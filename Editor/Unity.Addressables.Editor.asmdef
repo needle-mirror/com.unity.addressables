@@ -1,0 +1,12 @@
+{
+    "name": "Unity.Addressables.Editor",
+    "references": [
+      "Unity.Addressables",
+      "Unity.ResourceManager",
+      "Unity.ResourceManager.Editor",
+	  "Unity.ScriptableBuildPipeline.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ]
+}
