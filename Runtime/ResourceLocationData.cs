@@ -114,5 +114,23 @@ namespace UnityEngine.AddressableAssets
         /// TODO - doc
         /// </summary>
         public bool IsEmpty { get { return locations.Count == 0 && labels.Count == 0; } }
+#if UNITY_EDITOR
+        public bool Validate()
+        {
+            bool success = true;
+            HashSet<string> addresses = new HashSet<string>();
+            foreach (var l in locations)
+            {
+                if (!addresses.Add(l.m_address))
+                {
+                    Debug.LogWarningFormat("Duplicate address '{0}' with path '{1}' found in build, runtime data will contain errors...", 
+                        l.m_address, 
+                        UnityEditor.AssetDatabase.GUIDToAssetPath(l.m_guid));
+                    success = false;
+                }
+            }
+            return success;
+        }
+#endif
     }
 }

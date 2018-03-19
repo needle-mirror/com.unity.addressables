@@ -10,6 +10,7 @@ using UnityEditor.Build.Tasks;
 using System.IO;
 using UnityEngine.ResourceManagement;
 using UnityEngine.AddressableAssets;
+using UnityEditor.SceneManagement;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -31,6 +32,7 @@ namespace UnityEditor.AddressableAssets
     /// </summary>
     public class BuildScript
     {
+        static int codeVersion = 2;
         [InitializeOnLoadMethod]
         static void Init()
         {
@@ -94,7 +96,6 @@ namespace UnityEditor.AddressableAssets
             return runtimeData.CopyFromLibraryToPlayer(aaSettings.buildSettings.editorPlayMode.ToString());
         }
 
-
         public static bool PrepareRuntimeData(bool isPlayerBuild, bool isDevBuild, bool allowProfilerEvents, bool forceRebuild, bool enteringPlayMode, BuildTargetGroup buildTargetGroup, BuildTarget buildTarget)
         {
             var timer = new System.Diagnostics.Stopwatch();
@@ -104,7 +105,7 @@ namespace UnityEditor.AddressableAssets
             if (aaSettings == null)
                 return true;
 
-            var settingsHash = aaSettings.currentHash.ToString();
+            var settingsHash = aaSettings.currentHash.ToString() + codeVersion;
             ResourceManagerRuntimeData runtimeData = null;
             ResourceLocationList contentCatalog = null;
 
@@ -115,7 +116,15 @@ namespace UnityEditor.AddressableAssets
                // Debug.Log("Loaded cached runtime data in " + timer.Elapsed.TotalSeconds + " secs.");
                 return true;
             }
+            bool validated = true;
+            foreach (var assetGroup in aaSettings.groups)
+            {
+                if (!assetGroup.processor.Validate(aaSettings, assetGroup))
+                    validated = false;
+            }
 
+            if (!validated)
+                return false;
 
             runtimeData = new ResourceManagerRuntimeData(isPlayerBuild ? ResourceManagerRuntimeData.EditorPlayMode.PackedMode : aaSettings.buildSettings.editorPlayMode);
             contentCatalog = new ResourceLocationList();
@@ -123,10 +132,7 @@ namespace UnityEditor.AddressableAssets
             runtimeData.profileEvents = allowProfilerEvents && aaSettings.buildSettings.postProfilerEvents;
             if (runtimeData.resourceProviderMode == ResourceManagerRuntimeData.EditorPlayMode.FastMode)
             {
-                var allEntries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
-                foreach (var a in aaSettings.allEntries)
-                    a.Value.GatherAllAssets(allEntries, aaSettings, true);
-                foreach (var a in allEntries)
+                foreach (var a in aaSettings.GetAllAssets(true, true))
                 {
                     var t = AssetDatabase.GetMainAssetTypeAtPath(a.assetPath);
                     if (t == null)
@@ -150,6 +156,9 @@ namespace UnityEditor.AddressableAssets
 
                 if (allBundleInputDefs.Count > 0)
                 {
+                    if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                        return false;
+
                     var bundleWriteData = new BundleWriteData();
                     var bundleBuildResults = new BundleBuildResults();
                     var dependencyData = new BuildDependencyData();
@@ -205,16 +214,23 @@ namespace UnityEditor.AddressableAssets
 
             if (enteringPlayMode && runtimeData.resourceProviderMode != ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
                 AddAddressableScenesToEditorBuildSettingsSceneList(aaSettings, runtimeData);
-            runtimeData.contentVersion = aaSettings.profileSettings.GetValueByName(aaSettings.activeProfile, "version");
+            runtimeData.contentVersion = aaSettings.profileSettings.GetValueByName(aaSettings.activeProfile, "ContentVersion");
+            if (string.IsNullOrEmpty(runtimeData.contentVersion))
+                runtimeData.contentVersion = "X";
+
             runtimeData.settingsHash = settingsHash;
             var catalogLocations = new List<ResourceLocationData>();
             foreach (var assetGroup in aaSettings.groups)
+            {
                 assetGroup.processor.CreateCatalog(aaSettings, assetGroup, contentCatalog, catalogLocations);
+            }
             runtimeData.catalogLocations.locations.AddRange(catalogLocations.OrderBy(s => s.m_address));
+
+            contentCatalog.Validate();
 
             runtimeData.Save(contentCatalog, aaSettings.buildSettings.editorPlayMode.ToString());
 
-            Debug.Log("Processed  " + aaSettings.assetEntries.Count() + " addressable assets in " + timer.Elapsed.TotalSeconds + " secs.");
+            Debug.Log("Processed  " + contentCatalog.locations.Count + " addressable assets in " + timer.Elapsed.TotalSeconds + " secs.");
             Resources.UnloadUnusedAssets();
             return true;
         }

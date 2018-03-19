@@ -120,7 +120,7 @@ namespace UnityEditor.AddressableAssets
                     return -1;
                 }
 
-                private int IndexOfVarName(string name)
+                internal int IndexOfVarName(string name)
                 {
                     for (int i = 0; i < m_values.Count; i++)
                         if (m_values[i].m_name == name)
@@ -294,27 +294,35 @@ namespace UnityEditor.AddressableAssets
                 return ResourceManagerConfig.ExpandWithVariables(varString, '[', ']', getVal);
             }
 
+
+            void AddDefaultEntry(string profileId, string varName, string value)
+            {
+                var profile = GetProfile(profileId);
+                if (profile == null)
+                    SetValueByName(profileId, varName, value, true);
+                else if(profile.IndexOfVarName(varName) < 0)
+                    SetValueByName(profileId, varName, value, true);
+            }
+
             internal string CreateDefaultProfile()
             {
-                if (m_profiles.Count == 0)
-                {
-                    var defaultId = AddProfile("Default", null);
-                    SetValueByName(defaultId, "BuildTarget", "[UnityEditor.EditorUserBuildSettings.activeBuildTarget]");
-                    SetValueByName(defaultId, "LocalBuildPath", "Assets/StreamingAssets");
-                    SetValueByName(defaultId, "LocalLoadPrefix", "file://{UnityEngine.Application.streamingAssetsPath}");
-                    SetValueByName(defaultId, "RemoteBuildPath", "ServerData/[BuildTarget]");
-                    SetValueByName(defaultId, "RemoteLoadPrefix", "http://localhost/[BuildTarget]");
-                    SetValueByName(defaultId, "version", "1");
+                var defaultId = AddProfile("Default", null);
+                AddDefaultEntry(defaultId, "BuildTarget", "[UnityEditor.EditorUserBuildSettings.activeBuildTarget]");
+                AddDefaultEntry(defaultId, "LocalBuildPath", "Assets/StreamingAssets");
+                AddDefaultEntry(defaultId, "LocalLoadPrefix", "file://{UnityEngine.Application.streamingAssetsPath}");
+                AddDefaultEntry(defaultId, "RemoteBuildPath", "ServerData/[BuildTarget]");
+                AddDefaultEntry(defaultId, "RemoteLoadPrefix", "http://localhost/[BuildTarget]");
+                AddDefaultEntry(defaultId, "ContentVersion", "1");
 
-                    var devId = AddProfile("Dev", defaultId);
-                    SetValueByName(devId, "RemoteBuildPath", "DevServerData/[BuildTarget]");
-                    SetValueByName(devId, "RemoteLoadPrefix", "http://devserver/[BuildTarget]");
+                var devId = AddProfile("Dev", defaultId);
+                AddDefaultEntry(devId, "RemoteBuildPath", "DevServerData/[BuildTarget]");
+                AddDefaultEntry(devId, "RemoteLoadPrefix", "http://devserver/[BuildTarget]");
 
-                    var prodId = AddProfile("Production", defaultId);
-                    SetValueByName(prodId, "RemoteBuildPath", "ProductionServerData/[BuildTarget]");
-                    SetValueByName(prodId, "RemoteLoadPrefix", "http://productionserver/[BuildTarget]");
-                }
-                return m_profiles[0].m_id;
+                var prodId = AddProfile("Production", defaultId);
+                AddDefaultEntry(prodId, "RemoteBuildPath", "ProductionServerData/[BuildTarget]");
+                AddDefaultEntry(prodId, "RemoteLoadPrefix", "http://productionserver/[BuildTarget]");
+                
+                return defaultId;
             }
 
             /// <summary>
@@ -392,8 +400,9 @@ namespace UnityEditor.AddressableAssets
             /// </summary>
             public string AddProfile(string name, string parent)
             {
-                if (GetProfileByName(name) != null)
-                    return string.Empty;
+                var existing = GetProfileByName(name);
+                if (existing != null)
+                    return existing.m_id;
                 var id = GUID.Generate().ToString();
                 m_profiles.Add(new BuildProfile(id, name, parent));
                 PostModificationEvent(ModificationEvent.ProfileAdded);

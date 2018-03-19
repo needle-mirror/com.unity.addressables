@@ -48,5 +48,10 @@ namespace UnityEditor.AddressableAssets
         {
             return int.MaxValue;
         }
+
+        internal virtual bool Validate(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup assetGroup)
+        {
+            return true;
+        }
     }
 }

@@ -54,9 +54,9 @@ namespace UnityEditor.AddressableAssets
 
         internal override void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group, ResourceLocationList contentCatalog, List<ResourceLocationData> locations)
         {
-            var buildPath = GetBuildPath(aaSettings) + aaSettings.profileSettings.Evaluate(aaSettings.activeProfile, "/catalog_[version].json");
-            var remoteHashLoadPath = "file://{UnityEngine.Application.streamingAssetsPath}/catalog_{version}.hash";
-            var localCacheLoadPath = "{UnityEngine.Application.persistentDataPath}/catalog_{version}.hash";
+            var buildPath = GetBuildPath(aaSettings) + aaSettings.profileSettings.Evaluate(aaSettings.activeProfile, "/catalog_[ContentVersion].json");
+            var remoteHashLoadPath = "file://{UnityEngine.Application.streamingAssetsPath}/catalog_{ContentVersion}.hash";
+            var localCacheLoadPath = "{UnityEngine.Application.persistentDataPath}/catalog_{ContentVersion}.hash";
             
             var jsonText = JsonUtility.ToJson(contentCatalog);
             var contentHash = Build.Utilities.HashingMethods.CalculateMD5Hash(jsonText).ToString();

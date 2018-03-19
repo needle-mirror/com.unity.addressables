@@ -93,7 +93,7 @@ namespace UnityEditor.AddressableAssets
                 processor.SerializeForHash(formatter, stream);
             }
 
-            internal void OnAfterDeserialize(Dictionary<string, AssetGroup.AssetEntry> allEntries)
+            internal void OnAfterDeserialize(AddressableAssetSettings settings)
             {
                 entryMap.Clear();
                 foreach (var e in m_serializeEntries)
@@ -103,7 +103,6 @@ namespace UnityEditor.AddressableAssets
                         e.parentGroup = this;
                         e.isSubAsset = false;
                         entryMap.Add(e.guid, e);
-                        allEntries.Add(e.guid, e);
                     }
                     catch (Exception ex)
                     {

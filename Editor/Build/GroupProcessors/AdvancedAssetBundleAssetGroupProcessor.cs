@@ -28,7 +28,7 @@ namespace UnityEditor.AddressableAssets
             {
                 var settings = AddressableAssetSettings.GetDefault(false, false);
                 if ((m_buildPath == null || string.IsNullOrEmpty(m_buildPath.value)) && settings != null)
-                    m_buildPath = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("StreamingAsssetsBuildPath"));
+                    m_buildPath = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalBuildPath"));
                 return m_buildPath;
             }
         }
@@ -41,7 +41,7 @@ namespace UnityEditor.AddressableAssets
             {
                 var settings = AddressableAssetSettings.GetDefault(false, false);
                 if ((m_loadPrefix == null || string.IsNullOrEmpty(m_loadPrefix.value)) && settings != null)
-                    m_loadPrefix = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("StreamingAssetsLoadPrefix"));
+                    m_loadPrefix = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalLoadPrefix"));
                 return m_loadPrefix;
             }
         }
@@ -64,9 +64,9 @@ namespace UnityEditor.AddressableAssets
         {
             Debug.Log("Initialize");
             if (m_buildPath == null || string.IsNullOrEmpty(m_buildPath.value))
-                m_buildPath = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("StreamingAsssetsBuildPath"));
+                m_buildPath = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalBuildPath"));
             if (m_loadPrefix == null || string.IsNullOrEmpty(m_loadPrefix.value))
-                m_loadPrefix = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("StreamingAssetsLoadPrefix"));
+                m_loadPrefix = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalLoadPrefix"));
             if (m_bundleLoadProvider == null || string.IsNullOrEmpty(m_bundleLoadProvider.value))
                 m_bundleLoadProvider = settings.profileSettings.CreateProfileValue(typeof(RemoteAssetBundleProvider).FullName, true);
         }

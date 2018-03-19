@@ -26,6 +26,7 @@ namespace UnityEditor.AddressableAssets
             GroupAdded,
             GroupRemoved,
             GroupProcessorChanged,
+            EntryCreated,
             EntryAdded,
             EntryMoved,
             EntryRemoved,
@@ -140,14 +141,24 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        private Dictionary<string, AssetGroup.AssetEntry> m_allEntries = new Dictionary<string, AssetGroup.AssetEntry>();
-        internal Dictionary<string, AssetGroup.AssetEntry> allEntries { get { return m_allEntries; } }
-
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        internal IEnumerable<AssetGroup.AssetEntry> assetEntries
-        { get { return m_allEntries.Values; } }
+        public List<AssetGroup.AssetEntry> GetAllAssets(bool excludeFilters = true, bool includeImplicitAssets = false)
+        {
+            var results = new List<AssetGroup.AssetEntry>();
+            foreach (var g in groups)
+            {
+                foreach (var e in g.entries)
+                {
+                    if (!excludeFilters || !string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(e.guid)))
+                    {
+                        if (includeImplicitAssets)
+                            e.GatherAllAssets(results, this);
+                        else
+                            results.Add(e);
+                    }
+                }
+            }
+            return results;
+        }
 
         public void RemoveAssetEntry(string guid)
         {
@@ -156,7 +167,6 @@ namespace UnityEditor.AddressableAssets
             {
                 if (entry.parentGroup != null)
                     entry.parentGroup.RemoveAssetEntry(entry);
-                m_allEntries.Remove(guid);
                 PostModificationEvent(ModificationEvent.EntryRemoved, entry);
             }
         }
@@ -169,9 +179,8 @@ namespace UnityEditor.AddressableAssets
 
         public void OnAfterDeserialize()
         {
-            m_allEntries.Clear();
             foreach (var g in groups)
-                g.OnAfterDeserialize(m_allEntries);
+               g.OnAfterDeserialize(this);
             profileSettings.OnAfterDeserialize(this);
             buildSettings.OnAfterDeserialize(this);
         }
@@ -236,15 +245,15 @@ namespace UnityEditor.AddressableAssets
 
         internal void GetAllSceneEntries(List<AssetGroup.AssetEntry> entries)
         {
-            foreach (var a in allEntries)
-                a.Value.GatherSceneEntries(entries, this, true);
+            foreach (var a in GetAllAssets(true, true))
+                if (a.isScene)
+                    entries.Add(a);
         }
 
         private AssetGroup.AssetEntry CreateEntry(string guid, string address, AssetGroup parent, bool readOnly)
         {
             var entry = new AssetGroup.AssetEntry(guid, address, parent, readOnly);
-            m_allEntries.Add(guid, entry);
-            PostModificationEvent(ModificationEvent.EntryAdded, entry);
+            PostModificationEvent(ModificationEvent.EntryCreated, entry);
             return entry;
         }
 
@@ -264,9 +273,12 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public AssetGroup.AssetEntry FindAssetEntry(string guid)
         {
-            AssetGroup.AssetEntry entry;
-            if (m_allEntries.TryGetValue(guid, out entry))
-                return entry;
+            foreach (var g in groups)
+            {
+                var e = g.GetAssetEntry(guid);
+                if (e != null)
+                    return e;
+            }
             return null;
         }
 
@@ -351,7 +363,6 @@ namespace UnityEditor.AddressableAssets
             }
 
             targetParent.AddAssetEntry(entry);
-            PostModificationEvent(ModificationEvent.EntryAdded, entry);
             return entry;
         }
 
@@ -454,8 +465,6 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public void RemoveGroup(AssetGroup g)
         {
-            foreach (var e in g.entries)
-                m_allEntries.Remove(e.guid);
             var path = System.IO.Path.GetDirectoryName(pathForAsset) + "/" + g.guid.ToString() + ".asset";
             AssetDatabase.DeleteAsset(path);
             groups.Remove(g);

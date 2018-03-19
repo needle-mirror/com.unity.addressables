@@ -56,7 +56,7 @@ namespace UnityEditor.AddressableAssets
                     if (window != null)
                         window.Repaint();
                     break;
-
+                case AddressableAssetSettings.ModificationEvent.EntryCreated:
                 case AddressableAssetSettings.ModificationEvent.LabelAdded:
                 case AddressableAssetSettings.ModificationEvent.LabelRemoved:
                 case AddressableAssetSettings.ModificationEvent.ProfileAdded:

@@ -355,25 +355,6 @@ namespace UnityEditor.AddressableAssets
                     }
                 }
 
-                internal void GatherSceneEntries(List<AssetEntry> entries, AddressableAssetSettings settings, bool skipResourcesFolders)
-                {
-                    if (isScene)
-                    {
-                        entries.Add(this);
-                    }
-                    else
-                    {
-                        var assetPath = AssetDatabase.GUIDToAssetPath(m_guid);
-                        if (string.IsNullOrEmpty(assetPath) || AssetDatabase.IsValidFolder(assetPath))
-                        {
-                            List<AssetEntry> subEntries = new List<AssetEntry>();
-                            GatherAllAssets(subEntries, settings, skipResourcesFolders);
-                            foreach (var s in subEntries)
-                                s.GatherSceneEntries(entries, settings, skipResourcesFolders);
-                        }
-                    }
-                }
-
                 /// <summary>
                 /// TODO - doc
                 /// </summary>

@@ -53,7 +53,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public string contentVersion = "0";
+        public string contentVersion = "undefined";
 
         /// <summary>
         /// TODO - doc
@@ -82,10 +82,10 @@ namespace UnityEngine.AddressableAssets
             if (!Application.isEditor && resourceProviderMode != EditorPlayMode.PackedMode)
                 throw new Exception("Unsupported resource provider mode in player: " + resourceProviderMode);
 
-            ResourceManagerConfig.AddCachedValue("version", contentVersion);
+            ResourceManagerConfig.AddCachedValue("ContentVersion", contentVersion);
 
             if (usePooledInstanceProvider)
-                ResourceManager.InstanceProvider = new PooledInstanceProvider("PooledInstanceProvider", 2);
+                ResourceManager.InstanceProvider = new PooledInstanceProvider("PooledInstanceProvider", 10);
             else
                 ResourceManager.InstanceProvider = new InstanceProvider();
 
@@ -155,6 +155,11 @@ namespace UnityEngine.AddressableAssets
             for (int i = 0; i < locList.locations.Count; i++)
             {
                 var rlData = locList.locations[i];
+                if (locMap.ContainsKey(rlData.m_address))
+                {
+                    Debug.LogErrorFormat("Duplicate address '{0}' with id '{1}' found, skipping...", rlData.m_address, rlData.m_id);
+                    continue;
+                }
                 var loc = rlData.Create();
                 locMap.Add(rlData.m_address, loc);
                 dataMap.Add(rlData.m_address, rlData);

@@ -29,7 +29,7 @@ namespace UnityEditor.AddressableAssets
             {
                 var settings = AddressableAssetSettings.GetDefault(false, false);
                 if ((m_buildPath == null || string.IsNullOrEmpty(m_buildPath.value)) && settings != null)
-                    m_buildPath = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("StreamingAsssetsBuildPath"));
+                    m_buildPath = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalBuildPath"));
                 return m_buildPath;
             }
         }
@@ -42,19 +42,37 @@ namespace UnityEditor.AddressableAssets
             {
                 var settings = AddressableAssetSettings.GetDefault(false, false);
                 if ((m_loadPrefix == null || string.IsNullOrEmpty(m_loadPrefix.value)) && settings != null)
-                    m_loadPrefix = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("StreamingAssetsLoadPrefix"));
+                    m_loadPrefix = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalLoadPrefix"));
                 return m_loadPrefix;
             }
         }
+
+        internal override bool Validate(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup assetGroup)
+        {
+            bool valid = true;
+            if (string.IsNullOrEmpty(loadPrefix.value))
+            {
+                Debug.LogWarningFormat("Asset Group '{0}' has invalid loadPrefix", assetGroup.name);
+                valid = false;
+            }
+            var bp = GetBuildPath(aaSettings);
+            if (string.IsNullOrEmpty(bp))
+            {
+                Debug.LogWarningFormat("Asset Group '{0}' has invalid buildPath", assetGroup.name);
+                valid = false;
+            }
+            return valid;
+        }
+
         public BundleMode bundleMode = BundleMode.PackTogether;
 
         internal override string displayName { get { return "Remote Packed Content"; } }
         internal override void Initialize(AddressableAssetSettings settings)
         {
             if(m_buildPath == null)
-                m_buildPath = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("StreamingAsssetsBuildPath"));
+                m_buildPath = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalBuildPath"));
             if(m_loadPrefix == null)
-                m_loadPrefix = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("StreamingAssetsLoadPrefix"));
+                m_loadPrefix = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalLoadPrefix"));
         }
 
         internal override void SerializeForHash(System.Runtime.Serialization.Formatters.Binary.BinaryFormatter formatter, Stream stream)
@@ -89,11 +107,13 @@ namespace UnityEditor.AddressableAssets
             return 0;
         }
 
+
         internal override void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group, ResourceLocationList contentCatalog, List<ResourceLocationData> locations)
         {
-            var buildPath = GetBuildPath(aaSettings) + aaSettings.profileSettings.Evaluate(aaSettings.activeProfile, "/catalog_[version].json");
-            var remoteHashLoadPath = m_loadPrefix.Evaluate(aaSettings.profileSettings, aaSettings.activeProfile) + "/catalog_{version}.hash";
-            var localCacheLoadPath = "{UnityEngine.Application.persistentDataPath}/catalog_{version}.hash";
+            var bp = GetBuildPath(aaSettings);
+            var buildPath = Path.Combine(bp, aaSettings.profileSettings.Evaluate(aaSettings.activeProfile, "catalog_[ContentVersion].json"));
+            var remoteHashLoadPath = m_loadPrefix.Evaluate(aaSettings.profileSettings, aaSettings.activeProfile) + "/catalog_{ContentVersion}.hash";
+            var localCacheLoadPath = "{UnityEngine.Application.persistentDataPath}/catalog_{ContentVersion}.hash";
 
             var jsonText = JsonUtility.ToJson(contentCatalog);
             var contentHash = Build.Utilities.HashingMethods.CalculateMD5Hash(jsonText).ToString();

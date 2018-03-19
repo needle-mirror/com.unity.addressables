@@ -339,21 +339,17 @@ namespace UnityEditor.AddressableAssets
                     else
                     {
                         root.AddChild(new AssetRefTreeViewItem(k_noAssetString.GetHashCode(), 0, k_noAssetString, string.Empty, string.Empty));
-                        foreach (var entry in aaSettings.assetEntries)
+                        foreach (var entry in aaSettings.GetAllAssets(true, true))
                         {
-                            if ((entry.guid != AddressableAssetSettings.AssetGroup.AssetEntry.EditorSceneListName) &&
-                                (entry.guid != AddressableAssetSettings.AssetGroup.AssetEntry.ResourcesName))
-                            {
-                                bool passedFilters = true;
-                                if (m_drawer.labelFilter != null && !m_drawer.labelFilter.Validate(entry.labels))
-                                    passedFilters = false;
+                            bool passedFilters = true;
+                            if (m_drawer.labelFilter != null && !m_drawer.labelFilter.Validate(entry.labels))
+                                passedFilters = false;
 
-                                if (passedFilters && m_drawer.typeFilter != null && !m_drawer.typeFilter.Validate(AssetDatabase.GetMainAssetTypeAtPath(entry.assetPath)))
-                                    passedFilters = false;
+                            if (passedFilters && m_drawer.typeFilter != null && !m_drawer.typeFilter.Validate(AssetDatabase.GetMainAssetTypeAtPath(entry.assetPath)))
+                                passedFilters = false;
                                
-                                if(passedFilters)
-                                    root.AddChild(new AssetRefTreeViewItem(entry.address.GetHashCode(), 0, entry.address, entry.guid, entry.assetPath));
-                            }
+                            if(passedFilters)
+                                root.AddChild(new AssetRefTreeViewItem(entry.address.GetHashCode(), 0, entry.address, entry.guid, entry.assetPath));
                         }
                     }
 
