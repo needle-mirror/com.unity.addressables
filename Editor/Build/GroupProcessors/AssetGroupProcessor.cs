@@ -2,9 +2,9 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
-using UnityEditor.Build.Interfaces;
 using UnityEngine.AddressableAssets;
 using System;
+using UnityEditor.Build.Pipeline.Interfaces;
 
 namespace UnityEditor.AddressableAssets
 {

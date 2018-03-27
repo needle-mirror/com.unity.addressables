@@ -59,7 +59,7 @@ namespace UnityEditor.AddressableAssets
             var localCacheLoadPath = "{UnityEngine.Application.persistentDataPath}/catalog_{ContentVersion}.hash";
             
             var jsonText = JsonUtility.ToJson(contentCatalog);
-            var contentHash = Build.Utilities.HashingMethods.CalculateMD5Hash(jsonText).ToString();
+            var contentHash = Build.Pipeline.Utilities.HashingMethods.CalculateMD5Hash(jsonText).ToString();
 
             var buildPathDir = Path.GetDirectoryName(buildPath);
             if (!Directory.Exists(buildPathDir))

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using UnityEditor.Build;
-using UnityEditor.Build.Interfaces;
+using UnityEditor.Build.Pipeline;
+using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine.ResourceManagement;
 using UnityEngine.AddressableAssets;
 
@@ -12,18 +12,17 @@ namespace UnityEditor.AddressableAssets
         const int k_Version = 1;
         public int Version { get { return k_Version; } }
 
-        static readonly Type[] k_RequiredTypes = { typeof(IAddressableAssetsBuildContext) };
+        static readonly Type[] k_RequiredTypes = { typeof(IAddressableAssetsBuildContext), typeof(IBundleWriteData) };
         public Type[] RequiredContextTypes { get { return k_RequiredTypes; } }
 
         public ReturnCodes Run(IBuildContext context)
         {
             var aaContext = context.GetContextObject<IAddressableAssetsBuildContext>() as AddressableAssetsBuildContext;
-            return Run(aaContext.m_settings, aaContext.m_runtimeData, aaContext.m_contentCatalog);
+            return Run(aaContext.m_settings, aaContext.m_runtimeData, aaContext.m_contentCatalog, context.GetContextObject<IBundleWriteData>());
         }
 
-        public static ReturnCodes Run(AddressableAssetSettings aaSettings, ResourceManagerRuntimeData runtimeData, ResourceLocationList contentCatalog)
+        public static ReturnCodes Run(AddressableAssetSettings aaSettings, ResourceManagerRuntimeData runtimeData, ResourceLocationList contentCatalog, IBundleWriteData writeData)
         {
-
             var virtualBundleData = new VirtualAssetBundleRuntimeData(aaSettings.buildSettings.localLoadSpeed, aaSettings.buildSettings.remoteLoadSpeed);
             var bundledAssets = new Dictionary<string, List<string>>();
             foreach (var loc in contentCatalog.locations)
@@ -45,7 +44,7 @@ namespace UnityEditor.AddressableAssets
             foreach (var bd in bundledAssets)
             {
                 var bundleLocData = contentCatalog.locations.Find(a => a.m_address == bd.Key);
-                var size = bd.Value.Count * 1024 * 1024; //for now estimate 1MB per entry
+                uint size = (uint)(bd.Value.Count * 1024 * 1024); //for now estimate 1MB per entry
                 virtualBundleData.AssetBundles.Add(new VirtualAssetBundle(bundleLocData.m_id, bundleLocData.m_provider == typeof(LocalAssetBundleProvider).FullName, size, bd.Value));
             }
             virtualBundleData.Save();

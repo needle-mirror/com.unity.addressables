@@ -1,13 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEditor;
 using System.Linq;
-using UnityEditor.Build;
-using UnityEditor.Build.AssetBundle;
-using UnityEditor.Build.Interfaces;
 using UnityEditor.Build.Utilities;
-using UnityEditor.Build.Tasks;
-using System.IO;
+using UnityEditor.Build.Pipeline;
+using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEditor.Build.Pipeline.Tasks;
+using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine.ResourceManagement;
 using UnityEngine.AddressableAssets;
 using UnityEditor.SceneManagement;
@@ -85,7 +83,7 @@ namespace UnityEditor.AddressableAssets
             if (runtimeData.resourceProviderMode == ResourceManagerRuntimeData.EditorPlayMode.VirtualMode)
             {
                 if (!VirtualAssetBundleRuntimeData.CopyFromLibraryToPlayer())
-                    WriteVirtualBundleDataTask.Run(aaSettings, runtimeData, contentCatalog);
+                    WriteVirtualBundleDataTask.Run(aaSettings, runtimeData, contentCatalog, null);
             }
 
             var catalogLocations = new List<ResourceLocationData>();
@@ -96,6 +94,16 @@ namespace UnityEditor.AddressableAssets
             return runtimeData.CopyFromLibraryToPlayer(aaSettings.buildSettings.editorPlayMode.ToString());
         }
 
+        public struct BuildResult
+        {
+            public bool completed;
+            public double duration;
+            public int locationCount;
+            public string error;
+        }
+
+        public static System.Action<BuildResult> buildCompleted;
+
         public static bool PrepareRuntimeData(bool isPlayerBuild, bool isDevBuild, bool allowProfilerEvents, bool forceRebuild, bool enteringPlayMode, BuildTargetGroup buildTargetGroup, BuildTarget buildTarget)
         {
             var timer = new System.Diagnostics.Stopwatch();
@@ -103,7 +111,11 @@ namespace UnityEditor.AddressableAssets
 
             var aaSettings = AddressableAssetSettings.GetDefault(false, false);
             if (aaSettings == null)
+            {
+                if (buildCompleted != null)
+                    buildCompleted(new BuildResult() { completed = false, duration = timer.Elapsed.TotalSeconds, error = "AddressableAssetSettings not found." });
                 return true;
+            }
 
             var settingsHash = aaSettings.currentHash.ToString() + codeVersion;
             ResourceManagerRuntimeData runtimeData = null;
@@ -113,7 +125,8 @@ namespace UnityEditor.AddressableAssets
             {
                 if (enteringPlayMode && runtimeData.resourceProviderMode != ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
                     AddAddressableScenesToEditorBuildSettingsSceneList(aaSettings, runtimeData);
-               // Debug.Log("Loaded cached runtime data in " + timer.Elapsed.TotalSeconds + " secs.");
+                if (buildCompleted != null)
+                    buildCompleted(new BuildResult() { completed = true, duration = timer.Elapsed.TotalSeconds });
                 return true;
             }
             bool validated = true;
@@ -157,18 +170,22 @@ namespace UnityEditor.AddressableAssets
                 if (allBundleInputDefs.Count > 0)
                 {
                     if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                    {
+                        if (buildCompleted != null)
+                            buildCompleted(new BuildResult() { completed = false, duration = timer.Elapsed.TotalSeconds, error = "Unsaved scenes" });
                         return false;
+                    }
 
                     var bundleWriteData = new BundleWriteData();
                     var bundleBuildResults = new BundleBuildResults();
                     var dependencyData = new BuildDependencyData();
                    // using (var progressTracker = new TimeThrottledProgressTracker(100))
                     {
-                        var buildParams = new BuildParameters(buildTarget, buildTargetGroup, aaSettings.buildSettings.bundleBuildPath, ContentPipeline.kTempBuildPath);
-                        buildParams.UseCache = aaSettings.buildSettings.useCache && !forceRebuild;
+                        var buildParams = new BuildParameters(buildTarget, buildTargetGroup, aaSettings.buildSettings.bundleBuildPath);
+                        buildParams.UseCache = true;// aaSettings.buildSettings.useCache && !forceRebuild;
                         using (var buildCleanup = new BuildStateCleanup(buildParams.TempOutputFolder))
                         {
-                            var buildContext = new BuildContext(new BundleContent(allBundleInputDefs), new Unity5PackedIdentifiers(), buildParams, dependencyData, bundleWriteData, bundleBuildResults);//, progressTracker);
+                            var buildContext = new BuildContext(new BundleBuildContent(allBundleInputDefs), new Unity5PackedIdentifiers(), buildParams, dependencyData, bundleWriteData, bundleBuildResults);//, progressTracker);
                             buildContext.SetContextObject(new AddressableAssetsBuildContext() { m_settings = aaSettings, m_runtimeData = runtimeData, m_bundleToAssetGroup = bundleToAssetGroup, m_contentCatalog = contentCatalog });
 
                             var buildTasks = new List<IBuildTask>();
@@ -204,7 +221,8 @@ namespace UnityEditor.AddressableAssets
                             var result = BuildTasksRunner.Run(buildTasks, buildContext);
                             if (result < ReturnCodes.Success)
                             {
-                                Debug.Log("Build Failed, result = " + result);
+                                if (buildCompleted != null)
+                                    buildCompleted(new BuildResult() { completed = false, duration = timer.Elapsed.TotalSeconds, error = result.ToString() });
                                 return false;
                             }
                         }
@@ -230,8 +248,9 @@ namespace UnityEditor.AddressableAssets
 
             runtimeData.Save(contentCatalog, aaSettings.buildSettings.editorPlayMode.ToString());
 
-            Debug.Log("Processed  " + contentCatalog.locations.Count + " addressable assets in " + timer.Elapsed.TotalSeconds + " secs.");
             Resources.UnloadUnusedAssets();
+            if (buildCompleted != null)
+                buildCompleted(new BuildResult() { completed = true, duration = timer.Elapsed.TotalSeconds, locationCount = contentCatalog.locations.Count });
             return true;
         }
 
@@ -266,11 +285,11 @@ namespace UnityEditor.AddressableAssets
 
             using (var progressTracker = new TimeThrottledProgressTracker(100))
             {
-                var buildParams = new BuildParameters(EditorUserBuildSettings.activeBuildTarget, BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), aaSettings.buildSettings.bundleBuildPath, ContentPipeline.kTempBuildPath);
-                buildParams.UseCache = aaSettings.buildSettings.useCache;
+                var buildParams = new BuildParameters(EditorUserBuildSettings.activeBuildTarget, BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), aaSettings.buildSettings.bundleBuildPath);
+                buildParams.UseCache = true;
                 using (var buildCleanup = new BuildStateCleanup(buildParams.TempOutputFolder))
                 {
-                    var buildContext = new BuildContext(new BundleContent(allBundleInputDefs), new Unity5PackedIdentifiers(), buildParams, depData = new BuildDependencyData(), bundleWriteData = new BundleWriteData(), new BundleBuildResults(), progressTracker);
+                    var buildContext = new BuildContext(new BundleBuildContent(allBundleInputDefs), new Unity5PackedIdentifiers(), buildParams, depData = new BuildDependencyData(), bundleWriteData = new BundleWriteData(), new BundleBuildResults(), progressTracker);
                     buildContext.SetContextObject(new AddressableAssetsBuildContext() { m_settings = aaSettings, m_runtimeData = runtimeData, m_contentCatalog = contentCatalog });
 
                     var buildTasks = new List<IBuildTask>();

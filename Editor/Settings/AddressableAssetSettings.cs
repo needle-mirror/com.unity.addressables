@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using UnityEditor;
 using UnityEngine;
-using Object = UnityEngine.Object;
-using UnityEditor.Build.Utilities;
 using System.Runtime.Serialization.Formatters.Binary;
+using UnityEditor.Build.Pipeline.Utilities;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Unity.Addressables.Editor.Tests")]
 

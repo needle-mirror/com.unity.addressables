@@ -1,10 +1,9 @@
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 using UnityEditor.IMGUI.Controls;
 using System;
-using UnityEditor.Build;
-using UnityEditor.Experimental.Build.AssetBundle;
+using UnityEditor.Build.Content;
+using UnityEditor.Build.Pipeline;
 
 namespace UnityEditor.AddressableAssets
 {

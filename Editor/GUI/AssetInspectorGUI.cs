@@ -1,7 +1,4 @@
-using UnityEditor;
 using UnityEngine;
-using System.Reflection;
-using System;
 using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets
@@ -11,7 +8,7 @@ namespace UnityEditor.AddressableAssets
     {
         static AddressableAssetInspectorGUI()
         {
-            InspectorWindow.OnPostHeaderGUI += OnPostHeaderGUI;
+            Editor.finishedDefaultHeaderGUI += OnPostHeaderGUI;
         }
 
         static GUIContent addressableAssetToggleText = new GUIContent("Address", "Check this to mark this asset as an Addressable Asset, which includes it in the bundled data and makes it loadable via script by its address.");

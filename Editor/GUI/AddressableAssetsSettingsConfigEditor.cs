@@ -1,9 +1,8 @@
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -51,8 +50,8 @@ namespace UnityEditor.AddressableAssets
                     if (expandSimulation)
                     {
                         EditorGUI.indentLevel++;
-                        bs.localLoadSpeed = (int)(EditorGUILayout.FloatField("Local Load (MB/s)", bs.localLoadSpeed / 1048576f) * 1048576);
-                        bs.remoteLoadSpeed = (int)(EditorGUILayout.FloatField("Remote Load (MB/s)", bs.remoteLoadSpeed / 1048576f) * 1048576);
+                        DrawSpeedSlider("Local Load (MB/s)", ref bs.localLoadSpeed);
+                        DrawSpeedSlider("Remote Load (MB/s)", ref bs.remoteLoadSpeed);
                         EditorGUI.indentLevel--;
                     }
 
@@ -62,7 +61,6 @@ namespace UnityEditor.AddressableAssets
                     break;
             }
 
-           // using (new EditorGUI.DisabledScope(bs.editorPlayMode == ResourceManagerRuntimeData.EditorPlayMode.FastMode))
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
@@ -73,17 +71,6 @@ namespace UnityEditor.AddressableAssets
                 GUILayout.EndHorizontal();
             }
             EditorGUI.indentLevel--;
-            /*
-            bs.downloadRemoteCatalog = EditorGUILayout.ToggleLeft(new GUIContent("Download Remote Catalog", "Download remote catalog on game startup"), bs.downloadRemoteCatalog);
-            using (new EditorGUI.DisabledScope(!bs.downloadRemoteCatalog))
-            {
-                EditorGUI.indentLevel++;
-
-                ProfileSettingsEditor.ValueGUI(settingsObject, "Remote Location", bs.remoteCatalogLocation);
-                ProfileSettingsEditor.ValueGUI(settingsObject, "Build Location", bs.remoteCatalogBuildLocation);
-                EditorGUI.indentLevel--;
-            }
-            */
             bs.postProfilerEvents = EditorGUILayout.ToggleLeft("Send Profiler Events", bs.postProfilerEvents);
             
             GUILayout.EndScrollView();
@@ -94,6 +81,11 @@ namespace UnityEditor.AddressableAssets
                 BuildScript.PrepareRuntimeData(false, true, true, true, false, BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), EditorUserBuildSettings.activeBuildTarget);
 
             return false;
+        }
+
+        private void DrawSpeedSlider(string text, ref uint speed)
+        {
+            speed = (uint)(Mathf.Clamp(EditorGUILayout.FloatField(text, speed / 1048576f), .1f, 1024f) * 1048576);
         }
 
         internal void OnEnable()
@@ -151,8 +143,8 @@ namespace UnityEditor.AddressableAssets
         {
             internal bool postProfilerEvents;
             internal ResourceManagerRuntimeData.EditorPlayMode editorPlayMode;
-            internal int localLoadSpeed;
-            internal int remoteLoadSpeed;
+            internal uint localLoadSpeed;
+            internal uint remoteLoadSpeed;
         }
     }
 }

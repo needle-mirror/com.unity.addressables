@@ -1,7 +1,7 @@
 using System;
-using UnityEditor.Experimental.Build.AssetBundle;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using UnityEditor.Build.Content;
 using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets
@@ -31,12 +31,12 @@ namespace UnityEditor.AddressableAssets
             /// TODO - doc
             /// </summary>
             [NonSerialized]
-            public int localLoadSpeed = 1024 * 1024 * 10;
+            public uint localLoadSpeed = 1024 * 1024 * 10;
             /// <summary>
             /// TODO - doc
             /// </summary>
             [NonSerialized]
-            public int remoteLoadSpeed = 1024 * 1024 * 1;
+            public uint remoteLoadSpeed = 1024 * 1024 * 1;
             /// <summary>
             /// TODO - doc
             /// </summary>
@@ -65,84 +65,7 @@ namespace UnityEditor.AddressableAssets
                 }
             }
             [UnityEngine.SerializeField]
-            private string m_bundleBuildPath = "Temp/AddressableAssetsBundles";  
-            
-            /// <summary>
-            /// TODO - doc
-            /// </summary>
-            public bool downloadRemoteCatalog
-            {
-                get { return m_downloadRemoteCatalog; }
-                set
-                {
-                    m_downloadRemoteCatalog = value;
-                    PostModificationEvent();
-                }
-            }
-            [UnityEngine.SerializeField]
-            private bool m_downloadRemoteCatalog = false;
-            /// <summary>
-            /// TODO - doc
-            /// </summary>
-            public bool useCache
-            {
-                get { return m_useCache; }
-                set
-                {
-                    m_useCache = value;
-                    PostModificationEvent();
-                }
-            }
-            [UnityEngine.SerializeField]
-            private bool m_useCache = false;
-            /// <summary>
-            /// TODO - doc
-            /// </summary>
-            public ProfileSettings.ProfileValue remoteCatalogLocation
-            {
-                get
-                {
-                    if (m_remoteCatalogLocation == null || string.IsNullOrEmpty(m_remoteCatalogLocation.value))
-                    {
-                        if (m_Settings != null)
-                            remoteCatalogLocation = m_Settings.profileSettings.CreateProfileValue(m_Settings.profileSettings.GetVariableIdFromName("RemoteCatalogURL"));
-                        else
-                            remoteCatalogLocation = new ProfileSettings.ProfileValue();
-                    }
-                    return m_remoteCatalogLocation;
-                }
-                set
-                {
-                    m_remoteCatalogLocation = value;
-                    PostModificationEvent();
-                }
-            }
-            [UnityEngine.SerializeField]
-            private ProfileSettings.ProfileValue m_remoteCatalogLocation = null;
-
-            /// <summary>
-            /// TODO - doc
-            /// </summary>
-            public ProfileSettings.ProfileValue remoteCatalogBuildLocation
-            {
-                get {
-
-                    if (m_remoteCatalogBuildLocation == null || string.IsNullOrEmpty(m_remoteCatalogBuildLocation.value))
-                    {
-                        if (m_Settings != null)
-                            remoteCatalogBuildLocation = m_Settings.profileSettings.CreateProfileValue(m_Settings.profileSettings.GetVariableIdFromName("RemoteBuildPath"));
-                        else
-                            remoteCatalogBuildLocation = new ProfileSettings.ProfileValue();
-                    }
-                    return m_remoteCatalogBuildLocation; }
-                set
-                {
-                    PostModificationEvent();
-                    m_remoteCatalogBuildLocation = value;
-                }
-            }
-            [UnityEngine.SerializeField]
-            private ProfileSettings.ProfileValue m_remoteCatalogBuildLocation = null;
+            private string m_bundleBuildPath = "Temp/AddressableAssetsBundles";
 
             internal void SerializeForHash(BinaryFormatter formatter, Stream stream)
             {
@@ -150,9 +73,6 @@ namespace UnityEditor.AddressableAssets
                 formatter.Serialize(stream, compression);
                 formatter.Serialize(stream, localLoadSpeed);
                 formatter.Serialize(stream, remoteLoadSpeed);
-                formatter.Serialize(stream, downloadRemoteCatalog);
-                formatter.Serialize(stream, remoteCatalogLocation);
-                formatter.Serialize(stream, remoteCatalogBuildLocation);
             }
 
             [NonSerialized]
