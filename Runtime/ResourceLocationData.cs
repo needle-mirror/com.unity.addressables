@@ -39,7 +39,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public string m_id;
+        public string m_internalId;
         /// <summary>
         /// TODO - doc
         /// </summary>
@@ -61,7 +61,7 @@ namespace UnityEngine.AddressableAssets
             m_isLoadable = isLoadable;
             m_address = address;
             m_guid = guid;
-            m_id = id;
+            m_internalId = id;
             m_provider = provider;
             m_typeName = objectType;
             m_type = locationType;
@@ -76,8 +76,8 @@ namespace UnityEngine.AddressableAssets
         {
              switch (m_type)
             {
-                case LocationType.String: return new ResourceLocationBase<string>(m_address, m_id, m_provider);
-                case LocationType.Int: return new ResourceLocationBase<int>(int.Parse(m_address), m_id, m_provider);
+                case LocationType.String: return new ResourceLocationBase<string>(m_address, AAConfig.ExpandPathWithGlobalVariables(m_internalId), m_provider);
+                case LocationType.Int: return new ResourceLocationBase<int>(int.Parse(m_address), AAConfig.ExpandPathWithGlobalVariables(m_internalId), m_provider);
                     //case LocationType.Enum: return ResourceLocationBase<Enum>(Enum.Parse(typeof(Enum), address) as typeof, id, provider);
             }
             return null;

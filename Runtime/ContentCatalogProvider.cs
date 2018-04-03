@@ -59,7 +59,7 @@ namespace UnityEngine.AddressableAssets
                 InvokeCompletionEvent();
                 if (op.Result != null && !string.IsNullOrEmpty(m_hashValue) && !string.IsNullOrEmpty(m_localDataPath))
                 {
-                    var localCachePath = ResourceManagerConfig.ExpandPathWithGlobalVariables(m_localDataPath);
+                    var localCachePath = m_localDataPath;
                     File.WriteAllText(localCachePath, JsonUtility.ToJson(op.Result));
                     File.WriteAllText(localCachePath.Replace(".json", ".hash"), m_hashValue);
                 }

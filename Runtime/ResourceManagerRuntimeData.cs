@@ -60,12 +60,14 @@ namespace UnityEngine.AddressableAssets
         public static void InitializeResourceManager()
         {
             DiagnosticEventCollector.ProfileEvents = true;
+            SceneManagement.SceneManager.sceneUnloaded += ResourceManager.OnSceneUnloaded;
             ResourceManager.s_postEvents = true;
             ResourceManager.ResourceLocators.Add(new ResourceLocationLocator());
             ResourceManager.ResourceProviders.Add(new JsonAssetProvider());
             ResourceManager.ResourceProviders.Add(new TextDataProvider());
             ResourceManager.ResourceProviders.Add(new ContentCatalogProvider());
-            var runtimeDataLocation = new ResourceLocationBase<string>("RuntimeData", PlayerSettingsLoadLocation, typeof(JsonAssetProvider).FullName);
+            var playerSettingsLocation = AAConfig.ExpandPathWithGlobalVariables(PlayerSettingsLoadLocation);
+            var runtimeDataLocation = new ResourceLocationBase<string>("RuntimeData", playerSettingsLocation, typeof(JsonAssetProvider).FullName);
             ResourceManager.LoadAsync<ResourceManagerRuntimeData, IResourceLocation>(runtimeDataLocation).Completed += (op) =>
             {
                 if (op.Result != null)
@@ -78,7 +80,7 @@ namespace UnityEngine.AddressableAssets
             if (!Application.isEditor && resourceProviderMode != EditorPlayMode.PackedMode)
                 throw new Exception("Unsupported resource provider mode in player: " + resourceProviderMode);
 
-            ResourceManagerConfig.AddCachedValue("ContentVersion", contentVersion);
+            AAConfig.AddCachedValue("ContentVersion", contentVersion);
 
             if (usePooledInstanceProvider)
                 ResourceManager.InstanceProvider = new PooledInstanceProvider("PooledInstanceProvider", 10);
@@ -134,7 +136,7 @@ namespace UnityEngine.AddressableAssets
                     ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new AssetDatabaseProvider()));
                     break;
                 case EditorPlayMode.VirtualMode:
-                    VirtualAssetBundleManager.AddProviders();
+                    VirtualAssetBundleManager.AddProviders(AAConfig.ExpandPathWithGlobalVariables);
                     break;
 #endif
                 case EditorPlayMode.PackedMode:
@@ -157,7 +159,7 @@ namespace UnityEngine.AddressableAssets
                 var rlData = locList.locations[i];
                 if (locMap.ContainsKey(rlData.m_address))
                 {
-                    Debug.LogErrorFormat("Duplicate address '{0}' with id '{1}' found, skipping...", rlData.m_address, rlData.m_id);
+                    Debug.LogErrorFormat("Duplicate address '{0}' with id '{1}' found, skipping...", rlData.m_address, rlData.m_internalId);
                     continue;
                 }
                 var loc = rlData.Create();

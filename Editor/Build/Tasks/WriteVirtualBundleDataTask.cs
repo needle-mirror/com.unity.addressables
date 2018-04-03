@@ -15,13 +15,13 @@ namespace UnityEditor.AddressableAssets
         static readonly Type[] k_RequiredTypes = { typeof(IAddressableAssetsBuildContext), typeof(IBundleWriteData) };
         public Type[] RequiredContextTypes { get { return k_RequiredTypes; } }
 
-        public ReturnCodes Run(IBuildContext context)
+        public ReturnCode Run(IBuildContext context)
         {
             var aaContext = context.GetContextObject<IAddressableAssetsBuildContext>() as AddressableAssetsBuildContext;
             return Run(aaContext.m_settings, aaContext.m_runtimeData, aaContext.m_contentCatalog, context.GetContextObject<IBundleWriteData>());
         }
 
-        public static ReturnCodes Run(AddressableAssetSettings aaSettings, ResourceManagerRuntimeData runtimeData, ResourceLocationList contentCatalog, IBundleWriteData writeData)
+        public static ReturnCode Run(AddressableAssetSettings aaSettings, ResourceManagerRuntimeData runtimeData, ResourceLocationList contentCatalog, IBundleWriteData writeData)
         {
             var virtualBundleData = new VirtualAssetBundleRuntimeData(aaSettings.buildSettings.localLoadSpeed, aaSettings.buildSettings.remoteLoadSpeed);
             var bundledAssets = new Dictionary<string, List<string>>();
@@ -36,7 +36,7 @@ namespace UnityEditor.AddressableAssets
                         List<string> assetsInBundle = null;
                         if (!bundledAssets.TryGetValue(dep, out assetsInBundle))
                             bundledAssets.Add(dep, assetsInBundle = new List<string>());
-                        assetsInBundle.Add(loc.m_id);
+                        assetsInBundle.Add(loc.m_internalId);
                     }
                 }
             }
@@ -45,10 +45,10 @@ namespace UnityEditor.AddressableAssets
             {
                 var bundleLocData = contentCatalog.locations.Find(a => a.m_address == bd.Key);
                 uint size = (uint)(bd.Value.Count * 1024 * 1024); //for now estimate 1MB per entry
-                virtualBundleData.AssetBundles.Add(new VirtualAssetBundle(bundleLocData.m_id, bundleLocData.m_provider == typeof(LocalAssetBundleProvider).FullName, size, bd.Value));
+                virtualBundleData.AssetBundles.Add(new VirtualAssetBundle(bundleLocData.m_internalId, bundleLocData.m_provider == typeof(LocalAssetBundleProvider).FullName, size, bd.Value));
             }
             virtualBundleData.Save();
-            return ReturnCodes.Success;
+            return ReturnCode.Success;
         }
     }
 }

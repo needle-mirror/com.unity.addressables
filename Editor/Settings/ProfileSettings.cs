@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.ResourceManagement;
+using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -287,19 +288,18 @@ namespace UnityEditor.AddressableAssets
                 {
                     string v = GetValueByName(profileId, s);
                     if (string.IsNullOrEmpty(v))
-                        v = ResourceManagerConfig.GetGlobalVar(s);
+                        v = AAConfig.GetGlobalVar(s);
                     return v;
                 };
-                return ResourceManagerConfig.ExpandWithVariables(varString, '[', ']', getVal);
+                return AAConfig.ExpandWithVariables(varString, '[', ']', getVal);
             }
-
 
             void AddDefaultEntry(string profileId, string varName, string value)
             {
                 var profile = GetProfile(profileId);
                 if (profile == null)
                     SetValueByName(profileId, varName, value, true);
-                else if(profile.IndexOfVarName(varName) < 0)
+                else if (profile.IndexOfVarName(varName) < 0)
                     SetValueByName(profileId, varName, value, true);
             }
 
@@ -312,15 +312,6 @@ namespace UnityEditor.AddressableAssets
                 AddDefaultEntry(defaultId, "RemoteBuildPath", "ServerData/[BuildTarget]");
                 AddDefaultEntry(defaultId, "RemoteLoadPrefix", "http://localhost/[BuildTarget]");
                 AddDefaultEntry(defaultId, "ContentVersion", "1");
-
-                var devId = AddProfile("Dev", defaultId);
-                AddDefaultEntry(devId, "RemoteBuildPath", "DevServerData/[BuildTarget]");
-                AddDefaultEntry(devId, "RemoteLoadPrefix", "http://devserver/[BuildTarget]");
-
-                var prodId = AddProfile("Production", defaultId);
-                AddDefaultEntry(prodId, "RemoteBuildPath", "ProductionServerData/[BuildTarget]");
-                AddDefaultEntry(prodId, "RemoteLoadPrefix", "http://productionserver/[BuildTarget]");
-                
                 return defaultId;
             }
 

@@ -49,8 +49,25 @@ namespace UnityEditor.AddressableAssets
                     PostModificationEvent();
                 }
             }
+
             [UnityEngine.SerializeField]
             private BuildCompression m_compression = BuildCompression.DefaultLZ4;
+            /// <summary>
+            /// TODO - doc
+            /// </summary>
+            public bool compileScriptsInVirtualMode
+            {
+                get { return m_compileScriptsInVirtualMode; }
+                set
+                {
+                    m_compileScriptsInVirtualMode = value;
+                    PostModificationEvent();
+                }
+            }
+            [UnityEngine.SerializeField]
+            private bool m_compileScriptsInVirtualMode = false;
+
+
             /// <summary>
             /// TODO - doc
             /// //where to build bundles, this is usually a temporary folder (or a folder in the project).  bundles are copied out of this location to their final destination

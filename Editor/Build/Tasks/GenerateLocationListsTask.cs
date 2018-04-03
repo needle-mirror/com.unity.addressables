@@ -13,12 +13,12 @@ namespace UnityEditor.AddressableAssets
         static readonly Type[] k_RequiredTypes = { typeof(IAddressableAssetsBuildContext), typeof(IBundleWriteData), typeof(IBuildResults) };
         public Type[] RequiredContextTypes { get { return k_RequiredTypes; } }
 
-        public ReturnCodes Run(IBuildContext context)
+        public ReturnCode Run(IBuildContext context)
         {
             return Run(context.GetContextObject<IAddressableAssetsBuildContext>(), context.GetContextObject<IBundleWriteData>(), context.GetContextObject<IBuildResults>());
         }
 
-        public static ReturnCodes Run(IAddressableAssetsBuildContext aaContext, IBundleWriteData writeData, IBuildResults results)
+        public static ReturnCode Run(IAddressableAssetsBuildContext aaContext, IBundleWriteData writeData, IBuildResults results)
         {
             var aabc = aaContext as AddressableAssetsBuildContext;
             var aaSettings = aabc.m_settings;
@@ -55,7 +55,7 @@ namespace UnityEditor.AddressableAssets
                 assetGroup.processor.CreateResourceLocationData(aaSettings, assetGroup, kvp.Key, kvp.Value, assetsToBundles, contentCatalog.locations);
             }
 
-            return ReturnCodes.Success;
+            return ReturnCode.Success;
         }
     }
 }
