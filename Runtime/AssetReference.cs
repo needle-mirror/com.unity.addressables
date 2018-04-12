@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine.ResourceManagement;
 
 namespace UnityEngine.AddressableAssets
@@ -37,20 +38,20 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public IAsyncOperation<TObject> LoadAsync<TObject>() where TObject : Object
         {
-            return ResourceManager.LoadAsync<TObject, AssetReference>(this);
+            return Addressables.LoadAsset<TObject>(this);
         }
 
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public IAsyncOperation<TObject> InstantiateAsync<TObject>(Vector3 position, Quaternion rotation, Transform parent = null) where TObject : Object
+        public IAsyncOperation<TObject> Instantiate<TObject>(Vector3 position, Quaternion rotation, Transform parent = null) where TObject : Object
         {
-            return ResourceManager.InstantiateAsync<TObject, AssetReference>(this, position, rotation, parent);
+            return Addressables.Instantiate<TObject>(this, position, rotation, parent);
         }
 
         public IAsyncOperation<TObject> InstantiateAsync<TObject>(Transform parent = null, bool instantiateInWorldSpace = false) where TObject : Object
         {
-            return ResourceManager.InstantiateAsync<TObject, AssetReference>(this, parent, instantiateInWorldSpace);
+            return Addressables.Instantiate<TObject>(this, parent, instantiateInWorldSpace);
         }
 
         /// <summary>
@@ -58,7 +59,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public void Release<TObject>(TObject obj) where TObject : Object
         {
-            ResourceManager.Release(obj);
+            Addressables.ReleaseAsset(obj);
         }
 
         /// <summary>
@@ -66,7 +67,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public void ReleaseInstance<TObject>(TObject obj) where TObject : Object
         {
-            ResourceManager.ReleaseInstance(obj);
+            Addressables.ReleaseInstance(obj);
         }
 
 
@@ -110,16 +111,15 @@ namespace UnityEngine.AddressableAssets
 #endif
     }
 
-    internal class AssetReferenceLocator : IResourceLocator<AssetReference>
+    internal class AssetReferenceLocator : IResourceLocator
     {
-        System.Func<AssetReference, IResourceLocation> m_converter;
-        public AssetReferenceLocator(System.Func<AssetReference, IResourceLocation> conv)
+        public bool Locate(object key, out IList<IResourceLocation> locations)
         {
-            m_converter = conv;
-        }
-        public IResourceLocation Locate(AssetReference address)
-        {
-            return m_converter(address);
+            locations = null;
+            var ar = key as AssetReference;
+            if (ar == null)
+                return false;
+            return Addressables.GetResourceLocations(ar.assetGUID, out locations);
         }
     }
 

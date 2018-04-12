@@ -1,0 +1,10 @@
+﻿{
+    "name": "Unity.Addressables.Tests",
+    "references": [
+        "Unity.Addressables",
+		"Unity.ResourceManager"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine.ResourceManagement;
 using System;
 using System.IO;
-using UnityEngine.ResourceManagement.Diagnostics;
+
 
 namespace UnityEngine.AddressableAssets
 {
@@ -33,10 +33,6 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public string settingsHash;
         /// <summary>
-        /// TODO - doc
-        /// </summary>
-        public EditorPlayMode resourceProviderMode = EditorPlayMode.VirtualMode;
-        /// <summary>
         /// List of catalog locations to download in order (try remote first, then local)
         /// </summary>
         public ResourceLocationList catalogLocations = new ResourceLocationList();
@@ -52,186 +48,11 @@ namespace UnityEngine.AddressableAssets
         /// TODO - doc
         /// </summary>
         public string contentVersion = "undefined";
-
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        [RuntimeInitializeOnLoadMethod]
-        public static void InitializeResourceManager()
-        {
-            DiagnosticEventCollector.ProfileEvents = true;
-            SceneManagement.SceneManager.sceneUnloaded += ResourceManager.OnSceneUnloaded;
-            ResourceManager.s_postEvents = true;
-            ResourceManager.ResourceLocators.Add(new ResourceLocationLocator());
-            ResourceManager.ResourceProviders.Add(new JsonAssetProvider());
-            ResourceManager.ResourceProviders.Add(new TextDataProvider());
-            ResourceManager.ResourceProviders.Add(new ContentCatalogProvider());
-            var playerSettingsLocation = AAConfig.ExpandPathWithGlobalVariables(PlayerSettingsLoadLocation);
-            var runtimeDataLocation = new ResourceLocationBase<string>("RuntimeData", playerSettingsLocation, typeof(JsonAssetProvider).FullName);
-            ResourceManager.LoadAsync<ResourceManagerRuntimeData, IResourceLocation>(runtimeDataLocation).Completed += (op) =>
-            {
-                if (op.Result != null)
-                    op.Result.Init();
-            };
-        }
-
-        internal void Init()
-        {
-            if (!Application.isEditor && resourceProviderMode != EditorPlayMode.PackedMode)
-                throw new Exception("Unsupported resource provider mode in player: " + resourceProviderMode);
-
-            AAConfig.AddCachedValue("ContentVersion", contentVersion);
-
-            if (usePooledInstanceProvider)
-                ResourceManager.InstanceProvider = new PooledInstanceProvider("PooledInstanceProvider", 10);
-            else
-                ResourceManager.InstanceProvider = new InstanceProvider();
-
-            ResourceManager.SceneProvider = new SceneProvider();
-
-            DiagnosticEventCollector.ProfileEvents = profileEvents;
-            ResourceManager.s_postEvents = profileEvents;
-
-            AddResourceProviders();
-
-            ResourceManager.ResourceLocators.Add(new ResourceLocationLocator());
-            ResourceManager.ResourceLocators.Add(new AssetReferenceLocator((assetRef) => ResourceManager.GetResourceLocation(assetRef.assetGUID)));
-            AddContentCatalogs(catalogLocations);
-            LoadContentCatalog(0);
-        }
-
-        void LoadContentCatalog(int index)
-        {
-            while (index < catalogLocations.locations.Count && !catalogLocations.locations[index].m_isLoadable)
-                index++;
-
-            ResourceManager.LoadAsync<ResourceLocationList, string>(catalogLocations.locations[index].m_address).Completed += (op) =>
-            {
-                if (op.Result != null)
-                {
-                    AddContentCatalogs(op.Result);
-                    ResourceManager.SetReady();
-                }
-                else
-                {
-                    if (index + 1 >= catalogLocations.locations.Count)
-                    {
-                        Debug.LogError("Failed to load content catalog.");
-                        ResourceManager.SetReady();
-                    }
-                    else
-                    {
-                        LoadContentCatalog(index + 1);
-                    }
-                }
-            }; 
-        }
-
-        private void AddResourceProviders()
-        {
-            switch (resourceProviderMode)
-            {
+        public int assetCacheSize = 25;
+        public float assetCacheAge = 5;
+        public int bundleCacheSize = 5;
+        public float bundleCacheAge = 5;
 #if UNITY_EDITOR
-                case EditorPlayMode.FastMode:
-                    ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new AssetDatabaseProvider()));
-                    break;
-                case EditorPlayMode.VirtualMode:
-                    VirtualAssetBundleManager.AddProviders(AAConfig.ExpandPathWithGlobalVariables);
-                    break;
-#endif
-                case EditorPlayMode.PackedMode:
-                {
-                    ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new BundledAssetProvider()));
-                    ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new LocalAssetBundleProvider()));
-                    ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new RemoteAssetBundleProvider()));
-                }
-                break;
-            }
-        }
-
-        private static void AddContentCatalogs(ResourceLocationList locList)
-        {
-            var locMap = new Dictionary<string, IResourceLocation>();
-            var dataMap = new Dictionary<string, ResourceLocationData>();
-            //create and collect locations
-            for (int i = 0; i < locList.locations.Count; i++)
-            {
-                var rlData = locList.locations[i];
-                if (locMap.ContainsKey(rlData.m_address))
-                {
-                    Debug.LogErrorFormat("Duplicate address '{0}' with id '{1}' found, skipping...", rlData.m_address, rlData.m_internalId);
-                    continue;
-                }
-                var loc = rlData.Create();
-                locMap.Add(rlData.m_address, loc);
-                dataMap.Add(rlData.m_address, rlData);
-            }
-
-            //fix up dependencies between them
-            foreach (var kvp in locMap)
-            {
-                var deps = kvp.Value.Dependencies;
-                var data = dataMap[kvp.Key];
-                if (data.m_dependencies != null)
-                {
-                    foreach (var d in data.m_dependencies)
-                        kvp.Value.Dependencies.Add(locMap[d]);
-                }
-            }
-
-            //put them in the correct lookup table
-            var ccString = new ResourceLocationMap<string>();
-            var ccInt = new ResourceLocationMap<int>();
-            var ccEnum = new ResourceLocationMap<Enum>();
-
-            foreach (KeyValuePair<string, IResourceLocation> kvp in locMap)
-            {
-                IResourceLocation loc = kvp.Value;
-                ResourceLocationData rlData = dataMap[kvp.Key];
-                if (!rlData.m_isLoadable)
-                    continue;
-
-                switch (rlData.m_type)
-                {
-                    case ResourceLocationData.LocationType.String: AddToCatalog(locList.labels, ccString, loc, rlData.m_labelMask); break;
-                    case ResourceLocationData.LocationType.Int: AddToCatalog(locList.labels, ccInt, loc, rlData.m_labelMask); break;
-                    case ResourceLocationData.LocationType.Enum: AddToCatalog(locList.labels, ccEnum, loc, rlData.m_labelMask); break;
-                }
-                if (!string.IsNullOrEmpty(rlData.m_guid) && !ccString.m_addressMap.ContainsKey(rlData.m_guid))
-                    ccString.m_addressMap.Add(rlData.m_guid, loc as IResourceLocation<string>);
-            }
-            if (ccString.m_addressMap.Count > 0)
-                ResourceManager.ResourceLocators.Insert(0, ccString);
-            if (ccInt.m_addressMap.Count > 0)
-                ResourceManager.ResourceLocators.Insert(0, ccInt);
-            if (ccEnum.m_addressMap.Count > 0)
-                ResourceManager.ResourceLocators.Insert(0, ccEnum);
-        }
-
-        private static void AddToCatalog<T>(List<string> labels, ResourceLocationMap<T> locations, IResourceLocation location, long labelMask)
-        {
-            var locT = location as IResourceLocation<T>;
-            locations.m_addressMap.Add(locT.Key, locT);
-            for (int t = 0; t < labels.Count; t++)
-            {
-                if ((labelMask & (1 << t)) != 0)
-                {
-                    IList<T> results = null;
-                    if (!locations.m_labeledGroups.TryGetValue(labels[t], out results))
-                        locations.m_labeledGroups.Add(labels[t], results = new List<T>());
-                    results.Add(locT.Key);
-                }
-            }
-        }
-
-#if UNITY_EDITOR
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        public ResourceManagerRuntimeData(EditorPlayMode mode)
-        {
-            resourceProviderMode = mode;
-        }
 
         static string LibrarySettingsLocation(string mode)
         {

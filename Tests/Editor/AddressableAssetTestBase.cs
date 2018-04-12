@@ -6,7 +6,7 @@ namespace UnityEditor.AddressableAssets.Tests
 {
     public abstract class AddressableAssetTestBase
     {
-        protected const string TestConfigName = "AddresableAssetSettings";
+        protected const string TestConfigName = "AddressableAssetSettings.Tests";
         protected const string TestConfigFolder = "Assets/AddressableAssetsData_AddressableAssetSettingsTests";
         protected AddressableAssetSettings settings;
         protected string assetGUID;

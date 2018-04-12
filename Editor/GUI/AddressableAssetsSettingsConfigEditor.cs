@@ -83,9 +83,9 @@ namespace UnityEditor.AddressableAssets
             return false;
         }
 
-        private void DrawSpeedSlider(string text, ref uint speed)
+        private void DrawSpeedSlider(string text, ref long speed)
         {
-            speed = (uint)(Mathf.Clamp(EditorGUILayout.FloatField(text, speed / 1048576f), .1f, 1024f) * 1048576);
+            speed = (long)(Mathf.Clamp(EditorGUILayout.FloatField(text, speed / 1048576f), .1f, 1024f) * 1048576);
         }
 
         internal void OnEnable()
@@ -143,8 +143,8 @@ namespace UnityEditor.AddressableAssets
         {
             internal bool postProfilerEvents;
             internal ResourceManagerRuntimeData.EditorPlayMode editorPlayMode;
-            internal uint localLoadSpeed;
-            internal uint remoteLoadSpeed;
+            internal long localLoadSpeed;
+            internal long remoteLoadSpeed;
         }
     }
 }

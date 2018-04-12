@@ -14,8 +14,8 @@ namespace UnityEditor.AddressableAssets
     /// </summary>
     public partial class AddressableAssetSettings : ScriptableObject, ISerializationCallbackReceiver
     {
-        const string DefaultConfigName = "AddresableAssetSettings";
-        const string DefaultConfigFolder = "Assets/AddressableAssetsData";
+        public const string DefaultConfigName = "AddressableAssetSettings";
+        public const string DefaultConfigFolder = "Assets/AddressableAssetsData";
         /// <summary>
         /// TODO - doc
         /// </summary>

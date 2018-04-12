@@ -4,6 +4,7 @@ using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine.ResourceManagement;
 using UnityEngine.AddressableAssets;
+using System.IO;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -40,15 +41,37 @@ namespace UnityEditor.AddressableAssets
                     }
                 }
             }
-
+            
             foreach (var bd in bundledAssets)
             {
                 var bundleLocData = contentCatalog.locations.Find(a => a.m_address == bd.Key);
-                uint size = (uint)(bd.Value.Count * 1024 * 1024); //for now estimate 1MB per entry
-                virtualBundleData.AssetBundles.Add(new VirtualAssetBundle(bundleLocData.m_internalId, bundleLocData.m_provider == typeof(LocalAssetBundleProvider).FullName, size, bd.Value));
+                var bundleData = new VirtualAssetBundle(bundleLocData.m_internalId, bundleLocData.m_provider == typeof(LocalAssetBundleProvider).FullName);
+
+                long dataSize = 0;
+                long headerSize = 0;
+                foreach (var a in bd.Value)
+                {
+                    var size = ComputeSize(writeData, a);
+                    bundleData.Assets.Add(new VirtualAssetBundle.AssetInfo(a, size));
+                    dataSize += size;
+                    headerSize += (long)(a.Length * 5); //assume 5x path length overhead size per item, probably much less
+                }
+                bundleData.SetSize(dataSize, headerSize);
+                virtualBundleData.AssetBundles.Add(bundleData);
             }
             virtualBundleData.Save();
             return ReturnCode.Success;
+        }
+
+        private static long ComputeSize(IBundleWriteData writeData, string a)
+        {
+            var guid = AssetDatabase.AssetPathToGUID(a);
+            if (string.IsNullOrEmpty(guid) || guid.Length < 2)
+                return 1024;
+            var path = string.Format("Library/metadata/{0}{1}/{2}", guid[0], guid[1], guid);
+            if (!File.Exists(path))
+                return 1024;
+            return new FileInfo(path).Length;
         }
     }
 }

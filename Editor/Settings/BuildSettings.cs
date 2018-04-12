@@ -31,12 +31,12 @@ namespace UnityEditor.AddressableAssets
             /// TODO - doc
             /// </summary>
             [NonSerialized]
-            public uint localLoadSpeed = 1024 * 1024 * 10;
+            public long localLoadSpeed = 1024 * 1024 * 10;
             /// <summary>
             /// TODO - doc
             /// </summary>
             [NonSerialized]
-            public uint remoteLoadSpeed = 1024 * 1024 * 1;
+            public long remoteLoadSpeed = 1024 * 1024 * 1;
             /// <summary>
             /// TODO - doc
             /// </summary>

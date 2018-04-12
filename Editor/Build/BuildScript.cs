@@ -31,7 +31,7 @@ namespace UnityEditor.AddressableAssets
     /// </summary>
     public class BuildScript
     {
-        static int codeVersion = 3;
+        static int codeVersion = 4;
         [InitializeOnLoadMethod]
         static void Init()
         {
@@ -68,7 +68,7 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        static bool LoadFromCache(AddressableAssetSettings aaSettings, string settingsHash, ref ResourceManagerRuntimeData runtimeData, ref ResourceLocationList contentCatalog)
+        static bool LoadFromCache(AddressableAssetSettings aaSettings, string settingsHash, ResourceManagerRuntimeData.EditorPlayMode playMode, ref ResourceManagerRuntimeData runtimeData, ref ResourceLocationList contentCatalog)
         {
             if (!ResourceManagerRuntimeData.LoadFromLibrary(aaSettings.buildSettings.editorPlayMode.ToString(), ref runtimeData, ref contentCatalog))
                 return false;
@@ -76,12 +76,12 @@ namespace UnityEditor.AddressableAssets
             if (runtimeData.settingsHash != settingsHash)
             {
                 ResourceManagerRuntimeData.DeleteFromLibrary(aaSettings.buildSettings.editorPlayMode.ToString());
-                if (runtimeData.resourceProviderMode == ResourceManagerRuntimeData.EditorPlayMode.VirtualMode)
+                if (playMode == ResourceManagerRuntimeData.EditorPlayMode.VirtualMode)
                     VirtualAssetBundleRuntimeData.DeleteFromLibrary();
                 return false;
             }
 
-            if (runtimeData.resourceProviderMode == ResourceManagerRuntimeData.EditorPlayMode.VirtualMode)
+            if (playMode == ResourceManagerRuntimeData.EditorPlayMode.VirtualMode)
             {
                 if (!VirtualAssetBundleRuntimeData.CopyFromLibraryToPlayer())
                     WriteVirtualBundleDataTask.Run(aaSettings, runtimeData, contentCatalog, null);
@@ -122,9 +122,12 @@ namespace UnityEditor.AddressableAssets
             ResourceManagerRuntimeData runtimeData = null;
             ResourceLocationList contentCatalog = null;
 
-            if (!forceRebuild && LoadFromCache(aaSettings, settingsHash, ref runtimeData, ref contentCatalog))
+            var playMode = isPlayerBuild ? ResourceManagerRuntimeData.EditorPlayMode.PackedMode : aaSettings.buildSettings.editorPlayMode;
+            PlayerPrefs.SetInt("AddressablesPlayMode", (int)playMode);
+
+            if (!forceRebuild && LoadFromCache(aaSettings, settingsHash, playMode, ref runtimeData, ref contentCatalog))
             {
-                if (enteringPlayMode && runtimeData.resourceProviderMode != ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
+                if (enteringPlayMode && playMode != ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
                     AddAddressableScenesToEditorBuildSettingsSceneList(aaSettings, runtimeData);
                 if (buildCompleted != null)
                     buildCompleted(new BuildResult() { completed = true, duration = timer.Elapsed.TotalSeconds });
@@ -141,12 +144,11 @@ namespace UnityEditor.AddressableAssets
             if (!validated)
                 return false;
 
-
-            runtimeData = new ResourceManagerRuntimeData(isPlayerBuild ? ResourceManagerRuntimeData.EditorPlayMode.PackedMode : aaSettings.buildSettings.editorPlayMode);
+            runtimeData = new ResourceManagerRuntimeData();
             contentCatalog = new ResourceLocationList();
             contentCatalog.labels = aaSettings.labelTable.labelNames;
             runtimeData.profileEvents = allowProfilerEvents && aaSettings.buildSettings.postProfilerEvents;
-            if (runtimeData.resourceProviderMode == ResourceManagerRuntimeData.EditorPlayMode.FastMode)
+            if (playMode == ResourceManagerRuntimeData.EditorPlayMode.FastMode)
             {
                 foreach (var a in aaSettings.GetAllAssets(true, true))
                 {
@@ -199,7 +201,7 @@ namespace UnityEditor.AddressableAssets
                         buildTasks.Add(new BuildPlayerScripts());
                         buildTasks.Add(new SetBundleSettingsTypeDB());
 
-                        if (runtimeData.resourceProviderMode == ResourceManagerRuntimeData.EditorPlayMode.VirtualMode)
+                        if (playMode == ResourceManagerRuntimeData.EditorPlayMode.VirtualMode)
                             buildTasks.Add(new PreviewSceneDependencyData());
                         else
                             buildTasks.Add(new CalculateSceneDependencyData());
@@ -208,7 +210,7 @@ namespace UnityEditor.AddressableAssets
                         buildTasks.Add(new StripUnusedSpriteSources());
                         buildTasks.Add(new GenerateBundlePacking());
                         buildTasks.Add(new GenerateLocationListsTask());
-                        if (runtimeData.resourceProviderMode == ResourceManagerRuntimeData.EditorPlayMode.VirtualMode)
+                        if (playMode == ResourceManagerRuntimeData.EditorPlayMode.VirtualMode)
                         {
                             buildTasks.Add(new WriteVirtualBundleDataTask());
                         }
@@ -236,7 +238,7 @@ namespace UnityEditor.AddressableAssets
                 }
             }
 
-            if (enteringPlayMode && runtimeData.resourceProviderMode != ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
+            if (enteringPlayMode && playMode != ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
                 AddAddressableScenesToEditorBuildSettingsSceneList(aaSettings, runtimeData);
             runtimeData.contentVersion = aaSettings.profileSettings.GetValueByName(aaSettings.activeProfile, "ContentVersion");
             if (string.IsNullOrEmpty(runtimeData.contentVersion))
@@ -251,7 +253,6 @@ namespace UnityEditor.AddressableAssets
             contentCatalog.Validate();
 
             runtimeData.Save(contentCatalog, aaSettings.buildSettings.editorPlayMode.ToString());
-
             Resources.UnloadUnusedAssets();
             if (buildCompleted != null)
                 buildCompleted(new BuildResult() { completed = true, duration = timer.Elapsed.TotalSeconds, locationCount = contentCatalog.locations.Count });
@@ -278,7 +279,7 @@ namespace UnityEditor.AddressableAssets
                 return false;
             SceneManagerState.Record();
 
-            var runtimeData = new ResourceManagerRuntimeData(ResourceManagerRuntimeData.EditorPlayMode.VirtualMode);
+            var runtimeData = new ResourceManagerRuntimeData();
             var contentCatalog = new ResourceLocationList();
             var allBundleInputDefs = new List<AssetBundleBuild>();
             foreach (var assetGroup in aaSettings.groups)

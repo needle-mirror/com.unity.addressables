@@ -82,15 +82,34 @@ namespace UnityEditor.AddressableAssets
             if (settingsObject == null)
             {
                 GUILayout.Space(50);
-                if (GUILayout.Button("Begin Using The Addressables System"))
+                if (GUILayout.Button("Create Addressables Settings"))
                 {
                     settingsObject = AddressableAssetSettings.GetDefault(true, true);
+                }
+                if (GUILayout.Button("Import Addressables Settings"))
+                {
+                    var path = EditorUtility.OpenFilePanel("Addressables Settings Object", AddressableAssetSettings.DefaultConfigFolder, "asset");
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        var i = path.ToLower().IndexOf("/assets/");
+                        if (i > 0)
+                        {
+                            path = path.Substring(i+1);
+                            Debug.LogFormat("Loading Addressables Settings from {0}", path);
+                            var obj = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
+                            if (obj != null)
+                            {
+                                EditorBuildSettings.AddConfigObject(AddressableAssetSettings.DefaultConfigName, obj, true);
+                                settingsObject = AddressableAssetSettings.GetDefault(true, true);
+                            }
+                        }
+                    }
                 }
                 GUILayout.Space(20);
                 GUILayout.BeginHorizontal();
                 GUILayout.Space(50);
                 GUI.skin.label.wordWrap = true;
-                GUILayout.Label("Click the \"Begin\" button above or simply drag an asset into this window to start using Addressables.  Once you begin, the Addressables system will save some assets to your project to keep up with its data");
+                GUILayout.Label("Click the \"Create\" or \"Import\" button above or simply drag an asset into this window to start using Addressables.  Once you begin, the Addressables system will save some assets to your project to keep up with its data");
                 GUILayout.Space(50);
                 GUILayout.EndHorizontal();
                 switch (Event.current.type)
