@@ -73,6 +73,8 @@ namespace UnityEditor.AddressableAssets
             [SerializeField]
             internal bool readOnly;
 
+            internal bool HasSettings() { return processor == null ? false : processor.HasSettings(); }
+
             internal void OnBeforeSerialize(AddressableAssetSettings settings)
             {
                 m_serializeEntries.Clear();

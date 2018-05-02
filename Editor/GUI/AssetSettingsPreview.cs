@@ -19,14 +19,19 @@ namespace UnityEditor.AddressableAssets
         internal BuildDependencyData m_buildDependencyData;
 
         [SerializeField]
-        internal HashSet<GUID> explicitAssets;
+        internal HashSet<GUID> explicitAssets = null;
 
         internal AssetSettingsPreview()
         {
         }
 
-        SearchField m_searchField = null;
+        //SearchField m_searchField = null;
 
+        internal void ReloadIfEmpty()
+        {
+            if(explicitAssets == null || explicitAssets.Count == 0)
+                ReloadPreview();
+        }
 
         private Texture2D m_RefreshTexture;
         internal Texture2D bundleIcon;
@@ -47,8 +52,8 @@ namespace UnityEditor.AddressableAssets
 
         internal void OnGUI(Rect pos)
         {
-            if(m_searchField == null)
-                m_searchField = new SearchField();
+            //if(m_searchField == null)
+            //    m_searchField = new SearchField();
 
             if (tree == null)
             {
@@ -63,22 +68,24 @@ namespace UnityEditor.AddressableAssets
                 FindBundleIcons();
             }
 
+            GUILayout.BeginArea(pos);
             GUILayout.Space(4);
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(m_RefreshTexture, GUILayout.ExpandWidth(false)))
             {
                 ReloadPreview();
             }
-            GUILayout.Space(12);
-            tree.searchString = m_searchField.OnGUI(tree.searchString);
+            //tree.searchString = m_searchField.OnGUI(tree.searchString);
             GUILayout.Space(12);
             GUILayout.EndHorizontal();
 
             tree.OnGUI(new Rect(pos.x, pos.y + 32, pos.width, pos.height - 28));
+            GUILayout.EndArea();
         }
 
         private void ReloadPreview()
         {
+            //TODO - this should just read from the virtual bundle file in Library.
             explicitAssets = new HashSet<GUID>();
             if (BuildScript.PreviewDependencyInfo(out m_buildDependencyData, out m_bundleWriteData))
             {

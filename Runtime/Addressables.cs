@@ -738,6 +738,9 @@ namespace UnityEngine.AddressableAssets
 
         static void OnSceneUnloaded(Scene scene)
         {
+            if (!Application.isPlaying)
+                return;
+
             if (s_currentFrame != Time.frameCount)
             {
                 s_currentFrame = Time.frameCount;

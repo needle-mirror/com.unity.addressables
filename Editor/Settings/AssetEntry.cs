@@ -39,6 +39,8 @@ namespace UnityEditor.AddressableAssets
                 List<string> m_serializedLabels;
                 HashSet<string> m_labels = new HashSet<string>();
 
+                internal virtual bool HasSettings() { return false; }
+
 
                 [NonSerialized]
                 private AssetGroup m_parentGroup;

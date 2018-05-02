@@ -5,7 +5,7 @@ using UnityEditor.Build.Pipeline.Interfaces;
 
 namespace UnityEditor.AddressableAssets
 {
-    public struct PostProcessBundlesTask : IBuildTask
+    public class PostProcessBundlesTask : IBuildTask
     {
         const int k_Version = 1;
         public int Version { get { return k_Version; } }

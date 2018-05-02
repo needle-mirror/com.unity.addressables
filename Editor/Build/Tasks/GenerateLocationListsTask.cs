@@ -5,7 +5,7 @@ using UnityEditor.Build.Pipeline.Interfaces;
 
 namespace UnityEditor.AddressableAssets
 {
-    public struct GenerateLocationListsTask : IBuildTask
+    public class GenerateLocationListsTask : IBuildTask
     {
         const int k_Version = 1;
         public int Version { get { return k_Version; } }
@@ -31,13 +31,18 @@ namespace UnityEditor.AddressableAssets
                 List<string> bundleList = new List<string>();
                 assetsToBundles.Add(k.Key, bundleList);
                 List<GUID> assetList = null;
-                foreach (var f in k.Value)
+                var bundle = writeData.FileToBundle[k.Value[0]];
+                if (!bundleToAssets.TryGetValue(bundle, out assetList))
+                    bundleToAssets.Add(bundle, assetList = new List<GUID>());
+                if (!bundleList.Contains(bundle))
+                    bundleList.Add(bundle);
+                foreach (var file in k.Value)
                 {
-                    var bundle = writeData.FileToBundle[f];
-                    if (!bundleToAssets.TryGetValue(bundle, out assetList))
-                        bundleToAssets.Add(bundle, assetList = new List<GUID>());
-                    if (!bundleList.Contains(bundle))
-                        bundleList.Add(bundle);
+                    var fileBundle = writeData.FileToBundle[file];
+                    if (!bundleList.Contains(fileBundle))
+                        bundleList.Add(fileBundle);
+                    if (!bundleToAssets.ContainsKey(fileBundle))
+                        bundleToAssets.Add(fileBundle, new List<GUID>());
                 }
                 assetList.Add(k.Key);
             }
@@ -46,7 +51,7 @@ namespace UnityEditor.AddressableAssets
             {
                 AddressableAssetSettings.AssetGroup assetGroup = null;
                 if (!bundleToAssetGroup.TryGetValue(kvp.Key, out assetGroup))
-                    continue;
+                    assetGroup = aaSettings.DefaultGroup;
                 List<string> bundles;
                 if (!assetGroupToBundle.TryGetValue(assetGroup, out bundles))
                     assetGroupToBundle.Add(assetGroup, bundles = new List<string>());

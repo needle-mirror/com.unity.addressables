@@ -14,8 +14,12 @@ namespace UnityEditor.AddressableAssets
         [SerializeField]
         MultiColumnHeaderState mchs;
         AddressableAssetEntryTreeView entryTree;
-        
-        AddressableAssetsWindow window;
+
+
+        [SerializeField]
+        public AddressableAssetsSettingsConfigEditor m_configEditor = null;
+
+        public AddressableAssetsWindow window;
 
         SearchField searchField;
         const int k_SearchHeight = 20;
@@ -65,6 +69,180 @@ namespace UnityEditor.AddressableAssets
                     break;
             }
         }
+        private GUIStyle GetStyle(string styleName)
+        {
+            GUIStyle s = GUI.skin.FindStyle(styleName);
+            if (s == null)
+                s = EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).FindStyle(styleName);
+            if (s == null)
+            {
+                Debug.LogError("Missing built-in guistyle " + styleName);
+                s = new GUIStyle();
+            }
+            return s;
+        }
+
+        GUIStyle searchStyle = null;
+        GUIStyle buttonStyle = null;
+        bool previewMode = false;
+        public Texture2D cogIcon = null;
+
+        //TODO - this is a temp hack until we have better speed settings
+        enum SpeedSettings
+        {
+            undefined,
+            low,
+            medium,
+            high
+        };
+        SpeedSettings speed =SpeedSettings.undefined;
+
+        void TopToolbar(Rect toolbarPos)
+        {
+            if (searchStyle == null)
+                searchStyle = GetStyle("ToolbarSeachTextField");
+            if (buttonStyle == null)
+                buttonStyle = GetStyle("ToolbarButton");
+            if(cogIcon == null)
+                cogIcon = EditorGUIUtility.FindTexture("_Popup");
+           
+
+            GUILayout.BeginArea(new Rect(0, 0, toolbarPos.width, k_SearchHeight));
+
+            GUILayout.BeginHorizontal(EditorStyles.toolbar);
+            {
+                float spaceBetween = 4f;
+                
+                CreateDropdown();
+                GUILayout.Space(8);
+                var p = GUILayout.Toggle(previewMode, "Preview", buttonStyle);
+                if(p != previewMode)
+                {
+                    previewMode = p;
+                    if (previewMode)
+                        m_previewEditor.ReloadIfEmpty();
+                }
+                
+                GUILayout.Space(20);
+                using (new EditorGUI.DisabledScope(true))
+                {
+                    if (GUILayout.Button("Build", buttonStyle))
+                        Debug.Log("Integrated build flow is not yet implemented.");
+                }
+                
+                GUILayout.FlexibleSpace();
+
+                GUILayout.Space(spaceBetween * 2f);
+
+                Rect searchRect = GUILayoutUtility.GetRect(0, toolbarPos.width * 0.6f, 16f, 16f, searchStyle, GUILayout.MinWidth(65), GUILayout.MaxWidth(300));
+                var searchString = searchField.OnToolbarGUI(searchRect, entryTree.searchString);
+                entryTree.searchString = searchString;
+
+                GUILayout.Space(spaceBetween);
+                var gc = new GUIContent(cogIcon);
+                Rect r = GUILayoutUtility.GetRect(gc, buttonStyle);
+                if (EditorGUI.DropdownButton(r, gc, FocusType.Passive,buttonStyle))
+                {
+                    if(speed == SpeedSettings.undefined)
+                    {
+                        if (settings.buildSettings.localLoadSpeed == 1024 * 1024 * 10)
+                            speed = SpeedSettings.medium;
+                        else if (settings.buildSettings.localLoadSpeed < 1024 * 1024 * 10)
+                            speed = SpeedSettings.low;
+                        else
+                            speed = SpeedSettings.high;
+
+                    }
+                    var menu = new GenericMenu();
+                    bool fast = settings.buildSettings.editorPlayMode == UnityEngine.AddressableAssets.ResourceManagerRuntimeData.EditorPlayMode.FastMode;
+                    bool virt = settings.buildSettings.editorPlayMode == UnityEngine.AddressableAssets.ResourceManagerRuntimeData.EditorPlayMode.VirtualMode;
+                    bool packed = settings.buildSettings.editorPlayMode == UnityEngine.AddressableAssets.ResourceManagerRuntimeData.EditorPlayMode.PackedMode;
+                    menu.AddItem(new GUIContent("Play Mode/Fast"), fast, OnFastClick);
+                    menu.AddItem(new GUIContent("Play Mode/Virtual"), virt, OnVirtualClick);
+                    menu.AddItem(new GUIContent("Play Mode/Packed"), packed, OnPackedClick);
+                    menu.AddSeparator("Play Mode/");
+                    menu.AddItem(new GUIContent("Play Mode/Virtual Settings/3G speeds"), speed == SpeedSettings.low, OnVirtual3GSpeedClick);
+                    menu.AddItem(new GUIContent("Play Mode/Virtual Settings/High-Speed"), speed == SpeedSettings.medium, OnVirtualHighSpeedClick);
+                    menu.AddItem(new GUIContent("Play Mode/Virtual Settings/Max Speed"), speed == SpeedSettings.high, OnVirtualInfiniteSpeedClick);
+                    menu.AddItem(new GUIContent("Send Profile Events"), settings.buildSettings.postProfilerEvents, OnSendProfileClick);
+                    menu.DropDown(r);
+                }
+                GUILayout.Space(spaceBetween);
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+        void OnFastClick()
+        {
+            settings.buildSettings.editorPlayMode = UnityEngine.AddressableAssets.ResourceManagerRuntimeData.EditorPlayMode.FastMode;
+        }
+        void OnVirtualClick()
+        {
+            settings.buildSettings.editorPlayMode = UnityEngine.AddressableAssets.ResourceManagerRuntimeData.EditorPlayMode.VirtualMode;
+        }
+        void OnPackedClick()
+        {
+            settings.buildSettings.editorPlayMode = UnityEngine.AddressableAssets.ResourceManagerRuntimeData.EditorPlayMode.PackedMode;
+        }
+        void OnVirtual3GSpeedClick()
+        {
+            speed = SpeedSettings.low;
+            settings.buildSettings.localLoadSpeed = 1024 * 1024 * 3;
+            settings.buildSettings.remoteLoadSpeed = 262144; // 1024 * 1024 / 4;
+        }
+        void OnVirtualHighSpeedClick()
+        {
+            speed = SpeedSettings.medium;
+            settings.buildSettings.localLoadSpeed = 1024 * 1024 * 10;
+            settings.buildSettings.remoteLoadSpeed = 1024 * 1024 * 1;
+        }
+        void OnVirtualInfiniteSpeedClick()
+        {
+            speed = SpeedSettings.high;
+            settings.buildSettings.localLoadSpeed = long.MaxValue;
+            settings.buildSettings.remoteLoadSpeed = long.MaxValue;
+        }
+        void OnSendProfileClick()
+        {
+            settings.buildSettings.postProfilerEvents = !settings.buildSettings.postProfilerEvents;
+        }
+        void CreateDropdown()
+        {
+            var activeProfileName = settings.profileSettings.GetProfileName(settings.activeProfileId);
+            if(settings.activeProfileId != null && string.IsNullOrEmpty(activeProfileName))
+            {
+                settings.activeProfileId = settings.profileSettings.GetProfileId(AddressableAssetSettings.ProfileSettings.k_rootProfileName);
+                activeProfileName = settings.profileSettings.GetProfileName(settings.activeProfileId);
+            }
+            var profileButton = new GUIContent("Profile: " + activeProfileName);
+
+            Rect r = GUILayoutUtility.GetRect(profileButton, buttonStyle, GUILayout.Width(115f));
+            if (EditorGUI.DropdownButton(r, profileButton, FocusType.Passive, EditorStyles.toolbarDropDown))
+            {
+                //GUIUtility.hotControl = 0;
+                var menu = new GenericMenu();
+
+                var nameList = settings.profileSettings.GetAllProfileNames();
+                
+                foreach(var name in nameList)
+                {
+                    menu.AddItem(new GUIContent(name), name == activeProfileName, SetActiveProfile, name);
+                }
+                menu.AddItem(new GUIContent("Manage Profiles"), false, ShowManageProfilesWindow);
+                menu.DropDown(r);
+            }
+        }
+
+        void SetActiveProfile(object context)
+        {
+            var n = context as string;
+            settings.activeProfileId = settings.profileSettings.GetProfileId(n);
+        }
+
+        void ShowManageProfilesWindow()
+        {
+            ProfilesWindow.OpenWindow();
+        }
 
         private bool m_modificationRegistered = false;
         public void OnEnable()
@@ -73,6 +251,10 @@ namespace UnityEditor.AddressableAssets
                 return;
             settings.OnModification += OnSettingsModification;
             m_modificationRegistered = true;
+
+
+            if (m_configEditor != null)
+                m_configEditor.OnEnable();
         }
 
         public void OnDisable()
@@ -81,7 +263,13 @@ namespace UnityEditor.AddressableAssets
                 return;
             settings.OnModification -= OnSettingsModification;
             m_modificationRegistered = false;
+
+            if (m_configEditor != null)
+                m_configEditor.OnDisable();
         }
+
+        [SerializeField]
+        AssetSettingsPreview m_previewEditor = null;
 
         public bool OnGUI(Rect pos)
         {
@@ -96,8 +284,7 @@ namespace UnityEditor.AddressableAssets
             }
 
 
-            HandleVerticalResize(pos);
-            
+
             if (entryTree == null)
             {
                 if (treeState == null)
@@ -112,19 +299,6 @@ namespace UnityEditor.AddressableAssets
                 entryTree = new AddressableAssetEntryTreeView(treeState, mchs, this);
                 entryTree.Reload();
             }
-
-            var width = pos.width - k_SplitterWidth * 2;
-            var inRectY = m_VerticalSplitterRect.y - pos.yMin;
-            var topRect = new Rect(pos.xMin + k_SplitterWidth, pos.yMin + k_SplitterWidth, width, inRectY - k_SplitterWidth);
-            var botRect = new Rect(pos.xMin + k_SplitterWidth, pos.yMin + inRectY + k_SplitterWidth, width, pos.height - inRectY - k_SplitterWidth * 2);
-
-            var searchRect = new Rect(topRect.xMin, topRect.yMin, topRect.width, k_SearchHeight);
-            var treeRect = new Rect(topRect.xMin, topRect.yMin + k_SearchHeight, topRect.width, topRect.height - k_SearchHeight);
-            var searchString = searchField.OnGUI(searchRect, entryTree.searchString);
-            entryTree.searchString = searchString;
-            
-            entryTree.OnGUI(treeRect);
-
             if (m_details == null)
             {
                 m_details = new AssetDetailsView();
@@ -132,7 +306,34 @@ namespace UnityEditor.AddressableAssets
                 entryTree.SetSelection(sel, TreeViewSelectionOptions.FireSelectionChanged);
             }
 
-            m_details.OnGUI(settings, botRect);
+
+            HandleVerticalResize(pos);
+            var width = pos.width - k_SplitterWidth * 2;
+            var inRectY = pos.height;
+            if(m_details.SelectionHasSettings() && !previewMode)
+                inRectY = m_VerticalSplitterRect.yMin - pos.yMin;
+
+            var searchRect = new Rect(pos.xMin, pos.yMin, pos.width, k_SearchHeight);
+            var treeRect = new Rect(pos.xMin, pos.yMin + k_SearchHeight, pos.width, inRectY - k_SearchHeight);
+            var botRect = new Rect(pos.xMin + k_SplitterWidth, pos.yMin + inRectY + k_SplitterWidth, width, pos.height - inRectY - k_SplitterWidth * 2);
+
+            TopToolbar(searchRect);
+
+            if(!previewMode)
+            {
+                entryTree.OnGUI(treeRect);
+                if(inRectY != pos.height)
+                    m_details.OnGUI(settings, botRect);
+            }
+            else
+            {
+
+                if (m_previewEditor == null)
+                    m_previewEditor = new AssetSettingsPreview();
+                m_previewEditor.OnGUI(treeRect);
+            }
+
+
 
             return m_ResizingVerticalSplitter;
         }
@@ -147,6 +348,7 @@ namespace UnityEditor.AddressableAssets
         {
             m_VerticalSplitterRect.y = (int)(position.yMin + position.height * m_VerticalSplitterPercent);
             m_VerticalSplitterRect.width = position.width;
+            m_VerticalSplitterRect.height = k_SplitterWidth;
 
 
             EditorGUIUtility.AddCursorRect(m_VerticalSplitterRect, MouseCursor.ResizeVertical);
@@ -170,15 +372,20 @@ namespace UnityEditor.AddressableAssets
     internal class AddressableAssetEntryTreeView : TreeView
     {
         AddressableAssetsSettingsGroupEditor editor;
-        public AddressableAssetEntryTreeView(TreeViewState state, MultiColumnHeaderState mchs, AddressableAssetsSettingsGroupEditor editor) : base(state, new MultiColumnHeader(mchs))
+        public AddressableAssetEntryTreeView(TreeViewState state, MultiColumnHeaderState mchs, AddressableAssetsSettingsGroupEditor ed) : base(state, new MultiColumnHeader(mchs))
         {
             showBorder = true;
-            this.editor = editor;
+            editor = ed;
+            columnIndexForTreeFoldouts = 0;
         }
 
         protected override TreeViewItem BuildRoot()
         {
-            return new TreeViewItem(-1, -1);
+            var root = new TreeViewItem(-1, -1);
+            foreach (var group in editor.settings.groups)
+                AddGroupChildrenBuild(group, root);
+        
+            return root;
         }
 
         public enum ColumnID
@@ -187,24 +394,6 @@ namespace UnityEditor.AddressableAssets
             Type,
             Path,
             Labels
-        }
-
-        protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
-        {
-            List<TreeViewItem> tempRows = new List<TreeViewItem>(100);
-
-            if (!string.IsNullOrEmpty(searchString))
-            {
-                Search(searchString, tempRows);
-            }
-            else
-            {
-                foreach (var group in editor.settings.groups)
-                {
-                    AddGroupChildren(group, tempRows);
-                }
-            }
-            return tempRows;
         }
 
         protected virtual void Search(string search, List<TreeViewItem> rows)
@@ -245,46 +434,36 @@ namespace UnityEditor.AddressableAssets
             //SortSearchResult(result);
         }
 
-        void AddGroupChildren(AddressableAssetSettings.AssetGroup group, List<TreeViewItem> rows)
+        void AddGroupChildrenBuild(AddressableAssetSettings.AssetGroup group, TreeViewItem root)
         {
             var groupItem = new AssetEntryTreeViewItem(group, 0);
-            rows.Add(groupItem);
+            root.AddChild(groupItem);
             if (group.entries.Count > 0)
             {
-                if (IsExpanded(groupItem.id))
-                {
+                
                     foreach (var entry in group.entries)
                     {
-                        AddAndRecurseEntries(entry, groupItem, rows, 1);
+                        AddAndRecurseEntriesBuild(entry, groupItem, 1);
                     }
-                }
-                else
-                {
-                    groupItem.children = CreateChildListForCollapsedParent();
-                }
+                
             }
         }
 
-        void AddAndRecurseEntries(AddressableAssetSettings.AssetGroup.AssetEntry entry, AssetEntryTreeViewItem parent, List<TreeViewItem> rows, int depth)
+        void AddAndRecurseEntriesBuild(AddressableAssetSettings.AssetGroup.AssetEntry entry, AssetEntryTreeViewItem parent, int depth)
         {
             var item = new AssetEntryTreeViewItem(entry, depth);
             parent.AddChild(item);
-            rows.Add(item);
+            //rows.Add(item);
             List<AddressableAssetSettings.AssetGroup.AssetEntry> subAssets = null;
             entry.GetSubAssets(out subAssets, editor.settings);
             if (subAssets != null && subAssets.Count > 0)
             {
-                if (IsExpanded(item.id))
-                {
+                
                     foreach (var e in subAssets)
                     {
-                        AddAndRecurseEntries(e, item, rows, depth + 1);
+                        AddAndRecurseEntriesBuild(e, item, depth + 1);
                     }
-                }
-                else
-                {
-                    item.children = CreateChildListForCollapsedParent();
-                }
+                
             }
         }
 
@@ -313,20 +492,28 @@ namespace UnityEditor.AddressableAssets
                     int first;
                     int last;
                     GetFirstAndLastVisibleRows(out first, out last);
-                    for(int rowID = first; rowID <= last; rowID++)
+                    for (int rowID = first; rowID <= last; rowID++)
                     {
                         var aeI = rows[rowID] as AssetEntryTreeViewItem;
-                        if(aeI != null && aeI.entry != null)
+                        if (aeI != null && aeI.entry != null)
                         {
                             DefaultStyles.backgroundEven.Draw(GetRowRect(rowID), false, false, false, false);
                         }
                     }
-                } 
+                }
             }
         }
 
+        GUIStyle labelStyle = null;
         protected override void RowGUI(RowGUIArgs args)
         {
+            if (labelStyle == null)
+            {
+                labelStyle = new GUIStyle("PR Label");
+                if (labelStyle == null)
+                    labelStyle = GUI.skin.GetStyle("Label");
+            }
+
             var item = args.item as AssetEntryTreeViewItem;
             if (item == null)
             {
@@ -351,46 +538,73 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        GUIStyle labelStyle = null;
         private void CellGUI(Rect cellRect, AssetEntryTreeViewItem item, int column, ref RowGUIArgs args)
         {
-            if(labelStyle == null)
-            {
-                labelStyle = new GUIStyle("PR Label");
-                if (labelStyle == null)
-                    labelStyle = GUI.skin.GetStyle("Label");
-            }
+
 
 
             CenterRectUsingSingleLineHeight(ref cellRect);
 
-            if (Event.current.type == EventType.Repaint)
+            
+            switch ((ColumnID)column)
             {
-                switch ((ColumnID)column)
-                {
-                    case ColumnID.Id:
-                        {
-                            // The rect is assumed indented and sized after the content when pinging
-                            float indent = GetContentIndent(item) + extraSpaceBeforeIconAndLabel;
-                            cellRect.xMin += indent;
+                case ColumnID.Id:
+                    {
+                        // The rect is assumed indented and sized after the content when pinging
+                        float indent = GetContentIndent(item) + extraSpaceBeforeIconAndLabel;
+                        cellRect.xMin += indent;
 
+                        if (Event.current.type == EventType.Repaint)
                             labelStyle.Draw(cellRect, item.entry.address, false, false, args.selected, args.focused);
-                        }
-                        break;
-                    case ColumnID.Path:
+                    }
+                    break;
+                case ColumnID.Path:
+                    if (Event.current.type == EventType.Repaint)
                         labelStyle.Draw(cellRect, item.entry.assetPath, false, false, args.selected, args.focused);
-                        break;
-                    case ColumnID.Type:
-                        if (item.assetIcon != null)
-                            GUI.DrawTexture(cellRect, item.assetIcon, ScaleMode.ScaleToFit, true);
-                        break;
-                    case ColumnID.Labels:
-                        labelStyle.Draw(cellRect, editor.settings.labelTable.GetString(item.entry.labels), false, false, args.selected, args.focused);
-                        break;
-                }
+                    break;
+                case ColumnID.Type:
+                    if (item.assetIcon != null)
+                        GUI.DrawTexture(cellRect, item.assetIcon, ScaleMode.ScaleToFit, true);
+                    break;
+                case ColumnID.Labels:
+                    if (EditorGUI.DropdownButton(cellRect, new GUIContent(editor.settings.labelTable.GetString(item.entry.labels, cellRect.width)), FocusType.Passive))
+                    {
+                        var selection = GetItemsForContext(args.item.id);
+                        Dictionary<string, int> labelCounts = new Dictionary<string, int>();
+                        List<AddressableAssetSettings.AssetGroup.AssetEntry> entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+                        bool readOnly = false;
+                        foreach (var s in selection)
+                        {
+                            var aeItem = FindItem(s, rootItem) as AssetEntryTreeViewItem;
+                            if (aeItem == null || aeItem.entry == null)
+                                continue;
+
+                            entries.Add(aeItem.entry);
+                            readOnly |= aeItem.entry.readOnly;
+                            foreach (var label in aeItem.entry.labels)
+                            {
+                                var count = 0;
+                                labelCounts.TryGetValue(label, out count);
+                                count++;
+                                labelCounts[label] = count;
+                            }
+                        }
+                        PopupWindow.Show(cellRect, new LabelMaskPopupContent(editor.settings, entries, labelCounts));
+                    }
+                    break;
+
             }
         }
+        private IList<int> GetItemsForContext(int row)
+        {
+            var selection = GetSelection();
+            if (selection.Contains(row))
+                return selection;
 
+            selection = new List<int>();
+            selection.Add(row);
+            return selection;
+        }
         protected override void SelectionChanged(IList<int> selectedIds)
         {
             base.SelectionChanged(selectedIds);
@@ -440,11 +654,11 @@ namespace UnityEditor.AddressableAssets
                 new MultiColumnHeaderState.Column(),
                 new MultiColumnHeaderState.Column(),
                 new MultiColumnHeaderState.Column(),
-                //    new MultiColumnHeaderState.Column(),
+                //new MultiColumnHeaderState.Column(),
             };
 
             int counter = 0;
-
+            
             retVal[counter].headerContent = new GUIContent("Address", "Asset address");
             retVal[counter].minWidth = 100;
             retVal[counter].width = 260;
@@ -579,7 +793,7 @@ namespace UnityEditor.AddressableAssets
             List<AssetEntryTreeViewItem> selectedNodes = new List<AssetEntryTreeViewItem>();
             foreach (var nodeID in GetSelection())
             {
-                var item = FindItemInVisibleRows(nodeID) as AssetEntryTreeViewItem;
+                var item = FindItemInVisibleRows(nodeID) as AssetEntryTreeViewItem; //TODO - this probably makes off-screen but selected items not get added to list.
                 if (item != null)
                     selectedNodes.Add(item);
             }
@@ -649,7 +863,6 @@ namespace UnityEditor.AddressableAssets
                             menu.AddItem(new GUIContent("Convert Group Type/" + name), false, ConvertGroupsToProcessor, new KeyValuePair<string, List<AssetEntryTreeViewItem>>(ty.FullName, selectedNodes));
                             if (selectedNodes.Count > 1)
                                 menu.AddItem(new GUIContent("Merge Groups/" + name), false, MergeGroupsToNewGroup, new KeyValuePair<string, List<AssetEntryTreeViewItem>>(ty.FullName, selectedNodes));
-                            //     menu.AddItem(new GUIContent("Extract Common Assets/" + name), false, ExtractCommonAssets, new KeyValuePair<string, List<AssetEntryTreeViewItem>>(ty.FullName, selectedNodes));
                         }
                     }
                     menu.AddItem(new GUIContent("Remove Group(s)"), false, RemoveGroup, selectedNodes);
@@ -1042,201 +1255,174 @@ namespace UnityEditor.AddressableAssets
         }
     }
 
+   
+
+
+    class LabelMaskPopupContent : PopupWindowContent
+    {
+        AddressableAssetSettings m_settings;
+        List<AddressableAssetSettings.AssetGroup.AssetEntry> m_entries;
+        Dictionary<string, int> m_labelCount;
+
+        GUIStyle toggleMixed = null;
+
+
+        int lastItemCount = -1;
+        Vector2 rect = new Vector2();
+        public LabelMaskPopupContent(AddressableAssetSettings settings, List<AddressableAssetSettings.AssetGroup.AssetEntry> e, Dictionary<string, int> count)
+        {
+            m_settings = settings;
+            m_entries = e;
+            m_labelCount = count;
+        }
+
+        public override Vector2 GetWindowSize()
+        {
+            var labelTable = m_settings.labelTable;
+            if (lastItemCount != labelTable.labelNames.Count)
+            {
+                int maxLen = 0;
+                string maxStr = "";
+                for (int i = 0; i < labelTable.labelNames.Count; i++)
+                {
+                    var len = labelTable.labelNames[i].Length;
+                    if (len > maxLen)
+                    {
+                        maxLen = len;
+                        maxStr = labelTable.labelNames[i];
+                    }
+                }
+                float minWidth, maxWidth;
+                var content = new GUIContent(maxStr);
+                GUI.skin.toggle.CalcMinMaxWidth(content, out minWidth, out maxWidth);
+                var height = GUI.skin.toggle.CalcHeight(content, maxWidth) + 3.5f;
+                rect = new Vector2(Mathf.Clamp(maxWidth + 100, 300, 600), Mathf.Clamp(labelTable.labelNames.Count * height + 25, 100, 65 * height));
+                lastItemCount = labelTable.labelNames.Count;
+            }
+            return rect;
+        }
+
+        private void SetValueOnEntries(string label, bool value)
+        {
+            foreach (var e in m_entries)
+            {
+                e.SetLabel(label, value);
+            }
+            m_labelCount[label] = value ? m_entries.Count : 0;
+        }
+
+        bool focusTextEntry = false;
+        public override void OnGUI(Rect rect)
+        {
+            if (m_entries.Count == 0)
+                return;
+
+
+            var labelTable = m_settings.labelTable;
+
+            GUILayout.BeginArea(new Rect(rect.xMin + 3, rect.yMin + 3, rect.width - 6, rect.height - 6));
+
+            string toRemove = null;
+            foreach (var labelName in labelTable.labelNames)
+            {
+                EditorGUILayout.BeginHorizontal();
+
+                bool oldState = false;
+                bool newState = false;
+                int count = 0;
+                if (m_labelCount == null)
+                    count = m_entries[0].labels.Contains(labelName) ? m_entries.Count : 0;
+                else
+                    m_labelCount.TryGetValue(labelName, out count);
+
+                if (count == 0)
+                {
+                    newState = GUILayout.Toggle(oldState, new GUIContent(labelName), GUILayout.ExpandWidth(false));
+                }
+                else if (count == m_entries.Count)
+                {
+                    oldState = true;
+                    newState = GUILayout.Toggle(oldState, new GUIContent(labelName), GUILayout.ExpandWidth(false));
+                }
+                else
+                {
+                    if (toggleMixed == null)
+                        toggleMixed = new GUIStyle("ToggleMixed");
+                    //if (GUILayout.Toggle(false, addressableAssetToggleText, toggleMixed, GUILayout.ExpandWidth(false)))
+                    newState = GUILayout.Toggle(oldState, new GUIContent(labelName), toggleMixed, GUILayout.ExpandWidth(false));
+                }
+                if (oldState != newState)
+                {
+                    SetValueOnEntries(labelName, newState);
+                }
+
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button(new GUIContent("X"), GUILayout.ExpandWidth(false)))
+                    toRemove = labelName;
+                EditorGUILayout.EndHorizontal();
+            }
+            if (toRemove != null)
+                labelTable.RemoveLabelName(toRemove);
+
+            if (labelTable.labelNames.Count < 64)
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField(new GUIContent("New"), GUILayout.Width(50), GUILayout.ExpandWidth(false));
+                GUI.SetNextControlName("MaskTextEntry");
+                var newEntry = EditorGUILayout.DelayedTextField("", GUILayout.ExpandWidth(true));
+                if (focusTextEntry)
+                {
+                    focusTextEntry = false;
+                    GUI.FocusWindow(GUIUtility.hotControl);
+                    EditorGUI.FocusTextInControl("MaskTextEntry");
+                }
+                if (!string.IsNullOrEmpty(newEntry))
+                {
+                    focusTextEntry = true;
+                    labelTable.AddLabelName(newEntry);
+                    SetValueOnEntries(newEntry, true);
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+            GUILayout.EndArea();
+        }
+    }
+
     internal class AssetDetailsView
     {
         public AddressableAssetSettings.AssetGroup group;
         public List<AddressableAssetSettings.AssetGroup.AssetEntry> entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
 
-        class LabelMaskPopupContent : PopupWindowContent
+        public bool SelectionHasSettings()
         {
-            AddressableAssetSettings m_settings;
-            List<AddressableAssetSettings.AssetGroup.AssetEntry> m_entries;
-            Dictionary<string, int> m_labelCount;
-
-            GUIStyle toggleMixed = null;
-
-
-            int lastItemCount = -1;
-            Vector2 rect = new Vector2();
-            public LabelMaskPopupContent(AddressableAssetSettings settings, List<AddressableAssetSettings.AssetGroup.AssetEntry> e, Dictionary<string, int> count)
+            bool result = false;
+            if(group != null)
             {
-                m_settings = settings;
-                m_entries = e;
-                m_labelCount = count;
+                result = group.HasSettings();
+                result &= entries.Count == 0;
             }
-
-            public override Vector2 GetWindowSize()
+            else
             {
-                var labelTable = m_settings.labelTable;
-                if (lastItemCount != labelTable.labelNames.Count)
-                {
-                    int maxLen = 0;
-                    string maxStr = "";
-                    for (int i = 0; i < labelTable.labelNames.Count; i++)
-                    {
-                        var len = labelTable.labelNames[i].Length;
-                        if (len > maxLen)
-                        {
-                            maxLen = len;
-                            maxStr = labelTable.labelNames[i];
-                        }
-                    }
-                    float minWidth, maxWidth;
-                    var content = new GUIContent(maxStr);
-                    GUI.skin.toggle.CalcMinMaxWidth(content, out minWidth, out maxWidth);
-                    var height = GUI.skin.toggle.CalcHeight(content, maxWidth) + 3.5f;
-                    rect = new Vector2(Mathf.Clamp(maxWidth + 100, 300, 600), Mathf.Clamp(labelTable.labelNames.Count * height + 25, 100, 65 * height));
-                    lastItemCount = labelTable.labelNames.Count;
+                result = entries.Count > 0;
+                foreach (var e in entries)
+                { 
+                    if(e != null)
+                        result &= e.HasSettings();
                 }
-                return rect;
             }
-
-            private void SetValueOnEntries(string label, bool value)
-            {
-                foreach (var e in m_entries)
-                {
-                    e.SetLabel(label, value);
-                }
-                m_labelCount[label] = value ? m_entries.Count : 0;
-            }
-
-            bool focusTextEntry = false;
-            public override void OnGUI(Rect rect)
-            {
-                if (m_entries.Count == 0)
-                    return;
-
-
-                var labelTable = m_settings.labelTable;
-
-                GUILayout.BeginArea(new Rect(rect.xMin + 3, rect.yMin + 3, rect.width - 6, rect.height - 6));
-
-                string toRemove = null;
-                foreach (var labelName in labelTable.labelNames)
-                {
-                    EditorGUILayout.BeginHorizontal();
-
-                    bool oldState = false;
-                    bool newState = false;
-                    int count = 0;
-                    if (m_labelCount == null)
-                        count = m_entries[0].labels.Contains(labelName) ? m_entries.Count : 0;
-                    else
-                        m_labelCount.TryGetValue(labelName, out count);
-
-                    if (count == 0)
-                    {
-                        newState = GUILayout.Toggle(oldState, new GUIContent(labelName), GUILayout.ExpandWidth(false));
-                    }
-                    else if (count == m_entries.Count)
-                    {
-                        oldState = true;
-                        newState = GUILayout.Toggle(oldState, new GUIContent(labelName), GUILayout.ExpandWidth(false));
-                    }
-                    else
-                    {
-                        if (toggleMixed == null)
-                            toggleMixed = new GUIStyle("ToggleMixed");
-                        //if (GUILayout.Toggle(false, addressableAssetToggleText, toggleMixed, GUILayout.ExpandWidth(false)))
-                        newState = GUILayout.Toggle(oldState, new GUIContent(labelName), toggleMixed, GUILayout.ExpandWidth(false));
-                    }
-                    if (oldState != newState)
-                    {
-                        SetValueOnEntries(labelName, newState);
-                    }
-
-                    GUILayout.FlexibleSpace();
-                    if (GUILayout.Button(new GUIContent("X"), GUILayout.ExpandWidth(false)))
-                        toRemove = labelName;
-                    EditorGUILayout.EndHorizontal();
-                }
-                if (toRemove != null)
-                    labelTable.RemoveLabelName(toRemove);
-
-                if (labelTable.labelNames.Count < 64)
-                {
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField(new GUIContent("New"), GUILayout.Width(50), GUILayout.ExpandWidth(false));
-                    GUI.SetNextControlName("MaskTextEntry");
-                    var newEntry = EditorGUILayout.DelayedTextField("", GUILayout.ExpandWidth(true));
-                    if (focusTextEntry)
-                    {
-                        focusTextEntry = false;
-                        GUI.FocusWindow(GUIUtility.hotControl);
-                        EditorGUI.FocusTextInControl("MaskTextEntry");
-                    }
-                    if (!string.IsNullOrEmpty(newEntry))
-                    {
-                        focusTextEntry = true;
-                        labelTable.AddLabelName(newEntry);
-                        SetValueOnEntries(newEntry, true);
-                    }
-                    EditorGUILayout.EndHorizontal();
-                }
-                GUILayout.EndArea();
-            }
+            return result;
         }
-
         Rect buttonRect, toolbarRect;
         public void OnGUI(AddressableAssetSettings settings, Rect pos)
         {
             MyExtensionMethods.DrawOutline(pos, 1f);
             if (entries.Count > 0)
             {
-                bool readOnly = false;
-                Dictionary<string, int> labelCounts = new Dictionary<string, int>();
-                foreach (var e in entries)
-                {
-                    readOnly |= e.readOnly;
-                    foreach (var label in e.labels)
-                    {
-                        var count = 0;
-                        labelCounts.TryGetValue(label, out count);
-                        count++;
-                        labelCounts[label] = count;
-                    }
-                }
-
-                using (new EditorGUI.DisabledScope(readOnly))
-                {
-                    GUILayout.BeginArea(pos);
-                    if (entries.Count == 1)
-                    {
-                        var e = entries[0];
-                        e.address = EditorGUILayout.DelayedTextField(new GUIContent("Address"), e.address, GUILayout.ExpandWidth(true));
-
-                        EditorGUILayout.BeginHorizontal();
-                        EditorGUILayout.PrefixLabel(new GUIContent("Labels"));
-                        if (EditorGUILayout.DropdownButton(new GUIContent(settings.labelTable.GetString(e.labels)), FocusType.Passive))
-                            PopupWindow.Show(buttonRect, new LabelMaskPopupContent(settings, entries, labelCounts));
-                        if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();
-                        EditorGUILayout.EndHorizontal();
-                    }
-                    else
-                    {
-                        using (new EditorGUI.DisabledScope(true))
-                            EditorGUILayout.DelayedTextField(new GUIContent("Address"), "--", GUILayout.ExpandWidth(true));
-
-                        EditorGUILayout.BeginHorizontal();
-                        EditorGUILayout.PrefixLabel(new GUIContent("Labels"));
-                        if (EditorGUILayout.DropdownButton(new GUIContent("--"), FocusType.Passive))
-                            PopupWindow.Show(buttonRect, new LabelMaskPopupContent(settings, entries, labelCounts));
-                        if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();
-                        EditorGUILayout.EndHorizontal();
-                    }
-                    GUILayout.EndArea();
-                }
+                //TODO - have the ability for entries to somehow show some GUI if the user has created a custom "entry" type.
             }
-            else if (group != null)
+            else if (group != null && group.processor != null)
             {
-                GUILayout.BeginArea(pos);
-                EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-                GUILayout.Label(group.name + " (" + group.processor.displayName + ")");
-                GUILayout.EndHorizontal();
-                GUILayout.EndArea();
-                if (Event.current.type == EventType.Repaint) toolbarRect = GUILayoutUtility.GetLastRect();
-                var rect = new Rect(pos.x, pos.y + toolbarRect.height, pos.width, pos.height - toolbarRect.height);
-                group.processor.OnDrawGUI(settings, rect);
+                group.processor.OnDrawGUI(settings, pos);
             }
         }
     }

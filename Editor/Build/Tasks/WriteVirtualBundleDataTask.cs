@@ -8,7 +8,7 @@ using System.IO;
 
 namespace UnityEditor.AddressableAssets
 {
-    public struct WriteVirtualBundleDataTask : IBuildTask
+    public class WriteVirtualBundleDataTask : IBuildTask
     {
         const int k_Version = 1;
         public int Version { get { return k_Version; } }

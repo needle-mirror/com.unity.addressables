@@ -19,178 +19,130 @@ namespace UnityEditor.AddressableAssets
         [Serializable]
         public class ProfileSettings
         {
-            /// <summary>
-            /// TODO - doc
-            /// </summary>
-            [Serializable]
-            public class ProfileValue
+            
+            public enum ProfileEntryUsage
             {
-                /// <summary>
-                /// TODO - doc
-                /// </summary>
-                public bool custom
-                {
-                    get { return m_custom; }
-                }
-                [SerializeField]
-                private bool m_custom = false;
-                /// <summary>
-                /// TODO - doc
-                /// </summary>
-                public string value
-                {
-                    get { return m_value; }
-                }
-                [SerializeField]
-                private string m_value = "";
-
-                /// <summary>
-                /// TODO - doc
-                /// </summary>
-                /// 
-                public string GetDisplayName(ProfileSettings ps, string profileId)
-                {
-                    return m_custom ? "<custom>" : ps.GetVariableName(profileId, m_value);
-                }
-
-                public ProfileValue() { }
-                /// <summary>
-                /// TODO - doc
-                /// </summary>
-                public ProfileValue(string val, bool custom) { m_value = val; m_custom = custom; }
-                /// <summary>
-                /// TODO - doc
-                /// </summary>
-                public string Evaluate(ProfileSettings ps, string profileId)
-                {
-                    return ps.Evaluate(profileId, m_custom ? m_value : ps.GetValueById(profileId, m_value));
-                }
-                /// <summary>
-                /// TODO - doc
-                /// </summary>
-                public bool SetValue(ProfileSettings ps, string val, bool cust = false)
-                {
-                    if (cust == m_custom && val == m_value)
-                        return false;
-                    m_custom = cust;
-                    m_value = val;
-                    ps.PostModificationEvent(ModificationEvent.ProfileModified);
-                    return true;
-                }
+                Invalid = 1,
+                Inline = 2,
+                BuildPath = 4,
+                LoadPrefix = 8,
+                Helper = 1024,
+                Other = 2048,
             }
 
             [Serializable]
-            class BuildProfile
+            internal class BuildProfile
             {
                 [Serializable]
-                public class Variable
+                public class ProfileEntry
                 {
+
                     public string m_id;
-                    public string m_name;
                     public string m_value;
-                    public Variable(string id, string n, string v)
+                    public ProfileEntry(string id, string v)
                     {
                         m_id = id;
-                        m_name = n;
                         m_value = v;
                     }
                 }
+                [NonSerialized]
+                ProfileSettings m_profileParent = null;
 
                 [SerializeField]
-                internal string m_parent;
+                internal string m_inheritedParent;
                 [SerializeField]
-                public string m_id;
-                [SerializeField]
-                public string m_name;
-                [SerializeField]
-                public List<Variable> m_values = new List<Variable>();
-
-                public BuildProfile(string profileId, string n, string p)
+                string m_id;
+                public string id
                 {
-                    m_id = profileId;
-                    m_name = n;
-                    m_parent = p;
+                    get { return m_id; }
+                    set { m_id = value; }
+                }
+                [SerializeField]
+                string m_profileName;
+                public string profileName
+                {
+                    get { return m_profileName; }
+                    set { m_profileName = value; }
+                }
+                [SerializeField]
+                private List<ProfileEntry> m_values = new List<ProfileEntry>();
+                public List<ProfileEntry> values {
+                    get { return m_values; }
+                    set { m_values = value; }
+                }
+
+                public BuildProfile(string name, BuildProfile copyFrom, ProfileSettings ps)
+                {
+                    m_inheritedParent = null;
+                    id = GUID.Generate().ToString();
+                    profileName = name;
+                    values.Clear();
+                    m_profileParent = ps;
+
+                    if (copyFrom != null)
+                    {
+                        values.AddRange(copyFrom.values);
+                        m_inheritedParent = copyFrom.m_inheritedParent;
+                    }
+                        
+                }
+                internal void OnAfterDeserialize(ProfileSettings ps)
+                {
+                    m_profileParent = ps;
                 }
 
                 private int IndexOfVarId(string variableId)
                 {
-                    for (int i = 0; i < m_values.Count; i++)
-                        if (m_values[i].m_id == variableId)
+                    if (string.IsNullOrEmpty(variableId))
+                        return -1;
+
+                    for (int i = 0; i < values.Count; i++)
+                        if (values[i].m_id == variableId)
                             return i;
                     return -1;
                 }
 
-                internal int IndexOfVarName(string name)
+                private int IndexOfVarName(string name)
                 {
-                    for (int i = 0; i < m_values.Count; i++)
-                        if (m_values[i].m_name == name)
+                    if (m_profileParent == null)
+                        return -1;
+
+                    var id = m_profileParent.GetVariableID(name);
+                    if (string.IsNullOrEmpty(id))
+                        return -1;
+
+                    for (int i = 0; i < values.Count; i++)
+                        if (values[i].m_id == id)
                             return i;
                     return -1;
                 }
 
-                internal string GetValueById(ProfileSettings ps, string variableId)
+                internal string GetValueById(string variableId)
                 {
                     var i = IndexOfVarId(variableId);
                     if (i >= 0)
-                        return m_values[i].m_value;
+                        return values[i].m_value;
 
-                    return ps.GetValueById(m_parent, variableId);
-                }
 
-                internal string GetValueByName(ProfileSettings ps, string variableName)
-                {
-                    var i = IndexOfVarName(variableName);
-                    if (i >= 0)
-                        return m_values[i].m_value;
+                    if (m_profileParent == null)
+                        return null;
 
-                    return ps.GetValueByName(m_parent, variableName);
+                    return m_profileParent.GetValueById(m_inheritedParent, variableId);
                 }
 
                 internal void SetValueById(string variableId, string val)
                 {
                     var i = IndexOfVarId(variableId);
                     if (i >= 0)
-                        m_values[i].m_value = val;
+                        values[i].m_value = val;
                 }
-
-                internal void SetValueByName(ProfileSettings ps, string variableName, string val, bool create)
-                {
-                    var i = IndexOfVarName(variableName);
-                    if (i < 0)
-                    {
-                        if (create)
-                        {
-                            m_values.Add(new Variable(ps.GetVariableIdForName(m_id, variableName), variableName, val));
-                        }
-                    }
-                    else
-                    {
-                        m_values[i].m_value = val;
-                    }
-                }
-
-                internal void ChangeVariableName(string currName, string newName)
-                {
-                    foreach (var v in m_values)
-                        if (v.m_name == currName)
-                            v.m_name = newName;
-                }
+                
                 internal void ReplaceVariableValueSubString(string searchStr, string replacementStr)
                 {
-                    foreach (var v in m_values)
+                    foreach (var v in values)
                         v.m_value = v.m_value.Replace(searchStr, replacementStr);
                 }
 
-                internal string GetVariableName(ProfileSettings ps, string variableId)
-                {
-                    var index = IndexOfVarId(variableId);
-                    if (index >= 0)
-                        return m_values[index].m_name;
-                    var p = ps.GetProfile(m_parent);
-                    if (p == null)
-                        return "<undefined>";
-                    return p.GetVariableName(ps, variableId);
-                }
 
                 internal bool IsValueInheritedByName(string variableName)
                 {
@@ -201,72 +153,91 @@ namespace UnityEditor.AddressableAssets
                 {
                     return IndexOfVarId(variableId) >= 0;
                 }
-
-                internal string GetVariableId(string variableName)
-                {
-                    var index = IndexOfVarName(variableName);
-                    if (index < 0)
-                        return null;
-                    return m_values[index].m_id;
-                }
             }
-
-            private string GetVariableIdForName(string profileId, string variableName)
-            {
-                var p = GetProfile(profileId);
-                while (p != null)
-                {
-                    string varId = p.GetVariableId(variableName);
-                    if (!string.IsNullOrEmpty(varId))
-                        return varId;
-                    p = GetProfile(p.m_parent);
-                }
-                return GUID.Generate().ToString();
-            }
-
-            internal string GetVariableIdFromName(string variableName)
-            {
-                foreach (var p in m_profiles)
-                    foreach (var v in p.m_values)
-                        if (v.m_name == variableName)
-                            return v.m_id;
-                return string.Empty;
-            }
-
-            internal string GetVariableNameFromId(string variableId)
-            {
-                foreach (var p in m_profiles)
-                    foreach (var v in p.m_values)
-                        if (v.m_id == variableId)
-                            return v.m_name;
-                return string.Empty;
-            }
-
+            
             internal void OnAfterDeserialize(AddressableAssetSettings settings)
             {
                 m_Settings = settings;
-            }
-
-            internal int GetIndexOfProfile(string profileId)
-            {
-                return m_profiles.FindIndex(p => p.m_id == profileId);
+                foreach(var prof in m_profiles)
+                {
+                    prof.OnAfterDeserialize(this);
+                }
             }
 
             [NonSerialized]
             AddressableAssetSettings m_Settings;
             [SerializeField]
             List<BuildProfile> m_profiles = new List<BuildProfile>();
+            internal List<BuildProfile> profiles { get { return m_profiles; } }
 
-            /// <summary>
-            /// TODO - doc
-            /// </summary>
-            public List<string> profileNames
+            [Serializable]
+            public class ProfileIDData
+            {
+                public string id;
+                public string name;
+                public ProfileEntryUsage usage;
+                public ProfileIDData(string entryId, string entryName, ProfileEntryUsage entryUsage)
+                {
+                    id = entryId;
+                    name = entryName;
+                    usage = entryUsage;
+                }
+                public string Evaluate(ProfileSettings ps, string profileId)
+                {
+                    if (usage == ProfileEntryUsage.Inline || usage == ProfileEntryUsage.Invalid)
+                        return ps.EvaluateString(profileId, id);
+
+                    return Evaluate(ps, profileId, id);
+                }
+                public static string Evaluate(ProfileSettings ps, string profileId, string idString)
+                {
+                    string baseValue = ps.GetValueById(profileId, idString);
+                    return ps.EvaluateString(profileId, baseValue);
+                }
+            }
+            [SerializeField]
+            List<ProfileIDData> m_profileEntryNames = new List<ProfileIDData>();
+            internal List<ProfileIDData> profileEntryNames
             {
                 get
                 {
-                    CreateDefaultProfile();
-                    return m_profiles.Select(p => p.m_name).ToList();
+                    if (m_profileEntryNames.Count == 0)
+                        m_profileEntryNames.Add(new ProfileIDData(GUID.Generate().ToString(), k_customEntryString, ProfileEntryUsage.Inline));
+                    return m_profileEntryNames;
                 }
+            }
+            internal const string k_customEntryString = "<custom>";
+
+            public ProfileIDData GetProfileDataById(string id)
+            {
+                foreach(var data in profileEntryNames)
+                {
+                    if (id == data.id)
+                        return data;
+                }
+                return null;
+            }
+            public static string TryGetProfileID(string dataName, AddressableAssetSettings settings = null)
+            {
+                var result = dataName;
+                if(settings == null)
+                    settings = AddressableAssetSettings.GetDefault(false, false);
+                if(settings != null)
+                {
+                    var data = settings.profileSettings.GetProfileDataByName(dataName);
+                    if (data != null)
+                        result = data.id;
+                }
+                return result;
+            }
+            public ProfileIDData GetProfileDataByName(string name)
+            {
+                foreach (var data in profileEntryNames)
+                {
+                    if (name == data.name)
+                        return data;
+                }
+                return null;
             }
 
             public string Reset()
@@ -275,14 +246,7 @@ namespace UnityEditor.AddressableAssets
                 return CreateDefaultProfile();
             }
 
-            public ProfileValue CreateProfileValue(string initialValue, bool custom = false)
-            {
-                return new ProfileValue(initialValue, custom);
-            }
-
-            internal string DefaultProfileId { get { return m_profiles[0].m_id; } }
-
-            public string Evaluate(string profileId, string varString)
+            public string EvaluateString(string profileId, string varString)
             {
                 Func<string, string> getVal = (s) =>
                 {
@@ -294,67 +258,124 @@ namespace UnityEditor.AddressableAssets
                 return AAConfig.ExpandWithVariables(varString, '[', ']', getVal);
             }
 
-            void AddDefaultEntry(string profileId, string varName, string value)
+            internal const string k_rootProfileName = "Default";
+            internal string CreateDefaultProfile()
+            {   
+                if (!ValidateProfiles())
+                {
+                    m_profileEntryNames.Clear();
+                    m_profiles.Clear();
+                    
+                    AddProfile(k_rootProfileName, null);
+                    CreateValue("ContentVersion", "1", ProfileEntryUsage.Helper);
+                    CreateValue("BuildTarget", "[UnityEditor.EditorUserBuildSettings.activeBuildTarget]", ProfileEntryUsage.Helper);
+
+                    CreateValue("LocalBuildPath", "Assets/StreamingAssets", ProfileEntryUsage.BuildPath);
+                    CreateValue("LocalLoadPrefix", "file://{UnityEngine.Application.streamingAssetsPath}", ProfileEntryUsage.LoadPrefix);
+                    CreateValue("RemoteBuildPath", "ServerData/[UnityEditor.EditorUserBuildSettings.activeBuildTarget]", ProfileEntryUsage.BuildPath);
+                    CreateValue("RemoteLoadPrefix", "http://localhost/[UnityEditor.EditorUserBuildSettings.activeBuildTarget]", ProfileEntryUsage.LoadPrefix);
+                }
+                return GetDefaultProfileID();
+            }
+            internal string GetDefaultProfileID()
             {
-                var profile = GetProfile(profileId);
-                if (profile == null)
-                    SetValueByName(profileId, varName, value, true);
-                else if (profile.IndexOfVarName(varName) < 0)
-                    SetValueByName(profileId, varName, value, true);
+                var def = GetDefaultProfile();
+                if (def != null)
+                    return def.id;
+                return null;
+            }
+            private BuildProfile GetDefaultProfile()
+            {
+                var profile = GetProfileByName(k_rootProfileName);
+                if (profile == null && m_profiles.Count > 0)
+                    profile = m_profiles[0];
+                return profile;
             }
 
-            internal string CreateDefaultProfile()
+            internal bool ValidateProfiles()
             {
-                var defaultId = AddProfile("Default", null);
-                AddDefaultEntry(defaultId, "BuildTarget", "[UnityEditor.EditorUserBuildSettings.activeBuildTarget]");
-                AddDefaultEntry(defaultId, "LocalBuildPath", "Assets/StreamingAssets");
-                AddDefaultEntry(defaultId, "LocalLoadPrefix", "file://{UnityEngine.Application.streamingAssetsPath}");
-                AddDefaultEntry(defaultId, "RemoteBuildPath", "ServerData/[BuildTarget]");
-                AddDefaultEntry(defaultId, "RemoteLoadPrefix", "http://localhost/[BuildTarget]");
-                AddDefaultEntry(defaultId, "ContentVersion", "1");
-                return defaultId;
+                if (m_profiles.Count == 0)
+                    return false;
+                var root = m_profiles[0];
+                if(root == null || root.profileName != k_rootProfileName)
+                    root = GetProfileByName(k_rootProfileName);
+
+                if (root == null)
+                    return false;
+
+                var rootValueCount = root.values.Count;
+                foreach(var profile in m_profiles)
+                {
+                    if (profile.profileName == k_rootProfileName)
+                        continue;
+                    if (string.IsNullOrEmpty(profile.profileName))
+                        return false;
+
+                    if (profile.values.Count != rootValueCount)
+                        return false;
+
+                    for (int i = 0; i < rootValueCount; i++)
+                    {
+                        if (root.values[i].m_id != profile.values[i].m_id)
+                            return false;
+                    }
+                }
+
+                return true;
             }
 
             /// <summary>
             /// TODO - doc
             /// </summary>
-            public HashSet<string> GetAllVariableNames(string profileId)
+            public HashSet<string> GetAllVariableNames(ProfileEntryUsage usage)
             {
                 HashSet<string> names = new HashSet<string>();
-                var p = GetProfile(profileId);
-                while (p != null)
+                foreach (var entry in profileEntryNames)
                 {
-                    foreach (var v in p.m_values)
-                        names.Add(v.m_name);
-                    p = GetProfile(p.m_parent);
+                    int overlap = (int)entry.usage & (int)usage;
+                    if(overlap != 0)
+                        names.Add(entry.name);
                 }
                 return names;
             }
-
             /// <summary>
             /// TODO - doc
             /// </summary>
-            public HashSet<string> GetAllVariableNames()
+            public List<string> GetAllProfileNames()
             {
-                HashSet<string> names = new HashSet<string>();
+                CreateDefaultProfile();
+                List<string> result = new List<string>();
                 foreach (var p in m_profiles)
-                    foreach (var v in p.m_values)
-                        names.Add(v.m_name);
-                return names;
+                {
+                    result.Add(p.profileName);
+                }
+                return result;
+                
             }
-
+            public string GetProfileName(string profileID)
+            {
+                foreach(var p in m_profiles)
+                {
+                    if (p.id == profileID)
+                        return p.profileName;
+                }
+                return "";
+            }
+            public string GetProfileId(string profileName)
+            {
+                foreach (var p in m_profiles)
+                {
+                    if (p.profileName == profileName)
+                        return p.id;
+                }
+                return null;
+            }
             public HashSet<string> GetAllVariableIds()
             {
                 HashSet<string> ids = new HashSet<string>();
-                foreach (var p in m_profiles)
-                    foreach (var v in p.m_values)
-                        ids.Add(v.m_id);
+                foreach (var v in profileEntryNames)
+                    ids.Add(v.id);
                 return ids;
-            }
-
-            internal string GetProfileAtIndex(int profileIndex)
-            {
-                return m_profiles[profileIndex].m_id;
             }
 
             void PostModificationEvent(ModificationEvent e)
@@ -365,10 +386,9 @@ namespace UnityEditor.AddressableAssets
 
             internal bool ValidateNewVariableName(string name)
             {
-                foreach (var p in m_profiles)
-                    foreach (var v in p.m_values)
-                        if (name == v.m_name)
-                            return false;
+                foreach (var idPair in profileEntryNames)
+                    if (idPair.name == name)
+                        return false;
                 return !string.IsNullOrEmpty(name) && !name.Any(c => { return c == '[' || c == ']' || c == '{' || c == '}'; });
             }
 
@@ -376,8 +396,11 @@ namespace UnityEditor.AddressableAssets
             {
                 if (!ValidateNewVariableName(newName))
                     return currName;
-                foreach (var p in m_profiles)
-                    p.ChangeVariableName(currName, newName);
+
+                foreach (var idPair in profileEntryNames)
+                    if (idPair.name == currName)
+                        idPair.name = newName;
+
                 var currRefStr = "[" + currName + "]";
                 var newRefStr = "[" + newName + "]";
                 foreach (var p in m_profiles)
@@ -388,15 +411,18 @@ namespace UnityEditor.AddressableAssets
             /// <summary>
             /// TODO - doc
             /// </summary>
-            public string AddProfile(string name, string parent)
+            public string AddProfile(string name, string copyFromId)
             {
-                var existing = GetProfileByName(name);
-                if (existing != null)
-                    return existing.m_id;
-                var id = GUID.Generate().ToString();
-                m_profiles.Add(new BuildProfile(id, name, parent));
+                var existingProfile = GetProfileByName(name);
+                if (existingProfile != null)
+                    return existingProfile.id;
+                var copyRoot = GetProfile(copyFromId);
+                if (copyRoot == null && m_profiles.Count > 0)
+                    copyRoot = GetDefaultProfile();
+                var prof = new BuildProfile(name, copyRoot, this);
+                m_profiles.Add(prof);
                 PostModificationEvent(ModificationEvent.ProfileAdded);
-                return id;
+                return prof.id;
             }
 
             /// <summary>
@@ -404,52 +430,99 @@ namespace UnityEditor.AddressableAssets
             /// </summary>
             public void RemoveProfile(string profileId)
             {
-                m_profiles.RemoveAll(p => p.m_id == profileId);
-                m_profiles.ForEach(p => { if (p.m_parent == profileId) p.m_parent = null; });
+                m_profiles.RemoveAll(p => p.id == profileId);
+                m_profiles.ForEach(p => { if (p.m_inheritedParent == profileId) p.m_inheritedParent = null; });
                 PostModificationEvent(ModificationEvent.ProfileRemoved);
             }
 
             private BuildProfile GetProfileByName(string profileName)
             {
-                return m_profiles.Find(p => p.m_name == profileName);
+                return m_profiles.Find(p => p.profileName == profileName);
             }
 
 
             private BuildProfile GetProfile(string profileId)
             {
-                return m_profiles.Find(p => p.m_id == profileId);
+                return m_profiles.Find(p => p.id == profileId);
             }
 
-            private string GetVariableName(string profileId, string variableId)
+            private string GetVariableName(string variableId)
             {
-                var p = GetProfile(profileId);
-                if (p == null)
-                    return "<undefined>";
-                return p.GetVariableName(this, variableId);
+                foreach(var idPair in profileEntryNames)
+                {
+                    if (idPair.id == variableId)
+                        return idPair.name;
+                }
+                return null;
             }
-
+            public List<ProfileIDData> GetVairablesFromUsage(ProfileEntryUsage usage)
+            {
+                var result = new List<ProfileIDData>();
+                foreach(var idPair in profileEntryNames)
+                {
+                    if (idPair.usage == usage)
+                        result.Add(idPair);
+                }
+                return result;
+            }
+            private string GetVariableID(string variableName)
+            {
+                foreach (var idPair in profileEntryNames)
+                {
+                    if (idPair.name == variableName)
+                        return idPair.id;
+                }
+                return null;
+            }
 
             /// <summary>
             /// TODO - doc
             /// </summary>
-            public void SetValueById(string profileId, string variableId, string val)
+            public void SetValue(string profileId, string variableName, string val)
             {
-                var p = GetProfile(profileId);
-                if (p == null)
+                var profile = GetProfile(profileId);
+                if (profile == null)
+                {
+                    Debug.LogError("setting variable " + variableName + " failed because profile " + profileId + " does not exist.");
                     return;
-                p.SetValueById(variableId, val);
+                }
+
+                var id = GetVariableID(variableName);
+                if(string.IsNullOrEmpty(id))
+                {
+                    Debug.LogError("setting variable " + variableName + " failed because variable does not yet exist. Call CreateValue() first.");
+                    return;
+                }
+                
+                profile.SetValueById(id, val);
                 PostModificationEvent(ModificationEvent.ProfileModified);
             }
-            /// <summary>
-            /// TODO - doc
-            /// </summary>
-            public void SetValueByName(string profileId, string variableName, string val, bool create = true)
+            public void CreateValue(string variableName, string defaultValue, ProfileEntryUsage usage)
             {
-                var p = GetProfile(profileId);
-                if (p == null)
-                    return;
-                p.SetValueByName(this, variableName, val, create);
-                PostModificationEvent(ModificationEvent.ProfileModified);
+                if(m_profiles.Count == 0)
+                {
+                    Debug.LogError("Attempting to add a profile variable in Addressables, but there are no profiles yet.");
+                }
+
+                var id = GetVariableID(variableName);
+                if (string.IsNullOrEmpty(id))
+                {
+                    id = GUID.Generate().ToString();
+                    profileEntryNames.Add(new ProfileIDData(id, variableName, usage));
+
+                    foreach (var pro in m_profiles)
+                    {
+                        pro.values.Add(new BuildProfile.ProfileEntry(id, defaultValue));
+                    }
+                }
+            }
+            public void RemoveValue(string variableID)
+            {
+                foreach(var pro in m_profiles)
+                {
+                    pro.values.RemoveAll(x => x.m_id == variableID );
+                }
+                m_profileEntryNames.RemoveAll(x => x.id == variableID);
             }
 
             /// <summary>
@@ -458,13 +531,14 @@ namespace UnityEditor.AddressableAssets
             public string GetValueById(string profileId, string varId)
             {
                 BuildProfile profile = GetProfile(profileId);
-                return profile == null ? string.Empty : profile.GetValueById(this, varId);
+                return profile == null ? varId : profile.GetValueById(varId);
             }
 
             public string GetValueByName(string profileId, string varName)
             {
-                return GetValueById(profileId, GetVariableIdForName(profileId, varName));
+                return GetValueById(profileId, GetVariableID(varName));
             }
+
 
             internal bool IsValueInheritedById(string profileId, string variableId)
             {
@@ -472,14 +546,6 @@ namespace UnityEditor.AddressableAssets
                 if (p == null)
                     return false;
                 return p.IsValueInheritedById(variableId);
-            }
-
-            internal string GetProfileName(string profileId)
-            {
-                var p = GetProfile(profileId);
-                if (p == null)
-                    return string.Empty;
-                return p.m_name;
             }
         }
     }

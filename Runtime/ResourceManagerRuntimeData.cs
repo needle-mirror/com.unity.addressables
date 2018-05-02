@@ -16,8 +16,6 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public static string PlayerSettingsLocation { get { return Path.Combine(Application.streamingAssetsPath, "ResourceManagerRuntimeData_settings.json").Replace('\\', '/'); } }
         public static string PlayerSettingsLoadLocation { get { return "file://{UnityEngine.Application.streamingAssetsPath}/ResourceManagerRuntimeData_settings.json"; } }
-        public static string PlayerCatalogLocation { get { return Path.Combine(Application.streamingAssetsPath, "ResourceManagerRuntimeData_catalog.json").Replace('\\', '/'); } }
-        public static string PlayerCatalogLoadLocation { get { return "file://{UnityEngine.Application.streamingAssetsPath}/ResourceManagerRuntimeData_catalog.json"; } }
 
         /// <summary>
         /// TODO - doc
@@ -48,9 +46,21 @@ namespace UnityEngine.AddressableAssets
         /// TODO - doc
         /// </summary>
         public string contentVersion = "undefined";
+        /// <summary>
+        /// TODO - doc
+        /// </summary>
         public int assetCacheSize = 25;
+        /// <summary>
+        /// TODO - doc
+        /// </summary>
         public float assetCacheAge = 5;
+        /// <summary>
+        /// TODO - doc
+        /// </summary>
         public int bundleCacheSize = 5;
+        /// <summary>
+        /// TODO - doc
+        /// </summary>
         public float bundleCacheAge = 5;
 #if UNITY_EDITOR
 
@@ -101,13 +111,6 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public static void Cleanup()
         {
-            if (File.Exists(PlayerCatalogLocation))
-            {
-                File.Delete(PlayerCatalogLocation);
-                var metaFile = PlayerCatalogLocation + ".meta";
-                if (File.Exists(metaFile))
-                    File.Delete(metaFile);
-            }
             if (File.Exists(PlayerSettingsLocation))
             {
                 File.Delete(PlayerSettingsLocation);
@@ -132,7 +135,6 @@ namespace UnityEngine.AddressableAssets
                 File.WriteAllText(PlayerSettingsLocation, data);
                 File.WriteAllText(LibrarySettingsLocation(mode), data);
                 data = JsonUtility.ToJson(catalog);
-                File.WriteAllText(PlayerCatalogLocation, data);
                 File.WriteAllText(LibraryCatalogLocation(mode), data);
             }
             catch (Exception e)
@@ -155,14 +157,6 @@ namespace UnityEngine.AddressableAssets
                 if (!string.IsNullOrEmpty(dirName) && !Directory.Exists(dirName))
                     Directory.CreateDirectory(dirName);
                 File.Copy(LibrarySettingsLocation(mode), PlayerSettingsLocation);
-                
-                if (File.Exists(PlayerCatalogLocation))
-                    File.Delete(PlayerCatalogLocation);
-                dirName = Path.GetDirectoryName(PlayerCatalogLocation);
-                if (!string.IsNullOrEmpty(dirName) && !Directory.Exists(dirName))
-                    Directory.CreateDirectory(dirName);
-
-                File.Copy(LibraryCatalogLocation(mode), PlayerCatalogLocation);
                 return true;
             }
             catch (Exception e)
@@ -171,8 +165,6 @@ namespace UnityEngine.AddressableAssets
                 return false;
             }
         }
-
-
 #endif
     }
 }

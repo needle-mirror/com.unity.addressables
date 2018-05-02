@@ -60,10 +60,10 @@ namespace UnityEditor.AddressableAssets
             GUILayout.BeginArea(rect);
             position = EditorGUILayout.BeginScrollView(position, false, false, GUILayout.MaxWidth(rect.width));
 
+            bool oldWrap = EditorStyles.label.wordWrap;
             EditorStyles.label.wordWrap = true;
-            EditorGUILayout.LabelField("Player Data Processor");
             EditorGUILayout.LabelField("This processor handles proper building of all assets stored in Resources and the scenes that are included in the build in BuildSettings window. All data built here will be included in \"Player Data\" in the build of the game.");
-
+            EditorStyles.label.wordWrap = oldWrap;
             GUILayout.EndScrollView();
             GUILayout.EndArea();
         }

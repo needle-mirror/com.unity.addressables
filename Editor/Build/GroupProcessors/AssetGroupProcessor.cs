@@ -23,6 +23,8 @@ namespace UnityEditor.AddressableAssets
         {
         }
 
+        internal virtual bool HasSettings() { return true; }
+
         internal virtual void OnDrawGUI(AddressableAssetSettings settings, Rect rect)
         {
         }

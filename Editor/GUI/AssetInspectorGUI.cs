@@ -11,7 +11,7 @@ namespace UnityEditor.AddressableAssets
             Editor.finishedDefaultHeaderGUI += OnPostHeaderGUI;
         }
 
-        static GUIContent addressableAssetToggleText = new GUIContent("Address", "Check this to mark this asset as an Addressable Asset, which includes it in the bundled data and makes it loadable via script by its address.");
+        static GUIContent addressableAssetToggleText = new GUIContent("Addressable", "Check this to mark this asset as an Addressable Asset, which includes it in the bundled data and makes it loadable via script by its address.");
 
         static void SetAAEntry(Editor editor, AddressableAssetSettings aaSettings, Object[] targets, bool create)
         {

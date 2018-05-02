@@ -10,40 +10,31 @@ namespace UnityEditor.AddressableAssets
     [Description("Remote Packed Content")]
     public class RemoteAssetBundleAssetGroupProcessor : AssetBundleAssetGroupProcessor
     {
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
         [SerializeField]
-        protected AddressableAssetSettings.ProfileSettings.ProfileValue m_buildPath;
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
+        protected string m_buildPathId;
         [SerializeField]
-        protected AddressableAssetSettings.ProfileSettings.ProfileValue m_loadPrefix;
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        public AddressableAssetSettings.ProfileSettings.ProfileValue buildPath
+        protected string m_loadPrefixId;
+
+        public string buildPathId
         {
             get
             {
-                var settings = AddressableAssetSettings.GetDefault(false, false);
-                if ((m_buildPath == null || string.IsNullOrEmpty(m_buildPath.value)) && settings != null)
-                    m_buildPath = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalBuildPath"));
-                return m_buildPath;
+                if (string.IsNullOrEmpty(m_buildPathId))
+                {
+                    m_buildPathId = AddressableAssetSettings.ProfileSettings.TryGetProfileID("LocalBuildPath");
+                }
+                return m_buildPathId;
             }
         }
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        public AddressableAssetSettings.ProfileSettings.ProfileValue loadPrefix
+        public string loadPrefixId
         {
             get
             {
-                var settings = AddressableAssetSettings.GetDefault(false, false);
-                if ((m_loadPrefix == null || string.IsNullOrEmpty(m_loadPrefix.value)) && settings != null)
-                    m_loadPrefix = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalLoadPrefix"));
-                return m_loadPrefix;
+                if (string.IsNullOrEmpty(m_loadPrefixId))
+                {
+                    m_loadPrefixId = AddressableAssetSettings.ProfileSettings.TryGetProfileID("LocalLoadPrefix");
+                }
+                return m_loadPrefixId;
             }
         }
         public BundleMode bundleMode = BundleMode.PackTogether;
@@ -51,27 +42,23 @@ namespace UnityEditor.AddressableAssets
         internal override string displayName { get { return "Remote Packed Content"; } }
         internal override void Initialize(AddressableAssetSettings settings)
         {
-            if(m_buildPath == null)
-                m_buildPath = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalBuildPath"));
-            if(m_loadPrefix == null)
-                m_loadPrefix = settings.profileSettings.CreateProfileValue(settings.profileSettings.GetVariableIdFromName("LocalLoadPrefix"));
         }
 
         internal override void SerializeForHash(System.Runtime.Serialization.Formatters.Binary.BinaryFormatter formatter, Stream stream)
         {
             formatter.Serialize(stream, bundleMode);
-            formatter.Serialize(stream, buildPath);
-            formatter.Serialize(stream, loadPrefix);
+            formatter.Serialize(stream, buildPathId);
+            formatter.Serialize(stream, loadPrefixId);
         }
 
         protected override string GetBuildPath(AddressableAssetSettings settings)
         {
-            return buildPath.Evaluate(settings.profileSettings, settings.activeProfile);
+            return AddressableAssetSettings.ProfileSettings.ProfileIDData.Evaluate(settings.profileSettings, settings.activeProfileId, buildPathId);
         }
 
-        protected override string GetBundleLoadPath(AddressableAssetSettings settings, string bundleName)
+        protected override string GetBundleLoadPath(AddressableAssetSettings settings, string postfixPath)
         {
-            return loadPrefix.Evaluate(settings.profileSettings, settings.activeProfile) + "/" + bundleName;
+            return AddressableAssetSettings.ProfileSettings.ProfileIDData.Evaluate(settings.profileSettings, settings.activeProfileId, loadPrefixId) + "/" + postfixPath;
         }
 
         protected override string GetBundleLoadProvider(AddressableAssetSettings settings)
@@ -92,7 +79,7 @@ namespace UnityEditor.AddressableAssets
         internal override bool Validate(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup assetGroup)
         {
             bool valid = true;
-            if (string.IsNullOrEmpty(loadPrefix.value))
+            if (string.IsNullOrEmpty(loadPrefixId))
             {
                 Debug.LogWarningFormat("Asset Group '{0}' has invalid loadPrefix", assetGroup.name);
                 valid = false;
@@ -109,8 +96,8 @@ namespace UnityEditor.AddressableAssets
         internal override void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group, ResourceLocationList contentCatalog, List<ResourceLocationData> locations)
         {
             var bp = GetBuildPath(aaSettings);
-            var buildPath = Path.Combine(bp, aaSettings.profileSettings.Evaluate(aaSettings.activeProfile, "catalog_[ContentVersion].json"));
-            var remoteHashLoadPath = m_loadPrefix.Evaluate(aaSettings.profileSettings, aaSettings.activeProfile) + "/catalog_{ContentVersion}.hash";
+            var buildPath = Path.Combine(bp, aaSettings.profileSettings.EvaluateString(aaSettings.activeProfileId, "catalog_[ContentVersion].json"));
+            var remoteHashLoadPath = GetBundleLoadPath(aaSettings, "catalog_{ContentVersion}.hash");
             var localCacheLoadPath = "{UnityEngine.Application.persistentDataPath}/catalog_{ContentVersion}.hash";
 
             var jsonText = JsonUtility.ToJson(contentCatalog);
@@ -142,21 +129,24 @@ namespace UnityEditor.AddressableAssets
         {
             GUILayout.BeginArea(rect);
             position = EditorGUILayout.BeginScrollView(position, false, false, GUILayout.MaxWidth(rect.width));
+            bool oldWrap = EditorStyles.label.wordWrap;
+            EditorStyles.label.wordWrap = true;
             EditorGUILayout.LabelField("Assets in this group can either be packed together or separately and will be downloaded from a URL via UnityWebRequest.");
-            bool modified = false;
+            EditorStyles.label.wordWrap = oldWrap;
             var newBundleMode = (BundleMode)EditorGUILayout.EnumPopup("Packing Mode", bundleMode);
             if (newBundleMode != bundleMode)
-            {
                 bundleMode = newBundleMode;
-                modified = true;
-            }
 
-            modified |= ProfileSettingsEditor.ValueGUI(settings, "Build Path", buildPath);
-            modified |= ProfileSettingsEditor.ValueGUI(settings, "Load Prefix", loadPrefix);
+            var newBP = ProfilesWindow.ValueGUI(settings, "Build Path", buildPathId, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.BuildPath | AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Inline);
+            var newLP = ProfilesWindow.ValueGUI(settings, "Load Prefix", loadPrefixId, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.LoadPrefix | AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Inline);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
-            if(modified)
+            if (newBP != buildPathId || newLP != loadPrefixId)
+            {
+                m_buildPathId = newBP;
+                m_loadPrefixId = newLP;
                 settings.PostModificationEvent(AddressableAssetSettings.ModificationEvent.GroupProcessorModified, this);
+            }
         }
     }
 }

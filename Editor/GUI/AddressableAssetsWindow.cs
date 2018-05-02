@@ -6,14 +6,6 @@ namespace UnityEditor.AddressableAssets
     {
         [SerializeField]
         AddressableAssetsSettingsGroupEditor m_groupEditor = null;
-        [SerializeField]
-        AddressableAssetsSettingsConfigEditor m_configEditor = null;
-        [SerializeField]
-        ProfileSettingsEditor m_profileEditor = null;
-        [SerializeField]
-        AssetSettingsPreview m_previewEditor = null;
-        [SerializeField]
-        AssetPublishEditor m_publishEditor = null;
 
         enum TabList
         {
@@ -23,20 +15,21 @@ namespace UnityEditor.AddressableAssets
             Preview,
             Publish,
         }
-        [SerializeField]
-        int currentTab = 0;
-        string[] labels = new string[5] { "Assets", "Config", "Profiles", "Preview", "Publish" };
-
 
         [SerializeField]
         bool m_ignoreLegacyBundles = false;  
 
-        [MenuItem("Window/Addressable Assets", priority = 2050)]
+        [MenuItem("Window/Asset Management/Addressable Assets", priority = 2050)]
         static void Init()
         {
             var window = GetWindow<AddressableAssetsWindow>();
             window.titleContent = new GUIContent("Addressables");
             window.Show();
+        }
+        public static Vector2 GetWindowPosition()
+        {
+            var window = GetWindow<AddressableAssetsWindow>();
+            return new Vector2(window.position.x, window.position.y);
         }
 
         public void OnEnable()
@@ -49,20 +42,12 @@ namespace UnityEditor.AddressableAssets
             }
             if (m_groupEditor != null)
                 m_groupEditor.OnEnable();
-            if (m_configEditor != null)
-                m_configEditor.OnEnable();
-            if (m_publishEditor != null)
-                m_publishEditor.OnEnable();
         }
 
         public void OnDisable()
         {
             if (m_groupEditor != null)
                 m_groupEditor.OnDisable();
-            if (m_configEditor != null)
-                m_configEditor.OnDisable();
-            if (m_publishEditor != null)
-                m_publishEditor.OnDisable();
         }
 
         internal void OfferToConvert()
@@ -139,58 +124,15 @@ namespace UnityEditor.AddressableAssets
             }
             else
             {
-                var profileNames = settingsObject.profileSettings.profileNames;
-                int currentProfileIndex = settingsObject.profileSettings.GetIndexOfProfile(settingsObject.activeProfile);
-                int newProfileIndex = EditorGUILayout.Popup("Active Profile", currentProfileIndex, profileNames.ToArray());
-                if (newProfileIndex != currentProfileIndex)
-                    settingsObject.activeProfile = settingsObject.profileSettings.GetProfileAtIndex(newProfileIndex);
-
-                currentTab = GUILayout.Toolbar(currentTab, labels);
-
-                Rect contentRect = new Rect(0, 38, position.width, position.height - 38);
-                switch (currentTab)
+                Rect contentRect = new Rect(0, 0, position.width, position.height);
+ 
+                    if (m_groupEditor == null)
                 {
-                    case (int)TabList.Assets:
-                        if (m_groupEditor == null)
-                        {
-                            m_groupEditor = new AddressableAssetsSettingsGroupEditor(this);
-                            m_groupEditor.OnEnable();
-                        }
-                        if (m_groupEditor.OnGUI(contentRect))
-                            Repaint();
-                        break;
-
-                    case (int)TabList.Config:
-                        if (m_configEditor == null)
-                        {
-                            m_configEditor = new AddressableAssetsSettingsConfigEditor();
-                            m_configEditor.OnEnable();
-                        }
-                        if (m_configEditor.OnGUI(contentRect))
-                            Repaint();
-                        break;
-
-                    case (int)TabList.Profile:
-                        if (m_profileEditor == null)
-                            m_profileEditor = new ProfileSettingsEditor();
-                        m_profileEditor.OnGUI(contentRect);
-                        break;
-
-                    case (int)TabList.Preview:
-                        if (m_previewEditor == null)
-                            m_previewEditor = new AssetSettingsPreview();
-                        m_previewEditor.OnGUI(contentRect);
-                        break;
-
-                    case (int)TabList.Publish:
-                        if (m_publishEditor == null)
-                        {
-                            m_publishEditor = new AssetPublishEditor();
-                            m_publishEditor.OnEnable();
-                        }
-                        m_publishEditor.OnGUI(contentRect);
-                        break;
+                    m_groupEditor = new AddressableAssetsSettingsGroupEditor(this);
+                    m_groupEditor.OnEnable();
                 }
+                if (m_groupEditor.OnGUI(contentRect))
+                            Repaint();
             }
         }
     }

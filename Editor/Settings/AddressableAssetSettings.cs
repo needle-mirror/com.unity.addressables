@@ -57,7 +57,7 @@ namespace UnityEditor.AddressableAssets
                 var formatter = new BinaryFormatter();
                 //formatter.Serialize(stream, m_buildSettings);
                 m_buildSettings.SerializeForHash(formatter, stream);
-                formatter.Serialize(stream, activeProfile);
+                formatter.Serialize(stream, activeProfileId);
                 formatter.Serialize(stream, m_labelTable);
                 formatter.Serialize(stream, m_profileSettings);
                 formatter.Serialize(stream, m_groups.Count);
@@ -87,7 +87,7 @@ namespace UnityEditor.AddressableAssets
         /// TODO - doc
         /// </summary>
         public ProfileSettings profileSettings { get { return m_profileSettings; } }
-
+        
         [SerializeField]
         LabelTable m_labelTable = new LabelTable();
         /// <summary>
@@ -125,7 +125,7 @@ namespace UnityEditor.AddressableAssets
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public string activeProfile
+        public string activeProfileId
         {
             get
             {
@@ -257,11 +257,13 @@ namespace UnityEditor.AddressableAssets
 
         internal void PostModificationEvent(ModificationEvent e, object o)
         {
-            if (e == ModificationEvent.ProfileRemoved && o as string == activeProfile)
-                activeProfile = null;
+            if (e == ModificationEvent.ProfileRemoved && o as string == activeProfileId)
+                activeProfileId = null;
 
             if (OnModification != null)
                 OnModification(this, e, o);
+            if(o is UnityEngine.Object)
+                EditorUtility.SetDirty(o as UnityEngine.Object);
             EditorUtility.SetDirty(this);
             m_cachedHash = default(Hash128);
         }

@@ -19,7 +19,10 @@ namespace UnityEditor.AddressableAssets
         {
             GUILayout.BeginArea(rect);
             position = EditorGUILayout.BeginScrollView(position, false, false, GUILayout.MaxWidth(rect.width));
-            EditorGUILayout.LabelField("Assets in this group will be packed together in the StreamingAssets folder and will delivered with the game.");
+            bool oldWrap = EditorStyles.label.wordWrap;
+            EditorStyles.label.wordWrap = true;
+            EditorGUILayout.LabelField("Assets in this group will be packed together in the StreamingAssets folder and will be delivered with the game");
+            EditorStyles.label.wordWrap = oldWrap;
             GUILayout.EndScrollView();
             GUILayout.EndArea();
         }
@@ -54,7 +57,7 @@ namespace UnityEditor.AddressableAssets
 
         internal override void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group, ResourceLocationList contentCatalog, List<ResourceLocationData> locations)
         {
-            var buildPath = GetBuildPath(aaSettings) + aaSettings.profileSettings.Evaluate(aaSettings.activeProfile, "/catalog_[ContentVersion].json");
+            var buildPath = GetBuildPath(aaSettings) + aaSettings.profileSettings.EvaluateString(aaSettings.activeProfileId, "/catalog_[ContentVersion].json");
             var remoteHashLoadPath = "file://{UnityEngine.Application.streamingAssetsPath}/catalog_{ContentVersion}.hash";
             var localCacheLoadPath = "{UnityEngine.Application.persistentDataPath}/catalog_{ContentVersion}.hash";
             

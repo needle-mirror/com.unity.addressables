@@ -7,40 +7,139 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void AddRemoveProfile()
         {
+            //Arrange
             Assert.IsNotNull(settings.profileSettings);
-            var dpid = settings.activeProfile = settings.profileSettings.Reset();
-            var pid = settings.profileSettings.AddProfile("TestProfile", dpid);
-            Assert.Contains("TestProfile", settings.profileSettings.profileNames);
-            Assert.IsNotEmpty(pid);
-            settings.profileSettings.RemoveProfile(pid);
-            Assert.IsFalse(settings.profileSettings.profileNames.Contains("TestProfile"));
+            settings.activeProfileId = null;
+            var mainId = settings.profileSettings.Reset();
+            
+            //Act 
+            var secondId = settings.profileSettings.AddProfile("TestProfile", mainId);
+
+            //Assert
+            bool foundIt = false;
+            foreach(var prof in settings.profileSettings.profiles)
+            {
+                if (prof.profileName == "TestProfile")
+                    foundIt = true;
+            }
+            Assert.IsTrue(foundIt);
+            Assert.IsNotEmpty(secondId);
+
+            //Act again
+            settings.profileSettings.RemoveProfile(secondId);
+
+            //Assert again
+            foundIt = false;
+            foreach (var prof in settings.profileSettings.profiles)
+            {
+                if (prof.profileName == "TestProfile")
+                    foundIt = true;
+            }
+            Assert.IsFalse(foundIt);
         }
 
         [Test]
-        public void SetGetValue()
+        public void CreateValuePropogtesValue()
         {
+            //Arrange
             Assert.IsNotNull(settings.profileSettings);
-            var dpid = settings.activeProfile = settings.profileSettings.Reset();
-            var pid = settings.profileSettings.AddProfile("Test", dpid);
-            settings.profileSettings.SetValueByName(dpid, "TestTag", "DefaultTestVal");
-            settings.profileSettings.SetValueByName(pid, "TestTag", "OverrideTestVal");
-            Assert.AreEqual("DefaultTestVal", settings.profileSettings.GetValueByName(dpid, "TestTag"));
-            Assert.AreEqual("OverrideTestVal", settings.profileSettings.GetValueByName(pid, "TestTag"));
-        }
+            settings.activeProfileId = null;
+            var mainId = settings.profileSettings.Reset();
+            var secondId = settings.profileSettings.AddProfile("TestProfile", mainId);
 
+            //Act
+            string path = "/Assets/Important";
+            settings.profileSettings.CreateValue("SomePath", path, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Other);
+
+            //Assert
+            Assert.AreEqual(path, settings.profileSettings.GetValueByName(mainId, "SomePath"));
+            Assert.AreEqual(path, settings.profileSettings.GetValueByName(secondId, "SomePath"));
+        }
         [Test]
-        public void VariableNames()
+        public void SetValueOnlySetsDesiredProfile()
         {
+            //Arrange
             Assert.IsNotNull(settings.profileSettings);
-            var dpid = settings.activeProfile = settings.profileSettings.Reset();
-            var pid = settings.profileSettings.AddProfile("Test", dpid);
-            settings.profileSettings.SetValueByName(dpid, "TestTag", "DefaultTestVal");
-            settings.profileSettings.SetValueByName(pid, "TestTag", "OverrideTestVal");
-            var allNames = settings.profileSettings.GetAllVariableNames();
-            Assert.IsTrue(allNames.Contains("TestTag"));
-            var testNames = settings.profileSettings.GetAllVariableNames(pid);
-            Assert.IsTrue(testNames.Contains("TestTag"));
-            Assert.IsFalse(testNames.Contains("SomethingElse"));
+            settings.activeProfileId = null;
+            var mainId = settings.profileSettings.Reset();
+            var secondId = settings.profileSettings.AddProfile("TestProfile", mainId);
+            string originalPath = "/Assets/Important";
+            settings.profileSettings.CreateValue("SomePath", originalPath, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Other);
+
+            //Act
+            string newPath = "/Assets/LessImportant";
+            settings.profileSettings.SetValue(secondId, "SomePath", newPath);
+
+            //Assert
+            Assert.AreEqual(originalPath, settings.profileSettings.GetValueByName(mainId, "SomePath"));
+            Assert.AreEqual(newPath, settings.profileSettings.GetValueByName(secondId, "SomePath"));
+        }
+        [Test]
+        public void CanGetValueById()
+        {
+            //Arrange
+            Assert.IsNotNull(settings.profileSettings);
+            settings.activeProfileId = null;
+            var mainId = settings.profileSettings.Reset();
+            string originalPath = "/Assets/Important";
+            settings.profileSettings.CreateValue("SomePath", originalPath, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Other);
+
+            //Act
+            string varId = null;
+            foreach(var variable in settings.profileSettings.profileEntryNames)
+            {
+                if(variable.name == "SomePath")
+                {
+                    varId = variable.id;
+                    break;
+                }
+            }
+
+            //Assert
+            Assert.AreEqual(originalPath, settings.profileSettings.GetValueById(mainId, varId));
+        }
+        [Test]
+        public void EvaluatingUnknownIdReturnsIdAsResult()
+        {
+            //Arrange
+            Assert.IsNotNull(settings.profileSettings);
+            settings.activeProfileId = null;
+            settings.profileSettings.Reset();
+
+            //Act
+            string badIdName = "BadIdName";
+
+
+            //Assert
+            Assert.AreEqual(badIdName, AddressableAssetSettings.ProfileSettings.ProfileIDData.Evaluate(settings.profileSettings, settings.activeProfileId, badIdName));
+
+        }
+        [Test]
+        public void MissingVariablesArePassThrough()
+        {
+            //Arrange
+            Assert.IsNotNull(settings.profileSettings);
+            settings.activeProfileId = null;
+
+            //Act
+            settings.profileSettings.Reset();
+
+            //Assert
+            Assert.AreEqual("VariableNotThere", AddressableAssetSettings.ProfileSettings.TryGetProfileID("VariableNotThere"));
+        }
+        [Test]
+        public void DefaultVariablesExist()
+        {
+            //Arrange
+            Assert.IsNotNull(settings.profileSettings);
+            settings.activeProfileId = null;
+
+            //Act
+            settings.profileSettings.Reset();
+
+            //Assert
+            Assert.AreNotEqual("LocalBuildPath", AddressableAssetSettings.ProfileSettings.TryGetProfileID("LocalBuildPath"));
+            Assert.AreNotEqual("LocalLoadPrefix", AddressableAssetSettings.ProfileSettings.TryGetProfileID("LocalLoadPrefix"));
         }
 
     }

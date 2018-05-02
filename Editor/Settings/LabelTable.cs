@@ -39,7 +39,7 @@ namespace UnityEditor.AddressableAssets
         /// <summary>
         /// TODO - doc
         /// </summary>
-        internal string GetString(HashSet<string> val)
+        internal string GetString(HashSet<string> val, float width) //TODO - use width to add the "..." in the right place.
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             int counter = 0;
