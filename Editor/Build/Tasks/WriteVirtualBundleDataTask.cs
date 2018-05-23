@@ -14,37 +14,43 @@ namespace UnityEditor.AddressableAssets
         public int Version { get { return k_Version; } }
 
         static readonly Type[] k_RequiredTypes = { typeof(IAddressableAssetsBuildContext), typeof(IBundleWriteData) };
+        bool m_writeData;
         public Type[] RequiredContextTypes { get { return k_RequiredTypes; } }
-
+        public WriteVirtualBundleDataTask(bool writeData)
+        {
+            m_writeData = writeData;
+        }
         public ReturnCode Run(IBuildContext context)
         {
             var aaContext = context.GetContextObject<IAddressableAssetsBuildContext>() as AddressableAssetsBuildContext;
-            return Run(aaContext.m_settings, aaContext.m_runtimeData, aaContext.m_contentCatalog, context.GetContextObject<IBundleWriteData>());
+            return Run(aaContext.m_settings, aaContext.m_runtimeData, aaContext.m_locations, context.GetContextObject<IBundleWriteData>(), m_writeData, out aaContext.m_virtualBundleRuntimeData);
         }
 
-        public static ReturnCode Run(AddressableAssetSettings aaSettings, ResourceManagerRuntimeData runtimeData, ResourceLocationList contentCatalog, IBundleWriteData writeData)
+        public static ReturnCode Run(AddressableAssetSettings aaSettings, ResourceManagerRuntimeData runtimeData, List<ResourceLocationData> locations, IBundleWriteData writeData, bool saveBundleData, out VirtualAssetBundleRuntimeData virtualBundleData)
         {
-            var virtualBundleData = new VirtualAssetBundleRuntimeData(aaSettings.buildSettings.localLoadSpeed, aaSettings.buildSettings.remoteLoadSpeed);
+            virtualBundleData = new VirtualAssetBundleRuntimeData(ProjectConfigData.localLoadSpeed, ProjectConfigData.remoteLoadSpeed);
             var bundledAssets = new Dictionary<string, List<string>>();
-            foreach (var loc in contentCatalog.locations)
+            foreach (var loc in locations)
             {
                 if (loc.m_provider == typeof(BundledAssetProvider).FullName)
                 {
                     if (loc.m_dependencies == null || loc.m_dependencies.Length == 0)
                         continue;
-                    foreach (var dep in loc.m_dependencies)
+                    for(int i = 0; i < loc.m_dependencies.Length; i++)
                     {
+                        var dep = loc.m_dependencies[i];
                         List<string> assetsInBundle = null;
                         if (!bundledAssets.TryGetValue(dep, out assetsInBundle))
                             bundledAssets.Add(dep, assetsInBundle = new List<string>());
-                        assetsInBundle.Add(loc.m_internalId);
+                        if(i == 0) //only add the asset to the first bundle...
+                            assetsInBundle.Add(loc.m_internalId);
                     }
                 }
             }
             
             foreach (var bd in bundledAssets)
             {
-                var bundleLocData = contentCatalog.locations.Find(a => a.m_address == bd.Key);
+                var bundleLocData = locations.Find(a => a.m_address == bd.Key);
                 var bundleData = new VirtualAssetBundle(bundleLocData.m_internalId, bundleLocData.m_provider == typeof(LocalAssetBundleProvider).FullName);
 
                 long dataSize = 0;
@@ -59,7 +65,8 @@ namespace UnityEditor.AddressableAssets
                 bundleData.SetSize(dataSize, headerSize);
                 virtualBundleData.AssetBundles.Add(bundleData);
             }
-            virtualBundleData.Save();
+            if(saveBundleData)
+                virtualBundleData.Save();
             return ReturnCode.Success;
         }
 

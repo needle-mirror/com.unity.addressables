@@ -15,7 +15,7 @@ namespace UnityEngine.AddressableAssets
             string m_hashValue;
             public InternalOp()
             {
-                action = (op) => 
+                action = (op) =>
                 {
                     if (op.Result.Count == 2)
                     {
@@ -25,7 +25,7 @@ namespace UnityEngine.AddressableAssets
                         {
                             var depOps = op.Context as IList<IResourceLocation>;
                             var localDataPath = depOps[0].InternalId.Replace(".hash", ".json");
-                            ResourceManager.ProvideResource<ResourceLocationList>(new ResourceLocationBase(localDataPath, localDataPath, typeof(JsonAssetProvider).FullName)).Completed += OnCatalogLoaded;
+                            ResourceManager.ProvideResource<ContentCatalogData>(new ResourceLocationBase(localDataPath, localDataPath, typeof(JsonAssetProvider).FullName)).Completed += OnCatalogLoaded;
                         }
                         else
                         {
@@ -33,7 +33,7 @@ namespace UnityEngine.AddressableAssets
                             var remoteDataPath = depOps[1].InternalId.Replace(".hash", ".json");
                             m_localDataPath = depOps[0].InternalId.Replace(".hash", ".json");
                             m_hashValue = remoteHash;
-                            ResourceManager.ProvideResource<ResourceLocationList>(new ResourceLocationBase(remoteDataPath, remoteDataPath, typeof(JsonAssetProvider).FullName)).Completed += OnCatalogLoaded;
+                            ResourceManager.ProvideResource<ContentCatalogData>(new ResourceLocationBase(remoteDataPath, remoteDataPath, typeof(JsonAssetProvider).FullName)).Completed += OnCatalogLoaded;
                         }
                     }
                     else
@@ -49,13 +49,13 @@ namespace UnityEngine.AddressableAssets
                 m_localDataPath = null;
                 m_hashValue = null;
                 startFrame = Time.frameCount;
-                Result = null;
+                m_result = null;
                 Context = location;
                 loadDependencyOperation.Completed += action;
                 return this;
             }
 
-            private void OnCatalogLoaded(IAsyncOperation<ResourceLocationList> op)
+            private void OnCatalogLoaded(IAsyncOperation<ContentCatalogData> op)
             {
                 Validate();
                 SetResult(op.Result as TObject);

@@ -49,7 +49,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             //Act
             string path = "/Assets/Important";
-            settings.profileSettings.CreateValue("SomePath", path, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Other);
+            settings.profileSettings.CreateValue("SomePath", path);
 
             //Assert
             Assert.AreEqual(path, settings.profileSettings.GetValueByName(mainId, "SomePath"));
@@ -64,7 +64,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var mainId = settings.profileSettings.Reset();
             var secondId = settings.profileSettings.AddProfile("TestProfile", mainId);
             string originalPath = "/Assets/Important";
-            settings.profileSettings.CreateValue("SomePath", originalPath, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Other);
+            settings.profileSettings.CreateValue("SomePath", originalPath);
 
             //Act
             string newPath = "/Assets/LessImportant";
@@ -82,7 +82,7 @@ namespace UnityEditor.AddressableAssets.Tests
             settings.activeProfileId = null;
             var mainId = settings.profileSettings.Reset();
             string originalPath = "/Assets/Important";
-            settings.profileSettings.CreateValue("SomePath", originalPath, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Other);
+            settings.profileSettings.CreateValue("SomePath", originalPath);
 
             //Act
             string varId = null;

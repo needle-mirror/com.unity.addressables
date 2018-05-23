@@ -71,7 +71,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
         DelayedActionManager.Clear();
 
         AssetDatabase.StartAssetEditing();
-        var locations = new ResourceLocationMap();
+        var locations = new ResourceLocationMap(100);
         CreateLocations(locations);
         AssetDatabase.StopAssetEditing();
 

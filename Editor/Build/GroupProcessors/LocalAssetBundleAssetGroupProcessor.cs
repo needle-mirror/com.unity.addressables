@@ -40,9 +40,9 @@ namespace UnityEditor.AddressableAssets
             return "{UnityEngine.Application.streamingAssetsPath}/" + bundleName;
         }
 
-        protected override string GetBundleLoadProvider(AddressableAssetSettings settings)
+        protected override System.Type GetBundleLoadProvider(AddressableAssetSettings settings)
         {
-            return typeof(LocalAssetBundleProvider).FullName;
+            return typeof(LocalAssetBundleProvider);
         }
 
         protected override BundleMode GetBundleMode(AddressableAssetSettings settings)
@@ -55,7 +55,7 @@ namespace UnityEditor.AddressableAssets
             return 100;
         }
 
-        internal override void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group, ResourceLocationList contentCatalog, List<ResourceLocationData> locations)
+        internal override void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group, ContentCatalogData contentCatalog, List<ResourceLocationData> locations)
         {
             var buildPath = GetBuildPath(aaSettings) + aaSettings.profileSettings.EvaluateString(aaSettings.activeProfileId, "/catalog_[ContentVersion].json");
             var remoteHashLoadPath = "file://{UnityEngine.Application.streamingAssetsPath}/catalog_{ContentVersion}.hash";
@@ -70,12 +70,12 @@ namespace UnityEditor.AddressableAssets
 
             File.WriteAllText(buildPath, jsonText);
             File.WriteAllText(buildPath.Replace(".json", ".hash"), contentHash);
-            var remoteHash = new ResourceLocationData("RemoteCatalogHash" + group.guid, "", remoteHashLoadPath, typeof(TextDataProvider).FullName, false);
-            var localHash = new ResourceLocationData("LocalCatalogHash" + group.guid, "", localCacheLoadPath, typeof(TextDataProvider).FullName, false);
+            var remoteHash = new ResourceLocationData("RemoteCatalogHash" + group.guid, "", remoteHashLoadPath, typeof(TextDataProvider), false);
+            var localHash = new ResourceLocationData("LocalCatalogHash" + group.guid, "", localCacheLoadPath, typeof(TextDataProvider), false);
 
 
             int priority = GetPriority(aaSettings, group);
-            locations.Add(new ResourceLocationData(priority + "_RemoteCatalog_" + group.guid, "", remoteHashLoadPath.Replace(".hash", ".json"), typeof(ContentCatalogProvider).FullName, true,
+            locations.Add(new ResourceLocationData(priority + "_RemoteCatalog_" + group.guid, "", remoteHashLoadPath.Replace(".hash", ".json"), typeof(ContentCatalogProvider), true,
                 ResourceLocationData.LocationType.String, 1, "",
                 new string[] { localHash.m_address, remoteHash.m_address }));
             locations.Add(localHash);

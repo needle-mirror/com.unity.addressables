@@ -67,6 +67,44 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
+        class ExternalEntryImporter : AssetPostprocessor
+        {
+            static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
+            {
+                var aa = GetDefault(false, false);
+                if (aa == null)
+                    return;
+                bool modified = false;
+                foreach (string str in importedAssets)
+                {
+                    if (AssetDatabase.GetMainAssetTypeAtPath(str) == typeof(AddressablesEntryCollection))
+                    {
+                        aa.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(str), aa.DefaultGroup);
+                        modified = true;
+                    }
+                }
+                foreach (string str in deletedAssets)
+                {
+                    var guid = AssetDatabase.AssetPathToGUID(str);
+                    if (aa.RemoveAssetEntry(guid))
+                        modified = true;
+                }
+                foreach (var str in movedAssets)
+                {
+                    var guid = AssetDatabase.AssetPathToGUID(str);
+                    if (aa.FindAssetEntry(guid) != null)
+                        modified = true;
+                }
+                if (modified)
+                    aa.MarkDirty();
+            }
+        }
+
+        private void MarkDirty()
+        {
+            m_cachedHash = default(Hash128);
+        }
+
         [SerializeField]
         List<AssetGroup> m_groups = new List<AssetGroup>();
         /// <summary>
@@ -97,19 +135,21 @@ namespace UnityEditor.AddressableAssets
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public void AddLabel(string label)
+        public void AddLabel(string label, bool postEvent = true)
         {
             m_labelTable.AddLabelName(label);
-            PostModificationEvent(ModificationEvent.LabelAdded, label);
+            if(postEvent)
+                PostModificationEvent(ModificationEvent.LabelAdded, label);
         }
 
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public void RemoveLabel(string label)
+        public void RemoveLabel(string label, bool postEvent = true)
         {
             m_labelTable.RemoveLabelName(label);
-            PostModificationEvent(ModificationEvent.LabelRemoved, label);
+            if(postEvent)
+                PostModificationEvent(ModificationEvent.LabelRemoved, label);
         }
 
         /// <summary>
@@ -139,34 +179,27 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        public List<AssetGroup.AssetEntry> GetAllAssets(bool excludeFilters = true, bool includeImplicitAssets = false)
+        public List<AssetGroup.AssetEntry> GetAllAssets()
         {
             var results = new List<AssetGroup.AssetEntry>();
             foreach (var g in groups)
-            {
                 foreach (var e in g.entries)
-                {
-                    if (!excludeFilters || !string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(e.guid)))
-                    {
-                        if (includeImplicitAssets)
-                            e.GatherAllAssets(results, this);
-                        else
-                            results.Add(e);
-                    }
-                }
-            }
+                    e.GatherAllAssets(results, this);
             return results;
         }
 
-        public void RemoveAssetEntry(string guid)
+        public bool RemoveAssetEntry(string guid, bool postEvent = true)
         {
             var entry = FindAssetEntry(guid);
             if (entry != null)
             {
                 if (entry.parentGroup != null)
-                    entry.parentGroup.RemoveAssetEntry(entry);
-                PostModificationEvent(ModificationEvent.EntryRemoved, entry);
+                    entry.parentGroup.RemoveAssetEntry(entry, postEvent);
+                if(postEvent)
+                    PostModificationEvent(ModificationEvent.EntryRemoved, entry);
+                return true;
             }
+            return false;
         }
 
         public void OnBeforeSerialize()
@@ -209,13 +242,13 @@ namespace UnityEditor.AddressableAssets
                     aa.profileSettings.Reset();
                     aa.name = configName;
                     aa.pathForAsset = path;
-                    var playerData = aa.CreateGroup(PlayerDataGroupName, typeof(PlayerDataAssetGroupProcessor).Name);
+                    var playerData = aa.CreateGroup(PlayerDataGroupName, typeof(PlayerDataAssetGroupProcessor).FullName);
                     playerData.readOnly = true;
                     var resourceEntry = aa.CreateOrMoveEntry(AssetGroup.AssetEntry.ResourcesName, playerData);
                     resourceEntry.isInResources = true;
                     aa.CreateOrMoveEntry(AssetGroup.AssetEntry.EditorSceneListName, playerData);
 
-                    aa.CreateGroup(DefaultLocalGroupName, typeof(LocalAssetBundleAssetGroupProcessor).Name, true);
+                    aa.CreateGroup(DefaultLocalGroupName, typeof(LocalAssetBundleAssetGroupProcessor).FullName, true);
 
                     AssetDatabase.SaveAssets();
                     EditorBuildSettings.AddConfigObject(configName, aa, true);
@@ -240,18 +273,11 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-
-        internal void GetAllSceneEntries(List<AssetGroup.AssetEntry> entries)
-        {
-            foreach (var a in GetAllAssets(true, true))
-                if (a.isScene)
-                    entries.Add(a);
-        }
-
-        private AssetGroup.AssetEntry CreateEntry(string guid, string address, AssetGroup parent, bool readOnly)
+        private AssetGroup.AssetEntry CreateEntry(string guid, string address, AssetGroup parent, bool readOnly, bool postEvent = true)
         {
             var entry = new AssetGroup.AssetEntry(guid, address, parent, readOnly);
-            PostModificationEvent(ModificationEvent.EntryCreated, entry);
+            if(!readOnly && postEvent)
+                PostModificationEvent(ModificationEvent.EntryCreated, entry);
             return entry;
         }
 
@@ -264,7 +290,7 @@ namespace UnityEditor.AddressableAssets
                 OnModification(this, e, o);
             if(o is UnityEngine.Object)
                 EditorUtility.SetDirty(o as UnityEngine.Object);
-            EditorUtility.SetDirty(this);
+            EditorUtility.SetDirty(this); 
             m_cachedHash = default(Hash128);
         }
 
@@ -287,7 +313,9 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public void MoveAssetsFromResources(Dictionary<string, string> guidToNewPath, AssetGroup targetParent)
         {
-            foreach(var item in guidToNewPath)
+            var entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+            AssetDatabase.StartAssetEditing();
+            foreach (var item in guidToNewPath)
             {
                 AssetGroup.AssetEntry entry = FindAssetEntry(item.Key);
                 if (entry != null) //move entry to where it should go...
@@ -308,19 +336,20 @@ namespace UnityEditor.AddressableAssets
                         AssetGroup.AssetEntry e = FindAssetEntry(item.Key);
                         if (e != null)
                             e.isInResources = false;
-                        CreateOrMoveEntry(item.Key, targetParent);
+                        entries.Add(CreateOrMoveEntry(item.Key, targetParent, false, false));
                     }
                 }
             }
-
+            AssetDatabase.StopAssetEditing();
             AssetDatabase.Refresh();
+            PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryMoved, entries);
         }
 
         /// <summary>
         /// TODO - doc
         /// </summary>
         // create a new entry, or if one exists in a different group, move it into the new group
-        public AssetGroup.AssetEntry CreateOrMoveEntry(string guid, AssetGroup targetParent, bool readOnly = false)
+        public AssetGroup.AssetEntry CreateOrMoveEntry(string guid, AssetGroup targetParent, bool readOnly = false, bool postEvent = true)
         {
             AssetGroup.AssetEntry entry = FindAssetEntry(guid);
             if (entry != null) //move entry to where it should go...
@@ -329,8 +358,7 @@ namespace UnityEditor.AddressableAssets
                 entry.readOnly = readOnly;
                 if (entry.parentGroup == targetParent)
                 {
-                    targetParent.AddAssetEntry(entry); //in case this is a sub-asset, make sure parent knows about it now.
-                    PostModificationEvent(ModificationEvent.EntryMoved, entry);
+                    targetParent.AddAssetEntry(entry, postEvent); //in case this is a sub-asset, make sure parent knows about it now.
                     return entry;
                 }
 
@@ -346,7 +374,7 @@ namespace UnityEditor.AddressableAssets
                     entry.isInSceneList = false;
                 }
                 if (entry.parentGroup != null)
-                    entry.parentGroup.RemoveAssetEntry(entry);
+                    entry.parentGroup.RemoveAssetEntry(entry, postEvent);
                 entry.parentGroup = targetParent;
             }
             else //create entry
@@ -354,15 +382,15 @@ namespace UnityEditor.AddressableAssets
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 if (AddressablesUtility.IsPathValidForEntry(path))
                 {
-                    entry = CreateEntry(guid, path, targetParent, readOnly);
+                    entry = CreateEntry(guid, path, targetParent, readOnly, postEvent);
                 }
                 else
                 {
-                    entry = CreateEntry(guid, guid, targetParent, true);
+                    entry = CreateEntry(guid, guid, targetParent, true, postEvent);
                 }
             }
 
-            targetParent.AddAssetEntry(entry);
+            targetParent.AddAssetEntry(entry, postEvent);
             return entry;
         }
 
@@ -444,31 +472,64 @@ namespace UnityEditor.AddressableAssets
                     Debug.LogError("Unable to create valid name for new Addressable Assets group.");
                     return name;
                 }
-                foundExisting = false;
-                foreach (var g in groups)
+                foundExisting = IsNotUniqueGroupName(validName);
+                if(foundExisting)
                 {
-                    if (g.name == validName)
-                    {
-                        foundExisting = true;
-                        validName = name + index.ToString();
-                        index++;
-                        break;
-                    }
+                    validName = name + index.ToString();
+                    index++;
                 }
             }
 
             return validName;
         }
+        public bool IsNotUniqueGroupName(string name)
+        {
+
+            bool foundExisting = false;
+            foreach (var g in groups)
+            {
+                if (g.name == name)
+                {
+                    foundExisting = true;
+                    break;
+                }
+            }
+            return foundExisting;
+        }
 
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public void RemoveGroup(AssetGroup g)
+        public void RemoveGroup(AssetGroup g, bool postEvent = true)
         {
             var path = System.IO.Path.GetDirectoryName(pathForAsset) + "/" + g.guid.ToString() + ".asset";
             AssetDatabase.DeleteAsset(path);
             groups.Remove(g);
-            PostModificationEvent(ModificationEvent.GroupRemoved, g);
+            if(postEvent)
+                PostModificationEvent(ModificationEvent.GroupRemoved, g);
+        }
+
+
+        internal void SetLabelValueForEntries(List<AssetGroup.AssetEntry> entries, string label, bool value)
+        {
+            if (value)
+                AddLabel(label);
+
+            foreach (var e in entries)
+                e.SetLabel(label, value, false);
+
+            PostModificationEvent(ModificationEvent.EntryModified, entries);
+        }
+
+        internal void MoveEntriesToGroup(List<AssetGroup.AssetEntry> entries, AssetGroup targetGroup)
+        {
+            foreach (var e in entries)
+            {
+                if (e.parentGroup != null)
+                    e.parentGroup.RemoveAssetEntry(e, false);
+                targetGroup.AddAssetEntry(e, false);
+            }
+            PostModificationEvent(ModificationEvent.EntryMoved, entries);
         }
     }
 }

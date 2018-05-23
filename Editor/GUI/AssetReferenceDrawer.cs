@@ -339,7 +339,7 @@ namespace UnityEditor.AddressableAssets
                     else
                     {
                         root.AddChild(new AssetRefTreeViewItem(k_noAssetString.GetHashCode(), 0, k_noAssetString, string.Empty, string.Empty));
-                        foreach (var entry in aaSettings.GetAllAssets(true, true))
+                        foreach (var entry in aaSettings.GetAllAssets())
                         {
                             bool passedFilters = true;
                             if (m_drawer.labelFilter != null && !m_drawer.labelFilter.Validate(entry.labels))

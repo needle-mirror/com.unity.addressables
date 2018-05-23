@@ -22,10 +22,10 @@ namespace UnityEditor.AddressableAssets
         }
         protected abstract string GetBuildPath(AddressableAssetSettings settings);
         protected abstract string GetBundleLoadPath(AddressableAssetSettings settings, string bundleName);
-        protected abstract string GetBundleLoadProvider(AddressableAssetSettings settings);
-        protected string GetAssetLoadProvider(AddressableAssetSettings settings)
+        protected abstract System.Type GetBundleLoadProvider(AddressableAssetSettings settings);
+        protected System.Type GetAssetLoadProvider(AddressableAssetSettings settings)
         {
-            return typeof(BundledAssetProvider).FullName;
+            return typeof(BundledAssetProvider);
         }
 
         protected abstract BundleMode GetBundleMode(AddressableAssetSettings settings);
@@ -49,7 +49,7 @@ namespace UnityEditor.AddressableAssets
                 var assetType = t == null ? string.Empty : t.FullName;
                 if (t == null)
                     Debug.Log("Can't get asset type for " + assetEntry.assetPath);
-                var assetPath = assetEntry.GetAssetLoadPath(settings.buildSettings.editorPlayMode == ResourceManagerRuntimeData.EditorPlayMode.PackedMode);
+                var assetPath = assetEntry.GetAssetLoadPath(ProjectConfigData.editorPlayMode == ResourceManagerRuntimeData.EditorPlayMode.PackedMode);
                 locations.Add(new ResourceLocationData(assetEntry.address, assetEntry.guid, assetPath, GetAssetLoadProvider(settings), true, ResourceLocationData.LocationType.String, settings.labelTable.GetMask(assetEntry.labels), assetType, assetsToBundles[a].ToArray()));
             }
         }

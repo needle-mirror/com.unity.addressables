@@ -1,6 +1,10 @@
 {
     "name": "Unity.Addressables",
     "references": [
-      "Unity.ResourceManager"
-    ]
+        "Unity.ResourceManager"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false
 }

@@ -1,12 +1,16 @@
-﻿{
+{
     "name": "Unity.Addressables.Editor.Tests",
     "references": [
-        "Unity.Addressables.Editor"
+        "Unity.Addressables.Editor",
+        "Unity.Addressables",
+        "Unity.ResourceManager"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
     ],
     "includePlatforms": [
         "Editor"
     ],
-    "optionalUnityReferences": [
-        "TestAssemblies"
-    ]
+    "excludePlatforms": [],
+    "allowUnsafeCode": false
 }

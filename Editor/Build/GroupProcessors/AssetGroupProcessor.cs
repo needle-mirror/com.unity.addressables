@@ -42,7 +42,7 @@ namespace UnityEditor.AddressableAssets
             
         }
 
-        internal virtual void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group, ResourceLocationList contentCatalog, List<ResourceLocationData> locations)
+        internal virtual void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group, ContentCatalogData contentCatalog, List<ResourceLocationData> locations)
         {
         }
 

@@ -25,14 +25,14 @@ namespace UnityEditor.AddressableAssets
                     var assetPath = s.GetAssetLoadPath(false);
                     if (s.isScene)
                     {
-                        locationData.Add(new ResourceLocationData(s.address, s.guid, assetPath, typeof(SceneProvider).FullName, true, ResourceLocationData.LocationType.String, 0, typeof(UnityEngine.SceneManagement.Scene).FullName, null));
+                        locationData.Add(new ResourceLocationData(s.address, s.guid, assetPath, typeof(SceneProvider), true, ResourceLocationData.LocationType.String, 0, typeof(UnityEngine.SceneManagement.Scene).FullName, null));
                         var indexInSceneList = IndexOfSceneInEditorBuildSettings(new GUID(s.guid));
                         if (indexInSceneList >= 0)
-                            locationData.Add(new ResourceLocationData(indexInSceneList.ToString(), s.guid, assetPath, typeof(SceneProvider).FullName, true, ResourceLocationData.LocationType.Int, 0, typeof(UnityEngine.SceneManagement.Scene).FullName, null));
+                            locationData.Add(new ResourceLocationData(indexInSceneList.ToString(), s.guid, assetPath, typeof(SceneProvider), true, ResourceLocationData.LocationType.Int, 0, typeof(UnityEngine.SceneManagement.Scene).FullName, null));
                     }
                     else
                     {
-                        locationData.Add(new ResourceLocationData(s.address, s.guid, assetPath, typeof(SceneProvider).FullName, true, ResourceLocationData.LocationType.String, 0, typeof(UnityEngine.SceneManagement.Scene).FullName, null));
+                        locationData.Add(new ResourceLocationData(s.address, s.guid, assetPath, typeof(SceneProvider), true, ResourceLocationData.LocationType.String, 0, typeof(UnityEngine.SceneManagement.Scene).FullName, null));
                     }
                 }
             }

@@ -22,7 +22,7 @@ namespace UnityEditor.AddressableAssets
         {
             var aabc = aaContext as AddressableAssetsBuildContext;
             var aaSettings = aabc.m_settings;
-            var contentCatalog = aabc.m_contentCatalog;
+            var locations = aabc.m_locations;
             var bundleToAssetGroup = aabc.m_bundleToAssetGroup;
             var bundleToAssets = new Dictionary<string, List<GUID>>();
             var assetsToBundles = new Dictionary<GUID, List<string>>();
@@ -57,7 +57,7 @@ namespace UnityEditor.AddressableAssets
                     assetGroupToBundle.Add(assetGroup, bundles = new List<string>());
                 bundles.Add(kvp.Key);
 
-                assetGroup.processor.CreateResourceLocationData(aaSettings, assetGroup, kvp.Key, kvp.Value, assetsToBundles, contentCatalog.locations);
+                assetGroup.processor.CreateResourceLocationData(aaSettings, assetGroup, kvp.Key, kvp.Value, assetsToBundles, locations);
             }
 
             return ReturnCode.Success;

@@ -14,11 +14,10 @@ namespace UnityEngine.AddressableAssets
     {
         [SerializeField]
         public string assetType;
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        [SerializeField]
         public string assetGUID;
+
+        public Hash128 RuntimeKey { get { return Hash128.Parse(assetGUID); } }
+
 #if UNITY_EDITOR
         [SerializeField]
         private Object _cachedAsset;
@@ -38,7 +37,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public IAsyncOperation<TObject> LoadAsync<TObject>() where TObject : Object
         {
-            return Addressables.LoadAsset<TObject>(this);
+            return Addressables.LoadAsset<TObject>(RuntimeKey);
         }
 
         /// <summary>
@@ -46,12 +45,12 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public IAsyncOperation<TObject> Instantiate<TObject>(Vector3 position, Quaternion rotation, Transform parent = null) where TObject : Object
         {
-            return Addressables.Instantiate<TObject>(this, position, rotation, parent);
+            return Addressables.Instantiate<TObject>(RuntimeKey, position, rotation, parent);
         }
 
         public IAsyncOperation<TObject> InstantiateAsync<TObject>(Transform parent = null, bool instantiateInWorldSpace = false) where TObject : Object
         {
-            return Addressables.Instantiate<TObject>(this, parent, instantiateInWorldSpace);
+            return Addressables.Instantiate<TObject>(RuntimeKey, parent, instantiateInWorldSpace);
         }
 
         /// <summary>
@@ -76,7 +75,8 @@ namespace UnityEngine.AddressableAssets
         {
             try
             {
-                assetType = UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(UnityEditor.AssetDatabase.GUIDToAssetPath(assetGUID)).FullName;
+                assetType = UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(UnityEditor.AssetDatabase.GUIDToAssetPath(assetGUID.ToString())).FullName;
+          //      serializedGUID = Hash128.Parse(assetGUID);
             }
             catch (System.Exception)
             {
@@ -86,7 +86,7 @@ namespace UnityEngine.AddressableAssets
 
         public void OnAfterDeserialize()
         {
-
+//            assetGUID = serializedGUID.ToString();
         }
 
         public Object editorAsset
@@ -95,7 +95,7 @@ namespace UnityEngine.AddressableAssets
             {
                 if (_cachedAsset != null)
                     return _cachedAsset;
-                return (_cachedAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<Object>(UnityEditor.AssetDatabase.GUIDToAssetPath(assetGUID)));
+                return (_cachedAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<Object>(UnityEditor.AssetDatabase.GUIDToAssetPath(assetGUID.ToString())));
             }
 
             set
@@ -110,7 +110,7 @@ namespace UnityEngine.AddressableAssets
         }
 #endif
     }
-
+    
     internal class AssetReferenceLocator : IResourceLocator
     {
         public bool Locate(object key, out IList<IResourceLocation> locations)
@@ -119,10 +119,10 @@ namespace UnityEngine.AddressableAssets
             var ar = key as AssetReference;
             if (ar == null)
                 return false;
-            return Addressables.GetResourceLocations(ar.assetGUID, out locations);
+            return Addressables.GetResourceLocations(ar.RuntimeKey, out locations);
         }
     }
-
+    
     /// <summary>
     /// TODO - doc
     /// </summary>

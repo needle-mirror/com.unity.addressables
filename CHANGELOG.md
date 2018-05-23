@@ -4,6 +4,24 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.0.26-preview] - 2018-05-24
+ - re-added Instantiate(AssetReference) for the sake of backwards compatability.
+ 
+## [0.0.25-preview] - 2018-05-23
+ - workaround for engine bug surrounding shader build.  Fix to engine is on it's way in.
+ 
+## [0.0.24-preview] - 2018-05-21
+ - minor bug fix
+ 
+## [0.0.23-preview] - 2018-05-21
+ - new format for content catalogs
+ - detects changes in project and invalidates cached runtime data and catalogs
+ - data is not copied into StreamingAssets folder when running fast or virtual mode
+ - added external AssetEntry collections for use by packages
+ - modifying large number of asset entries on the UI is no longer unresponsive
+ - added an option to search the asset list in a hierarchical fashion. Helps track down which group an asset is in.
+ - many small bug fixes.
+ 
 ## [0.0.22-preview] - 2018-05-03
  - dependency update.
  

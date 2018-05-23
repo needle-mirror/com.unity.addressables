@@ -61,9 +61,9 @@ namespace UnityEditor.AddressableAssets
             return AddressableAssetSettings.ProfileSettings.ProfileIDData.Evaluate(settings.profileSettings, settings.activeProfileId, loadPrefixId) + "/" + postfixPath;
         }
 
-        protected override string GetBundleLoadProvider(AddressableAssetSettings settings)
+        protected override System.Type GetBundleLoadProvider(AddressableAssetSettings settings)
         {
-            return typeof(RemoteAssetBundleProvider).FullName;
+            return typeof(RemoteAssetBundleProvider);
         }
 
         protected override BundleMode GetBundleMode(AddressableAssetSettings settings)
@@ -93,7 +93,7 @@ namespace UnityEditor.AddressableAssets
             return valid;
         }
 
-        internal override void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group, ResourceLocationList contentCatalog, List<ResourceLocationData> locations)
+        internal override void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group, ContentCatalogData contentCatalog, List<ResourceLocationData> locations)
         {
             var bp = GetBuildPath(aaSettings);
             var buildPath = Path.Combine(bp, aaSettings.profileSettings.EvaluateString(aaSettings.activeProfileId, "catalog_[ContentVersion].json"));
@@ -109,14 +109,14 @@ namespace UnityEditor.AddressableAssets
             File.WriteAllText(buildPath, jsonText);
             File.WriteAllText(buildPath.Replace(".json", ".hash"), contentHash);
 
-            var remoteHash = new ResourceLocationData("RemoteCatalogHash" + group.guid, "", remoteHashLoadPath, typeof(TextDataProvider).FullName, false);
-            var localHash = new ResourceLocationData("LocalCatalogHash" + group.guid, "", localCacheLoadPath, typeof(TextDataProvider).FullName, false);
+            var remoteHash = new ResourceLocationData("RemoteCatalogHash" + group.guid, "", remoteHashLoadPath, typeof(TextDataProvider), false);
+            var localHash = new ResourceLocationData("LocalCatalogHash" + group.guid, "", localCacheLoadPath, typeof(TextDataProvider), false);
 
 
             int priority = GetPriority(aaSettings, group);
             locations.Add(new ResourceLocationData(priority + "_RemoteCatalog_" + group.guid, "", 
                 remoteHashLoadPath.Replace(".hash", ".json"), 
-                typeof(ContentCatalogProvider).FullName, true,
+                typeof(ContentCatalogProvider), true,
                 ResourceLocationData.LocationType.String, 1, "", 
                 new string[] { localHash.m_address, remoteHash.m_address}));
             locations.Add(localHash);
@@ -137,8 +137,8 @@ namespace UnityEditor.AddressableAssets
             if (newBundleMode != bundleMode)
                 bundleMode = newBundleMode;
 
-            var newBP = ProfilesWindow.ValueGUI(settings, "Build Path", buildPathId, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.BuildPath | AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Inline);
-            var newLP = ProfilesWindow.ValueGUI(settings, "Load Prefix", loadPrefixId, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.LoadPrefix | AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Inline);
+            var newBP = ProfilesWindow.ValueGUI(settings, "Build Path", buildPathId);
+            var newLP = ProfilesWindow.ValueGUI(settings, "Load Prefix", loadPrefixId);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
             if (newBP != buildPathId || newLP != loadPrefixId)

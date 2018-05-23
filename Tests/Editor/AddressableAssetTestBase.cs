@@ -21,6 +21,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 Directory.CreateDirectory(TestConfigFolder);
                 AssetDatabase.Refresh();
             }
+            
             settings = AddressableAssetSettings.GetDefault(true, false, TestConfigFolder, TestConfigName);
             settings.labelTable.labelNames.Clear();
             GameObject testObject = new GameObject("TestObject");

@@ -146,6 +146,11 @@ namespace UnityEngine.AddressableAssets
         {
             if (s_initializationOperation != null)
                 return;
+            var playMode = (ResourceManagerRuntimeData.EditorPlayMode)PlayerPrefs.GetInt("AddressablesPlayMode", 0);
+            if (playMode == ResourceManagerRuntimeData.EditorPlayMode.Invalid)
+                return;
+            if (!Application.isPlaying)
+                Debug.LogWarning("Addressables are not available in edit mode.");
             s_releaseInstanceAction = ReleaseInstance;
             s_recordAssetAction = RecordObjectLocation;
             s_recordAssetListAction = RecordObjectListLocation;
@@ -153,7 +158,7 @@ namespace UnityEngine.AddressableAssets
             s_recordInstanceListAction = RecordInstanceListLocation;
             ResourceManagement.Diagnostics.DiagnosticEventCollector.ProfileEvents = true;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
-            s_initializationOperation = new InitializationOperation();
+            s_initializationOperation = new InitializationOperation(playMode);
         }
 
         private static IAsyncOperation<bool> InitializationOperation
@@ -273,7 +278,7 @@ namespace UnityEngine.AddressableAssets
                 m_keys = null;
                 m_key = key;
                 m_callback = callback;
-                Result = null;
+                m_result = null;
                 DelayedActionManager.AddAction((Action)OnComplete);
                 return this;
             }
@@ -283,7 +288,7 @@ namespace UnityEngine.AddressableAssets
                 m_keys = keys;
                 m_mode = mode;
                 m_callback = callback;
-                Result = null;
+                m_result = null;
                 DelayedActionManager.AddAction((Action)OnComplete);
                 return this;
             }
@@ -339,14 +344,20 @@ namespace UnityEngine.AddressableAssets
                     op.SetResult(locs[0]);
                 return op as IAsyncOperation<TObject>;
             }
-            
-
 
             IList<IResourceLocation> locations;
-            if(GetResourceLocations(key, out locations))
-                return LoadAsset<TObject>(locations[0]);
-
-            throw new InvalidKeyException(key);
+            if (GetResourceLocations(key, out locations))
+            {
+                foreach (var loc in locations)
+                {
+                    var provider = ResourceManager.GetResourceProvider<TObject>(loc);
+                    if (provider != null)
+                        return provider.Provide<TObject>(loc, ResourceManager.LoadDependencies(loc));
+                }
+                throw new UnknownResourceProviderException(locations[0]);
+            }
+            return new EmptyOperation<TObject>().Start(null, null);
+            //throw new InvalidKeyException(key);
         }
 
         /// <summary>

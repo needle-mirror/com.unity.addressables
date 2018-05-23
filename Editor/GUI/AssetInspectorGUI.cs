@@ -47,7 +47,8 @@ namespace UnityEditor.AddressableAssets
                 bool foundValidAsset = false;
                 foreach (var t in editor.targets)
                 {
-                    if (AddressablesUtility.GetPathAndGUIDFromTarget(t, ref path, ref guid))
+                    if ( (AddressablesUtility.GetPathAndGUIDFromTarget(t, ref path, ref guid)) &&
+                        (path.ToLower().Contains("assets")) )
                     {
                         foundValidAsset = true;
 

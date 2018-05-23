@@ -42,7 +42,7 @@ namespace UnityEditor.AddressableAssets
 
             if (GUILayout.Button("Add Entry"))
             {
-                settings.profileSettings.CreateValue("NewVariable" + UnityEngine.Random.Range(0, 1000).ToString(), "", AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Other);
+                settings.profileSettings.CreateValue("NewVariable" + UnityEngine.Random.Range(0, 1000).ToString(), "");
                 tree.Reload();
             }
 
@@ -112,11 +112,11 @@ namespace UnityEditor.AddressableAssets
             }
 
         }
-        static public string ValueGUI(AddressableAssetSettings settings, string label, string currentID, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage usage)
+        static public string ValueGUI(AddressableAssetSettings settings, string label, string currentID)
         {
             string result = currentID;
             
-            var names = settings.profileSettings.GetAllVariableNames(usage).ToList();
+            var names = settings.profileSettings.GetAllVariableNames().ToList();
             names.Sort();
             string[] displayNames = names.ToArray();
             AddressableAssetSettings.ProfileSettings.ProfileIDData data = settings.profileSettings.GetProfileDataById(currentID);
@@ -219,7 +219,7 @@ namespace UnityEditor.AddressableAssets
                 for (int i = 0; i < args.GetNumVisibleColumns(); ++i)
                     CellGUI(args.GetCellRect(i), args.item as ProfileEditorTreeViewItem, args.GetColumn(i), ref args);
             }
-            const int k_numPrefixColumns = 2;
+            const int k_numPrefixColumns = 1;
             private void CellGUI(Rect cellRect, ProfileEditorTreeViewItem item, int column, ref RowGUIArgs args)
             {
                 if (item == null)
@@ -228,10 +228,6 @@ namespace UnityEditor.AddressableAssets
                 if (column == 0)
                 {
                     EditorGUI.LabelField(cellRect, item.displayName);
-                }
-                else if(column == 1)
-                {
-                    item.entry.usage = (AddressableAssetSettings.ProfileSettings.ProfileEntryUsage)EditorGUI.EnumPopup(cellRect, item.entry.usage);
                 }
                 else
                 {
@@ -259,16 +255,6 @@ namespace UnityEditor.AddressableAssets
                 retVal[0].headerTextAlignment = TextAlignment.Left;
                 retVal[0].canSort = true;
                 retVal[0].autoResize = true;
-
-                retVal[1] = new MultiColumnHeaderState.Column();
-                retVal[1].headerContent = new GUIContent("Entry Usage", "What context this variable can be used in");
-                retVal[1].minWidth = 100;
-                retVal[1].width = 125;
-                retVal[1].maxWidth = 250;
-                retVal[1].headerTextAlignment = TextAlignment.Left;
-                retVal[1].canSort = true;
-                retVal[1].autoResize = true;
-
 
                 int column = k_numPrefixColumns;
                 foreach(var prof in profileSettings.profiles)

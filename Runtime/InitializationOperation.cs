@@ -7,14 +7,16 @@ namespace UnityEngine.AddressableAssets
 {
     class InitializationOperation : AsyncOperationBase<bool>
     {
-        public InitializationOperation()
+        ResourceManagerRuntimeData.EditorPlayMode m_playMode;
+        public InitializationOperation(ResourceManagerRuntimeData.EditorPlayMode playMode)
         {
+            m_playMode = playMode;
             ResourceManager.SceneProvider = new SceneProvider();
             ResourceManager.ResourceProviders.Add(new JsonAssetProvider());
             ResourceManager.ResourceProviders.Add(new TextDataProvider());
             ResourceManager.ResourceProviders.Add(new ContentCatalogProvider());
 
-            var playerSettingsLocation = AAConfig.ExpandPathWithGlobalVariables(ResourceManagerRuntimeData.PlayerSettingsLoadLocation);
+            var playerSettingsLocation = AAConfig.ExpandPathWithGlobalVariables(ResourceManagerRuntimeData.GetPlayerSettingsLoadLocation(m_playMode));
             var runtimeDataLocation = new ResourceLocationBase("RuntimeData", playerSettingsLocation, typeof(JsonAssetProvider).FullName);
             Context = runtimeDataLocation;
             ResourceManager.ProvideResource<ResourceManagerRuntimeData>(runtimeDataLocation).Completed += OnDataLoaded;
@@ -35,33 +37,34 @@ namespace UnityEngine.AddressableAssets
             else
                 ResourceManager.InstanceProvider = new InstanceProvider();
 
-            Addressables.ResourceLocators.Add(rtd.catalogLocations.Create());
+            Addressables.ResourceLocators.Add(new ResourceLocationMap(rtd.catalogLocations));
             LoadContentCatalog(rtd, 0);
         }
 
         void LoadContentCatalog(ResourceManagerRuntimeData rtd, int index)
         {
-            while (index < rtd.catalogLocations.locations.Count && !rtd.catalogLocations.locations[index].m_isLoadable)
+            while (index < rtd.catalogLocations.Count && !rtd.catalogLocations[index].m_isLoadable)
                 index++;
             IList<IResourceLocation> locations;
-            if (Addressables.GetResourceLocations(rtd.catalogLocations.locations[index].m_address, out locations))
+            if (Addressables.GetResourceLocations(rtd.catalogLocations[index].m_address, out locations))
             {
-                ResourceManager.ProvideResource<ResourceLocationList>(locations[0]).Completed += (op) =>
+                ResourceManager.ProvideResource<ContentCatalogData>(locations[0]).Completed += (op) =>
                 {
                     if (op.Result != null)
                     {
-                        Addressables.ResourceLocators.Clear();
-                        Addressables.ResourceLocators.Add(op.Result.Create());
+                        Addressables.ResourceLocators.Add(op.Result.CreateLocator());
                         Addressables.ResourceLocators.Add(new AssetReferenceLocator());
                         SetResult(true);
                         InvokeCompletionEvent();
                     }
                     else
                     {
-                        if (index + 1 >= rtd.catalogLocations.locations.Count)
+                        if (index + 1 >= rtd.catalogLocations.Count)
                         {
-                            Debug.LogError("Failed to load content catalog.");
+                            Debug.Log("Addressables initialization failed.");
+                            m_error = new Exception("Failed to load content catalog.");
                             SetResult(false);
+                            Status = AsyncOperationStatus.Failed;
                             InvokeCompletionEvent();
                         }
                         else
@@ -85,8 +88,7 @@ namespace UnityEngine.AddressableAssets
             else
             {
 #if UNITY_EDITOR
-                var playMode = (ResourceManagerRuntimeData.EditorPlayMode)PlayerPrefs.GetInt("AddressablesPlayMode", 0);
-                switch (playMode)
+                switch (m_playMode)
                 {
                     case ResourceManagerRuntimeData.EditorPlayMode.FastMode:
                         ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new AssetDatabaseProvider(), assetCacheSize, assetCacheAge));

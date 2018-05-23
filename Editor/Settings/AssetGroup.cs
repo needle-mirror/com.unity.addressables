@@ -140,12 +140,13 @@ namespace UnityEditor.AddressableAssets
             /// <summary>
             /// TODO - doc
             /// </summary>
-            internal void AddAssetEntry(AssetEntry e)
+            internal void AddAssetEntry(AssetEntry e, bool postEvent = true)
             {
                 e.isSubAsset = false;
                 e.parentGroup = this;
                 entryMap[e.guid] = e;
-                PostModificationEvent(ModificationEvent.EntryAdded, e);
+                if(postEvent)
+                    PostModificationEvent(ModificationEvent.EntryAdded, e);
             }
 
             /// <summary>
@@ -167,11 +168,14 @@ namespace UnityEditor.AddressableAssets
             /// <summary>
             /// TODO - doc
             /// </summary>
-            internal void RemoveAssetEntry(AssetEntry entry)
+            internal void RemoveAssetEntry(AssetEntry entry, bool postEvent = true)
             {
                 entryMap.Remove(entry.guid);
-                PostModificationEvent(ModificationEvent.EntryRemoved, entry);
+                entry.parentGroup = null;
+                if(postEvent)
+                    PostModificationEvent(ModificationEvent.EntryRemoved, entry);
             }
         }
+
     }
 }

@@ -3,6 +3,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using UnityEditor.Build.Content;
 using UnityEngine.AddressableAssets;
+using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -20,26 +21,6 @@ namespace UnityEditor.AddressableAssets
             /// <summary>
             /// TODO - doc
             /// </summary>
-            [NonSerialized]
-            public bool postProfilerEvents = true;
-            /// <summary>
-            /// TODO - doc
-            /// </summary>
-            [NonSerialized]
-            public ResourceManagerRuntimeData.EditorPlayMode editorPlayMode = ResourceManagerRuntimeData.EditorPlayMode.VirtualMode;
-            /// <summary>
-            /// TODO - doc
-            /// </summary>
-            [NonSerialized]
-            public long localLoadSpeed = 1024 * 1024 * 10;
-            /// <summary>
-            /// TODO - doc
-            /// </summary>
-            [NonSerialized]
-            public long remoteLoadSpeed = 1024 * 1024 * 1;
-            /// <summary>
-            /// TODO - doc
-            /// </summary>
             public BuildCompression compression
             {
                 get { return m_compression; }
@@ -51,7 +32,11 @@ namespace UnityEditor.AddressableAssets
             }
 
             [UnityEngine.SerializeField]
+#if UNITY_2018_3_OR_NEWER
+            private BuildCompression m_compression = BuildCompression.LZ4;
+#else
             private BuildCompression m_compression = BuildCompression.DefaultLZ4;
+#endif
             /// <summary>
             /// TODO - doc
             /// </summary>
@@ -86,10 +71,7 @@ namespace UnityEditor.AddressableAssets
 
             internal void SerializeForHash(BinaryFormatter formatter, Stream stream)
             {
-                formatter.Serialize(stream, postProfilerEvents);
                 formatter.Serialize(stream, compression);
-                formatter.Serialize(stream, localLoadSpeed);
-                formatter.Serialize(stream, remoteLoadSpeed);
             }
 
             [NonSerialized]

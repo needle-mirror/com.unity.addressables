@@ -51,7 +51,7 @@ namespace UnityEditor.AddressableAssets
                     break;
 
                 currCount++;
-                var group = settings.CreateGroup(bundle, "AddressableAssets.LocalAssetBundleAssetGroupProcessor");
+                var group = settings.CreateGroup(bundle, typeof(LocalAssetBundleAssetGroupProcessor).FullName);
                 var assetList = AssetDatabase.GetAssetPathsFromAssetBundle(bundle);
                 foreach(var asset in assetList)
                 {

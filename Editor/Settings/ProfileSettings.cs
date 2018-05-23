@@ -19,17 +19,6 @@ namespace UnityEditor.AddressableAssets
         [Serializable]
         public class ProfileSettings
         {
-            
-            public enum ProfileEntryUsage
-            {
-                Invalid = 1,
-                Inline = 2,
-                BuildPath = 4,
-                LoadPrefix = 8,
-                Helper = 1024,
-                Other = 2048,
-            }
-
             [Serializable]
             internal class BuildProfile
             {
@@ -175,16 +164,16 @@ namespace UnityEditor.AddressableAssets
             {
                 public string id;
                 public string name;
-                public ProfileEntryUsage usage;
-                public ProfileIDData(string entryId, string entryName, ProfileEntryUsage entryUsage)
+                public bool inlineUsage;
+                public ProfileIDData(string entryId, string entryName, bool inline = false)
                 {
                     id = entryId;
                     name = entryName;
-                    usage = entryUsage;
+                    inlineUsage = inline;
                 }
                 public string Evaluate(ProfileSettings ps, string profileId)
                 {
-                    if (usage == ProfileEntryUsage.Inline || usage == ProfileEntryUsage.Invalid)
+                    if (inlineUsage)
                         return ps.EvaluateString(profileId, id);
 
                     return Evaluate(ps, profileId, id);
@@ -202,7 +191,7 @@ namespace UnityEditor.AddressableAssets
                 get
                 {
                     if (m_profileEntryNames.Count == 0)
-                        m_profileEntryNames.Add(new ProfileIDData(GUID.Generate().ToString(), k_customEntryString, ProfileEntryUsage.Inline));
+                        m_profileEntryNames.Add(new ProfileIDData(GUID.Generate().ToString(), k_customEntryString, true));
                     return m_profileEntryNames;
                 }
             }
@@ -267,13 +256,14 @@ namespace UnityEditor.AddressableAssets
                     m_profiles.Clear();
                     
                     AddProfile(k_rootProfileName, null);
-                    CreateValue("ContentVersion", "1", ProfileEntryUsage.Helper);
-                    CreateValue("BuildTarget", "[UnityEditor.EditorUserBuildSettings.activeBuildTarget]", ProfileEntryUsage.Helper);
+                    CreateValue("LocalBuildPath", "Assets/StreamingAssets");
+                    CreateValue("LocalLoadPrefix", "file://{UnityEngine.Application.streamingAssetsPath}");
+                    CreateValue("RemoteBuildPath", "ServerData/[UnityEditor.EditorUserBuildSettings.activeBuildTarget]");
+                    CreateValue("RemoteLoadPrefix", "http://localhost/[UnityEditor.EditorUserBuildSettings.activeBuildTarget]");
 
-                    CreateValue("LocalBuildPath", "Assets/StreamingAssets", ProfileEntryUsage.BuildPath);
-                    CreateValue("LocalLoadPrefix", "file://{UnityEngine.Application.streamingAssetsPath}", ProfileEntryUsage.LoadPrefix);
-                    CreateValue("RemoteBuildPath", "ServerData/[UnityEditor.EditorUserBuildSettings.activeBuildTarget]", ProfileEntryUsage.BuildPath);
-                    CreateValue("RemoteLoadPrefix", "http://localhost/[UnityEditor.EditorUserBuildSettings.activeBuildTarget]", ProfileEntryUsage.LoadPrefix);
+                    CreateValue("ContentVersion", "1");
+                    CreateValue("BuildTarget", "[UnityEditor.EditorUserBuildSettings.activeBuildTarget]");
+
                 }
                 return GetDefaultProfileID();
             }
@@ -327,14 +317,12 @@ namespace UnityEditor.AddressableAssets
             /// <summary>
             /// TODO - doc
             /// </summary>
-            public HashSet<string> GetAllVariableNames(ProfileEntryUsage usage)
+            public HashSet<string> GetAllVariableNames()
             {
                 HashSet<string> names = new HashSet<string>();
                 foreach (var entry in profileEntryNames)
                 {
-                    int overlap = (int)entry.usage & (int)usage;
-                    if(overlap != 0)
-                        names.Add(entry.name);
+                    names.Add(entry.name);
                 }
                 return names;
             }
@@ -455,16 +443,16 @@ namespace UnityEditor.AddressableAssets
                 }
                 return null;
             }
-            public List<ProfileIDData> GetVairablesFromUsage(ProfileEntryUsage usage)
-            {
-                var result = new List<ProfileIDData>();
-                foreach(var idPair in profileEntryNames)
-                {
-                    if (idPair.usage == usage)
-                        result.Add(idPair);
-                }
-                return result;
-            }
+            //public List<ProfileIDData> GetVairablesFromUsage(ProfileEntryUsage usage)
+            //{
+            //    var result = new List<ProfileIDData>();
+            //    foreach(var idPair in profileEntryNames)
+            //    {
+            //        if (idPair.usage == usage)
+            //            result.Add(idPair);
+            //    }
+            //    return result;
+            //}
             private string GetVariableID(string variableName)
             {
                 foreach (var idPair in profileEntryNames)
@@ -497,7 +485,7 @@ namespace UnityEditor.AddressableAssets
                 profile.SetValueById(id, val);
                 PostModificationEvent(ModificationEvent.ProfileModified);
             }
-            public void CreateValue(string variableName, string defaultValue, ProfileEntryUsage usage)
+            public void CreateValue(string variableName, string defaultValue, bool inline=false)
             {
                 if(m_profiles.Count == 0)
                 {
@@ -508,7 +496,7 @@ namespace UnityEditor.AddressableAssets
                 if (string.IsNullOrEmpty(id))
                 {
                     id = GUID.Generate().ToString();
-                    profileEntryNames.Add(new ProfileIDData(id, variableName, usage));
+                    profileEntryNames.Add(new ProfileIDData(id, variableName, inline));
 
                     foreach (var pro in m_profiles)
                     {

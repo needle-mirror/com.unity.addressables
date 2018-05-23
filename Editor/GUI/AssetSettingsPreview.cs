@@ -78,8 +78,9 @@ namespace UnityEditor.AddressableAssets
             //tree.searchString = m_searchField.OnGUI(tree.searchString);
             GUILayout.Space(12);
             GUILayout.EndHorizontal();
-
-            tree.OnGUI(new Rect(pos.x, pos.y + 32, pos.width, pos.height - 28));
+            var treeRect = new Rect(pos.x, pos.y + 12, pos.width, pos.height - 32);
+            
+            tree.OnGUI(treeRect);
             GUILayout.EndArea();
         }
 
@@ -87,13 +88,16 @@ namespace UnityEditor.AddressableAssets
         {
             //TODO - this should just read from the virtual bundle file in Library.
             explicitAssets = new HashSet<GUID>();
-            if (BuildScript.PreviewDependencyInfo(out m_buildDependencyData, out m_bundleWriteData))
+            var result = BuildScript.PreviewDependencyInfo(out m_buildDependencyData, out m_bundleWriteData);
+            if (result >= ReturnCode.Success)
             {
                 foreach (var a in m_bundleWriteData.AssetToFiles)
                     explicitAssets.Add(a.Key);
             }
             else
-                Debug.LogError("Build preview failed.");
+            {
+                Debug.LogError("Build preview failed: " + result.ToString());
+            }
 
             tree.Reload();
         }
@@ -156,30 +160,33 @@ namespace UnityEditor.AddressableAssets
                                 {
                                     if (loadInfo.referencedObjects.Count > 0)
                                     {
-                                        if (IsExpanded(assetItem.id))
+                                        HashSet<string> assetRefs = new HashSet<string>();
+                                        foreach (var r in loadInfo.referencedObjects)
                                         {
-                                            HashSet<string> assetRefs = new HashSet<string>();
-                                            foreach (var r in loadInfo.referencedObjects)
+                                            if ((!preview.explicitAssets.Contains(r.guid)) &&
+                                                (r.filePath != "library/unity default resources") &&
+                                                (r.filePath != "resources/unity_builtin_extra"))
                                             {
-                                                if ((!preview.explicitAssets.Contains(r.guid)) &&
-                                                    (r.filePath != "library/unity default resources") &&
-                                                    (r.filePath != "resources/unity_builtin_extra"))
-                                                {
-                                                    var filePath = AssetDatabase.GUIDToAssetPath(r.guid.ToString());
-                                                    if (!string.IsNullOrEmpty(filePath) && !assetRefs.Contains(filePath))
-                                                        assetRefs.Add(filePath);
-                                                }
-                                            }
-                                            foreach (var r in assetRefs)
-                                            {
-                                                var subAssetItem = new TreeViewItem(r.GetHashCode(), 2, r);
-                                                subAssetItem.icon = AssetDatabase.GetCachedIcon(r) as Texture2D;
-                                                tempRows.Add(subAssetItem);
-                                                assetItem.AddChild(subAssetItem);
+                                                var filePath = AssetDatabase.GUIDToAssetPath(r.guid.ToString());
+                                                if (!string.IsNullOrEmpty(filePath) && !assetRefs.Contains(filePath))
+                                                    assetRefs.Add(filePath);
                                             }
                                         }
-                                        else
-                                            assetItem.children = CreateChildListForCollapsedParent();
+                                        if(assetRefs.Count > 0)
+                                        {
+                                            if (IsExpanded(assetItem.id))
+                                            {
+                                                foreach (var r in assetRefs)
+                                                {
+                                                    var subAssetItem = new TreeViewItem(r.GetHashCode(), 2, r);
+                                                    subAssetItem.icon = AssetDatabase.GetCachedIcon(r) as Texture2D;
+                                                    tempRows.Add(subAssetItem);
+                                                    assetItem.AddChild(subAssetItem);
+                                                }
+                                            }
+                                            else
+                                                assetItem.children = CreateChildListForCollapsedParent();
+                                        }
                                     }
                                 }
                             }

@@ -16,7 +16,7 @@ namespace UnityEditor.AddressableAssets
         protected string m_loadPrefixId;
 
         [SerializeField]
-        protected string m_bundleLoadProvider;
+        protected System.Type m_bundleLoadProvider;
 
         /// <summary>
         /// TODO - doc
@@ -49,13 +49,13 @@ namespace UnityEditor.AddressableAssets
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public string bundleLoadProvider
+        public System.Type bundleLoadProvider
         {
             get
             {
-                if (string.IsNullOrEmpty(m_bundleLoadProvider))
+                if (m_bundleLoadProvider == null)
                 {
-                    m_bundleLoadProvider = typeof(RemoteAssetBundleProvider).FullName;
+                    m_bundleLoadProvider = typeof(RemoteAssetBundleProvider);
                 }
                 return m_bundleLoadProvider;
             }
@@ -89,7 +89,7 @@ namespace UnityEditor.AddressableAssets
             return AddressableAssetSettings.ProfileSettings.ProfileIDData.Evaluate(settings.profileSettings, settings.activeProfileId, loadPrefixId) + "/" + postfixPath;
         }
 
-        protected override string GetBundleLoadProvider(AddressableAssetSettings settings)
+        protected override System.Type GetBundleLoadProvider(AddressableAssetSettings settings)
         {
             return bundleLoadProvider;
         }
@@ -113,16 +113,16 @@ namespace UnityEditor.AddressableAssets
             if (newBundleMode != bundleMode)
                 bundleMode = newBundleMode;
 
-            var newBP = ProfilesWindow.ValueGUI(settings, "Build Path", buildPathId, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.BuildPath | AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Inline);
-            var newLP = ProfilesWindow.ValueGUI(settings, "Load Prefix", loadPrefixId, AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.LoadPrefix | AddressableAssetSettings.ProfileSettings.ProfileEntryUsage.Inline);
-            var newLM = EditorGUILayout.DelayedTextField(new GUIContent("Load Method"), bundleLoadProvider);
+            var newBP = ProfilesWindow.ValueGUI(settings, "Build Path", buildPathId);
+            var newLP = ProfilesWindow.ValueGUI(settings, "Load Prefix", loadPrefixId);
+            var newLM = EditorGUILayout.DelayedTextField(new GUIContent("Load Method"), bundleLoadProvider.ToString());
             GUILayout.EndScrollView();
             GUILayout.EndArea();
-            if (newBP != buildPathId || newLP != loadPrefixId || newLM != bundleLoadProvider)
+            if (newBP != buildPathId || newLP != loadPrefixId || newLM != bundleLoadProvider.FullName)
             {
                 m_buildPathId = newBP;
                 m_loadPrefixId = newLP;
-                m_bundleLoadProvider = newLM;
+                m_bundleLoadProvider = System.Type.GetType(newLM);
                 settings.PostModificationEvent(AddressableAssetSettings.ModificationEvent.GroupProcessorModified, this);
             }
 
