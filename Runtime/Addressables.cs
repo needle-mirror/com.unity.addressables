@@ -146,11 +146,14 @@ namespace UnityEngine.AddressableAssets
         {
             if (s_initializationOperation != null)
                 return;
-            var playMode = (ResourceManagerRuntimeData.EditorPlayMode)PlayerPrefs.GetInt("AddressablesPlayMode", 0);
+            
+            int playModePref = PlayerPrefs.GetInt("AddressablesPlayMode", (int)ResourceManagerRuntimeData.EditorPlayMode.PackedMode);
+            var playMode = (ResourceManagerRuntimeData.EditorPlayMode)playModePref;
             if (playMode == ResourceManagerRuntimeData.EditorPlayMode.Invalid)
                 return;
             if (!Application.isPlaying)
                 Debug.LogWarning("Addressables are not available in edit mode.");
+
             s_releaseInstanceAction = ReleaseInstance;
             s_recordAssetAction = RecordObjectLocation;
             s_recordAssetListAction = RecordObjectListLocation;
