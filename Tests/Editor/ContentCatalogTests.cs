@@ -96,7 +96,7 @@ public class ContentCatalogTests
         var sw = System.Diagnostics.Stopwatch.StartNew();
         sw.Start();
         var catalog = new ContentCatalogData();
-        var entries = new List<ContentCatalogData.DataEntry>();
+        var entries = new List<ContentCatalogDataEntry>();
         var availableKeys = new List<object>();
 
         for (int i = 0; i < 1000; i++)
@@ -109,7 +109,7 @@ public class ContentCatalogTests
             else
                 data = new OddData() { index = i, path = internalId };
 
-            var e = new ContentCatalogData.DataEntry(internalId, providers[Random.Range(0, providers.Count)].FullName, eKeys, GetRandomSubset(availableKeys, Random.Range(0, 1)), data);
+            var e = new ContentCatalogDataEntry(internalId, providers[Random.Range(0, providers.Count)].FullName, eKeys, GetRandomSubset(availableKeys, Random.Range(0, 1)), data);
             availableKeys.Add(eKeys[0]);
             entries.Add(e);
         }
@@ -123,17 +123,17 @@ public class ContentCatalogTests
         sw.Stop();
         Debug.LogFormat("Create: {0}ms, Load: {1}ms", t, sw.Elapsed.TotalMilliseconds);
 
-        foreach (var k in locMap.m_locations)
+        foreach (var k in locMap.Locations)
         {
             foreach (var loc in k.Value)
             {
-                var entry = entries.Find(e => e.m_internalId == loc.InternalId);
-                Assert.AreEqual(entry.m_provider.ToString(), loc.ProviderId);
+                var entry = entries.Find(e => e.InternalId == loc.InternalId);
+                Assert.AreEqual(entry.Provider.ToString(), loc.ProviderId);
                 
                 var deps = loc.Dependencies;
                 if (deps != null)
                 {
-                    foreach (var ed in entry.m_dependencies)
+                    foreach (var ed in entry.Dependencies)
                     {
                         IList<IResourceLocation> depList;
                         Assert.IsTrue(locMap.Locate(ed, out depList));

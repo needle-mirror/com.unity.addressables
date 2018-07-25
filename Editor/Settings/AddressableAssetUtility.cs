@@ -1,8 +1,9 @@
+using UnityEditor.Build.Utilities;
 using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets
 {
-    public class AddressablesUtility
+    public static class AddressablesUtility
     {
         internal static bool GetPathAndGUIDFromTarget(Object t, ref string path, ref string guid)
         {
@@ -23,9 +24,9 @@ namespace UnityEditor.AddressableAssets
             if (string.IsNullOrEmpty(path))
                 return false;
             path = path.ToLower();
-            if (path == "library/unity editor resources" ||
-                path == "library/unity default resources" ||
-                path == "resources/unity_builtin_extra")
+            if (path == CommonStrings.UnityEditorResourcePath ||
+                path == CommonStrings.UnityDefaultResourcePath ||
+                path == CommonStrings.UnityBuiltInExtraPath)
                 return false;
             var ext = System.IO.Path.GetExtension(path);
             if (ext == ".cs" || ext == ".js" || ext == ".boo" || ext == ".exe" || ext == ".dll")
@@ -41,6 +42,10 @@ namespace UnityEditor.AddressableAssets
             AssetDatabase.RemoveUnusedAssetBundleNames();
             var bundleList = AssetDatabase.GetAllAssetBundleNames();
 
+            var message = "You are about to convert " + bundleList.Length + " asset bundles into " + bundleList.Length + " Addressable groups. This action cannot be undone.";
+            if (!EditorUtility.DisplayDialog("Convert Legacy Asset Bundles", message, "Continue", "Abort"))
+                return;
+
             float fullCount = bundleList.Length;
             int currCount = 0;
 
@@ -51,17 +56,18 @@ namespace UnityEditor.AddressableAssets
                     break;
 
                 currCount++;
-                var group = settings.CreateGroup(bundle, typeof(LocalAssetBundleAssetGroupProcessor).FullName);
+                var group = settings.CreateGroup(bundle, typeof(BundledAssetGroupProcessor), false, false);
                 var assetList = AssetDatabase.GetAssetPathsFromAssetBundle(bundle);
                 foreach(var asset in assetList)
                 {
                     var guid = AssetDatabase.AssetPathToGUID(asset);
-                    settings.CreateOrMoveEntry(guid, group);
+                    settings.CreateOrMoveEntry(guid, group, false, false);
                     var imp = AssetImporter.GetAtPath(asset);
                     if(imp != null)
                         imp.SetAssetBundleNameAndVariant(string.Empty, string.Empty);
                 }
             }
+            settings.PostModificationEvent(AddressableAssetSettings.ModificationEvent.BatchModification, null);
             EditorUtility.ClearProgressBar();
             AssetDatabase.RemoveUnusedAssetBundleNames();
         }

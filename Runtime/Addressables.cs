@@ -1,37 +1,54 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using UnityEngine.ResourceManagement;
 using UnityEngine.SceneManagement;
 
 namespace UnityEngine.AddressableAssets
 {
+    public class InvalidKeyException : Exception
+    {
+        public object Key { get; private set; }
+        public InvalidKeyException(object key)
+        {
+            Key = key;
+        }
+
+        public InvalidKeyException() { }
+        public InvalidKeyException(string message) : base(message) { }
+        public InvalidKeyException(string message, Exception innerException) : base(message, innerException) { }
+        protected InvalidKeyException(SerializationInfo message, StreamingContext context) : base(message, context) { }
+
+        public override string Message
+        {
+            get
+            {
+                return base.Message + ", Key=" + Key;
+            }
+        }
+    }
+
     /// <summary>
     /// Entry point for Addressable API, this provides a simpler interface than using ResourceManager directly as it assumes string address type.
     /// </summary>
-    public class Addressables
+    public static class Addressables
     {
-        public class InvalidKeyException : Exception
-        {
-            public object Key { get; private set; }
-            public InvalidKeyException(object key)
-            {
-                Key = key;
-            }
-            public override string Message
-            {
-                get
-                {
-                    return base.Message + ", Key=" + Key;
-                }
-            }
-        }
-
         public enum MergeMode
         {
             None,
             Union,
             Intersection
+        }
+
+        public static string BuildPath
+        {
+            get { return "Assets/StreamingAssets/com.unity.addressables"; }
+        }
+
+        public static string RuntimePath
+        {
+            get { return Application.streamingAssetsPath + "/com.unity.addressables"; }
         }
 
         static List<IResourceLocator> s_resourceLocators = new List<IResourceLocator>();
@@ -164,6 +181,18 @@ namespace UnityEngine.AddressableAssets
             s_initializationOperation = new InitializationOperation(playMode);
         }
 
+        /// <summary>
+        /// TODO - doc
+        /// </summary>
+        public static void InitializeWithAdditionalData(string runtimeDataPath)
+        {
+            if (!InitializationOperation.IsDone)
+                InitializationOperation.Completed += (op) => InitializeWithAdditionalData(runtimeDataPath);
+            else
+                InitializeWithAdditionalData(runtimeDataPath);
+        }
+
+
         private static IAsyncOperation<bool> InitializationOperation
         {
             get
@@ -267,14 +296,11 @@ namespace UnityEngine.AddressableAssets
 
         internal class GetLocationsOperation : AsyncOperationBase<IList<IResourceLocation>>
         {
-            object m_key;
-            IList<object> m_keys;
             Action<IAsyncOperation<IResourceLocation>> m_callback;
             MergeMode m_mode;
             public IAsyncOperation<IList<IResourceLocation>> Start(object key, Action<IAsyncOperation<IResourceLocation>> callback)
             {
-                m_keys = null;
-                m_key = key;
+                Key = key;
                 m_callback = callback;
                 m_result = null;
                 DelayedActionManager.AddAction((Action)OnComplete);
@@ -282,8 +308,7 @@ namespace UnityEngine.AddressableAssets
             }
             public IAsyncOperation<IList<IResourceLocation>> Start(IList<object> keys, Action<IAsyncOperation<IResourceLocation>> callback, MergeMode mode)
             {
-                m_key = null;
-                m_keys = keys;
+                Key = keys;
                 m_mode = mode;
                 m_callback = callback;
                 m_result = null;
@@ -294,20 +319,17 @@ namespace UnityEngine.AddressableAssets
             void OnComplete()
             {
                 IList<IResourceLocation> locations = null;
-                if(m_key != null)
-                    GetResourceLocations(m_key, out locations);
-                else if(m_keys != null)
-                    GetResourceLocations(m_keys, m_mode, out locations);
+                var keyList = Key as IList<object>;
+                if(keyList != null)
+                    GetResourceLocations(keyList, m_mode, out locations);
+                else
+                    GetResourceLocations(Key, out locations);
 
                 if (m_callback != null && locations != null)
                 {
-                    foreach (var l in locations)
-                    {
-                        //very wasteful, but needed to ensure expected behavior - callbacks should not be passed in for location queries but they need to be supported if the user chooses to
-                        var op = new EmptyOperation<IResourceLocation>();
-                        op.SetResult(l);
-                        m_callback(op);
-                    }
+                    //very wasteful, but needed to ensure expected behavior - callbacks should not be passed in for location queries but they need to be supported if the user chooses to
+                    foreach(var loc in locations)
+                        m_callback(new CompletedOperation<IResourceLocation>(loc, Key, loc));
                 }
                 SetResult(locations);
                 InvokeCompletionEvent();
@@ -322,6 +344,7 @@ namespace UnityEngine.AddressableAssets
         {
             var loadOp = ResourceManager.ProvideResource<TObject>(location);
             (loadOp as IAsyncOperation).Completed += s_recordAssetAction;
+            loadOp.Key = location;
             return loadOp;
         }
 
@@ -332,15 +355,15 @@ namespace UnityEngine.AddressableAssets
         public static IAsyncOperation<TObject> LoadAsset<TObject>(object key) where TObject : class
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<TObject, bool>>().Start(InitializationOperation, (op) => LoadAsset<TObject>(key)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<TObject, bool>>().Start(null, key, InitializationOperation, (op) => LoadAsset<TObject>(key)).Retain();
 
             if (typeof(IResourceLocation).IsAssignableFrom(typeof(TObject)))
             {
-                var op = new EmptyOperation<IResourceLocation>();
-                IList<IResourceLocation> locs;
-                if(GetResourceLocations(key, out locs))
-                    op.SetResult(locs[0]);
-                return op as IAsyncOperation<TObject>;
+                IResourceLocation loc = null;
+                IList<IResourceLocation> locList;
+                if(GetResourceLocations(key, out locList))
+                    loc = locList[0];
+                return new CompletedOperation<IResourceLocation>(loc, key, loc).Start() as IAsyncOperation<TObject>;
             }
 
             IList<IResourceLocation> locations;
@@ -350,12 +373,16 @@ namespace UnityEngine.AddressableAssets
                 {
                     var provider = ResourceManager.GetResourceProvider<TObject>(loc);
                     if (provider != null)
-                        return provider.Provide<TObject>(loc, ResourceManager.LoadDependencies(loc));
+                    {
+                        var op = provider.Provide<TObject>(loc, ResourceManager.LoadDependencies(loc));
+                        (op as IAsyncOperation).Completed += s_recordAssetAction;
+                        op.Key = key;
+                        return op;
+                    }
                 }
                 throw new UnknownResourceProviderException(locations[0]);
             }
-            return new EmptyOperation<TObject>().Start(null, null);
-            //throw new InvalidKeyException(key);
+            return new EmptyOperation<TObject>().Start(null, key, null);
         }
 
         /// <summary>
@@ -367,6 +394,7 @@ namespace UnityEngine.AddressableAssets
         {
             var loadOp = ResourceManager.ProvideResources(locations, callback);
             (loadOp as IAsyncOperation).Completed += s_recordAssetListAction;
+            loadOp.Key = locations;
             return loadOp;
         }
 
@@ -381,16 +409,20 @@ namespace UnityEngine.AddressableAssets
             where TObject : class
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, bool>>().Start(InitializationOperation, (op) => LoadAssets<TObject>(keys, callback, mode)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, bool>>().Start(null, keys, InitializationOperation, (op) => LoadAssets<TObject>(keys, callback, mode)).Retain();
 
             if (typeof(IResourceLocation).IsAssignableFrom(typeof(TObject)))
                 return AsyncOperationCache.Instance.Acquire<GetLocationsOperation>().Start(keys, callback as Action<IAsyncOperation<IResourceLocation>>, mode).Retain() as IAsyncOperation<IList<TObject>>;
 
             IList<IResourceLocation> locations;
             if (GetResourceLocations(keys, mode, out locations))
-                return LoadAssets(locations, callback);
+            {
+                var loadOp = LoadAssets(locations, callback);
+                loadOp.Key = keys;
+                return loadOp;
+            }
 
-            return new EmptyOperation<IList<TObject>>().Start(locations, null, new InvalidKeyException(keys));
+            return new EmptyOperation<IList<TObject>>().Start(locations, keys, null, new InvalidKeyException(keys));
         }
 
 
@@ -403,16 +435,20 @@ namespace UnityEngine.AddressableAssets
             where TObject : class
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, bool>>().Start(InitializationOperation, (op) => LoadAssets(key, callback)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, bool>>().Start(null, key, InitializationOperation, (op) => LoadAssets(key, callback)).Retain();
 
             if (typeof(IResourceLocation).IsAssignableFrom(typeof(TObject)))
                 return AsyncOperationCache.Instance.Acquire<GetLocationsOperation>().Start(key, callback as Action<IAsyncOperation<IResourceLocation>>).Retain() as IAsyncOperation<IList<TObject>>;
 
             IList<IResourceLocation> locations;
             if (GetResourceLocations(key, out locations))
-                return LoadAssets(locations, callback);
+            {
+                var loadOp = LoadAssets(locations, callback);
+                loadOp.Key = key;
+                return loadOp;
+            }
 
-            return new EmptyOperation<IList<TObject>>().Start(locations, null, new InvalidKeyException(key));
+            return new EmptyOperation<IList<TObject>>().Start(locations, key, null, new InvalidKeyException(key));
         }
 
         /// <summary>
@@ -444,11 +480,11 @@ namespace UnityEngine.AddressableAssets
         public static IAsyncOperation<IList<object>> PreloadDependencies(IList<object> keys, Action<IAsyncOperation<object>> callback, MergeMode mode = MergeMode.None)
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<object>, bool>>().Start(InitializationOperation, (op) => PreloadDependencies(keys, callback, mode)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<object>, bool>>().Start(null, keys, InitializationOperation, (op) => PreloadDependencies(keys, callback, mode)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(keys, mode, out locations))
-                return new EmptyOperation<IList<object>>().Start(locations, null, new InvalidKeyException(keys));
+                return new EmptyOperation<IList<object>>().Start(locations, keys, null, new InvalidKeyException(keys));
 
 
             var locHash = new HashSet<IResourceLocation>();
@@ -462,6 +498,7 @@ namespace UnityEngine.AddressableAssets
             }
             var loadOp = LoadAssets(new List<IResourceLocation>(locHash), callback);
             loadOp.Completed += (op) => DelayedActionManager.AddAction((Action<IList<IResourceLocation>>)InternalReleaseLocations, 0, op.Context);
+            loadOp.Key = keys;
             return loadOp;
         }
 
@@ -474,11 +511,11 @@ namespace UnityEngine.AddressableAssets
         public static IAsyncOperation<IList<object>> PreloadDependencies(object key, Action<IAsyncOperation<object>> callback)
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<object>, bool>>().Start(InitializationOperation, (op) => PreloadDependencies(key, callback)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<object>, bool>>().Start(null, key, InitializationOperation, (op) => PreloadDependencies(key, callback)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                return new EmptyOperation<IList<object>>().Start(locations, null, new InvalidKeyException(key));
+                return new EmptyOperation<IList<object>>().Start(locations, key, null, new InvalidKeyException(key));
 
 
             var locHash = new HashSet<IResourceLocation>();
@@ -492,6 +529,7 @@ namespace UnityEngine.AddressableAssets
             }
             var loadOp = LoadAssets(new List<IResourceLocation>(locHash), callback);
             loadOp.Completed += (op) => DelayedActionManager.AddAction((Action<IList<IResourceLocation>>)InternalReleaseLocations, 0, op.Context);
+            loadOp.Key = key;
             return loadOp;
         }
 
@@ -515,6 +553,7 @@ namespace UnityEngine.AddressableAssets
         {
             var instOp = ResourceManager.ProvideInstance<TObject>(location, instantiateParameters);
             (instOp as IAsyncOperation).Completed += s_recordInstanceAction;
+            instOp.Key = location;
             return instOp;
         }
 
@@ -528,14 +567,16 @@ namespace UnityEngine.AddressableAssets
             where TObject : Object
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<TObject, bool>>().Start(InitializationOperation, (op) => Instantiate<TObject>(key, instantiateParameters)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<TObject, bool>>().Start(null, key, InitializationOperation, (op) => Instantiate<TObject>(key, instantiateParameters)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                return new EmptyOperation<TObject>().Start(locations, null, new InvalidKeyException(key));
+                return new EmptyOperation<TObject>().Start(locations, key, null, new InvalidKeyException(key));
 
 
-            return Instantiate<TObject>(locations[0], instantiateParameters);
+            var instOp = Instantiate<TObject>(locations[0], instantiateParameters);
+            instOp.Key = key;
+            return instOp;
         }
 
         /// <summary>
@@ -606,14 +647,16 @@ namespace UnityEngine.AddressableAssets
             where TObject : Object
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, bool>>().Start(InitializationOperation, (op) => InstantiateAll(key, callback, instantiateParameters)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, bool>>().Start(null, key, InitializationOperation, (op) => InstantiateAll(key, callback, instantiateParameters)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                return new EmptyOperation<IList<TObject>>().Start(locations, null, new InvalidKeyException(key));
+                return new EmptyOperation<IList<TObject>>().Start(locations, key, null, new InvalidKeyException(key));
 
 
-            return InstantiateAll(locations, callback, instantiateParameters);
+            var instOp = InstantiateAll(locations, callback, instantiateParameters);
+            instOp.Key = key;
+            return instOp;
         }
 
         /// <summary>
@@ -627,6 +670,7 @@ namespace UnityEngine.AddressableAssets
         {
             var instOp = ResourceManager.ProvideInstances(locations, callback, instantiateParameters);
             (instOp as IAsyncOperation).Completed += s_recordInstanceListAction;
+            instOp.Key = locations;
             return instOp;
         }
 
@@ -693,14 +737,16 @@ namespace UnityEngine.AddressableAssets
         public static IAsyncOperation<Scene> LoadScene(object key, LoadSceneMode loadMode = LoadSceneMode.Single)
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<Scene, bool>>().Start(InitializationOperation, (op) => LoadScene(key, loadMode)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<Scene, bool>>().Start(null, key, InitializationOperation, (op) => LoadScene(key, loadMode)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                return new EmptyOperation<Scene>().Start(locations, default(Scene), new InvalidKeyException(key));
+                return new EmptyOperation<Scene>().Start(locations, key, default(Scene), new InvalidKeyException(key));
 
 
-            return LoadScene(locations[0], loadMode);
+            var loadOp = LoadScene(locations[0], loadMode);
+            loadOp.Key = key;
+            return loadOp;
         }
 
         /// <summary>
@@ -715,6 +761,7 @@ namespace UnityEngine.AddressableAssets
 
             var loadOp = ResourceManager.ProvideScene(location, loadMode);
             loadOp.Completed += (op) => s_sceneToLocationMap.Add(op.Result, location);
+            loadOp.Key = location;
             return loadOp;
         }
 
@@ -726,7 +773,7 @@ namespace UnityEngine.AddressableAssets
         {
             IResourceLocation location;
             if (!s_sceneToLocationMap.TryGetValue(scene, out location))
-                return new EmptyOperation<Scene>().Start(null, default(Scene), new ArgumentNullException("scene", string.Format("UnloadScene - unable to find location for scene {0}.", scene)));
+                return new EmptyOperation<Scene>().Start(null, scene, default(Scene), new ArgumentNullException("scene", string.Format("UnloadScene - unable to find location for scene {0}.", scene)));
 
             s_sceneToLocationMap.Remove(scene);
             return ResourceManager.ReleaseScene(location, scene);
@@ -741,6 +788,8 @@ namespace UnityEngine.AddressableAssets
         /// <param name="currentScene">Current scene for gameobject.</param>
         public static void RecordInstanceSceneChange(GameObject gameObject, Scene previousScene, Scene currentScene)
         {
+            if (gameObject == null)
+                return;
             HashSet<GameObject> instanceIds = null;
             if (!s_sceneToInstances.TryGetValue(previousScene, out instanceIds))
                 Debug.LogFormat("Unable to find instance table for instance {0}.", gameObject.GetInstanceID());

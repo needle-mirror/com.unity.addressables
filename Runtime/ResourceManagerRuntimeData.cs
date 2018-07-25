@@ -14,22 +14,22 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public static string PlayerSettingsLocation { get { return Path.Combine(Application.streamingAssetsPath, "Addressables_settings.json").Replace('\\', '/'); } }
-        public static string PlayerCatalogLocation { get { return Path.Combine(Application.streamingAssetsPath, "Addressables_catalog.json").Replace('\\', '/'); } }
+        public static string PlayerSettingsLocation { get { return Path.Combine(Addressables.RuntimePath, "settings.json").Replace('\\', '/'); } }
+        public static string PlayerCatalogLocation { get { return Path.Combine(Addressables.RuntimePath, "catalog.json").Replace('\\', '/'); } }
         public static string GetPlayerSettingsLoadLocation(EditorPlayMode mode)
         {
             if (mode == EditorPlayMode.PackedMode)
-                return "{UnityEngine.Application.streamingAssetsPath}/Addressables_settings.json";
+                return "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/settings.json";
             var p = System.IO.Path.GetDirectoryName(UnityEngine.Application.dataPath);
-            return "file://" + System.IO.Path.Combine(p, "Library/Addressables_settings_" + mode + ".json");
+            return "file://" + System.IO.Path.Combine(p, "Library/Addressables/settings_" + mode + ".json");
         }
 
         public static string GetPlayerCatalogLoadLocation(EditorPlayMode mode)
         {
             if (mode == EditorPlayMode.PackedMode)
-                return "{UnityEngine.Application.streamingAssetsPath}/Addressables_catalog.json";
+                return "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/catalog.json";
             var p = System.IO.Path.GetDirectoryName(UnityEngine.Application.dataPath);
-            return "file://" + System.IO.Path.Combine(p, "Library/Addressables_catalog_" + mode + ".json");
+            return "file://" + System.IO.Path.Combine(p, "Library/Addressables/catalog_" + mode + ".json");
         }
 
         /// <summary>
@@ -45,48 +45,67 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public string settingsHash;
+        [SerializeField]
+        string m_settingsHash;
+        public string SettingsHash { get { return m_settingsHash; } set { m_settingsHash = value; } }
         /// <summary>
         /// List of catalog locations to download in order (try remote first, then local)
         /// </summary>
-        public List<ResourceLocationData> catalogLocations = new List<ResourceLocationData>();
+        [SerializeField]
+        List<ResourceLocationData> m_catalogLocations = new List<ResourceLocationData>();
+        public List<ResourceLocationData> CatalogLocations { get { return m_catalogLocations; } }
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public bool usePooledInstanceProvider = false;
+        [SerializeField]
+        bool m_usePooledInstanceProvider = false;
+        public bool UsePooledInstanceProvider { get { return m_usePooledInstanceProvider; } set { m_usePooledInstanceProvider = value; } }
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public bool profileEvents = true;
+        [SerializeField]
+        bool m_profileEvents = false;
+        public bool ProfileEvents { get { return m_profileEvents; } set { m_profileEvents = value; } }
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public string contentVersion = "undefined";
+        [SerializeField]
+        string m_contentVersion = "undefined";
+        public string ContentVersion { get { return m_contentVersion; } set { m_contentVersion = value; } }
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public int assetCacheSize = 25;
+        [SerializeField]
+        int m_assetCacheSize = 25;
+        public int AssetCacheSize { get { return m_assetCacheSize; } set { m_assetCacheSize = value; } }
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public float assetCacheAge = 5;
+        [SerializeField]
+        float m_assetCacheAge = 5;
+        public float AssetCacheAge { get { return m_assetCacheAge; } set { m_assetCacheAge = value; } }
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public int bundleCacheSize = 5;
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        public float bundleCacheAge = 5;
-#if UNITY_EDITOR
+        [SerializeField]
+        int m_bundleCacheSize = 5;
+        public int BundleCacheSize { get { return m_bundleCacheSize; } set { m_bundleCacheSize = value; } }
 
+        /// <summary>
+        /// TODO - doc
+        /// </summary>
+        [SerializeField]
+        float m_bundleCacheAge = 5;
+        public float BundleCacheAge { get { return m_bundleCacheAge; } set { m_bundleCacheAge = value; } }
+
+#if UNITY_EDITOR
         static string LibrarySettingsLocation(EditorPlayMode mode)
         {
-            return "Library/Addressables_settings_" + mode + ".json";
+            return "Library/Addressables/settings_" + mode + ".json";
         }
         static string LibraryCatalogLocation(EditorPlayMode mode)
         {
-            return "Library/Addressables_catalog_" + mode + ".json";
+            return "Library/Addressables/catalog_" + mode + ".json";
         }
 
         /// <summary>

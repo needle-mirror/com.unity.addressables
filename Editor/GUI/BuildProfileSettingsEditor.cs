@@ -89,7 +89,7 @@ namespace UnityEditor.AddressableAssets
             public override void OnGUI(Rect rect)
             {
                 EditorGUILayout.BeginScrollView(m_scrollPos);
-                List<AddressableAssetSettings.ProfileSettings.BuildProfile> toRemove = new List<AddressableAssetSettings.ProfileSettings.BuildProfile>();
+                List<AddressableAssetProfileSettings.BuildProfile> toRemove = new List<AddressableAssetProfileSettings.BuildProfile>();
                 foreach(var prof in m_settings.profileSettings.profiles)
                 {
                     EditorGUILayout.BeginHorizontal();
@@ -115,22 +115,24 @@ namespace UnityEditor.AddressableAssets
         static public string ValueGUI(AddressableAssetSettings settings, string label, string currentID)
         {
             string result = currentID;
-            
+            if (settings == null)
+                return result;
+
             var names = settings.profileSettings.GetAllVariableNames().ToList();
             names.Sort();
             string[] displayNames = names.ToArray();
-            AddressableAssetSettings.ProfileSettings.ProfileIDData data = settings.profileSettings.GetProfileDataById(currentID);
-            int currentIndex = names.IndexOf(data == null ? AddressableAssetSettings.ProfileSettings.k_customEntryString : data.name);
+            AddressableAssetProfileSettings.ProfileIDData data = settings.profileSettings.GetProfileDataById(currentID);
+            int currentIndex = names.IndexOf(data == null ? AddressableAssetProfileSettings.k_customEntryString : data.Name);
             bool custom = data == null && currentIndex >= 0;
             EditorGUILayout.BeginHorizontal();
             var newIndex = 0;
-            if(displayNames.Length ==1)
+            if(displayNames.Length == 1 && !string.IsNullOrEmpty(label))
                 EditorGUILayout.LabelField(label, displayNames[0]);
             else
                 newIndex = EditorGUILayout.Popup(label, currentIndex, displayNames);
             if (newIndex != currentIndex)
             {
-                if(displayNames[newIndex] == AddressableAssetSettings.ProfileSettings.k_customEntryString)
+                if(displayNames[newIndex] == AddressableAssetProfileSettings.k_customEntryString)
                 {
                     custom = true;
                     result = "<undefined>";
@@ -139,7 +141,7 @@ namespace UnityEditor.AddressableAssets
                 {
                     data = settings.profileSettings.GetProfileDataByName(displayNames[newIndex]);
                     if (data != null)
-                        result = data.id;
+                        result = data.Id;
                 }
             }
             if (custom)
@@ -158,13 +160,13 @@ namespace UnityEditor.AddressableAssets
             return result;
         }
 
-        public class ProfileEditorTree : TreeView
+        class ProfileEditorTree : TreeView
         {
-            AddressableAssetSettings.ProfileSettings m_profileSettings;
+            AddressableAssetProfileSettings m_profileSettings;
             List<string> m_columnIds = new List<string>();
             public bool isValid = true;
 
-            public ProfileEditorTree(TreeViewState state, MultiColumnHeaderState mchs, AddressableAssetSettings.ProfileSettings profileSettings) : base(state, new MultiColumnHeader(mchs))
+            public ProfileEditorTree(TreeViewState state, MultiColumnHeaderState mchs, AddressableAssetProfileSettings profileSettings) : base(state, new MultiColumnHeader(mchs))
             {
                 m_profileSettings = profileSettings;
                 showAlternatingRowBackgrounds = true;
@@ -183,7 +185,7 @@ namespace UnityEditor.AddressableAssets
 
                 foreach (var e in m_profileSettings.profileEntryNames)
                 {
-                    if (e.name != AddressableAssetSettings.ProfileSettings.k_customEntryString)
+                    if (e.Name != AddressableAssetProfileSettings.k_customEntryString)
                         root.AddChild(new ProfileEditorTreeViewItem(e));
                 }
 
@@ -198,7 +200,7 @@ namespace UnityEditor.AddressableAssets
                 var item = FindItem(args.itemID, rootItem) as ProfileEditorTreeViewItem;
                 if (item != null)
                 {
-                    item.entry.name = args.newName;
+                    item.entry.Name = args.newName;
                     Reload();
                 }
             }
@@ -231,19 +233,19 @@ namespace UnityEditor.AddressableAssets
                 }
                 else
                 {
-                    var oldVal = m_profileSettings.GetValueById(m_columnIds[column - k_numPrefixColumns], item.entry.id);
+                    var oldVal = m_profileSettings.GetValueById(m_columnIds[column - k_numPrefixColumns], item.entry.Id);
                     var newVal = EditorGUI.DelayedTextField(cellRect, oldVal);
                     if (oldVal != newVal)
-                        m_profileSettings.SetValue(m_columnIds[column - k_numPrefixColumns], item.entry.name, newVal);
+                        m_profileSettings.SetValue(m_columnIds[column - k_numPrefixColumns], item.entry.Name, newVal);
                 }
             }
 
-            public static MultiColumnHeaderState CreateDefaultMultiColumnHeaderState(AddressableAssetSettings.ProfileSettings profileSettings)
+            public static MultiColumnHeaderState CreateDefaultMultiColumnHeaderState(AddressableAssetProfileSettings profileSettings)
             {
                 return new MultiColumnHeaderState(GetColumns(profileSettings));
             }
 
-            private static MultiColumnHeaderState.Column[] GetColumns(AddressableAssetSettings.ProfileSettings profileSettings)
+            private static MultiColumnHeaderState.Column[] GetColumns(AddressableAssetProfileSettings profileSettings)
             {
                 var columnCount = profileSettings.profiles.Count+ k_numPrefixColumns;
                 var retVal = new MultiColumnHeaderState.Column[columnCount];
@@ -282,7 +284,7 @@ namespace UnityEditor.AddressableAssets
                     var item = FindItem(s, rootItem) as ProfileEditorTreeViewItem;
                     if(item != null)
                     {
-                        m_profileSettings.RemoveValue(item.entry.id);
+                        m_profileSettings.RemoveValue(item.entry.Id);
                     }
                 }
                 Reload();
@@ -290,8 +292,8 @@ namespace UnityEditor.AddressableAssets
 
             public class ProfileEditorTreeViewItem : TreeViewItem
             {
-                public AddressableAssetSettings.ProfileSettings.ProfileIDData entry;
-                public ProfileEditorTreeViewItem(AddressableAssetSettings.ProfileSettings.ProfileIDData e) : base(e.id.GetHashCode(), 0, e.name)
+                public AddressableAssetProfileSettings.ProfileIDData entry;
+                public ProfileEditorTreeViewItem(AddressableAssetProfileSettings.ProfileIDData e) : base(e.Id.GetHashCode(), 0, e.Name)
                 {
                     entry = e;
                 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEditor.Build.Pipeline.Injector;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -10,35 +11,35 @@ namespace UnityEditor.AddressableAssets
         const int k_Version = 1;
         public int Version { get { return k_Version; } }
 
-        static readonly Type[] k_RequiredTypes = { typeof(IAddressableAssetsBuildContext), typeof(IBundleWriteData), typeof(IBuildResults) };
-        public Type[] RequiredContextTypes { get { return k_RequiredTypes; } }
+#pragma warning disable 649
+        [InjectContext(ContextUsage.In)]
+        IAddressableAssetsBuildContext m_AABuildContext;
 
-        public ReturnCode Run(IBuildContext context)
-        {
-            return Run(context.GetContextObject<IAddressableAssetsBuildContext>(), context.GetContextObject<IBundleWriteData>(), context.GetContextObject<IBuildResults>());
-        }
+        [InjectContext]
+        IBundleWriteData m_WriteData;
+#pragma warning restore 649
 
-        public static ReturnCode Run(IAddressableAssetsBuildContext aaContext, IBundleWriteData writeData, IBuildResults results)
+        public ReturnCode Run()
         {
-            var aabc = aaContext as AddressableAssetsBuildContext;
-            var aaSettings = aabc.m_settings;
-            var locations = aabc.m_locations;
-            var bundleToAssetGroup = aabc.m_bundleToAssetGroup;
+            var aaContext = m_AABuildContext as AddressableAssetsBuildContext;
+            var aaSettings = aaContext.m_settings;
+            var locations = aaContext.m_locations;
+            var bundleToAssetGroup = aaContext.m_bundleToAssetGroup;
             var bundleToAssets = new Dictionary<string, List<GUID>>();
             var assetsToBundles = new Dictionary<GUID, List<string>>();
-            foreach (var k in writeData.AssetToFiles)
+            foreach (var k in m_WriteData.AssetToFiles)
             {
                 List<string> bundleList = new List<string>();
                 assetsToBundles.Add(k.Key, bundleList);
                 List<GUID> assetList = null;
-                var bundle = writeData.FileToBundle[k.Value[0]];
+                var bundle = m_WriteData.FileToBundle[k.Value[0]];
                 if (!bundleToAssets.TryGetValue(bundle, out assetList))
                     bundleToAssets.Add(bundle, assetList = new List<GUID>());
                 if (!bundleList.Contains(bundle))
                     bundleList.Add(bundle);
                 foreach (var file in k.Value)
                 {
-                    var fileBundle = writeData.FileToBundle[file];
+                    var fileBundle = m_WriteData.FileToBundle[file];
                     if (!bundleList.Contains(fileBundle))
                         bundleList.Add(fileBundle);
                     if (!bundleToAssets.ContainsKey(fileBundle))
@@ -47,7 +48,7 @@ namespace UnityEditor.AddressableAssets
 
                 assetList.Add(k.Key);
             }
-            var assetGroupToBundle = (aabc.m_assetGroupToBundles = new Dictionary<AddressableAssetGroup, List<string>>());
+            var assetGroupToBundle = (aaContext.m_assetGroupToBundles = new Dictionary<AddressableAssetGroup, List<string>>());
             foreach (var kvp in bundleToAssets)
             {
                 AddressableAssetGroup assetGroup = null;
@@ -58,7 +59,7 @@ namespace UnityEditor.AddressableAssets
                     assetGroupToBundle.Add(assetGroup, bundles = new List<string>());
                 bundles.Add(kvp.Key);
 
-                assetGroup.processor.CreateResourceLocationData(aaSettings, assetGroup, kvp.Key, kvp.Value, assetsToBundles, locations);
+                assetGroup.Processor.CreateResourceLocationData(assetGroup, kvp.Key, kvp.Value, assetsToBundles, locations);
             }
 
             return ReturnCode.Success;

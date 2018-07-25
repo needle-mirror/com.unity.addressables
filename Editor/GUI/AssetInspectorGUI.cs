@@ -4,14 +4,17 @@ using Object = UnityEngine.Object;
 namespace UnityEditor.AddressableAssets
 {
     [InitializeOnLoad]
-    internal class AddressableAssetInspectorGUI
+    internal static class AddressableAssetInspectorGUI
     {
+        static GUIStyle toggleMixed;
+        static GUIContent addressableAssetToggleText;
+
         static AddressableAssetInspectorGUI()
         {
+            toggleMixed = null;
+            addressableAssetToggleText = new GUIContent("Addressable", "Check this to mark this asset as an Addressable Asset, which includes it in the bundled data and makes it loadable via script by its address.");
             Editor.finishedDefaultHeaderGUI += OnPostHeaderGUI;
         }
-
-        static GUIContent addressableAssetToggleText = new GUIContent("Addressable", "Check this to mark this asset as an Addressable Asset, which includes it in the bundled data and makes it loadable via script by its address.");
 
         static void SetAAEntry(Editor editor, AddressableAssetSettings aaSettings, Object[] targets, bool create)
         {
@@ -33,8 +36,7 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        static GUIStyle toggleMixed = null;
-        static protected void OnPostHeaderGUI(Editor editor)
+        static void OnPostHeaderGUI(Editor editor)
         {
             var aaSettings = AddressableAssetSettings.GetDefault(false, false);
             string path = string.Empty;

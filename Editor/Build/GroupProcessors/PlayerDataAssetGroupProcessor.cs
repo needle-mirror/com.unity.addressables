@@ -6,15 +6,9 @@ using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets
 {
-    /// <summary>
-    /// TODO - doc
-    /// </summary>
-    [Description("")]
     public class PlayerDataAssetGroupProcessor : AssetGroupProcessor
     {
-        internal override string displayName { get { return "Player Data"; } }
-
-        internal override void ProcessGroup(AddressableAssetSettings settings, AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, Dictionary<object, ContentCatalogData.DataEntry> locationData)
+        internal override void ProcessGroup(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, List<ContentCatalogDataEntry> locationData)
         {
             foreach (var e in assetGroup.entries)
             {
@@ -25,14 +19,14 @@ namespace UnityEditor.AddressableAssets
                     var assetPath = s.GetAssetLoadPath(false);
                     if (s.isScene)
                     {
-                        locationData.Add(s.address, new ContentCatalogData.DataEntry(s.address, s.guid, assetPath, typeof(SceneProvider)));
+                        locationData.Add(new ContentCatalogDataEntry(s.address, s.guid, assetPath, typeof(SceneProvider)));
                         var indexInSceneList = IndexOfSceneInEditorBuildSettings(new GUID(s.guid));
                         if (indexInSceneList >= 0)
-                            locationData.Add(indexInSceneList, new ContentCatalogData.DataEntry(indexInSceneList.ToString(), s.guid, assetPath, typeof(SceneProvider)));
+                            locationData.Add(new ContentCatalogDataEntry(indexInSceneList.ToString(), s.guid, assetPath, typeof(SceneProvider)));
                     }
                     else
                     {
-                        locationData.Add(s.address, new ContentCatalogData.DataEntry(s.address, s.guid, assetPath, typeof(LegacyResourcesProvider)));
+                        locationData.Add(new ContentCatalogDataEntry(s.address, s.guid, assetPath, typeof(LegacyResourcesProvider)));
                     }
                 }
             }
@@ -55,7 +49,7 @@ namespace UnityEditor.AddressableAssets
 
         [SerializeField]
         Vector2 position = new Vector2();
-        internal override void OnDrawGUI(AddressableAssetSettings settings, Rect rect)
+        internal override void OnDrawGUI(AddressableAssetGroup group, Rect rect)
         {
             GUILayout.BeginArea(rect);
             position = EditorGUILayout.BeginScrollView(position, false, false, GUILayout.MaxWidth(rect.width));

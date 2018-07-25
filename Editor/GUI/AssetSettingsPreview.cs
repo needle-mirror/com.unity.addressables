@@ -4,6 +4,7 @@ using UnityEditor.IMGUI.Controls;
 using System;
 using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
+using UnityEditor.Build.Utilities;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -161,8 +162,8 @@ namespace UnityEditor.AddressableAssets
                                         foreach (var r in loadInfo.referencedObjects)
                                         {
                                             if ((!preview.explicitAssets.Contains(r.guid)) &&
-                                                (r.filePath != "library/unity default resources") &&
-                                                (r.filePath != "resources/unity_builtin_extra"))
+                                                (r.filePath != CommonStrings.UnityDefaultResourcePath) &&
+                                                (r.filePath != CommonStrings.UnityBuiltInExtraPath))
                                             {
                                                 var filePath = AssetDatabase.GUIDToAssetPath(r.guid.ToString());
                                                 if (!string.IsNullOrEmpty(filePath) && !assetRefs.Contains(filePath))

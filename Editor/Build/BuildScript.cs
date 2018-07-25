@@ -13,16 +13,24 @@ using UnityEditor.SceneManagement;
 
 namespace UnityEditor.AddressableAssets
 {
+    public struct AddressableAssetBuildResult
+    {
+        public bool Completed { get; set; }
+        public double Duration { get; set; }
+        public int LocationCount { get; set; }
+        public bool Cached { get; set; }
+        public string Error { get; set; }
+    }
 
-    public interface IAddressableAssetsBuildContext : IContextObject
+    internal interface IAddressableAssetsBuildContext : IContextObject
     {
     }
 
-    public class AddressableAssetsBuildContext : IAddressableAssetsBuildContext
+    internal class AddressableAssetsBuildContext : IAddressableAssetsBuildContext
     {
         public AddressableAssetSettings m_settings;
         public ResourceManagerRuntimeData m_runtimeData;
-        public Dictionary<object, ContentCatalogData.DataEntry> m_locations;
+        public List<ContentCatalogDataEntry> m_locations;
         public Dictionary<string, AddressableAssetGroup> m_bundleToAssetGroup;
         public Dictionary<AddressableAssetGroup, List<string>> m_assetGroupToBundles;
         public VirtualAssetBundleRuntimeData m_virtualBundleRuntimeData;
@@ -30,7 +38,7 @@ namespace UnityEditor.AddressableAssets
     /// <summary>
     /// TODO - doc
     /// </summary>
-    public class BuildScript
+    public static class BuildScript
     {
         static int codeVersion = 13;
         [InitializeOnLoadMethod]
@@ -39,27 +47,52 @@ namespace UnityEditor.AddressableAssets
             BuildPlayerWindow.RegisterBuildPlayerHandler(BuildPlayer);
             EditorApplication.playModeStateChanged += OnEditorPlayModeChanged;
         }
+        static string kStreamingAssetsPath = "Assets/StreamingAssets";
+        static bool streamingAssetsExists;
+        static void Cleanup(bool deleteStreamingAssetsFolderIfEmpty)
+        {
+            if (Directory.Exists(Addressables.BuildPath))
+            {
+                Directory.Delete(Addressables.BuildPath, true);
+            }
+            if (deleteStreamingAssetsFolderIfEmpty)
+            {
+                if (Directory.Exists(kStreamingAssetsPath))
+                {
+                    var files = Directory.GetFiles(kStreamingAssetsPath);
+                    if (files.Length == 0)
+                        Directory.Delete(kStreamingAssetsPath);
+                }
+            }
+        }
 
         static void BuildPlayer(BuildPlayerOptions ops)
         {
+            streamingAssetsExists = Directory.Exists(kStreamingAssetsPath);
             if (PrepareRuntimeData(true, (ops.options & BuildOptions.Development) != BuildOptions.None, (ops.options & BuildOptions.ConnectWithProfiler) != BuildOptions.None, false, false, ops.targetGroup, ops.target))
+            {
                 BuildPipeline.BuildPlayer(ops);
+            }
+            Cleanup(!streamingAssetsExists);
         }
 
         private static void OnEditorPlayModeChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.ExitingEditMode)
             {
+                streamingAssetsExists = Directory.Exists(kStreamingAssetsPath);
                 SceneManagerState.Record();
                 if (!PrepareRuntimeData(false, true, true, false, true, BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), EditorUserBuildSettings.activeBuildTarget))
                 {
                     EditorApplication.isPlaying = false;
                     SceneManagerState.Restore();
+                    Cleanup(!streamingAssetsExists);
                 }
             }
             else if (state == PlayModeStateChange.EnteredEditMode)
             {
                 SceneManagerState.Restore();
+                Cleanup(!streamingAssetsExists);
             }
         }
 
@@ -68,7 +101,7 @@ namespace UnityEditor.AddressableAssets
             if (!ResourceManagerRuntimeData.LoadFromLibrary(ProjectConfigData.editorPlayMode, ref runtimeData, ref contentCatalog))
                 return false;
 
-            if (runtimeData.settingsHash != settingsHash)
+            if (runtimeData.SettingsHash != settingsHash)
             {
                 ResourceManagerRuntimeData.DeleteFromLibrary(ProjectConfigData.editorPlayMode);
                 if (playMode == ResourceManagerRuntimeData.EditorPlayMode.VirtualMode)
@@ -80,7 +113,7 @@ namespace UnityEditor.AddressableAssets
                 runtimeData.Save(contentCatalog, playMode);
                 var locator = contentCatalog.CreateLocator();
                 var pathsToCheck = new HashSet<string>();
-                foreach (var d in locator.m_locations)
+                foreach (var d in locator.Locations)
                 {
                     foreach (var l in d.Value)
                     {
@@ -104,16 +137,8 @@ namespace UnityEditor.AddressableAssets
             return true;
         }
 
-        public struct BuildResult
-        {
-            public bool completed;
-            public double duration;
-            public int locationCount;
-            public bool cached;
-            public string error;
-        }
 
-        public static System.Action<BuildResult> buildCompleted;
+        public static System.Action<AddressableAssetBuildResult> buildCompleted;
 
 
         static IList<IBuildTask> RuntimeDataBuildTasks(ResourceManagerRuntimeData.EditorPlayMode playMode, bool compileScripts, bool writeData)
@@ -121,8 +146,6 @@ namespace UnityEditor.AddressableAssets
             var buildTasks = new List<IBuildTask>();
             
             // Setup
-            buildTasks.Add(new ProjectInCleanState());
-            buildTasks.Add(new ValidateBundleAssignments());
             buildTasks.Add(new SwitchToBuildPlatform());
             buildTasks.Add(new RebuildSpriteAtlasCache());
 
@@ -130,7 +153,6 @@ namespace UnityEditor.AddressableAssets
             if (compileScripts || playMode == ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
             {
                 buildTasks.Add(new BuildPlayerScripts());
-                buildTasks.Add(new SetBundleSettingsTypeDB());
             }
 
             // Dependency
@@ -173,17 +195,18 @@ namespace UnityEditor.AddressableAssets
             if (aaSettings == null)
             {
                 if (buildCompleted != null)
-                    buildCompleted(new BuildResult() { completed = false, duration = timer.Elapsed.TotalSeconds, error = "AddressableAssetSettings not found." });
+                    buildCompleted(new AddressableAssetBuildResult() { Completed = false, Duration = timer.Elapsed.TotalSeconds, Error = "AddressableAssetSettings not found." });
                 PlayerPrefs.SetInt("AddressablesPlayMode", (int)ResourceManagerRuntimeData.EditorPlayMode.Invalid);
                 return true;
             }
 
             var settingsHash = aaSettings.currentHash.ToString() + codeVersion;
-            var allEntries = aaSettings.GetAllAssets();
+            var allEntries = new List<AddressableAssetEntry>();
+            aaSettings.GetAllAssets(allEntries);
             if (allEntries.Count == 0)
             {
                 if (buildCompleted != null)
-                    buildCompleted(new BuildResult() { completed = false, duration = timer.Elapsed.TotalSeconds, error = "AddressableAssetSettings has 0 entries." });
+                    buildCompleted(new AddressableAssetBuildResult() { Completed = false, Duration = timer.Elapsed.TotalSeconds, Error = "AddressableAssetSettings has 0 entries." });
                 PlayerPrefs.SetInt("AddressablesPlayMode", (int)ResourceManagerRuntimeData.EditorPlayMode.Invalid);
                 return true;
             }
@@ -198,25 +221,10 @@ namespace UnityEditor.AddressableAssets
                 if (enteringPlayMode && playMode != ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
                     AddAddressableScenesToEditorBuildSettingsSceneList(allEntries, runtimeData);
                 if (buildCompleted != null)
-                    buildCompleted(new BuildResult() { completed = true, duration = timer.Elapsed.TotalSeconds, cached = true, locationCount = allEntries.Count });
+                    buildCompleted(new AddressableAssetBuildResult() { Completed = true, Duration = timer.Elapsed.TotalSeconds, Cached = true, LocationCount = allEntries.Count });
                 return true;
             }
             
-            bool validated = true;
-            foreach (var assetGroup in aaSettings.groups)
-            {
-                if (!assetGroup.processor.Validate(aaSettings, assetGroup))
-                    validated = false;
-            }
-
-            if (!validated)
-            {
-                if (buildCompleted != null)
-                    buildCompleted(new BuildResult() { completed = false, duration = timer.Elapsed.TotalSeconds, error = "Validation failed." });
-                PlayerPrefs.SetInt("AddressablesPlayMode", (int)ResourceManagerRuntimeData.EditorPlayMode.Invalid);
-                return false;
-            }
-
             if (playMode == ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
             {
                 var catalogCacheDir = Application.persistentDataPath + "/Unity/AddressablesCatalogCache";
@@ -227,13 +235,13 @@ namespace UnityEditor.AddressableAssets
             contentCatalog = new ContentCatalogData();
             runtimeData = new ResourceManagerRuntimeData();
             // List<ResourceLocationData> locations = new List<ResourceLocationData>();
-            var locations = new Dictionary<object, ContentCatalogData.DataEntry>();
-            runtimeData.profileEvents = allowProfilerEvents && ProjectConfigData.postProfilerEvents;
+            var locations = new List<ContentCatalogDataEntry> ();
+            runtimeData.ProfileEvents = allowProfilerEvents && ProjectConfigData.postProfilerEvents;
             if (playMode == ResourceManagerRuntimeData.EditorPlayMode.FastMode)
             {
                 foreach (var a in allEntries)
                 {
-                    locations.Add(a.address, new ContentCatalogData.DataEntry(a.address, a.guid, a.GetAssetLoadPath(false), typeof(AssetDatabaseProvider), a.labels));
+                    locations.Add(new ContentCatalogDataEntry(a.address, a.guid, a.GetAssetLoadPath(false), typeof(AssetDatabaseProvider), a.labels));
                 }
             }
             else
@@ -243,7 +251,7 @@ namespace UnityEditor.AddressableAssets
                 foreach (var assetGroup in aaSettings.groups)
                 {
                     var bundleInputDefs = new List<AssetBundleBuild>();
-                    assetGroup.processor.ProcessGroup(aaSettings, assetGroup, bundleInputDefs, locations);
+                    assetGroup.Processor.ProcessGroup(assetGroup, bundleInputDefs, locations);
                     foreach (var bid in bundleInputDefs)
                         bundleToAssetGroup.Add(bid.assetBundleName, assetGroup);
                     allBundleInputDefs.AddRange(bundleInputDefs);
@@ -254,12 +262,13 @@ namespace UnityEditor.AddressableAssets
                     if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                     {
                         if (buildCompleted != null)
-                            buildCompleted(new BuildResult() { completed = false, duration = timer.Elapsed.TotalSeconds, error = "Unsaved scenes" });
+                            buildCompleted(new AddressableAssetBuildResult() { Completed = false, Duration = timer.Elapsed.TotalSeconds, Error = "Unsaved scenes" });
                         return false;
                     }
 
-                    var buildParams = new BuildParameters(buildTarget, buildTargetGroup, aaSettings.buildSettings.bundleBuildPath);
+                    var buildParams = new BundleBuildParameters(buildTarget, buildTargetGroup, aaSettings.buildSettings.bundleBuildPath);
                     buildParams.UseCache = true; // aaSettings.buildSettings.useCache && !forceRebuild;
+                    buildParams.BundleCompression = aaSettings.buildSettings.compression;
 
                     var buildTasks = RuntimeDataBuildTasks(playMode, aaSettings.buildSettings.compileScriptsInVirtualMode, true); 
 
@@ -278,11 +287,11 @@ namespace UnityEditor.AddressableAssets
                     {
                         if (buildCompleted != null)
                         {
-                            buildCompleted(new BuildResult
+                            buildCompleted(new AddressableAssetBuildResult
                             {
-                                completed = false,
-                                duration = timer.Elapsed.TotalSeconds,
-                                error = exitCode.ToString()
+                                Completed = false,
+                                Duration = timer.Elapsed.TotalSeconds,
+                                Error = exitCode.ToString()
                             });
                         }
                         return false;
@@ -292,38 +301,49 @@ namespace UnityEditor.AddressableAssets
 
             if (enteringPlayMode && playMode != ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
                 AddAddressableScenesToEditorBuildSettingsSceneList(allEntries, runtimeData);
-            runtimeData.contentVersion = aaSettings.profileSettings.GetValueByName(aaSettings.activeProfileId, "ContentVersion");
-            if (string.IsNullOrEmpty(runtimeData.contentVersion))
-                runtimeData.contentVersion = "X";
+            runtimeData.ContentVersion = aaSettings.profileSettings.GetValueByName(aaSettings.activeProfileId, "ContentVersion");
+            if (string.IsNullOrEmpty(runtimeData.ContentVersion))
+                runtimeData.ContentVersion = "X";
 
-            runtimeData.settingsHash = settingsHash;
-            contentCatalog.SetData(locations.Values.ToList());
+            runtimeData.SettingsHash = settingsHash;
+            contentCatalog.SetData(locations);
 
             if (playMode == ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
             {
                 var catalogLocations = new List<ResourceLocationData>();
                 foreach (var assetGroup in aaSettings.groups)
-                    assetGroup.processor.CreateCatalog(aaSettings, assetGroup, contentCatalog, catalogLocations);
-                runtimeData.catalogLocations.AddRange(catalogLocations.OrderBy(s => s.m_address));
+                    assetGroup.Processor.CreateCatalog(assetGroup, contentCatalog, catalogLocations);
+                runtimeData.CatalogLocations.AddRange(catalogLocations.OrderBy(s => s.Address));
             }
             else
             {
-                runtimeData.catalogLocations.Add(new ResourceLocationData("Catalog" + playMode, "", ResourceManagerRuntimeData.GetPlayerCatalogLoadLocation(playMode), typeof(JsonAssetProvider)));
+                runtimeData.CatalogLocations.Add(new ResourceLocationData("Catalog" + playMode, "", ResourceManagerRuntimeData.GetPlayerCatalogLoadLocation(playMode), typeof(JsonAssetProvider)));
             }
 
-            runtimeData.Save(contentCatalog, ProjectConfigData.editorPlayMode);
+            runtimeData.Save(contentCatalog, playMode);
             Resources.UnloadUnusedAssets();
             if (buildCompleted != null)
-                buildCompleted(new BuildResult() { completed = true, duration = timer.Elapsed.TotalSeconds, locationCount = locations.Count });
+                buildCompleted(new AddressableAssetBuildResult() { Completed = true, Duration = timer.Elapsed.TotalSeconds, LocationCount = locations.Count });
             return true;
         }
 
         private static void AddAddressableScenesToEditorBuildSettingsSceneList(List<AddressableAssetEntry> entries, ResourceManagerRuntimeData runtimeData)
         {
             var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            var sceneSet = new HashSet<string>();
+            foreach (var s in scenes)
+            {
+                if (!sceneSet.Add(s.guid.ToString()))
+                    Debug.LogWarningFormat("Scene {0} is duplicated in EditorBuildSettings.scenes list.", s.path);
+            }
             foreach (var entry in entries)
-                if(entry.isScene)
+            {
+                if (entry.isScene && !sceneSet.Contains(entry.guid))
+                {
+                    sceneSet.Add(entry.guid);
                     scenes.Add(new EditorBuildSettingsScene(new GUID(entry.guid), true));
+                }
+            }
             EditorBuildSettings.scenes = scenes.ToArray();
         }
 
@@ -342,10 +362,10 @@ namespace UnityEditor.AddressableAssets
 
             var runtimeData = new ResourceManagerRuntimeData();
             //var contentCatalog = new ResourceLocationList();
-            var locations = new Dictionary<object, ContentCatalogData.DataEntry>();
+            var locations = new List<ContentCatalogDataEntry>();
             var allBundleInputDefs = new List<AssetBundleBuild>();
             foreach (var assetGroup in aaSettings.groups)
-                assetGroup.processor.ProcessGroup(aaSettings, assetGroup, allBundleInputDefs, locations);
+                assetGroup.Processor.ProcessGroup(assetGroup, allBundleInputDefs, locations);
 
             if (allBundleInputDefs.Count == 0)
             {
@@ -355,8 +375,9 @@ namespace UnityEditor.AddressableAssets
                 return ReturnCode.MissingRequiredObjects;
             }
 
-            var buildParams = new BuildParameters(EditorUserBuildSettings.activeBuildTarget, BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), aaSettings.buildSettings.bundleBuildPath);
+            var buildParams = new BundleBuildParameters(EditorUserBuildSettings.activeBuildTarget, BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), aaSettings.buildSettings.bundleBuildPath);
             buildParams.UseCache = true;
+            buildParams.BundleCompression = aaSettings.buildSettings.compression;
 
             var aaContext = new AddressableAssetsBuildContext
             {
@@ -365,23 +386,16 @@ namespace UnityEditor.AddressableAssets
                 m_locations = locations
             };
 
-            IBuildContext buildContext = null;
+            ExtractDataTask extractData = new ExtractDataTask();
             var buildTasks = new List<IBuildTask>();
-            buildTasks.Add(new ProjectInCleanState());
-            buildTasks.Add(new ValidateBundleAssignments());
             buildTasks.Add(new SwitchToBuildPlatform());
             buildTasks.Add(new RebuildSpriteAtlasCache());
             buildTasks.Add(new BuildPlayerScripts());
-            buildTasks.Add(new SetBundleSettingsTypeDB());
             buildTasks.Add(new PreviewSceneDependencyData());
             buildTasks.Add(new CalculateAssetDependencyData());
             buildTasks.Add(new StripUnusedSpriteSources());
             buildTasks.Add(new GenerateBundlePacking());
-            buildTasks.Add(new InlineTaskRunner(context =>
-            {
-                buildContext = context;
-                return ReturnCode.Success;
-            }));
+            buildTasks.Add(extractData);
 
             IBundleBuildResults results;
             var exitCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(allBundleInputDefs), out results, buildTasks, aaContext);
@@ -393,8 +407,8 @@ namespace UnityEditor.AddressableAssets
                 return exitCode;
             }
             
-            depData = (BuildDependencyData)buildContext.GetContextObject<IDependencyData>();
-            bundleWriteData = (BundleWriteData)buildContext.GetContextObject<IWriteData>();
+            depData = (BuildDependencyData)extractData.DependencyData;
+            bundleWriteData = (BundleWriteData)extractData.WriteData;
             return ReturnCode.Success;
         }
 
@@ -408,11 +422,11 @@ namespace UnityEditor.AddressableAssets
             var allBundleInputDefs = new List<AssetBundleBuild>();
             var bundleToAssetGroup = new Dictionary<string, AddressableAssetGroup>();
             var runtimeData = new ResourceManagerRuntimeData();
-            var locations = new Dictionary<object, ContentCatalogData.DataEntry>();
+            var locations = new List<ContentCatalogDataEntry>();
             foreach (var assetGroup in groups)
             {
                 var bundleInputDefs = new List<AssetBundleBuild>();
-                assetGroup.processor.ProcessGroup(aaSettings, assetGroup, bundleInputDefs, locations);
+                assetGroup.Processor.ProcessGroup(assetGroup, bundleInputDefs, locations);
                 foreach (var bid in bundleInputDefs)
                     bundleToAssetGroup.Add(bid.assetBundleName, assetGroup);
                 allBundleInputDefs.AddRange(bundleInputDefs);
@@ -421,8 +435,9 @@ namespace UnityEditor.AddressableAssets
             var duplicatedAssets = new HashSet<GUID>();
             if (allBundleInputDefs.Count > 0)
             {
-                var buildParams = new BuildParameters(buildTarget, buildTargetGroup, aaSettings.buildSettings.bundleBuildPath);
+                var buildParams = new BundleBuildParameters(buildTarget, buildTargetGroup, aaSettings.buildSettings.bundleBuildPath);
                 buildParams.UseCache = true; // aaSettings.buildSettings.useCache && !forceRebuild;
+                buildParams.BundleCompression = aaSettings.buildSettings.compression;
 
                 var buildTasks = RuntimeDataBuildTasks(ResourceManagerRuntimeData.EditorPlayMode.VirtualMode, false, false);
 
@@ -435,12 +450,8 @@ namespace UnityEditor.AddressableAssets
                 };
 
                 IBundleBuildResults results;
-                IBuildContext buildContext = null;
-                buildTasks.Add(new InlineTaskRunner(context =>
-                {
-                    buildContext = context;
-                    return ReturnCode.Success;
-                }));
+                ExtractDataTask extractData = new ExtractDataTask();
+                buildTasks.Add(extractData);
 
                 var retCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(allBundleInputDefs), out results, buildTasks, aaContext);
                 if (retCode >= ReturnCode.Success)
@@ -451,14 +462,14 @@ namespace UnityEditor.AddressableAssets
                     {
                         foreach (var a in b.Assets)
                         {
-                            var guid = new GUID(AssetDatabase.AssetPathToGUID(a.m_name));
+                            var guid = new GUID(AssetDatabase.AssetPathToGUID(a.Name));
                             if (guid.Empty())
                                 continue;
                             explicitAssets.Add(guid);
                             assetToBundle.Add(guid, b.Name);
                         }
                     }
-                    var depData = buildContext.GetContextObject<IDependencyData>();
+                    var depData = extractData.DependencyData;
                     var objectsToBundles = new Dictionary<Build.Content.ObjectIdentifier, HashSet<string>>();
                     foreach (var guid in explicitAssets)
                     {

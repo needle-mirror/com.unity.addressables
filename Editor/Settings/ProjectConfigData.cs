@@ -22,7 +22,7 @@ namespace UnityEditor.AddressableAssets
             [SerializeField]
             internal bool m_hierarchicalSearch = false;
         }
-        private static ConfigSaveData m_data = null;
+        private static ConfigSaveData s_data = null;
 
 
         internal static bool postProfilerEvents
@@ -30,12 +30,12 @@ namespace UnityEditor.AddressableAssets
             get
             {
                 ValidateData();
-                return m_data.m_postProfilerEvents;
+                return s_data.m_postProfilerEvents;
             }
             set
             {
                 ValidateData();
-                m_data.m_postProfilerEvents = value;
+                s_data.m_postProfilerEvents = value;
                 SaveData();
             }
         }
@@ -44,12 +44,12 @@ namespace UnityEditor.AddressableAssets
             get
             {
                 ValidateData();
-                return m_data.m_editorPlayMode;
+                return s_data.m_editorPlayMode;
             }
             set
             {
                 ValidateData();
-                m_data.m_editorPlayMode = value;
+                s_data.m_editorPlayMode = value;
                 SaveData();
             }
         }
@@ -58,12 +58,12 @@ namespace UnityEditor.AddressableAssets
             get
             {
                 ValidateData();
-                return m_data.m_localLoadSpeed;
+                return s_data.m_localLoadSpeed;
             }
             set
             {
                 ValidateData();
-                m_data.m_localLoadSpeed = value;
+                s_data.m_localLoadSpeed = value;
                 SaveData();
             }
         }
@@ -72,12 +72,12 @@ namespace UnityEditor.AddressableAssets
             get
             {
                 ValidateData();
-                return m_data.m_remoteLoadSpeed;
+                return s_data.m_remoteLoadSpeed;
             }
             set
             {
                 ValidateData();
-                m_data.m_remoteLoadSpeed = value;
+                s_data.m_remoteLoadSpeed = value;
                 SaveData();
             }
         }
@@ -86,19 +86,19 @@ namespace UnityEditor.AddressableAssets
             get
             {
                 ValidateData();
-                return m_data.m_hierarchicalSearch;
+                return s_data.m_hierarchicalSearch;
             }
             set
             {
                 ValidateData();
-                m_data.m_hierarchicalSearch = value;
+                s_data.m_hierarchicalSearch = value;
                 SaveData();
             }
         }
 
         private static void ValidateData()
         {
-            if(m_data == null)
+            if(s_data == null)
             {
                 var dataPath = System.IO.Path.GetFullPath(".");
                 dataPath = dataPath.Replace("\\", "/");
@@ -114,7 +114,7 @@ namespace UnityEditor.AddressableAssets
                             var data = bf.Deserialize(file) as ConfigSaveData;
                             if (data != null)
                             {
-                                m_data = data;
+                                s_data = data;
                             }
                         }
                     }
@@ -127,15 +127,15 @@ namespace UnityEditor.AddressableAssets
                 }
                 
                 //check if some step failed.
-                if(m_data == null)
+                if(s_data == null)
                 {
-                    m_data = new ConfigSaveData();
+                    s_data = new ConfigSaveData();
                 }
             }
         }
         private static void SaveData()
         {
-            if (m_data == null)
+            if (s_data == null)
                 return;
 
             var dataPath = Path.GetFullPath(".");
@@ -145,7 +145,7 @@ namespace UnityEditor.AddressableAssets
             BinaryFormatter bf = new BinaryFormatter();
             FileStream file = File.Create(dataPath);
             
-            bf.Serialize(file, m_data);
+            bf.Serialize(file, s_data);
             file.Close();
         }
     }

@@ -7,63 +7,79 @@ namespace UnityEngine.AddressableAssets
 {
     class InitializationOperation : AsyncOperationBase<bool>
     {
-        ResourceManagerRuntimeData.EditorPlayMode m_playMode;
+        ResourceManagerRuntimeData.EditorPlayMode m_playMode = ResourceManagerRuntimeData.EditorPlayMode.Invalid;
         public InitializationOperation(ResourceManagerRuntimeData.EditorPlayMode playMode)
+        {
+            Start(playMode, AAConfig.ExpandPathWithGlobalVariables(ResourceManagerRuntimeData.GetPlayerSettingsLoadLocation(playMode)));
+        }
+
+        public InitializationOperation(string playerSettingsLocation)
+        {
+            Start(ResourceManagerRuntimeData.EditorPlayMode.Invalid, playerSettingsLocation);
+        }
+
+        public void Start(ResourceManagerRuntimeData.EditorPlayMode playMode, string playerSettingsLocation)
         {
             m_playMode = playMode;
             ResourceManager.SceneProvider = new SceneProvider();
             ResourceManager.ResourceProviders.Add(new JsonAssetProvider());
             ResourceManager.ResourceProviders.Add(new TextDataProvider());
             ResourceManager.ResourceProviders.Add(new ContentCatalogProvider());
-            //needed to prevent stripping for this value
-            var sap = Application.streamingAssetsPath;
-            var playerSettingsLocation = AAConfig.ExpandPathWithGlobalVariables(ResourceManagerRuntimeData.GetPlayerSettingsLoadLocation(m_playMode));
+            //this line should NOT be removed as it is adding a reference to Application.streamingAssetsPath so that it doesnt get stripped
+            Debug.LogFormat("Initializing Addressables system from {0}.", Addressables.RuntimePath);
             var runtimeDataLocation = new ResourceLocationBase("RuntimeData", playerSettingsLocation, typeof(JsonAssetProvider).FullName);
             Context = runtimeDataLocation;
+            Key = playMode;
             ResourceManager.ProvideResource<ResourceManagerRuntimeData>(runtimeDataLocation).Completed += OnDataLoaded;
         }
+
 
         void OnDataLoaded(IAsyncOperation<ResourceManagerRuntimeData> op)
         {
             if (op.Result == null)
-                throw new Exception("Unable to load runtime data.");
+            {
+                Debug.LogWarningFormat("Unable to load runtime data at location {0}.", (op.Context as IResourceLocation).InternalId);
+                return;
+            }
             var rtd = op.Result;
-            AddResourceProviders(rtd.assetCacheSize, rtd.assetCacheAge, rtd.bundleCacheSize, rtd.bundleCacheAge);
+            if (m_playMode != ResourceManagerRuntimeData.EditorPlayMode.Invalid)
+            {
+                AddResourceProviders(rtd.AssetCacheSize, rtd.AssetCacheAge, rtd.BundleCacheSize, rtd.BundleCacheAge);
+                DiagnosticEventCollector.ProfileEvents = rtd.ProfileEvents;
+                AAConfig.AddCachedValue("ContentVersion", rtd.ContentVersion);
+                if (rtd.UsePooledInstanceProvider)
+                    ResourceManager.InstanceProvider = new PooledInstanceProvider("PooledInstanceProvider", 10);
+                else
+                    ResourceManager.InstanceProvider = new InstanceProvider();
+            }
 
-
-            DiagnosticEventCollector.ProfileEvents = rtd.profileEvents;
-            AAConfig.AddCachedValue("ContentVersion", rtd.contentVersion);
-            if (rtd.usePooledInstanceProvider)
-                ResourceManager.InstanceProvider = new PooledInstanceProvider("PooledInstanceProvider", 10);
-            else
-                ResourceManager.InstanceProvider = new InstanceProvider();
-
-            Addressables.ResourceLocators.Add(new ResourceLocationMap(rtd.catalogLocations));
+            Addressables.ResourceLocators.Add(new ResourceLocationMap(rtd.CatalogLocations));
             LoadContentCatalog(rtd, 0);
         }
 
         void LoadContentCatalog(ResourceManagerRuntimeData rtd, int index)
         {
-            while (index < rtd.catalogLocations.Count && rtd.catalogLocations[index].m_internalId.EndsWith(".hash"))
+            while (index < rtd.CatalogLocations.Count && rtd.CatalogLocations[index].InternalId.EndsWith(".hash"))
                 index++;
             IList<IResourceLocation> locations;
-            if (Addressables.GetResourceLocations(rtd.catalogLocations[index].m_address, out locations))
+            if (Addressables.GetResourceLocations(rtd.CatalogLocations[index].Address, out locations))
             {
                 ResourceManager.ProvideResource<ContentCatalogData>(locations[0]).Completed += (op) =>
                 {
                     if (op.Result != null)
                     {
                         Addressables.ResourceLocators.Add(op.Result.CreateLocator());
-                        Addressables.ResourceLocators.Add(new AssetReferenceLocator());
+                        if (m_playMode != ResourceManagerRuntimeData.EditorPlayMode.Invalid)
+                            Addressables.ResourceLocators.Add(new AssetReferenceLocator());
                         SetResult(true);
                         InvokeCompletionEvent();
                     }
                     else
                     {
-                        if (index + 1 >= rtd.catalogLocations.Count)
+                        if (index + 1 >= rtd.CatalogLocations.Count)
                         {
-                            Debug.Log("Addressables initialization failed.");
-                            m_error = new Exception("Failed to load content catalog.");
+                            Debug.LogWarningFormat("Addressables initialization failed.", (op.Context as IResourceLocation).InternalId);
+                            m_error = op.OperationException;
                             SetResult(false);
                             Status = AsyncOperationStatus.Failed;
                             InvokeCompletionEvent();
@@ -82,7 +98,7 @@ namespace UnityEngine.AddressableAssets
 
             if (!Application.isEditor)
             {
-                ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new BundledAssetProvider(), assetCacheSize, assetCacheAge));
+                ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new BundledAssetProvider(), 0, 0));
                 ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new AssetBundleProvider(), bundleCacheSize, bundleCacheAge));
             }
             else
@@ -98,7 +114,7 @@ namespace UnityEngine.AddressableAssets
                         break;
                     case ResourceManagerRuntimeData.EditorPlayMode.PackedMode:
                         {
-                            ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new BundledAssetProvider(), assetCacheSize, assetCacheAge));
+                            ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new BundledAssetProvider(), 0, 0));
                             ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new AssetBundleProvider(), bundleCacheSize, bundleCacheAge));
                         }
                         break;

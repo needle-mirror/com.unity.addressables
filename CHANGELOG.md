@@ -4,14 +4,28 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.1.2] - 2018-06-11
+## [0.2.1-preview] - 2018-07-26
+ - smoothed transition from 0.1.x data to 0.2.x data
+ - added checks for adding duplicate scenes into the EditorBuildSettings.scenes list
+ - fixed exception when deleting group via delete key, added confirmation to all deletions
+
+## [0.2.0-preview] - 2018-07-23
+ - Fixed bundles being built with default compression instead of compression from settings
+ - Fixed bug in tracking loaded assets resulting in not being able to release them properly
+ - Added Key property to IAsyncOperation to allow for retrieval of key that requested the operation
+ - Added AssetLabelReference to provide inspector UI for selecting the string name of a label
+ - Fixed dragging from Resources to a group.
+ - Added ability to re-initialize Addressables with multiple runtime data paths.  This is to support split projects.
+ - Clean up StreamingAssets folder after build/play mode
+ 
+## [0.1.2-preview] - 2018-06-11
  - fixed Application.streamingAssetsPath being stripped in IL2CPP platforms
 
-## [0.1.1] - 2018-06-07
+## [0.1.1-preview] - 2018-06-07
  - MIN VERSION NOW 2018.2.0b6
  - updated dependency
- 
-## [0.1.0] - 2018-06-05
+
+## [0.1.0-preview] - 2018-06-05
  - MIN VERSION NOW 2018.2.0b6
  - added better checks for detecting modified assets in order to invalidate cache
  - fixed preview window showing scenes in wrong bundle

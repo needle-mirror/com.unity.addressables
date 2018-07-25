@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using UnityEngine.ResourceManagement;
 
-namespace UnityEngine.ResourceManagement
+namespace UnityEngine.AddressableAssets
 {
     public interface IResourceLocator
     {

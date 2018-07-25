@@ -29,9 +29,9 @@ namespace UnityEditor.AddressableAssets
                     long lfid;
                     if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out lfid))
                     {
-                        var objProp = property.FindPropertyRelative("_cachedAsset");
+                        var objProp = property.FindPropertyRelative("m_cachedAsset");
                         objProp.objectReferenceValue = obj;
-                        var guidProp = property.FindPropertyRelative("assetGUID");
+                        var guidProp = property.FindPropertyRelative("m_assetGUID");
                         guidProp.stringValue = guid;
                     }
                     return true;
@@ -47,12 +47,13 @@ namespace UnityEditor.AddressableAssets
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            
+            if (property == null || label == null)
+                return;
             label.text = ObjectNames.NicifyVariableName(property.propertyPath);
             EditorGUI.BeginProperty(position, label, property);
 
             GatherFilters(property, ref labelFilter, ref typeFilter);
-            var guidProp = property.FindPropertyRelative("assetGUID");
+            var guidProp = property.FindPropertyRelative("m_assetGUID");
             string guid = guidProp.stringValue;
 
             if (!string.IsNullOrEmpty(newGuid) && newGuidPropertyPath == property.propertyPath)
@@ -178,7 +179,7 @@ namespace UnityEditor.AddressableAssets
                             if (entry == null && !string.IsNullOrEmpty(guid))
                             {
                                 entry = aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup);
-                                Debug.LogFormat("Created AddressableAsset {0} in group {1}.", entry.address, aaSettings.DefaultGroup.name);
+                                Debug.LogFormat("Created AddressableAsset {0} in group {1}.", entry.address, aaSettings.DefaultGroup.Name);
                             }
                         }
                     }
@@ -311,7 +312,7 @@ namespace UnityEditor.AddressableAssets
 
                 protected override void SelectionChanged(IList<int> selectedIds)
                 {
-                    if (selectedIds.Count == 1)
+                    if (selectedIds!= null && selectedIds.Count == 1)
                     {
                         var assetRefItem = FindItem(selectedIds[0], rootItem) as AssetRefTreeViewItem;
                         if (!string.IsNullOrEmpty(assetRefItem.guid))
@@ -359,7 +360,9 @@ namespace UnityEditor.AddressableAssets
                     else
                     {
                         root.AddChild(new AssetRefTreeViewItem(k_noAssetString.GetHashCode(), 0, k_noAssetString, string.Empty, string.Empty));
-                        foreach (var entry in aaSettings.GetAllAssets())
+                        var allAssets = new List<AddressableAssetEntry>();
+                        aaSettings.GetAllAssets(allAssets);
+                        foreach (var entry in allAssets)
                         {
                             bool passedFilters = true;
                             if (m_drawer.labelFilter != null && !m_drawer.labelFilter.Validate(entry.labels))
@@ -385,6 +388,8 @@ namespace UnityEditor.AddressableAssets
         {
             try
             {
+                if (property == null || field == null)
+                    return null;
                 var serializedObject = property.serializedObject;
                 if (serializedObject == null)
                 {

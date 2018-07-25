@@ -5,6 +5,39 @@ using System.Linq;
 
 namespace UnityEngine.AddressableAssets
 {
+    public class ContentCatalogDataEntry
+    {
+        public string InternalId { get; set; }
+        public string Provider { get; private set; }
+        public List<object> Keys { get; private set; }
+        public List<object> Dependencies { get; private set; }
+        public object Data { get; set; }
+
+        public ContentCatalogDataEntry(string internalId, string provider, IEnumerable<object> keys, IEnumerable<object> deps, object extraData)
+        {
+            InternalId = internalId;
+            Provider = provider;
+            Keys = new List<object>(keys);
+            Dependencies = deps == null ? new List<object>() : new List<object>(deps);
+            Data = extraData;
+        }
+        public ContentCatalogDataEntry(string address, string guid, string internalId, System.Type provider, HashSet<string> labels = null, IEnumerable<object> deps = null, object extraData = null)
+        {
+            InternalId = internalId;
+            Provider = provider == null ? "" : provider.FullName;
+            Keys = new List<object>(labels == null ? 2 : labels.Count + 2);
+            Keys.Add(address);
+            if (!string.IsNullOrEmpty(guid))
+                Keys.Add(Hash128.Parse(guid));
+            if (labels != null)
+            {
+                foreach (var l in labels)
+                    Keys.Add(l);
+            }
+            Dependencies = deps == null ? new List<object>() : new List<object>(deps);
+            Data = extraData;
+        }
+    }
 
     [Serializable]
     public class ContentCatalogData
@@ -222,40 +255,6 @@ namespace UnityEngine.AddressableAssets
             return offset + 4;
         }
 
-        public class DataEntry
-        {
-            public string m_internalId;
-            public string m_provider;
-            public List<object> m_keys;
-            public List<object> m_dependencies;
-            public object m_data;
-            public DataEntry(string internalId, string provider, IEnumerable<object> keys, IEnumerable<object> deps, object extraData)
-            {
-                m_internalId = internalId;
-                m_provider = provider;
-                m_keys = new List<object>(keys);
-                m_dependencies = deps == null ?  new List<object>() : new List<object>(deps);
-                m_data = extraData;
-            }
-            public DataEntry(string address, string guid, string internalId, System.Type provider, HashSet<string> labels = null, IEnumerable<object> deps = null, object extraData = null)
-            {
-                m_internalId = internalId;
-                m_provider = provider.FullName;
-                m_keys = new List<object>(labels == null ? 2 : labels.Count + 2);
-                m_keys.Add(address);
-                if (!string.IsNullOrEmpty(guid))
-                    m_keys.Add(Hash128.Parse(guid));
-                if (labels != null)
-                {
-                    foreach (var l in labels)
-                        m_keys.Add(l);
-                }
-                m_dependencies = deps == null ? new List<object>() : new List<object>(deps);
-                m_data = extraData;
-            }
-
-        }
-
         class KeyIndexer<T>
         {
             public List<T> values;
@@ -336,14 +335,16 @@ namespace UnityEngine.AddressableAssets
             public TVal this[TKey key] { get { return values[map[key]]; } }
         }
 
-        public void SetData(IList<DataEntry> data)
+        public void SetData(IList<ContentCatalogDataEntry> data)
         {
-            var providers = new KeyIndexer<string>(data.Select(s => s.m_provider), 10);
-            var internalIds = new KeyIndexer<string>(data.Select(s => s.m_internalId), data.Count);
-            var keys = new KeyIndexer<object>(data.SelectMany(s => s.m_keys), data.Count * 3);
-            keys.Add(data.SelectMany(s => s.m_dependencies));
-            var keyIndexToEntries = new KeyIndexer<List<DataEntry>, object>(keys.values, s => new List<DataEntry>(), keys.values.Count);
-            var entryToIndex = new Dictionary<DataEntry, int>(data.Count);
+            if (data == null)
+                return;
+            var providers = new KeyIndexer<string>(data.Select(s => s.Provider), 10);
+            var internalIds = new KeyIndexer<string>(data.Select(s => s.InternalId), data.Count);
+            var keys = new KeyIndexer<object>(data.SelectMany(s => s.Keys), data.Count * 3);
+            keys.Add(data.SelectMany(s => s.Dependencies));
+            var keyIndexToEntries = new KeyIndexer<List<ContentCatalogDataEntry>, object>(keys.values, s => new List<ContentCatalogDataEntry>(), keys.values.Count);
+            var entryToIndex = new Dictionary<ContentCatalogDataEntry, int>(data.Count);
             var extraDataList = new List<byte>();
             var entryIndexToExtraDataIndex = new Dictionary<int, int>();
 
@@ -353,9 +354,9 @@ namespace UnityEngine.AddressableAssets
             {
                 var e = data[i];
                 int extraDataOffset = -1;
-                if (e.m_data != null)
+                if (e.Data != null)
                 {
-                    var len = WriteObjectToByteList(e.m_data, extraDataList);
+                    var len = WriteObjectToByteList(e.Data, extraDataList);
                     if (len > 0)
                     {
                         extraDataOffset = extraDataIndex;
@@ -364,7 +365,7 @@ namespace UnityEngine.AddressableAssets
                 }
                 entryIndexToExtraDataIndex.Add(i, extraDataOffset);
                 entryToIndex.Add(e, i);
-                foreach (var k in e.m_keys)
+                foreach (var k in e.Keys)
                     keyIndexToEntries[k].Add(e);
             }
             m_extraDataString = Convert.ToBase64String(extraDataList.ToArray());
@@ -374,27 +375,27 @@ namespace UnityEngine.AddressableAssets
             for (int i = 0; i < originalEntryCount; i++)
             {
                 var entry = data[i];
-                if (entry.m_dependencies == null || entry.m_dependencies.Count < 2)
+                if (entry.Dependencies == null || entry.Dependencies.Count < 2)
                     continue;
 
                 //seed and and factor values taken from https://stackoverflow.com/questions/1646807/quick-and-simple-hash-code-combinations
                 int hashCode = 1009;
-                foreach (var dep in entry.m_dependencies)
+                foreach (var dep in entry.Dependencies)
                     hashCode = hashCode * 9176 + dep.GetHashCode();
                 bool isNew = false;
                 keys.Add(hashCode, ref isNew);
                 if (isNew)
                 {
                     //if this combination of dependecies is new, add a new entry and add its key to all contained entries
-                    var deps = entry.m_dependencies.Select(d => keyIndexToEntries[d][0]).ToList();
+                    var deps = entry.Dependencies.Select(d => keyIndexToEntries[d][0]).ToList();
                     keyIndexToEntries.Add(hashCode, deps);
                     foreach (var dep in deps)
-                        dep.m_keys.Add(hashCode);
+                        dep.Keys.Add(hashCode);
                 }
 
                 //reset the dependency list to only contain the key of the new set
-                entry.m_dependencies.Clear();
-                entry.m_dependencies.Add(hashCode);
+                entry.Dependencies.Clear();
+                entry.Dependencies.Add(hashCode);
             }
 
             //serialize internal ids and providers
@@ -408,9 +409,9 @@ namespace UnityEngine.AddressableAssets
                 for (int i = 0; i < data.Count; i++)
                 {
                     var e = data[i];
-                    entryDataOffset = WriteIntToByteArray(entryData, internalIds.map[e.m_internalId], entryDataOffset);
-                    entryDataOffset = WriteIntToByteArray(entryData, providers.map[e.m_provider], entryDataOffset);
-                    entryDataOffset = WriteIntToByteArray(entryData, e.m_dependencies.Count == 0 ? -1 : keyIndexToEntries.map[e.m_dependencies[0]], entryDataOffset);
+                    entryDataOffset = WriteIntToByteArray(entryData, internalIds.map[e.InternalId], entryDataOffset);
+                    entryDataOffset = WriteIntToByteArray(entryData, providers.map[e.Provider], entryDataOffset);
+                    entryDataOffset = WriteIntToByteArray(entryData, e.Dependencies.Count == 0 ? -1 : keyIndexToEntries.map[e.Dependencies[0]], entryDataOffset);
                     entryDataOffset = WriteIntToByteArray(entryData, entryIndexToExtraDataIndex[i], entryDataOffset);
                 }
                 m_entryDataString = Convert.ToBase64String(entryData);

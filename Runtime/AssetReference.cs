@@ -23,22 +23,6 @@ namespace UnityEngine.AddressableAssets
         {
             return typeof(TObject).IsAssignableFrom(type);
         }
-
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        public void ReleaseAsset(TObject obj)
-        {
-            ReleaseAsset<TObject>(obj);
-        }
-
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        public void ReleaseInstance(TObject obj)
-        {
-            ReleaseInstance<TObject>(obj);
-        }
     }
 
     [System.Serializable]
@@ -59,21 +43,22 @@ namespace UnityEngine.AddressableAssets
     [System.Serializable]
     public class AssetReference
     {
-        public string assetGUID;
+        [SerializeField]
+        private string m_assetGUID;
 
-        public Hash128 RuntimeKey { get { return Hash128.Parse(assetGUID); } }
+        public Hash128 RuntimeKey { get { return Hash128.Parse(m_assetGUID); } }
 
 #if UNITY_EDITOR
         [SerializeField]
-        private Object _cachedAsset;
+        private Object m_cachedAsset;
 #endif
 
         public override string ToString()
         {
 #if UNITY_EDITOR
-            return "[" + assetGUID + "]" + _cachedAsset;
+            return "[" + m_assetGUID + "]" + m_cachedAsset;
 #else
-            return "[" + assetGUID + "]";
+            return "[" + m_assetGUID + "]";
 #endif
         } 
 
@@ -126,14 +111,14 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
-                if (_cachedAsset != null)
-                    return _cachedAsset;
-                return (_cachedAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<Object>(UnityEditor.AssetDatabase.GUIDToAssetPath(assetGUID.ToString())));
+                if (m_cachedAsset != null)
+                    return m_cachedAsset;
+                return (m_cachedAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<Object>(UnityEditor.AssetDatabase.GUIDToAssetPath(m_assetGUID.ToString())));
             }
 
             set
             {
-                if (_cachedAsset != value)
+                if (m_cachedAsset != value)
                 {
                     var path = UnityEditor.AssetDatabase.GetAssetOrScenePath(value);
                     if (string.IsNullOrEmpty(path))
@@ -149,8 +134,8 @@ namespace UnityEngine.AddressableAssets
                     }
                     else
                     {
-                        assetGUID = UnityEditor.AssetDatabase.AssetPathToGUID(path);
-                        _cachedAsset = value;
+                        m_assetGUID = UnityEditor.AssetDatabase.AssetPathToGUID(path);
+                        m_cachedAsset = value;
                     }
                 }
             }
@@ -174,21 +159,23 @@ namespace UnityEngine.AddressableAssets
     /// TODO - doc
     /// </summary>
     [System.AttributeUsage(System.AttributeTargets.Field | System.AttributeTargets.Property)]
-    public class AssetReferenceLabelRestriction : System.Attribute
+    public sealed class AssetReferenceLabelRestriction : System.Attribute
     {
-        private string[] allowedLabels;
-        public AssetReferenceLabelRestriction(params string[] labels)
+        private string[] m_allowedLabels;
+        private string _cachedToString = null;
+        public ICollection<string> AllowedLabels { get { return m_allowedLabels; } }
+        public AssetReferenceLabelRestriction(params string[] allowedLabels)
         {
-            allowedLabels = labels;
+            m_allowedLabels = allowedLabels;
         }
-        string _cachedToString = null;
+
         public override string ToString()
         {
             if (_cachedToString == null)
             {
                 System.Text.StringBuilder sb = new System.Text.StringBuilder();
                 bool first = true;
-                foreach (var t in allowedLabels)
+                foreach (var t in m_allowedLabels)
                 {
                     if (!first)
                         sb.Append(',');
@@ -202,7 +189,9 @@ namespace UnityEngine.AddressableAssets
 
         public bool Validate(HashSet<string> t)
         {
-            foreach (var tt in allowedLabels)
+            if (t == null)
+                return true;
+            foreach (var tt in m_allowedLabels)
                 if (t.Contains(tt))
                     return true;
             return false;
@@ -210,22 +199,23 @@ namespace UnityEngine.AddressableAssets
     }
 
     [System.AttributeUsage(System.AttributeTargets.Field | System.AttributeTargets.Property)]
-    public class AssetReferenceTypeRestriction : System.Attribute
+    public sealed class AssetReferenceTypeRestriction : System.Attribute
     {
-        private System.Type[] allowedTypes;
-        public AssetReferenceTypeRestriction(params System.Type[] types)
+        private System.Type[] m_allowedTypes;
+        private string _cachedToString = null;
+        public ICollection<System.Type> AllowedTypes { get { return m_allowedTypes; } }
+        public AssetReferenceTypeRestriction(params System.Type[] allowedTypes)
         {
-            allowedTypes = types;
+            m_allowedTypes = allowedTypes;
         }
 
-        string _cachedToString = null;
         public override string ToString()
         {
             if (_cachedToString == null)
             {
                 System.Text.StringBuilder sb = new System.Text.StringBuilder();
                 bool first = true;
-                foreach (var t in allowedTypes)
+                foreach (var t in m_allowedTypes)
                 {
                     if (!first)
                         sb.Append(',');
@@ -239,7 +229,9 @@ namespace UnityEngine.AddressableAssets
 
         public bool Validate(System.Type t)
         {
-            foreach (var tt in allowedTypes)
+            if (t == null)
+                return false;
+            foreach (var tt in m_allowedTypes)
                 if (tt.IsAssignableFrom(t))
                     return true;
             return false;

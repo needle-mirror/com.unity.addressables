@@ -175,7 +175,7 @@ namespace UnityEditor.AddressableAssets
 
         static bool IsValidAsset(string p)
         {
-            return AssetDatabase.AssetPathToGUID(p) != "";
+            return !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(p));
         }
 
         /// <summary>
@@ -245,7 +245,7 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         internal void GatherAllAssets(List<AddressableAssetEntry> assets, bool includeSelf, bool recurseAll)
         {
-            var settings = parentGroup.settings;
+            var settings = parentGroup.Settings;
 
             if (m_guid == EditorSceneListName)
             {

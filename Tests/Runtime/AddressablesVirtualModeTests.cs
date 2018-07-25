@@ -34,7 +34,7 @@ public class AddressablesVirtualModeTests : AddressablesBaseTests
         }
         virtualBundleData.AssetBundles.AddRange(sharedBundles);
 
-        object[] labels = new object[] {"label1", "lable2", "label3", "label4", "label5", 1234, new Hash128(234,3456,55,22) };
+        object[] labels = new object[] {"label1", "label2", "label3", "label4", "label5", 1234, new Hash128(234,3456,55,22) };
         for (int b = 0; b < 5; b++)
         {
             var isLocal = b % 2 == 0;
@@ -55,7 +55,7 @@ public class AddressablesVirtualModeTests : AddressablesBaseTests
                 var assetPath = RootFolder + "/" + objectName + ".prefab";
                 CreateAsset(assetPath, objectName);
 
-                var asset = new VirtualAssetBundle.AssetInfo(assetPath, UnityEngine.Random.Range(1024, 1024 * 1024));
+                var asset = new VirtualAssetBundleEntry(assetPath, UnityEngine.Random.Range(1024, 1024 * 1024));
                 bundle.Assets.Add(asset);
                 AddLocation(locations, new ResourceLocationBase(objectName, assetPath, typeof(BundledAssetProvider).FullName, bundleLocation, sharedBundleLocations[UnityEngine.Random.Range(0, sharedBundleLocations.Count)], sharedBundleLocations[UnityEngine.Random.Range(0, sharedBundleLocations.Count)]), labelSet);
             }

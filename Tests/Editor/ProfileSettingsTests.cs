@@ -62,9 +62,9 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsNotNull(settings.profileSettings);
             settings.activeProfileId = null;
             var mainId = settings.profileSettings.Reset();
-            var secondId = settings.profileSettings.AddProfile("TestProfile", mainId);
             string originalPath = "/Assets/Important";
             settings.profileSettings.CreateValue("SomePath", originalPath);
+            var secondId = settings.profileSettings.AddProfile("TestProfile", mainId);
 
             //Act
             string newPath = "/Assets/LessImportant";
@@ -88,9 +88,9 @@ namespace UnityEditor.AddressableAssets.Tests
             string varId = null;
             foreach(var variable in settings.profileSettings.profileEntryNames)
             {
-                if(variable.name == "SomePath")
+                if(variable.Name == "SomePath")
                 {
-                    varId = variable.id;
+                    varId = variable.Id;
                     break;
                 }
             }
@@ -111,7 +111,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
 
             //Assert
-            Assert.AreEqual(badIdName, AddressableAssetSettings.ProfileSettings.ProfileIDData.Evaluate(settings.profileSettings, settings.activeProfileId, badIdName));
+            Assert.AreEqual(badIdName, AddressableAssetProfileSettings.ProfileIDData.Evaluate(settings.profileSettings, settings.activeProfileId, badIdName));
 
         }
         [Test]
@@ -125,21 +125,7 @@ namespace UnityEditor.AddressableAssets.Tests
             settings.profileSettings.Reset();
 
             //Assert
-            Assert.AreEqual("VariableNotThere", AddressableAssetSettings.ProfileSettings.TryGetProfileID("VariableNotThere"));
-        }
-        [Test]
-        public void DefaultVariablesExist()
-        {
-            //Arrange
-            Assert.IsNotNull(settings.profileSettings);
-            settings.activeProfileId = null;
-
-            //Act
-            settings.profileSettings.Reset();
-
-            //Assert
-            Assert.AreNotEqual("LocalBuildPath", AddressableAssetSettings.ProfileSettings.TryGetProfileID("LocalBuildPath"));
-            Assert.AreNotEqual("LocalLoadPrefix", AddressableAssetSettings.ProfileSettings.TryGetProfileID("LocalLoadPrefix"));
+            Assert.AreEqual("VariableNotThere", settings.profileSettings.GetValueById("invalid key", "VariableNotThere"));
         }
 
     }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEditor.Build.Pipeline.Injector;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -9,31 +10,28 @@ namespace UnityEditor.AddressableAssets
     {
         const int k_Version = 1;
         public int Version { get { return k_Version; } }
+#pragma warning disable 649
+        [InjectContext(ContextUsage.In)]
+        IAddressableAssetsBuildContext m_AABuildContext;
 
-        static readonly Type[] k_RequiredTypes = { typeof(IAddressableAssetsBuildContext), typeof(IBundleWriteData), typeof(IBundleBuildResults) };
-        public Type[] RequiredContextTypes { get { return k_RequiredTypes; } }
+        [InjectContext]
+        IBundleWriteData m_WriteData;
+        [InjectContext]
+        IBundleBuildResults m_BundleBuildResults;
+#pragma warning restore 649
 
-        public ReturnCode Run(IBuildContext context)
+        public ReturnCode Run()
         {
-            IProgressTracker tracker;
-            context.TryGetContextObject(out tracker);
-            return Run(context.GetContextObject<IAddressableAssetsBuildContext>(), context.GetContextObject<IBundleWriteData>(), context.GetContextObject<IBundleBuildResults>(), tracker);
-        }
-
-        public static ReturnCode Run(IAddressableAssetsBuildContext aaContext, IBundleWriteData writeData, IBundleBuildResults results, IProgressTracker tracker)
-        {
-            var aabc = aaContext as AddressableAssetsBuildContext;
+            var aabc = m_AABuildContext as AddressableAssetsBuildContext;
             var aaSettings = aabc.m_settings;
             var runtimeData = aabc.m_runtimeData;
             var locations = aabc.m_locations;
             var assetGroupToBundle = aabc.m_assetGroupToBundles;
             foreach (var assetGroup in aaSettings.groups)
             {
-                if (tracker != null)
-                    tracker.UpdateInfo("Postprocessing asset group " + assetGroup.displayName);
                 List<string> bundles;
                 if (assetGroupToBundle.TryGetValue(assetGroup, out bundles))
-                    assetGroup.processor.PostProcessBundles(aaSettings, assetGroup, bundles, results, writeData, runtimeData, locations);
+                    assetGroup.Processor.PostProcessBundles(assetGroup, bundles, m_BundleBuildResults, m_WriteData, runtimeData, locations);
             }
             return ReturnCode.Success;
         }

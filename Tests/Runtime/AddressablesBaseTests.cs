@@ -87,6 +87,13 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
     }
 
     [UnityTest]
+    public IEnumerator VerifyProfileVariableEvaluation()
+    {
+        Assert.AreEqual(string.Format("{0}", Addressables.RuntimePath), AAConfig.ExpandPathWithGlobalVariables("{UnityEngine.AddressableAssets.Addressables.RuntimePath}"));
+        yield return null;
+    }
+
+    [UnityTest]
     public IEnumerator CanGetResourceLocationsWithSingleKey()
     {
         foreach (var k in keysHashSet)
@@ -107,7 +114,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
         {
             HashSet<IResourceLocation> set1 = new HashSet<IResourceLocation>();
             HashSet<IResourceLocation> set2 = new HashSet<IResourceLocation>();
-            var key1 = keysList[UnityEngine.Random.Range(0, keysList.Count/2)];
+            var key1 = keysList[UnityEngine.Random.Range(0, keysList.Count / 2)];
             var key2 = keysList[UnityEngine.Random.Range(keysList.Count / 2, keysList.Count)];
             var op1 = Addressables.LoadAssets<IResourceLocation>(key1, (op) => set1.Add(op.Result));
             var op2 = Addressables.LoadAssets<IResourceLocation>(key2, (op) => set2.Add(op.Result));
@@ -116,7 +123,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
             List<object> keys = new List<object>();
             keys.Add(key1);
             keys.Add(key2);
-            var op3 = Addressables.LoadAssets<IResourceLocation>(keys, (op) => Assert.IsNotNull(op.Result), mode);
+            var op3 = Addressables.LoadAssets<IResourceLocation>(keys, (op) => { Assert.IsNotNull(op.Result); Assert.AreEqual(keys, op.Key); }, mode);
             yield return op3;
             Assert.NotNull(op3.Result);
             switch (mode)
@@ -157,12 +164,48 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
         int loaded = 0;
         var assets = new List<object>();
         foreach (var key in keysList)
-            Addressables.LoadAsset<object>(key).Completed += (op) => { loaded++; Assert.IsNotNull(op.Result); assets.Add(op.Result); };
+            Addressables.LoadAsset<object>(key).Completed += (op) =>
+            {
+                loaded++;
+                Assert.IsNotNull(op.Result);
+                assets.Add(op.Result);
+            };
 
         while (loaded < keysList.Count)
             yield return null;
         foreach (var a in assets)
             Addressables.ReleaseAsset(a);
+    }
+
+    [UnityTest]
+    public IEnumerator KeyIsPassedThroughAsyncOperation()
+    {
+        object asset = null;
+        Addressables.LoadAsset<object>(keysList[0]).Completed += (op) =>
+        {
+            Assert.IsNotNull(op.Result);
+            Assert.AreEqual(keysList[0], op.Key);
+            asset = op.Result;
+        };
+
+        while (asset == null)
+            yield return null;
+        Addressables.ReleaseAsset(asset);
+    }
+
+    [UnityTest]
+    public IEnumerator CanReleaseInCallback()
+    {
+        bool complete = false;
+        Addressables.LoadAsset<object>(keysList[0]).Completed += (op) =>
+        {
+            Assert.IsNotNull(op.Result);
+            Addressables.ReleaseAsset(op.Result);
+            complete = true;
+        };
+
+        while (!complete)
+            yield return null;
     }
 
     [UnityTest]
@@ -239,7 +282,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
         for (int i = 0; i < 50; i++)
         {
             List<object> keys = new List<object>(new object[] { keysList[UnityEngine.Random.Range(0, keysList.Count / 2)], keysList[UnityEngine.Random.Range(keysList.Count / 2, keysList.Count)] });
-            var op3 = Addressables.PreloadDependencies(keys, (op) => { Assert.IsNotNull(op.Result); }, mode);
+            var op3 = Addressables.PreloadDependencies(keys, (op) => Assert.IsNotNull(op.Result), mode);
             yield return op3;
             Assert.NotNull(op3.Result);
             foreach (var d in op3.Result)
