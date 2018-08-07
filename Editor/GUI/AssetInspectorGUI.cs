@@ -13,7 +13,8 @@ namespace UnityEditor.AddressableAssets
         {
             toggleMixed = null;
             addressableAssetToggleText = new GUIContent("Addressable", "Check this to mark this asset as an Addressable Asset, which includes it in the bundled data and makes it loadable via script by its address.");
-            Editor.finishedDefaultHeaderGUI += OnPostHeaderGUI;
+            //This is disabled until the editor is fixed - there is a bug where the animation inspector gets messed up when this callback is set
+            //Editor.finishedDefaultHeaderGUI += OnPostHeaderGUI;
         }
 
         static void SetAAEntry(Editor editor, AddressableAssetSettings aaSettings, Object[] targets, bool create)

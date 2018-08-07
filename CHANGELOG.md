@@ -4,6 +4,9 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.2.2-preview] - 2018-08-08
+ - disabled asset inspector gui for addressables checkbox due to editor bug
+
 ## [0.2.1-preview] - 2018-07-26
  - smoothed transition from 0.1.x data to 0.2.x data
  - added checks for adding duplicate scenes into the EditorBuildSettings.scenes list
