@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -17,7 +18,7 @@ namespace UnityEditor.AddressableAssets
         }
 
         [SerializeField]
-        bool m_ignoreLegacyBundles = false;  
+        bool m_ignoreLegacyBundles = false;
 
         [MenuItem("Window/Asset Management/Addressable Assets", priority = 2050)]
         static void Init()
@@ -62,7 +63,6 @@ namespace UnityEditor.AddressableAssets
 
         public void OnGUI()
         {
-    
             var settingsObject = AddressableAssetSettings.GetDefault(false, false);
             if (settingsObject == null)
             {
@@ -73,18 +73,18 @@ namespace UnityEditor.AddressableAssets
                 }
                 if (GUILayout.Button("Import Addressables Settings"))
                 {
-                    var path = EditorUtility.OpenFilePanel("Addressables Settings Object", AddressableAssetSettings.DefaultConfigFolder, "asset");
+                    var path = EditorUtility.OpenFilePanel("Addressables Settings Object", AddressableAssetSettings.kDefaultConfigFolder, "asset");
                     if (!string.IsNullOrEmpty(path))
                     {
                         var i = path.ToLower().IndexOf("/assets/");
                         if (i > 0)
                         {
-                            path = path.Substring(i+1);
-                            Debug.LogFormat("Loading Addressables Settings from {0}", path);
+                            path = path.Substring(i + 1);
+                            Addressables.LogFormat("Loading Addressables Settings from {0}", path);
                             var obj = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
                             if (obj != null)
                             {
-                                EditorBuildSettings.AddConfigObject(AddressableAssetSettings.DefaultConfigName, obj, true);
+                                EditorBuildSettings.AddConfigObject(AddressableAssetSettings.kDefaultConfigName, obj, true);
                                 settingsObject = AddressableAssetSettings.GetDefault(true, true);
                             }
                         }
@@ -103,12 +103,12 @@ namespace UnityEditor.AddressableAssets
                         DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
                         foreach (var path in DragAndDrop.paths)
                         {
-                            if(AddressablesUtility.IsPathValidForEntry(path))
+                            if (AddressablesUtility.IsPathValidForEntry(path))
                             {
                                 var guid = AssetDatabase.AssetPathToGUID(path);
                                 if (!string.IsNullOrEmpty(guid))
                                 {
-                                    if(settingsObject == null)
+                                    if (settingsObject == null)
                                         settingsObject = AddressableAssetSettings.GetDefault(true, true);
                                     Undo.RecordObject(settingsObject, "AddressableAssetSettings");
                                     settingsObject.CreateOrMoveEntry(guid, settingsObject.DefaultGroup);
@@ -125,14 +125,14 @@ namespace UnityEditor.AddressableAssets
             else
             {
                 Rect contentRect = new Rect(0, 0, position.width, position.height);
- 
-                    if (m_groupEditor == null)
+
+                if (m_groupEditor == null)
                 {
                     m_groupEditor = new AddressableAssetsSettingsGroupEditor(this);
                     m_groupEditor.OnEnable();
                 }
                 if (m_groupEditor.OnGUI(contentRect))
-                            Repaint();
+                    Repaint();
             }
         }
     }

@@ -5,16 +5,23 @@ using UnityEngine.ResourceManagement;
 namespace UnityEngine.AddressableAssets
 {
     /// <summary>
-    /// TODO - doc
+    /// Simple implementation of an IResourceLocator
     /// </summary>
     public class ResourceLocationMap : IResourceLocator
     {
-
+        /// <summary>
+        /// Construct a new ResourceLocationMap object.
+        /// </summary>
+        /// <param name="capacity">The expected number of items.</param>
         public ResourceLocationMap(int capacity = 0)
         {
             Locations = new Dictionary<object, IList<IResourceLocation>>(capacity == 0 ? 100 : capacity);
         }
 
+        /// <summary>
+        /// Construct a new ResourceLocationMap object with a list of locations.
+        /// </summary>
+        /// <param name="locations">The list of locations to initialize with.</param>
         public ResourceLocationMap(IList<ResourceLocationData> locations)
         {
             if (locations == null)
@@ -26,14 +33,19 @@ namespace UnityEngine.AddressableAssets
             for (int i = 0; i < locations.Count; i++)
             {
                 var rlData = locations[i];
-                if (locMap.ContainsKey(rlData.Address))
+                if (rlData.Keys == null || rlData.Keys.Length < 1)
                 {
-                    Debug.LogErrorFormat("Duplicate address '{0}' with id '{1}' found, skipping...", rlData.Address, rlData.InternalId);
+                    Addressables.LogErrorFormat("Address with id '{0}' does not have any valid keys, skipping...", rlData.InternalId);
                     continue;
                 }
-                var loc = new ResourceLocationBase(rlData.Address, AAConfig.ExpandPathWithGlobalVariables(rlData.InternalId), rlData.Provider);
-                locMap.Add(rlData.Address, loc);
-                dataMap.Add(rlData.Address, rlData);
+                if (locMap.ContainsKey(rlData.Keys[0]))
+                {
+                    Addressables.LogErrorFormat("Duplicate address '{0}' with id '{1}' found, skipping...", rlData.Keys[0], rlData.InternalId);
+                    continue;
+                }
+                var loc = new ResourceLocationBase(rlData.Keys[0], AddressablesRuntimeProperties.EvaluateString(rlData.InternalId), rlData.Provider);
+                locMap.Add(rlData.Keys[0], loc);
+                dataMap.Add(rlData.Keys[0], rlData);
             }
 
             //fix up dependencies between them
@@ -51,41 +63,49 @@ namespace UnityEngine.AddressableAssets
             {
                 IResourceLocation loc = kvp.Value;
                 ResourceLocationData rlData = dataMap[kvp.Key];
-                if(!string.IsNullOrEmpty(rlData.Address))
-                    Add(rlData.Address, loc);
-                if (!string.IsNullOrEmpty(rlData.Guid))
-                    Add(rlData.Guid, loc);
+                foreach (var k in rlData.Keys)
+                    Add(k, loc);
             }
         }
 
 
         /// <summary>
-        /// TODO - doc
+        /// The mapping of key to location lists.
         /// </summary>
         public Dictionary<object, IList<IResourceLocation>> Locations { get; private set; }
 
         /// <summary>
-        /// TODO - doc
+        /// Locate all of the locations that match the given key.
         /// </summary>
+        /// <param name="key">The key used to locate the locations.</param>
+        /// <param name="locations">The list of found locations.  This list is shared so it should not be modified.</param>
+        /// <returns></returns>
         public bool Locate(object key, out IList<IResourceLocation> locations)
         {
             return Locations.TryGetValue(key, out locations);
         }
 
         /// <summary>
-        /// TODO - doc
+        /// Add a new location.
         /// </summary>
-        public void Add(object key, IResourceLocation loc)
+        /// <param name="key">The key to reference the location.</param>
+        /// <param name="location">The location to add.</param>
+        public void Add(object key, IResourceLocation location)
         {
             IList<IResourceLocation> locations;
             if (!Locations.TryGetValue(key, out locations))
                 Locations.Add(key, locations = new List<IResourceLocation>());
-            locations.Add(loc);
+            locations.Add(location);
         }
 
-        public void Add(object key, IList<IResourceLocation> locs)
+        /// <summary>
+        /// Add a list of locations.
+        /// </summary>
+        /// <param name="key">The key to reference the locations with.</param>
+        /// <param name="locations">The list of locations to store at the given key.</param>
+        public void Add(object key, IList<IResourceLocation> locations)
         {
-            Locations.Add(key, locs);
+            Locations.Add(key, locations);
         }
     }
 }

@@ -17,19 +17,20 @@ namespace UnityEditor.AddressableAssets
             EditorGUI.BeginProperty(position, label, property);
             if (settings == null)
                 settings = AddressableAssetSettings.GetDefault(false, false);
-            if(settings == null)
-            {
 
+            var currentLabel = property.FindPropertyRelative("m_labelString");
+            var smallPos = EditorGUI.PrefixLabel(position, label);
+            if (settings == null)
+            {
+                using (new EditorGUI.DisabledScope(true))
+                    EditorGUI.LabelField(smallPos, new GUIContent(currentLabel.stringValue));
             }
             else
             {
-
-                var currentLabel = property.FindPropertyRelative("m_labelString");
                 var currIndex = settings.labelTable.labelNames.IndexOf(currentLabel.stringValue);
                 var labelList = settings.labelTable.labelNames.ToArray();
-                var smallPos = EditorGUI.PrefixLabel(position, label);
                 var newIndex = EditorGUI.Popup(smallPos, currIndex, labelList);
-                if(newIndex != currIndex)
+                if (newIndex != currIndex)
                 {
                     currentLabel.stringValue = labelList[newIndex];
                 }

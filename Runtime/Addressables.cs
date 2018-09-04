@@ -7,19 +7,33 @@ using UnityEngine.SceneManagement;
 
 namespace UnityEngine.AddressableAssets
 {
+    /// <summary>
+    /// Exception to encapsulate invalid key errors.
+    /// </summary>
     public class InvalidKeyException : Exception
     {
+        /// <summary>
+        /// The key used to generate the exception.
+        /// </summary>
         public object Key { get; private set; }
+        /// <summary>
+        /// Construct a new InvalidKeyException.
+        /// </summary>
+        /// <param name="key">The key that caused the exception.</param>
         public InvalidKeyException(object key)
         {
             Key = key;
         }
 
+        ///<inheritdoc/>
         public InvalidKeyException() { }
+        ///<inheritdoc/>
         public InvalidKeyException(string message) : base(message) { }
+        ///<inheritdoc/>
         public InvalidKeyException(string message, Exception innerException) : base(message, innerException) { }
+        ///<inheritdoc/>
         protected InvalidKeyException(SerializationInfo message, StreamingContext context) : base(message, context) { }
-
+        ///<inheritdoc/>
         public override string Message
         {
             get
@@ -34,25 +48,44 @@ namespace UnityEngine.AddressableAssets
     /// </summary>
     public static class Addressables
     {
+        /// <summary>
+        /// Enumerates the supported modes of merging the results of requests.
+        /// If keys (A, B) mapped to results ([1,2,4],[3,4,5])...
+        ///  - UseFirst (or None) takes the results from the first key 
+        ///  -- [1,2,4]
+        ///  - Union takes results of each key and collects items that matched any key.
+        ///  -- [1,2,3,4,5]
+        ///  - Intersection takes results of each key, and collects items that matched every key.
+        ///  -- [4]
+        /// </summary>
         public enum MergeMode
         {
-            None,
+            None=0,
+            UseFirst=0,
             Union,
             Intersection
         }
 
+        const string kAddressablesLogConditional = "ADDRESSABLES_LOG_ALL";
+
+        /// <summary>
+        /// The path used by the Addressables system for its initialization data.
+        /// </summary>
         public static string BuildPath
         {
             get { return "Assets/StreamingAssets/com.unity.addressables"; }
         }
 
+        /// <summary>
+        /// The path used by the Addressables system to load initialization data.
+        /// </summary>
         public static string RuntimePath
         {
             get { return Application.streamingAssetsPath + "/com.unity.addressables"; }
         }
 
         static List<IResourceLocator> s_resourceLocators = new List<IResourceLocator>();
-        static IAsyncOperation<bool> s_initializationOperation = null;
+        static IAsyncOperation<IResourceLocator> s_initializationOperation = null;
 
         static Dictionary<object, KeyValuePair<IResourceLocation, int>> s_assetToLocationMap = new Dictionary<object, KeyValuePair<IResourceLocation, int>>();
         static Dictionary<GameObject, IResourceLocation> s_instanceToLocationMap = new Dictionary<GameObject, IResourceLocation>();
@@ -78,6 +111,65 @@ namespace UnityEngine.AddressableAssets
             {
                 return s_resourceLocators;
             }
+        }
+
+        /// <summary>
+        /// Debug.Log wrapper method that is contional on the LOG_ADDRESSABLES symbol definition.  This can be set in the Player preferences in the 'Scripting Define Symbols'.
+        /// </summary>
+        /// <param name="msg">The msg to log</param>
+        [System.Diagnostics.Conditional(kAddressablesLogConditional)]
+        public static void Log(string msg)
+        {
+            Debug.Log(msg);
+        }
+
+        /// <summary>
+        /// Debug.LogFormat wrapper method that is contional on the LOG_ADDRESSABLES symbol definition.  This can be set in the Player preferences in the 'Scripting Define Symbols'.
+        /// </summary>
+        /// <param name="format">The string with format tags.</param>
+        /// <param name="args">The args used to fill in the format tags.</param>
+        [System.Diagnostics.Conditional(kAddressablesLogConditional)]
+        public static void LogFormat(string format, params object[] args)
+        {
+            Debug.LogFormat(format, args);
+        }
+
+        /// <summary>
+        /// Debug.LogWarning wrapper method.
+        /// </summary>
+        /// <param name="msg">The msg to log</param>
+        public static void LogWarning(string msg)
+        {
+            Debug.LogWarning(msg);
+        }
+
+        /// <summary>
+        /// Debug.LogWarningFormat wrapper method.
+        /// </summary>
+        /// <param name="format">The string with format tags.</param>
+        /// <param name="args">The args used to fill in the format tags.</param>
+        public static void LogWarningFormat(string format, params object[] args)
+        {
+            Debug.LogWarningFormat(format, args);
+        }
+
+        /// <summary>
+        /// Debug.LogError wrapper method.
+        /// </summary>
+        /// <param name="msg">The msg to log</param>
+        public static void LogError(string msg)
+        {
+            Debug.LogError(msg);
+        }
+
+        /// <summary>
+        /// Debug.LogErrorFormat wrapper method.
+        /// </summary>
+        /// <param name="format">The string with format tags.</param>
+        /// <param name="args">The args used to fill in the format tags.</param>
+        public static void LogErrorFormat(string format, params object[] args)
+        {
+            Debug.LogErrorFormat(format, args);
         }
 
         internal static bool GetResourceLocations(object key, out IList<IResourceLocation> locations)
@@ -128,7 +220,7 @@ namespace UnityEngine.AddressableAssets
                     if (locations == null)
                     {
                         locations = locs;
-                        if (merge == MergeMode.None)
+                        if (merge == MergeMode.UseFirst)
                             return true;
                     }
                     else
@@ -155,50 +247,63 @@ namespace UnityEngine.AddressableAssets
             return true;
         }
 
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
         [RuntimeInitializeOnLoadMethod]
-        private static void InitializeResourceManager()
+        private static void RuntimeInitialization()
+        {
+#if !ADDRESSABLES_DISABLE_AUTO_INITIALIZATION
+            Initialize();
+#endif
+        }
+
+        /// <summary>
+        /// Initialize Addressables system.  This method will automatically be called at startup unless ADDRESSABLES_DISABLE_AUTO_INITIALIZATION is defined as a script conditional in the player settings.
+        /// If ADDRESSABLES_DISABLE_AUTO_INITIALIZATION is set and a request is made, this method will also be called then.  It is safe to call this method mutliple times as it will only initialize once.
+        /// </summary>
+        /// <returns>IAsync operation for initialization. The result of the operation is the IResourceLocator that was loaded.</returns>
+        public static IAsyncOperation<IResourceLocator> Initialize()
         {
             if (s_initializationOperation != null)
-                return;
-            
+                return s_initializationOperation;
+
             int playModePref = PlayerPrefs.GetInt("AddressablesPlayMode", (int)ResourceManagerRuntimeData.EditorPlayMode.PackedMode);
             var playMode = (ResourceManagerRuntimeData.EditorPlayMode)playModePref;
             if (playMode == ResourceManagerRuntimeData.EditorPlayMode.Invalid)
-                return;
+                return new CompletedOperation<IResourceLocator>().Start(null, null, null);
+
             if (!Application.isPlaying)
-                Debug.LogWarning("Addressables are not available in edit mode.");
+                Addressables.LogWarning("Addressables are not available in edit mode.");
 
             s_releaseInstanceAction = ReleaseInstance;
             s_recordAssetAction = RecordObjectLocation;
             s_recordAssetListAction = RecordObjectListLocation;
             s_recordInstanceAction = RecordInstanceLocation;
             s_recordInstanceListAction = RecordInstanceListLocation;
-            ResourceManagement.Diagnostics.DiagnosticEventCollector.ProfileEvents = true;
+            ResourceManagement.Diagnostics.DiagnosticEventCollector.ResourceManagerProfilerEventsEnabled = true;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
-            s_initializationOperation = new InitializationOperation(playMode);
+            return (s_initializationOperation = new InitializationOperation(playMode));
         }
 
         /// <summary>
-        /// TODO - doc
+        /// Additively load catalogs from runtime data.  The settings are not used.
         /// </summary>
-        public static void InitializeWithAdditionalData(string runtimeDataPath)
+        /// <param name="runtimeDataPath">The path to the runtime data.</param>
+        /// <returns>IAsync operation for initialization.</returns>
+        public static IAsyncOperation<IResourceLocator> LoadCatalogsFromRuntimeData(string runtimeDataPath)
         {
             if (!InitializationOperation.IsDone)
-                InitializationOperation.Completed += (op) => InitializeWithAdditionalData(runtimeDataPath);
-            else
-                InitializeWithAdditionalData(runtimeDataPath);
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IResourceLocator, IResourceLocator>>().Start(null, runtimeDataPath, InitializationOperation, (op) => new InitializationOperation(runtimeDataPath)).Retain();
+            return new InitializationOperation(runtimeDataPath);
         }
 
-
-        private static IAsyncOperation<bool> InitializationOperation
+        /// <summary>
+        /// Initialization operation.  You can register a callback with this if you need to run code after Addressables is ready.  Any requests made before this operaton completes will automatically cahin to its result.
+        /// </summary>
+        public static IAsyncOperation<IResourceLocator> InitializationOperation
         {
             get
             {
                 if (s_initializationOperation == null)
-                    InitializeResourceManager();
+                    Initialize();
                 return s_initializationOperation;
             }
         }
@@ -211,7 +316,7 @@ namespace UnityEngine.AddressableAssets
 
             if (location == null)
             {
-                Debug.LogWarningFormat("RecordInstance() - parameter location cannot be null.");
+                Addressables.LogWarningFormat("RecordInstance() - parameter location cannot be null.");
                 return;
             }
 
@@ -233,13 +338,13 @@ namespace UnityEngine.AddressableAssets
             var locations = op.Context as IList<IResourceLocation>;
             if (locations == null)
             {
-                Debug.LogWarningFormat("RecordInstanceListLocation() - Context is not an IList<IResourceLocation> {0}", op.Context);
+                Addressables.LogWarningFormat("RecordInstanceListLocation() - Context is not an IList<IResourceLocation> {0}", op.Context);
                 return;
             }
             var results = op.Result as IList;
             if (results == null)
             {
-                Debug.LogWarningFormat("RecordInstanceListLocation() - Result is not a IList {0}", op.Result);
+                Addressables.LogWarningFormat("RecordInstanceListLocation() - Result is not a IList {0}", op.Result);
                 return;
             }
 
@@ -251,15 +356,15 @@ namespace UnityEngine.AddressableAssets
         {
             if (gameObject == null)
                 return;
-           
+
             if (location == null)
             {
-                Debug.LogWarningFormat("RecordInstance() - parameter location cannot be null.");
+                Addressables.LogWarningFormat("RecordInstance() - parameter location cannot be null.");
                 return;
             }
             if (!gameObject.scene.IsValid() || !gameObject.scene.isLoaded)
             {
-                Debug.LogWarningFormat("RecordInstance() - scene is not valid and loaded " + gameObject.scene);
+                Addressables.LogWarningFormat("RecordInstance() - scene is not valid and loaded " + gameObject.scene);
                 return;
             }
 
@@ -281,13 +386,13 @@ namespace UnityEngine.AddressableAssets
             var locations = op.Context as IList<IResourceLocation>;
             if (locations == null)
             {
-                Debug.LogWarningFormat("RecordInstanceListLocation() - Context is not an IList<IResourceLocation> {0}", op.Context);
+                Addressables.LogWarningFormat("RecordInstanceListLocation() - Context is not an IList<IResourceLocation> {0}", op.Context);
                 return;
             }
             var results = op.Result as IList;
             if (results == null)
             {
-                Debug.LogWarningFormat("RecordInstanceListLocation() - Result is not a IList {0}", op.Result);
+                Addressables.LogWarningFormat("RecordInstanceListLocation() - Result is not a IList {0}", op.Result);
                 return;
             }
             for (int i = 0; i < results.Count; i++)
@@ -320,7 +425,7 @@ namespace UnityEngine.AddressableAssets
             {
                 IList<IResourceLocation> locations = null;
                 var keyList = Key as IList<object>;
-                if(keyList != null)
+                if (keyList != null)
                     GetResourceLocations(keyList, m_mode, out locations);
                 else
                     GetResourceLocations(Key, out locations);
@@ -328,8 +433,8 @@ namespace UnityEngine.AddressableAssets
                 if (m_callback != null && locations != null)
                 {
                     //very wasteful, but needed to ensure expected behavior - callbacks should not be passed in for location queries but they need to be supported if the user chooses to
-                    foreach(var loc in locations)
-                        m_callback(new CompletedOperation<IResourceLocation>(loc, Key, loc));
+                    foreach (var loc in locations)
+                        m_callback(new CompletedOperation<IResourceLocation>().Start(loc, Key, loc));
                 }
                 SetResult(locations);
                 InvokeCompletionEvent();
@@ -355,15 +460,15 @@ namespace UnityEngine.AddressableAssets
         public static IAsyncOperation<TObject> LoadAsset<TObject>(object key) where TObject : class
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<TObject, bool>>().Start(null, key, InitializationOperation, (op) => LoadAsset<TObject>(key)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<TObject, IResourceLocator>>().Start(null, key, InitializationOperation, (op) => LoadAsset<TObject>(key)).Retain();
 
             if (typeof(IResourceLocation).IsAssignableFrom(typeof(TObject)))
             {
                 IResourceLocation loc = null;
                 IList<IResourceLocation> locList;
-                if(GetResourceLocations(key, out locList))
+                if (GetResourceLocations(key, out locList))
                     loc = locList[0];
-                return new CompletedOperation<IResourceLocation>(loc, key, loc).Start() as IAsyncOperation<TObject>;
+                return new CompletedOperation<IResourceLocation>().Start(loc, key, loc) as IAsyncOperation<TObject>;
             }
 
             IList<IResourceLocation> locations;
@@ -382,7 +487,7 @@ namespace UnityEngine.AddressableAssets
                 }
                 throw new UnknownResourceProviderException(locations[0]);
             }
-            return new EmptyOperation<TObject>().Start(null, key, null);
+            return new CompletedOperation<TObject>().Start(null, key, null);
         }
 
         /// <summary>
@@ -405,11 +510,11 @@ namespace UnityEngine.AddressableAssets
         /// <param name="keys">List of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <param name="mode">Merge method of locations.</param>
-        public static IAsyncOperation<IList<TObject>> LoadAssets<TObject>(IList<object> keys, Action<IAsyncOperation<TObject>> callback, MergeMode mode = MergeMode.None)
+        public static IAsyncOperation<IList<TObject>> LoadAssets<TObject>(IList<object> keys, Action<IAsyncOperation<TObject>> callback, MergeMode mode = MergeMode.UseFirst)
             where TObject : class
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, bool>>().Start(null, keys, InitializationOperation, (op) => LoadAssets<TObject>(keys, callback, mode)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, IResourceLocator>>().Start(null, keys, InitializationOperation, (op) => LoadAssets<TObject>(keys, callback, mode)).Retain();
 
             if (typeof(IResourceLocation).IsAssignableFrom(typeof(TObject)))
                 return AsyncOperationCache.Instance.Acquire<GetLocationsOperation>().Start(keys, callback as Action<IAsyncOperation<IResourceLocation>>, mode).Retain() as IAsyncOperation<IList<TObject>>;
@@ -422,7 +527,7 @@ namespace UnityEngine.AddressableAssets
                 return loadOp;
             }
 
-            return new EmptyOperation<IList<TObject>>().Start(locations, keys, null, new InvalidKeyException(keys));
+            return new CompletedOperation<IList<TObject>>().Start(locations, keys, null, new InvalidKeyException(keys));
         }
 
 
@@ -435,7 +540,7 @@ namespace UnityEngine.AddressableAssets
             where TObject : class
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, bool>>().Start(null, key, InitializationOperation, (op) => LoadAssets(key, callback)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, IResourceLocator>>().Start(null, key, InitializationOperation, (op) => LoadAssets(key, callback)).Retain();
 
             if (typeof(IResourceLocation).IsAssignableFrom(typeof(TObject)))
                 return AsyncOperationCache.Instance.Acquire<GetLocationsOperation>().Start(key, callback as Action<IAsyncOperation<IResourceLocation>>).Retain() as IAsyncOperation<IList<TObject>>;
@@ -448,7 +553,7 @@ namespace UnityEngine.AddressableAssets
                 return loadOp;
             }
 
-            return new EmptyOperation<IList<TObject>>().Start(locations, key, null, new InvalidKeyException(key));
+            return new CompletedOperation<IList<TObject>>().Start(locations, key, null, new InvalidKeyException(key));
         }
 
         /// <summary>
@@ -461,7 +566,7 @@ namespace UnityEngine.AddressableAssets
             KeyValuePair<IResourceLocation, int> info;
             if (!s_assetToLocationMap.TryGetValue(asset, out info))
             {
-                Debug.LogWarningFormat("ResourceManager.Release() - unable to find location info for asset {0}.", asset);
+                Addressables.LogWarningFormat("ResourceManager.Release() - unable to find location info for asset {0}.", asset);
                 return;
             }
             if (info.Value <= 1)
@@ -477,14 +582,14 @@ namespace UnityEngine.AddressableAssets
         /// <returns>An async operation that will complete when all individual async load operations are complete.</returns>
         /// <param name="keys">List of keys for which to load dependencies.</param>
         /// <param name="callback">This callback will be invoked once for each object that is loaded.</param>
-        public static IAsyncOperation<IList<object>> PreloadDependencies(IList<object> keys, Action<IAsyncOperation<object>> callback, MergeMode mode = MergeMode.None)
+        public static IAsyncOperation<IList<object>> PreloadDependencies(IList<object> keys, Action<IAsyncOperation<object>> callback, MergeMode mode = MergeMode.UseFirst)
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<object>, bool>>().Start(null, keys, InitializationOperation, (op) => PreloadDependencies(keys, callback, mode)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<object>, IResourceLocator>>().Start(null, keys, InitializationOperation, (op) => PreloadDependencies(keys, callback, mode)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(keys, mode, out locations))
-                return new EmptyOperation<IList<object>>().Start(locations, keys, null, new InvalidKeyException(keys));
+                return new CompletedOperation<IList<object>>().Start(locations, keys, null, new InvalidKeyException(keys));
 
 
             var locHash = new HashSet<IResourceLocation>();
@@ -511,11 +616,11 @@ namespace UnityEngine.AddressableAssets
         public static IAsyncOperation<IList<object>> PreloadDependencies(object key, Action<IAsyncOperation<object>> callback)
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<object>, bool>>().Start(null, key, InitializationOperation, (op) => PreloadDependencies(key, callback)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<object>, IResourceLocator>>().Start(null, key, InitializationOperation, (op) => PreloadDependencies(key, callback)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                return new EmptyOperation<IList<object>>().Start(locations, key, null, new InvalidKeyException(key));
+                return new CompletedOperation<IList<object>>().Start(locations, key, null, new InvalidKeyException(key));
 
 
             var locHash = new HashSet<IResourceLocation>();
@@ -567,11 +672,11 @@ namespace UnityEngine.AddressableAssets
             where TObject : Object
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<TObject, bool>>().Start(null, key, InitializationOperation, (op) => Instantiate<TObject>(key, instantiateParameters)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<TObject, IResourceLocator>>().Start(null, key, InitializationOperation, (op) => Instantiate<TObject>(key, instantiateParameters)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                return new EmptyOperation<TObject>().Start(locations, key, null, new InvalidKeyException(key));
+                return new CompletedOperation<TObject>().Start(locations, key, null, new InvalidKeyException(key));
 
 
             var instOp = Instantiate<TObject>(locations[0], instantiateParameters);
@@ -647,11 +752,11 @@ namespace UnityEngine.AddressableAssets
             where TObject : Object
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, bool>>().Start(null, key, InitializationOperation, (op) => InstantiateAll(key, callback, instantiateParameters)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, IResourceLocator>>().Start(null, key, InitializationOperation, (op) => InstantiateAll(key, callback, instantiateParameters)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                return new EmptyOperation<IList<TObject>>().Start(locations, key, null, new InvalidKeyException(key));
+                return new CompletedOperation<IList<TObject>>().Start(locations, key, null, new InvalidKeyException(key));
 
 
             var instOp = InstantiateAll(locations, callback, instantiateParameters);
@@ -688,7 +793,7 @@ namespace UnityEngine.AddressableAssets
             }
             if (instance == null)
             {
-                Debug.LogWarning("ResourceManager.ReleaseInstance() - trying to release null instance");
+                Addressables.LogWarning("ResourceManager.ReleaseInstance() - trying to release null instance");
                 return;
             }
             if (s_currentFrame != Time.frameCount)
@@ -704,25 +809,25 @@ namespace UnityEngine.AddressableAssets
             var go = instance as GameObject;
             if (go == null)
             {
-                Debug.LogWarning("ResourceManager.ReleaseInstance() - only GameObject types are supported");
+                Addressables.LogWarning("ResourceManager.ReleaseInstance() - only GameObject types are supported");
                 GameObject.Destroy(go);
                 return;
             }
-            
+
             s_instancesReleasedInCurrentFrame.Add(instance);
             IResourceLocation location;
             if (!s_instanceToLocationMap.TryGetValue(go, out location))
             {
                 //TODO - need to keep this around for to-be-implemented a verbose loggging option
-                //Debug.LogWarningFormat("ResourceManager.ReleaseInstance() - unable to find location for instance {0}.", instance.GetInstanceID());
+                //Addressables.LogWarningFormat("ResourceManager.ReleaseInstance() - unable to find location for instance {0}.", instance.GetInstanceID());
                 GameObject.Destroy(go);
                 return;
             }
 
             if (!s_sceneToInstances[go.scene].Remove(go))
-                Debug.LogWarningFormat("Instance {0} was not found in scene {1}.", go.GetInstanceID(), go.scene);
-            if(!s_instanceToScene.Remove(go))
-                Debug.LogWarningFormat("Instance {0} was not found instance->scene map.", go.GetInstanceID());
+                Addressables.LogWarningFormat("Instance {0} was not found in scene {1}.", go.GetInstanceID(), go.scene);
+            if (!s_instanceToScene.Remove(go))
+                Addressables.LogWarningFormat("Instance {0} was not found instance->scene map.", go.GetInstanceID());
 
 
             s_instanceToLocationMap.Remove(go);
@@ -737,11 +842,11 @@ namespace UnityEngine.AddressableAssets
         public static IAsyncOperation<Scene> LoadScene(object key, LoadSceneMode loadMode = LoadSceneMode.Single)
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<Scene, bool>>().Start(null, key, InitializationOperation, (op) => LoadScene(key, loadMode)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<Scene, IResourceLocator>>().Start(null, key, InitializationOperation, (op) => LoadScene(key, loadMode)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                return new EmptyOperation<Scene>().Start(locations, key, default(Scene), new InvalidKeyException(key));
+                return new CompletedOperation<Scene>().Start(locations, key, default(Scene), new InvalidKeyException(key));
 
 
             var loadOp = LoadScene(locations[0], loadMode);
@@ -773,10 +878,10 @@ namespace UnityEngine.AddressableAssets
         {
             IResourceLocation location;
             if (!s_sceneToLocationMap.TryGetValue(scene, out location))
-                return new EmptyOperation<Scene>().Start(null, scene, default(Scene), new ArgumentNullException("scene", string.Format("UnloadScene - unable to find location for scene {0}.", scene)));
+                return new CompletedOperation<Scene>().Start(null, scene, default(Scene), new ArgumentNullException("scene", string.Format("UnloadScene - unable to find location for scene {0}.", scene)));
 
             s_sceneToLocationMap.Remove(scene);
-            return ResourceManager.ReleaseScene(location, scene);
+            return ResourceManager.ReleaseScene(scene, location);
         }
 
 
@@ -792,7 +897,7 @@ namespace UnityEngine.AddressableAssets
                 return;
             HashSet<GameObject> instanceIds = null;
             if (!s_sceneToInstances.TryGetValue(previousScene, out instanceIds))
-                Debug.LogFormat("Unable to find instance table for instance {0}.", gameObject.GetInstanceID());
+                Addressables.LogFormat("Unable to find instance table for instance {0}.", gameObject.GetInstanceID());
             else
                 instanceIds.Remove(gameObject);
             if (!s_sceneToInstances.TryGetValue(currentScene, out instanceIds))
@@ -825,7 +930,7 @@ namespace UnityEngine.AddressableAssets
                     if (s_instanceToLocationMap.TryGetValue(go, out loc))
                     {
                         if (!s_instanceToScene.Remove(go))
-                            Debug.LogWarningFormat("Scene not found for instance {0}", go);
+                            Addressables.LogWarningFormat("Scene not found for instance {0}", go);
 
                         s_instanceToLocationMap.Remove(go);
                         ResourceManager.ReleaseInstance(go, loc);
@@ -833,7 +938,7 @@ namespace UnityEngine.AddressableAssets
                     else
                     {
                         //object has already been released
-                        Debug.LogWarningFormat("Object instance {0} has already been released.", go);
+                        Addressables.LogWarningFormat("Object instance {0} has already been released.", go);
                     }
                 }
 
@@ -850,13 +955,13 @@ namespace UnityEngine.AddressableAssets
                 {
                     if (go == null)
                     {
-                        Debug.LogWarningFormat("GameObject instance has been destroyed, use ResourceManager.ReleaseInstance to ensure proper reference counts.");
+                        Addressables.LogWarningFormat("GameObject instance has been destroyed, use ResourceManager.ReleaseInstance to ensure proper reference counts.");
                     }
                     else
                     {
                         if (go.scene != kvp.Key)
                         {
-                            Debug.LogWarningFormat("GameObject instance {0} has been moved to from scene {1} to scene {2}.  When moving tracked instances, use ResourceManager.RecordInstanceSceneChange to ensure that reference counts are accurate.", go, kvp.Key, go.scene.GetHashCode());
+                            Addressables.LogWarningFormat("GameObject instance {0} has been moved to from scene {1} to scene {2}.  When moving tracked instances, use ResourceManager.RecordInstanceSceneChange to ensure that reference counts are accurate.", go, kvp.Key, go.scene.GetHashCode());
                             objectsThatNeedToBeFixed.Add(new KeyValuePair<Scene, GameObject>(kvp.Key, go));
                         }
                     }

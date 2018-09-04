@@ -4,9 +4,51 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.2.2-preview] - 2018-08-08
+## [0.3.5-preview] - 2018-09-05
+ - implemented content update workflow.  Added a dropdown to the "Build" button on main window's toolbar.   
+    - "Build/Prepare for Content Update" will detect assets in locked bundles (bundles flagged as static, by default all local bundles).
+    - "Build/Build for Content Update" will build assets with a catalog that is compatible with a previously released player.
+	- "Build/Build Packed Data" will build in the same way entering play mode in PackedMode would.
+	- implemented Clean Build. "Build/Clean/*" will clear out build caches. 
+ - cleaned up streaming assets folder better after build
+ - moved asset group data into separate assets in order to better support version control
+ - fixed bug when canceling export of entries to an AssetEntryCollection
+ - fixed several bugs related to caching packed bundles in play mode
+ - added option to build settings to control whether streaming assets is cleared after each build
+ - enabled CreateBuiltInShadersBundle task in build and preview
+ - fixed bug in AA initialization that was cuasing tests to fail when AA is not being used.
+ - fixed bug where toggling "send profiler events" would have no effect in some situations
+ - default the first 2 converted groups to have StaticContent set to true
+ - UI Redesign
+  - Moved most data settings onto actual assets.  AddressableAssetSettings and AddressableAssetGroup assets.
+    - AddressableAssetSettings asset has "Send Profile Events", list of groups, labels, and profiles
+	- AddressableAssetGroup assets have all data associated with that group (such as BuildPath)
+  - Made "preview" be a sub-section within the Addressables window.
+  - The "Default" group can now be set with a right-click in the Addressables window.
+  - Set play mode from "Mode" dropdown on main window's toolbar. 
+  - Moved "Hierarchical Search" option onto magnifying glass of search bar.  Removed now empty settings cog button.
+ - fixed issue when packing groups into seperate bundles generated duplicate asset bundle names, leading to an error being thrown during build
+ - added support for disabling the automatic initialization of the addressables system at runtime via a script define:  ADDRESSABLES_DISABLE_AUTO_INITIALIZATION
+ - added API to create AssetReference from AddressableAssetSettings object in order to create an entry if it does not exist.
+ - moving resource profiler from the ResourceManager package to the Addressables package
+ - fixed bug where UnloadScene operation never entered Done state or called callback.
+ - fixed loading of additonal catalogs. The API has changed to Addressables.LoadCatalogsFromRuntimeData.
+ - fixed bug in InitializationOperation where content catalogs were not found.
+ - changed content update workflow to browse for cachedata.bin file instead of folder
+ - fixed exception thrown when creating a group and using .NET 4.x
+ - fixed bugs surrounding a project without addressables data.
+  - AssetLabelReference inspector rendering
+  - AssetReference drag and drop
+ - fixed profiler details view not updating when a mouse drag is completed
+ - fixes surrounding the stability of interacting with the "default" group.
+ - Added docs for the Content Update flow.
+ - Adjusted UI slightly so single-clicking groups shows their inspector.
+ - removed not-helpful "Build/Build Packed Data" item from menu.  
+ - fixed bug where you could no longer create groups, and group assets were not named correctly
+ 
+ ## [0.2.2-preview] - 2018-08-08
  - disabled asset inspector gui for addressables checkbox due to editor bug
-
+ 
 ## [0.2.1-preview] - 2018-07-26
  - smoothed transition from 0.1.x data to 0.2.x data
  - added checks for adding duplicate scenes into the EditorBuildSettings.scenes list

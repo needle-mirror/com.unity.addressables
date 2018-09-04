@@ -11,13 +11,13 @@ using BuildCompression = UnityEditor.Build.Content.BuildCompression;
 namespace UnityEditor.AddressableAssets
 {
     /// <summary>
-    /// TODO - doc
+    /// Build settings for addressables.
     /// </summary>
     [Serializable]
     public class AddressableAssetBuildSettings
     {
         /// <summary>
-        /// TODO - doc
+        /// Build compression.
         /// </summary>
         public BuildCompression compression
         {
@@ -33,10 +33,10 @@ namespace UnityEditor.AddressableAssets
 #if UNITY_2018_3_OR_NEWER
         private BuildCompression m_compression = BuildCompression.LZ4;
 #else
-            private BuildCompression m_compression = BuildCompression.DefaultLZ4;
+        private BuildCompression m_compression = BuildCompression.DefaultLZ4;
 #endif
         /// <summary>
-        /// TODO - doc
+        /// Controls whether to compile scripts when running in virtual mode.  When disabled, build times are faster but the simulated bundle contents may not be accurate due to including editor code.
         /// </summary>
         public bool compileScriptsInVirtualMode
         {
@@ -50,10 +50,24 @@ namespace UnityEditor.AddressableAssets
         [UnityEngine.SerializeField]
         private bool m_compileScriptsInVirtualMode = false;
 
+        /// <summary>
+        /// Controls whether to remove temporary files after each build.  When disabled, build times in packed mode are faster, but may not reflect all changes in assets.
+        /// </summary>
+        public bool cleanupStreamingAssetsAfterBuilds
+        {
+            get { return m_cleanupStreamingAssetsAfterBuilds; }
+            set
+            {
+                m_cleanupStreamingAssetsAfterBuilds = value;
+                PostModificationEvent();
+            }
+        }
+        [UnityEngine.SerializeField]
+        private bool m_cleanupStreamingAssetsAfterBuilds = true;
+
 
         /// <summary>
-        /// TODO - doc
-        /// //where to build bundles, this is usually a temporary folder (or a folder in the project).  bundles are copied out of this location to their final destination
+        /// //Specifies where to build asset bundles, this is usually a temporary folder (or a folder in the project).  Bundles are copied out of this location to their final destination.
         /// </summary>
         public string bundleBuildPath
         {
@@ -64,8 +78,9 @@ namespace UnityEditor.AddressableAssets
                 PostModificationEvent();
             }
         }
+
         [UnityEngine.SerializeField]
-        private string m_bundleBuildPath = "Temp/AddressableAssetsBundles";
+        private string m_bundleBuildPath = "Temp/com.unity.addressables/AssetBundles";
 
         internal void SerializeForHash(BinaryFormatter formatter, Stream stream)
         {
@@ -86,7 +101,7 @@ namespace UnityEditor.AddressableAssets
 
         internal void Validate(AddressableAssetSettings addressableAssetSettings)
         {
-            
+
         }
     }
 }

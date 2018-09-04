@@ -6,7 +6,7 @@ using UnityEditor.Build.Pipeline.Injector;
 
 namespace UnityEditor.AddressableAssets
 {
-    public class GenerateLocationListsTask : IBuildTask
+    internal class GenerateLocationListsTask : IBuildTask
     {
         const int k_Version = 1;
         public int Version { get { return k_Version; } }

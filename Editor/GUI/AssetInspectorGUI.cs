@@ -50,15 +50,15 @@ namespace UnityEditor.AddressableAssets
                 bool foundValidAsset = false;
                 foreach (var t in editor.targets)
                 {
-                    if ( (AddressablesUtility.GetPathAndGUIDFromTarget(t, ref path, ref guid)) &&
-                        (path.ToLower().Contains("assets")) )
+                    if ((AddressablesUtility.GetPathAndGUIDFromTarget(t, ref path, ref guid)) &&
+                        (path.ToLower().Contains("assets")))
                     {
                         foundValidAsset = true;
 
                         if (aaSettings != null)
                         {
                             entry = aaSettings.FindAssetEntry(guid);
-                            if (entry != null && !entry.isSubAsset)
+                            if (entry != null && !entry.IsSubAsset)
                             {
                                 addressableCount++;
                             }

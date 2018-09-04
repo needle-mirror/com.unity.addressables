@@ -12,7 +12,7 @@ namespace UnityEditor.AddressableAssets
     /// TODO - doc
     /// </summary>
     [System.ComponentModel.Description("Packed Content Group")]
-    public class BundledAssetGroupProcessor : AssetGroupProcessor
+    internal class BundledAssetGroupProcessor : AssetGroupProcessor
     {
         /// <summary>
         /// TODO - doc
@@ -25,16 +25,15 @@ namespace UnityEditor.AddressableAssets
 
         internal override void CreateDefaultData(AddressableAssetGroup assetGroup)
         {
-            assetGroup.Data.Reset();
             GetBuildPath(assetGroup);
             GetLoadPath(assetGroup, "");
             GetBundleMode(assetGroup);
-            GetPriority(assetGroup);
+            var unused = assetGroup.StaticContent;
         }
 
         protected string GetBuildPath(AddressableAssetGroup group)
         {
-            return GetDataString(group, "BuildPath","LocalBuildPath", Addressables.BuildPath);
+            return GetDataString(group, "BuildPath", "LocalBuildPath", Addressables.BuildPath);
         }
 
         protected string GetLoadPath(AddressableAssetGroup group, string name)
@@ -93,6 +92,11 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
+        static bool IsInternalIdLocal(string path)
+        {
+            return path.StartsWith("{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
+        }
+
         internal override void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> bundles, IBundleBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations)
         {
 
@@ -103,14 +107,20 @@ namespace UnityEditor.AddressableAssets
             foreach (var bundleName in bundles)
             {
                 var info = buildResult.BundleInfos[bundleName];
-                var targetPath = Path.Combine(path, bundleName.Replace(".bundle", "_" + info.Hash + ".bundle"));
                 ContentCatalogDataEntry dataEntry = locations.First(s => bundleName == (string)s.Keys[0]);
+                bool isLocalBundle = true;
                 if (dataEntry != null)
                 {
-                    var cacheData = new AssetBundleCacheInfo() { Crc = info.Crc, Hash = info.Hash.ToString() };
-                    dataEntry.Data = cacheData;
-                    dataEntry.InternalId = dataEntry.InternalId.Replace(".bundle", "_" + info.Hash + ".bundle");
+                    isLocalBundle = IsInternalIdLocal(dataEntry.InternalId);
+                    if (!isLocalBundle)
+                    {
+                        var cacheData = new AssetBundleCacheInfo() { Crc = info.Crc, Hash = info.Hash.ToString() };
+                        dataEntry.Data = cacheData;
+                        dataEntry.InternalId = dataEntry.InternalId.Replace(".bundle", "_" + info.Hash + ".bundle");
+                    }
                 }
+
+                var targetPath = Path.Combine(path, isLocalBundle ? bundleName : bundleName.Replace(".bundle", "_" + info.Hash + ".bundle"));
                 if (!Directory.Exists(Path.GetDirectoryName(targetPath)))
                     Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
                 File.Copy(Path.Combine(assetGroup.Settings.buildSettings.bundleBuildPath, bundleName), targetPath, true);
@@ -123,7 +133,7 @@ namespace UnityEditor.AddressableAssets
             var assets = new List<AddressableAssetEntry>();
             foreach (var e in allEntries)
             {
-                if (e.assetPath.EndsWith(".unity"))
+                if (e.AssetPath.EndsWith(".unity"))
                     scenes.Add(e);
                 else
                     assets.Add(e);
@@ -142,7 +152,7 @@ namespace UnityEditor.AddressableAssets
             var assetGuids = new List<string>(assets.Count);
             foreach (var a in assets)
             {
-                assetIds.Add(a.assetPath);
+                assetIds.Add(a.AssetPath);
                 assetGuids.Add(a.guid);
             }
             assetsInputDef.assetNames = assetIds.ToArray();
@@ -150,12 +160,12 @@ namespace UnityEditor.AddressableAssets
             return assetsInputDef;
         }
 
-        internal override void CreateCatalog(AddressableAssetGroup group, ContentCatalogData contentCatalog, List<ResourceLocationData> locations)
+        internal override void CreateCatalog(AddressableAssetGroup group, ContentCatalogData contentCatalog, List<ResourceLocationData> locations, string playerVersion)
         {
             var aaSettings = group.Settings;
-            var buildPath = GetBuildPath(group) + aaSettings.profileSettings.EvaluateString(aaSettings.activeProfileId, "/catalog_[ContentVersion].json");
-            var remoteHashLoadPath = GetLoadPath(group, "catalog_{ContentVersion}.hash");
-            var localCacheLoadPath = "{UnityEngine.Application.persistentDataPath}/Unity/AddressablesCatalogCache/catalog_{ContentVersion}.hash";
+            var buildPath = GetBuildPath(group) + aaSettings.profileSettings.EvaluateString(aaSettings.activeProfileId, "/catalog_" + playerVersion + ".json");
+            var remoteHashLoadPath = GetLoadPath(group, "catalog_" + playerVersion + ".hash");
+            var localCacheLoadPath = "{UnityEngine.Application.persistentDataPath}/com.unity.addressables/catalog_" + playerVersion + ".hash";
 
             var jsonText = JsonUtility.ToJson(contentCatalog);
             var contentHash = Build.Pipeline.Utilities.HashingMethods.Calculate(jsonText).ToString();
@@ -166,12 +176,14 @@ namespace UnityEditor.AddressableAssets
             File.WriteAllText(buildPath, jsonText);
             File.WriteAllText(buildPath.Replace(".json", ".hash"), contentHash);
 
-            var remoteHash = new ResourceLocationData("RemoteCatalogHash" + group.Guid, "", remoteHashLoadPath, typeof(TextDataProvider));
-            var localHash = new ResourceLocationData("LocalCatalogHash" + group.Guid, "", localCacheLoadPath, typeof(TextDataProvider));
+            var depKeys = new string[] { "RemoteCatalogHash" + group.Guid, "LocalCatalogHash" + group.Guid };
 
-            int priority = GetPriority(group);
+            var remoteHash = new ResourceLocationData(new string[] { depKeys[0] }, remoteHashLoadPath, typeof(TextDataProvider));
+            var localHash = new ResourceLocationData(new string[] { depKeys[1] }, localCacheLoadPath, typeof(TextDataProvider));
+
             var internalId = remoteHashLoadPath.Replace(".hash", ".json");
-            locations.Add(new ResourceLocationData(priority + "_RemoteCatalog_" + group.Guid, "", internalId, typeof(ContentCatalogProvider), new string[] { localHash.Address, remoteHash.Address }));
+            var loadOrder = IsInternalIdLocal(internalId) ? "1" : "0";
+            locations.Add(new ResourceLocationData(new string[] { loadOrder + "_RemoteCatalog_" + group.Guid, "catalogs" }, internalId, typeof(ContentCatalogProvider), depKeys));
             locations.Add(localHash);
             locations.Add(remoteHash);
         }

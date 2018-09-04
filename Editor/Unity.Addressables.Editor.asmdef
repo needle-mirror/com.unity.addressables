@@ -1,12 +1,18 @@
 {
     "name": "Unity.Addressables.Editor",
     "references": [
-      "Unity.Addressables",
-      "Unity.ResourceManager",
-      "Unity.ResourceManager.Editor",
-	  "Unity.ScriptableBuildPipeline.Editor"
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "Unity.ScriptableBuildPipeline.Editor"
     ],
+    "optionalUnityReferences": [],
     "includePlatforms": [
         "Editor"
-    ]
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": []
 }

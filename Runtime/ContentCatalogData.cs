@@ -5,23 +5,59 @@ using System.Linq;
 
 namespace UnityEngine.AddressableAssets
 {
+    /// <summary>
+    /// Contains serializable data for an IResourceLocation
+    /// </summary>
     public class ContentCatalogDataEntry
     {
+        /// <summary>
+        /// Internl id.
+        /// </summary>
         public string InternalId { get; set; }
+        /// <summary>
+        /// IResourceProvider identifier.
+        /// </summary>
         public string Provider { get; private set; }
+        /// <summary>
+        /// Keys for this location.
+        /// </summary>
         public List<object> Keys { get; private set; }
+        /// <summary>
+        /// Dependency keys.
+        /// </summary>
         public List<object> Dependencies { get; private set; }
+        /// <summary>
+        /// Serializable data for the provider.
+        /// </summary>
         public object Data { get; set; }
 
-        public ContentCatalogDataEntry(string internalId, string provider, IEnumerable<object> keys, IEnumerable<object> deps, object extraData)
+        /// <summary>
+        /// Construct a new ContentCatalogEntry.
+        /// </summary>
+        /// <param name="internalId">The internal id.</param>
+        /// <param name="provider">The provider id.</param>
+        /// <param name="keys">The collection of keys that can be used to retrieve this entry.</param>
+        /// <param name="dependencies">Optional collection of keys for dependencies.</param>
+        /// <param name="extraData">Optional additional data to be passed to the provider.  For example, AssetBundleProviders use this for cache and crc data.</param>
+        public ContentCatalogDataEntry(string internalId, string provider, IEnumerable<object> keys, IEnumerable<object> dependencies = null, object extraData = null)
         {
             InternalId = internalId;
             Provider = provider;
             Keys = new List<object>(keys);
-            Dependencies = deps == null ? new List<object>() : new List<object>(deps);
+            Dependencies = dependencies == null ? new List<object>() : new List<object>(dependencies);
             Data = extraData;
         }
-        public ContentCatalogDataEntry(string address, string guid, string internalId, System.Type provider, HashSet<string> labels = null, IEnumerable<object> deps = null, object extraData = null)
+        /// <summary>
+        /// Construct a new ContentCatalogEntry.
+        /// </summary>
+        /// <param name="address">The primary key for this entry.</param>
+        /// <param name="guid">The guid of the asset.</param>
+        /// <param name="internalId">The internal id.</param>
+        /// <param name="provider">The provider id.</param>
+        /// <param name="labels">Optional set of labels that will be used as keys.</param>
+        /// <param name="dependencies">Optional collection of keys for dependencies.</param>
+        /// <param name="extraData">Optional additional data to be passed to the provider.  For example, AssetBundleProviders use this for cache and crc data.</param>
+        public ContentCatalogDataEntry(string address, string guid, string internalId, System.Type provider, HashSet<string> labels = null, IEnumerable<object> dependencies = null, object extraData = null)
         {
             InternalId = internalId;
             Provider = provider == null ? "" : provider.FullName;
@@ -34,15 +70,18 @@ namespace UnityEngine.AddressableAssets
                 foreach (var l in labels)
                     Keys.Add(l);
             }
-            Dependencies = deps == null ? new List<object>() : new List<object>(deps);
+            Dependencies = dependencies == null ? new List<object>() : new List<object>(dependencies);
             Data = extraData;
         }
     }
 
+    /// <summary>
+    /// Container for ContentCatalogEntries.
+    /// </summary>
     [Serializable]
     public class ContentCatalogData
     {
-        public enum ObjectType
+        internal enum ObjectType
         {
             ASCIIString,
             UnicodeString,
@@ -54,17 +93,17 @@ namespace UnityEngine.AddressableAssets
         }
 
         [SerializeField]
-        string[] m_providerIds;
+        string[] m_providerIds = null;
         [SerializeField]
-        string[] m_internalIds;
+        string[] m_internalIds = null;
         [SerializeField]
-        string m_keyDataString;
+        string m_keyDataString = null;
         [SerializeField]
-        string m_bucketDataString;
+        string m_bucketDataString = null;
         [SerializeField]
-        string m_entryDataString;
+        string m_entryDataString = null;
         [SerializeField]
-        string m_extraDataString;
+        string m_extraDataString = null;
 
         struct Bucket
         {
@@ -160,6 +199,10 @@ namespace UnityEngine.AddressableAssets
             return null;
         }
 
+        /// <summary>
+        /// Create IResourceLocator object
+        /// </summary>
+        /// <returns>ResourceLocationMap, which implements the IResourceLocator interface.</returns>
         public ResourceLocationMap CreateLocator()
         {
             var bucketData = Convert.FromBase64String(m_bucketDataString);
@@ -201,7 +244,7 @@ namespace UnityEngine.AddressableAssets
                 var dependency = Deserialize(entryData, index + 8);
                 var dataIndex = Deserialize(entryData, index + 12);
                 object data = dataIndex < 0 ? null : ReadObjectFromByteArray(extraData, dataIndex);
-                locations.Add(new CompactLocation(locator, AAConfig.ExpandPathWithGlobalVariables(m_internalIds[internalId]),
+                locations.Add(new CompactLocation(locator, AddressablesRuntimeProperties.EvaluateString(m_internalIds[internalId]),
                     m_providerIds[providerIndex], dependency < 0 ? null : keys[dependency], data));
             }
 
@@ -223,29 +266,6 @@ namespace UnityEngine.AddressableAssets
         }
 
 #if UNITY_EDITOR
-
-        public bool Save(string path, bool binary)
-        {
-            try
-            {
-                if (binary)
-                {
-                    return false;
-                }
-                else
-                {
-                    var data = JsonUtility.ToJson(this);
-                    System.IO.File.WriteAllText(path, data);
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogException(ex);
-                return false;
-            }
-        }
-
         static int WriteIntToByteArray(byte[] data, int val, int offset)
         {
             data[offset] = (byte)(val & 0xFF);
@@ -335,6 +355,10 @@ namespace UnityEngine.AddressableAssets
             public TVal this[TKey key] { get { return values[map[key]]; } }
         }
 
+        /// <summary>
+        /// Set the data before serialization
+        /// </summary>
+        /// <param name="data">The list of </param>
         public void SetData(IList<ContentCatalogDataEntry> data)
         {
             if (data == null)
@@ -350,7 +374,7 @@ namespace UnityEngine.AddressableAssets
 
             int extraDataIndex = 0;
             //create buckets of key to data entry
-            for(int i = 0; i < data.Count; i++)
+            for (int i = 0; i < data.Count; i++)
             {
                 var e = data[i];
                 int extraDataOffset = -1;

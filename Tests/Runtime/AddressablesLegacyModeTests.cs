@@ -21,7 +21,7 @@ public class AddressablesLegacyModeTests : AddressablesBaseTests
         ResourceManager.SceneProvider = new SceneProvider();
         Addressables.ResourceLocators.Clear();
 
-        object[] labels = new object[] {"label1", "label2", "label3", "label4", "label5", 1234, new Hash128(234,3456,55,22) };
+        object[] labels = new object[] { "label1", "label2", "label3", "label4", "label5", 1234, new Hash128(234, 3456, 55, 22) };
 
         for (int i = 0; i < 20; i++)
         {

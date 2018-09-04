@@ -10,8 +10,9 @@ using UnityEditor.IMGUI.Controls;
 namespace UnityEditor.AddressableAssets
 {
     /// <summary>
-    /// TODO - doc
+    /// [Obsolete] API for creating custom processors for asset groups.  NOTE: This API is going to be replaced soon with a more flexible build system.
     /// </summary>
+    //[Obsolete("This API is going to be replaced soon with a more flexible build system.")]
     public class AssetGroupProcessor
     {
         internal string GetDataString(AddressableAssetGroup assetGroup, string dataKey, string profileVarName, string profileVarDefaultValue)
@@ -34,42 +35,12 @@ namespace UnityEditor.AddressableAssets
         {
         }
 
-        internal virtual void CreateCatalog(AddressableAssetGroup assetGroup, ContentCatalogData contentCatalog, List<ResourceLocationData> locations)
+        internal virtual void CreateCatalog(AddressableAssetGroup assetGroup, ContentCatalogData contentCatalog, List<ResourceLocationData> locations, string playerVersion)
         {
         }
 
         internal virtual void CreateDefaultData(AddressableAssetGroup assetGroup)
         {
         }
-
-        internal int GetPriority(AddressableAssetGroup assetGroup)
-        {
-            return assetGroup.Data.GetData("Priority", 0, true);
-        }
-
-        KeyDataStoreTreeView tree = null;
-        [SerializeField]
-        TreeViewState treeState;
-        [SerializeField]
-        MultiColumnHeaderState mchs;
-        internal virtual void OnDrawGUI(AddressableAssetGroup assetGroup, Rect rect)
-        {
-            if (tree == null)
-            {
-                if (treeState == null)
-                    treeState = new TreeViewState();
-
-                var headerState = KeyDataStoreTreeView.CreateDefaultMultiColumnHeaderState();
-                if (MultiColumnHeaderState.CanOverwriteSerializedFields(mchs, headerState))
-                    MultiColumnHeaderState.OverwriteSerializedFields(mchs, headerState);
-                mchs = headerState;
-
-                tree = new KeyDataStoreTreeView(assetGroup.Settings, assetGroup.Data, treeState, mchs);
-                tree.Reload();
-            }
-
-            tree.OnGUI(rect);
-        }
-
     }
 }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -25,7 +26,7 @@ namespace UnityEditor.AddressableAssets
             GUILayout.Space(10);
 
             fullBuildFoldout = EditorGUILayout.Foldout(fullBuildFoldout, "Full Build");
-            if(fullBuildFoldout)
+            if (fullBuildFoldout)
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.HelpBox(new GUIContent("This section will create a rebuild of all content packs as well as the core player build.  A snapshot of this build must be saved in order to do updates to it later."));
@@ -33,7 +34,7 @@ namespace UnityEditor.AddressableAssets
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Build and Save Snapshot"))
                 {
-                    Debug.Log("we aren't actually building yet.");
+                    Addressables.Log("we aren't actually building yet.");
                 }
                 GUILayout.EndHorizontal();
                 EditorGUI.indentLevel--;
@@ -49,16 +50,16 @@ namespace UnityEditor.AddressableAssets
                 GUILayout.BeginHorizontal();
                 snapshotPath = EditorGUILayout.TextField(new GUIContent("Reference Snapshot"), snapshotPath);
                 GUILayout.Space(10);
-                if(GUILayout.Button("Browse"))
+                if (GUILayout.Button("Browse"))
                 {
-                    Debug.Log("we aren't actually browsing yet.");
+                    Addressables.Log("we aren't actually browsing yet.");
                 }
                 GUILayout.EndHorizontal();
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Create Updated Packs"))
                 {
-                    Debug.Log("we aren't actually updating yet.");
+                    Addressables.Log("we aren't actually updating yet.");
                 }
                 GUILayout.EndHorizontal();
                 EditorGUI.indentLevel--;
@@ -73,12 +74,12 @@ namespace UnityEditor.AddressableAssets
 
         internal void OnEnable()
         {
-           
+
         }
 
         internal void OnDisable()
         {
-           
+
         }
     }
 }

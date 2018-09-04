@@ -129,7 +129,7 @@ public class ContentCatalogTests
             {
                 var entry = entries.Find(e => e.InternalId == loc.InternalId);
                 Assert.AreEqual(entry.Provider.ToString(), loc.ProviderId);
-                
+
                 var deps = loc.Dependencies;
                 if (deps != null)
                 {

@@ -9,7 +9,7 @@ using System.Linq;
 using UnityEditor.Build.Pipeline.Injector;
 namespace UnityEditor.AddressableAssets
 {
-    public class WriteVirtualBundleDataTask : IBuildTask
+    internal class WriteVirtualBundleDataTask : IBuildTask
     {
         const int k_Version = 1;
         public int Version { get { return k_Version; } }
@@ -42,18 +42,18 @@ namespace UnityEditor.AddressableAssets
                 {
                     if (loc.Dependencies == null || loc.Dependencies.Count == 0)
                         continue;
-                    for(int i = 0; i < loc.Dependencies.Count; i++)
+                    for (int i = 0; i < loc.Dependencies.Count; i++)
                     {
                         var dep = loc.Dependencies[i];
                         List<string> assetsInBundle = null;
                         if (!bundledAssets.TryGetValue(dep, out assetsInBundle))
                             bundledAssets.Add(dep, assetsInBundle = new List<string>());
-                        if(i == 0) //only add the asset to the first bundle...
+                        if (i == 0) //only add the asset to the first bundle...
                             assetsInBundle.Add(loc.InternalId);
                     }
                 }
             }
-            
+
             foreach (var bd in bundledAssets)
             {
                 var bundleLocData = locations.First(s => s.Keys[0] == bd.Key);
@@ -76,7 +76,7 @@ namespace UnityEditor.AddressableAssets
                 bundleData.SetSize(dataSize, headerSize);
                 aaContext.m_virtualBundleRuntimeData.AssetBundles.Add(bundleData);
             }
-            if(m_SaveData)
+            if (m_SaveData)
                 aaContext.m_virtualBundleRuntimeData.Save();
             return ReturnCode.Success;
         }

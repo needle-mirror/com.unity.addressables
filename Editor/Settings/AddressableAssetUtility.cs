@@ -3,7 +3,7 @@ using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets
 {
-    public static class AddressablesUtility
+    internal static class AddressablesUtility
     {
         internal static bool GetPathAndGUIDFromTarget(Object t, ref string path, ref string guid)
         {
@@ -18,7 +18,7 @@ namespace UnityEditor.AddressableAssets
                 return false;
             return true;
         }
-        
+
         internal static bool IsPathValidForEntry(string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -37,7 +37,7 @@ namespace UnityEditor.AddressableAssets
             return true;
         }
 
-        public static void ConvertAssetBundlesToAddressables()
+        internal static void ConvertAssetBundlesToAddressables()
         {
             AssetDatabase.RemoveUnusedAssetBundleNames();
             var bundleList = AssetDatabase.GetAllAssetBundleNames();
@@ -50,7 +50,7 @@ namespace UnityEditor.AddressableAssets
             int currCount = 0;
 
             var settings = AddressableAssetSettings.GetDefault(true, true);
-            foreach(var bundle in bundleList)
+            foreach (var bundle in bundleList)
             {
                 if (EditorUtility.DisplayCancelableProgressBar("Converting Legacy Asset Bundles", bundle, currCount / fullCount))
                     break;
@@ -58,12 +58,12 @@ namespace UnityEditor.AddressableAssets
                 currCount++;
                 var group = settings.CreateGroup(bundle, typeof(BundledAssetGroupProcessor), false, false);
                 var assetList = AssetDatabase.GetAssetPathsFromAssetBundle(bundle);
-                foreach(var asset in assetList)
+                foreach (var asset in assetList)
                 {
                     var guid = AssetDatabase.AssetPathToGUID(asset);
                     settings.CreateOrMoveEntry(guid, group, false, false);
                     var imp = AssetImporter.GetAtPath(asset);
-                    if(imp != null)
+                    if (imp != null)
                         imp.SetAssetBundleNameAndVariant(string.Empty, string.Empty);
                 }
             }

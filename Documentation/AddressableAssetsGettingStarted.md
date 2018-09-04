@@ -62,3 +62,18 @@ To load an `AssetReference`, call one of the methods defined on it. For example:
 or
 
 `AssetRefMember.Instantiate<GameObject>(pos, rot);`
+
+
+### Downloading in Advance
+
+Calling the `Addressables.PreloadDependencies()` method loads the dependencies for the address or label that you pass in. Typically, this is the asset bundle.  
+
+The `IAsyncOperation` object returned by this call includes a `PercentComplete` attribute that you can use to monitor progress of downloads. You can use the percent complete to display a progress bar and have the app wait until the content has loaded.
+
+While it can be advantageous to download assets for your app in advance, there are instances where you might choose not do so. For example:
+
+1. If your app has a large amount of online content, and you generally expect users to only ever interact with a portion of it. 
+
+2. You have an app that must be connected online to function. For example, a multiplayer game. If all the content for the app is in small bundles, you might choose to wait and download content as-needed.
+
+You can also choose to partially use the preload functionality. Rather than using the percent complete to wait until the content is loaded, you can start the download then continue on. You would need to create a loading/waiting screen later on when you actually load the asset. If the preload has finished, the load is quick, otherwise the app would need to wait until the content is loaded.

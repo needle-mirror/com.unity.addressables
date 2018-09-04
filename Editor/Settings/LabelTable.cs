@@ -10,27 +10,34 @@ namespace UnityEditor.AddressableAssets
     [Serializable]
     internal class LabelTable
     {
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
         [SerializeField]
         private List<string> m_labelNames = new List<string>(new string[] { "default" });
 
         internal List<string> labelNames { get { return m_labelNames; } }
         private const int kNameCountCap = 3;
-
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
+        
         internal void AddLabelName(string name)
         {
             if(!m_labelNames.Contains(name))
+            { 
                 m_labelNames.Add(name);
+            }
         }
 
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
+        internal string GetUniqueLabelName(string name)
+        {
+            var newName = name;
+            int counter = 1;
+            while (counter < 100)
+            {
+                if (!m_labelNames.Contains(newName))
+                    return newName;
+                newName = name + counter.ToString();
+                counter++;
+            }
+            return string.Empty;
+        }
+
         internal bool RemoveLabelName(string name)
         {
             return m_labelNames.Remove(name);

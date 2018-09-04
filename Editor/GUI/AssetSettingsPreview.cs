@@ -5,6 +5,7 @@ using System;
 using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Utilities;
+using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -14,7 +15,7 @@ namespace UnityEditor.AddressableAssets
         [SerializeField]
         TreeViewState treeState;
         AssetSettingsPreviewTreeView tree;
-        
+
         [SerializeField]
         internal BundleWriteData m_bundleWriteData;
         internal BuildDependencyData m_buildDependencyData;
@@ -30,7 +31,7 @@ namespace UnityEditor.AddressableAssets
 
         internal void ReloadIfEmpty()
         {
-            if(explicitAssets == null || explicitAssets.Count == 0)
+            if (explicitAssets == null || explicitAssets.Count == 0)
                 ReloadPreview();
         }
 
@@ -69,20 +70,23 @@ namespace UnityEditor.AddressableAssets
                 FindBundleIcons();
             }
 
-            GUILayout.BeginArea(pos);
+            var headerRect = new Rect(pos.x, pos.y, pos.width, 32f);
+            var treeRect = new Rect(pos.x, pos.yMin + 32, pos.width, pos.height - 34);
+
+            GUILayout.BeginArea(headerRect);
             GUILayout.Space(4);
             GUILayout.BeginHorizontal();
+            GUILayout.Label("Build Output Preview");
             if (GUILayout.Button(m_RefreshTexture, GUILayout.ExpandWidth(false)))
             {
                 ReloadPreview();
             }
             //tree.searchString = m_searchField.OnGUI(tree.searchString);
-            GUILayout.Space(12);
+            GUILayout.Space(2);
             GUILayout.EndHorizontal();
-            var treeRect = new Rect(pos.x, pos.y + 12, pos.width, pos.height - 32);
-            
-            tree.OnGUI(treeRect);
             GUILayout.EndArea();
+
+            tree.OnGUI(treeRect);
         }
 
         private void ReloadPreview()
@@ -97,7 +101,7 @@ namespace UnityEditor.AddressableAssets
             }
             else
             {
-                Debug.LogError("Build preview failed: " + result.ToString());
+                Addressables.LogError("Build preview failed: " + result.ToString());
             }
 
             tree.Reload();
@@ -115,6 +119,7 @@ namespace UnityEditor.AddressableAssets
 
         protected override TreeViewItem BuildRoot()
         {
+
             return new TreeViewItem(-1, -1);
         }
 
@@ -154,7 +159,7 @@ namespace UnityEditor.AddressableAssets
                                 bundleItem.AddChild(assetItem);
 
                                 AssetLoadInfo loadInfo;
-                                if(preview.m_buildDependencyData.AssetInfo.TryGetValue(g, out loadInfo))
+                                if (preview.m_buildDependencyData.AssetInfo.TryGetValue(g, out loadInfo))
                                 {
                                     if (loadInfo.referencedObjects.Count > 0)
                                     {
@@ -170,7 +175,7 @@ namespace UnityEditor.AddressableAssets
                                                     assetRefs.Add(filePath);
                                             }
                                         }
-                                        if(assetRefs.Count > 0)
+                                        if (assetRefs.Count > 0)
                                         {
                                             if (IsExpanded(assetItem.id))
                                             {

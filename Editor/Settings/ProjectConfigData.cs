@@ -96,9 +96,16 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
+        internal static void SerializeForHash(Stream stream)
+        {
+            ValidateData();
+            BinaryFormatter formatter = new BinaryFormatter();
+            formatter.Serialize(stream, s_data);
+        }
+
         private static void ValidateData()
         {
-            if(s_data == null)
+            if (s_data == null)
             {
                 var dataPath = System.IO.Path.GetFullPath(".");
                 dataPath = dataPath.Replace("\\", "/");
@@ -121,13 +128,13 @@ namespace UnityEditor.AddressableAssets
                     catch
                     {
                         //if the current class doesn't match what's in the file, Deserialize will throw. since this data is non-critical, we just wipe it
-                        Debug.LogWarning("Error reading Addressable Asset project config (play mode, etc.). Resetting to default.");
+                        Addressables.LogWarning("Error reading Addressable Asset project config (play mode, etc.). Resetting to default.");
                         System.IO.File.Delete(dataPath);
                     }
                 }
-                
+
                 //check if some step failed.
-                if(s_data == null)
+                if (s_data == null)
                 {
                     s_data = new ConfigSaveData();
                 }
@@ -144,7 +151,7 @@ namespace UnityEditor.AddressableAssets
 
             BinaryFormatter bf = new BinaryFormatter();
             FileStream file = File.Create(dataPath);
-            
+
             bf.Serialize(file, s_data);
             file.Close();
         }

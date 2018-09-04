@@ -7,7 +7,7 @@ using UnityEngine;
 namespace UnityEditor.AddressableAssets
 {
     /// <summary>
-    /// TODO - doc
+    /// Contains data for an addressable asset entry.
     /// </summary>
     [Serializable]
     public class AddressableAssetEntry : ISerializationCallbackReceiver
@@ -35,20 +35,21 @@ namespace UnityEditor.AddressableAssets
         [NonSerialized]
         private AddressableAssetGroup m_parentGroup;
         /// <summary>
-        /// TODO - doc
+        /// The asset group that this entry belongs to.  An entry can only belong to a single group at a time.
         /// </summary>
         public AddressableAssetGroup parentGroup
         {
             get { return m_parentGroup; }
             set { m_parentGroup = value; }
         }
+        
         /// <summary>
-        /// TODO - doc
+        /// The asset guid.
         /// </summary>
         public string guid { get { return m_guid; } }
 
         /// <summary>
-        /// TODO - doc
+        /// The address of the entry.  This is treated as the primary key in the ResourceManager system.
         /// </summary>
         public string address
         {
@@ -62,41 +63,49 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
+        /// <summary>
+        /// Set the address of the entry.
+        /// </summary>
+        /// <param name="address">The address.</param>
+        /// <param name="postEvent">Post modification event.</param>
         public void SetAddress(string address, bool postEvent = true)
         {
             if (m_address != address)
             {
                 m_address = address;
                 if (string.IsNullOrEmpty(m_address))
-                    m_address = assetPath;
+                    m_address = AssetPath;
                 if (postEvent)
                     PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryModified, this);
             }
         }
 
         /// <summary>
-        /// TODO - doc
+        /// Read only state of the entry.
         /// </summary>
-        public bool readOnly { get { return m_readOnly; } set { if (m_readOnly != value) { m_readOnly = value; PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryModified, this); } } }
+        public bool ReadOnly { get { return m_readOnly; } set { if (m_readOnly != value) { m_readOnly = value; PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryModified, this); } } }
 
         /// <summary>
-        /// TODO - doc
+        /// Is the asset in a resource folder.
         /// </summary>
-        public bool isInResources { get; set; }
+        public bool IsInResources { get; set; }
         /// <summary>
-        /// TODO - doc
+        /// Is scene in scene list.
         /// </summary>
-        public bool isInSceneList { get; set; }
+        public bool IsInSceneList { get; set; }
         /// <summary>
-        /// TODO - doc
+        /// Is a sub asset.  For example an asset in an addressable folder.
         /// </summary>
-        public bool isSubAsset { get; set; }
+        public bool IsSubAsset { get; set; }
         /// <summary>
         /// TODO - doc
         /// </summary>
         bool m_checkedIsScene = false;
         bool m_isScene = false;
-        public bool isScene
+        /// <summary>
+        /// Is this entry for a scene.
+        /// </summary>
+        public bool IsScene
         {
             get
             {
@@ -110,12 +119,16 @@ namespace UnityEditor.AddressableAssets
 
         }
         /// <summary>
-        /// TODO - doc
+        /// The set of labels for this entry.  There is no inherent limit to the number of labels.
         /// </summary>
         public HashSet<string> labels { get { return m_labels; } }
         /// <summary>
-        /// TODO - doc
+        /// Set or unset a label on this entry.
         /// </summary>
+        /// <param name="label">The label name.</param>
+        /// <param name="val">The value to set.  Setting to true will add the label, false will remove it.</param>
+        /// <param name="postEvent">Post modification event.</param>
+        /// <returns></returns>
         public bool SetLabel(string label, bool val, bool postEvent = true)
         {
             if (val)
@@ -139,17 +152,14 @@ namespace UnityEditor.AddressableAssets
             return false;
         }
 
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
         internal AddressableAssetEntry(string guid, string address, AddressableAssetGroup parent, bool readOnly)
         {
             m_guid = guid;
             m_address = address;
             m_readOnly = readOnly;
             parentGroup = parent;
-            isInResources = false;
-            isInSceneList = false;
+            IsInResources = false;
+            IsInSceneList = false;
         }
 
         internal void SerializeForHash(BinaryFormatter formatter, Stream stream)
@@ -161,9 +171,9 @@ namespace UnityEditor.AddressableAssets
             foreach (var t in m_labels)
                 formatter.Serialize(stream, t);
 
-            formatter.Serialize(stream, isInResources);
-            formatter.Serialize(stream, isInSceneList);
-            formatter.Serialize(stream, isSubAsset);
+            formatter.Serialize(stream, IsInResources);
+            formatter.Serialize(stream, IsInSceneList);
+            formatter.Serialize(stream, IsSubAsset);
         }
 
 
@@ -179,9 +189,9 @@ namespace UnityEditor.AddressableAssets
         }
 
         /// <summary>
-        /// TODO - doc
+        /// The path of the asset.
         /// </summary>
-        public string assetPath
+        public string AssetPath
         {
             get
             {
@@ -197,11 +207,16 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
+        /// <summary>
+        /// The asset load path.  This is used to determine the internal id of resource locations.
+        /// </summary>
+        /// <param name="isBundled">True if the asset will be contained in an asset bundle.</param>
+        /// <returns>Return the runtime path that should be used to load this entry.</returns>
         public string GetAssetLoadPath(bool isBundled)
         {
-            if (!isScene)
+            if (!IsScene)
             {
-                var path = assetPath;
+                var path = AssetPath;
                 int ri = path.ToLower().LastIndexOf("resources/");
                 if (ri == 0 || (ri > 0 && path[ri - 1] == '/'))
                 {
@@ -215,8 +230,8 @@ namespace UnityEditor.AddressableAssets
             else
             {
                 if (isBundled)
-                    return assetPath;// Path.GetFileNameWithoutExtension(assetPath);
-                var path = assetPath;
+                    return AssetPath;// Path.GetFileNameWithoutExtension(assetPath);
+                var path = AssetPath;
                 int i = path.LastIndexOf(".unity");
                 if (i > 0)
                     path = path.Substring(0, i);
@@ -240,9 +255,6 @@ namespace UnityEditor.AddressableAssets
             return path;
         }
 
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
         internal void GatherAllAssets(List<AddressableAssetEntry> assets, bool includeSelf, bool recurseAll)
         {
             var settings = parentGroup.Settings;
@@ -256,7 +268,7 @@ namespace UnityEditor.AddressableAssets
                         var entry = settings.CreateSubEntryIfUnique(s.guid.ToString(), Path.GetFileNameWithoutExtension(s.path), this);
                         if (entry != null) //TODO - it's probably really bad if this is ever null. need some error detection
                         {
-                            entry.isInSceneList = true;
+                            entry.IsInSceneList = true;
                             entry.m_labels = m_labels;
                             assets.Add(entry);
                         }
@@ -276,7 +288,7 @@ namespace UnityEditor.AddressableAssets
                             var entry = settings.CreateSubEntryIfUnique(g, addr, this);
                             if (entry != null) //TODO - it's probably really bad if this is ever null. need some error detection
                             {
-                                entry.isInResources = true;
+                                entry.IsInResources = true;
                                 entry.m_labels = m_labels;
                                 assets.Add(entry);
                             }
@@ -291,7 +303,7 @@ namespace UnityEditor.AddressableAssets
                                 var entry = settings.CreateSubEntryIfUnique(AssetDatabase.AssetPathToGUID(folder), GetResourcesPath(folder), this);
                                 if (entry != null) //TODO - it's probably really bad if this is ever null. need some error detection
                                 {
-                                    entry.isInResources = true;
+                                    entry.IsInResources = true;
                                     entry.m_labels = m_labels;
                                     assets.Add(entry);
                                 }
@@ -316,7 +328,7 @@ namespace UnityEditor.AddressableAssets
                             var entry = settings.CreateSubEntryIfUnique(AssetDatabase.AssetPathToGUID(file), address + GetRelativePath(file, path), this);
                             if (entry != null)
                             {
-                                entry.isInResources = isInResources; //if this is a sub-folder of Resources, copy it on down
+                                entry.IsInResources = IsInResources; //if this is a sub-folder of Resources, copy it on down
                                 entry.m_labels = m_labels;
                                 assets.Add(entry);
                             }
@@ -332,7 +344,7 @@ namespace UnityEditor.AddressableAssets
                                 var entry = settings.CreateSubEntryIfUnique(AssetDatabase.AssetPathToGUID(folder), address + GetRelativePath(folder, path), this);
                                 if (entry != null)
                                 {
-                                    entry.isInResources = isInResources; //if this is a sub-folder of Resources, copy it on down
+                                    entry.IsInResources = IsInResources; //if this is a sub-folder of Resources, copy it on down
                                     entry.m_labels = m_labels;
                                     assets.Add(entry);
                                 }
@@ -342,9 +354,9 @@ namespace UnityEditor.AddressableAssets
                 }
                 else
                 {
-                    if (AssetDatabase.GetMainAssetTypeAtPath(path) == typeof(AddressablesEntryCollection))
+                    if (AssetDatabase.GetMainAssetTypeAtPath(path) == typeof(AddressableAssetEntryCollection))
                     {
-                        var col = AssetDatabase.LoadAssetAtPath<AddressablesEntryCollection>(assetPath);
+                        var col = AssetDatabase.LoadAssetAtPath<AddressableAssetEntryCollection>(AssetPath);
                         if (col != null)
                         {
                             foreach (var e in col.Entries)
@@ -352,7 +364,7 @@ namespace UnityEditor.AddressableAssets
                                 var entry = settings.CreateSubEntryIfUnique(e.guid, e.address, this);
                                 if (entry != null)
                                 {
-                                    entry.isInResources = e.isInResources;
+                                    entry.IsInResources = e.IsInResources;
                                     foreach (var l in e.labels)
                                         entry.SetLabel(l, true, false);
                                     foreach (var l in m_labels)
@@ -376,6 +388,9 @@ namespace UnityEditor.AddressableAssets
             return file.Substring(path.Length);
         }
 
+        /// <summary>
+        /// Implementation of ISerializationCallbackReceiver.  Converts data to serializable form before serialization.
+        /// </summary>
         public void OnBeforeSerialize()
         {
             m_serializedLabels = new List<string>();
@@ -383,6 +398,9 @@ namespace UnityEditor.AddressableAssets
                 m_serializedLabels.Add(t);
         }
 
+        /// <summary>
+        /// Implementation of ISerializationCallbackReceiver.  Converts data from serializable form after deserialization.
+        /// </summary>
         public void OnAfterDeserialize()
         {
             m_labels = new HashSet<string>();

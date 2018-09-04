@@ -13,26 +13,30 @@ namespace UnityEditor.AddressableAssets
         public string newGuid;
         public string newGuidPropertyPath;
         string assetName;
-        Rect smallPos;
+        internal Rect smallPos;
         bool filtersGathered = false;
         public AssetReferenceLabelRestriction labelFilter;
         public AssetReferenceTypeRestriction typeFilter;
-        public const string k_noAssetString = "None (AddressableAsset)";
+        internal const string k_noAssetString = "None (AddressableAsset)";
+        AssetReference assetRefObject = null;
         bool SetObject(SerializedProperty property, UnityEngine.Object obj, out string guid)
         {
             guid = null;
             try
             {
-                AssetReference assetRefObject = property.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo);
-                if (obj == null || assetRefObject == null || assetRefObject.ValidateType(obj.GetType()))
+                if (assetRefObject == null)
+                    return false;
+                if (obj == null)
+                {
+                    assetRefObject.editorAsset = null;
+                    return true;
+                }
+                if (assetRefObject.ValidateType(obj.GetType()))
                 {
                     long lfid;
                     if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out lfid))
                     {
-                        var objProp = property.FindPropertyRelative("m_cachedAsset");
-                        objProp.objectReferenceValue = obj;
-                        var guidProp = property.FindPropertyRelative("m_assetGUID");
-                        guidProp.stringValue = guid;
+                        assetRefObject.editorAsset = obj;
                     }
                     return true;
                 }
@@ -48,8 +52,20 @@ namespace UnityEditor.AddressableAssets
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             if (property == null || label == null)
+            {
+                Debug.LogError("Error rendering drawer for AssetReference property.");
                 return;
+            }
+            if (assetRefObject == null)
+                assetRefObject = property.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo);
             label.text = ObjectNames.NicifyVariableName(property.propertyPath);
+            if (assetRefObject == null)
+            {
+                Debug.LogError("Error rendering drawer for AssetReference property " + label.text + ".");
+                return;
+            }
+
+
             EditorGUI.BeginProperty(position, label, property);
 
             GatherFilters(property, ref labelFilter, ref typeFilter);
@@ -79,7 +95,7 @@ namespace UnityEditor.AddressableAssets
                 if (entry != null)
                 {
                     assetName = entry.address;
-                    icon = AssetDatabase.GetCachedIcon(entry.assetPath) as Texture2D;
+                    icon = AssetDatabase.GetCachedIcon(entry.AssetPath) as Texture2D;
                 }
             }
 
@@ -109,7 +125,7 @@ namespace UnityEditor.AddressableAssets
                     {
                         if (aaEntries.Count != 1)
                             rejected = true;
-                        if (rejected && !typeFilter.Validate(AssetDatabase.GetMainAssetTypeAtPath(aaEntries[0].entry.assetPath)))
+                        if (rejected && !typeFilter.Validate(AssetDatabase.GetMainAssetTypeAtPath(aaEntries[0].entry.AssetPath)))
                             rejected = true;
                     }
                     else
@@ -126,33 +142,38 @@ namespace UnityEditor.AddressableAssets
 
                 if (!rejected && labelFilter != null)
                 {
-                    var aaEntries = DragAndDrop.GetGenericData("AssetEntryTreeViewItem") as List<AssetEntryTreeViewItem>;
-                    if (aaEntries != null)
-                    {
-                        if (aaEntries.Count != 1)
-                            rejected = true;
-                        if (rejected && !labelFilter.Validate(aaEntries[0].entry.labels))
-                            rejected = true;
-                    }
+                    if (aaSettings == null)
+                        rejected = true;
                     else
                     {
-                        if (DragAndDrop.paths.Length == 1)
+                        var aaEntries = DragAndDrop.GetGenericData("AssetEntryTreeViewItem") as List<AssetEntryTreeViewItem>;
+                        if (aaEntries != null)
                         {
-                            var entry = aaSettings.FindAssetEntry(AssetDatabase.AssetPathToGUID(DragAndDrop.paths[0]));
-                            //for now, do not allow creation of new AssetEntries when there is a label filter on the property.
-                            //This could be changed in the future to be configurable via the attribute if desired (allowEntryCreate = true)
-                            if (entry == null)
+                            if (aaEntries.Count != 1)
                                 rejected = true;
-                            if (!rejected && !labelFilter.Validate(entry.labels))
+                            if (rejected && !labelFilter.Validate(aaEntries[0].entry.labels))
                                 rejected = true;
                         }
                         else
                         {
-                            rejected = true;
+                            if (DragAndDrop.paths.Length == 1)
+                            {
+                                var entry = aaSettings.FindAssetEntry(AssetDatabase.AssetPathToGUID(DragAndDrop.paths[0]));
+                                //for now, do not allow creation of new AssetEntries when there is a label filter on the property.
+                                //This could be changed in the future to be configurable via the attribute if desired (allowEntryCreate = true)
+                                if (entry == null)
+                                    rejected = true;
+                                if (!rejected && !labelFilter.Validate(entry.labels))
+                                    rejected = true;
+                            }
+                            else
+                            {
+                                rejected = true;
+                            }
                         }
                     }
                 }
-                
+
                 DragAndDrop.visualMode = rejected ? DragAndDropVisualMode.Rejected : DragAndDropVisualMode.Copy;
             }
             if (Event.current.type == EventType.DragPerform && position.Contains(Event.current.mousePosition))
@@ -161,7 +182,7 @@ namespace UnityEditor.AddressableAssets
                 if (aaEntries != null)
                 {
                     if (aaEntries.Count == 1)
-                        SetObject(property, AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(aaEntries[0].entry.assetPath), out guid);
+                        SetObject(property, AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(aaEntries[0].entry.AssetPath), out guid);
                 }
                 else
                 {
@@ -175,11 +196,13 @@ namespace UnityEditor.AddressableAssets
 
                         if (SetObject(property, obj, out guid))
                         {
+                            if (aaSettings == null)
+                                aaSettings = AddressableAssetSettings.GetDefault(true, true);
                             var entry = aaSettings.FindAssetEntry(guid);
                             if (entry == null && !string.IsNullOrEmpty(guid))
                             {
                                 entry = aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup);
-                                Debug.LogFormat("Created AddressableAsset {0} in group {1}.", entry.address, aaSettings.DefaultGroup.Name);
+                                Addressables.LogFormat("Created AddressableAsset {0} in group {1}.", entry.address, aaSettings.DefaultGroup.Name);
                             }
                         }
                     }
@@ -228,161 +251,175 @@ namespace UnityEditor.AddressableAssets
         {
             return base.GetPropertyHeight(property, label);
         }
+    }
 
-        class AssetReferencePopup : PopupWindowContent
+    class AssetReferencePopup : PopupWindowContent
+    {
+        AssetReferenceTreeView tree;
+        [SerializeField]
+        TreeViewState treeState;
+        bool shouldClose;
+        public void ForceClose()
         {
-            AssetReferenceTreeView tree;
-            [SerializeField]
-            TreeViewState treeState;
+            shouldClose = true;
+        }
 
-            string currentName = string.Empty;
+        string currentName = string.Empty;
+        AssetReferenceDrawer m_drawer;
+
+        SearchField searchField;
+
+        internal AssetReferencePopup(AssetReferenceDrawer drawer)
+        {
+            m_drawer = drawer;
+            searchField = new SearchField();
+            shouldClose = false;
+        }
+
+        public override void OnClose()
+        {
+            base.OnClose();
+        }
+
+        public override void OnOpen()
+        {
+            searchField.SetFocus();
+            base.OnOpen();
+        }
+
+        public override Vector2 GetWindowSize()
+        {
+            Vector2 result = base.GetWindowSize();
+            result.x = m_drawer.smallPos.width;
+            return result;
+        }
+
+        public override void OnGUI(Rect rect)
+        {
+            int border = 4;
+            int topPadding = 12;
+            int searchHeight = 20;
+            var searchRect = new Rect(border, topPadding, rect.width - border * 2, searchHeight);
+            var remainTop = topPadding + searchHeight + border;
+            var remainginRect = new Rect(border, topPadding + searchHeight + border, rect.width - border * 2, rect.height - remainTop - border);
+            currentName = searchField.OnGUI(searchRect, currentName);
+
+
+            if (tree == null)
+            {
+                if (treeState == null)
+                    treeState = new TreeViewState();
+                tree = new AssetReferenceTreeView(treeState, m_drawer, this);
+                tree.Reload();
+            }
+            tree.searchString = currentName;
+            tree.OnGUI(remainginRect);
+
+            if (shouldClose)
+            {
+                EditorGUIUtility.hotControl = 0;
+                editorWindow.Close();
+            }
+        }
+
+        private class AssetRefTreeViewItem : TreeViewItem
+        {
+            public string guid;
+            public AssetRefTreeViewItem(int id, int depth, string displayName, string g, string path) : base(id, depth, displayName)
+            {
+                guid = g;
+                icon = AssetDatabase.GetCachedIcon(path) as Texture2D;
+            }
+        }
+        private class AssetReferenceTreeView : TreeView
+        {
             AssetReferenceDrawer m_drawer;
-
-            SearchField searchField;
-
-            public AssetReferencePopup(AssetReferenceDrawer drawer)
+            AssetReferencePopup m_popup;
+            public AssetReferenceTreeView(TreeViewState state, AssetReferenceDrawer drawer, AssetReferencePopup popup) : base(state)
             {
                 m_drawer = drawer;
-                searchField = new SearchField();
+                m_popup = popup;
+                showBorder = true;
+                showAlternatingRowBackgrounds = true;
             }
 
-            public override void OnClose()
+            protected override bool CanMultiSelect(TreeViewItem item)
             {
-                base.OnClose();
+                return false;
             }
 
-            public override void OnOpen()
+            protected override void SelectionChanged(IList<int> selectedIds)
             {
-                searchField.SetFocus();
-                base.OnOpen();
-            }
-
-            public override Vector2 GetWindowSize()
-            {
-                Vector2 result = base.GetWindowSize();
-                result.x = m_drawer.smallPos.width;
-                return result;
-            }
-
-            public override void OnGUI(Rect rect)
-            {
-                int border = 4;
-                int topPadding = 12;
-                int searchHeight = 20;
-                var searchRect = new Rect(border, topPadding, rect.width - border * 2, searchHeight);
-                var remainTop = topPadding + searchHeight + border;
-                var remainginRect = new Rect(border, topPadding + searchHeight + border, rect.width - border * 2, rect.height - remainTop - border);
-                currentName = searchField.OnGUI(searchRect, currentName);
-
-
-                if (tree == null)
+                if (selectedIds != null && selectedIds.Count == 1)
                 {
-                    if (treeState == null)
-                        treeState = new TreeViewState();
-                    tree = new AssetReferenceTreeView(treeState, m_drawer);
-                    tree.Reload();
-                }
-                tree.searchString = currentName;
-                tree.OnGUI(remainginRect);
-            }
-
-            private class AssetRefTreeViewItem : TreeViewItem
-            {
-                public string guid;
-                public AssetRefTreeViewItem(int id, int depth, string displayName, string g, string path) : base(id, depth, displayName)
-                {
-                    guid = g;
-                    icon = AssetDatabase.GetCachedIcon(path) as Texture2D;
-                }
-            }
-            private class AssetReferenceTreeView : TreeView
-            {
-                AssetReferenceDrawer m_drawer;
-                public AssetReferenceTreeView(TreeViewState state, AssetReferenceDrawer drawer) : base(state)
-                {
-                    m_drawer = drawer;
-                    showBorder = true;
-                    showAlternatingRowBackgrounds = true;
-                }
-
-                protected override bool CanMultiSelect(TreeViewItem item)
-                {
-                    return false;
-                }
-
-                protected override void SelectionChanged(IList<int> selectedIds)
-                {
-                    if (selectedIds!= null && selectedIds.Count == 1)
+                    var assetRefItem = FindItem(selectedIds[0], rootItem) as AssetRefTreeViewItem;
+                    if (!string.IsNullOrEmpty(assetRefItem.guid))
                     {
-                        var assetRefItem = FindItem(selectedIds[0], rootItem) as AssetRefTreeViewItem;
-                        if (!string.IsNullOrEmpty(assetRefItem.guid))
-                        {
-                            m_drawer.newGuid = assetRefItem.guid;
-                        }
-                        else
-                        {
-                            m_drawer.newGuid = k_noAssetString;
-                        }
-                        PopupWindow.focusedWindow.Close();
-                    }
-                }
-
-                protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
-                {
-                    if (string.IsNullOrEmpty(searchString))
-                    {
-                        return base.BuildRows(root);
+                        m_drawer.newGuid = assetRefItem.guid;
                     }
                     else
                     {
-                        List<TreeViewItem> rows = new List<TreeViewItem>();
-
-                        foreach (var child in rootItem.children)
-                        {
-                            if (child.displayName.IndexOf(searchString, StringComparison.OrdinalIgnoreCase) >= 0)
-                                rows.Add(child);
-                        }
-
-                        return rows;
+                        m_drawer.newGuid = AssetReferenceDrawer.k_noAssetString;
                     }
+                    m_popup.ForceClose();
                 }
+            }
 
-                protected override TreeViewItem BuildRoot()
+            protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
+            {
+                if (string.IsNullOrEmpty(searchString))
                 {
-                    var root = new TreeViewItem(-1, -1);
-
-                    var aaSettings = AddressableAssetSettings.GetDefault(false, false);
-                    if (aaSettings == null)
-                    {
-                        var message = "Use 'Window->Addressable Assets' to initialize.";
-                        root.AddChild(new AssetRefTreeViewItem(message.GetHashCode(), 0, message, string.Empty, string.Empty));
-                    }
-                    else
-                    {
-                        root.AddChild(new AssetRefTreeViewItem(k_noAssetString.GetHashCode(), 0, k_noAssetString, string.Empty, string.Empty));
-                        var allAssets = new List<AddressableAssetEntry>();
-                        aaSettings.GetAllAssets(allAssets);
-                        foreach (var entry in allAssets)
-                        {
-                            bool passedFilters = true;
-                            if (m_drawer.labelFilter != null && !m_drawer.labelFilter.Validate(entry.labels))
-                                passedFilters = false;
-
-                            if (passedFilters && m_drawer.typeFilter != null && !m_drawer.typeFilter.Validate(AssetDatabase.GetMainAssetTypeAtPath(entry.assetPath)))
-                                passedFilters = false;
-                               
-                            if(passedFilters)
-                                root.AddChild(new AssetRefTreeViewItem(entry.address.GetHashCode(), 0, entry.address, entry.guid, entry.assetPath));
-                        }
-                    }
-
-                    return root;
+                    return base.BuildRows(root);
                 }
+                else
+                {
+                    List<TreeViewItem> rows = new List<TreeViewItem>();
+
+                    foreach (var child in rootItem.children)
+                    {
+                        if (child.displayName.IndexOf(searchString, StringComparison.OrdinalIgnoreCase) >= 0)
+                            rows.Add(child);
+                    }
+
+                    return rows;
+                }
+            }
+
+            protected override TreeViewItem BuildRoot()
+            {
+                var root = new TreeViewItem(-1, -1);
+
+                var aaSettings = AddressableAssetSettings.GetDefault(false, false);
+                if (aaSettings == null)
+                {
+                    var message = "Use 'Window->Addressable Assets' to initialize.";
+                    root.AddChild(new AssetRefTreeViewItem(message.GetHashCode(), 0, message, string.Empty, string.Empty));
+                }
+                else
+                {
+                    root.AddChild(new AssetRefTreeViewItem(AssetReferenceDrawer.k_noAssetString.GetHashCode(), 0, AssetReferenceDrawer.k_noAssetString, string.Empty, string.Empty));
+                    var allAssets = new List<AddressableAssetEntry>();
+                    aaSettings.GetAllAssets(allAssets);
+                    foreach (var entry in allAssets)
+                    {
+                        bool passedFilters = true;
+                        if (m_drawer.labelFilter != null && !m_drawer.labelFilter.Validate(entry.labels))
+                            passedFilters = false;
+
+                        if (passedFilters && m_drawer.typeFilter != null && !m_drawer.typeFilter.Validate(AssetDatabase.GetMainAssetTypeAtPath(entry.AssetPath)))
+                            passedFilters = false;
+
+                        if (passedFilters)
+                            root.AddChild(new AssetRefTreeViewItem(entry.address.GetHashCode(), 0, entry.address, entry.guid, entry.AssetPath));
+                    }
+                }
+
+                return root;
             }
         }
     }
 
-    public static class SerializedPropertyExtensions
+    internal static class SerializedPropertyExtensions
     {
         public static T GetActualObjectForSerializedProperty<T>(this SerializedProperty property, System.Reflection.FieldInfo field) where T : class
         {

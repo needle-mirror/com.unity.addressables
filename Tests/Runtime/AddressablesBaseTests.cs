@@ -61,21 +61,31 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
         }
     }
 
-    [OneTimeSetUp]
-    public void OneTimeSetup()
+    //we must wait for Addressables initialization to complete since we are clearing out all of its data for the tests.
+    public bool initializationComplete = false;
+    IEnumerator Init()
     {
-        ResourceManager.ResourceProviders.Clear();
-        ResourceManager.InstanceProvider = null;
-        ResourceManager.SceneProvider = null;
-        AsyncOperationCache.Instance.Clear();
-        DelayedActionManager.Clear();
+        if (!initializationComplete)
+        {
+            while (!Addressables.InitializationOperation.IsDone)
+                yield return null;
 
-        AssetDatabase.StartAssetEditing();
-        var locations = new ResourceLocationMap(100);
-        CreateLocations(locations);
-        AssetDatabase.StopAssetEditing();
+            ResourceManager.ResourceProviders.Clear();
+            ResourceManager.InstanceProvider = null;
+            ResourceManager.SceneProvider = null;
+            AsyncOperationCache.Instance.Clear();
+            DelayedActionManager.Clear();
 
-        Addressables.ResourceLocators.Add(locations);
+            AssetDatabase.StartAssetEditing();
+            var locations = new ResourceLocationMap(100);
+            CreateLocations(locations);
+            AssetDatabase.StopAssetEditing();
+
+            Addressables.ResourceLocators.Add(locations);
+
+            initializationComplete = true;
+            Debug.Log("Initialization Complete");
+        }
     }
 
     protected abstract void CreateLocations(ResourceLocationMap locations);
@@ -89,13 +99,15 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
     [UnityTest]
     public IEnumerator VerifyProfileVariableEvaluation()
     {
-        Assert.AreEqual(string.Format("{0}", Addressables.RuntimePath), AAConfig.ExpandPathWithGlobalVariables("{UnityEngine.AddressableAssets.Addressables.RuntimePath}"));
+        yield return Init();
+        Assert.AreEqual(string.Format("{0}", Addressables.RuntimePath), AddressablesRuntimeProperties.EvaluateString("{UnityEngine.AddressableAssets.Addressables.RuntimePath}"));
         yield return null;
     }
 
     [UnityTest]
     public IEnumerator CanGetResourceLocationsWithSingleKey()
     {
+        yield return Init();
         foreach (var k in keysHashSet)
         {
             Addressables.LoadAssets<IResourceLocation>(k.Key, (op1) => Assert.IsNotNull(op1.Result)).Completed += (op) =>
@@ -106,10 +118,11 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
             yield return null;
         }
     }
-     
+
     [UnityTest]
-    public IEnumerator CanGetResourceLocationsWithMultipleKeysMerged([Values(Addressables.MergeMode.None, Addressables.MergeMode.Intersection, Addressables.MergeMode.Union)]Addressables.MergeMode mode)
+    public IEnumerator CanGetResourceLocationsWithMultipleKeysMerged([Values(Addressables.MergeMode.UseFirst, Addressables.MergeMode.Intersection, Addressables.MergeMode.Union)]Addressables.MergeMode mode)
     {
+        yield return Init();
         for (int i = 0; i < 50; i++)
         {
             HashSet<IResourceLocation> set1 = new HashSet<IResourceLocation>();
@@ -128,7 +141,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
             Assert.NotNull(op3.Result);
             switch (mode)
             {
-                case Addressables.MergeMode.None:
+                case Addressables.MergeMode.UseFirst:
                     break;
                 case Addressables.MergeMode.Intersection:
                     set1.IntersectWith(set2);
@@ -147,10 +160,11 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
     [UnityTest]
     public IEnumerator CanDestroyNonAddressable()
     {
+        yield return Init();
         GameObject go = GameObject.Instantiate(GameObject.CreatePrimitive(PrimitiveType.Cube));
         go.name = "TestCube";
 
-        Addressables.ReleaseInstance(go); 
+        Addressables.ReleaseInstance(go);
         yield return null;
 
         GameObject foundObj = GameObject.Find("TestCube");
@@ -161,6 +175,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
     [UnityTest]
     public IEnumerator CanLoadAssetWithCallback()
     {
+        yield return Init();
         int loaded = 0;
         var assets = new List<object>();
         foreach (var key in keysList)
@@ -180,6 +195,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
     [UnityTest]
     public IEnumerator KeyIsPassedThroughAsyncOperation()
     {
+        yield return Init();
         object asset = null;
         Addressables.LoadAsset<object>(keysList[0]).Completed += (op) =>
         {
@@ -196,6 +212,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
     [UnityTest]
     public IEnumerator CanReleaseInCallback()
     {
+        yield return Init();
         bool complete = false;
         Addressables.LoadAsset<object>(keysList[0]).Completed += (op) =>
         {
@@ -211,17 +228,18 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
     [UnityTest]
     public IEnumerator CanLoadAssetsWithCallback()
     {
+        yield return Init();
         int loaded = 0;
         var assets = new List<object>();
         foreach (var key in keysList)
         {
-            Addressables.LoadAssets<object>(key, (a)=> { Assert.IsNotNull(a.Result); assets.Add(a.Result); }).Completed += (op) =>
-            {
-                loaded++;
-                Assert.IsNotNull(op.Result);
-                foreach (var a in op.Result)
-                    Assert.IsNotNull(a);
-            };
+            Addressables.LoadAssets<object>(key, (a) => { Assert.IsNotNull(a.Result); assets.Add(a.Result); }).Completed += (op) =>
+             {
+                 loaded++;
+                 Assert.IsNotNull(op.Result);
+                 foreach (var a in op.Result)
+                     Assert.IsNotNull(a);
+             };
         }
         while (loaded < keysList.Count)
             yield return null;
@@ -231,14 +249,15 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
 
 
     [UnityTest]
-    public IEnumerator CanLoadAssetsWithMultipleKeysMerged([Values(Addressables.MergeMode.None, Addressables.MergeMode.Intersection, Addressables.MergeMode.Union)]Addressables.MergeMode mode)
+    public IEnumerator CanLoadAssetsWithMultipleKeysMerged([Values(Addressables.MergeMode.UseFirst, Addressables.MergeMode.Intersection, Addressables.MergeMode.Union)]Addressables.MergeMode mode)
     {
+        yield return Init();
         int loaded = 0;
         var assets = new List<UnityEngine.Object>();
         for (int i = 0; i < 50; i++)
         {
             List<object> keys = new List<object>(new object[] { keysList[UnityEngine.Random.Range(0, keysList.Count / 2)], keysList[UnityEngine.Random.Range(keysList.Count / 2, keysList.Count)] });
-            var op3 = Addressables.LoadAssets<UnityEngine.Object>(keys, (op) => {Assert.IsNotNull(op.Result); assets.Add(op.Result); }, mode);
+            var op3 = Addressables.LoadAssets<UnityEngine.Object>(keys, (op) => { Assert.IsNotNull(op.Result); assets.Add(op.Result); }, mode);
             yield return op3;
             Assert.NotNull(op3.Result);
             Addressables.LoadAssets<IResourceLocation>(keys, (op) => Assert.IsNotNull(op.Result), mode).Completed += (checkOp) =>
@@ -256,6 +275,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
     [UnityTest]
     public IEnumerator CanLoadPreloadDependenciesForSingleKey()
     {
+        yield return Init();
         int loaded = 0;
         var assets = new List<object>();
         foreach (var key in keysList)
@@ -277,8 +297,9 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
     }
 
     [UnityTest]
-    public IEnumerator CanLoadPreloadDependenciesForMutlipleKeys([Values(Addressables.MergeMode.None, Addressables.MergeMode.Intersection, Addressables.MergeMode.Union)]Addressables.MergeMode mode)
+    public IEnumerator CanLoadPreloadDependenciesForMutlipleKeys([Values(Addressables.MergeMode.UseFirst, Addressables.MergeMode.Intersection, Addressables.MergeMode.Union)]Addressables.MergeMode mode)
     {
+        yield return Init();
         for (int i = 0; i < 50; i++)
         {
             List<object> keys = new List<object>(new object[] { keysList[UnityEngine.Random.Range(0, keysList.Count / 2)], keysList[UnityEngine.Random.Range(keysList.Count / 2, keysList.Count)] });
@@ -294,6 +315,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
     [UnityTest]
     public IEnumerator StressInstantiation()
     {
+        yield return Init();
         for (int i = 0; i < 100; i++)
         {
             var key = keysList[UnityEngine.Random.Range(0, keysList.Count)];

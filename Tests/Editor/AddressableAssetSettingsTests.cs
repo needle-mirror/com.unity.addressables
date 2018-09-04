@@ -26,23 +26,6 @@ namespace UnityEditor.AddressableAssets.Tests
             settings.RemoveLabel(labelName);
             Assert.False(settings.labelTable.labelNames.Contains(labelName));
         }
-        [Test]
-        public void VerifylabelMask()
-        {
-            const string label0 = "label0";
-            const string label1 = "label1";
-            const string label2 = "label2";
-            settings.labelTable.labelNames.Clear();
-            settings.AddLabel(label0);
-            settings.AddLabel(label1);
-            settings.AddLabel(label2);
-            var hs = new System.Collections.Generic.HashSet<string>();
-            hs.Add(label0);
-            Assert.AreEqual(settings.GetLabelMask(hs), 1);
-            hs.Add(label2);
-            Assert.AreEqual(settings.GetLabelMask(hs), 1 << 2 | 1);
-            settings.labelTable.labelNames.Clear();
-        }
 
         [Test]
         public void AddRemoveGroup()
