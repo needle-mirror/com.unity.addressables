@@ -13,7 +13,7 @@ When you install the Addressable Assets package, the Resource Manager and Script
 * __Address__ - Identifies an Asset for easy run-time retrieval.
 * __AddressableAssetData directory__ - Stores your addressable Asset metadata in your Project’s Assets directory.
 * __Asset Group__ - Denotes a set of addressable Assets available for build-time processing.
-* __Asset Group Processor__ - Prepares a group of addressable Assets for run time.
+* __Asset Group Schema__ - Defines a set of data that can be assigned to a group and used during the build.
 * __AssetReference__ - An object that operates like a direct reference, but with deferred initialization (for example, for lazy loading). The `AssetReference` stores the GUID as an addressable that you can load on-demand.
 * __Asynchronous Loading__ - allows the location of the Asset and dependencies (for example,  local, remote and generated) to change throughout the course of your development without changing the game code. Async Loading is foundational to the Addressable Asset System.
 * __Build Script__ - runs Asset Group Processors to package Assets and provides the mapping between Addresses and Resource Locations for the Resource Manager.

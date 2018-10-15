@@ -33,8 +33,7 @@ namespace UnityEditor.AddressableAssets
             {
                 string validName = settings.FindUniqueGroupName(old.m_name);
                 var group = ScriptableObject.CreateInstance<AddressableAssetGroup>();
-                group.Initialize(settings, validName, old);
-                group.StaticContent = staticContent;
+                group.Initialize(settings, validName, old, staticContent);
                 if (!Directory.Exists(settings.GroupFolder))
                     Directory.CreateDirectory(settings.GroupFolder);
                 var groupAssetPath = settings.GroupFolder + "/" + validName + ".asset";

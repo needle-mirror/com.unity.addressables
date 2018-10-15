@@ -6,6 +6,7 @@ using UnityEngine.AddressableAssets;
 using System.Collections.Generic;
 using UnityEngine.ResourceManagement;
 using System.Linq;
+using System.Collections;
 
 public class ContentCatalogTests
 {
@@ -88,6 +89,37 @@ public class ContentCatalogTests
     {
         public int index;
         public string path;
+    }
+
+    [Test]
+    public void AssetBundleRequestOptionsTest()
+    {
+        var options = new AssetBundleRequestOptions()
+        {
+            ChunkedTransfer = true,
+            Crc = 123,
+            Hash = new Hash128(1, 2, 3, 4).ToString(),
+            RedirectLimit = 4,
+            RetryCount = 7,
+            Timeout = 12
+        };
+        var dataEntry = new ContentCatalogDataEntry("internalId", "provider", new object[] { 1 }, null, options);
+        var entries = new List<ContentCatalogDataEntry>();
+        entries.Add(dataEntry);
+        var ccData = new ContentCatalogData(entries);
+        var locator = ccData.CreateLocator();
+        IList<IResourceLocation> locations;
+        if (!locator.Locate(1, out locations))
+            Assert.Fail("Unable to locate resource location");
+        var loc = locations[0];
+        var locOptions = loc.Data as AssetBundleRequestOptions;
+        Assert.IsNotNull(locOptions);
+        Assert.AreEqual(locOptions.ChunkedTransfer, options.ChunkedTransfer);
+        Assert.AreEqual(locOptions.Crc, options.Crc);
+        Assert.AreEqual(locOptions.Hash, options.Hash);
+        Assert.AreEqual(locOptions.RedirectLimit, options.RedirectLimit);
+        Assert.AreEqual(locOptions.RetryCount, options.RetryCount);
+        Assert.AreEqual(locOptions.Timeout, options.Timeout);
     }
 
     [Test]

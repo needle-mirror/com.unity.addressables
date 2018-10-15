@@ -53,9 +53,10 @@ namespace UnityEditor.AddressableAssets
 
         internal void OfferToConvert()
         {
-            if (EditorUtility.DisplayDialog("Legacy Bundles Detected", "We have detected the use of legacy bundles in this project.  Would you like to auto-convert those into Addressables?", "Convert", "Ignore"))
+            var bundleList = AssetDatabase.GetAllAssetBundleNames();
+            if (EditorUtility.DisplayDialog("Legacy Bundles Detected", "We have detected the use of legacy bundles in this project.  Would you like to auto-convert those into Addressables? \nThis will take each asset bundle you have defined (we have detected " + bundleList.Length + " bundles), create an Addressables group with a matching name, then move all assets from those bundles into corresponding groups.  This will remove the asset bundle assignment from all assets, and remove all asset bundle definitions from this project.  This cannot be undone.", "Convert", "Ignore"))
             {
-                AddressablesUtility.ConvertAssetBundlesToAddressables();
+                AddressableAssetUtility.ConvertAssetBundlesToAddressables();
             }
             else
                 m_ignoreLegacyBundles = true;
@@ -63,17 +64,16 @@ namespace UnityEditor.AddressableAssets
 
         public void OnGUI()
         {
-            var settingsObject = AddressableAssetSettings.GetDefault(false, false);
-            if (settingsObject == null)
+            if (AddressableAssetSettingsDefaultObject.Settings == null)
             {
                 GUILayout.Space(50);
                 if (GUILayout.Button("Create Addressables Settings"))
                 {
-                    settingsObject = AddressableAssetSettings.GetDefault(true, true);
+                    AddressableAssetSettingsDefaultObject.Settings = AddressableAssetSettings.Create(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, AddressableAssetSettingsDefaultObject.kDefaultConfigAssetName, true, true);
                 }
                 if (GUILayout.Button("Import Addressables Settings"))
                 {
-                    var path = EditorUtility.OpenFilePanel("Addressables Settings Object", AddressableAssetSettings.kDefaultConfigFolder, "asset");
+                    var path = EditorUtility.OpenFilePanel("Addressables Settings Object", AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, "asset");
                     if (!string.IsNullOrEmpty(path))
                     {
                         var i = path.ToLower().IndexOf("/assets/");
@@ -83,10 +83,7 @@ namespace UnityEditor.AddressableAssets
                             Addressables.LogFormat("Loading Addressables Settings from {0}", path);
                             var obj = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
                             if (obj != null)
-                            {
-                                EditorBuildSettings.AddConfigObject(AddressableAssetSettings.kDefaultConfigName, obj, true);
-                                settingsObject = AddressableAssetSettings.GetDefault(true, true);
-                            }
+                                AddressableAssetSettingsDefaultObject.Settings = obj;
                         }
                     }
                 }
@@ -103,15 +100,15 @@ namespace UnityEditor.AddressableAssets
                         DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
                         foreach (var path in DragAndDrop.paths)
                         {
-                            if (AddressablesUtility.IsPathValidForEntry(path))
+                            if (AddressableAssetUtility.IsPathValidForEntry(path))
                             {
                                 var guid = AssetDatabase.AssetPathToGUID(path);
                                 if (!string.IsNullOrEmpty(guid))
                                 {
-                                    if (settingsObject == null)
-                                        settingsObject = AddressableAssetSettings.GetDefault(true, true);
-                                    Undo.RecordObject(settingsObject, "AddressableAssetSettings");
-                                    settingsObject.CreateOrMoveEntry(guid, settingsObject.DefaultGroup);
+                                    if (AddressableAssetSettingsDefaultObject.Settings == null)
+                                        AddressableAssetSettingsDefaultObject.Settings = AddressableAssetSettings.Create(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, AddressableAssetSettingsDefaultObject.kDefaultConfigAssetName, true, true);
+                                    Undo.RecordObject(AddressableAssetSettingsDefaultObject.Settings, "AddressableAssetSettings");
+                                    AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(guid, AddressableAssetSettingsDefaultObject.Settings.DefaultGroup);
                                 }
                             }
                         }

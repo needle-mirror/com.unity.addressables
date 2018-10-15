@@ -11,22 +11,39 @@ using UnityEngine.SceneManagement;
 
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.AddressableAssets;
 #endif
 
-public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
+public abstract class AddressablesBaseTests : IPrebuildSetup
 {
     protected string RootFolder { get { return string.Format("Assets/{0}_AssetsToDelete", GetType().Name); } }
+
     public void Setup()
     {
+        AssetDatabase.StartAssetEditing();
         if (!Directory.Exists(RootFolder))
             Directory.CreateDirectory(RootFolder);
+
+        SceneManagerState.Record(RootFolder + "/scenes.json");
+        var scene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Additive);
+        UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, RootFolder + "/testScene.unity");
+        UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene, true);
+
+        var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+        scenes.Add(new EditorBuildSettingsScene(RootFolder + "/testScene.unity", true));
+        EditorBuildSettings.scenes = scenes.ToArray();
+        AssetDatabase.StopAssetEditing();
     }
 
     [OneTimeTearDown]
-    public void Cleanup()
+    public void TearDown()
     {
+#if UNITY_EDITOR
+        SceneManagerState.Restore(RootFolder + "/scenes.json");
         AssetDatabase.DeleteAsset(RootFolder);
+#endif
     }
+
     Dictionary<object, int> keysHashSet = new Dictionary<object, int>();
     List<object> keysList = new List<object>();
 
@@ -72,7 +89,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
 
             ResourceManager.ResourceProviders.Clear();
             ResourceManager.InstanceProvider = null;
-            ResourceManager.SceneProvider = null;
+            ResourceManager.SceneProvider = new SceneProvider();
             AsyncOperationCache.Instance.Clear();
             DelayedActionManager.Clear();
 
@@ -80,7 +97,8 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
             var locations = new ResourceLocationMap(100);
             CreateLocations(locations);
             AssetDatabase.StopAssetEditing();
-
+            var sceneLoc = new ResourceLocationBase("testscene", RootFolder + "/testScene.unity", typeof(SceneProvider).FullName);
+            locations.Add("testscene", sceneLoc);
             Addressables.ResourceLocators.Add(locations);
 
             initializationComplete = true;
@@ -90,10 +108,41 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
 
     protected abstract void CreateLocations(ResourceLocationMap locations);
 
-    [OneTimeTearDown]
-    public void TearDown()
+    [UnityTest]
+    public IEnumerator CanLoadScene()
     {
-        AssetDatabase.DeleteAsset(RootFolder);
+        yield return Init();
+        var loadOp = Addressables.LoadScene("testscene", LoadSceneMode.Additive);
+        while (!loadOp.IsDone)
+            yield return null;
+
+        Assert.IsTrue(loadOp.Result.isLoaded, "Scene isn't loaded");
+
+        var unloadOp = Addressables.UnloadScene(loadOp.Result);
+        while (!unloadOp.IsDone)
+            yield return null;
+
+        Assert.IsFalse(unloadOp.Result.isLoaded, "Scene wasn't unloaded"); yield return null;
+    }
+
+    [UnityTest]
+    public IEnumerator AssetReferenceCanLoadAndUnloadAssetTest()
+    {
+        yield return Init();
+        IList<IResourceLocation> locs;
+        Addressables.ResourceLocators[0].Locate(keysList[0], out locs);
+        var guidString = AssetDatabase.AssetPathToGUID(locs[0].InternalId);
+        (Addressables.ResourceLocators[0] as ResourceLocationMap).Add(Hash128.Parse(guidString), locs[0]);
+        var ar = new AssetReference(guidString);
+
+        Assert.IsNull(ar.Asset);
+        var op = ar.LoadAsset<UnityEngine.Object>();
+        Assert.IsNull(ar.Asset);
+        yield return op;
+        Assert.IsNotNull(ar.Asset);
+        ar.ReleaseAsset<UnityEngine.Object>();
+        Assert.IsNull(ar.Asset);
+        yield return null;
     }
 
     [UnityTest]
@@ -336,4 +385,5 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
         foreach (var r in objs)
             Assert.False(r.name.EndsWith("(Clone)"), "All instances were not cleaned up");
     }
+
 }

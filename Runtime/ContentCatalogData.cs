@@ -48,7 +48,7 @@ namespace UnityEngine.AddressableAssets
             Data = extraData;
         }
         /// <summary>
-        /// Construct a new ContentCatalogEntry.
+        /// [obsolete] Construct a new ContentCatalogEntry.
         /// </summary>
         /// <param name="address">The primary key for this entry.</param>
         /// <param name="guid">The guid of the asset.</param>
@@ -57,6 +57,7 @@ namespace UnityEngine.AddressableAssets
         /// <param name="labels">Optional set of labels that will be used as keys.</param>
         /// <param name="dependencies">Optional collection of keys for dependencies.</param>
         /// <param name="extraData">Optional additional data to be passed to the provider.  For example, AssetBundleProviders use this for cache and crc data.</param>
+        [Obsolete("Use the version of ContentCatalogDataEntry that takes a list of keys instead of explicit address and guid.")]
         public ContentCatalogDataEntry(string address, string guid, string internalId, System.Type provider, HashSet<string> labels = null, IEnumerable<object> dependencies = null, object extraData = null)
         {
             InternalId = internalId;
@@ -81,16 +82,7 @@ namespace UnityEngine.AddressableAssets
     [Serializable]
     public class ContentCatalogData
     {
-        internal enum ObjectType
-        {
-            ASCIIString,
-            UnicodeString,
-            UInt16,
-            UInt32,
-            Int32,
-            Hash128,
-            JsonObject
-        }
+
 
         [SerializeField]
         string[] m_providerIds = null;
@@ -150,55 +142,6 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
-        static object ReadObjectFromByteArray(byte[] keyData, int dataIndex)
-        {
-            try
-            {
-                ObjectType keyType = (ObjectType)keyData[dataIndex];
-                dataIndex++;
-                switch (keyType)
-                {
-                    case ObjectType.UnicodeString:
-                        {
-                            var dataLength = BitConverter.ToInt32(keyData, dataIndex);
-                            return System.Text.Encoding.Unicode.GetString(keyData, dataIndex + 4, dataLength);
-                        }
-                    case ObjectType.ASCIIString:
-                        {
-                            var dataLength = BitConverter.ToInt32(keyData, dataIndex);
-                            return System.Text.Encoding.ASCII.GetString(keyData, dataIndex + 4, dataLength);
-                        }
-                    case ObjectType.UInt16: return BitConverter.ToUInt16(keyData, dataIndex);
-                    case ObjectType.UInt32: return BitConverter.ToUInt32(keyData, dataIndex);
-                    case ObjectType.Int32: return BitConverter.ToInt32(keyData, dataIndex);
-                    case ObjectType.Hash128: return Hash128.Parse(System.Text.Encoding.ASCII.GetString(keyData, dataIndex + 1, keyData[dataIndex]));
-                    case ObjectType.JsonObject:
-                        {
-                            int assemblyNameLength = keyData[dataIndex];
-                            dataIndex++;
-                            string assemblyName = System.Text.Encoding.ASCII.GetString(keyData, dataIndex, assemblyNameLength);
-                            dataIndex += assemblyNameLength;
-
-                            int classNameLength = keyData[dataIndex];
-                            dataIndex++;
-                            string className = System.Text.Encoding.ASCII.GetString(keyData, dataIndex, classNameLength);
-                            dataIndex += classNameLength;
-                            int jsonLength = BitConverter.ToInt32(keyData, dataIndex);
-                            dataIndex += 4;
-                            string jsonText = System.Text.Encoding.Unicode.GetString(keyData, dataIndex, jsonLength);
-                            var assembly = System.Reflection.Assembly.Load(assemblyName);
-                            var t = assembly.GetType(className);
-                            return JsonUtility.FromJson(jsonText, t);
-                        }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogException(ex);
-            }
-            return null;
-        }
-
         /// <summary>
         /// Create IResourceLocator object
         /// </summary>
@@ -211,14 +154,14 @@ namespace UnityEngine.AddressableAssets
             int bi = 4;
             for (int i = 0; i < bucketCount; i++)
             {
-                var index = Deserialize(bucketData, bi);
+                var index = SerializationUtilities.ReadInt32FromByteArray(bucketData, bi);
                 bi += 4;
-                var entryCount = Deserialize(bucketData, bi);
+                var entryCount = SerializationUtilities.ReadInt32FromByteArray(bucketData, bi);
                 bi += 4;
                 var entryArray = new int[entryCount];
                 for (int c = 0; c < entryCount; c++)
                 {
-                    entryArray[c] = Deserialize(bucketData, bi);
+                    entryArray[c] = SerializationUtilities.ReadInt32FromByteArray(bucketData, bi);
                     bi += 4;
                 }
                 buckets[i] = new Bucket() { entries = entryArray, dataOffset = index };
@@ -229,22 +172,22 @@ namespace UnityEngine.AddressableAssets
             var keyCount = BitConverter.ToInt32(keyData, 0);
             var keys = new object[keyCount];
             for (int i = 0; i < buckets.Length; i++)
-                keys[i] = ReadObjectFromByteArray(keyData, buckets[i].dataOffset);
+                keys[i] = SerializationUtilities.ReadObjectFromByteArray(keyData, buckets[i].dataOffset);
 
             var locator = new ResourceLocationMap(buckets.Length);
 
             var entryData = Convert.FromBase64String(m_entryDataString);
-            int count = Deserialize(entryData, 0);
+            int count = SerializationUtilities.ReadInt32FromByteArray(entryData, 0);
             List<IResourceLocation> locations = new List<IResourceLocation>(count);
             for (int i = 0; i < count; i++)
             {
                 var index = 4 + i * 4 * 4;
-                var internalId = Deserialize(entryData, index);
-                var providerIndex = Deserialize(entryData, index + 4);
-                var dependency = Deserialize(entryData, index + 8);
-                var dataIndex = Deserialize(entryData, index + 12);
-                object data = dataIndex < 0 ? null : ReadObjectFromByteArray(extraData, dataIndex);
-                locations.Add(new CompactLocation(locator, AddressablesRuntimeProperties.EvaluateString(m_internalIds[internalId]),
+                var internalId = SerializationUtilities.ReadInt32FromByteArray(entryData, index);
+                var providerIndex = SerializationUtilities.ReadInt32FromByteArray(entryData, index + 4);
+                var dependency = SerializationUtilities.ReadInt32FromByteArray(entryData, index + 8);
+                var dataIndex = SerializationUtilities.ReadInt32FromByteArray(entryData, index + 12);
+                object data = dataIndex < 0 ? null : SerializationUtilities.ReadObjectFromByteArray(extraData, dataIndex);
+                locations.Add(new CompactLocation(locator, ResourceManager.ResolveInternalId(m_internalIds[internalId]),
                     m_providerIds[providerIndex], dependency < 0 ? null : keys[dependency], data));
             }
 
@@ -259,20 +202,16 @@ namespace UnityEngine.AddressableAssets
             }
             return locator;
         }
-
-        static int Deserialize(byte[] data, int offset)
+        
+        public ContentCatalogData()
         {
-            return ((int)data[offset]) | (((int)data[offset + 1]) << 8) | (((int)data[offset + 2]) << 16) | (((int)data[offset + 3]) << 24);
         }
 
+
 #if UNITY_EDITOR
-        static int WriteIntToByteArray(byte[] data, int val, int offset)
+        public ContentCatalogData(IList<ContentCatalogDataEntry> data)
         {
-            data[offset] = (byte)(val & 0xFF);
-            data[offset + 1] = (byte)((val >> 8) & 0xFF);
-            data[offset + 2] = (byte)((val >> 16) & 0xFF);
-            data[offset + 3] = (byte)((val >> 24) & 0xFF);
-            return offset + 4;
+            SetData(data);
         }
 
         class KeyIndexer<T>
@@ -380,7 +319,7 @@ namespace UnityEngine.AddressableAssets
                 int extraDataOffset = -1;
                 if (e.Data != null)
                 {
-                    var len = WriteObjectToByteList(e.Data, extraDataList);
+                    var len = SerializationUtilities.WriteObjectToByteList(e.Data, extraDataList);
                     if (len > 0)
                     {
                         extraDataOffset = extraDataIndex;
@@ -429,14 +368,14 @@ namespace UnityEngine.AddressableAssets
             //serialize entries
             {
                 var entryData = new byte[data.Count * 4 * 4 + 4];
-                var entryDataOffset = WriteIntToByteArray(entryData, data.Count, 0);
+                var entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, data.Count, 0);
                 for (int i = 0; i < data.Count; i++)
                 {
                     var e = data[i];
-                    entryDataOffset = WriteIntToByteArray(entryData, internalIds.map[e.InternalId], entryDataOffset);
-                    entryDataOffset = WriteIntToByteArray(entryData, providers.map[e.Provider], entryDataOffset);
-                    entryDataOffset = WriteIntToByteArray(entryData, e.Dependencies.Count == 0 ? -1 : keyIndexToEntries.map[e.Dependencies[0]], entryDataOffset);
-                    entryDataOffset = WriteIntToByteArray(entryData, entryIndexToExtraDataIndex[i], entryDataOffset);
+                    entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, internalIds.map[e.InternalId], entryDataOffset);
+                    entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, providers.map[e.Provider], entryDataOffset);
+                    entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, e.Dependencies.Count == 0 ? -1 : keyIndexToEntries.map[e.Dependencies[0]], entryDataOffset);
+                    entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, entryIndexToExtraDataIndex[i], entryDataOffset);
                 }
                 m_entryDataString = Convert.ToBase64String(entryData);
             }
@@ -448,114 +387,22 @@ namespace UnityEngine.AddressableAssets
                 var keyData = new List<byte>(keys.values.Count * 10);
                 keyData.AddRange(BitConverter.GetBytes(keys.values.Count));
                 int keyDataOffset = 4;
-                int bucketDataOffset = WriteIntToByteArray(bucketData, keys.values.Count, 0);
+                int bucketDataOffset = SerializationUtilities.WriteInt32ToByteArray(bucketData, keys.values.Count, 0);
                 for (int i = 0; i < keys.values.Count; i++)
                 {
                     var key = keys.values[i];
-                    bucketDataOffset = WriteIntToByteArray(bucketData, keyDataOffset, bucketDataOffset);
-                    keyDataOffset += WriteObjectToByteList(key, keyData);
+                    bucketDataOffset = SerializationUtilities.WriteInt32ToByteArray(bucketData, keyDataOffset, bucketDataOffset);
+                    keyDataOffset += SerializationUtilities.WriteObjectToByteList(key, keyData);
                     var entries = keyIndexToEntries[key];
-                    bucketDataOffset = WriteIntToByteArray(bucketData, entries.Count, bucketDataOffset);
+                    bucketDataOffset = SerializationUtilities.WriteInt32ToByteArray(bucketData, entries.Count, bucketDataOffset);
                     foreach (var e in entries)
-                        bucketDataOffset = WriteIntToByteArray(bucketData, entryToIndex[e], bucketDataOffset);
+                        bucketDataOffset = SerializationUtilities.WriteInt32ToByteArray(bucketData, entryToIndex[e], bucketDataOffset);
                 }
                 m_bucketDataString = Convert.ToBase64String(bucketData);
                 m_keyDataString = Convert.ToBase64String(keyData.ToArray());
             }
         }
 
-        static int WriteObjectToByteList(object obj, List<byte> buffer)
-        {
-            var objectType = obj.GetType();
-            if (objectType == typeof(string))
-            {
-                string str = obj as string;
-                byte[] tmp = System.Text.Encoding.Unicode.GetBytes(str);
-                byte[] tmp2 = System.Text.Encoding.ASCII.GetBytes(str);
-                if (System.Text.Encoding.Unicode.GetString(tmp) == System.Text.Encoding.ASCII.GetString(tmp2))
-                {
-                    buffer.Add((byte)ObjectType.ASCIIString);
-                    buffer.AddRange(BitConverter.GetBytes(tmp2.Length));
-                    buffer.AddRange(tmp2);
-                    return tmp2.Length + 5;
-                }
-                else
-                {
-                    buffer.Add((byte)ObjectType.UnicodeString);
-                    buffer.AddRange(BitConverter.GetBytes(tmp.Length));
-                    buffer.AddRange(tmp);
-                    return tmp.Length + 5;
-                }
-            }
-            else if (objectType == typeof(UInt32))
-            {
-                byte[] tmp = BitConverter.GetBytes((UInt32)obj);
-                buffer.Add((byte)ObjectType.UInt32);
-                buffer.AddRange(tmp);
-                return tmp.Length + 1;
-            }
-            else if (objectType == typeof(UInt16))
-            {
-                byte[] tmp = BitConverter.GetBytes((UInt16)obj);
-                buffer.Add((byte)ObjectType.UInt16);
-                buffer.AddRange(tmp);
-                return tmp.Length + 1;
-            }
-            else if (objectType == typeof(Int32))
-            {
-                byte[] tmp = BitConverter.GetBytes((Int32)obj);
-                buffer.Add((byte)ObjectType.Int32);
-                buffer.AddRange(tmp);
-                return tmp.Length + 1;
-            }
-            else if (objectType == typeof(int))
-            {
-                byte[] tmp = BitConverter.GetBytes((UInt32)obj);
-                buffer.Add((byte)ObjectType.UInt32);
-                buffer.AddRange(tmp);
-                return tmp.Length + 1;
-            }
-            else if (objectType == typeof(Hash128))
-            {
-                var guid = (Hash128)obj;
-                byte[] tmp = System.Text.Encoding.ASCII.GetBytes(guid.ToString());
-                buffer.Add((byte)ObjectType.Hash128);
-                buffer.Add((byte)tmp.Length);
-                buffer.AddRange(tmp);
-                return tmp.Length + 2;
-            }
-            else
-            {
-                var attrs = objectType.GetCustomAttributes(typeof(System.SerializableAttribute), true);
-                if (attrs == null || attrs.Length == 0)
-                    return 0;
-                int length = 0;
-                buffer.Add((byte)ObjectType.JsonObject);
-                length++;
-
-                //write assembly name
-                byte[] tmpAssemblyName = System.Text.Encoding.ASCII.GetBytes(objectType.Assembly.FullName);
-                buffer.Add((byte)tmpAssemblyName.Length);
-                length++;
-                buffer.AddRange(tmpAssemblyName);
-                length += tmpAssemblyName.Length;
-
-                //write class name
-                byte[] tmpClassName = System.Text.Encoding.ASCII.GetBytes(objectType.FullName);
-                buffer.Add((byte)tmpClassName.Length);
-                length++;
-                buffer.AddRange(tmpClassName);
-                length += tmpClassName.Length;
-
-                //write json data
-                byte[] tmpJson = System.Text.Encoding.Unicode.GetBytes(JsonUtility.ToJson(obj));
-                buffer.AddRange(BitConverter.GetBytes((Int32)tmpJson.Length));
-                length += 4;
-                buffer.AddRange(tmpJson);
-                length += tmpJson.Length;
-                return length;
-            }
-        }
 
 #if REFERENCE_IMPLEMENTATION
         public void SetDataOld(List<ResourceLocationData> locations, List<string> labels)

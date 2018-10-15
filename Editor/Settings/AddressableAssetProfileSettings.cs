@@ -13,6 +13,22 @@ namespace UnityEditor.AddressableAssets
     [Serializable]
     public class AddressableAssetProfileSettings
     {
+        internal delegate string ProfileStringEvaluationDelegate(string key);
+
+        [NonSerialized]
+        internal ProfileStringEvaluationDelegate onProfileStringEvaluation;
+        
+        internal void RegisterProfileStringEvaluationFunc(ProfileStringEvaluationDelegate f)
+        {
+            onProfileStringEvaluation -= f;
+            onProfileStringEvaluation += f;
+        }
+
+        internal void UnregisterProfileStringEvaluationFunc(ProfileStringEvaluationDelegate f)
+        {
+            onProfileStringEvaluation -= f;
+        }
+        
         [Serializable]
         internal class BuildProfile
         {
@@ -278,11 +294,24 @@ namespace UnityEditor.AddressableAssets
         {
             Func<string, string> getVal = (s) =>
             {
-                string v = GetValueByName(profileId, s);
+                var v = GetValueByName(profileId, s);
                 if (string.IsNullOrEmpty(v))
+                {
+                    foreach (var i in onProfileStringEvaluation.GetInvocationList())
+                    {
+                        var del = (ProfileStringEvaluationDelegate) i;
+                        v = del(s);
+                        if (!string.IsNullOrEmpty(v))
+                            return v;
+                    }
+            
+                    
                     v = UnityEngine.AddressableAssets.AddressablesRuntimeProperties.EvaluateProperty(s);
+                }
+
                 return v;
             };
+            
             return UnityEngine.AddressableAssets.AddressablesRuntimeProperties.EvaluateString(varString, '[', ']', getVal);
         }
 
@@ -301,10 +330,10 @@ namespace UnityEditor.AddressableAssets
 
                 AddProfile(k_rootProfileName, null);
                 CreateValue("BuildTarget", "[UnityEditor.EditorUserBuildSettings.activeBuildTarget]");
-                CreateValue("LocalBuildPath", Addressables.BuildPath + "/[BuildTarget]");
-                CreateValue("LocalLoadPath", "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]");
-                CreateValue("RemoteBuildPath", "ServerData/[BuildTarget]");
-                CreateValue("RemoteLoadPath", "http://localhost/[BuildTarget]");
+                CreateValue(AddressableAssetSettings.kLocalBuildPath, Addressables.BuildPath + "/[BuildTarget]");
+                CreateValue(AddressableAssetSettings.kLocalLoadPath, "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]");
+                CreateValue(AddressableAssetSettings.kRemoteBuildPath, "ServerData/[BuildTarget]");
+                CreateValue(AddressableAssetSettings.kRemoteLoadPath, "http://localhost/[BuildTarget]");
             }
             return GetDefaultProfileID();
         }
@@ -429,10 +458,16 @@ namespace UnityEditor.AddressableAssets
             return ids;
         }
 
-        void PostModificationEvent(AddressableAssetSettings.ModificationEvent e)
+        /// <summary>
+        /// Marks the object as modified.
+        /// </summary>
+        /// <param name="modificationEvent">The event type that is changed.</param>
+        /// <param name="eventData">The object data that corresponds to the event.</param>
+        /// <param name="postEvent">If true, the event is propagated to callbacks.</param>
+        public void SetDirty(AddressableAssetSettings.ModificationEvent modificationEvent, object eventData, bool postEvent)
         {
             if (m_Settings != null)
-                m_Settings.PostModificationEvent(e, this);
+                m_Settings.SetDirty(modificationEvent, eventData, postEvent);
         }
 
         internal bool ValidateNewVariableName(string name)
@@ -459,7 +494,7 @@ namespace UnityEditor.AddressableAssets
                 copyRoot = GetDefaultProfile();
             var prof = new BuildProfile(name, copyRoot, this);
             m_profiles.Add(prof);
-            PostModificationEvent(AddressableAssetSettings.ModificationEvent.ProfileAdded);
+            SetDirty(AddressableAssetSettings.ModificationEvent.ProfileAdded, prof, true);
             return prof.id;
         }
 
@@ -471,7 +506,7 @@ namespace UnityEditor.AddressableAssets
         {
             m_profiles.RemoveAll(p => p.id == profileId);
             m_profiles.ForEach(p => { if (p.m_inheritedParent == profileId) p.m_inheritedParent = null; });
-            PostModificationEvent(AddressableAssetSettings.ModificationEvent.ProfileRemoved);
+            SetDirty(AddressableAssetSettings.ModificationEvent.ProfileRemoved, profileId, true);
         }
 
         private BuildProfile GetProfileByName(string profileName)
@@ -551,8 +586,9 @@ namespace UnityEditor.AddressableAssets
             }
 
             profile.SetValueById(id, val);
-            PostModificationEvent(AddressableAssetSettings.ModificationEvent.ProfileModified);
+            SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, profile, true);
         }
+
         internal string GetUniqueProfileEntryName(string name)
         {
             var newName = name;

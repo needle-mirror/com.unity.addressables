@@ -1,54 +1,71 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using UnityEngine;
 using System.Linq;
-using UnityEditor.Build.Utilities;
-using UnityEditor.Build.Pipeline;
-using UnityEditor.Build.Pipeline.Interfaces;
-using UnityEditor.Build.Pipeline.Tasks;
-using UnityEditor.Build.Pipeline.Utilities;
-using UnityEngine.ResourceManagement;
-using UnityEngine.AddressableAssets;
-using UnityEditor.SceneManagement;
-using UnityEditor.IMGUI.Controls;
 using System.Runtime.Serialization.Formatters.Binary;
-using System;
+using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEditor.Build.Pipeline.Utilities;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement;
 
 namespace UnityEditor.AddressableAssets
 {
+    /// <summary>
+    /// Data stored with each build that is used to generated content updates.
+    /// </summary>
     [System.Serializable]
-    internal class CachedData
+    public class AddressablesContentState
     {
+        /// <summary>
+        /// The version that the player was built with.  This is usually set to AddressableAssetSettings.PlayerBuildVersion.
+        /// </summary>
         [SerializeField]
         public string m_playerVersion;
+        /// <summary>
+        /// The version of the unity editor used to build the player.
+        /// </summary>
+        [SerializeField]
+        public string m_editorVersion;
+        /// <summary>
+        /// Dependency information for all assets in the build that have been marked StaticContent.
+        /// </summary>
         [SerializeField]
         public CachedInfo[] m_cachedInfos;
     }
-    internal class ContentUpdateScript
+
+    /// <summary>
+    /// Contains methods used for the content update workflow.
+    /// </summary>
+    public static class ContentUpdateScript
     {
-        internal static string SaveCacheData(List<AddressableAssetEntry> entries, IBuildCache buildCache, string playerVersion)
+        /// <summary>
+        /// Save the content update information for a set of AddressableAssetEntry objects.
+        /// </summary>
+        /// <param name="entries">The entries to save.</param>
+        /// <param name="buildCache">The cache dependency information generated from the build.</param>
+        /// <param name="playerVersion">The player version to save. This is usually set to AddressableAssetSettings.PlayerBuildVersion.</param>
+        /// <returns></returns>
+        public static string SaveContentState(List<AddressableAssetEntry> entries, IBuildCache buildCache, string playerVersion)
         {
             try
             {
                 var cacheEntries = new List<CacheEntry>();
                 foreach (var entry in entries)
                 {
-                    if (entry.parentGroup.StaticContent)
+                    GUID guid;
+                    if (GUID.TryParse(entry.guid, out guid))
                     {
-                        GUID guid;
-                        if (GUID.TryParse(entry.guid, out guid))
-                        {
-                            var cacheEntry = buildCache.GetCacheEntry(guid);
-                            if (cacheEntry.IsValid())
-                                cacheEntries.Add(cacheEntry);
-                        }
+                        var cacheEntry = buildCache.GetCacheEntry(guid);
+                        if (cacheEntry.IsValid())
+                            cacheEntries.Add(cacheEntry);
                     }
                 }
                 IList<CachedInfo> cachedInfos;
                 buildCache.LoadCachedData(cacheEntries, out cachedInfos);
-                var cacheData = new CachedData() { m_cachedInfos = cachedInfos.ToArray(), m_playerVersion = playerVersion };
+                var cacheData = new AddressablesContentState() { m_cachedInfos = cachedInfos.ToArray(), m_playerVersion = playerVersion, m_editorVersion = Application.unityVersion };
                 var formatter = new BinaryFormatter();
-                var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Temp/com.unity.addressables/cachedata.bin";
+                var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Temp/com.unity.addressables/addressables_content_state.bin";
                 if (File.Exists(tempPath))
                     File.Delete(tempPath);
                 var dir = Path.GetDirectoryName(tempPath);
@@ -68,11 +85,46 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        internal static string GetCacheDataPath(bool browse)
+        /// <summary>
+        /// [Obsolete] Save the content update information for a set of AddressableAssetEntry objects.
+        /// </summary>
+        /// <param name="entries">The entries to save.</param>
+        /// <param name="buildCache">The cache dependency information generated from the build.</param>
+        /// <param name="playerVersion">The player version to save. This is usually set to AddressableAssetSettings.PlayerBuildVersion.</param>
+        /// <returns></returns>
+        [Obsolete("Use SaveContentState instead. (UnityUpgradable) -> SaveContentState")]
+        public static string SaveCacheData(List<AddressableAssetEntry> entries, IBuildCache buildCache, string playerVersion)
+        {
+            return SaveContentState(entries, buildCache, playerVersion);
+        }
+
+
+        /// <summary>
+        /// [obsolete] Gets the path of the cache data from a selected build.
+        /// </summary>
+        /// <param name="browse">If true, the user is allowed to browse for a specific file.</param>
+        /// <returns></returns>
+        [Obsolete("Use GetContentStateDataPath instead. (UnityUpgradable) -> GetContentStateDataPath")]
+        public static string GetCacheDataPath(bool browse)
+        {
+            return GetContentStateDataPath(browse);
+        }
+
+        /// <summary>
+        /// Gets the path of the cache data from a selected build.
+        /// </summary>
+        /// <param name="browse">If true, the user is allowed to browse for a specific file.</param>
+        /// <returns></returns>
+        public static string GetContentStateDataPath(bool browse)
         {
             var buildPath = EditorUserBuildSettings.GetBuildLocation(EditorUserBuildSettings.activeBuildTarget);
             if (File.Exists(buildPath))
                 buildPath = Path.GetDirectoryName(buildPath);
+            #if UNITY_EDITOR_OSX
+                if(EditorUserBuildSettings.activeBuildTarget == BuildTarget.iOS || 
+                   EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneOSX)
+                    buildPath = Path.GetDirectoryName(buildPath);
+            #endif
             if (browse)
             {
                 if (string.IsNullOrEmpty(buildPath))
@@ -90,66 +142,107 @@ namespace UnityEditor.AddressableAssets
                 if (string.IsNullOrEmpty(buildPath))
                     buildPath = Application.streamingAssetsPath;
             }
-            var path = Path.Combine(buildPath, "cachedata.bin");
+            var path = Path.Combine(buildPath, "addressables_content_state.bin");
             return path;
         }
 
-        internal static CachedData LoadCacheData(string cacheDataPath)
+        /// <summary>
+        /// Loads cache data from a specific location
+        /// </summary>
+        /// <param name="contentStateDataPath"></param>
+        /// <returns></returns>
+        public static AddressablesContentState LoadCacheData(string contentStateDataPath)
         {
-            if (string.IsNullOrEmpty(cacheDataPath))
+            return LoadContentState(contentStateDataPath);
+        }
+
+        /// <summary>
+        /// Loads cache data from a specific location
+        /// </summary>
+        /// <param name="contentStateDataPath"></param>
+        /// <returns></returns>
+        public static AddressablesContentState LoadContentState(string contentStateDataPath)
+        {
+            if (string.IsNullOrEmpty(contentStateDataPath))
+            {
+                Debug.LogErrorFormat("Unable to load cache data from {0}.", contentStateDataPath);
                 return null;
-            var stream = new FileStream(cacheDataPath, FileMode.Open, FileAccess.Read);
+            }
+            var stream = new FileStream(contentStateDataPath, FileMode.Open, FileAccess.Read);
             var formatter = new BinaryFormatter();
-            var cacheData = formatter.Deserialize(stream) as CachedData;
+            var cacheData = formatter.Deserialize(stream) as AddressablesContentState;
             if (cacheData == null)
             {
-                Addressables.LogError("Invalid hash data file.  This file is usually named cachedata.bin and is built into the streaming assets path of a player build.");
+                Addressables.LogError("Invalid hash data file.  This file is usually named addressables_content_state.bin and is built into the streaming assets path of a player build.");
                 return null;
             }
             return cacheData;
         }
 
         static bool streamingAssetsExists = false;
-        public static void BuildContentUpdate(string buildPath)
+        static string kStreamingAssetsPath = "Assets/StreamingAssets";
+
+        internal static void Cleanup(bool deleteStreamingAssetsFolderIfEmpty)
         {
-            BuildContentUpdate(AddressableAssetSettings.GetDefault(false, false), buildPath);
+            if (Directory.Exists(Addressables.BuildPath))
+            {
+                Directory.Delete(Addressables.BuildPath, true);
+                if (File.Exists(Addressables.BuildPath + ".meta"))
+                    File.Delete(Addressables.BuildPath + ".meta");
+            }
+            if (deleteStreamingAssetsFolderIfEmpty)
+            {
+                if (Directory.Exists(kStreamingAssetsPath))
+                {
+                    var files = Directory.GetFiles(kStreamingAssetsPath);
+                    if (files.Length == 0)
+                    {
+                        Directory.Delete(kStreamingAssetsPath);
+                        if (File.Exists(kStreamingAssetsPath + ".meta"))
+                            File.Delete(kStreamingAssetsPath + ".meta");
+
+                    }
+                }
+            }
         }
 
-        internal static bool BuildContentUpdate(AddressableAssetSettings settings, string buildPath)
+        /// <summary>
+        /// Builds player content using the player content version from a specified cache file.
+        /// </summary>
+        /// <param name="settings">The settings object to use for the build.</param>
+        /// <param name="contentStateDataPath">The path of the cache data to use.</param>
+        /// <returns>The build operation.</returns>
+        public static AddressablesPlayerBuildResult BuildContentUpdate(AddressableAssetSettings settings, string contentStateDataPath)
         {
-            var cacheDataPath = string.IsNullOrEmpty(buildPath) ? GetCacheDataPath(true) : Path.Combine(buildPath, "cachedata.bin");
-            var cacheData = LoadCacheData(cacheDataPath);
+            var cacheData = LoadCacheData(contentStateDataPath);
             if (cacheData == null)
-                return false;
+                return null;
 
             streamingAssetsExists = Directory.Exists("Assets/StreamingAssets");
+            var context = new AddressablesBuildDataBuilderContext(settings, 
+                BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
+                EditorUserBuildSettings.activeBuildTarget, 
+                false, 
+                false, 
+                cacheData.m_playerVersion);
+
             SceneManagerState.Record();
-            string unusedCacheDataPath;
-            BuildScript.PrepareRuntimeData(false, false, false, true, false, BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), EditorUserBuildSettings.activeBuildTarget, cacheData.m_playerVersion, ResourceManagerRuntimeData.EditorPlayMode.PackedMode, out unusedCacheDataPath);
+            var buildOp = settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
             SceneManagerState.Restore();
-            BuildScript.Cleanup(!streamingAssetsExists);
-
-            return BuildScript.BuildDataForPlayMode(cacheData.m_playerVersion, ResourceManagerRuntimeData.EditorPlayMode.PackedMode);
+            Cleanup(!streamingAssetsExists);
+            return buildOp;
         }
 
-        public static void PrepareForContentUpdate(string buildPath, bool showConfirmationWindow)
+        internal static List<AddressableAssetEntry> GatherModifiedEntries(AddressableAssetSettings settings, string cacheDataPath)
         {
-            PrepareForContentUpdate(AddressableAssetSettings.GetDefault(false, false), buildPath, showConfirmationWindow);
-
-        }
-
-        internal static bool PrepareForContentUpdate(AddressableAssetSettings settings, string buildPath, bool showConfirmationWindow)
-        {
-            var cacheDataPath = string.IsNullOrEmpty(buildPath) ? GetCacheDataPath(true) : Path.Combine(buildPath, "cachedata.bin");
             var cacheData = LoadCacheData(cacheDataPath);
             if (cacheData == null)
-                return false;
+            {
+                return null;
+            }
 
             var allEntries = new List<AddressableAssetEntry>();
-            foreach (var group in settings.groups)
-                if (group.StaticContent)
-                    foreach (var entry in group.entries)
-                        entry.GatherAllAssets(allEntries, true, true);
+            settings.GetAllAssets(allEntries, g => g.HasSchema<BundledAssetGroupSchema>() && g.GetSchema<ContentUpdateGroupSchema>().StaticContent);
 
             var entryToCacheInfo = new Dictionary<string, CachedInfo>();
             foreach (var cacheInfo in cacheData.m_cachedInfos)
@@ -163,184 +256,27 @@ namespace UnityEditor.AddressableAssets
                 if (!entryToCacheInfo.TryGetValue(entry.guid, out info) || buildCache.NeedsRebuild(info))
                     modifiedEntries.Add(entry);
             }
-            if (showConfirmationWindow)
-            {
-                var previewWindow = EditorWindow.GetWindow<ContentUpdatePreviewWindow>();
-                previewWindow.Show(settings, modifiedEntries);
-            }
-            else
-            {
-                CreateContentUpdateGroup(settings, modifiedEntries);
-            }
-            return true;
+            return modifiedEntries;
         }
 
-        internal static void CreateContentUpdateGroup(AddressableAssetSettings settings, List<AddressableAssetEntry> items)
+        /// <summary>
+        /// Create a new AddressableAssetGroup with the items and mark it as remote.
+        /// </summary>
+        /// <param name="settings">The settings object.</param>
+        /// <param name="items">The items to move.</param>
+        /// <param name="groupName">The name of the new group.</param>
+        public static void CreateContentUpdateGroup(AddressableAssetSettings settings, List<AddressableAssetEntry> items, string groupName)
         {
-            var contentGroup = settings.CreateGroup(settings.FindUniqueGroupName("Content Update"), typeof(BundledAssetGroupProcessor), false, false, true);
-            contentGroup.Data.SetData("BuildPath", settings.profileSettings.CreateValue("RemoteBuildPath", Addressables.BuildPath));
-            contentGroup.Data.SetData("LoadPath", settings.profileSettings.CreateValue("RemoteLoadPath", "http://localhost/[BuildTarget]"));
+            var contentGroup = settings.CreateGroup(settings.FindUniqueGroupName(groupName), false, false, true);
+            var schema = contentGroup.AddSchema<BundledAssetGroupSchema>();
+            schema.BuildPath.SetVariableByName(settings, AddressableAssetSettings.kRemoteBuildPath);
+            schema.LoadPath.SetVariableByName(settings, AddressableAssetSettings.kRemoteLoadPath);
+            schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
+            contentGroup.AddSchema<ContentUpdateGroupSchema>().StaticContent = false;
             settings.MoveEntriesToGroup(items, contentGroup);
         }
 
     }
 
-    class ContentUpdatePreviewWindow : EditorWindow
-    {
-        class ContentUpdateTreeView : TreeView
-        {
-            class Item : TreeViewItem
-            {
-                internal AddressableAssetEntry m_entry;
-                internal bool m_enabled;
-                public Item(AddressableAssetEntry entry) : base(entry.guid.GetHashCode())
-                {
-                    m_entry = entry;
-                    m_enabled = true;
-                }
-            }
-
-            ContentUpdatePreviewWindow m_preview;
-            public ContentUpdateTreeView(ContentUpdatePreviewWindow preview, TreeViewState state, MultiColumnHeaderState mchs) : base(state, new MultiColumnHeader(mchs))
-            {
-                m_preview = preview;
-            }
-
-            internal List<AddressableAssetEntry> GetEnabledEntries()
-            {
-                var result = new List<AddressableAssetEntry>();
-                foreach (var i in GetRows())
-                {
-                    var item = i as Item;
-                    if (item != null)
-                    {
-                        if (item.m_enabled)
-                            result.Add(item.m_entry);
-                    }
-                }
-                return result;
-            }
-
-            protected override TreeViewItem BuildRoot()
-            {
-                var root = new TreeViewItem(-1, -1);
-                root.children = new List<TreeViewItem>();
-                foreach (var k in m_preview.m_entries)
-                    root.AddChild(new Item(k));
-
-                return root;
-            }
-
-            protected override void RowGUI(RowGUIArgs args)
-            {
-                var item = args.item as Item;
-                if (item == null)
-                {
-                    base.RowGUI(args);
-                    return;
-                }
-                for (int i = 0; i < args.GetNumVisibleColumns(); ++i)
-                {
-                    CellGUI(args.GetCellRect(i), item, args.GetColumn(i), ref args);
-                }
-            }
-            private void CellGUI(Rect cellRect, Item item, int column, ref RowGUIArgs args)
-            {
-                if (column == 0)
-                {
-                    item.m_enabled = EditorGUI.Toggle(cellRect, item.m_enabled);
-                }
-                else if (column == 1)
-                {
-                    EditorGUI.LabelField(cellRect, item.m_entry.address);
-                }
-                else if (column == 2)
-                {
-                    EditorGUI.LabelField(cellRect, item.m_entry.AssetPath);
-                }
-            }
-
-            internal static MultiColumnHeaderState CreateDefaultMultiColumnHeaderState()
-            {
-                var retVal = new MultiColumnHeaderState.Column[3];
-                retVal[0] = new MultiColumnHeaderState.Column();
-                retVal[0].headerContent = new GUIContent("Include", "Include change in Update");
-                retVal[0].minWidth = 50;
-                retVal[0].width = 50;
-                retVal[0].maxWidth = 50;
-                retVal[0].headerTextAlignment = TextAlignment.Left;
-                retVal[0].canSort = true;
-                retVal[0].autoResize = true;
-
-                retVal[1] = new MultiColumnHeaderState.Column();
-                retVal[1].headerContent = new GUIContent("Address", "Data Value");
-                retVal[1].minWidth = 300;
-                retVal[1].width = 500;
-                retVal[1].maxWidth = 1000;
-                retVal[1].headerTextAlignment = TextAlignment.Left;
-                retVal[1].canSort = true;
-                retVal[1].autoResize = true;
-
-                retVal[2] = new MultiColumnHeaderState.Column();
-                retVal[2].headerContent = new GUIContent("Path", "Asset Path");
-                retVal[2].minWidth = 300;
-                retVal[2].width = 800;
-                retVal[2].maxWidth = 1000;
-                retVal[2].headerTextAlignment = TextAlignment.Left;
-                retVal[2].canSort = true;
-                retVal[2].autoResize = true;
-
-                return new MultiColumnHeaderState(retVal);
-            }
-        }
-
-        AddressableAssetSettings m_settings;
-        List<AddressableAssetEntry> m_entries;
-        Vector2 m_scrollPosition;
-        ContentUpdateTreeView tree = null;
-        [SerializeField]
-        TreeViewState treeState;
-        [SerializeField]
-        MultiColumnHeaderState mchs;
-
-        public void Show(AddressableAssetSettings settings, List<AddressableAssetEntry> entries)
-        {
-            m_settings = settings;
-            m_entries = entries;
-            Show();
-        }
-
-        public void OnGUI()
-        {
-            if (m_entries == null)
-                return;
-            Rect contentRect = new Rect(0, 0, position.width, position.height - 50);
-            if (tree == null)
-            {
-                if (treeState == null)
-                    treeState = new TreeViewState();
-
-                var headerState = ContentUpdateTreeView.CreateDefaultMultiColumnHeaderState();
-                if (MultiColumnHeaderState.CanOverwriteSerializedFields(mchs, headerState))
-                    MultiColumnHeaderState.OverwriteSerializedFields(mchs, headerState);
-                mchs = headerState;
-
-                tree = new ContentUpdateTreeView(this, treeState, mchs);
-                tree.Reload();
-            }
-
-            tree.OnGUI(contentRect);
-            GUILayout.BeginArea(new Rect(0, position.height - 50, position.width, 50));
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Cancel"))
-                Close();
-            if (GUILayout.Button("Apply Changes"))
-            {
-                ContentUpdateScript.CreateContentUpdateGroup(m_settings, tree.GetEnabledEntries());
-                Close();
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.EndArea();
-        }
-    }
+ 
 }

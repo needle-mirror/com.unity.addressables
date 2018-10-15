@@ -25,7 +25,7 @@ namespace UnityEditor.AddressableAssets
             set
             {
                 m_compression = value;
-                PostModificationEvent();
+                SetDirty();
             }
         }
 
@@ -44,7 +44,7 @@ namespace UnityEditor.AddressableAssets
             set
             {
                 m_compileScriptsInVirtualMode = value;
-                PostModificationEvent();
+                SetDirty();
             }
         }
         [UnityEngine.SerializeField]
@@ -59,12 +59,22 @@ namespace UnityEditor.AddressableAssets
             set
             {
                 m_cleanupStreamingAssetsAfterBuilds = value;
-                PostModificationEvent();
+                SetDirty();
             }
         }
         [UnityEngine.SerializeField]
         private bool m_cleanupStreamingAssetsAfterBuilds = true;
 
+        [UnityEngine.SerializeField]
+        private bool m_logResourceManagerExceptions = true;
+        /// <summary>
+        /// When enabled, the ResourceManager.ExceptionHandler is set to (op, ex) => Debug.LogException(ex);
+        /// </summary>
+        public bool LogResourceManagerExceptions
+        {
+            get { return m_logResourceManagerExceptions; }
+            set { m_logResourceManagerExceptions = value; }
+        }
 
         /// <summary>
         /// //Specifies where to build asset bundles, this is usually a temporary folder (or a folder in the project).  Bundles are copied out of this location to their final destination.
@@ -75,7 +85,7 @@ namespace UnityEditor.AddressableAssets
             set
             {
                 m_bundleBuildPath = value;
-                PostModificationEvent();
+                SetDirty();
             }
         }
 
@@ -89,10 +99,10 @@ namespace UnityEditor.AddressableAssets
 
         [NonSerialized]
         AddressableAssetSettings m_Settings;
-        void PostModificationEvent()
+        void SetDirty()
         {
             if (m_Settings != null)
-                m_Settings.PostModificationEvent(AddressableAssetSettings.ModificationEvent.BuildSettingsChanged, this);
+                m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.BuildSettingsChanged, this, true);
         }
         internal void OnAfterDeserialize(AddressableAssetSettings settings)
         {

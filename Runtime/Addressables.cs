@@ -66,6 +66,10 @@ namespace UnityEngine.AddressableAssets
             Intersection
         }
 
+        /// <summary>
+        /// The name of the PlayerPrefs value used to set the path to load the addressables runtime data file. 
+        /// </summary>
+        public const string kAddressablesRuntimeDataPath = "AddressablesRuntimeDataPath";
         const string kAddressablesLogConditional = "ADDRESSABLES_LOG_ALL";
 
         /// <summary>
@@ -238,6 +242,15 @@ namespace UnityEngine.AddressableAssets
                             current.UnionWith(locs);
                     }
                 }
+                else
+                {
+                    //if entries for a key are not found, the intersection is empty
+                    if (merge == MergeMode.Intersection)
+                    {
+                        locations = null;
+                        return false;
+                    }
+                }
             }
 
             if (current == null)
@@ -250,6 +263,13 @@ namespace UnityEngine.AddressableAssets
         [RuntimeInitializeOnLoadMethod]
         private static void RuntimeInitialization()
         {
+            //these need to be referenced in order to prevent stripping on IL2CPP platforms.
+            var sap = Application.streamingAssetsPath;
+            var pdp = Application.persistentDataPath;
+            Debug.LogFormat("Using StreamingAssetsPath {0}.", sap);
+            Debug.LogFormat("Using PersistentDataPath {0}.", pdp);
+            ResourceManager.ExceptionHandler = (op, ex) => Debug.LogException(ex);
+            ResourceManager.OnResolveInternalId = AddressablesRuntimeProperties.EvaluateString;
 #if !ADDRESSABLES_DISABLE_AUTO_INITIALIZATION
             Initialize();
 #endif
@@ -265,10 +285,10 @@ namespace UnityEngine.AddressableAssets
             if (s_initializationOperation != null)
                 return s_initializationOperation;
 
-            int playModePref = PlayerPrefs.GetInt("AddressablesPlayMode", (int)ResourceManagerRuntimeData.EditorPlayMode.PackedMode);
-            var playMode = (ResourceManagerRuntimeData.EditorPlayMode)playModePref;
-            if (playMode == ResourceManagerRuntimeData.EditorPlayMode.Invalid)
-                return new CompletedOperation<IResourceLocator>().Start(null, null, null);
+            var runtimeDataPath = ResourceManager.ResolveInternalId(PlayerPrefs.GetString(kAddressablesRuntimeDataPath, RuntimePath + "/settings.json"));
+
+            if (string.IsNullOrEmpty(runtimeDataPath))
+                return new CompletedOperation<IResourceLocator>().Start(null, null, null, new InvalidKeyException(runtimeDataPath));
 
             if (!Application.isPlaying)
                 Addressables.LogWarning("Addressables are not available in edit mode.");
@@ -280,7 +300,7 @@ namespace UnityEngine.AddressableAssets
             s_recordInstanceListAction = RecordInstanceListLocation;
             ResourceManagement.Diagnostics.DiagnosticEventCollector.ResourceManagerProfilerEventsEnabled = true;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
-            return (s_initializationOperation = new InitializationOperation(playMode));
+            return (s_initializationOperation = new InitializationOperation(runtimeDataPath, true));
         }
 
         /// <summary>
@@ -291,8 +311,8 @@ namespace UnityEngine.AddressableAssets
         public static IAsyncOperation<IResourceLocator> LoadCatalogsFromRuntimeData(string runtimeDataPath)
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IResourceLocator, IResourceLocator>>().Start(null, runtimeDataPath, InitializationOperation, (op) => new InitializationOperation(runtimeDataPath)).Retain();
-            return new InitializationOperation(runtimeDataPath);
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IResourceLocator, IResourceLocator>>().Start(null, runtimeDataPath, InitializationOperation, (op) => new InitializationOperation(runtimeDataPath, false)).Retain();
+            return new InitializationOperation(runtimeDataPath, false);
         }
 
         /// <summary>
@@ -479,7 +499,7 @@ namespace UnityEngine.AddressableAssets
                     var provider = ResourceManager.GetResourceProvider<TObject>(loc);
                     if (provider != null)
                     {
-                        var op = provider.Provide<TObject>(loc, ResourceManager.LoadDependencies(loc));
+                        var op = provider.Provide<TObject>(loc, ResourceManager.LoadDependencies(loc)).Retain();
                         (op as IAsyncOperation).Completed += s_recordAssetAction;
                         op.Key = key;
                         return op;
@@ -487,7 +507,7 @@ namespace UnityEngine.AddressableAssets
                 }
                 throw new UnknownResourceProviderException(locations[0]);
             }
-            return new CompletedOperation<TObject>().Start(null, key, null);
+            return new CompletedOperation<TObject>().Start(null, key, null, new InvalidKeyException(key));
         }
 
         /// <summary>

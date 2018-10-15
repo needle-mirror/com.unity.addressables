@@ -86,6 +86,7 @@ namespace UnityEngine.AddressableAssets
     {
         [SerializeField]
         private string m_assetGUID;
+        private Object m_loadedAsset;
 
         /// <summary>
         /// The actual key used to request the asset at runtime.
@@ -106,6 +107,17 @@ namespace UnityEngine.AddressableAssets
         public AssetReference(string guid)
         {
             m_assetGUID = guid;
+        }
+
+        /// <summary>
+        /// The loaded asset.  This value is only set after the IAsyncOperation returned from LoadAsset completes.  It will not be set if only Instantiate is called.  It will be set to null if release is called.
+        /// </summary>
+        public Object Asset
+        {
+            get
+            {
+                return m_loadedAsset;
+            }
         }
 
 #if UNITY_EDITOR
@@ -132,7 +144,9 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The load operation.</returns>
         public IAsyncOperation<TObject> LoadAsset<TObject>() where TObject : Object
         {
-            return Addressables.LoadAsset<TObject>(RuntimeKey);
+            var loadOp = Addressables.LoadAsset<TObject>(RuntimeKey);
+            loadOp.Completed += (op) => m_loadedAsset = op.Result;
+            return loadOp;
         }
 
         /// <summary>
@@ -164,10 +178,37 @@ namespace UnityEngine.AddressableAssets
         /// Release the refrerenced asset.
         /// </summary>
         /// <typeparam name="TObject">The object type.</typeparam>
-        /// <param name="obj">The object to release.</param>
-        public void ReleaseAsset<TObject>(TObject obj) where TObject : Object
+        [System.Obsolete("Use ReleaseAsset without parameters.  It will release the asset loaded via LoadAsset.")]
+        public void ReleaseAsset<TObject>(Object asset) where TObject : Object
         {
-            Addressables.ReleaseAsset(obj);
+            if (asset != m_loadedAsset)
+            {
+                Debug.LogWarning("Attempting to release the wrong asset to an AssetReference.");
+                return;
+            }
+            if (m_loadedAsset == null)
+            {
+                Debug.LogWarning("Cannot release null asset.");
+                return;
+            }
+            Addressables.ReleaseAsset(m_loadedAsset);
+            m_loadedAsset = null;
+        }
+
+
+        /// <summary>
+        /// Release the refrerenced asset.
+        /// </summary>
+        /// <typeparam name="TObject">The object type.</typeparam>
+        public void ReleaseAsset<TObject>() where TObject : Object
+        {
+            if (m_loadedAsset == null)
+            {
+                Debug.LogWarning("Cannot release null asset.");
+                return;
+            }
+            Addressables.ReleaseAsset(m_loadedAsset);
+            m_loadedAsset = null;
         }
 
         /// <summary>

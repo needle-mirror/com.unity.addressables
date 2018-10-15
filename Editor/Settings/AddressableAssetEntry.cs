@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
+using System.Linq;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -75,15 +76,28 @@ namespace UnityEditor.AddressableAssets
                 m_address = address;
                 if (string.IsNullOrEmpty(m_address))
                     m_address = AssetPath;
-                if (postEvent)
-                    PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryModified, this);
+                SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
             }
         }
 
         /// <summary>
         /// Read only state of the entry.
         /// </summary>
-        public bool ReadOnly { get { return m_readOnly; } set { if (m_readOnly != value) { m_readOnly = value; PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryModified, this); } } }
+        public bool ReadOnly
+        {
+            get
+            {
+                return m_readOnly;
+            }
+            set
+            {
+                if (m_readOnly != value)
+                {
+                    m_readOnly = value;
+                    SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, true);
+                }
+            }
+        }
 
         /// <summary>
         /// Is the asset in a resource folder.
@@ -135,8 +149,7 @@ namespace UnityEditor.AddressableAssets
             {
                 if (m_labels.Add(label))
                 {
-                    if (postEvent)
-                        PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryModified, this);
+                    SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
                     return true;
                 }
             }
@@ -144,12 +157,39 @@ namespace UnityEditor.AddressableAssets
             {
                 if (m_labels.Remove(label))
                 {
-                    if (postEvent)
-                        PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryModified, this);
+                    SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
                     return true;
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// Creates a list of keys that can be used to load this entry.
+        /// </summary>
+        /// <returns>The list of keys.  This will contain the address, the guid as a Hash128 if valid, all assigned labels, and the scene index if applicable.</returns>
+        public List<object> CreateKeyList()
+        {
+            var keys = new List<object>();
+            //the address must be the first key
+            keys.Add(address);
+            var h = Hash128.Parse(guid);
+            if (h.isValid)
+                keys.Add(h);
+            if (IsScene && IsInSceneList)
+            {
+                var g = new GUID(guid);
+                for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
+                    if (EditorBuildSettings.scenes[i].guid == g)
+                        keys.Add(i);
+            }
+
+            if (labels != null)
+            {
+                foreach (var l in labels)
+                    keys.Add(l);
+            }
+            return keys;
         }
 
         internal AddressableAssetEntry(string guid, string address, AddressableAssetGroup parent, bool readOnly)
@@ -177,10 +217,10 @@ namespace UnityEditor.AddressableAssets
         }
 
 
-        internal void PostModificationEvent(AddressableAssetSettings.ModificationEvent e, object o)
+        internal void SetDirty(AddressableAssetSettings.ModificationEvent e, object o, bool postEvent)
         {
             if (parentGroup != null)
-                parentGroup.PostModificationEvent(e, o);
+                parentGroup.SetDirty(e, o, postEvent);
         }
 
         static bool IsValidAsset(string p)
@@ -217,20 +257,15 @@ namespace UnityEditor.AddressableAssets
             if (!IsScene)
             {
                 var path = AssetPath;
-                int ri = path.ToLower().LastIndexOf("resources/");
-                if (ri == 0 || (ri > 0 && path[ri - 1] == '/'))
-                {
-                    path = path.Substring(ri + "resources/".Length);
-                    int i = path.LastIndexOf('.');
-                    if (i > 0)
-                        path = path.Substring(0, i);
-                }
+                int ri = path.ToLower().LastIndexOf("/resources/");
+                if (ri >= 0)
+                    path = GetResourcesPath(AssetPath);
                 return path;
             }
             else
             {
                 if (isBundled)
-                    return AssetPath;// Path.GetFileNameWithoutExtension(assetPath);
+                    return AssetPath;
                 var path = AssetPath;
                 int i = path.LastIndexOf(".unity");
                 if (i > 0)
@@ -246,9 +281,9 @@ namespace UnityEditor.AddressableAssets
         static string GetResourcesPath(string path)
         {
             path = path.Replace('\\', '/');
-            int ri = path.ToLower().LastIndexOf("resources/");
-            if (ri == 0 || (ri > 0 && path[ri - 1] == '/'))
-                path = path.Substring(ri + "resources/".Length);
+            int ri = path.ToLower().LastIndexOf("/resources/");
+            if (ri >= 0)
+                path = path.Substring(ri + "/resources/".Length);
             int i = path.LastIndexOf('.');
             if (i > 0)
                 path = path.Substring(0, i);

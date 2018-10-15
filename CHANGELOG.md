@@ -4,6 +4,37 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.4.6-preview] - 2018-10-16
+ - MINIMUM RECOMMENDED VERSION - 2018.2.11+ 
+   - We have re-enabled the addressables checkbox. Versions of 2018.2 older than the .11 release will work unless you attempt to view the Animation Import Settings inspector.  If you do have animations you need to inspect, use .11+. If you do not, use any official release version of 2018.2.
+ - refactored the way IResourceProviders are initialized in the player - serialized data is constructed at runtime to control how the providers are configured
+ - added readonly custom inspector for AddressableAssetEntryCollection
+ - AssetReference now stores the loaded asset which can be accessed via the Asset property after LoadAsset completes.  ReleaseAsset has been modified to not need the asset passed in (the old version is marked obsolete]
+ - fixed profiler details view not updating when a mouse drag is completed
+ - fixed null-ref when moving Resources to Addressables when there are no Resources
+ - blocked moving EditorSceneList within GUI
+ - fixed cap on address name length
+ - fixed workflows of marking Resources as addressable and moving an addressable into Resources.
+ - fixed issue where AssetReferenceDrawer did not mark scene as dirty when changed.
+ - added Hosting Services feature; provides extensible framework and implementation for serving packed content to player builds from the Editor
+ - replaced addressables buildscript with an interface based system.  IDataBuilder class is now used to define builders of specific types of data.  The Addressables settings object
+   contains a collection of data builders and uses these to create player and play mode data.  Users can implemented custom data builders to control the build process.
+ - replaced AssetGroupProcessors with a collection of AssetGroupSchema objects.  The difference is that the schema objects only contain data and groups can have multiple schemas.  The 
+   logic for processing groups now resides in the build script and uses the schemas as data sources and filters for how to build.
+ - Added Initialization objects that can be created during the build to run during addressables initialization
+ - Implemented Caching API initialization with initialization objects
+ - Changed some API and tests to work with 2019.x
+ - fixed how AssetReference's draw when within lists, arrays, or contained classes
+ - Fixed the workflow of scenes moving in and out of the Editor Build Settings Scene list. 
+ - Removed "Preview" and added "Analyze". 
+   - The new system runs any rules it knows about. 
+   - Currently this is one rule that is manually set up in code. Future work will have additional rules, and expose the ability to create/add user- or project-specific rules
+   - This process can be slow, as it runs most of a build to get accurate data.
+   - Within the Analyze window there is a "fix" button that allows each rule to fix any issues if the rule knows how. 
+   - The current rule is a "check duplicate asset" rule. This looks for assets that are pulled into multiple asset bundles due to dependency calculations. The way it fixes things is to move all of those into a newly created group.
+ - Added option to toggle logging of all exceptions within the Resource Manager
+ - Refactored initialization of the addressable asset settings to prevent it getting into a bad state.
+
 ## [0.3.5-preview] - 2018-09-05
  - implemented content update workflow.  Added a dropdown to the "Build" button on main window's toolbar.   
     - "Build/Prepare for Content Update" will detect assets in locked bundles (bundles flagged as static, by default all local bundles).
@@ -46,7 +77,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - removed not-helpful "Build/Build Packed Data" item from menu.  
  - fixed bug where you could no longer create groups, and group assets were not named correctly
  
- ## [0.2.2-preview] - 2018-08-08
+## [0.2.2-preview] - 2018-08-08
  - disabled asset inspector gui for addressables checkbox due to editor bug
  
 ## [0.2.1-preview] - 2018-07-26

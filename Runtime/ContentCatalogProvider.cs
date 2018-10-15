@@ -22,24 +22,24 @@ namespace UnityEngine.AddressableAssets
                 {
                     if (op.Result.Count == 2)
                     {
-                        var localHash = op.Result[0] as string;
-                        var remoteHash = op.Result[1] as string;
-                        Addressables.LogFormat("Addressables - ContentCatalogProvider LocalHash = {0}, RemoteHash = {1}.", localHash, remoteHash);
+                        var remoteHash = op.Result[0] as string;
+						var localHash = op.Result[1] as string;
+						Addressables.LogFormat("Addressables - ContentCatalogProvider LocalHash = {0}, RemoteHash = {1}.", localHash, remoteHash);
 
                         if (remoteHash == localHash || string.IsNullOrEmpty(remoteHash))
                         {
-                            if (string.IsNullOrEmpty(remoteHash))
-                                Addressables.LogFormat("Addressables - Unable to load remote catalog hash: {0}.", op.OperationException);
+                            if (string.IsNullOrEmpty(localHash))
+                                Addressables.LogFormat("Addressables - Unable to load localHash catalog hash: {0}.", op.OperationException);
                             var depOps = op.Context as IList<IResourceLocation>;
-                            var localDataPath = depOps[0].InternalId.Replace(".hash", ".json");
+                            var localDataPath = depOps[1].InternalId.Replace(".hash", ".json");
                             Addressables.LogFormat("Addressables - Using content catalog from {0}.", localDataPath);
                             ResourceManager.ProvideResource<ContentCatalogData>(new ResourceLocationBase(localDataPath, localDataPath, typeof(JsonAssetProvider).FullName)).Completed += OnCatalogLoaded;
                         }
                         else
                         {
                             var depOps = op.Context as IList<IResourceLocation>;
-                            var remoteDataPath = depOps[1].InternalId.Replace(".hash", ".json");
-                            m_localDataPath = depOps[0].InternalId.Replace(".hash", ".json");
+                            var remoteDataPath = depOps[0].InternalId.Replace(".hash", ".json");
+                            m_localDataPath = depOps[1].InternalId.Replace(".hash", ".json");
                             m_hashValue = remoteHash;
                             Addressables.LogFormat("Addressables - Using content catalog from {0}.", remoteDataPath);
                             ResourceManager.ProvideResource<ContentCatalogData>(new ResourceLocationBase(remoteDataPath, remoteDataPath, typeof(JsonAssetProvider).FullName)).Completed += OnCatalogLoaded;

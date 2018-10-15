@@ -16,22 +16,19 @@ namespace UnityEditor.AddressableAssets
         [SerializeField]
         private string m_name;
         [SerializeField]
-        private KeyDataStore m_data = new KeyDataStore();
+        private KeyDataStore m_data;
         [SerializeField]
         private string m_guid;
-        [SerializeField]
-        private string m_processorAssembly;
-        [SerializeField]
-        private string m_processorClass;
         [SerializeField]
         private List<AddressableAssetEntry> m_serializeEntries = new List<AddressableAssetEntry>();
         [SerializeField]
         private bool m_readOnly;
         [SerializeField]
         private AddressableAssetSettings m_settings;
+        [SerializeField]
+        private AddressableAssetGroupSchemaSet m_schemaSet = new AddressableAssetGroupSchemaSet();
 
         private Dictionary<string, AddressableAssetEntry> entryMap = new Dictionary<string, AddressableAssetEntry>();
-        private AssetGroupProcessor m_processor;
 
         /// <summary>
         /// The group name.
@@ -48,6 +45,10 @@ namespace UnityEditor.AddressableAssets
             set
             {
                 m_name = value;
+                m_name = m_name.Replace('/', '-');
+                m_name = m_name.Replace('\\', '-');
+                if(m_name != value)
+                    Debug.Log("Group names cannot include '\\' or '/'.  Replacing with '-'. " + m_name);
                 if (m_name != name)
                 {
                     string guid;
@@ -59,12 +60,25 @@ namespace UnityEditor.AddressableAssets
                         {
                             var newPath = path.Replace(name, m_name);
                             if (path != newPath)
-                                AssetDatabase.MoveAsset(path, newPath);
+                            {
+                                var setPath = AssetDatabase.MoveAsset(path, newPath);
+                                if (!string.IsNullOrEmpty(setPath))
+                                {
+                                    //unable to rename group due to invalid file name
+                                    Debug.LogError("Rename of Group failed. " + setPath);
+                                }
+                                m_name = name;
+                                
+                            }
                         }
                     }
-                    name = m_name;
+                    else
+                    {
+                        //this isn't a valid asset, which means it wasn't persisted, so just set the object name to the desired display name.
+                        name = m_name;
+                    }
+                    SetDirty(AddressableAssetSettings.ModificationEvent.GroupRenamed, this, true);
                 }
-                PostModificationEvent(AddressableAssetSettings.ModificationEvent.GroupRenamed, this);
             }
         }
         /// <summary>
@@ -81,36 +95,129 @@ namespace UnityEditor.AddressableAssets
         }
 
         /// <summary>
-        /// Is the group static.  This property is used in determining which assets need to be moved to a new remote group during the content update process.
+        /// List of schemas for this group.
         /// </summary>
-        public virtual bool StaticContent
-        {
-            get
-            {
-                return Data.GetData("StaticContent", false, true);
-            }
+        public List<AddressableAssetGroupSchema> Schemas { get { return m_schemaSet.Schemas; } }
 
-            set
-            {
-                Data.SetData("StaticContent", value);
-            }
-        }
-
-        internal void SetNameIfInvalid(string name)
+        string GetSchemaAssetPath(Type type)
         {
-            if (string.IsNullOrEmpty(m_name))
-                m_name = name;
+            return Settings.IsPersisted ? (Settings.GroupSchemaFolder + "/" + m_guid + "_" + type.Name + ".asset") : string.Empty;
         }
 
         /// <summary>
-        /// Check the processor type of this group.
+        /// Adds a copy of the provided schema object.
         /// </summary>
-        /// <param name="processorType">The processor type.</param>
-        /// <returns>True if this group has the same processor type.</returns>
-        //[Obsolete("This API is going to be replaced soon with a more flexible build system.")]
-        public virtual bool IsProcessorType(Type processorType)
+        /// <param name="schema">The schema to add. A copy will be made and saved in a folder relative to the main Addressables settings asset. </param>
+        /// <returns>The created schema object.</returns>
+        public AddressableAssetGroupSchema AddSchema(AddressableAssetGroupSchema schema, bool postEvent = true)
         {
-            return m_processorClass == processorType.FullName && m_processorAssembly == processorType.Assembly.FullName;
+            var added = m_schemaSet.AddSchema(schema, GetSchemaAssetPath);
+            if (added != null)
+            {
+                added.Group = this;
+                SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaAdded, this, postEvent);
+            }
+            return added;
+        }
+
+        /// <summary>
+        /// Creates and adds a schema of a given type to this group.  The schema asset will be created in the GroupSchemas directory relative to the settings asset.
+        /// </summary>
+        /// <param name="type">The schema type. This type must not already be added.</param>
+        /// <returns>The created schema object.</returns>
+        public AddressableAssetGroupSchema AddSchema(Type type, bool postEvent = true)
+        {
+            var added = m_schemaSet.AddSchema(type, GetSchemaAssetPath);
+            if (added != null)
+            {
+                added.Group = this;
+                SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaAdded, this, postEvent);
+            }
+            return added;
+        }
+
+        /// <summary>
+        /// Creates and adds a schema of a given type to this group.
+        /// </summary>
+        /// <typeparam name="TSchema">The schema type. This type must not already be added.</typeparam>
+        /// <returns>The created schema object.</returns>
+        public TSchema AddSchema<TSchema>(bool postEvent = true) where TSchema : AddressableAssetGroupSchema
+        {
+            return AddSchema(typeof(TSchema), postEvent) as TSchema;
+        }
+
+        /// <summary>
+        ///  Remove a given schema from this group.
+        /// </summary>
+        /// <param name="type">The schema type.</param>
+        /// <returns>True if the schema was found and removed, false otherwise.</returns>
+        public bool RemoveSchema(Type type, bool postEvent = true)
+        {
+            if (!m_schemaSet.RemoveSchema(type))
+                return false;
+
+            SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaRemoved, this, postEvent);
+            return true;
+        }
+
+        /// <summary>
+        ///  Remove a given schema from this group.
+        /// </summary>
+        /// <typeparam name="TSchema">The schema type.</typeparam>
+        /// <returns>True if the schema was found and removed, false otherwise.</returns>
+        public bool RemoveSchema<TSchema>(bool postEvent = true)
+        {
+            return RemoveSchema(typeof(TSchema), postEvent);
+        }
+        
+        /// <summary>
+        /// Gets an added schema of the specified type.
+        /// </summary>
+        /// <typeparam name="TSchema">The schema type.</typeparam>
+        /// <returns>The schema if found, otherwise null.</returns>
+        public TSchema GetSchema<TSchema>() where TSchema : AddressableAssetGroupSchema
+        {
+            return GetSchema(typeof(TSchema)) as TSchema;
+        }
+
+        /// <summary>
+        /// Gets an added schema of the specified type.
+        /// </summary>
+        /// <param name="type">The schema type.</typeparam>
+        /// <returns>The schema if found, otherwise null.</returns>
+        public AddressableAssetGroupSchema GetSchema(Type type)
+        {
+            return m_schemaSet.GetSchema(type);
+        }
+
+        /// <summary>
+        /// Checks if the group contains a schema of a given type.
+        /// </summary>
+        /// <typeparam name="TSchema">The schema type.</typeparam>
+        /// <returns>True if the schema type or subclass has been added to this group.</returns>
+        public bool HasSchema<TSchema>()
+        {
+            return HasSchema(typeof(TSchema));
+        }
+
+        /// <summary>
+        /// Removes all schemas and optionally deletes the assets associated with them.
+        /// </summary>
+        /// <param name="deleteAssets">If true, the schema assets will also be deleted.</param>
+        public void ClearSchemas(bool deleteAssets, bool postEvent = true)
+        {
+            m_schemaSet.ClearSchemas(deleteAssets);
+            SetDirty(AddressableAssetSettings.ModificationEvent.GroupRemoved, this, postEvent);
+        }
+
+        /// <summary>
+        /// Checks if the group contains a schema of a given type.
+        /// </summary>
+        /// <param name="type">The schema type.</typeparam>
+        /// <returns>True if the schema type or subclass has been added to this group.</returns>
+        public bool HasSchema(Type type)
+        {
+            return GetSchema(type) != null;
         }
 
         /// <summary>
@@ -126,21 +233,9 @@ namespace UnityEditor.AddressableAssets
             get
             {
                 if (m_settings == null)
-                    m_settings = AddressableAssetSettings.GetDefault(false, false);
+                    m_settings = AddressableAssetSettingsDefaultObject.Settings;
 
                 return m_settings;
-            }
-        }
-
-
-        /// <summary>
-        /// The data store associated with this group.
-        /// </summary>
-        public virtual KeyDataStore Data
-        {
-            get
-            {
-                return m_data;
             }
         }
 
@@ -154,30 +249,6 @@ namespace UnityEditor.AddressableAssets
                 return entryMap.Values;
             }
         }
-        /// <summary>
-        /// Gets the associated group processor. NOTE: This API is going to be replaced soon with a more flexible and user controlled system.
-        /// </summary>
-        //[Obsolete("This API is going to be replaced soon with a more flexible build system.")]
-        public virtual AssetGroupProcessor Processor
-        {
-            get
-            {
-                EnsureValidProcessor();
-                return m_processor;
-            }
-        }
-        private void EnsureValidProcessor()
-        {
-            if (m_processor == null)
-            {
-                m_processor = CreateProcessor(false);
-                if (m_processor == null)
-                    m_processor = CreateProcessor(true);
-                if (m_processor != null)
-                    m_processor.CreateDefaultData(this);
-            }
-
-        }
 
         /// <summary>
         /// Is the default group.
@@ -185,35 +256,6 @@ namespace UnityEditor.AddressableAssets
         public virtual bool Default
         {
             get { return Guid == Settings.DefaultGroup.Guid; }
-        }
-
-        private AssetGroupProcessor CreateProcessor(bool resetToDefault)
-        {
-            try
-            {
-                if (resetToDefault || string.IsNullOrEmpty(m_processorAssembly) || string.IsNullOrEmpty(m_processorClass))
-                {
-                    var type = typeof(BundledAssetGroupProcessor);
-                    m_processorAssembly = type.Assembly.FullName;
-                    m_processorClass = type.FullName;
-                }
-                var assembly = System.Reflection.Assembly.Load(m_processorAssembly);
-                var objType = assembly.GetType(m_processorClass);
-                return (AssetGroupProcessor)Activator.CreateInstance(objType);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        internal void SetProcessorType(Type processorType)
-        {
-            m_processorAssembly = processorType.Assembly.FullName;
-            m_processorClass = processorType.FullName;
-            m_processor = null;
-            if (IsProcessorType(typeof(PlayerDataAssetGroupProcessor)))
-                m_readOnly = true;
         }
 
         /// <inheritdoc/>
@@ -230,8 +272,6 @@ namespace UnityEditor.AddressableAssets
             foreach (var e in entries)
                 e.SerializeForHash(formatter, stream);
             formatter.Serialize(stream, m_readOnly);
-            formatter.Serialize(stream, m_processorAssembly);
-            formatter.Serialize(stream, m_processorClass);
             //TODO: serialize group data
         }
 
@@ -268,66 +308,91 @@ namespace UnityEditor.AddressableAssets
                 }
             }
             m_serializeEntries.Clear();
-            if (IsProcessorType(typeof(PlayerDataAssetGroupProcessor)))
-                m_readOnly = true;
         }
 
         void OnEnable()
         {
-            m_data.OnSetData += OnDataModified;
-        }
+            Validate();
+        } 
 
-        void OnDisable()
+        internal void Validate()
         {
-            m_data.OnSetData -= OnDataModified;
-        }
-
-        internal void Validate(AddressableAssetSettings addressableAssetSettings)
-        {
-            if (m_processorAssembly == null)
+            
+            bool allValid = false;
+            while (!allValid)
             {
-                var editorList = GetAssetEntry(AddressableAssetEntry.EditorSceneListName);
-                if (editorList != null)
+                allValid = true;
+                for (int i = 0; i < m_schemaSet.Schemas.Count; i++)
                 {
-                    SetProcessorType(typeof(PlayerDataAssetGroupProcessor));
-                    if (m_name == null)
-                        m_name = AddressableAssetSettings.PlayerDataGroupName;
+                    if (m_schemaSet.Schemas[i] == null)
+                    {
+                        m_schemaSet.Schemas.RemoveAt(i);
+                        allValid = false;
+                        break;
+                    }
                 }
-                else
+            }
+
+            var editorList = GetAssetEntry(AddressableAssetEntry.EditorSceneListName); 
+            if (editorList != null)
+            {
+                if (m_name == null)
+                    m_name = AddressableAssetSettings.PlayerDataGroupName;
+                if (m_data != null)
                 {
-                    SetProcessorType(typeof(BundledAssetGroupProcessor));
-                    if (m_name == null)
-                        m_name = Settings.FindUniqueGroupName("Packed Content Group");
+                    if(!HasSchema<PlayerDataGroupSchema>())
+                        AddSchema<PlayerDataGroupSchema>();
+                    m_data = null;
+                }
+            }
+            else if(Settings != null)
+            {
+                if (m_name == null)
+                    m_name = Settings.FindUniqueGroupName("Packed Content Group");
+                if (m_data != null)
+                {
+                    if (!HasSchema<BundledAssetGroupSchema>())
+                    {
+                        var schema = AddSchema<BundledAssetGroupSchema>();
+                        schema.BuildPath.SetVariableById(Settings, m_data.GetData("BuildPath", Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kLocalBuildPath).Id));
+                        schema.LoadPath.SetVariableById(Settings, m_data.GetData("LoadPath", Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kLocalLoadPath).Id));
+                        schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
+                        AddSchema<ContentUpdateGroupSchema>().StaticContent = m_data.GetData("StaticContent", "false") == "true";
+                    }
+                    m_data = null;
                 }
             }
         }
 
-        void OnDataModified(string key, object val, bool isNew)
-        {
-            PostModificationEvent(AddressableAssetSettings.ModificationEvent.GroupDataModified, this);
-        }
-
         //TODO: deprecate and remove once most users have transitioned to newer external data files
-        internal void Initialize(AddressableAssetSettings settings, string groupName, AddressableAssetGroupDeprecated old)
+        internal void Initialize(AddressableAssetSettings settings, string groupName, AddressableAssetGroupDeprecated old, bool staticContent)
         {
             m_settings = settings;
             m_name = groupName;
             m_readOnly = old.m_readOnly;
-            m_processorAssembly = old.m_processorAssembly;
-            m_processorClass = old.m_processorClass;
             m_guid = old.m_guid;
             m_serializeEntries = old.m_serializeEntries;
-            m_data = old.m_data;
+
+            if (old.m_processorClass.Contains("PlayerDataAssetGroupProcessor"))
+            {
+                AddSchema<PlayerDataGroupSchema>();
+            }
+            else
+            {
+                var schema = AddSchema<BundledAssetGroupSchema>();
+                schema.BuildPath.SetVariableByName(settings, old.m_data.GetDataString("BuildPath", ""));
+                schema.LoadPath.SetVariableByName(settings, old.m_data.GetDataString("LoadPath", ""));
+                schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
+                AddSchema<ContentUpdateGroupSchema>().StaticContent = false;
+            }
             OnAfterDeserialize();
         }
 
-        internal void Initialize(AddressableAssetSettings settings, string groupName, Type processorType, string guid, bool readOnly)
+        internal void Initialize(AddressableAssetSettings settings, string groupName, string guid, bool readOnly)
         {
             m_settings = settings;
             m_name = groupName;
             m_readOnly = readOnly;
-            SetProcessorType(processorType);
-            EnsureValidProcessor();
             m_guid = guid;
         }
 
@@ -343,18 +408,12 @@ namespace UnityEditor.AddressableAssets
                 e.GatherAllAssets(results, includeSelf, recurseAll);
         }
 
-        internal void ReplaceProcessor(Type proc)
-        {
-            SetProcessorType(proc);
-        }
-
         internal void AddAssetEntry(AddressableAssetEntry e, bool postEvent = true)
         {
             e.IsSubAsset = false;
             e.parentGroup = this;
             entryMap[e.guid] = e;
-            if (postEvent)
-                PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryAdded, e);
+            SetDirty(AddressableAssetSettings.ModificationEvent.EntryAdded, e, postEvent);
         }
 
         /// <summary>
@@ -369,19 +428,32 @@ namespace UnityEditor.AddressableAssets
             return null;
         }
 
-        internal void PostModificationEvent(AddressableAssetSettings.ModificationEvent e, object o)
+        /// <summary>
+        /// Marks the object as modified.
+        /// </summary>
+        /// <param name="modificationEvent">The event type that is changed.</param>
+        /// <param name="eventData">The object data that corresponds to the event.</param>
+        /// <param name="postEvent">If true, the event is propagated to callbacks.</param>
+        public void SetDirty(AddressableAssetSettings.ModificationEvent modificationEvent, object eventData, bool postEvent)
         {
-            EditorUtility.SetDirty(this);
             if (Settings != null)
-                Settings.PostModificationEvent(e, o);
+            {
+                if (Settings.IsPersisted)
+                    EditorUtility.SetDirty(this);
+                Settings.SetDirty(modificationEvent, eventData, postEvent);
+            }
         }
 
-        internal void RemoveAssetEntry(AddressableAssetEntry entry, bool postEvent = true)
+        /// <summary>
+        /// Remove an entry.
+        /// </summary>
+        /// <param name="entry">The entry to remove.</param>
+        /// <param name="postEvent">If true, post the event to callbacks.</param>
+        public void RemoveAssetEntry(AddressableAssetEntry entry, bool postEvent = true)
         {
             entryMap.Remove(entry.guid);
             entry.parentGroup = null;
-            if (postEvent)
-                PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryRemoved, entry);
+            SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, entry, postEvent);
         }
     }
 

@@ -11,53 +11,6 @@ namespace UnityEngine.AddressableAssets
     /// </summary>
     public class ResourceManagerRuntimeData
     {
-        /// <summary>
-        /// The runtime location for player settings.
-        /// </summary>
-        public static string PlayerSettingsLocation { get { return Path.Combine(Addressables.RuntimePath, "settings.json").Replace('\\', '/'); } }
-        
-        /// <summary>
-        /// The runtime location for the local catalog.
-        /// </summary>
-        public static string PlayerCatalogLocation { get { return Path.Combine(Addressables.RuntimePath, "catalog.json").Replace('\\', '/'); } }
-        
-        /// <summary>
-        /// Gets the player settings path based on play mode.
-        /// </summary>
-        /// <param name="mode">The mode that the player is in.</param>
-        /// <returns>The player settings load path.</returns>
-        public static string GetPlayerSettingsLoadLocation(EditorPlayMode mode)
-        {
-            if (mode == EditorPlayMode.PackedMode)
-                return "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/settings.json";
-            var p = System.IO.Path.GetDirectoryName(UnityEngine.Application.dataPath);
-            return "file://" + System.IO.Path.Combine(p, "Library/com.unity.addressables/settings_" + mode + ".json");
-        }
-
-        /// <summary>
-        /// Gets the player catalog load path based on play mode.
-        /// </summary>
-        /// <param name="mode">The mode that the player is in.</param>
-        /// <returns>The player catalog load path.</returns>
-        public static string GetPlayerCatalogLoadLocation(EditorPlayMode mode)
-        {
-            if (mode == EditorPlayMode.PackedMode)
-                return "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/catalog.json";
-            var p = System.IO.Path.GetDirectoryName(UnityEngine.Application.dataPath);
-            return "file://" + System.IO.Path.Combine(p, "Library/com.unity.addressables/catalog_" + mode + ".json");
-        }
-
-        /// <summary>
-        /// The mode the payer is in.  In built players, the mode is always PackedMode.
-        /// </summary>
-        public enum EditorPlayMode
-        {
-            Invalid,
-            FastMode,
-            VirtualMode,
-            PackedMode
-        }
-
         [SerializeField]
         string m_settingsHash;
         /// <summary>
@@ -76,19 +29,20 @@ namespace UnityEngine.AddressableAssets
         /// Flag to control whether the ResourceManager sends profiler events.
         /// </summary>
         public bool ProfileEvents { get { return m_profileEvents; } set { m_profileEvents = value; } }
-        [SerializeField]
-        string m_contentVersion = "undefined";
-        /// <summary>
-        /// The content version that was used to generate this runtime data.
-        /// </summary>
-        public string ContentVersion { get { return m_contentVersion; } set { m_contentVersion = value; } }
 
+        [SerializeField]
+        bool m_logResourceManagerExceptions = true;
+        /// <summary>
+        /// When enabled, the ResourceManager.ExceptionHandler is set to (op, ex) => Debug.LogException(ex);
+        /// </summary>
+        public bool LogResourceManagerExceptions { get { return m_logResourceManagerExceptions; } set { m_logResourceManagerExceptions = value; } }
 
         [SerializeField]
         bool m_usePooledInstanceProvider = false;
         /// <summary>
         ///  obsolete - this will be refactored out of here.
         /// </summary>
+        [Obsolete("This data has been moved to the ResourceProviderData for the instance provider.")]
         public bool UsePooledInstanceProvider { get { return m_usePooledInstanceProvider; } set { m_usePooledInstanceProvider = value; } }
 
         [SerializeField]
@@ -96,18 +50,21 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// obsolete - this will be refactored out of here.
         /// </summary>
+        [Obsolete("This data has been moved to the ResourceProviderData for each provider.")]
         public int AssetCacheSize { get { return m_assetCacheSize; } set { m_assetCacheSize = value; } }
          [SerializeField]
         float m_assetCacheAge = 5;
         /// <summary>
         /// obsolete - this will be refactored out of here.
         /// </summary>
+        [Obsolete("This data has been moved to the ResourceProviderData for each provider.")]
         public float AssetCacheAge { get { return m_assetCacheAge; } set { m_assetCacheAge = value; } }
         [SerializeField]
         int m_bundleCacheSize = 5;
         /// <summary>
         /// obsolete - this will be refactored out of here.
         /// </summary>
+        [Obsolete("This data has been moved to the ResourceProviderData for each provider.")]
         public int BundleCacheSize { get { return m_bundleCacheSize; } set { m_bundleCacheSize = value; } }
 
         [SerializeField]
@@ -115,87 +72,55 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// obsolete - this will be refactored out of here.
         /// </summary>
+        [Obsolete("This data has been moved to the ResourceProviderData for each provider.")]
         public float BundleCacheAge { get { return m_bundleCacheAge; } set { m_bundleCacheAge = value; } }
-       
 
-#if UNITY_EDITOR
-        static string LibrarySettingsLocation(EditorPlayMode mode)
-        {
-            return "Library/com.unity.addressables/settings_" + mode + ".json";
-        }
-        static string LibraryCatalogLocation(EditorPlayMode mode)
-        {
-            return "Library/com.unity.addressables/catalog_" + mode + ".json";
-        }
-
+        [SerializeField]
+        ObjectInitializationData m_instanceProviderData;
         /// <summary>
-        /// Loads the runtime data from the library folder.
+        /// Data for the ResourceManager.InstanceProvider initialization;
         /// </summary>
-        /// <param name="mode">The play mode that the editor is running in.</param>
-        /// <param name="runtimeData">The runtime data object to load into.</param>
-        /// <param name="catalog">The content catalog object to load into</param>
-        /// <returns>True if the load succeeds.</returns>
-        public static bool LoadFromLibrary(EditorPlayMode mode, ref ResourceManagerRuntimeData runtimeData, ref ContentCatalogData catalog)
+        public ObjectInitializationData InstanceProviderData
         {
-            try
+            get
             {
-                runtimeData = JsonUtility.FromJson<ResourceManagerRuntimeData>(File.ReadAllText(LibrarySettingsLocation(mode)));
-                catalog = JsonUtility.FromJson<ContentCatalogData>(File.ReadAllText(LibraryCatalogLocation(mode)));
-                return runtimeData != null && catalog != null;
+                return m_instanceProviderData;
             }
-            catch (Exception)
+            set
             {
+                m_instanceProviderData = value;
             }
-            return false;
         }
+
+        [SerializeField]
+        ObjectInitializationData m_sceneProviderData;
         /// <summary>
-        /// Delete all temporary data from the library folder.
+        /// Data for the ResourceManager.SceneProvider initialization.
         /// </summary>
-        /// <param name="mode">Specifies the set of data to delete.</param>
-        public static void DeleteFromLibrary(EditorPlayMode mode)
+        public ObjectInitializationData SceneProviderData
         {
-            try
+            get
             {
-                if (File.Exists(LibrarySettingsLocation(mode)))
-                    File.Delete(LibrarySettingsLocation(mode));
-                if (File.Exists(LibraryCatalogLocation(mode)))
-                    File.Delete(LibraryCatalogLocation(mode));
+                return m_sceneProviderData;
             }
-            catch (Exception)
+            set
             {
+                m_sceneProviderData = value;
             }
         }
 
+        [SerializeField]
+        List<ObjectInitializationData> m_resourceProviderData = new List<ObjectInitializationData>();
         /// <summary>
-        /// Saves the runtime data and the content catalog.
+        /// The list of resource provider data.  Each entry will add an IResourceProvider to the ResourceManager.ResourceProviders list.
         /// </summary>
-        /// <param name="catalog">The content catalog data.</param>
-        /// <param name="mode">The play mode.  This is used to determine where the data is saved and loaded from.</param>
-        public void Save(ContentCatalogData catalog, EditorPlayMode mode)
-        {
-            try
-            {
-                var settingsData = JsonUtility.ToJson(this);
-                var catalogData = JsonUtility.ToJson(catalog);
-                if (mode == EditorPlayMode.PackedMode)
-                {
-                    if (!Directory.Exists(Path.GetDirectoryName(PlayerSettingsLocation)))
-                        Directory.CreateDirectory(Path.GetDirectoryName(PlayerSettingsLocation));
-                    File.WriteAllText(PlayerSettingsLocation, settingsData);
-                    File.WriteAllText(PlayerCatalogLocation, catalogData);
-                }
+        public List<ObjectInitializationData> ResourceProviderData { get { return m_resourceProviderData; } }
 
-                if (!Directory.Exists(Path.GetDirectoryName(LibrarySettingsLocation(mode))))
-                    Directory.CreateDirectory(Path.GetDirectoryName(LibrarySettingsLocation(mode)));
-                File.WriteAllText(LibrarySettingsLocation(mode), settingsData);
-                File.WriteAllText(LibraryCatalogLocation(mode), catalogData);
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-            }
-        }
-
-#endif
+        [SerializeField]
+        List<ObjectInitializationData> m_extraInitializationData = new List<ObjectInitializationData>();
+        /// <summary>
+        /// The list of initialization data.  These objects will get deserialized and initialized during the Addressables initialization process.  This happens after resource providers have been set up but before any catalogs are loaded.
+        /// </summary>
+        public List<ObjectInitializationData> InitializationObjects { get { return m_extraInitializationData; } }
     }
 }

@@ -147,13 +147,28 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             }
 
             if (moveInspectFrame)
-                m_inspectFrame = m_latestFrame;
+                SetInspectFrame(m_latestFrame);
 
             if (diagnosticEvent.EventId == "Events")
             {
                 Repaint();
             }
         }
+
+        void SetInspectFrame(int frame)
+        {
+            m_inspectFrame = frame;
+            if (m_inspectFrame > m_latestFrame)
+                m_inspectFrame = m_latestFrame;
+            if (m_inspectFrame < 0)
+                m_inspectFrame = 0;
+
+            if(m_eventList != null)
+                m_eventList.SetEvents(activeSession == null ? null : activeSession.GetFrameEvents(m_inspectFrame));
+            m_lastEventListUpdate = Time.unscaledTime;
+            m_eventListFrame = m_inspectFrame;
+        }
+
         private void OnGUI()
         {
             var session = activeSession;
@@ -166,22 +181,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             {
                 if (Event.current.keyCode == KeyCode.RightArrow)
                 {
-                    m_inspectFrame++;
-                    if (m_inspectFrame > m_latestFrame)
-                        m_inspectFrame = m_latestFrame;
-                    m_eventList.SetEvents(activeSession.GetFrameEvents(m_inspectFrame));
-                    m_lastEventListUpdate = Time.unscaledTime;
-                    m_eventListFrame = m_inspectFrame;
+                    SetInspectFrame(m_inspectFrame + 1);
                     return;
                 }
                 if (Event.current.keyCode == KeyCode.LeftArrow)
                 {
-                    m_inspectFrame--;
-                    if (m_inspectFrame < 0)
-                        m_inspectFrame = 0;
-                    m_eventList.SetEvents(activeSession.GetFrameEvents(m_inspectFrame));
-                    m_lastEventListUpdate = Time.unscaledTime;
-                    m_eventListFrame = m_inspectFrame;
+                    SetInspectFrame(m_inspectFrame - 1);
                     return;
                 }
             }
@@ -241,16 +246,15 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                 if (EditorApplication.isPlaying)
                     EditorApplication.isPaused = true;
                 m_draggingInspectLine = true;
-                m_eventList.SetEvents(null);
+                SetInspectFrame(m_inspectFrame);
             }
+
             if (m_draggingInspectLine && (Event.current.type == EventType.MouseDrag || Event.current.type == EventType.Repaint))
-                m_inspectFrame = m_graphList.visibleStartTime + (int)GraphUtility.PixelToValue(Event.current.mousePosition.x, graphRect.xMin, graphRect.xMax, m_graphList.visibleDuration);
+                SetInspectFrame(m_graphList.visibleStartTime + (int)GraphUtility.PixelToValue(Event.current.mousePosition.x, graphRect.xMin, graphRect.xMax, m_graphList.visibleDuration));
             if (Event.current.type == EventType.MouseUp)
             {
                 m_draggingInspectLine = false;
-                m_eventList.SetEvents(activeSession.GetFrameEvents(m_inspectFrame));
-                m_lastEventListUpdate = Time.unscaledTime;
-                m_eventListFrame = m_inspectFrame;
+                SetInspectFrame(m_inspectFrame);
             }
         }
 
@@ -281,29 +285,17 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
             using (new EditorGUI.DisabledScope(m_inspectFrame <= 0))
                 if (GUILayout.Button(m_prevFrameIcon, EditorStyles.toolbarButton))
-                {
-                    m_inspectFrame--;
-                    m_eventList.SetEvents(activeSession.GetFrameEvents(m_inspectFrame));
-                    m_lastEventListUpdate = Time.unscaledTime;
-                    m_eventListFrame = m_inspectFrame;
-                }
+                    SetInspectFrame(m_inspectFrame - 1);
+
 
             using (new EditorGUI.DisabledScope(m_inspectFrame >= m_latestFrame))
                 if (GUILayout.Button(m_nextFrameIcon, EditorStyles.toolbarButton))
-                {
-                    m_inspectFrame++;
-                    m_eventList.SetEvents(activeSession.GetFrameEvents(m_inspectFrame));
-                    m_lastEventListUpdate = Time.unscaledTime;
-                    m_eventListFrame = m_inspectFrame;
-                }
+                    SetInspectFrame(m_inspectFrame + 1);
+
 
             if (GUILayout.Button("Current", EditorStyles.toolbarButton, GUILayout.ExpandWidth(false)))
-            {
-                m_inspectFrame = m_latestFrame;
-                m_eventList.SetEvents(activeSession.GetFrameEvents(m_inspectFrame));
-                m_lastEventListUpdate = Time.unscaledTime;
-                m_eventListFrame = m_inspectFrame;
-            }
+                SetInspectFrame(m_latestFrame);
+
             GUILayout.EndHorizontal();
         }
 

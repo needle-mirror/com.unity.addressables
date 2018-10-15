@@ -27,7 +27,7 @@ namespace UnityEditor.AddressableAssets
             /// <inheritdoc/>
             public override string ToString()
             {
-                return string.Format("{0} ({1})", Data, ClassName);
+                return Data;
             }
         }
 
@@ -201,7 +201,7 @@ namespace UnityEditor.AddressableAssets
                 if (itemType == typeof(string))
                 {
                     string currValue = m_entryMap[key].ToString();
-                    var newValue = ProfilesEditor.ValueGUI(parent.Settings, key, currValue);
+                    var newValue = ProfilesEditor.ValueGUILayout(parent.Settings, key, currValue);
                     if (newValue != currValue)
                     {
                         SetDataFromString(key, newValue);

@@ -14,8 +14,6 @@ namespace UnityEditor.AddressableAssets
             [SerializeField]
             internal bool m_postProfilerEvents = false;
             [SerializeField]
-            internal ResourceManagerRuntimeData.EditorPlayMode m_editorPlayMode = ResourceManagerRuntimeData.EditorPlayMode.VirtualMode;
-            [SerializeField]
             internal long m_localLoadSpeed = 1024 * 1024 * 10;
             [SerializeField]
             internal long m_remoteLoadSpeed = 1024 * 1024 * 1;
@@ -36,20 +34,6 @@ namespace UnityEditor.AddressableAssets
             {
                 ValidateData();
                 s_data.m_postProfilerEvents = value;
-                SaveData();
-            }
-        }
-        internal static ResourceManagerRuntimeData.EditorPlayMode editorPlayMode
-        {
-            get
-            {
-                ValidateData();
-                return s_data.m_editorPlayMode;
-            }
-            set
-            {
-                ValidateData();
-                s_data.m_editorPlayMode = value;
                 SaveData();
             }
         }
