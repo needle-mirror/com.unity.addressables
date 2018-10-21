@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.4.8-preview] - 2018-10-22
+ - Added all referenced types in asset bundles to link.xml to prevent them from being stripped in IL2CPP builds
+
+## [0.4.7-preview] - 2018-10-20
+ - updated Scriptable Build Pipeline version in dependencies
+
 ## [0.4.6-preview] - 2018-10-16
  - MINIMUM RECOMMENDED VERSION - 2018.2.11+ 
    - We have re-enabled the addressables checkbox. Versions of 2018.2 older than the .11 release will work unless you attempt to view the Animation Import Settings inspector.  If you do have animations you need to inspect, use .11+. If you do not, use any official release version of 2018.2.

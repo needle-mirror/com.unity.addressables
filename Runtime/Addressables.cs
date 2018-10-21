@@ -263,13 +263,6 @@ namespace UnityEngine.AddressableAssets
         [RuntimeInitializeOnLoadMethod]
         private static void RuntimeInitialization()
         {
-            //these need to be referenced in order to prevent stripping on IL2CPP platforms.
-            var sap = Application.streamingAssetsPath;
-            var pdp = Application.persistentDataPath;
-            Debug.LogFormat("Using StreamingAssetsPath {0}.", sap);
-            Debug.LogFormat("Using PersistentDataPath {0}.", pdp);
-            ResourceManager.ExceptionHandler = (op, ex) => Debug.LogException(ex);
-            ResourceManager.OnResolveInternalId = AddressablesRuntimeProperties.EvaluateString;
 #if !ADDRESSABLES_DISABLE_AUTO_INITIALIZATION
             Initialize();
 #endif
@@ -284,6 +277,14 @@ namespace UnityEngine.AddressableAssets
         {
             if (s_initializationOperation != null)
                 return s_initializationOperation;
+
+            //these need to be referenced in order to prevent stripping on IL2CPP platforms.
+            if (string.IsNullOrEmpty(Application.streamingAssetsPath))
+                Debug.LogWarning("Application.streamingAssetsPath has been stripped!");
+            if (string.IsNullOrEmpty(Application.persistentDataPath))
+                Debug.LogWarning("Application.persistentDataPath has been stripped!");
+            ResourceManager.ExceptionHandler = (op, ex) => Debug.LogException(ex);
+            ResourceManager.OnResolveInternalId = AddressablesRuntimeProperties.EvaluateString;
 
             var runtimeDataPath = ResourceManager.ResolveInternalId(PlayerPrefs.GetString(kAddressablesRuntimeDataPath, RuntimePath + "/settings.json"));
 

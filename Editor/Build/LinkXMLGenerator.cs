@@ -7,11 +7,20 @@ using System.Reflection;
 
 internal class LinkXMLGenerator
 {
-    List<Type> m_types = new List<Type>();
-    public void AddTypes(params Type[] t)
+    HashSet<Type> m_types = new HashSet<Type>();
+    public void AddTypes(params Type[] types)
     {
-        if(t != null)
-            m_types.AddRange(t);
+        if (types == null)
+            return;
+        foreach (var t in types)
+            m_types.Add(t);
+    }
+    public void AddTypes(IEnumerable<Type> types)
+    {
+        if (types == null)
+            return;
+        foreach (var t in types)
+            m_types.Add(t);
     }
 
     public void Save(string path)

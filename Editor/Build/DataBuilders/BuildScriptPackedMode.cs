@@ -99,6 +99,7 @@ namespace UnityEditor.AddressableAssets
                 allBundleInputDefs.AddRange(bundleInputDefs);
             }
             ExtractDataTask extractData = new ExtractDataTask();
+            var linker = new LinkXMLGenerator();
 
             if (allBundleInputDefs.Count > 0)
             {
@@ -133,6 +134,8 @@ namespace UnityEditor.AddressableAssets
                     if (aaContext.m_assetGroupToBundles.TryGetValue(assetGroup, out bundles))
                         PostProcessBundles(assetGroup, bundles, results, extractData.WriteData, runtimeData, locations);
                 }
+                foreach (var r in results.WriteResults)
+                    linker.AddTypes(r.Value.includedTypes);
             }
             //save catalog
             var contentCatalog = new ContentCatalogData(locations);
@@ -145,8 +148,7 @@ namespace UnityEditor.AddressableAssets
             var settingsPath = isPlayerBuild ? Addressables.RuntimePath + "/settings.json" : "Library/com.unity.addressables/settings_BuildScriptPackedMode.json";
             var settingsRuntimePath = isPlayerBuild ? "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/settings.json" : "file://{UnityEngine.Application.dataPath}/../Library/com.unity.addressables/settings_BuildScriptPackedMode.json";
             WriteFile(catalogPath, JsonUtility.ToJson(contentCatalog));
-
-            var linker = new LinkXMLGenerator();
+            
 
             //create provider data for bundled assets if there are any groups that are bundled
             if (assetBundleProviderTypes.Count > 0)
