@@ -1,69 +1,69 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
+﻿using System;
+using UnityEditor.Callbacks;
 using UnityEditor.Experimental.UIElements;
+using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets.GraphBuild
 {
-    internal class DataBuilderEditorWindow : EditorWindow
+    class DataBuilderEditorWindow : EditorWindow
     {
-        IDataBuilderGUI m_gui;
-        Editor m_defaultEditor;
+        IDataBuilderGUI m_GUI;
+        Editor m_DefaultEditor;
+
         public void SetTarget(IDataBuilder target)
         {
-            if (m_gui != null)
+            if (m_GUI != null)
             {
-                m_gui.HideGUI();
-                m_gui = null;
+                m_GUI.HideGUI();
+                m_GUI = null;
             }
-            if (m_defaultEditor != null)
-            {
-                m_defaultEditor = null;
-            }
+
+            m_DefaultEditor = null;
 
             var settings = AddressableAssetSettingsDefaultObject.Settings;
             var context = new AddressablesBuildDataBuilderContext(settings);
-            m_gui = target.CreateGUI(context);
-            if (m_gui == null)
+            m_GUI = target.CreateGUI(context);
+            if (m_GUI == null)
             {
-                m_defaultEditor = Editor.CreateEditor(target as UnityEngine.Object);
+                m_DefaultEditor = Editor.CreateEditor(target as Object);
             }
             else
             {
-                m_gui.ShowGUI(UIElementsEntryPoint.GetRootVisualContainer(this));
+                m_GUI.ShowGUI(this.GetRootVisualContainer());
             }
         }
 
         public void OnGUI()
         {
-            if (m_gui == null)
+            if (m_GUI == null)
             {
-                m_defaultEditor.DrawDefaultInspector();
+                m_DefaultEditor.DrawDefaultInspector();
             }
             else
             {
-                m_gui.UpdateGUI(new Rect(0, 0, position.width, position.height));
-            }
-        }
-        public void OnDisable()
-        {
-            if (m_gui == null)
-            {
-                m_defaultEditor = null;
-            }
-            else
-            {
-                m_gui.HideGUI();
+                m_GUI.UpdateGUI(new Rect(0, 0, position.width, position.height));
             }
         }
 
-        [UnityEditor.Callbacks.OnOpenAsset(1)]
-        public static bool OnOpenAsset(int instanceID, int line)
+        public void OnDisable()
         {
-            if (Selection.activeObject as IDataBuilder != null)
+            if (m_GUI == null)
             {
-                var window = EditorWindow.GetWindow<DataBuilderEditorWindow>();
+                m_DefaultEditor = null;
+            }
+            else
+            {
+                m_GUI.HideGUI();
+            }
+        }
+
+        [OnOpenAsset(1)]
+        public static bool OnOpenAsset(int instanceId, int line)
+        {
+            if (Selection.activeObject is IDataBuilder)
+            {
+                var window = GetWindow<DataBuilderEditorWindow>();
                 window.Show();
                 window.SetTarget(Selection.activeObject as IDataBuilder);
                 return true; //catch open file

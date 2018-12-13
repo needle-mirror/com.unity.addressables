@@ -20,11 +20,19 @@ Drag the item from the Project window’s Asset folder into a group in the __Add
 
 ![](images/addressableswindow.png)
 
-The default address for your Asset is the path to the Asset in in your project. For example, *Assets/images/myImage.png*. You can use the **Addressables** window to change the address to any unique name.
+The default address for your Asset is the path to the Asset in your project. For example, *Assets/images/myImage.png*. You can use the **Addressables** window to change the address to any unique name.
 
 To change the address, double click the current address of the Asset and enter the new address.
 
 When you first start using Addressable Assets, the system saves some edit-time and run-time data Assets for your Project in *Assets/AddressableAssetsData* which should be added to your version control check in.
+
+### Building your game
+Addressables needs to build your content into files that can be consumed by the running game before you build the player.  This step is not done automatically.  You can build this content via the UI or API.
+1. UI
+a. Open the __Addressables__ window.
+b. Select _Build->Build Player Content_
+2. API
+a. `AddressableAssetSettings.BuildPlayerContent()`
 
 ### Loading or instantiating by address
 
@@ -48,7 +56,7 @@ or
         Addressables.LoadAsset<GameObject>("AssetAddress").Completed += onLoadDone;
     }
 
-    private void private void onLoadDone(UnityEngine.ResourceManagement.IAsyncOperation<Sprite> obj)
+    private void onLoadDone(UnityEngine.ResourceManagement.IAsyncOperation<Sprite> obj)
     {
         // In a production environment, you should add exception handling to catch scenarios such as a null result;
         myGameObject = obj.Result;

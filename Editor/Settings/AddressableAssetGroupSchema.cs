@@ -1,6 +1,8 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System;
+using System.Reflection;
 using UnityEngine;
+using UnityEngine.Serialization;
+
 namespace UnityEditor.AddressableAssets
 {
     /// <summary>
@@ -8,9 +10,10 @@ namespace UnityEditor.AddressableAssets
     /// </summary>
     public class AddressableAssetGroupSchema : ScriptableObject
     {
+        [FormerlySerializedAs("m_group")]
         [HideInInspector]
         [SerializeField]
-        private AddressableAssetGroup m_group;
+        AddressableAssetGroup m_Group;
 
         /// <summary>
         /// Get the group that the schema belongs to.
@@ -19,13 +22,13 @@ namespace UnityEditor.AddressableAssets
         {
             get
             {
-                return m_group;
+                return m_Group;
             }
             internal set
             {
-                m_group = value;
-                if(m_group != null)
-                    OnSetGroup(m_group);
+                m_Group = value;
+                if(m_Group != null)
+                    OnSetGroup(m_Group);
             }
         }
 
@@ -35,6 +38,25 @@ namespace UnityEditor.AddressableAssets
         /// <param name="group">The group that the schema is added to.</param>
         protected virtual void OnSetGroup(AddressableAssetGroup group)
         {
+
+        }
+
+        /// <summary>
+        /// Used to display the GUI of the schema.
+        /// </summary>
+        public virtual void OnGUI()
+        {
+            var type = GetType();
+            var so = new SerializedObject(this);
+            var p = so.GetIterator();
+            p.Next(true);
+            while (p.Next(false))
+            {
+                var prop = type.GetField(p.name, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                if(prop != null)
+                    EditorGUILayout.PropertyField(p, false);
+            }
+            so.ApplyModifiedProperties();
         }
 
         /// <summary>
@@ -42,12 +64,12 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         protected void SetDirty(bool postEvent)
         {
-            if (m_group != null)
+            if (m_Group != null)
             {
-                if (m_group.Settings != null && m_group.Settings.IsPersisted)
+                if (m_Group.Settings != null && m_Group.Settings.IsPersisted)
                     EditorUtility.SetDirty(this);
-                if (m_group != null)
-                    m_group.SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaModified, this, postEvent);
+                if (m_Group != null)
+                    m_Group.SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaModified, this, postEvent);
             }
         }
     }

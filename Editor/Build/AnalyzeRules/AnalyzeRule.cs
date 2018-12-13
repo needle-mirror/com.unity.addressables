@@ -12,12 +12,12 @@ namespace UnityEditor.AddressableAssets
         internal class AnalyzeResult
         {
             [SerializeField]
-            string m_Name;
+            string m_ResultName;
 
-            public string name
+            public string resultName
             {
-                get { return m_Name; }
-                set { m_Name = value; }
+                get { return m_ResultName; }
+                set { m_ResultName = value; }
             }
 
             [SerializeField]
@@ -30,11 +30,11 @@ namespace UnityEditor.AddressableAssets
 
             public AnalyzeResult(string newName, MessageType sev = MessageType.None)
             {
-                name = newName;
+                resultName = newName;
                 severity = sev;
             }
         }
-        internal virtual string name
+        internal virtual string ruleName
         {
             get { return GetType().ToString(); }
         }

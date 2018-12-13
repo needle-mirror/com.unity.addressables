@@ -1,4 +1,6 @@
-﻿using NUnit.Framework;
+﻿using System;
+using NUnit.Framework;
+using UnityEditor.Build.Utilities;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -31,9 +33,9 @@ namespace UnityEditor.AddressableAssets.Tests
         public void IsPathValidBlocksCommonStrings()
         {
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(string.Empty));
-            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(UnityEditor.Build.Utilities.CommonStrings.UnityEditorResourcePath));
-            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(UnityEditor.Build.Utilities.CommonStrings.UnityDefaultResourcePath));
-            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(UnityEditor.Build.Utilities.CommonStrings.UnityBuiltInExtraPath));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(CommonStrings.UnityEditorResourcePath));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(CommonStrings.UnityDefaultResourcePath));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(CommonStrings.UnityBuiltInExtraPath));
         }
         [Test]
         public void IsPathValidBlocksBadExtensions()

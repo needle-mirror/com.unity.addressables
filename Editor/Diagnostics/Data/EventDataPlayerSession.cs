@@ -5,44 +5,44 @@ using UnityEngine.ResourceManagement.Diagnostics;
 namespace UnityEditor.AddressableAssets.Diagnostics
 {
     [Serializable]
-    internal class EventDataPlayerSession
+    class EventDataPlayerSession
     {
-        EventDataSet m_rootStreamEntry = new EventDataSet("Root", "");
-        string m_name;
-        int m_playerId;
-        bool m_isActive;
-        int m_latestFrame = 0;
-        int m_startFrame = 0;
-        int m_frameCount = 300;
-        Dictionary<int, List<DiagnosticEvent>> m_frameEvents = new Dictionary<int, List<DiagnosticEvent>>();
+        EventDataSet m_RootStreamEntry = new EventDataSet("Root", "");
+        string m_EventName;
+        int m_PlayerId;
+        bool m_IsActive;
+        int m_LatestFrame;
+        int m_StartFrame;
+        int m_FrameCount = 300;
+        Dictionary<int, List<DiagnosticEvent>> m_FrameEvents = new Dictionary<int, List<DiagnosticEvent>>();
 
-        public EventDataSet RootStreamEntry { get { return m_rootStreamEntry; } }
-        public string Name { get { return m_name; } }
-        public int PlayerId { get { return m_playerId; } }
-        public bool IsActive { get { return m_isActive; } set { m_isActive = value; } }
-        public int LatestFrame { get { return m_latestFrame; } }
-        public int StartFrame { get { return m_startFrame; } }
-        public int FrameCount { get { return m_frameCount; } }
+        public EventDataSet RootStreamEntry { get { return m_RootStreamEntry; } }
+        public string EventName { get { return m_EventName; } }
+        public int PlayerId { get { return m_PlayerId; } }
+        public bool IsActive { get { return m_IsActive; } set { m_IsActive = value; } }
+        public int LatestFrame { get { return m_LatestFrame; } }
+        public int StartFrame { get { return m_StartFrame; } }
+        public int FrameCount { get { return m_FrameCount; } }
 
 
         public EventDataPlayerSession() { }
-        public EventDataPlayerSession(string name, int playerId)
+        public EventDataPlayerSession(string eventName, int playerId)
         {
-            m_name = name;
-            m_playerId = playerId;
-            m_isActive = true;
+            m_EventName = eventName;
+            m_PlayerId = playerId;
+            m_IsActive = true;
         }
 
         internal void Clear()
         {
             RootStreamEntry.Clear();
-            m_frameEvents.Clear();
+            m_FrameEvents.Clear();
         }
 
         internal List<DiagnosticEvent> GetFrameEvents(int frame)
         {
-            List<DiagnosticEvent> frameEvents = null;
-            if (m_frameEvents.TryGetValue(frame, out frameEvents))
+            List<DiagnosticEvent> frameEvents;
+            if (m_FrameEvents.TryGetValue(frame, out frameEvents))
                 return frameEvents;
             return null;
         }
@@ -57,14 +57,14 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         internal void AddSample(DiagnosticEvent evt, bool recordEvent, ref bool entryCreated)
         {
-            m_latestFrame = evt.Frame;
-            m_startFrame = m_latestFrame - m_frameCount;
+            m_LatestFrame = evt.Frame;
+            m_StartFrame = m_LatestFrame - m_FrameCount;
 
             if (recordEvent)
             {
-                List<DiagnosticEvent> frameEvents = null;
-                if (!m_frameEvents.TryGetValue(evt.Frame, out frameEvents))
-                    m_frameEvents.Add(evt.Frame, frameEvents = new List<DiagnosticEvent>());
+                List<DiagnosticEvent> frameEvents;
+                if (!m_FrameEvents.TryGetValue(evt.Frame, out frameEvents))
+                    m_FrameEvents.Add(evt.Frame, frameEvents = new List<DiagnosticEvent>());
                 frameEvents.Add(evt);
             }
 

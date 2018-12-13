@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.ResourceManagement.Diagnostics;
 
@@ -7,7 +9,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
     /*
      * ResourceManager specific implementation of an EventViewerWindow
      */
-    internal class ResourceProfilerWindow : EventViewerWindow
+    class ResourceProfilerWindow : EventViewerWindow
     {
         [MenuItem("Window/Asset Management/Addressable Profiler", priority = 2051)]
         static void ShowWindow()
@@ -56,10 +58,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         {
             if (Event.current.type != EventType.Repaint)
                 return;
-            var dataListText = System.Text.Encoding.ASCII.GetString(evt.Data);
-            if (dataListText == null)
+            var dataListText = Encoding.ASCII.GetString(evt.Data);
+            if (string.IsNullOrEmpty(dataListText))
                 return;
-            var dataList = dataListText.Split(new char[] { ',' }, System.StringSplitOptions.RemoveEmptyEntries);
+            var dataList = dataListText.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
             if (dataList[1].EndsWith(".bundle"))
             {
                 EditorGUI.TextArea(rect, "No preview available for AssetBundle");
@@ -79,7 +81,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         {
             if (columnNames == null || columnSizes == null)
                 return;
-            columnNames.AddRange(new string[] { "Event", "Key", "Provider", "Path", "Dependencies" });
+            columnNames.AddRange(new[] { "Event", "Key", "Provider", "Path", "Dependencies" });
             columnSizes.AddRange(new float[] { 150, 150, 200, 300, 400 });
         }
 
@@ -94,11 +96,11 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                         column -= 2;    //need to account for 2 columns that use build in fields
                         if (evt.Data != null && evt.Data.Length > 0)
                         {
-                            var dataListText = System.Text.Encoding.ASCII.GetString(evt.Data);
-                            if (dataListText == null)
+                            var dataListText = Encoding.ASCII.GetString(evt.Data);
+                            if (string.IsNullOrEmpty( dataListText))
                                 return false;
-                            var dataList = dataListText.Split(new char[] { '!' }, System.StringSplitOptions.RemoveEmptyEntries);
-                            if (dataList == null || column >= dataList.Length)
+                            var dataList = dataListText.Split(new[] { '!' }, StringSplitOptions.RemoveEmptyEntries);
+                            if (column >= dataList.Length)
                                 return false;
                             EditorGUI.LabelField(cellRect, dataList[column]);
                         }
@@ -114,29 +116,29 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             if (graphView == null)
                 return;
 
-            Color labelBGColor = GraphColors.LabelGraphLabelBackground;
+            Color labelBgColor = GraphColors.LabelGraphLabelBackground;
 
-            Color refCountBGColor = new Color(53 / 255f, 136 / 255f, 167 / 255f, 1);
-            Color loadingBGColor = Color.Lerp(refCountBGColor, GraphColors.WindowBackground, 0.5f);
+            Color refCountBgColor = new Color(53 / 255f, 136 / 255f, 167 / 255f, 1);
+            Color loadingBgColor = Color.Lerp(refCountBgColor, GraphColors.WindowBackground, 0.5f);
 
             graphView.DefineGraph(ResourceManagerEventCollector.EventCategory, (int)ResourceManagerEventCollector.EventType.CacheEntryRefCount,
-                new GraphLayerBackgroundGraph((int)ResourceManagerEventCollector.EventType.CacheEntryRefCount, refCountBGColor, (int)ResourceManagerEventCollector.EventType.CacheEntryLoadPercent, loadingBGColor, "LoadPercent", "Loaded"),
+                new GraphLayerBackgroundGraph((int)ResourceManagerEventCollector.EventType.CacheEntryRefCount, refCountBgColor, (int)ResourceManagerEventCollector.EventType.CacheEntryLoadPercent, loadingBgColor, "LoadPercent", "Loaded"),
                 new GraphLayerBarChartMesh((int)ResourceManagerEventCollector.EventType.CacheEntryRefCount, "RefCount", "Reference Count", new Color(123 / 255f, 158 / 255f, 6 / 255f, 1)),
                 new GraphLayerBarChartMesh((int)ResourceManagerEventCollector.EventType.PoolCount, "PoolSize", "Object Pool Count", new Color(204 / 255f, 113 / 255f, 0, .75f)),
                 new GraphLayerEventMarker((int)ResourceManagerEventCollector.EventType.CacheEntryLoadPercent, "", "", Color.white, Color.black),
-                new GraphLayerLabel((int)ResourceManagerEventCollector.EventType.CacheEntryRefCount, "RefCount", "Reference Count", new Color(123 / 255f, 158 / 255f, 6 / 255f, 1), labelBGColor, (v) => v.ToString())
+                new GraphLayerLabel((int)ResourceManagerEventCollector.EventType.CacheEntryRefCount, "RefCount", "Reference Count", new Color(123 / 255f, 158 / 255f, 6 / 255f, 1), labelBgColor, v => v.ToString())
                 );
 
-            graphView.DefineGraph(ResourceManagerEventCollector.EventType.CacheLRUCount.ToString(), (int)ResourceManagerEventCollector.EventType.CacheLRUCount,
-                new GraphLayerBarChartMesh((int)ResourceManagerEventCollector.EventType.CacheLRUCount, "LRU", "LRU Count", new Color(12 / 255f, 6 / 255f, 158 / 255f, 1)),
-                new GraphLayerLabel((int)ResourceManagerEventCollector.EventType.CacheLRUCount, "LRU", "LRU Count", new Color(12 / 255f, 6 / 255f, 158 / 255f, 1), labelBGColor, (v) => v.ToString())
+            graphView.DefineGraph(ResourceManagerEventCollector.EventType.CacheLruCount.ToString(), (int)ResourceManagerEventCollector.EventType.CacheLruCount,
+                new GraphLayerBarChartMesh((int)ResourceManagerEventCollector.EventType.CacheLruCount, "LRU", "LRU Count", new Color(12 / 255f, 6 / 255f, 158 / 255f, 1)),
+                new GraphLayerLabel((int)ResourceManagerEventCollector.EventType.CacheLruCount, "LRU", "LRU Count", new Color(12 / 255f, 6 / 255f, 158 / 255f, 1), labelBgColor, v => v.ToString())
                 );
 
             graphView.DefineGraph(ResourceManagerEventCollector.EventType.AsyncOpCacheHitRatio.ToString(), (int)ResourceManagerEventCollector.EventType.AsyncOpCacheHitRatio,
                 new GraphLayerBarChartMesh((int)ResourceManagerEventCollector.EventType.AsyncOpCacheHitRatio, "Cache Hit %", "Cache Hit %", new Color(123 / 255f, 158 / 255f, 6 / 255f, 1)),
                 new GraphLayerBarChartMesh((int)ResourceManagerEventCollector.EventType.AsyncOpCacheCount, "Cache Count", "Cache Count", new Color(204 / 255f, 113 / 255f, 0, .75f)),
-                new GraphLayerLabel((int)ResourceManagerEventCollector.EventType.AsyncOpCacheHitRatio, "Cache Hit %", "Cache Hit %", new Color(123 / 255f, 158 / 255f, 6 / 255f, 1), labelBGColor, (v) => v.ToString() + "%"),
-                new GraphLayerLabel((int)ResourceManagerEventCollector.EventType.AsyncOpCacheCount, "Cache Count", "Cache Count", new Color(204 / 255f, 113 / 255f, 0, 1), labelBGColor, (v) => v.ToString())
+                new GraphLayerLabel((int)ResourceManagerEventCollector.EventType.AsyncOpCacheHitRatio, "Cache Hit %", "Cache Hit %", new Color(123 / 255f, 158 / 255f, 6 / 255f, 1), labelBgColor, v => v.ToString() + "%"),
+                new GraphLayerLabel((int)ResourceManagerEventCollector.EventType.AsyncOpCacheCount, "Cache Count", "Cache Count", new Color(204 / 255f, 113 / 255f, 0, 1), labelBgColor, v => v.ToString())
                 );
         }
     }

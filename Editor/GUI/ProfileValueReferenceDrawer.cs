@@ -1,9 +1,10 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
     [CustomPropertyDrawer(typeof(ProfileValueReference), true)]
-    internal class ProfileValueReferenceDrawer : PropertyDrawer
+    class ProfileValueReferenceDrawer : PropertyDrawer
     {
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
@@ -11,12 +12,10 @@ namespace UnityEditor.AddressableAssets
             if (settings == null)
                 return;
             EditorGUI.BeginProperty(position, label, property);
-            var idProp = property.FindPropertyRelative("m_id");
+            var idProp = property.FindPropertyRelative("m_Id");
            
-            var newId = ProfilesEditor.ValueGUI(position, settings, label.text, idProp.stringValue);
+            idProp.stringValue = ProfilesEditor.ValueGUI(position, settings, label.text, idProp.stringValue);
            
-            if (newId != idProp.stringValue)
-                idProp.stringValue = newId;
             EditorGUI.EndProperty();
         }
 
@@ -24,8 +23,8 @@ namespace UnityEditor.AddressableAssets
         {
             var settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
-                return 0;
-            var idProp = property.FindPropertyRelative("m_id");
+                return 0; 
+            var idProp = property.FindPropertyRelative("m_Id");
             return ProfilesEditor.CalcGUIHeight(settings, label.text, idProp.stringValue);
         }
     }

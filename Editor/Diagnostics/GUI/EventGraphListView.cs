@@ -1,34 +1,34 @@
-using System.Collections.Generic;
-using UnityEngine;
 using System;
+using System.Collections.Generic;
 using UnityEditor.IMGUI.Controls;
+using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Diagnostics
 {
-    internal class EventGraphListView : TreeView
+    class EventGraphListView : TreeView
     {
         class DataStreamEntry : TreeViewItem
         {
             public GUIContent Content { get; private set; }
             public EventDataSet Entry { get; private set; }
-            public DataStreamEntry(EventDataSet dataSet, int depth) : base(dataSet.Name.GetHashCode(), depth, dataSet.Name)
+            public DataStreamEntry(EventDataSet dataSet, int depth) : base(dataSet.EventName.GetHashCode(), depth, dataSet.EventName)
             {
                 Entry = dataSet;
-                Content = new GUIContent(dataSet.Name);
+                Content = new GUIContent(dataSet.EventName);
             }
         }
-        Dictionary<int, bool> m_maximizedState = new Dictionary<int, bool>();
-        Func<string, bool> m_filterFunc;
-        IComparer<EventDataSet> m_dataSetComparer;
-        EventDataPlayerSession m_data;
-        Material m_graphMaterial;
-        Dictionary<string, GraphDefinition> m_graphDefinitions = new Dictionary<string, GraphDefinition>();
-        GUIContent m_plusGUIContent = new GUIContent("+", "Expand");
-        GUIContent m_minusGUIContent = new GUIContent("-", "Collapse");
+        Dictionary<int, bool> m_MaximizedState = new Dictionary<int, bool>();
+        Func<string, bool> m_FilterFunc;
+        IComparer<EventDataSet> m_DataSetComparer;
+        EventDataPlayerSession m_Data;
+        Material m_GraphMaterial;
+        Dictionary<string, GraphDefinition> m_GraphDefinitions = new Dictionary<string, GraphDefinition>();
+        GUIContent m_PlusGUIContent = new GUIContent("+", "Expand");
+        GUIContent m_MinusGUIContent = new GUIContent("-", "Collapse");
 
 
-        float m_lastReloadTime = 0;
-        int m_inspectFrame = -1;
+        float m_LastReloadTime;
+        int m_InspectFrame = -1;
         internal int visibleStartTime { get; private set; }
         internal int visibleDuration { get; private set; }
 
@@ -46,18 +46,18 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             showBorder = true;
             visibleStartTime = 0;
             visibleDuration = 300;
-            m_data = data;
-            m_dataSetComparer = dsComparer;
-            m_filterFunc = filter;
+            m_Data = data;
+            m_DataSetComparer = dsComparer;
+            m_FilterFunc = filter;
             columnIndexForTreeFoldouts = 1;
         }
 
         protected override TreeViewItem BuildRoot()
         {
-            return AddItems(new DataStreamEntry(m_data.RootStreamEntry, -1));
+            return AddItems(new DataStreamEntry(m_Data.RootStreamEntry, -1));
         }
 
-        private DataStreamEntry AddItems(DataStreamEntry root)
+        DataStreamEntry AddItems(DataStreamEntry root)
         {
             root.children = new List<TreeViewItem>();
             if (!root.Entry.HasChildren)
@@ -68,12 +68,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             {
                 if (!e.HasDataAfterFrame(visibleStartTime))
                     continue;
-                if (m_filterFunc(e.Graph))
+                if (m_FilterFunc(e.Graph))
                     entries.Add(e);
             }
 
-            if (m_dataSetComparer != null)
-                entries.Sort(m_dataSetComparer);
+            if (m_DataSetComparer != null)
+                entries.Sort(m_DataSetComparer);
 
             foreach (var e in entries)
             {
@@ -95,17 +95,17 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         public void DrawGraphs(Rect rect, int inspectFrame)
         {
             EditorGUI.DrawRect(GraphRect, GraphColors.WindowBackground);
-            m_inspectFrame = inspectFrame;
+            m_InspectFrame = inspectFrame;
             if (Event.current.type == EventType.Repaint)
                 multiColumnHeader.state.columns[2].width = rect.width - (multiColumnHeader.state.columns[1].width + multiColumnHeader.state.columns[0].width + 20);
 
             visibleDuration = Mathf.Max(300, (int)(multiColumnHeader.state.columns[2].width));
-            if (m_data.IsActive)
-                visibleStartTime = m_data.LatestFrame - visibleDuration;
-            if (Time.unscaledTime - m_lastReloadTime > 1 && EditorApplication.isPlaying)
+            if (m_Data.IsActive)
+                visibleStartTime = m_Data.LatestFrame - visibleDuration;
+            if (Time.unscaledTime - m_LastReloadTime > 1 && EditorApplication.isPlaying)
             {
                 Reload();
-                m_lastReloadTime = Time.unscaledTime;
+                m_LastReloadTime = Time.unscaledTime;
             }
             base.OnGUI(rect);
         }
@@ -113,17 +113,17 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         bool IsItemMaximized(int id)
         {
-            bool expanded = false;
-            m_maximizedState.TryGetValue(id, out expanded);
+            bool expanded;
+            m_MaximizedState.TryGetValue(id, out expanded);
             return expanded;
         }
 
         void ToggleItemMaximize(int id)
         {
             bool expanded = IsItemMaximized(id);
-            m_maximizedState[id] = !expanded;
+            m_MaximizedState[id] = !expanded;
             Reload();
-            m_lastReloadTime = Time.unscaledTime;
+            m_LastReloadTime = Time.unscaledTime;
         }
 
         protected override void RowGUI(RowGUIArgs args)
@@ -132,26 +132,26 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                 CellGUI(args.GetCellRect(i), args.item as DataStreamEntry, args.GetColumn(i));
         }
 
-        private void CellGUI(Rect cellRect, DataStreamEntry item, int column)
+        void CellGUI(Rect cellRect, DataStreamEntry item, int column)
         {
             switch (column)
             {
                 case 0:
                     {
                         var maximized = IsItemMaximized(item.id);
-                        if (GUI.Button(cellRect, maximized ? m_minusGUIContent : m_plusGUIContent, EditorStyles.toolbarButton))
+                        if (GUI.Button(cellRect, maximized ? m_MinusGUIContent : m_PlusGUIContent, EditorStyles.toolbarButton))
                         {
                             if (!IsSelected(item.id))
                             {
-                                m_maximizedState[item.id] = !maximized;
+                                m_MaximizedState[item.id] = !maximized;
                             }
                             else
                             {
                                 foreach (var i in GetSelection())
-                                    m_maximizedState[i] = !maximized;
+                                    m_MaximizedState[i] = !maximized;
                             }
                             Reload();
-                            m_lastReloadTime = Time.unscaledTime;
+                            m_LastReloadTime = Time.unscaledTime;
                         }
                     }
                     break;
@@ -175,7 +175,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         public void DefineGraph(string name, int maxValueStream, params IGraphLayer[] layers)
         {
-            m_graphDefinitions.Add(name, new GraphDefinition(maxValueStream, layers));
+            m_GraphDefinitions.Add(name, new GraphDefinition(maxValueStream, layers));
         }
 
         void DrawGraph(EventDataSet dataSet, Rect rect, int startTime, int duration, bool expanded)
@@ -184,27 +184,27 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                 return;
 
             rect = new Rect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2);
-            GraphDefinition gd = null;
-            if (!m_graphDefinitions.TryGetValue(dataSet.Graph, out gd))
+            GraphDefinition gd;
+            if (!m_GraphDefinitions.TryGetValue(dataSet.Graph, out gd))
                 return;
 
-            if (m_graphMaterial == null)
+            if (m_GraphMaterial == null)
             {
                 // best material options are "Unlit/Color" or "UI/Default". 
                 //  Unlit/Color is more efficient, but does not support alpha
                 //  UI/Default does support alpha
-                m_graphMaterial = new Material(Shader.Find("Unlit/Color"));
+                m_GraphMaterial = new Material(Shader.Find("Unlit/Color"));
             }
 
             int maxValue = gd.GetMaxValue(dataSet);
 
             foreach (var l in gd.layers)
-                l.Draw(dataSet, rect, startTime, duration, m_inspectFrame, expanded, m_graphMaterial, maxValue);
+                l.Draw(dataSet, rect, startTime, duration, m_InspectFrame, expanded, m_GraphMaterial, maxValue);
         }
 
         public static MultiColumnHeaderState CreateDefaultHeaderState()
         {
-            var columns = new MultiColumnHeaderState.Column[]
+            var columns = new[]
             {
                 new MultiColumnHeaderState.Column(),
                 new MultiColumnHeaderState.Column(),

@@ -1,64 +1,88 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.TestTools;
-using System.IO;
-using UnityEngine.ResourceManagement;
 using UnityEngine.AddressableAssets;
-using System;
+using UnityEngine.ResourceManagement;
 using UnityEngine.SceneManagement;
-
+using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
+using Random = UnityEngine.Random;
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEditor.AddressableAssets;
+using UnityEditor.SceneManagement;
 #endif
 
-public abstract class AddressablesBaseTests : IPrebuildSetup
+public abstract class AddressablesBaseTests : IPrebuildSetup//, IPostBuildCleanup
 {
     protected string RootFolder { get { return string.Format("Assets/{0}_AssetsToDelete", GetType().Name); } }
+#if UNITY_EDITOR
+    private List<EditorBuildSettingsScene> scenes = null;
+#endif
 
     public void Setup()
     {
-        AssetDatabase.StartAssetEditing();
-        if (!Directory.Exists(RootFolder))
-            Directory.CreateDirectory(RootFolder);
+#if UNITY_EDITOR
+        AssetDatabase.Refresh();
+        var sceneRoot = RootFolder;
+        if (!Directory.Exists(sceneRoot))
+            Directory.CreateDirectory(sceneRoot);
 
-        SceneManagerState.Record(RootFolder + "/scenes.json");
-        var scene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Additive);
-        UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, RootFolder + "/testScene.unity");
-        UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene, true);
+        var scenePath = sceneRoot + "/test_scene.unity";
+        //SceneManagerState.Record(RootFolder + "/scenes.json");
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        EditorSceneManager.SaveScene(scene, scenePath);
+        EditorSceneManager.CloseScene(scene, false);
 
-        var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
-        scenes.Add(new EditorBuildSettingsScene(RootFolder + "/testScene.unity", true));
+        scenes = new List<EditorBuildSettingsScene>();
+        foreach (EditorBuildSettingsScene s in EditorBuildSettings.scenes)
+        {
+            if(!String.IsNullOrEmpty(s.path))
+                scenes.Add(s);
+        }
+
+        foreach (var s in scenes)
+            if (s.path == scenePath)
+                return;
+
+        EditorBuildSettingsScene sceneToAdd = new EditorBuildSettingsScene(scenePath, true);
+        scenes.Add(sceneToAdd);
         EditorBuildSettings.scenes = scenes.ToArray();
-        AssetDatabase.StopAssetEditing();
+#endif
     }
 
     [OneTimeTearDown]
-    public void TearDown()
+    public void DeleteTempFiles()
     {
 #if UNITY_EDITOR
-        SceneManagerState.Restore(RootFolder + "/scenes.json");
+        //SceneManagerState.Restore(RootFolder + "/scenes.json");
         AssetDatabase.DeleteAsset(RootFolder);
 #endif
     }
 
-    Dictionary<object, int> keysHashSet = new Dictionary<object, int>();
-    List<object> keysList = new List<object>();
+    Dictionary<object, int> m_KeysHashSet = new Dictionary<object, int>();
+    List<object> m_KeysList = new List<object>();
 
     protected void CreateAsset(string assetPath, string objectName)
     {
+#if UNITY_EDITOR
         if (!Directory.Exists(Path.GetDirectoryName(assetPath)))
             Directory.CreateDirectory(Path.GetDirectoryName(assetPath));
 
         GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+#if UNITY_2018_3_OR_NEWER
+        PrefabUtility.SaveAsPrefabAsset(go, assetPath);
+#else
         PrefabUtility.CreatePrefab(assetPath, go);
+#endif
         go.name = objectName;
-        UnityEngine.Object.Destroy(go);
+        Object.DestroyImmediate(go, false);
+#endif
     }
 
-    protected void AddLocation(ResourceLocationMap locations, string assetPrefix, string objectName, string loadPath, System.Type provider, params object[] keys)
+    protected void AddLocation(ResourceLocationMap locations, string assetPrefix, string objectName, string loadPath, Type provider, params object[] keys)
     {
         CreateAsset(RootFolder + "/" + assetPrefix + objectName + ".prefab", objectName);
         AddLocation(locations, new ResourceLocationBase(objectName, loadPath, provider.FullName), keys);
@@ -68,18 +92,18 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
     {
         foreach (var key in keys)
         {
-            if (!keysHashSet.ContainsKey(key))
+            if (!m_KeysHashSet.ContainsKey(key))
             {
-                keysList.Add(key);
-                keysHashSet.Add(key, 0);
+                m_KeysList.Add(key);
+                m_KeysHashSet.Add(key, 0);
             }
-            keysHashSet[key] = keysHashSet[key] + 1;
+            m_KeysHashSet[key] = m_KeysHashSet[key] + 1;
             locations.Add(key, loc);
         }
     }
 
     //we must wait for Addressables initialization to complete since we are clearing out all of its data for the tests.
-    public bool initializationComplete = false;
+    public bool initializationComplete;
     IEnumerator Init()
     {
         if (!initializationComplete)
@@ -93,11 +117,15 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
             AsyncOperationCache.Instance.Clear();
             DelayedActionManager.Clear();
 
+#if UNITY_EDITOR
             AssetDatabase.StartAssetEditing();
+#endif
             var locations = new ResourceLocationMap(100);
             CreateLocations(locations);
+#if UNITY_EDITOR
             AssetDatabase.StopAssetEditing();
-            var sceneLoc = new ResourceLocationBase("testscene", RootFolder + "/testScene.unity", typeof(SceneProvider).FullName);
+#endif
+            var sceneLoc = new ResourceLocationBase("testscene", RootFolder + "/test_scene.unity", typeof(SceneProvider).FullName);
             locations.Add("testscene", sceneLoc);
             Addressables.ResourceLocators.Add(locations);
 
@@ -125,25 +153,28 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
         Assert.IsFalse(unloadOp.Result.isLoaded, "Scene wasn't unloaded"); yield return null;
     }
 
+#if UNITY_EDITOR
     [UnityTest]
     public IEnumerator AssetReferenceCanLoadAndUnloadAssetTest()
     {
         yield return Init();
         IList<IResourceLocation> locs;
-        Addressables.ResourceLocators[0].Locate(keysList[0], out locs);
+        Addressables.ResourceLocators[0].Locate(m_KeysList[0], out locs);
         var guidString = AssetDatabase.AssetPathToGUID(locs[0].InternalId);
+        Assert.IsTrue(Addressables.ResourceLocators[0] is ResourceLocationMap);
         (Addressables.ResourceLocators[0] as ResourceLocationMap).Add(Hash128.Parse(guidString), locs[0]);
         var ar = new AssetReference(guidString);
 
         Assert.IsNull(ar.Asset);
-        var op = ar.LoadAsset<UnityEngine.Object>();
+        var op = ar.LoadAsset<Object>();
         Assert.IsNull(ar.Asset);
         yield return op;
         Assert.IsNotNull(ar.Asset);
-        ar.ReleaseAsset<UnityEngine.Object>();
+        ar.ReleaseAsset<Object>();
         Assert.IsNull(ar.Asset);
         yield return null;
     }
+#endif
 
     [UnityTest]
     public IEnumerator VerifyProfileVariableEvaluation()
@@ -157,9 +188,9 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
     public IEnumerator CanGetResourceLocationsWithSingleKey()
     {
         yield return Init();
-        foreach (var k in keysHashSet)
+        foreach (var k in m_KeysHashSet)
         {
-            Addressables.LoadAssets<IResourceLocation>(k.Key, (op1) => Assert.IsNotNull(op1.Result)).Completed += (op) =>
+            Addressables.LoadAssets<IResourceLocation>(k.Key, op1 => Assert.IsNotNull(op1.Result)).Completed += op =>
             {
                 Assert.IsNotNull(op.Result);
                 Assert.AreEqual(k.Value, op.Result.Count);
@@ -176,16 +207,16 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
         {
             HashSet<IResourceLocation> set1 = new HashSet<IResourceLocation>();
             HashSet<IResourceLocation> set2 = new HashSet<IResourceLocation>();
-            var key1 = keysList[UnityEngine.Random.Range(0, keysList.Count / 2)];
-            var key2 = keysList[UnityEngine.Random.Range(keysList.Count / 2, keysList.Count)];
-            var op1 = Addressables.LoadAssets<IResourceLocation>(key1, (op) => set1.Add(op.Result));
-            var op2 = Addressables.LoadAssets<IResourceLocation>(key2, (op) => set2.Add(op.Result));
+            var key1 = m_KeysList[Random.Range(0, m_KeysList.Count / 2)];
+            var key2 = m_KeysList[Random.Range(m_KeysList.Count / 2, m_KeysList.Count)];
+            var op1 = Addressables.LoadAssets<IResourceLocation>(key1, op => set1.Add(op.Result));
+            var op2 = Addressables.LoadAssets<IResourceLocation>(key2, op => set2.Add(op.Result));
             yield return op1;
             yield return op2;
             List<object> keys = new List<object>();
             keys.Add(key1);
             keys.Add(key2);
-            var op3 = Addressables.LoadAssets<IResourceLocation>(keys, (op) => { Assert.IsNotNull(op.Result); Assert.AreEqual(keys, op.Key); }, mode);
+            var op3 = Addressables.LoadAssets<IResourceLocation>(keys, op => { Assert.IsNotNull(op.Result); Assert.AreEqual(keys, op.Key); }, mode);
             yield return op3;
             Assert.NotNull(op3.Result);
             switch (mode)
@@ -210,7 +241,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
     public IEnumerator CanDestroyNonAddressable()
     {
         yield return Init();
-        GameObject go = GameObject.Instantiate(GameObject.CreatePrimitive(PrimitiveType.Cube));
+        GameObject go = Object.Instantiate(GameObject.CreatePrimitive(PrimitiveType.Cube));
         go.name = "TestCube";
 
         Addressables.ReleaseInstance(go);
@@ -227,15 +258,15 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
         yield return Init();
         int loaded = 0;
         var assets = new List<object>();
-        foreach (var key in keysList)
-            Addressables.LoadAsset<object>(key).Completed += (op) =>
+        foreach (var key in m_KeysList)
+            Addressables.LoadAsset<object>(key).Completed += op =>
             {
                 loaded++;
                 Assert.IsNotNull(op.Result);
                 assets.Add(op.Result);
             };
 
-        while (loaded < keysList.Count)
+        while (loaded < m_KeysList.Count)
             yield return null;
         foreach (var a in assets)
             Addressables.ReleaseAsset(a);
@@ -246,10 +277,10 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
     {
         yield return Init();
         object asset = null;
-        Addressables.LoadAsset<object>(keysList[0]).Completed += (op) =>
+        Addressables.LoadAsset<object>(m_KeysList[0]).Completed += op =>
         {
             Assert.IsNotNull(op.Result);
-            Assert.AreEqual(keysList[0], op.Key);
+            Assert.AreEqual(m_KeysList[0], op.Key);
             asset = op.Result;
         };
 
@@ -263,7 +294,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
     {
         yield return Init();
         bool complete = false;
-        Addressables.LoadAsset<object>(keysList[0]).Completed += (op) =>
+        Addressables.LoadAsset<object>(m_KeysList[0]).Completed += op =>
         {
             Assert.IsNotNull(op.Result);
             Addressables.ReleaseAsset(op.Result);
@@ -280,9 +311,9 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
         yield return Init();
         int loaded = 0;
         var assets = new List<object>();
-        foreach (var key in keysList)
+        foreach (var key in m_KeysList)
         {
-            Addressables.LoadAssets<object>(key, (a) => { Assert.IsNotNull(a.Result); assets.Add(a.Result); }).Completed += (op) =>
+            Addressables.LoadAssets<object>(key, a => { Assert.IsNotNull(a.Result); assets.Add(a.Result); }).Completed += op =>
              {
                  loaded++;
                  Assert.IsNotNull(op.Result);
@@ -290,7 +321,7 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
                      Assert.IsNotNull(a);
              };
         }
-        while (loaded < keysList.Count)
+        while (loaded < m_KeysList.Count)
             yield return null;
         foreach (var a in assets)
             Addressables.ReleaseAsset(a);
@@ -302,20 +333,20 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
     {
         yield return Init();
         int loaded = 0;
-        var assets = new List<UnityEngine.Object>();
+        var assets = new List<Object>();
         for (int i = 0; i < 50; i++)
         {
-            List<object> keys = new List<object>(new object[] { keysList[UnityEngine.Random.Range(0, keysList.Count / 2)], keysList[UnityEngine.Random.Range(keysList.Count / 2, keysList.Count)] });
-            var op3 = Addressables.LoadAssets<UnityEngine.Object>(keys, (op) => { Assert.IsNotNull(op.Result); assets.Add(op.Result); }, mode);
+            List<object> keys = new List<object>(new[] { m_KeysList[Random.Range(0, m_KeysList.Count / 2)], m_KeysList[Random.Range(m_KeysList.Count / 2, m_KeysList.Count)] });
+            var op3 = Addressables.LoadAssets<Object>(keys, op => { Assert.IsNotNull(op.Result); assets.Add(op.Result); }, mode);
             yield return op3;
             Assert.NotNull(op3.Result);
-            Addressables.LoadAssets<IResourceLocation>(keys, (op) => Assert.IsNotNull(op.Result), mode).Completed += (checkOp) =>
+            Addressables.LoadAssets<IResourceLocation>(keys, op => Assert.IsNotNull(op.Result), mode).Completed += checkOp =>
             {
                 loaded++;
                 Assert.AreEqual(op3.Result.Count, checkOp.Result.Count);
             };
         }
-        while (loaded < keysList.Count)
+        while (loaded < m_KeysList.Count)
             yield return null;
         foreach (var a in assets)
             Addressables.ReleaseAsset(a);
@@ -326,22 +357,20 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
     {
         yield return Init();
         int loaded = 0;
-        var assets = new List<object>();
-        foreach (var key in keysList)
+        foreach (var key in m_KeysList)
         {
-            Addressables.PreloadDependencies(key, (c) => Assert.IsNotNull(c.Result)).Completed += (op) =>
+            Addressables.PreloadDependencies<object>(key, c => Assert.IsNotNull(c.Result)).Completed += op =>
               {
                   loaded++;
                   Assert.IsNotNull(op.Result);
                   foreach (var d in op.Result)
                   {
                       Assert.IsNotNull(d);
-                      assets.Add(d);
                   }
               };
         }
 
-        while (loaded < keysList.Count)
+        while (loaded < m_KeysList.Count)
             yield return null;
     }
 
@@ -351,8 +380,8 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
         yield return Init();
         for (int i = 0; i < 50; i++)
         {
-            List<object> keys = new List<object>(new object[] { keysList[UnityEngine.Random.Range(0, keysList.Count / 2)], keysList[UnityEngine.Random.Range(keysList.Count / 2, keysList.Count)] });
-            var op3 = Addressables.PreloadDependencies(keys, (op) => Assert.IsNotNull(op.Result), mode);
+            List<object> keys = new List<object>(new[] { m_KeysList[Random.Range(0, m_KeysList.Count / 2)], m_KeysList[Random.Range(m_KeysList.Count / 2, m_KeysList.Count)] });
+            var op3 = Addressables.PreloadDependencies<object>(keys, op => Assert.IsNotNull(op.Result), mode);
             yield return op3;
             Assert.NotNull(op3.Result);
             foreach (var d in op3.Result)
@@ -367,14 +396,14 @@ public abstract class AddressablesBaseTests : IPrebuildSetup
         yield return Init();
         for (int i = 0; i < 100; i++)
         {
-            var key = keysList[UnityEngine.Random.Range(0, keysList.Count)];
-            Addressables.Instantiate<GameObject>(key, new InstantiationParameters(null, true)).Completed += (op) =>
+            var key = m_KeysList[Random.Range(0, m_KeysList.Count)];
+            Addressables.Instantiate<GameObject>(key, new InstantiationParameters(null, true)).Completed += op =>
             {
                 Assert.IsNotNull(op.Result);
-                DelayedActionManager.AddAction((Action<UnityEngine.Object, float>)Addressables.ReleaseInstance, UnityEngine.Random.Range(.25f, .5f), op.Result, 0);
+                DelayedActionManager.AddAction((Action<Object, float>)Addressables.ReleaseInstance, Random.Range(.25f, .5f), op.Result, 0);
             };
 
-            if (UnityEngine.Random.Range(0, 100) > 20)
+            if (Random.Range(0, 100) > 20)
                 yield return null;
         }
 

@@ -4,46 +4,60 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using UnityEngine;
+using UnityEngine.Serialization;
+
+// ReSharper disable DelegateSubtraction
 
 namespace UnityEditor.AddressableAssets
 {
+    /// <summary>
+    /// Manages the hosting services.
+    /// </summary>
     [Serializable]
     public class HostingServicesManager : ISerializationCallbackReceiver
     {
         internal const string KPrivateIpAddressKey = "PrivateIpAddress";
 
         [Serializable]
-        private class HostingServiceInfo
+        class HostingServiceInfo
         {
             public string classRef;
             public KeyDataStore dataStore;
         }
 
-        [SerializeField] private List<HostingServiceInfo> m_hostingServiceInfos;
-        [SerializeField] private AddressableAssetSettings m_settings;
-        [SerializeField] private int m_nextInstanceId;
-        [SerializeField] private List<string> m_registeredServiceTypeRefs;
+        [FormerlySerializedAs("m_hostingServiceInfos")]
+        [SerializeField]
+        List<HostingServiceInfo> m_HostingServiceInfos;
+        [FormerlySerializedAs("m_settings")]
+        [SerializeField]
+        AddressableAssetSettings m_Settings;
+        [FormerlySerializedAs("m_nextInstanceId")]
+        [SerializeField]
+        int m_NextInstanceId;
+        [FormerlySerializedAs("m_registeredServiceTypeRefs")]
+        [SerializeField]
+        List<string> m_RegisteredServiceTypeRefs;
 
-        private readonly Type[] m_builtinServiceTypes =
+        readonly Type[] m_BuiltinServiceTypes =
         {
             typeof(HttpHostingService)
         };
 
-        private Dictionary<IHostingService, HostingServiceInfo> m_hostingServiceInfoMap;
-        private ILogger m_logger;
-        private List<Type> m_registeredServiceTypes;
+        Dictionary<IHostingService, HostingServiceInfo> m_HostingServiceInfoMap;
+        ILogger m_Logger;
+        List<Type> m_RegisteredServiceTypes;
 
         /// <summary>
         /// Direct logging output of all managed services
         /// </summary>
         public ILogger Logger
         {
-            get { return m_logger; }
+            get { return m_Logger; }
             set
             {
-                m_logger = value ?? Debug.unityLogger;
+                m_Logger = value ?? Debug.unityLogger;
                 foreach (var svc in HostingServices)
-                    svc.Logger = m_logger;
+                    svc.Logger = m_Logger;
             }
         }
         
@@ -89,7 +103,7 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public bool IsInitialized
         {
-            get { return m_settings != null; }
+            get { return m_Settings != null; }
         }
 
         /// <summary>
@@ -97,7 +111,7 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public ICollection<IHostingService> HostingServices
         {
-            get { return m_hostingServiceInfoMap.Keys; }
+            get { return m_HostingServiceInfoMap.Keys; }
         }
 
         /// <summary>
@@ -109,10 +123,10 @@ namespace UnityEditor.AddressableAssets
         {
             get
             {
-                if (m_registeredServiceTypes.Count == 0)
-                    m_registeredServiceTypes.AddRange(m_builtinServiceTypes);
+                if (m_RegisteredServiceTypes.Count == 0)
+                    m_RegisteredServiceTypes.AddRange(m_BuiltinServiceTypes);
 
-                return m_registeredServiceTypes.ToArray();
+                return m_RegisteredServiceTypes.ToArray();
             }
         }
 
@@ -121,7 +135,7 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public int NextInstanceId
         {
-            get { return m_nextInstanceId; }
+            get { return m_NextInstanceId; }
         }
 
         /// <summary>
@@ -130,9 +144,9 @@ namespace UnityEditor.AddressableAssets
         public HostingServicesManager()
         {
             GlobalProfileVariables = new Dictionary<string, string>();
-            m_hostingServiceInfoMap = new Dictionary<IHostingService, HostingServiceInfo>();
-            m_registeredServiceTypes = new List<Type>();
-            m_logger = Debug.unityLogger;
+            m_HostingServiceInfoMap = new Dictionary<IHostingService, HostingServiceInfo>();
+            m_RegisteredServiceTypes = new List<Type>();
+            m_Logger = Debug.unityLogger;
         }
 
         /// <summary>
@@ -142,7 +156,7 @@ namespace UnityEditor.AddressableAssets
         public void Initialize(AddressableAssetSettings settings)
         {
             if (IsInitialized) return;
-            m_settings = settings;
+            m_Settings = settings;
             RefreshGlobalProfileVariables();
         }
 
@@ -161,7 +175,7 @@ namespace UnityEditor.AddressableAssets
                 }
                 catch (Exception e)
                 {
-                    m_logger.LogFormat(LogType.Error, e.Message);
+                    m_Logger.LogFormat(LogType.Error, e.Message);
                 }
             }
         }
@@ -181,7 +195,7 @@ namespace UnityEditor.AddressableAssets
                 }
                 catch (Exception e)
                 {
-                    m_logger.LogFormat(LogType.Error, e.Message);
+                    m_Logger.LogFormat(LogType.Error, e.Message);
                 }
             }
         }
@@ -199,25 +213,25 @@ namespace UnityEditor.AddressableAssets
             if (svc == null)
                 throw new ArgumentException("Provided type does not implement IHostingService", "serviceType");
 
-            if (!m_registeredServiceTypes.Contains(serviceType))
-                m_registeredServiceTypes.Add(serviceType);
+            if (!m_RegisteredServiceTypes.Contains(serviceType))
+                m_RegisteredServiceTypes.Add(serviceType);
 
-            var info = new HostingServiceInfo()
+            var info = new HostingServiceInfo
             {
                 classRef = TypeToClassRef(serviceType),
                 dataStore = new KeyDataStore()
             };
 
-            svc.Logger = m_logger;
+            svc.Logger = m_Logger;
             svc.DescriptiveName = name;
-            svc.InstanceId = m_nextInstanceId;
+            svc.InstanceId = m_NextInstanceId;
             svc.HostingServiceContentRoots.AddRange(GetAllContentRoots());
-            m_settings.profileSettings.RegisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
+            m_Settings.profileSettings.RegisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
             
-            m_hostingServiceInfoMap.Add(svc, info);
-            m_settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true);
+            m_HostingServiceInfoMap.Add(svc, info);
+            m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true);
 
-            m_nextInstanceId++;
+            m_NextInstanceId++;
             return svc;
         }
 
@@ -228,13 +242,13 @@ namespace UnityEditor.AddressableAssets
         /// <param name="svc"></param>
         public void RemoveHostingService(IHostingService svc)
         {
-            if (!m_hostingServiceInfoMap.ContainsKey(svc))
+            if (!m_HostingServiceInfoMap.ContainsKey(svc))
                 return;
 
             svc.StopHostingService();
-            m_settings.profileSettings.UnregisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
-            m_hostingServiceInfoMap.Remove(svc);
-            m_settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true);
+            m_Settings.profileSettings.UnregisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
+            m_HostingServiceInfoMap.Remove(svc);
+            m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true);
         }
 
         /// <summary>
@@ -244,13 +258,13 @@ namespace UnityEditor.AddressableAssets
         {
             Debug.Assert(IsInitialized);
 
-            m_settings.OnModification -= OnSettingsModification;
-            m_settings.OnModification += OnSettingsModification;
-            m_settings.profileSettings.RegisterProfileStringEvaluationFunc(EvaluateGlobalProfileVariableKey);
+            m_Settings.OnModification -= OnSettingsModification;
+            m_Settings.OnModification += OnSettingsModification;
+            m_Settings.profileSettings.RegisterProfileStringEvaluationFunc(EvaluateGlobalProfileVariableKey);
             foreach (var svc in HostingServices)
             {
-                svc.Logger = m_logger;
-                m_settings.profileSettings.RegisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
+                svc.Logger = m_Logger;
+                m_Settings.profileSettings.RegisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
             }
 
             RefreshGlobalProfileVariables();
@@ -264,12 +278,12 @@ namespace UnityEditor.AddressableAssets
             Debug.Assert(IsInitialized);
 
             // ReSharper disable once DelegateSubtraction
-            m_settings.OnModification -= OnSettingsModification;
-            m_settings.profileSettings.UnregisterProfileStringEvaluationFunc(EvaluateGlobalProfileVariableKey);
+            m_Settings.OnModification -= OnSettingsModification;
+            m_Settings.profileSettings.UnregisterProfileStringEvaluationFunc(EvaluateGlobalProfileVariableKey);
             foreach (var svc in HostingServices)
             {
                 svc.Logger = null;
-                m_settings.profileSettings.UnregisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
+                m_Settings.profileSettings.UnregisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
             }
         }
 
@@ -279,17 +293,17 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public void OnBeforeSerialize()
         {
-            m_hostingServiceInfos = new List<HostingServiceInfo>();
+            m_HostingServiceInfos = new List<HostingServiceInfo>();
             foreach (var svc in HostingServices)
             {
-                var info = m_hostingServiceInfoMap[svc];
-                m_hostingServiceInfos.Add(info);
+                var info = m_HostingServiceInfoMap[svc];
+                m_HostingServiceInfos.Add(info);
                 svc.OnBeforeSerialize(info.dataStore);
             }
 
-            m_registeredServiceTypeRefs = new List<string>();
-            foreach (var type in m_registeredServiceTypes)
-                m_registeredServiceTypeRefs.Add(TypeToClassRef(type));
+            m_RegisteredServiceTypeRefs = new List<string>();
+            foreach (var type in m_RegisteredServiceTypes)
+                m_RegisteredServiceTypeRefs.Add(TypeToClassRef(type));
         }
 
         /// <inheritdoc/>
@@ -298,21 +312,21 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public void OnAfterDeserialize()
         {
-            m_hostingServiceInfoMap = new Dictionary<IHostingService, HostingServiceInfo>();
-            foreach (var svcInfo in m_hostingServiceInfos)
+            m_HostingServiceInfoMap = new Dictionary<IHostingService, HostingServiceInfo>();
+            foreach (var svcInfo in m_HostingServiceInfos)
             {
                 var svc = CreateHostingServiceInstance(svcInfo.classRef);
                 if (svc == null) continue;
                 svc.OnAfterDeserialize(svcInfo.dataStore);
-                m_hostingServiceInfoMap.Add(svc, svcInfo);
+                m_HostingServiceInfoMap.Add(svc, svcInfo);
             }
 
-            m_registeredServiceTypes = new List<Type>();
-            foreach (var typeRef in m_registeredServiceTypeRefs)
+            m_RegisteredServiceTypes = new List<Type>();
+            foreach (var typeRef in m_RegisteredServiceTypeRefs)
             {
                 var type = Type.GetType(typeRef, false);
                 if (type == null) continue;
-                m_registeredServiceTypes.Add(type);
+                m_RegisteredServiceTypes.Add(type);
             }
         }
 
@@ -350,7 +364,7 @@ namespace UnityEditor.AddressableAssets
             return retVal;
         }
 
-        private void OnSettingsModification(AddressableAssetSettings s, AddressableAssetSettings.ModificationEvent evt, object obj)
+        void OnSettingsModification(AddressableAssetSettings s, AddressableAssetSettings.ModificationEvent evt, object obj)
         {
             switch (evt)
             {
@@ -367,7 +381,7 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        private void ConfigureAllHostingServices()
+        void ConfigureAllHostingServices()
         {
             var contentRoots = GetAllContentRoots();
 
@@ -378,12 +392,12 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        private string[] GetAllContentRoots()
+        string[] GetAllContentRoots()
         {
             Debug.Assert(IsInitialized);
 
             var contentRoots = new List<string>();
-            foreach (var group in m_settings.groups)
+            foreach (var group in m_Settings.groups)
             {
                 foreach (var schema in group.Schemas)
                 {
@@ -400,7 +414,7 @@ namespace UnityEditor.AddressableAssets
             return contentRoots.ToArray();
         }
 
-        private IHostingService CreateHostingServiceInstance(string classRef)
+        IHostingService CreateHostingServiceInstance(string classRef)
         {
             try
             {
@@ -410,14 +424,14 @@ namespace UnityEditor.AddressableAssets
             }
             catch (Exception e)
             {
-                m_logger.LogFormat(LogType.Error, "Could not creat IHostingService from class ref '{0}'", classRef);
-                m_logger.LogFormat(LogType.Error, e.Message);
+                m_Logger.LogFormat(LogType.Error, "Could not creat IHostingService from class ref '{0}'", classRef);
+                m_Logger.LogFormat(LogType.Error, e.Message);
             }
 
             return null;
         }
 
-        private static string TypeToClassRef(Type t)
+        static string TypeToClassRef(Type t)
         {
             return string.Format("{0}, {1}", t.FullName, t.Assembly.GetName().Name);
         }
@@ -425,7 +439,7 @@ namespace UnityEditor.AddressableAssets
         // For unit tests
         internal AddressableAssetSettings Settings
         {
-            get { return m_settings; }
+            get { return m_Settings; }
         }
     }
 }

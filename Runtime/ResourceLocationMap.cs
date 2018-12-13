@@ -51,7 +51,6 @@ namespace UnityEngine.AddressableAssets
             //fix up dependencies between them
             foreach (var kvp in locMap)
             {
-                var deps = kvp.Value.Dependencies;
                 var data = dataMap[kvp.Key];
                 if (data.Dependencies != null)
                 {

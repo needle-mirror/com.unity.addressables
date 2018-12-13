@@ -7,31 +7,34 @@ using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using UnityEngine.ResourceManagement;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
     /// <summary>
     /// Data stored with each build that is used to generated content updates.
     /// </summary>
-    [System.Serializable]
+    [Serializable]
     public class AddressablesContentState
     {
         /// <summary>
         /// The version that the player was built with.  This is usually set to AddressableAssetSettings.PlayerBuildVersion.
         /// </summary>
+        [FormerlySerializedAs("m_playerVersion")]
         [SerializeField]
-        public string m_playerVersion;
+        public string playerVersion;
         /// <summary>
         /// The version of the unity editor used to build the player.
         /// </summary>
+        [FormerlySerializedAs("m_editorVersion")]
         [SerializeField]
-        public string m_editorVersion;
+        public string editorVersion;
         /// <summary>
         /// Dependency information for all assets in the build that have been marked StaticContent.
         /// </summary>
+        [FormerlySerializedAs("m_cachedInfos")]
         [SerializeField]
-        public CachedInfo[] m_cachedInfos;
+        public CachedInfo[] cachedInfos;
     }
 
     /// <summary>
@@ -42,11 +45,12 @@ namespace UnityEditor.AddressableAssets
         /// <summary>
         /// Save the content update information for a set of AddressableAssetEntry objects.
         /// </summary>
+        /// <param name="path">File to write content stat info to.  If file already exists, it will be deleted before the new file is created.</param>
         /// <param name="entries">The entries to save.</param>
         /// <param name="buildCache">The cache dependency information generated from the build.</param>
         /// <param name="playerVersion">The player version to save. This is usually set to AddressableAssetSettings.PlayerBuildVersion.</param>
-        /// <returns></returns>
-        public static string SaveContentState(List<AddressableAssetEntry> entries, IBuildCache buildCache, string playerVersion)
+        /// <returns>True if the file is saved, false otherwise.</returns>
+        public static bool SaveContentState(string path, List<AddressableAssetEntry> entries, IBuildCache buildCache, string playerVersion)
         {
             try
             {
@@ -63,25 +67,24 @@ namespace UnityEditor.AddressableAssets
                 }
                 IList<CachedInfo> cachedInfos;
                 buildCache.LoadCachedData(cacheEntries, out cachedInfos);
-                var cacheData = new AddressablesContentState() { m_cachedInfos = cachedInfos.ToArray(), m_playerVersion = playerVersion, m_editorVersion = Application.unityVersion };
+                var cacheData = new AddressablesContentState { cachedInfos = cachedInfos.ToArray(), playerVersion = playerVersion, editorVersion = Application.unityVersion };
                 var formatter = new BinaryFormatter();
-                var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Temp/com.unity.addressables/addressables_content_state.bin";
-                if (File.Exists(tempPath))
-                    File.Delete(tempPath);
-                var dir = Path.GetDirectoryName(tempPath);
-                if (!Directory.Exists(dir))
+                if (File.Exists(path))
+                    File.Delete(path);
+                var dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
-                var stream = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write);
+                var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write);
                 formatter.Serialize(stream, cacheData);
                 stream.Flush();
                 stream.Close();
                 stream.Dispose();
-                return tempPath;
+                return true;
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 Debug.LogException(e);
-                return null;
+                return false;
             }
         }
 
@@ -95,7 +98,8 @@ namespace UnityEditor.AddressableAssets
         [Obsolete("Use SaveContentState instead. (UnityUpgradable) -> SaveContentState")]
         public static string SaveCacheData(List<AddressableAssetEntry> entries, IBuildCache buildCache, string playerVersion)
         {
-            return SaveContentState(entries, buildCache, playerVersion);
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/addressables_content_state.bin";
+            return SaveContentState(tempPath, entries, buildCache, playerVersion) ? tempPath : "";
         }
 
 
@@ -118,13 +122,16 @@ namespace UnityEditor.AddressableAssets
         public static string GetContentStateDataPath(bool browse)
         {
             var buildPath = EditorUserBuildSettings.GetBuildLocation(EditorUserBuildSettings.activeBuildTarget);
-            if (File.Exists(buildPath))
-                buildPath = Path.GetDirectoryName(buildPath);
-            #if UNITY_EDITOR_OSX
+            if (!string.IsNullOrEmpty(buildPath))
+            {
+                if (File.Exists(buildPath))
+                    buildPath = Path.GetDirectoryName(buildPath);
+#if UNITY_EDITOR_OSX
                 if(EditorUserBuildSettings.activeBuildTarget == BuildTarget.iOS || 
                    EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneOSX)
                     buildPath = Path.GetDirectoryName(buildPath);
-            #endif
+#endif
+            }
             if (browse)
             {
                 if (string.IsNullOrEmpty(buildPath))
@@ -137,11 +144,9 @@ namespace UnityEditor.AddressableAssets
 
                 return buildPath;
             }
-            else
-            {
-                if (string.IsNullOrEmpty(buildPath))
-                    buildPath = Application.streamingAssetsPath;
-            }
+
+            if (string.IsNullOrEmpty(buildPath))
+                buildPath = Application.streamingAssetsPath;
             var path = Path.Combine(buildPath, "addressables_content_state.bin");
             return path;
         }
@@ -179,7 +184,7 @@ namespace UnityEditor.AddressableAssets
             return cacheData;
         }
 
-        static bool streamingAssetsExists = false;
+        static bool s_StreamingAssetsExists;
         static string kStreamingAssetsPath = "Assets/StreamingAssets";
 
         internal static void Cleanup(bool deleteStreamingAssetsFolderIfEmpty)
@@ -218,18 +223,18 @@ namespace UnityEditor.AddressableAssets
             if (cacheData == null)
                 return null;
 
-            streamingAssetsExists = Directory.Exists("Assets/StreamingAssets");
+            s_StreamingAssetsExists = Directory.Exists("Assets/StreamingAssets");
             var context = new AddressablesBuildDataBuilderContext(settings, 
                 BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
                 EditorUserBuildSettings.activeBuildTarget, 
                 false, 
                 false, 
-                cacheData.m_playerVersion);
+                cacheData.playerVersion);
 
             SceneManagerState.Record();
             var buildOp = settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
             SceneManagerState.Restore();
-            Cleanup(!streamingAssetsExists);
+            Cleanup(!s_StreamingAssetsExists);
             return buildOp;
         }
 
@@ -245,7 +250,7 @@ namespace UnityEditor.AddressableAssets
             settings.GetAllAssets(allEntries, g => g.HasSchema<BundledAssetGroupSchema>() && g.GetSchema<ContentUpdateGroupSchema>().StaticContent);
 
             var entryToCacheInfo = new Dictionary<string, CachedInfo>();
-            foreach (var cacheInfo in cacheData.m_cachedInfos)
+            foreach (var cacheInfo in cacheData.cachedInfos)
                 if (cacheInfo != null)
                     entryToCacheInfo[cacheInfo.Asset.Guid.ToString()] = cacheInfo;
             var modifiedEntries = new List<AddressableAssetEntry>();
@@ -267,7 +272,7 @@ namespace UnityEditor.AddressableAssets
         /// <param name="groupName">The name of the new group.</param>
         public static void CreateContentUpdateGroup(AddressableAssetSettings settings, List<AddressableAssetEntry> items, string groupName)
         {
-            var contentGroup = settings.CreateGroup(settings.FindUniqueGroupName(groupName), false, false, true);
+            var contentGroup = settings.CreateGroup(settings.FindUniqueGroupName(groupName), false, false, true, null);
             var schema = contentGroup.AddSchema<BundledAssetGroupSchema>();
             schema.BuildPath.SetVariableByName(settings, AddressableAssetSettings.kRemoteBuildPath);
             schema.LoadPath.SetVariableByName(settings, AddressableAssetSettings.kRemoteLoadPath);

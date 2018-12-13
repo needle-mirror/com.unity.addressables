@@ -4,6 +4,23 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.5.2-preview] - 2018-12-14
+ - *IMPORTANT CHANGE TO BUILDING* 
+   - We have disabled automatic asset bundle building.  That used to happen when you built the player, or entered play mode in "packed mode".  This is no longer the case.  You must now select "Build->Build Player Content" from the Addressables window, or call AddressableAssetSettings.BuildPlayerContent().  We did this because we determined that automatic building did not scale well at all for large projects.  
+ - fixed regression loading local bundles
+ - Added Adddressables.DownloadDependencies() interface
+ - fixes for Nintendo Switch support
+ - Fixed issues around referencing Addressables during an Awake() call
+ - Code refactor and naming convention fixes
+ - Cleaned up missing docs
+ - Content update now handles not having and groups marked as Static Content
+ - Fixed errors when browing for the addressables_content_state.bin and cancelling 
+ - Moved addressables_content_state.bin to be generated into the addressables settings folder
+ - Changed some exceptions when releasing null bundles to warnings to handle the case of releasing a failed download operation
+ - Separated hash and crc options to allow them to be used independently in asset bundle loads.
+ - Use CRC in AssetBundle.LoadFromFileAsync calls if specified
+ - Always include AssetBundleRequestOptions for asset bundle locations
+ 
 ## [0.4.8-preview] - 2018-10-22
  - Added all referenced types in asset bundles to link.xml to prevent them from being stripped in IL2CPP builds
 

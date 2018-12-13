@@ -8,6 +8,9 @@ using UnityEngine;
 namespace UnityEditor.AddressableAssets
 {
     // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
+    /// <summary>
+    /// HTTP implemenation of hosting service.
+    /// </summary>
     public class HttpHostingService : BaseHostingService
     {
         protected enum ResultCode
@@ -16,13 +19,13 @@ namespace UnityEditor.AddressableAssets
             NotFound = 404
         }
 
-        private const string k_hostingServicePortKey = "HostingServicePort";
-        private const int k_fileReadBufferSize = 64 * 1024;
-        
-        private static readonly IPEndPoint DefaultLoopbackEndpoint = new IPEndPoint(IPAddress.Loopback, 0);
-        private int m_servicePort;
-        private readonly List<string> m_contentRoots;
-        private readonly Dictionary<string, string> m_profileVariables;
+        const string k_HostingServicePortKey = "HostingServicePort";
+        const int k_FileReadBufferSize = 64 * 1024;
+
+        static readonly IPEndPoint k_DefaultLoopbackEndpoint = new IPEndPoint(IPAddress.Loopback, 0);
+        int m_ServicePort;
+        readonly List<string> m_ContentRoots;
+        readonly Dictionary<string, string> m_ProfileVariables;
         
         // ReSharper disable once MemberCanBePrivate.Global
         protected HttpListener MyHttpListener { get; set; }
@@ -35,12 +38,12 @@ namespace UnityEditor.AddressableAssets
         {
             get
             {
-                return m_servicePort;
+                return m_ServicePort;
             }
             protected set
             {
-                if (IsPortAvailable(value))
-                    m_servicePort = value;
+                if (value > 0 && IsPortAvailable(value))
+                    m_ServicePort = value;
             }
         }
 
@@ -53,7 +56,7 @@ namespace UnityEditor.AddressableAssets
         /// <inheritdoc/>
         public override List<string> HostingServiceContentRoots
         {
-            get { return m_contentRoots; }
+            get { return m_ContentRoots; }
         }
 
         /// <inheritdoc/>
@@ -61,9 +64,9 @@ namespace UnityEditor.AddressableAssets
         {
             get
             {
-                m_profileVariables[k_hostingServicePortKey] = HostingServicePort.ToString();
-                m_profileVariables[DisambiguateProfileVar(k_hostingServicePortKey)] = HostingServicePort.ToString();
-                return m_profileVariables;
+                m_ProfileVariables[k_HostingServicePortKey] = HostingServicePort.ToString();
+                m_ProfileVariables[DisambiguateProfileVar(k_HostingServicePortKey)] = HostingServicePort.ToString();
+                return m_ProfileVariables;
             }
         }
 
@@ -72,8 +75,8 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public HttpHostingService()
         {
-            m_profileVariables = new Dictionary<string, string>();
-            m_contentRoots = new List<string>();
+            m_ProfileVariables = new Dictionary<string, string>();
+            m_ContentRoots = new List<string>();
             MyHttpListener = new HttpListener();
         }
 
@@ -138,14 +141,14 @@ namespace UnityEditor.AddressableAssets
         /// <inheritdoc/>
         public override void OnBeforeSerialize(KeyDataStore dataStore)
         {
-            dataStore.SetData(k_hostingServicePortKey, HostingServicePort);
+            dataStore.SetData(k_HostingServicePortKey, HostingServicePort);
             base.OnBeforeSerialize(dataStore);
         }
 
         /// <inheritdoc/>
         public override void OnAfterDeserialize(KeyDataStore dataStore)
         {
-            HostingServicePort = dataStore.GetData(k_hostingServicePortKey, 0);
+            HostingServicePort = dataStore.GetData(k_HostingServicePortKey, 0);
             base.OnAfterDeserialize(dataStore);
         }
 
@@ -243,7 +246,7 @@ namespace UnityEditor.AddressableAssets
         /// <param name="context"></param>
         /// <param name="filePath"></param>
         /// <param name="readBufferSize"></param>
-        protected virtual void ReturnFile(HttpListenerContext context, string filePath, int readBufferSize = k_fileReadBufferSize)
+        protected virtual void ReturnFile(HttpListenerContext context, string filePath, int readBufferSize = k_FileReadBufferSize)
         {
             context.Response.ContentType = "application/octet-stream";
 
@@ -278,6 +281,9 @@ namespace UnityEditor.AddressableAssets
         {
             try
             {
+                if (port <= 0)
+                    return false;
+
                 using (var client = new TcpClient())
                 {
                     var result = client.BeginConnect(IPAddress.Loopback, port, null, null);
@@ -304,7 +310,7 @@ namespace UnityEditor.AddressableAssets
         {
             using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
             {
-                socket.Bind(DefaultLoopbackEndpoint);
+                socket.Bind(k_DefaultLoopbackEndpoint);
 
                 var endPoint = socket.LocalEndPoint as IPEndPoint;
                 return endPoint != null ? endPoint.Port : 0;

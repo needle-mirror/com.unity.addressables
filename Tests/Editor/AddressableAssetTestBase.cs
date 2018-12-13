@@ -1,37 +1,38 @@
-﻿using UnityEngine;
-using NUnit.Framework;
+﻿using System;
 using System.IO;
+using NUnit.Framework;
+using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
     public abstract class AddressableAssetTestBase
     {
-        protected const string TestConfigName = "AddressableAssetSettings.Tests";
-        protected const string TestConfigFolder = "Assets/AddressableAssetsData_AddressableAssetSettingsTests";
-        protected AddressableAssetSettings m_settings;
-        protected string assetGUID;
+        protected const string k_TestConfigName = "AddressableAssetSettings.Tests";
+        protected const string k_TestConfigFolder = "Assets/AddressableAssetsData_AddressableAssetSettingsTests";
+        protected AddressableAssetSettings m_Settings;
+        protected string m_AssetGUID;
         protected virtual bool PersistSettings { get { return true; } }
         [OneTimeSetUp]
         public void Init()
         {
-            
-            if (Directory.Exists(TestConfigFolder))
-                AssetDatabase.DeleteAsset(TestConfigFolder);
-            if (!Directory.Exists(TestConfigFolder))
+
+            if (Directory.Exists(k_TestConfigFolder))
+                AssetDatabase.DeleteAsset(k_TestConfigFolder);
+            if (!Directory.Exists(k_TestConfigFolder))
             {
-                Directory.CreateDirectory(TestConfigFolder);
+                Directory.CreateDirectory(k_TestConfigFolder);
                 AssetDatabase.Refresh();
             }
-            
-            m_settings = AddressableAssetSettings.Create(TestConfigFolder, TestConfigName, true, PersistSettings);
-            m_settings.labelTable.labelNames.Clear();
+
+            m_Settings = AddressableAssetSettings.Create(k_TestConfigFolder, k_TestConfigName, true, PersistSettings);
+            m_Settings.labelTable.labelNames.Clear();
             GameObject testObject = new GameObject("TestObject");
 #if UNITY_2018_3_OR_NEWER
-            PrefabUtility.SaveAsPrefabAsset(testObject, TestConfigFolder + "/test.prefab");
+            PrefabUtility.SaveAsPrefabAsset(testObject, k_TestConfigFolder + "/test.prefab");
 #else
-            PrefabUtility.CreatePrefab(TestConfigFolder + "/test.prefab", testObject);
+            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
 #endif
-            assetGUID = AssetDatabase.AssetPathToGUID(TestConfigFolder + "/test.prefab");
+            m_AssetGUID = AssetDatabase.AssetPathToGUID(k_TestConfigFolder + "/test.prefab");
             OnInit();
         }
 
@@ -41,9 +42,9 @@ namespace UnityEditor.AddressableAssets.Tests
         public void Cleanup()
         {
             OnCleanup();
-            if (Directory.Exists(TestConfigFolder))
-                AssetDatabase.DeleteAsset(TestConfigFolder);
-            EditorBuildSettings.RemoveConfigObject(TestConfigName);
+            if (Directory.Exists(k_TestConfigFolder))
+                AssetDatabase.DeleteAsset(k_TestConfigFolder);
+            EditorBuildSettings.RemoveConfigObject(k_TestConfigName);
         }
 
         protected virtual void OnCleanup()

@@ -1,17 +1,18 @@
-﻿
-using System;
+﻿using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
     /// <summary>
     /// Used to store references to profile variables.  This class is intended to be used for fields in user scripts, specifically ones that subclass AddressableAssetGroupSchema.
     /// </summary>
-    [System.Serializable]
+    [Serializable]
     public class ProfileValueReference
     {
+        [FormerlySerializedAs("m_id")]
         [SerializeField]
-        private string m_id;
+        string m_Id;
 
         /// <summary>
         /// This delegate will be invoked when the reference profile id changes.  This will NOT be invoked when the actual profile value itself changes.
@@ -21,7 +22,7 @@ namespace UnityEditor.AddressableAssets
         /// <summary>
         /// Get the profile variable id.
         /// </summary>
-        public string Id { get { return m_id; } }
+        public string Id { get { return m_Id; } }
 
         /// <summary>
         /// Evaluate the profile value using the provided settings object.
@@ -56,7 +57,7 @@ namespace UnityEditor.AddressableAssets
                 Debug.LogWarning("ProfileValueReference: GetValue called with invalid profileId.");
                 return null;
             }
-            return profileSettings.EvaluateString(profileId, profileSettings.GetValueById(profileId, m_id));
+            return profileSettings.EvaluateString(profileId, profileSettings.GetValueById(profileId, m_Id));
         }
 
         /// <summary>
@@ -71,11 +72,11 @@ namespace UnityEditor.AddressableAssets
                 Debug.LogWarning("ProfileValueReference: GetName() - AddressableAssetSettings object is null.");
                 return null;
             }
-            var pid = settings.profileSettings.GetProfileDataById(m_id);
+            var pid = settings.profileSettings.GetProfileDataById(m_Id);
             if(pid == null)
-                Debug.LogWarningFormat("ProfileValueReference: GetName() - Unable to find variable id {0} in settings object.", m_id);
+                Debug.LogWarningFormat("ProfileValueReference: GetName() - Unable to find variable id {0} in settings object.", m_Id);
 
-            return pid == null ? string.Empty : pid.Name;
+            return pid == null ? string.Empty : pid.ProfileName;
         }
 
         /// <summary>
@@ -101,7 +102,7 @@ namespace UnityEditor.AddressableAssets
                 Debug.LogWarningFormat("ProfileValueReference: SetVariableById() - Unable to find variable id {0} in settings object.", id);
                 return false;
             }
-            m_id = id;
+            m_Id = id;
             if (OnValueChanged != null)
                 OnValueChanged(this);
             return true;
@@ -132,7 +133,7 @@ namespace UnityEditor.AddressableAssets
                 Debug.LogWarningFormat("ProfileValueReference: SetVariableByName() - Unable to find variable name {0} in settings object.", name);
                 return false;
             }
-            m_id = idData.Id;
+            m_Id = idData.Id;
             if (OnValueChanged != null)
                 OnValueChanged(this);
             return true;

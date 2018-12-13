@@ -1,20 +1,17 @@
-using UnityEngine;
 using System;
-using UnityEditor.IMGUI.Controls;
-using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.AddressableAssets;
-using System.Linq;
 
 namespace UnityEditor.AddressableAssets
 {
     [CustomPropertyDrawer(typeof(AssetLabelReference), true)]
-    internal class AssetLabelReferenceDrawer : PropertyDrawer
+    class AssetLabelReferenceDrawer : PropertyDrawer
     {
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EditorGUI.BeginProperty(position, label, property);
 
-            var currentLabel = property.FindPropertyRelative("m_labelString");
+            var currentLabel = property.FindPropertyRelative("m_LabelString");
             var smallPos = EditorGUI.PrefixLabel(position, label);
             if (AddressableAssetSettingsDefaultObject.Settings == null)
             {

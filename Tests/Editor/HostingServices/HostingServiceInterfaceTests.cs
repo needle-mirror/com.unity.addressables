@@ -1,5 +1,6 @@
-﻿using NUnit.Framework;
+﻿using System;
 using System.IO;
+using NUnit.Framework;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Tests
@@ -7,11 +8,11 @@ namespace UnityEditor.AddressableAssets.Tests
     [TestFixtureSource("HostingServices")]
     public class HostingServiceInterfaceTests
     {
-        protected const string TestConfigName = "AddressableAssetSettings.HostingServiceInterfaceTests";
-        protected const string TestConfigFolder = "Assets/AddressableAssetsData_HostingServiceInterfaceTests";
+        protected const string k_TestConfigName = "AddressableAssetSettings.HostingServiceInterfaceTests";
+        protected const string k_TestConfigFolder = "Assets/AddressableAssetsData_HostingServiceInterfaceTests";
 
         // ReSharper disable once UnusedMember.Local
-        private static IHostingService[] HostingServices
+        static IHostingService[] HostingServices
         {
             get
             {
@@ -22,31 +23,31 @@ namespace UnityEditor.AddressableAssets.Tests
             }
         }
 
-        private readonly IHostingService m_service;
+        readonly IHostingService m_Service;
 
         public HostingServiceInterfaceTests(IHostingService svc)
         {
-            m_service = svc;
+            m_Service = svc;
         }
 
         [OneTimeTearDown]
         public void Cleanup()
         {
-            if (Directory.Exists(TestConfigFolder))
-                AssetDatabase.DeleteAsset(TestConfigFolder);
-            EditorBuildSettings.RemoveConfigObject(TestConfigName);
+            if (Directory.Exists(k_TestConfigFolder))
+                AssetDatabase.DeleteAsset(k_TestConfigFolder);
+            EditorBuildSettings.RemoveConfigObject(k_TestConfigName);
         }
 
-        private IHostingService GetManagedService(out AddressableAssetSettings settings)
+        IHostingService GetManagedService(out AddressableAssetSettings settings)
         {
             var m = new HostingServicesManager();
-            settings = AddressableAssetSettings.Create(TestConfigFolder, TestConfigName, false, false);
+            settings = AddressableAssetSettings.Create(k_TestConfigFolder, k_TestConfigName, false, false);
             settings.HostingServicesManager = m;
-            var group = settings.CreateGroup("testGroup", false, false, false);
+            var group = settings.CreateGroup("testGroup", false, false, false, null);
             group.AddSchema<BundledAssetGroupSchema>();
             settings.groups.Add(group);
             m.Initialize(settings);
-            return m.AddHostingService(m_service.GetType(), "test");
+            return m.AddHostingService(m_Service.GetType(), "test");
         }
 
         // HostingServiceContentRoots
@@ -67,7 +68,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void ProfileVariablesShould_ReturnProfileVariableKeyValuePairs()
         {
-            var vars = m_service.ProfileVariables;
+            var vars = m_Service.ProfileVariables;
             Assert.IsNotEmpty(vars);
         }
 
@@ -91,11 +92,11 @@ namespace UnityEditor.AddressableAssets.Tests
         public void OnBeforeSerializeShould_PersistExpectedDataToKeyDataStore()
         {
             var data = new KeyDataStore();
-            m_service.DescriptiveName = "Testing 123";
-            m_service.InstanceId = 123;
-            m_service.HostingServiceContentRoots.Clear();
-            m_service.HostingServiceContentRoots.AddRange(new[] {"/test123", "/test456"});
-            m_service.OnBeforeSerialize(data);
+            m_Service.DescriptiveName = "Testing 123";
+            m_Service.InstanceId = 123;
+            m_Service.HostingServiceContentRoots.Clear();
+            m_Service.HostingServiceContentRoots.AddRange(new[] {"/test123", "/test456"});
+            m_Service.OnBeforeSerialize(data);
             Assert.AreEqual("Testing 123", data.GetData("DescriptiveName", string.Empty));
             Assert.AreEqual(123, data.GetData("InstanceId", 0));
             Assert.AreEqual("/test123;/test456", data.GetData("ContentRoot", string.Empty));
@@ -110,11 +111,11 @@ namespace UnityEditor.AddressableAssets.Tests
             data.SetData("DescriptiveName", "Testing 123");
             data.SetData("InstanceId", 123);
             data.SetData("ContentRoot", "/test123;/test456");
-            m_service.OnAfterDeserialize(data);
-            Assert.AreEqual("Testing 123", m_service.DescriptiveName);
-            Assert.AreEqual(123, m_service.InstanceId);
-            Assert.Contains("/test123", m_service.HostingServiceContentRoots);
-            Assert.Contains("/test456", m_service.HostingServiceContentRoots);
+            m_Service.OnAfterDeserialize(data);
+            Assert.AreEqual("Testing 123", m_Service.DescriptiveName);
+            Assert.AreEqual(123, m_Service.InstanceId);
+            Assert.Contains("/test123", m_Service.HostingServiceContentRoots);
+            Assert.Contains("/test456", m_Service.HostingServiceContentRoots);
         }
 
         // EvaluateProfileString
@@ -122,16 +123,16 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void EvaluateProfileStringShould_CorrectlyReplaceKeyValues()
         {
-            var vars = m_service.ProfileVariables;
+            var vars = m_Service.ProfileVariables;
             vars.Add("foo", "bar");
-            var val = m_service.EvaluateProfileString("foo");
+            var val = m_Service.EvaluateProfileString("foo");
             Assert.AreEqual("bar", val);
         }
 
         [Test]
         public void EvaluateProfileStringShould_ReturnNullForNonMatchingKey()
         {
-            var val = m_service.EvaluateProfileString("foo2");
+            var val = m_Service.EvaluateProfileString("foo2");
             Assert.IsNull(val);
         }
 
@@ -141,15 +142,15 @@ namespace UnityEditor.AddressableAssets.Tests
         public void LoggerShould_UseTheProvidedLogger()
         {
             var l = new Logger(Debug.unityLogger.logHandler);
-            m_service.Logger = l;
-            Assert.AreEqual(l, m_service.Logger);
+            m_Service.Logger = l;
+            Assert.AreEqual(l, m_Service.Logger);
         }
 
         [Test]
         public void RegisterLoggerShould_UseTheDebugUnityLoggerWhenParamIsNull()
         {
-            m_service.Logger = null;
-            Assert.AreEqual(Debug.unityLogger, m_service.Logger);
+            m_Service.Logger = null;
+            Assert.AreEqual(Debug.unityLogger, m_Service.Logger);
         }
 
         // DescriptiveName
@@ -157,8 +158,8 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void DescriptiveNameShould_AllowGetAndSetOfDescriptiveName()
         {
-            m_service.DescriptiveName = "test";
-            Assert.AreEqual("test", m_service.DescriptiveName);
+            m_Service.DescriptiveName = "test";
+            Assert.AreEqual("test", m_Service.DescriptiveName);
         }
 
         // InstanceId
@@ -166,8 +167,8 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void InstanceIdShould_AllowGetAndSetOfInstanceId()
         {
-            m_service.InstanceId = 999;
-            Assert.AreEqual(999, m_service.InstanceId);
+            m_Service.InstanceId = 999;
+            Assert.AreEqual(999, m_Service.InstanceId);
         }
     }
 }

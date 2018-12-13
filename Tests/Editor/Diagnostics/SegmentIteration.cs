@@ -1,12 +1,13 @@
-﻿using NUnit.Framework;
-using System.Collections.Generic;
-using UnityEditor.AddressableAssets.Diagnostics;
+﻿using System;
 using System.Linq;
+using NUnit.Framework;
+using UnityEditor.AddressableAssets.Diagnostics;
+
 namespace UnityEditor.AddressableAssets.Tests
 {
     public class SegmentIterationTests
     {
-        private static bool IsContinuationOfSegment(int prevData, int newData)
+        static bool IsContinuationOfSegment(int prevData, int newData)
         {
             return prevData != newData;
         }
@@ -22,7 +23,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             EventDataSetStream stream = new EventDataSetStream();
             stream.AddSample(0, 99);
-            GraphUtility.Segment[] segs = GraphUtility.IterateSegments(stream, 25, 100, new GraphUtility.IsContinuationOfSegmentDelegate(IsContinuationOfSegment)).ToArray();
+            GraphUtility.Segment[] segs = GraphUtility.IterateSegments(stream, 25, 100, IsContinuationOfSegment).ToArray();
             Assert.AreEqual(1, segs.Length);
             Assert.AreEqual(25, segs[0].frameStart);
             Assert.AreEqual(100, segs[0].frameEnd);
@@ -34,14 +35,14 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             EventDataSetStream stream = new EventDataSetStream();
             stream.AddSample(50, 99);
-            GraphUtility.Segment[] segs = GraphUtility.IterateSegments(stream, 0, 100, new GraphUtility.IsContinuationOfSegmentDelegate(IsContinuationOfSegment)).ToArray();
+            GraphUtility.Segment[] segs = GraphUtility.IterateSegments(stream, 0, 100, IsContinuationOfSegment).ToArray();
             Assert.AreEqual(1, segs.Length);
             Assert.AreEqual(50, segs[0].frameStart);
             Assert.AreEqual(100, segs[0].frameEnd);
             Assert.AreEqual(99, segs[0].data);
         }
 
-        private void AddAlternativeSegments(EventDataSetStream stream, int data1, int data2, int startFrame, int frameIncrement, int count)
+        void AddAlternativeSegments(EventDataSetStream stream, int data1, int data2, int startFrame, int frameIncrement, int count)
         {
             for (int i = 0; i < count; i++)
             {
@@ -57,7 +58,7 @@ namespace UnityEditor.AddressableAssets.Tests
             const int kSampleCount = 20;
             const int kFrameIncrement = 100;
             AddAlternativeSegments(stream, -99, 99, 0, kFrameIncrement, kSampleCount);
-            GraphUtility.Segment[] segs = GraphUtility.IterateSegments(stream, 0, kSampleCount * kFrameIncrement, new GraphUtility.IsContinuationOfSegmentDelegate(IsContinuationOfSegment)).ToArray();
+            GraphUtility.Segment[] segs = GraphUtility.IterateSegments(stream, 0, kSampleCount * kFrameIncrement, IsContinuationOfSegment).ToArray();
             Assert.AreEqual(kSampleCount, segs.Length);
             for(int i = 0; i < segs.Length; i++)
             {
@@ -73,7 +74,7 @@ namespace UnityEditor.AddressableAssets.Tests
             EventDataSetStream stream = new EventDataSetStream();
             stream.AddSample(0, 99);
             stream.AddSample(50, 0);
-            GraphUtility.Segment[] segs = GraphUtility.IterateSegments(stream, 100, 200, new GraphUtility.IsContinuationOfSegmentDelegate(IsContinuationOfSegment)).ToArray();
+            GraphUtility.Segment[] segs = GraphUtility.IterateSegments(stream, 100, 200, IsContinuationOfSegment).ToArray();
             Assert.AreEqual(1, segs.Length);
             Assert.AreEqual(0, segs[0].data);
             Assert.AreEqual(100, segs[0].frameStart);

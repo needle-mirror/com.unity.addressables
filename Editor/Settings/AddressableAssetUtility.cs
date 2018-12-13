@@ -1,17 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor.Build.Utilities;
 using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets
 {
-    internal static class AddressableAssetUtility
+    static class AddressableAssetUtility
     {
         internal static bool IsInResources(string path)
         {
             return path.Replace('\\', '/').ToLower().Contains("/resources/");
         }
-        internal static bool GetPathAndGUIDFromTarget(Object t, ref string path, ref string guid)
+        internal static bool GetPathAndGUIDFromTarget(Object t, out string path, ref string guid)
         {
             path = AssetDatabase.GetAssetOrScenePath(t);
             if (!IsPathValidForEntry(path))
@@ -34,7 +35,7 @@ namespace UnityEditor.AddressableAssets
                 path == CommonStrings.UnityDefaultResourcePath ||
                 path == CommonStrings.UnityBuiltInExtraPath)
                 return false;
-            var ext = System.IO.Path.GetExtension(path);
+            var ext = Path.GetExtension(path);
             if (ext == ".cs" || ext == ".js" || ext == ".boo" || ext == ".exe" || ext == ".dll")
                 return false;
             var t = AssetDatabase.GetMainAssetTypeAtPath(path);
@@ -58,7 +59,7 @@ namespace UnityEditor.AddressableAssets
                     break;
 
                 currCount++;
-                var group = settings.CreateGroup(bundle, false, false, false);
+                var group = settings.CreateGroup(bundle, false, false, false, null);
                 var schema = group.AddSchema<BundledAssetGroupSchema>();
                 schema.BuildPath.SetVariableByName(settings, AddressableAssetSettings.kLocalBuildPath);
                 schema.LoadPath.SetVariableByName(settings, AddressableAssetSettings.kLocalLoadPath);
@@ -98,12 +99,12 @@ namespace UnityEditor.AddressableAssets
         /// <returns>A list of types that are assignable to type T.  The results are not cached.</returns>
         public static List<Type> GetTypes(Type rootType)
         {
-            return TypeManager.GetTypes(rootType);
+            return TypeManager.GetManagerTypes(rootType);
         }
 
         class TypeManager
         {
-            static public List<Type> GetTypes(Type rootType)
+            public static List<Type> GetManagerTypes(Type rootType)
             {
                 var types = new List<Type>();
                 try
@@ -125,22 +126,25 @@ namespace UnityEditor.AddressableAssets
                 }
                 catch (Exception)
                 {
+                    // ignored
                 }
+
                 return types;
             }
         }
 
         class TypeManager<T> : TypeManager
         {
-            static private List<Type> s_types;
-            static public List<Type> Types
+            // ReSharper disable once StaticMemberInGenericType
+            static List<Type> s_Types;
+            public static List<Type> Types
             {
                 get
                 {
-                    if (s_types == null)
-                        s_types = GetTypes(typeof(T));
+                    if (s_Types == null)
+                        s_Types = GetManagerTypes(typeof(T));
 
-                    return s_types;
+                    return s_Types;
                 }
             }
         }

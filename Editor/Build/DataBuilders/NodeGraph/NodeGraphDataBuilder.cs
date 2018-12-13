@@ -1,22 +1,22 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
-
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets.GraphBuild
 {
  //Disabled for now...   [CreateAssetMenu(fileName = "BuildGraph.asset", menuName = "Build Script/Node Graph")]
-    internal class NodeGraphDataBuilder : ScriptableObject, ISerializationCallbackReceiver, IDataBuilder
+    class NodeGraphDataBuilder : ScriptableObject, ISerializationCallbackReceiver, IDataBuilder
     {
         public Dictionary<Hash128, BuildNode> nodes = new Dictionary<Hash128, BuildNode>();
         public Dictionary<Hash128, BuildLink> links = new Dictionary<Hash128, BuildLink>();
         public Dictionary<PortIdentifier, List<Hash128>> linkTable = new Dictionary<PortIdentifier, List<Hash128>>(); //link backwards from input to source nodes
+        [FormerlySerializedAs("serializedNodes")]
         [SerializeField]
-        List<BuildNode> serializedNodes;
+        List<BuildNode> m_SerializedNodes;
+        [FormerlySerializedAs("serializedLinks")]
         [SerializeField]
-        List<BuildLink> serializedLinks;
+        List<BuildLink> m_SerializedLinks;
 
         public string Name
         {
@@ -71,7 +71,7 @@ namespace UnityEditor.AddressableAssets.GraphBuild
 
         public BuildLink CreateLink(Hash128 src, PortIdentifier target)
         {
-            var link = new BuildLink() { source = src, target = target, id = Hash128.Parse(GUID.Generate().ToString()) };
+            var link = new BuildLink { source = src, target = target, id = Hash128.Parse(GUID.Generate().ToString()) };
             List<Hash128> tableEntries;
             if (!linkTable.TryGetValue(target, out tableEntries))
                 linkTable.Add(target, tableEntries = new List<Hash128>());
@@ -85,7 +85,7 @@ namespace UnityEditor.AddressableAssets.GraphBuild
 
         public IList<Hash128> GetInputNodes(Hash128 targetNode, string inputName)
         {
-            return linkTable[new PortIdentifier() { node = targetNode, name = inputName }];
+            return linkTable[new PortIdentifier { node = targetNode, name = inputName }];
         }
 
         public object EvaluateNode(Hash128 node, IDataBuilderContext context)
@@ -95,22 +95,22 @@ namespace UnityEditor.AddressableAssets.GraphBuild
 
         public void OnBeforeSerialize()
         {
-            serializedLinks = new List<BuildLink>(links.Values);
-            serializedNodes = new List<BuildNode>(nodes.Values);
+            m_SerializedLinks = new List<BuildLink>(links.Values);
+            m_SerializedNodes = new List<BuildNode>(nodes.Values);
         }
 
         public void OnAfterDeserialize()
         {
-            if (serializedNodes != null)
+            if (m_SerializedNodes != null)
             {
-                foreach (var n in serializedNodes)
+                foreach (var n in m_SerializedNodes)
                     nodes.Add(n.id, n);
-                serializedNodes = null;
+                m_SerializedNodes = null;
             }
 
-            if (serializedLinks != null)
+            if (m_SerializedLinks != null)
             {
-                foreach (var l in serializedLinks)
+                foreach (var l in m_SerializedLinks)
                 {
                     links.Add(l.id, l);
 
@@ -119,7 +119,7 @@ namespace UnityEditor.AddressableAssets.GraphBuild
                         linkTable.Add(l.target, tableEntries = new List<Hash128>());
                     tableEntries.Add(l.source);
                 }
-                serializedLinks = null;
+                m_SerializedLinks = null;
             }
         }
 
@@ -136,7 +136,7 @@ namespace UnityEditor.AddressableAssets.GraphBuild
 
         public IDataBuilderGUI CreateGUI(IDataBuilderContext context)
         {
-            var gui = ScriptableObject.CreateInstance<BuildGraphGUI>();
+            var gui = CreateInstance<BuildGraphGUI>();
             gui.Init(this, context);
             return gui;
         }

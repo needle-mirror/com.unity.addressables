@@ -4,26 +4,50 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
+    /// <summary>
+    /// Base class for hosting services.
+    /// </summary>
     public abstract class BaseHostingService : IHostingService
     {
-        private const string k_hostingServiceContentRootKey = "ContentRoot";
-        private const string k_isHostingServiceRunningKey = "IsEnabled";
-        private const string k_descriptiveNameKey = "DescriptiveName";
-        private const string k_instanceIdKey = "InstanceId";
+        const string k_HostingServiceContentRootKey = "ContentRoot";
+        const string k_IsHostingServiceRunningKey = "IsEnabled";
+        const string k_DescriptiveNameKey = "DescriptiveName";
+        const string k_InstanceIdKey = "InstanceId";
 
+        /// <summary>
+        /// List of content roots for hosting service.
+        /// </summary>
         public abstract List<string> HostingServiceContentRoots { get; }
+        /// <summary>
+        /// Dictionary of profile variables defined by the hosting service.
+        /// </summary>
         public abstract Dictionary<string, string> ProfileVariables { get; }
+        /// <summary>
+        /// Gets the current running status of the hosting service.
+        /// </summary>
         public abstract bool IsHostingServiceRunning { get; }
+        /// <summary>
+        /// Starts the hosting service.
+        /// </summary>
         public abstract void StartHostingService();
+        /// <summary>
+        /// Stops the hosting service.
+        /// </summary>
         public abstract void StopHostingService();
+        /// <summary>
+        /// Render the hosting service GUI.
+        /// </summary>
         public abstract void OnGUI();
 
-        private ILogger m_logger = Debug.unityLogger;
+        ILogger m_Logger = Debug.unityLogger;
 
+        /// <summary>
+        /// Get and set the loger for the hosting service.
+        /// </summary>
         public ILogger Logger
         {
-            get { return m_logger; }
-            set { m_logger = value ?? Debug.unityLogger; }
+            get { return m_Logger; }
+            set { m_Logger = value ?? Debug.unityLogger; }
         }
 
         protected virtual string DisambiguateProfileVar(string key)
@@ -48,26 +72,26 @@ namespace UnityEditor.AddressableAssets
         /// <inheritdoc/>
         public virtual void OnBeforeSerialize(KeyDataStore dataStore)
         {
-            dataStore.SetData(k_hostingServiceContentRootKey, string.Join(";", HostingServiceContentRoots.ToArray()));
-            dataStore.SetData(k_isHostingServiceRunningKey, IsHostingServiceRunning);
-            dataStore.SetData(k_descriptiveNameKey, DescriptiveName);
-            dataStore.SetData(k_instanceIdKey, InstanceId);
+            dataStore.SetData(k_HostingServiceContentRootKey, string.Join(";", HostingServiceContentRoots.ToArray()));
+            dataStore.SetData(k_IsHostingServiceRunningKey, IsHostingServiceRunning);
+            dataStore.SetData(k_DescriptiveNameKey, DescriptiveName);
+            dataStore.SetData(k_InstanceIdKey, InstanceId);
         }
 
         /// <inheritdoc/>
         public virtual void OnAfterDeserialize(KeyDataStore dataStore)
         {
-            var contentRoots = dataStore.GetData(k_hostingServiceContentRootKey, string.Empty);
+            var contentRoots = dataStore.GetData(k_HostingServiceContentRootKey, string.Empty);
             HostingServiceContentRoots.AddRange(contentRoots.Split(';'));
 
-            if (dataStore.GetData(k_isHostingServiceRunningKey, false))
+            if (dataStore.GetData(k_IsHostingServiceRunningKey, false))
                 StartHostingService();
 
-            DescriptiveName = dataStore.GetDataString(k_descriptiveNameKey, string.Empty);
-            InstanceId = dataStore.GetData(k_instanceIdKey, -1);
+            DescriptiveName = dataStore.GetDataString(k_DescriptiveNameKey, string.Empty);
+            InstanceId = dataStore.GetData(k_InstanceIdKey, -1);
         }
 
-        private static T[] ArrayPush<T>(T[] arr, T val)
+        static T[] ArrayPush<T>(T[] arr, T val)
         {
             var newArr = new T[arr.Length + 1];
             Array.Copy(arr, newArr, arr.Length);

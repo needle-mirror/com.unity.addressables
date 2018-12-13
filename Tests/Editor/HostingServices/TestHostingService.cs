@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
-    internal class TestHostingService : AbstractTestHostingService
+    class TestHostingService : AbstractTestHostingService
     {
         public TestHostingService()
         {

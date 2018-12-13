@@ -1,110 +1,122 @@
-using UnityEngine;
 using System;
-using UnityEditor.IMGUI.Controls;
 using System.Collections.Generic;
-using UnityEngine.AddressableAssets;
-using System.Linq;
 using UnityEditorInternal;
+using UnityEngine;
 using UnityEngine.ResourceManagement;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
     [CustomEditor(typeof(AddressableAssetSettings))]
-    internal class AddressableAssetSettingsInspector : Editor
+    class AddressableAssetSettingsInspector : Editor
     {
-        AddressableAssetSettings m_aasTarget;
+        AddressableAssetSettings m_AasTarget;
 
+        [FormerlySerializedAs("m_generalFoldout")]
         [SerializeField]
-        bool m_generalFoldout = true;
+        bool m_GeneralFoldout = true;
+        [FormerlySerializedAs("m_groupFoldout")]
         [SerializeField]
-        bool m_groupFoldout = true;
+        bool m_GroupFoldout = true;
+        [FormerlySerializedAs("m_profilesFoldout")]
         [SerializeField]
-        bool m_profilesFoldout = true;
+        bool m_ProfilesFoldout = true;
+        [FormerlySerializedAs("m_labelsFoldout")]
         [SerializeField]
-        bool m_labelsFoldout = true;
+        bool m_LabelsFoldout = true;
+        [FormerlySerializedAs("m_dataBuildersFoldout")]
         [SerializeField]
-        bool m_dataBuildersFoldout = true;
+        bool m_DataBuildersFoldout = true;
+        [FormerlySerializedAs("m_schemaTemplatesFoldout")]
         [SerializeField]
-        bool m_schemaTemplatesFoldout = true;
+        bool m_SchemaTemplatesFoldout = true;
+        [FormerlySerializedAs("m_initObjectsFoldout")]
         [SerializeField]
-        bool m_initObjectsFoldout = true;
+        bool m_InitObjectsFoldout = true;
 
+        [FormerlySerializedAs("m_profileEntriesRL")]
         [SerializeField]
-        ReorderableList m_profileEntriesRL;
+        ReorderableList m_ProfileEntriesRl;
+        [FormerlySerializedAs("m_labelNamesRL")]
         [SerializeField]
-        ReorderableList m_labelNamesRL;
+        ReorderableList m_LabelNamesRl;
+        [FormerlySerializedAs("m_dataBuildersRL")]
         [SerializeField]
-        ReorderableList m_dataBuildersRL;
+        ReorderableList m_DataBuildersRl;
+        [FormerlySerializedAs("m_schemaTemplatesRL")]
         [SerializeField]
-        ReorderableList m_schemaTemplatesRL;
+        ReorderableList m_SchemaTemplatesRl;
+        [FormerlySerializedAs("m_initObjectsRL")]
         [SerializeField]
-        ReorderableList m_initObjectsRL;
+        ReorderableList m_InitObjectsRl;
 
+        [FormerlySerializedAs("m_currentProfileIndex")]
         [SerializeField]
-        int m_currentProfileIndex = -1;
+        int m_CurrentProfileIndex = -1;
 
-
-        private void OnEnable()
+        void OnEnable()
         {
-            m_aasTarget = target as AddressableAssetSettings;
+            m_AasTarget = target as AddressableAssetSettings;
+            if (m_AasTarget == null)
+                return;
 
-            var names = m_aasTarget.profileSettings.profileEntryNames;
-            m_profileEntriesRL = new ReorderableList(names, typeof(AddressableAssetProfileSettings.ProfileIDData), true, true, true, true);
-            m_profileEntriesRL.drawElementCallback = DrawProfileEntriesCallback;
-            m_profileEntriesRL.drawHeaderCallback = DrawProfileEntriesHeader;
-            m_profileEntriesRL.onAddCallback = OnAddProfileEntry;
-            m_profileEntriesRL.onRemoveCallback = OnRemoveProfileEntry;
+            var names = m_AasTarget.profileSettings.profileEntryNames;
+            m_ProfileEntriesRl = new ReorderableList(names, typeof(AddressableAssetProfileSettings.ProfileIdData), true, true, true, true);
+            m_ProfileEntriesRl.drawElementCallback = DrawProfileEntriesCallback;
+            m_ProfileEntriesRl.drawHeaderCallback = DrawProfileEntriesHeader;
+            m_ProfileEntriesRl.onAddCallback = OnAddProfileEntry;
+            m_ProfileEntriesRl.onRemoveCallback = OnRemoveProfileEntry;
 
-            var labels = m_aasTarget.labelTable.labelNames;
-            m_labelNamesRL = new ReorderableList(labels, typeof(string), true, true, true, true);
-            m_labelNamesRL.drawElementCallback = DrawLabelNamesCallback;
-            m_labelNamesRL.drawHeaderCallback = DrawLabelNamesHeader;
-            m_labelNamesRL.onAddDropdownCallback = OnAddLabel;
-            m_labelNamesRL.onRemoveCallback = OnRemoveLabel;
+            var labels = m_AasTarget.labelTable.labelNames;
+            m_LabelNamesRl = new ReorderableList(labels, typeof(string), true, true, true, true);
+            m_LabelNamesRl.drawElementCallback = DrawLabelNamesCallback;
+            m_LabelNamesRl.drawHeaderCallback = DrawLabelNamesHeader;
+            m_LabelNamesRl.onAddDropdownCallback = OnAddLabel;
+            m_LabelNamesRl.onRemoveCallback = OnRemoveLabel;
 
-            m_dataBuildersRL = new ReorderableList(m_aasTarget.DataBuilders, typeof(ScriptableObject), true, true, true, true);
-            m_dataBuildersRL.drawElementCallback = DrawDataBuilderCallback;
-            m_dataBuildersRL.drawHeaderCallback = DrawDataBuilderHeader;
-            m_dataBuildersRL.onAddDropdownCallback = OnAddDataBuilder;
-            m_dataBuildersRL.onRemoveCallback = OnRemoveDataBuilder;
+            m_DataBuildersRl = new ReorderableList(m_AasTarget.DataBuilders, typeof(ScriptableObject), true, true, true, true);
+            m_DataBuildersRl.drawElementCallback = DrawDataBuilderCallback;
+            m_DataBuildersRl.drawHeaderCallback = DrawDataBuilderHeader;
+            m_DataBuildersRl.onAddDropdownCallback = OnAddDataBuilder;
+            m_DataBuildersRl.onRemoveCallback = OnRemoveDataBuilder;
 
-            m_schemaTemplatesRL = new ReorderableList(m_aasTarget.SchemaTemplates, typeof(ScriptableObject), true, true, true, true);
-            m_schemaTemplatesRL.drawElementCallback = DrawSchemaTemplateCallback;
-            m_schemaTemplatesRL.drawHeaderCallback = DrawSchemaTemplateHeader;
-            m_schemaTemplatesRL.onAddDropdownCallback = OnAddSchemaTemplate;
-            m_schemaTemplatesRL.onRemoveCallback = OnRemoveSchemaTemplate;
+            m_SchemaTemplatesRl = new ReorderableList(m_AasTarget.SchemaTemplates, typeof(ScriptableObject), true, true, true, true);
+            m_SchemaTemplatesRl.drawElementCallback = DrawSchemaTemplateCallback;
+            m_SchemaTemplatesRl.drawHeaderCallback = DrawSchemaTemplateHeader;
+            m_SchemaTemplatesRl.onAddDropdownCallback = OnAddSchemaTemplate;
+            m_SchemaTemplatesRl.onRemoveCallback = OnRemoveSchemaTemplate;
 
-            m_initObjectsRL = new ReorderableList(m_aasTarget.InitializationObjects, typeof(ScriptableObject), true, true, true, true);
-            m_initObjectsRL.drawElementCallback = DrawInitializationObjectCallback;
-            m_initObjectsRL.drawHeaderCallback = DrawInitializationObjectHeader;
-            m_initObjectsRL.onAddDropdownCallback = OnAddInitializationObject;
-            m_initObjectsRL.onRemoveCallback = OnRemoveInitializationObject;
+            m_InitObjectsRl = new ReorderableList(m_AasTarget.InitializationObjects, typeof(ScriptableObject), true, true, true, true);
+            m_InitObjectsRl.drawElementCallback = DrawInitializationObjectCallback;
+            m_InitObjectsRl.drawHeaderCallback = DrawInitializationObjectHeader;
+            m_InitObjectsRl.onAddDropdownCallback = OnAddInitializationObject;
+            m_InitObjectsRl.onRemoveCallback = OnRemoveInitializationObject;
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
 
-            m_generalFoldout = EditorGUILayout.Foldout(m_generalFoldout, "General");
-            if (m_generalFoldout)
+            m_GeneralFoldout = EditorGUILayout.Foldout(m_GeneralFoldout, "General");
+            if (m_GeneralFoldout)
             {
                 ProjectConfigData.postProfilerEvents = EditorGUILayout.Toggle("Send Profiler Events", ProjectConfigData.postProfilerEvents);
-                m_aasTarget.buildSettings.LogResourceManagerExceptions = EditorGUILayout.Toggle("Log Resource Manager Exceptions", m_aasTarget.buildSettings.LogResourceManagerExceptions);
+                m_AasTarget.buildSettings.LogResourceManagerExceptions = EditorGUILayout.Toggle("Log Resource Manager Exceptions", m_AasTarget.buildSettings.LogResourceManagerExceptions);
             }
             GUILayout.Space(6);
-            m_groupFoldout = EditorGUILayout.Foldout(m_groupFoldout, "Groups");
-            if (m_groupFoldout)
+            m_GroupFoldout = EditorGUILayout.Foldout(m_GroupFoldout, "Groups");
+            if (m_GroupFoldout)
             {
                 EditorGUILayout.HelpBox("Group data is modified on the group asset, and the groups list is altered from the Addressables window.  The list below is presented for ease of finding group assets, not for direct editing.", MessageType.None);
                 using (new EditorGUI.DisabledScope(true))
                 {
                     EditorGUI.indentLevel++;
-                    for (int i = 0; i < m_aasTarget.groups.Count; i++)
+                    for (int i = 0; i < m_AasTarget.groups.Count; i++)
                     {
-                        var newObject = EditorGUILayout.ObjectField(m_aasTarget.groups[i], typeof(AddressableAssetGroup), false);
-                        if (newObject != m_aasTarget.groups[i] && newObject is AddressableAssetGroup)
+                        var newObject = EditorGUILayout.ObjectField(m_AasTarget.groups[i], typeof(AddressableAssetGroup), false);
+                        if (newObject != m_AasTarget.groups[i] && newObject is AddressableAssetGroup)
                         {
-                            m_aasTarget.groups[i] = newObject as AddressableAssetGroup;
+                            m_AasTarget.groups[i] = newObject as AddressableAssetGroup;
                         }
                     }
                     EditorGUI.indentLevel--;
@@ -112,34 +124,34 @@ namespace UnityEditor.AddressableAssets
             }
 
             GUILayout.Space(6);
-            m_profilesFoldout = EditorGUILayout.Foldout(m_profilesFoldout, "Profiles");
-            if (m_profilesFoldout)
+            m_ProfilesFoldout = EditorGUILayout.Foldout(m_ProfilesFoldout, "Profiles");
+            if (m_ProfilesFoldout)
             {
-                if (m_aasTarget.profileSettings.profiles.Count > 0)
+                if (m_AasTarget.profileSettings.profiles.Count > 0)
                 {
-                    if (m_currentProfileIndex < 0 || m_currentProfileIndex >= m_aasTarget.profileSettings.profiles.Count)
-                        m_currentProfileIndex = 0;
-                    var profileNames = m_aasTarget.profileSettings.GetAllProfileNames();
-                    m_currentProfileIndex = EditorGUILayout.Popup("Profile To Edit", m_currentProfileIndex, profileNames.ToArray());
+                    if (m_CurrentProfileIndex < 0 || m_CurrentProfileIndex >= m_AasTarget.profileSettings.profiles.Count)
+                        m_CurrentProfileIndex = 0;
+                    var profileNames = m_AasTarget.profileSettings.GetAllProfileNames();
+                    m_CurrentProfileIndex = EditorGUILayout.Popup("Profile To Edit", m_CurrentProfileIndex, profileNames.ToArray());
 
                     EditorGUI.indentLevel++;
-                    bool doAdd = false;
-                    bool doRemove = false;
-                    bool canEdit = profileNames[m_currentProfileIndex] == AddressableAssetProfileSettings.k_rootProfileName;
-                    using (new EditorGUI.DisabledScope(canEdit))
+                    bool doAdd;
+                    bool doRemove;
+                    bool cannotEdit = m_CurrentProfileIndex==0;// profileNames[m_CurrentProfileIndex] == AddressableAssetProfileSettings.k_RootProfileName;
+                    using (new EditorGUI.DisabledScope(cannotEdit))
                     {
-                        var newName = EditorGUILayout.DelayedTextField("Name", profileNames[m_currentProfileIndex]);
-                        if (newName != profileNames[m_currentProfileIndex])
+                        var newName = EditorGUILayout.DelayedTextField("EventName", profileNames[m_CurrentProfileIndex]);
+                        if (newName != profileNames[m_CurrentProfileIndex])
                         {
-                            var profile = m_aasTarget.profileSettings.profiles[m_currentProfileIndex];
+                            var profile = m_AasTarget.profileSettings.profiles[m_CurrentProfileIndex];
                             profile.profileName = newName;
-                            m_aasTarget.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, profile.id, true);
+                            m_AasTarget.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, profile.id, true);
                         }
                     }
                     EditorGUILayout.BeginHorizontal();
                     GUILayout.FlexibleSpace();
                     doAdd = GUILayout.Button("+");
-                    using (new EditorGUI.DisabledScope(canEdit))
+                    using (new EditorGUI.DisabledScope(cannotEdit))
                     {
 
                         doRemove = GUILayout.Button("-");
@@ -148,24 +160,24 @@ namespace UnityEditor.AddressableAssets
                     EditorGUILayout.EndHorizontal();
 
                     EditorGUI.indentLevel--;
-                    var rect = GUILayoutUtility.GetRect(0, m_profileEntriesRL.GetHeight());
+                    var rect = GUILayoutUtility.GetRect(0, m_ProfileEntriesRl.GetHeight());
                     rect.width -= 20;
                     rect.x += 20;
-                    m_profileEntriesRL.DoList(rect);
+                    m_ProfileEntriesRl.DoList(rect);
                     
                     if (doAdd)
                     {
-                        var name = m_aasTarget.profileSettings.GetUniqueProfileName("New Profile");
-                        if (!string.IsNullOrEmpty(name))
-                            m_aasTarget.profileSettings.AddProfile(name, string.Empty);
-                        m_currentProfileIndex = m_aasTarget.profileSettings.profiles.Count - 1;
+                        var uniqueProfileName = m_AasTarget.profileSettings.GetUniqueProfileName("New Profile");
+                        if (!string.IsNullOrEmpty(uniqueProfileName))
+                            m_AasTarget.profileSettings.AddProfile(uniqueProfileName, string.Empty);
+                        m_CurrentProfileIndex = m_AasTarget.profileSettings.profiles.Count - 1;
                     }
                     else if (doRemove)
                     {
-                        var prof = m_aasTarget.profileSettings.profiles[m_currentProfileIndex];
+                        var prof = m_AasTarget.profileSettings.profiles[m_CurrentProfileIndex];
                         if (prof != null)
                         {
-                            m_aasTarget.profileSettings.RemoveProfile(prof.id);
+                            m_AasTarget.profileSettings.RemoveProfile(prof.id);
                         }
                     }
                 }
@@ -176,116 +188,110 @@ namespace UnityEditor.AddressableAssets
 
             }
             GUILayout.Space(6);
-            if (m_labelsFoldout = EditorGUILayout.Foldout(m_labelsFoldout, "Labels"))
-                m_labelNamesRL.DoLayoutList();
+            m_LabelsFoldout = EditorGUILayout.Foldout(m_LabelsFoldout, "Labels");
+            if (m_LabelsFoldout)
+                m_LabelNamesRl.DoLayoutList();
 
             GUILayout.Space(6);
-            if (m_dataBuildersFoldout = EditorGUILayout.Foldout(m_dataBuildersFoldout, "Data Builders"))
-                m_dataBuildersRL.DoLayoutList();
+            m_DataBuildersFoldout = EditorGUILayout.Foldout(m_DataBuildersFoldout, "Data Builders");
+            if (m_DataBuildersFoldout)
+                m_DataBuildersRl.DoLayoutList();
 
             GUILayout.Space(6);
-            if (m_schemaTemplatesFoldout = EditorGUILayout.Foldout(m_schemaTemplatesFoldout, "Group Schema Templates"))
-                m_schemaTemplatesRL.DoLayoutList();
+            m_SchemaTemplatesFoldout = EditorGUILayout.Foldout(m_SchemaTemplatesFoldout, "Group Schema Templates");
+            if (m_SchemaTemplatesFoldout)
+                m_SchemaTemplatesRl.DoLayoutList();
 
             GUILayout.Space(6);
-            if (m_initObjectsFoldout = EditorGUILayout.Foldout(m_initObjectsFoldout, "Initialization Objects"))
-                m_initObjectsRL.DoLayoutList();
+            m_InitObjectsFoldout = EditorGUILayout.Foldout(m_InitObjectsFoldout, "Initialization Objects");
+            if (m_InitObjectsFoldout)
+                m_InitObjectsRl.DoLayoutList();
 
 
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void DrawGroupsHeader(Rect rect)
+        void DrawProfileEntriesHeader(Rect rect)
         {
-            EditorGUI.LabelField(rect, "Asset Groups");
-        }
-        void DrawGroupsCallback(Rect rect, int index, bool isActive, bool isFocused)
-        {
-            var grp = m_aasTarget.groups[index];
-
-            EditorGUI.LabelField(rect, grp.Name);
-        }
-
-        private void DrawProfileEntriesHeader(Rect rect)
-        {
-            var currProfile = m_aasTarget.profileSettings.profiles[m_currentProfileIndex];
             EditorGUI.LabelField(rect, "Profile Entries");
         }
 
-        private void DrawProfileEntriesCallback(Rect rect, int index, bool isActive, bool isFocused)
+        void DrawProfileEntriesCallback(Rect rect, int index, bool isActive, bool isFocused)
         {
             float halfW = rect.width * 0.4f;
-            var currentEntry = m_aasTarget.profileSettings.profileEntryNames[index];
-            var newName = EditorGUI.DelayedTextField(new Rect(rect.x, rect.y, halfW, rect.height), currentEntry.Name);
-            if (newName != currentEntry.Name)
-                currentEntry.SetName(newName, m_aasTarget.profileSettings);
+            var currentEntry = m_AasTarget.profileSettings.profileEntryNames[index];
+            var newName = EditorGUI.DelayedTextField(new Rect(rect.x, rect.y, halfW, rect.height), currentEntry.ProfileName);
+            if (newName != currentEntry.ProfileName)
+                currentEntry.SetName(newName, m_AasTarget.profileSettings);
 
-            var currProfile = m_aasTarget.profileSettings.profiles[m_currentProfileIndex];
-            var oldValue = m_aasTarget.profileSettings.GetValueById(currProfile.id, currentEntry.Id);
+            var currProfile = m_AasTarget.profileSettings.profiles[m_CurrentProfileIndex];
+            var oldValue = m_AasTarget.profileSettings.GetValueById(currProfile.id, currentEntry.Id);
             var newValue = EditorGUI.TextField(new Rect(rect.x + halfW, rect.y, rect.width - halfW, rect.height), oldValue);
             if (oldValue != newValue)
             {
-                m_aasTarget.profileSettings.SetValue(currProfile.id, currentEntry.Name, newValue);
+                m_AasTarget.profileSettings.SetValue(currProfile.id, currentEntry.ProfileName, newValue);
             }
         }
 
-        private void OnAddProfileEntry(ReorderableList list)
+        void OnAddProfileEntry(ReorderableList list)
         {
-            var name = m_aasTarget.profileSettings.GetUniqueProfileEntryName("New Entry");
-            if (!string.IsNullOrEmpty(name))
-                m_aasTarget.profileSettings.CreateValue(name, "");
+            var uniqueProfileEntryName = m_AasTarget.profileSettings.GetUniqueProfileEntryName("New Entry");
+            if (!string.IsNullOrEmpty(uniqueProfileEntryName))
+                m_AasTarget.profileSettings.CreateValue(uniqueProfileEntryName, "");
         }
-        private void OnRemoveProfileEntry(ReorderableList list)
+
+        void OnRemoveProfileEntry(ReorderableList list)
         {
-            if (list.index >= 0 && list.index < m_aasTarget.profileSettings.profileEntryNames.Count)
+            if (list.index >= 0 && list.index < m_AasTarget.profileSettings.profileEntryNames.Count)
             {
-                var entry = m_aasTarget.profileSettings.profileEntryNames[list.index];
+                var entry = m_AasTarget.profileSettings.profileEntryNames[list.index];
                 if (entry != null)
-                    m_aasTarget.profileSettings.RemoveValue(entry.Id);
+                    m_AasTarget.profileSettings.RemoveValue(entry.Id);
             }
         }
-        
-        private void DrawLabelNamesHeader(Rect rect)
+
+        void DrawLabelNamesHeader(Rect rect)
         {
             EditorGUI.LabelField(rect, "Labels");
         }
 
-        private void DrawLabelNamesCallback(Rect rect, int index, bool isActive, bool isFocused)
+        void DrawLabelNamesCallback(Rect rect, int index, bool isActive, bool isFocused)
         {
-            var oldName = m_aasTarget.labelTable.labelNames[index];
+            var oldName = m_AasTarget.labelTable.labelNames[index];
             EditorGUI.LabelField(rect, oldName);
 
         }
-        private void OnRemoveLabel(ReorderableList list)
+
+        void OnRemoveLabel(ReorderableList list)
         {
-            m_aasTarget.RemoveLabel(m_aasTarget.labelTable.labelNames[list.index], true);
+            m_AasTarget.RemoveLabel(m_AasTarget.labelTable.labelNames[list.index]);
         }
 
-        private void OnAddLabel(Rect buttonRect, ReorderableList list)
+        void OnAddLabel(Rect buttonRect, ReorderableList list)
         {
             buttonRect.x -= 400;
             buttonRect.y -= 13;
 
-            PopupWindow.Show(buttonRect, new LabelNamePopup(m_labelNamesRL.elementHeight, m_aasTarget));
+            PopupWindow.Show(buttonRect, new LabelNamePopup(m_LabelNamesRl.elementHeight, m_AasTarget));
         }
 
         class LabelNamePopup : PopupWindowContent
         {
-            internal float m_rowHeight;
-            internal string m_name;
-            internal bool m_needsFocus = true;
-            internal AddressableAssetSettings m_settings;
+            internal float rowHeight;
+            internal string name;
+            internal bool needsFocus = true;
+            internal AddressableAssetSettings settings;
 
             public LabelNamePopup(float rowHeight, AddressableAssetSettings settings)
             {
-                m_rowHeight = rowHeight;
-                m_settings = settings;
-                m_name = m_settings.labelTable.GetUniqueLabelName("New Label");
+                this.rowHeight = rowHeight;
+                this.settings = settings;
+                name = this.settings.labelTable.GetUniqueLabelName("New Label");
             }
 
             public override Vector2 GetWindowSize()
             {
-                return new Vector2(400, m_rowHeight * 3);
+                return new Vector2(400, rowHeight * 3);
             }
 
             public override void OnGUI(Rect windowRect)
@@ -294,51 +300,51 @@ namespace UnityEditor.AddressableAssets
                 Event evt = Event.current;
                 bool hitEnter = evt.type == EventType.KeyDown && (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter);
                 GUI.SetNextControlName("LabelName");
-                m_name = EditorGUILayout.TextField("New Tag Name", m_name);
-                if (m_needsFocus)
+                name = EditorGUILayout.TextField("New Tag EventName", name);
+                if (needsFocus)
                 {
-                    m_needsFocus = false;
+                    needsFocus = false;
                     EditorGUI.FocusTextInControl("LabelName");
                 }
 
-                GUI.enabled = m_name.Length != 0;
+                GUI.enabled = name.Length != 0;
                 if (GUILayout.Button("Save") || hitEnter)
                 {
-                    if (string.IsNullOrEmpty(m_name))
+                    if (string.IsNullOrEmpty(name))
                         Debug.LogError("Cannot add empty label to Addressables label list");
-                    else if (m_name != m_settings.labelTable.GetUniqueLabelName(m_name))
-                        Debug.LogError("Label name '" + m_name + "' is already in the labels list.");
+                    else if (name != settings.labelTable.GetUniqueLabelName(name))
+                        Debug.LogError("Label name '" + name + "' is already in the labels list.");
                     else
-                        m_settings.AddLabel(m_name, true);
+                        settings.AddLabel(name);
 
                     editorWindow.Close();
                 }
             }
         }
 
-        private void DrawDataBuilderHeader(Rect rect)
+        void DrawDataBuilderHeader(Rect rect)
         {
             EditorGUI.LabelField(rect, "Data Builders");
         }
 
-        private void DrawDataBuilderCallback(Rect rect, int index, bool isActive, bool isFocused)
+        void DrawDataBuilderCallback(Rect rect, int index, bool isActive, bool isFocused)
         {
-            var so = m_aasTarget.DataBuilders[index];
+            var so = m_AasTarget.DataBuilders[index];
             var builder = so as IDataBuilder;
             var label = builder == null ? "" : builder.Name;
             var nb = EditorGUI.ObjectField(rect, label, so, typeof(ScriptableObject), false) as ScriptableObject;
             if (nb != so)
-                m_aasTarget.SetDataBuilderAtIndex(index, nb as IDataBuilder);
+                m_AasTarget.SetDataBuilderAtIndex(index, nb as IDataBuilder);
         }
 
-        private void OnRemoveDataBuilder(ReorderableList list)
+        void OnRemoveDataBuilder(ReorderableList list)
         {
-            m_aasTarget.RemoveDataBuilder(list.index);
+            m_AasTarget.RemoveDataBuilder(list.index);
         }
 
-        private void OnAddDataBuilder(Rect buttonRect, ReorderableList list)
+        void OnAddDataBuilder(Rect buttonRect, ReorderableList list)
         {
-            var assetPath = EditorUtility.OpenFilePanelWithFilters("Data Builder", "Assets", new string[] {"Data Builder", "asset" });
+            var assetPath = EditorUtility.OpenFilePanelWithFilters("Data Builder", "Assets", new[] {"Data Builder", "asset" });
             if (string.IsNullOrEmpty(assetPath))
                 return;
             var builder = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath.Substring(assetPath.IndexOf("Assets/")));
@@ -347,52 +353,52 @@ namespace UnityEditor.AddressableAssets
                 Debug.LogWarningFormat("Asset at {0} does not implement the IDataBuilder interface.", assetPath);
                 return;
             }
-            m_aasTarget.AddDataBuilder(builder as IDataBuilder);
+            m_AasTarget.AddDataBuilder(builder as IDataBuilder);
         }
 
-        private void DrawSchemaTemplateHeader(Rect rect)
+        void DrawSchemaTemplateHeader(Rect rect)
         {
             EditorGUI.LabelField(rect, "Group Schema Templates");
         }
 
-        private void DrawSchemaTemplateCallback(Rect rect, int index, bool isActive, bool isFocused)
+        void DrawSchemaTemplateCallback(Rect rect, int index, bool isActive, bool isFocused)
         {
-            var template = m_aasTarget.SchemaTemplates[index];
+            var template = m_AasTarget.SchemaTemplates[index];
             GUI.Label(rect, template.DisplayName);
         }
 
-        private void OnRemoveSchemaTemplate(ReorderableList list)
+        void OnRemoveSchemaTemplate(ReorderableList list)
         {
-            m_aasTarget.RemoveSchemaTemplate(list.index);
+            m_AasTarget.RemoveSchemaTemplate(list.index);
         }
 
-        private void OnAddSchemaTemplate(Rect buttonRect, ReorderableList list)
+        void OnAddSchemaTemplate(Rect buttonRect, ReorderableList list)
         {
             buttonRect.x -= 400;
             buttonRect.y -= 13;
 
-            PopupWindow.Show(buttonRect, new NewScehemaTemplatePopup(m_labelNamesRL.elementHeight, m_aasTarget));
+            PopupWindow.Show(buttonRect, new NewScehemaTemplatePopup(m_LabelNamesRl.elementHeight, m_AasTarget));
         }
 
         class NewScehemaTemplatePopup : PopupWindowContent
         {
-            internal float m_rowHeight;
-            internal string m_name = "";
-            internal string m_description = "";
-            internal bool m_needsFocus = true;
-            internal AddressableAssetSettings m_settings;
-            List<Type> schemaTypes;
-            List<Type> selectedTypes = new List<Type>();
+            internal float rowHeight;
+            internal string name = "";
+            internal string description = "";
+            internal bool needsFocus = true;
+            internal AddressableAssetSettings settings;
+            List<Type> m_SchemaTypes;
+            List<Type> m_SelectedTypes = new List<Type>();
             public NewScehemaTemplatePopup(float rowHeight, AddressableAssetSettings settings)
             {
-                m_rowHeight = rowHeight;
-                m_settings = settings;
-                schemaTypes = AddressableAssetUtility.GetTypes<AddressableAssetGroupSchema>();
+                this.rowHeight = rowHeight;
+                this.settings = settings;
+                m_SchemaTypes = AddressableAssetUtility.GetTypes<AddressableAssetGroupSchema>();
             }
 
             public override Vector2 GetWindowSize()
             {
-                return new Vector2(400, m_rowHeight * (4 + selectedTypes.Count));
+                return new Vector2(400, rowHeight * (4 + m_SelectedTypes.Count));
             }
 
             public override void OnGUI(Rect windowRect)
@@ -401,21 +407,21 @@ namespace UnityEditor.AddressableAssets
                 Event evt = Event.current;
                 bool hitEnter = evt.type == EventType.KeyDown && (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter);
                 GUI.SetNextControlName("LabelName");
-                m_name = EditorGUILayout.TextField("Schema Template Name", m_name);
-                m_description = EditorGUILayout.TextField("Description", m_description);
-                if (m_needsFocus)
+                name = EditorGUILayout.TextField("Schema Template EventName", name);
+                description = EditorGUILayout.TextField("Description", description);
+                if (needsFocus)
                 {
-                    m_needsFocus = false;
+                    needsFocus = false;
                     EditorGUI.FocusTextInControl("LabelName");
                 }
-                for (int i = 0; i < selectedTypes.Count; i++)
+                for (int i = 0; i < m_SelectedTypes.Count; i++)
                 {
-                    var schema = selectedTypes[i];
+                    var schema = m_SelectedTypes[i];
                     EditorGUILayout.BeginHorizontal();
                     GUILayout.Label(schema.Name);
                     if (GUILayout.Button("X", GUILayout.Width(40)))
                     {
-                        selectedTypes.Remove(schema);
+                        m_SelectedTypes.Remove(schema);
                         EditorGUILayout.EndHorizontal();
                         break;
                     }
@@ -424,54 +430,54 @@ namespace UnityEditor.AddressableAssets
                 if (EditorGUILayout.DropdownButton(new GUIContent("Add Schema", "Add new schema to this group."), FocusType.Keyboard))
                 {
                     var menu = new GenericMenu();
-                    for (int i = 0; i < schemaTypes.Count; i++)
+                    for (int i = 0; i < m_SchemaTypes.Count; i++)
                     {
-                        var type = schemaTypes[i];
+                        var type = m_SchemaTypes[i];
                         menu.AddItem(new GUIContent(type.Name, ""), false, OnAddSchema, type);
                     }
                     menu.ShowAsContext();
                 }
 
-                GUI.enabled = m_name.Length != 0;
+                GUI.enabled = name.Length != 0;
                 if (GUILayout.Button("Save") || hitEnter)
                 {
-                    if (string.IsNullOrEmpty(m_name))
+                    if (string.IsNullOrEmpty(name))
                         Debug.LogError("Schema template must have a valid name.");
                     else
-                        m_settings.AddSchemaTemplate(m_name, m_description, selectedTypes.ToArray());
+                        settings.AddSchemaTemplate(name, description, m_SelectedTypes.ToArray());
 
                     editorWindow.Close();
                 }
             }
             void OnAddSchema(object context)
             {
-                selectedTypes.Add(context as Type);
+                m_SelectedTypes.Add(context as Type);
             }
         }
 
-        private void DrawInitializationObjectHeader(Rect rect)
+        void DrawInitializationObjectHeader(Rect rect)
         {
             EditorGUI.LabelField(rect, "Initialization Objects");
         }
 
-        private void DrawInitializationObjectCallback(Rect rect, int index, bool isActive, bool isFocused)
+        void DrawInitializationObjectCallback(Rect rect, int index, bool isActive, bool isFocused)
         {
-            var so = m_aasTarget.InitializationObjects[index];
+            var so = m_AasTarget.InitializationObjects[index];
             var initObj = so as IObjectInitializationDataProvider;
             var label = initObj == null ? "" : initObj.Name;
             var nb = EditorGUI.ObjectField(rect, label, so, typeof(ScriptableObject), false) as ScriptableObject;
             if (nb != so)
-                m_aasTarget.SetInitializationObjectAtIndex(index, nb as IObjectInitializationDataProvider);
+                m_AasTarget.SetInitializationObjectAtIndex(index, nb as IObjectInitializationDataProvider);
         }
 
-        private void OnRemoveInitializationObject(ReorderableList list)
+        void OnRemoveInitializationObject(ReorderableList list)
         {
-            m_aasTarget.RemoveInitializationObject(list.index);
+            m_AasTarget.RemoveInitializationObject(list.index);
         }
 
-        private void OnAddInitializationObject(Rect buttonRect, ReorderableList list)
+        void OnAddInitializationObject(Rect buttonRect, ReorderableList list)
         {
-            var assetPath = EditorUtility.OpenFilePanelWithFilters("Initialization Object", "Assets", new string[] { "Initialization Object", "asset" });
+            var assetPath = EditorUtility.OpenFilePanelWithFilters("Initialization Object", "Assets", new[] { "Initialization Object", "asset" });
             if (string.IsNullOrEmpty(assetPath))
                 return;
             var initObj = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath.Substring(assetPath.IndexOf("Assets/")));
@@ -480,7 +486,7 @@ namespace UnityEditor.AddressableAssets
                 Debug.LogWarningFormat("Asset at {0} does not implement the IObjectInitializationDataProvider interface.", assetPath);
                 return;
             }
-            m_aasTarget.AddInitializationObject(initObj as IObjectInitializationDataProvider);
+            m_AasTarget.AddInitializationObject(initObj as IObjectInitializationDataProvider);
         }
 
     }

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace UnityEditor.AddressableAssets
 {
     [InitializeOnLoad]
-    internal static class AddressableScenesManager
+    static class AddressableScenesManager
     {
         static AddressableScenesManager()
         {
@@ -19,7 +19,7 @@ namespace UnityEditor.AddressableAssets
                 settings.OnModification += OnSettingsChanged;
         }
 
-        private static void OnSettingsChanged(AddressableAssetSettings settings, AddressableAssetSettings.ModificationEvent evt, object obj)
+        static void OnSettingsChanged(AddressableAssetSettings settings, AddressableAssetSettings.ModificationEvent evt, object obj)
         {
             switch (evt)
             {
@@ -38,7 +38,7 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        private static void OnScenesChanged()
+        static void OnScenesChanged()
         {
             //ignore the play mode changes...
             if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -63,7 +63,8 @@ namespace UnityEditor.AddressableAssets
 
 
         }
-        private static void CheckForScenesInBuildList(IList<AddressableAssetEntry> entries)
+
+        static void CheckForScenesInBuildList(IList<AddressableAssetEntry> entries)
         {
             if (entries == null)
                 return;

@@ -1,10 +1,11 @@
-﻿using UnityEditor.Build.Pipeline;
+﻿using System;
+using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Injector;
 using UnityEditor.Build.Pipeline.Interfaces;
 
 namespace UnityEditor.AddressableAssets
 {
-    internal class ExtractDataTask : IBuildTask
+    class ExtractDataTask : IBuildTask
     {
         public int Version { get { return 1; } }
 

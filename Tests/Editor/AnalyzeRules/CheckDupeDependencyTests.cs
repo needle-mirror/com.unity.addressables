@@ -1,20 +1,15 @@
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor.Build.Pipeline;
-using UnityEditor.Build.Pipeline.Interfaces;
-using UnityEditor.Build.Pipeline.Tasks;
-using UnityEngine.AddressableAssets;
 using System;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Tests;
+using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
     class CheckDupeDependencyTests : AddressableAssetTestBase
     {
-        const string k_CheckDupePrefabA = TestConfigFolder + "/checkDupe_prefabA.prefab";
-        const string k_CheckDupePrefabB = TestConfigFolder + "/checkDupe_prefabB.prefab";
-        const string k_CheckDupeMyMaterial = TestConfigFolder + "/checkDupe_myMaterial.mat";
+        const string k_CheckDupePrefabA = k_TestConfigFolder + "/checkDupe_prefabA.prefab";
+        const string k_CheckDupePrefabB = k_TestConfigFolder + "/checkDupe_prefabB.prefab";
+        const string k_CheckDupeMyMaterial = k_TestConfigFolder + "/checkDupe_myMaterial.mat";
 
         protected override void OnInit()
         {
@@ -44,26 +39,26 @@ namespace UnityEditor.AddressableAssets
         [Test]
         public void CheckDupeCanFixIssues()
         {
-            var group1 = m_settings.CreateGroup("CheckDupeDepencency1", false, false, false, typeof(BundledAssetGroupSchema));
-            var group2 = m_settings.CreateGroup("CheckDupeDepencency2", false, false, false, typeof(BundledAssetGroupSchema));
+            var group1 = m_Settings.CreateGroup("CheckDupeDepencency1", false, false, false, null, typeof(BundledAssetGroupSchema));
+            var group2 = m_Settings.CreateGroup("CheckDupeDepencency2", false, false, false, null, typeof(BundledAssetGroupSchema));
 
-            m_settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA), group1, false, false);
-            m_settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabB), group2, false, false);
+            m_Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA), group1, false, false);
+            m_Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabB), group2, false, false);
 
             var matGuid = AssetDatabase.AssetPathToGUID(k_CheckDupeMyMaterial);
             Assert.IsNull(group1.GetAssetEntry(matGuid));
             Assert.IsNull(group2.GetAssetEntry(matGuid));
 
-            var groupCount = m_settings.groups.Count;
+            var groupCount = m_Settings.groups.Count;
 
             var rule = new CheckDupeDependencies();
-            rule.FixIssues(m_settings);
+            rule.FixIssues(m_Settings);
 
-            Assert.AreEqual(groupCount+1, m_settings.groups.Count);
+            Assert.AreEqual(groupCount+1, m_Settings.groups.Count);
 
-            //this is potentially unstable.  If another test runs CheckDupeDependencies.FixIssues on this m_settings
+            //this is potentially unstable.  If another test runs CheckDupeDependencies.FixIssues on this m_Settings
             // then this test will create "Duplicate Asset Isolation1".
-            var dupeGroup = m_settings.FindGroup("Duplicate Asset Isolation");
+            var dupeGroup = m_Settings.FindGroup("Duplicate Asset Isolation");
             Assert.IsNotNull(dupeGroup);
             Assert.IsNotNull(dupeGroup.GetAssetEntry(matGuid));
         }
@@ -71,19 +66,19 @@ namespace UnityEditor.AddressableAssets
         [Test]
         public void CheckDupeNoIssuesIfValid()
         {
-            var group1 = m_settings.CreateGroup("CheckDupeDepencency1", false, false, false, typeof(BundledAssetGroupSchema));
-            var group2 = m_settings.CreateGroup("CheckDupeDepencency2", false, false, false, typeof(BundledAssetGroupSchema));
+            var group1 = m_Settings.CreateGroup("CheckDupeDepencency1", false, false, false, null, typeof(BundledAssetGroupSchema));
+            var group2 = m_Settings.CreateGroup("CheckDupeDepencency2", false, false, false, null, typeof(BundledAssetGroupSchema));
 
-            m_settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA), group1, false, false);
-            m_settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabB), group2, false, false);
-            m_settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupeMyMaterial), group2, false, false);
+            m_Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA), group1, false, false);
+            m_Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabB), group2, false, false);
+            m_Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupeMyMaterial), group2, false, false);
 
-            var groupCount = m_settings.groups.Count;
+            var groupCount = m_Settings.groups.Count;
 
             var rule = new CheckDupeDependencies();
-            rule.FixIssues(m_settings);
+            rule.FixIssues(m_Settings);
 
-            Assert.AreEqual(groupCount, m_settings.groups.Count);
+            Assert.AreEqual(groupCount, m_Settings.groups.Count);
         }
 
 

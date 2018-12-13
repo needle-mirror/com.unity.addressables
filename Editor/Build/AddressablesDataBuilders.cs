@@ -44,8 +44,5 @@ namespace UnityEditor.AddressableAssets
     /// </summary>
     public class AddressablesPlayerBuildResult : AddressableAssetBuildResult
     {
-        public string ContentStateDataPath { get; internal set; }
     }
-
-
 }

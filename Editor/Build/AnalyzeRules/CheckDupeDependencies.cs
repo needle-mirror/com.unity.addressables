@@ -1,10 +1,14 @@
+using System;
 using System.Collections.Generic;
-using UnityEngine;
+using System.Diagnostics;
+using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
+using UnityEditor.SceneManagement;
+using UnityEngine;
 using UnityEngine.AddressableAssets;
-using System;
+using Debug = UnityEngine.Debug;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -12,7 +16,7 @@ namespace UnityEditor.AddressableAssets
     {
         [NonSerialized]
         HashSet<GUID> m_ImplicitAssets;
-        internal override string name
+        internal override string ruleName
         { get { return "Check Duplicate Bundle Dependencies"; } }
 
         internal override List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)
@@ -24,14 +28,14 @@ namespace UnityEditor.AddressableAssets
         {
             m_ImplicitAssets = new HashSet<GUID>();
             List<AnalyzeResult> emptyResult = new List<AnalyzeResult>();
-            emptyResult.Add(new AnalyzeResult(name + " - No issues found"));
+            emptyResult.Add(new AnalyzeResult(ruleName + " - No issues found"));
             IDataBuilderContext context = new AddressablesBuildDataBuilderContext(settings);
-            var timer = new System.Diagnostics.Stopwatch();
+            var timer = new Stopwatch();
             timer.Start();
             var aaSettings = context.GetValue<AddressableAssetSettings>(AddressablesBuildDataBuilderContext.BuildScriptContextConstants.kAddressableAssetSettings);
 
             //gather entries
-            var locations = new List<UnityEngine.AddressableAssets.ContentCatalogDataEntry>();
+            var locations = new List<ContentCatalogDataEntry>();
             var allBundleInputDefs = new List<AssetBundleBuild>();
             var bundleToAssetGroup = new Dictionary<string, AddressableAssetGroup>();
             var runtimeData = new ResourceManagerRuntimeData();
@@ -55,7 +59,7 @@ namespace UnityEditor.AddressableAssets
                         var newName = bid.assetBundleName;
                         while (bundleToAssetGroup.ContainsKey(newName) && count < 1000)
                             newName = bid.assetBundleName.Replace(".bundle", string.Format("{0}.bundle", count++));
-                        bundleInputDefs[i] = new AssetBundleBuild() { assetBundleName = newName, addressableNames = bid.addressableNames, assetBundleVariant = bid.assetBundleVariant, assetNames = bid.assetNames };
+                        bundleInputDefs[i] = new AssetBundleBuild { assetBundleName = newName, addressableNames = bid.addressableNames, assetBundleVariant = bid.assetBundleVariant, assetNames = bid.assetNames };
                     }
 
                     bundleToAssetGroup.Add(bundleInputDefs[i].assetBundleName, assetGroup);
@@ -66,7 +70,7 @@ namespace UnityEditor.AddressableAssets
 
             if (allBundleInputDefs.Count > 0)
             {
-                if (!SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 {
                     Debug.LogError("Cannot run Analyze with unsaved scenes");
                     return emptyResult;
@@ -83,10 +87,10 @@ namespace UnityEditor.AddressableAssets
 
                 var aaContext = new AddressableAssetsBuildContext
                 {
-                    m_settings = aaSettings,
-                    m_runtimeData = runtimeData,
-                    m_bundleToAssetGroup = bundleToAssetGroup,
-                    m_locations = locations
+                    settings = aaSettings,
+                    runtimeData = runtimeData,
+                    bundleToAssetGroup = bundleToAssetGroup,
+                    locations = locations
                 };
 
                 IBundleBuildResults buildResults;
@@ -107,7 +111,7 @@ namespace UnityEditor.AddressableAssets
                 Dictionary<GUID, List<string>> implicitGuids = new Dictionary<GUID, List<string>>();
                 foreach (var fto in extractData.WriteData.FileToObjects)
                 {
-                    foreach (Build.Content.ObjectIdentifier g in fto.Value)
+                    foreach (ObjectIdentifier g in fto.Value)
                     {
                         if (!explicitGuids.Contains(g.guid))
                         {
@@ -136,7 +140,7 @@ namespace UnityEditor.AddressableAssets
                         {
                             var bun = extractData.WriteData.FileToBundle[file];
                             AddressableAssetGroup group;
-                            if (aaContext.m_bundleToAssetGroup.TryGetValue(bun, out group))
+                            if (aaContext.bundleToAssetGroup.TryGetValue(bun, out group))
                             {
                                 Dictionary<string, List<string>> groupData;
                                 if (!allIssues.TryGetValue(group.Name, out groupData))
@@ -166,7 +170,7 @@ namespace UnityEditor.AddressableAssets
                     {
                         foreach (var item in bundle.Value)
                         {
-                            var issueName = name + AnalyzeRule.kDelimiter + group.Key + AnalyzeRule.kDelimiter + bundle.Key + AnalyzeRule.kDelimiter + item;
+                            var issueName = ruleName + kDelimiter + group.Key + kDelimiter + bundle.Key + kDelimiter + item;
                             result.Add(new AnalyzeResult(issueName, MessageType.Warning));
                         }
                     }
@@ -214,12 +218,9 @@ namespace UnityEditor.AddressableAssets
             if (m_ImplicitAssets.Count == 0)
                 return;
 
-            var group = settings.CreateGroup("Duplicate Asset Isolation", false, false, false);
-            group.AddSchema<BundledAssetGroupSchema>();
+            var group = settings.CreateGroup("Duplicate Asset Isolation", false, false, false, null, typeof(BundledAssetGroupSchema));
             foreach (var asset in m_ImplicitAssets)
-            {
-                settings.CreateOrMoveEntry(asset.ToString(), group);
-            }
+                settings.CreateOrMoveEntry(asset.ToString(), group, false, false);
         }
 
         internal override void ClearAnalysis()

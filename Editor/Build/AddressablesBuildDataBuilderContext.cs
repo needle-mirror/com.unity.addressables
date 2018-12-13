@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 
@@ -22,11 +23,11 @@ namespace UnityEditor.AddressableAssets
             public const string kPlayerBuildVersion = "PlayerBuildVersion";
         }
 
-        Dictionary<string, object> m_values = new Dictionary<string, object>();
+        Dictionary<string, object> m_Values = new Dictionary<string, object>();
         /// <summary>
         /// Collection of context keys.
         /// </summary>
-        public ICollection<string> Keys { get { return m_values.Keys; } }
+        public ICollection<string> Keys { get { return m_Values.Keys; } }
 
         /// <summary>
         /// Construct a new AddressablesBuildDataBuilderContext object.
@@ -40,7 +41,7 @@ namespace UnityEditor.AddressableAssets
         public AddressablesBuildDataBuilderContext(IDataBuilderContext toCopy)
         {
             foreach (var v in toCopy.Keys)
-                m_values.Add(v, toCopy.GetValue(v));
+                m_Values.Add(v, toCopy.GetValue(v));
         }
 
         /// <summary>
@@ -94,12 +95,12 @@ namespace UnityEditor.AddressableAssets
         /// <returns>The value as an object.</returns>
         public object GetValue(string key)
         {
-            if (!m_values.ContainsKey(key))
+            if (!m_Values.ContainsKey(key))
             {
                 Debug.LogErrorFormat("Missing key {0}.", key);
                 return null;
             }
-            return m_values[key];
+            return m_Values[key];
         }
 
         /// <summary>
@@ -109,7 +110,7 @@ namespace UnityEditor.AddressableAssets
         /// <param name="value">The value to set.</param>
         public void SetValue(string key, object value)
         {
-            m_values[key] = value;
+            m_Values[key] = value;
         }
     }
 }

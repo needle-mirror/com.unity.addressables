@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
+using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement;
@@ -9,7 +8,7 @@ using UnityEngine.ResourceManagement;
 namespace UnityEditor.AddressableAssets
 {
     [CreateAssetMenu(fileName = "BuildScriptFast.asset", menuName = "Addressable Assets/Data Builders/Fast Mode")]
-    internal class BuildScriptFastMode : BuildScriptBase
+    class BuildScriptFastMode : BuildScriptBase
     {
         public override string Name
         {
@@ -29,10 +28,10 @@ namespace UnityEditor.AddressableAssets
             return typeof(T) == typeof(AddressablesPlayModeBuildResult);
         }
 
-        string pathFormat = "{0}Library/com.unity.addressables/{1}_BuildScriptFastMode.json";
+        string m_PathFormat = "{0}Library/com.unity.addressables/{1}_BuildScriptFastMode.json";
         public override T BuildData<T>(IDataBuilderContext context)
         {
-            var timer = new System.Diagnostics.Stopwatch();
+            var timer = new Stopwatch();
             timer.Start();
             var aaSettings = context.GetValue<AddressableAssetSettings>(AddressablesBuildDataBuilderContext.BuildScriptContextConstants.kAddressableAssetSettings);
 
@@ -62,25 +61,29 @@ namespace UnityEditor.AddressableAssets
             }
 
             //save catalog
-            WriteFile(string.Format(pathFormat, "", "catalog"), JsonUtility.ToJson(new ContentCatalogData(locations)));
+            WriteFile(string.Format(m_PathFormat, "", "catalog"), JsonUtility.ToJson(new ContentCatalogData(locations)));
 
             //create runtime data
             var runtimeData = new ResourceManagerRuntimeData();
             runtimeData.LogResourceManagerExceptions = aaSettings.buildSettings.LogResourceManagerExceptions;
             runtimeData.ProfileEvents = ProjectConfigData.postProfilerEvents;
-            runtimeData.CatalogLocations.Add(new ResourceLocationData(new string[] { "catalogs" }, string.Format(pathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"), typeof(JsonAssetProvider)));
+            runtimeData.CatalogLocations.Add(new ResourceLocationData(new[] { "catalogs" }, string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"), typeof(JsonAssetProvider)));
             if (needsLegacyProvider)
                 runtimeData.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(typeof(LegacyResourcesProvider)));
             runtimeData.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData<AssetDatabaseProvider>());
             runtimeData.InstanceProviderData = ObjectInitializationData.CreateSerializedInitializationData<InstanceProvider>();
             runtimeData.SceneProviderData = ObjectInitializationData.CreateSerializedInitializationData<SceneProvider>();
-            foreach (IObjectInitializationDataProvider io in aaSettings.InitializationObjects)
-                runtimeData.InitializationObjects.Add(io.CreateObjectInitializationData());
-            WriteFile(string.Format(pathFormat, "", "settings"), JsonUtility.ToJson(runtimeData));
+            foreach (var io in aaSettings.InitializationObjects)
+            {
+                if(io is IObjectInitializationDataProvider )
+                    runtimeData.InitializationObjects.Add((io as IObjectInitializationDataProvider).CreateObjectInitializationData());
+            }
+
+            WriteFile(string.Format(m_PathFormat, "", "settings"), JsonUtility.ToJson(runtimeData));
 
             //inform runtime of the init data path
-            PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath, string.Format(pathFormat, "file://{UnityEngine.Application.dataPath}/../", "settings"));
-            IDataBuilderResult res = new AddressablesPlayModeBuildResult() { ScenesToAdd = scenesToAdd, Duration = timer.Elapsed.TotalSeconds, LocationCount = locations.Count };
+            PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath, string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "settings"));
+            IDataBuilderResult res = new AddressablesPlayModeBuildResult { ScenesToAdd = scenesToAdd, Duration = timer.Elapsed.TotalSeconds, LocationCount = locations.Count };
             return (T)res;
         }
     }

@@ -1,17 +1,17 @@
-
+using System;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Diagnostics
 {
-    static internal class GraphColors
+    static class GraphColors
     {
-        private static Color kWindowBackground = new Color(0.63f, 0.63f, 0.63f, 1.0f);
-        private static Color kLabelGraphLabelBackground = new Color(0.75f, 0.75f, 0.75f, 0.75f);
+        static Color s_KWindowBackground = new Color(0.63f, 0.63f, 0.63f, 1.0f);
+        static Color s_KLabelGraphLabelBackground = new Color(0.75f, 0.75f, 0.75f, 0.75f);
 
-        private static Color kWindowBackgroundPro = new Color(0.15f, 0.15f, 0.15f, 1.0f);
-        private static Color kLabelGraphLabelBackgroundPro = new Color(0, 0, 0, .75f);
+        static Color s_KWindowBackgroundPro = new Color(0.15f, 0.15f, 0.15f, 1.0f);
+        static Color s_KLabelGraphLabelBackgroundPro = new Color(0, 0, 0, .75f);
 
-        internal static Color WindowBackground { get { return EditorGUIUtility.isProSkin ? kWindowBackgroundPro : kWindowBackground; } }
-        internal static Color LabelGraphLabelBackground { get { return EditorGUIUtility.isProSkin ? kLabelGraphLabelBackgroundPro : kLabelGraphLabelBackground; } }
+        internal static Color WindowBackground { get { return EditorGUIUtility.isProSkin ? s_KWindowBackgroundPro : s_KWindowBackground; } }
+        internal static Color LabelGraphLabelBackground { get { return EditorGUIUtility.isProSkin ? s_KLabelGraphLabelBackgroundPro : s_KLabelGraphLabelBackground; } }
     }
 }

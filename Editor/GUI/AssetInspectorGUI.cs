@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -5,22 +6,22 @@ using Object = UnityEngine.Object;
 namespace UnityEditor.AddressableAssets
 {
     [InitializeOnLoad]
-    internal static class AddressableAssetInspectorGUI
+    static class AddressableAssetInspectorGUI
     {
-        static GUIStyle toggleMixed;
-        static GUIContent addressableAssetToggleText;
+        static GUIStyle s_ToggleMixed;
+        static GUIContent s_AddressableAssetToggleText;
 
         static AddressableAssetInspectorGUI()
         {
-            toggleMixed = null;
-            addressableAssetToggleText = new GUIContent("Addressable", "Check this to mark this asset as an Addressable Asset, which includes it in the bundled data and makes it loadable via script by its address.");
+            s_ToggleMixed = null;
+            s_AddressableAssetToggleText = new GUIContent("Addressable", "Check this to mark this asset as an Addressable Asset, which includes it in the bundled data and makes it loadable via script by its address.");
             Editor.finishedDefaultHeaderGUI += OnPostHeaderGUI;
         }
 
-        static void SetAAEntry(Editor editor, AddressableAssetSettings aaSettings, Object[] targets, bool create)
+        static void SetAaEntry(AddressableAssetSettings aaSettings, Object[] targets, bool create)
         {
             Undo.RecordObject(aaSettings, "AddressableAssetSettings");
-            string path = string.Empty;
+            string path;
             var guid = string.Empty;
             //if (create || EditorUtility.DisplayDialog("Remove Addressable Asset Entries", "Do you want to remove Addressable Asset entries for " + targets.Length + " items?", "Yes", "Cancel"))
             {
@@ -28,7 +29,7 @@ namespace UnityEditor.AddressableAssets
 
                 foreach (var t in targets)
                 {
-                    if (AddressableAssetUtility.GetPathAndGUIDFromTarget(t, ref path, ref guid))
+                    if (AddressableAssetUtility.GetPathAndGUIDFromTarget(t, out path, ref guid))
                     {
                         if (create)
                             entriesAdded.Add(aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup, false, false));
@@ -47,7 +48,6 @@ namespace UnityEditor.AddressableAssets
         static void OnPostHeaderGUI(Editor editor)
         {
             var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
-            string path = string.Empty;
             var guid = string.Empty;
             AddressableAssetEntry entry = null;
 
@@ -57,7 +57,8 @@ namespace UnityEditor.AddressableAssets
                 bool foundValidAsset = false;
                 foreach (var t in editor.targets)
                 {
-                    if ((AddressableAssetUtility.GetPathAndGUIDFromTarget(t, ref path, ref guid)) &&
+                    string path;
+                    if ((AddressableAssetUtility.GetPathAndGUIDFromTarget(t, out path, ref guid)) &&
                         (path.ToLower().Contains("assets")))
                     {
                         foundValidAsset = true;
@@ -79,16 +80,16 @@ namespace UnityEditor.AddressableAssets
 
                 if (addressableCount == 0)
                 {
-                    if (GUILayout.Toggle(false, addressableAssetToggleText, GUILayout.ExpandWidth(false)))
-                        SetAAEntry(editor, AddressableAssetSettingsDefaultObject.GetSettings(true), editor.targets, true);
+                    if (GUILayout.Toggle(false, s_AddressableAssetToggleText, GUILayout.ExpandWidth(false)))
+                        SetAaEntry(AddressableAssetSettingsDefaultObject.GetSettings(true), editor.targets, true);
                 }
                 else if (addressableCount == editor.targets.Length)
                 {
                     GUILayout.BeginHorizontal();
-                    if (!GUILayout.Toggle(true, addressableAssetToggleText, GUILayout.ExpandWidth(false)))
-                        SetAAEntry(editor, aaSettings, editor.targets, false);
+                    if (!GUILayout.Toggle(true, s_AddressableAssetToggleText, GUILayout.ExpandWidth(false)))
+                        SetAaEntry(aaSettings, editor.targets, false);
 
-                    if (editor.targets.Length == 1)
+                    if (editor.targets.Length == 1 && entry != null)
                     {
                         entry.address = EditorGUILayout.DelayedTextField(entry.address, GUILayout.ExpandWidth(true));
                     }
@@ -97,10 +98,10 @@ namespace UnityEditor.AddressableAssets
                 else
                 {
                     GUILayout.BeginHorizontal();
-                    if (toggleMixed == null)
-                        toggleMixed = new GUIStyle("ToggleMixed");
-                    if (GUILayout.Toggle(false, addressableAssetToggleText, toggleMixed, GUILayout.ExpandWidth(false)))
-                        SetAAEntry(editor, AddressableAssetSettingsDefaultObject.GetSettings(true), editor.targets, true);
+                    if (s_ToggleMixed == null)
+                        s_ToggleMixed = new GUIStyle("ToggleMixed");
+                    if (GUILayout.Toggle(false, s_AddressableAssetToggleText, s_ToggleMixed, GUILayout.ExpandWidth(false)))
+                        SetAaEntry(AddressableAssetSettingsDefaultObject.GetSettings(true), editor.targets, true);
                     EditorGUILayout.LabelField(addressableCount + " out of " + editor.targets.Length + " assets are addressable.");
                     GUILayout.EndHorizontal();
                 }

@@ -1,24 +1,19 @@
+using System;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
-    internal class AddressableAssetsWindow : EditorWindow
+    class AddressableAssetsWindow : EditorWindow
     {
+        [FormerlySerializedAs("m_groupEditor")]
         [SerializeField]
-        AddressableAssetsSettingsGroupEditor m_groupEditor = null;
+        AddressableAssetsSettingsGroupEditor m_GroupEditor;
 
-        enum TabList
-        {
-            Assets = 0,
-            Config,
-            Profile,
-            Preview,
-            Publish,
-        }
-
+        [FormerlySerializedAs("m_ignoreLegacyBundles")]
         [SerializeField]
-        bool m_ignoreLegacyBundles = false;
+        bool m_IgnoreLegacyBundles;
 
         [MenuItem("Window/Asset Management/Addressable Assets", priority = 2050)]
         static void Init()
@@ -35,20 +30,20 @@ namespace UnityEditor.AddressableAssets
 
         public void OnEnable()
         {
-            if (!m_ignoreLegacyBundles)
+            if (!m_IgnoreLegacyBundles)
             {
                 var bundleList = AssetDatabase.GetAllAssetBundleNames();
                 if (bundleList != null && bundleList.Length > 0)
                     OfferToConvert();
             }
-            if (m_groupEditor != null)
-                m_groupEditor.OnEnable();
+            if (m_GroupEditor != null)
+                m_GroupEditor.OnEnable();
         }
 
         public void OnDisable()
         {
-            if (m_groupEditor != null)
-                m_groupEditor.OnDisable();
+            if (m_GroupEditor != null)
+                m_GroupEditor.OnDisable();
         }
 
         internal void OfferToConvert()
@@ -59,7 +54,7 @@ namespace UnityEditor.AddressableAssets
                 AddressableAssetUtility.ConvertAssetBundlesToAddressables();
             }
             else
-                m_ignoreLegacyBundles = true;
+                m_IgnoreLegacyBundles = true;
         }
 
         public void OnGUI()
@@ -123,12 +118,12 @@ namespace UnityEditor.AddressableAssets
             {
                 Rect contentRect = new Rect(0, 0, position.width, position.height);
 
-                if (m_groupEditor == null)
+                if (m_GroupEditor == null)
                 {
-                    m_groupEditor = new AddressableAssetsSettingsGroupEditor(this);
-                    m_groupEditor.OnEnable();
+                    m_GroupEditor = new AddressableAssetsSettingsGroupEditor(this);
+                    m_GroupEditor.OnEnable();
                 }
-                if (m_groupEditor.OnGUI(contentRect))
+                if (m_GroupEditor.OnGUI(contentRect))
                     Repaint();
             }
         }

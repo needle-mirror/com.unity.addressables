@@ -1,10 +1,8 @@
-﻿using UnityEngine;
-using UnityEngine.ResourceManagement;
-using UnityEngine.AddressableAssets;
-using System;
-using UnityEngine.Experimental.UIElements;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
+using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -19,64 +17,36 @@ namespace UnityEditor.AddressableAssets
         public static Action<AddressableAssetBuildResult> buildCompleted;
     }
 
-    internal static class AddressablesBuildScriptHooks
+    class CopyContentStateIntoBuild : IPostprocessBuildWithReport
+    {
+        public int callbackOrder { get { return 0; } }
+    
+        public void OnPostprocessBuild(BuildReport report)
+        {
+            if (report.summary.result == BuildResult.Succeeded)
+            {
+                var libraryPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/addressables_content_state.bin";
+                if (!string.IsNullOrEmpty(libraryPath))
+                {
+                    var newPath = ContentUpdateScript.GetContentStateDataPath(false);
+                    if (File.Exists(newPath))
+                        File.Delete(newPath);
+                    File.Copy(libraryPath, newPath);
+                }
+            }
+        }
+    }
+
+    static class AddressablesBuildScriptHooks
     {
         [InitializeOnLoadMethod]
         static void Init()
         {
-            BuildPlayerWindow.RegisterBuildPlayerHandler(BuildPlayer);
             EditorApplication.playModeStateChanged += OnEditorPlayModeChanged;
         }
 
-        static void BuildPlayer(BuildPlayerOptions ops)
-        {
-            var settings = AddressableAssetSettingsDefaultObject.Settings;
-            if (settings == null)
-            {
-                if (BuildScript.buildCompleted != null)
-                    BuildScript.buildCompleted(new AddressableAssetBuildResult() { Duration = 0, Error = "AddressableAssetSettings not found." });
-                BuildPipeline.BuildPlayer(ops);
-            }
-            else
-            {
-                if (settings.ActivePlayerDataBuilder == null)
-                {
-                    var err = "Active build script is null.";
-                    Debug.LogError(err);
-
-                    if (BuildScript.buildCompleted != null)
-                        BuildScript.buildCompleted(new AddressableAssetBuildResult() { Duration = 0, Error = err });
-                    return;
-                }
-
-                if (!settings.ActivePlayerDataBuilder.CanBuildData<AddressablesPlayerBuildResult>())
-                {
-                    var err = string.Format("Active build script {0} cannot build AddressablesPlayerBuildResult.", settings.ActivePlayerDataBuilder);
-                    Debug.LogError(err);
-                    if (BuildScript.buildCompleted != null)
-                        BuildScript.buildCompleted(new AddressableAssetBuildResult() { Duration = 0, Error = err });
-                    return;
-                }
-
-                var context = new AddressablesBuildDataBuilderContext(settings, ops.targetGroup, ops.target, (ops.options & BuildOptions.Development) != BuildOptions.None, ((ops.options & BuildOptions.ConnectWithProfiler) != BuildOptions.None) && ProjectConfigData.postProfilerEvents, settings.PlayerBuildVersion);
-                var res = settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
-                BuildPipeline.BuildPlayer(ops);
-                if (!string.IsNullOrEmpty(res.ContentStateDataPath))
-                {      
-                    var newPath = ContentUpdateScript.GetContentStateDataPath(false);
-                    if (File.Exists(newPath))
-                          File.Delete(newPath);
-                    File.Copy(res.ContentStateDataPath, newPath);
-                }
-
-                if (BuildScript.buildCompleted != null)
-                    BuildScript.buildCompleted(res);
-                settings.DataBuilderCompleted(settings.ActivePlayerDataBuilder, res);
-            }
-        }
-
-        private static void OnEditorPlayModeChanged(PlayModeStateChange state)
-        {
+        static void OnEditorPlayModeChanged(PlayModeStateChange state)
+        {  
             if (state == PlayModeStateChange.ExitingEditMode)
             {
                 var settings = AddressableAssetSettingsDefaultObject.Settings;
@@ -88,30 +58,38 @@ namespace UnityEditor.AddressableAssets
                     Debug.LogError(err);
 
                     if (BuildScript.buildCompleted != null)
-                        BuildScript.buildCompleted(new AddressableAssetBuildResult() { Duration = 0, Error = err });
+                        BuildScript.buildCompleted(new AddressableAssetBuildResult { Duration = 0, Error = err });
                     return;
                 }
 
-                if (!settings.ActivePlayerDataBuilder.CanBuildData<AddressablesPlayModeBuildResult>())
+                if (!settings.ActivePlayModeDataBuilder.CanBuildData<AddressablesPlayModeBuildResult>())
                 {
                     var err = string.Format("Active build script {0} cannot build AddressablesPlayModeBuildResult.", settings.ActivePlayModeDataBuilder);
                     Debug.LogError(err);
                     if (BuildScript.buildCompleted != null)
-                        BuildScript.buildCompleted(new AddressableAssetBuildResult() { Duration = 0, Error = err });
+                        BuildScript.buildCompleted(new AddressableAssetBuildResult { Duration = 0, Error = err });
                     return;
                 }
 
                 SceneManagerState.Record();
                 var res = settings.ActivePlayModeDataBuilder.BuildData<AddressablesPlayModeBuildResult>(new AddressablesBuildDataBuilderContext(settings));
-                SceneManagerState.AddScenesForPlayMode(res.ScenesToAdd);
-                if (BuildScript.buildCompleted != null)
-                    BuildScript.buildCompleted(res);
-                settings.DataBuilderCompleted(settings.ActivePlayerDataBuilder, res);
+                if (!string.IsNullOrEmpty(res.Error))
+                {
+                    Debug.LogError(res.Error);
+                    EditorApplication.isPlaying = false;
+                }
+                else
+                {
+                    SceneManagerState.AddScenesForPlayMode(res.ScenesToAdd);
+                    if (BuildScript.buildCompleted != null)
+                        BuildScript.buildCompleted(res);
+                    settings.DataBuilderCompleted(settings.ActivePlayModeDataBuilder, res);
+                }
             }
             else if (state == PlayModeStateChange.EnteredEditMode)
             {
                 var settings = AddressableAssetSettingsDefaultObject.Settings;
-                if(settings != null && settings.ActivePlayerDataBuilder != null && settings.ActivePlayerDataBuilder.CanBuildData<AddressablesPlayModeBuildResult>())
+                if(settings != null && settings.ActivePlayModeDataBuilder != null && settings.ActivePlayModeDataBuilder.CanBuildData<AddressablesPlayModeBuildResult>())
                     SceneManagerState.Restore();
             }
         }

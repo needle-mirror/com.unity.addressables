@@ -1,32 +1,30 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using UnityEngine;
-using System.Xml;
-using System;
 using System.Reflection;
+using System.Xml;
 
-internal class LinkXMLGenerator
+class LinkXmlGenerator
 {
-    HashSet<Type> m_types = new HashSet<Type>();
+    HashSet<Type> m_Types = new HashSet<Type>();
     public void AddTypes(params Type[] types)
     {
         if (types == null)
             return;
         foreach (var t in types)
-            m_types.Add(t);
+            m_Types.Add(t);
     }
     public void AddTypes(IEnumerable<Type> types)
     {
         if (types == null)
             return;
         foreach (var t in types)
-            m_types.Add(t);
+            m_Types.Add(t);
     }
 
     public void Save(string path)
     {
         var assemblyMap = new Dictionary<Assembly, List<Type>> ();
-        foreach (var t in m_types)
+        foreach (var t in m_Types)
         {
             var a = t.Assembly;
             List<Type> types;
@@ -41,16 +39,22 @@ internal class LinkXMLGenerator
             var assembly = linker.AppendChild(doc.CreateElement("assembly"));
             var attr = doc.CreateAttribute("fullname");
             attr.Value = k.Key.FullName;
-            assembly.Attributes.Append(attr);
-            foreach (var t in k.Value)
+            if (assembly.Attributes != null)
             {
-                var typeEl = assembly.AppendChild(doc.CreateElement("type"));
-                var tattr = doc.CreateAttribute("fullname");
-                tattr.Value = t.FullName;
-                typeEl.Attributes.Append(tattr);
-                var pattr = doc.CreateAttribute("preserve");
-                pattr.Value = "all";
-                typeEl.Attributes.Append(pattr);
+                assembly.Attributes.Append(attr);
+                foreach (var t in k.Value)
+                {
+                    var typeEl = assembly.AppendChild(doc.CreateElement("type"));
+                    var tattr = doc.CreateAttribute("fullname");
+                    tattr.Value = t.FullName;
+                    if (typeEl.Attributes != null)
+                    {
+                        typeEl.Attributes.Append(tattr);
+                        var pattr = doc.CreateAttribute("preserve");
+                        pattr.Value = "all";
+                        typeEl.Attributes.Append(pattr);
+                    }
+                }
             }
         }
         doc.Save(path);

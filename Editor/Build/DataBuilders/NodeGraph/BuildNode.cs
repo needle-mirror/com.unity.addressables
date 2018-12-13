@@ -1,23 +1,20 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
-
 
 namespace UnityEditor.AddressableAssets.GraphBuild
 {
     [Serializable]
-    internal struct PortDescription
+    struct PortDescription
     {
         public string name;
         public string processorAssembly;
         public string processorType;
+
         public Type type
         {
-            get
-            {
-               return System.Reflection.Assembly.Load(processorAssembly).GetType(processorType);
-            }
+            get { return Assembly.Load(processorAssembly).GetType(processorType); }
         }
 
         public PortDescription(Type t, string n)
@@ -34,23 +31,22 @@ namespace UnityEditor.AddressableAssets.GraphBuild
     }
 
     [Serializable]
-    internal struct PortIdentifier
+    struct PortIdentifier
     {
         public string name;
         public Hash128 node;
     }
 
-
     [Serializable]
-    internal class BuildNode
+    class BuildNode
     {
         public Hash128 id;
         public string name;
         public Vector2 position;
         public string processorAssembly;
         public string processorType;
-        Type m_processorType;
-        List<PortDescription> typeInputMap = null;
+        Type m_ProcessorType;
+        List<PortDescription> m_TypeInputMap;
 
         public override int GetHashCode()
         {
@@ -58,6 +54,7 @@ namespace UnityEditor.AddressableAssets.GraphBuild
         }
 
         public BuildNode() { }
+
         public BuildNode(Type t)
         {
             processorAssembly = t.Assembly.FullName;
@@ -68,23 +65,24 @@ namespace UnityEditor.AddressableAssets.GraphBuild
         {
             get
             {
-                if (m_processorType == null)
-                    m_processorType = System.Reflection.Assembly.Load(processorAssembly).GetType(processorType);
-                return m_processorType;
+                if (m_ProcessorType == null)
+                    m_ProcessorType = Assembly.Load(processorAssembly).GetType(processorType);
+                return m_ProcessorType;
             }
         }
-        private IBuildNodeProcessor CreateProcessor()
+
+        IBuildNodeProcessor CreateProcessor()
         {
-            var instance = Activator.CreateInstance(ProcessorType);
+            var instance = Activator.CreateInstance(ProcessorType) as IBuildNodeProcessor;
             if (instance == null)
                 Debug.LogErrorFormat("Unable to create type {0} from assembly {1}.", processorType, processorAssembly);
-            return instance as IBuildNodeProcessor;
+            return instance;
         }
 
         static List<PortDescription> ExtractInputs(Type t)
         {
             var ports = new List<PortDescription>();
-            foreach (var f in t.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public))
+            foreach (var f in t.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
                 if (f.IsDefined(typeof(InjectInputAttribute), false))
                     ports.Add(new PortDescription(f.FieldType, f.Name));
             return ports;
@@ -94,9 +92,9 @@ namespace UnityEditor.AddressableAssets.GraphBuild
         {
             get
             {
-                if (typeInputMap == null)
-                    typeInputMap = ExtractInputs(ProcessorType);
-                return typeInputMap;
+                if (m_TypeInputMap == null)
+                    m_TypeInputMap = ExtractInputs(ProcessorType);
+                return m_TypeInputMap;
             }
         }
 
@@ -108,12 +106,13 @@ namespace UnityEditor.AddressableAssets.GraphBuild
                 {
                     Type oType = null;
                     var baseType = ProcessorType.BaseType;
-                    while (oType == null && baseType.BaseType != null)
+                    while (oType == null && baseType != null && baseType.BaseType != null)
                     {
-                        if(baseType.IsGenericType)
+                        if (baseType.IsGenericType)
                             oType = baseType.GetGenericArguments()[0];
                         baseType = baseType.BaseType;
                     }
+
                     return oType;
                 }
                 catch (Exception e)
@@ -130,15 +129,13 @@ namespace UnityEditor.AddressableAssets.GraphBuild
             {
                 return CreateProcessor().Evaluate(this, null, context);
             }
-            else
-            {
-                var inputs = new List<object>();
-                foreach (var input in Inputs)
-                    foreach (var inputNode in graph.GetInputNodes(id, input.name))
-                        inputs.Add(graph.EvaluateNode(inputNode, context));
 
-                return CreateProcessor().Evaluate(this, inputs, context);
-            }
+            var inputs = new List<object>();
+            foreach (var input in Inputs)
+            foreach (var inputNode in graph.GetInputNodes(id, input.name))
+                inputs.Add(graph.EvaluateNode(inputNode, context));
+
+            return CreateProcessor().Evaluate(this, inputs, context);
         }
     }
 }

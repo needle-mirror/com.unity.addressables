@@ -1,30 +1,30 @@
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor.IMGUI.Controls;
 using System;
+using System.Collections.Generic;
+using UnityEditor.IMGUI.Controls;
+using UnityEngine;
 using UnityEngine.ResourceManagement.Diagnostics;
 
 namespace UnityEditor.AddressableAssets.Diagnostics
 {
-    internal class EventListView : TreeView
+    class EventListView : TreeView
     {
         class EventTreeViewItem : TreeViewItem
         {
-            public DiagnosticEvent m_entry;
+            public DiagnosticEvent entry;
             public EventTreeViewItem(DiagnosticEvent e) : base(e.EventId.GetHashCode() + e.Stream, 0)
             {
-                m_entry = e;
+                entry = e;
             }
         }
-        List<DiagnosticEvent> m_events;
-        Action<Rect, DiagnosticEvent, int> m_onColumnGUI;
-        Func<DiagnosticEvent, bool> m_onFilterEvent;
+        List<DiagnosticEvent> m_Events;
+        Action<Rect, DiagnosticEvent, int> m_OnColumnGUI;
+        Func<DiagnosticEvent, bool> m_OnFilterEvent;
         public DiagnosticEvent selectedEvent { get; private set; }
 
         public EventListView(TreeViewState tvs, MultiColumnHeaderState mchs, Action<Rect, DiagnosticEvent, int> onColumn, Func<DiagnosticEvent, bool> filter) : base(tvs, new MultiColumnHeader(mchs))
         {
-            m_onColumnGUI = onColumn;
-            m_onFilterEvent = filter;
+            m_OnColumnGUI = onColumn;
+            m_OnFilterEvent = filter;
             showBorder = true;
             showAlternatingRowBackgrounds = true;
         }
@@ -33,7 +33,11 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         {
             selectedEvent = default(DiagnosticEvent);
             if (selectedIds != null && selectedIds.Count > 0)
-                selectedEvent = (FindItem(selectedIds[0], rootItem) as EventTreeViewItem).m_entry;
+            {
+                var item = FindItem(selectedIds[0], rootItem) as EventTreeViewItem;
+                if (item != null)
+                    selectedEvent = item.entry;
+            }
         }
 
         protected override bool CanMultiSelect(TreeViewItem item)
@@ -44,7 +48,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         public void SetEvents(List<DiagnosticEvent> e)
         {
             selectedEvent = default(DiagnosticEvent);
-            m_events = e;
+            m_Events = e;
             Reload();
         }
 
@@ -52,11 +56,11 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         {
             TreeViewItem root = new TreeViewItem(-1, -1);
             root.children = new List<TreeViewItem>();
-            if (m_events != null)
+            if (m_Events != null)
             {
-                foreach (var e in m_events)
+                foreach (var e in m_Events)
                 {
-                    if (m_onFilterEvent(e))
+                    if (m_OnFilterEvent(e))
                         root.AddChild(new EventTreeViewItem(e));
                 }
             }
@@ -75,10 +79,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                 CellGUI(args.GetCellRect(i), args.item as EventTreeViewItem, args.GetColumn(i));
         }
 
-        private void CellGUI(Rect cellRect, EventTreeViewItem item, int column)
+        void CellGUI(Rect cellRect, EventTreeViewItem item, int column)
         {
             CenterRectUsingSingleLineHeight(ref cellRect);
-            m_onColumnGUI(cellRect, item.m_entry, column);
+            m_OnColumnGUI(cellRect, item.entry, column);
         }
 
         protected override bool CanBeParent(TreeViewItem item)
@@ -89,7 +93,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         public static MultiColumnHeaderState CreateDefaultMultiColumnHeaderState(List<string> dataColumns, List<float> sizes)
         {
             if (dataColumns == null || sizes == null || dataColumns.Count != sizes.Count)
-                throw new System.ArgumentException("Column name and size lists are not the same size");
+                throw new ArgumentException("Column name and size lists are not the same size");
             var columns = new List<MultiColumnHeaderState.Column>();
             for (int i = 0; i < dataColumns.Count; i++)
                 AddColumn(columns, dataColumns[i], dataColumns[i], sizes[i]);

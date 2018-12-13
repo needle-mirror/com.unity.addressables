@@ -1,16 +1,13 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
-using UnityEditor.Experimental.UIElements;
 using UnityEditor.Experimental.UIElements.GraphView;
 using UnityEngine;
 using UnityEngine.Experimental.UIElements;
 
 namespace UnityEditor.AddressableAssets.GraphBuild
 {
-    internal class BuildGraphGUI : ScriptableObject, ISearchWindowProvider, IDataBuilderGUI
+    class BuildGraphGUI : ScriptableObject, ISearchWindowProvider, IDataBuilderGUI
     {
         public class BuildGraphView : GraphView
         {
@@ -44,9 +41,9 @@ namespace UnityEditor.AddressableAssets.GraphBuild
         //public BuildGraphBlackboard graphBlackboard { get; private set; }
         public IDataBuilderContext context;
 
-        internal void Init(NodeGraphDataBuilder data, IDataBuilderContext context)
+        internal void Init(NodeGraphDataBuilder data, IDataBuilderContext iContext)
         {
-            this.context = context;
+            context = iContext;
             graphData = data;
         }
 
@@ -75,7 +72,7 @@ namespace UnityEditor.AddressableAssets.GraphBuild
             graphView.parent.Remove(graphView);
         }
 
-        private void OnDragUpdatedEvent(DragUpdatedEvent e)
+        void OnDragUpdatedEvent(DragUpdatedEvent e)
         {
             var selection = DragAndDrop.GetGenericData("DragSelection") as List<ISelectable>;
 
@@ -85,7 +82,7 @@ namespace UnityEditor.AddressableAssets.GraphBuild
             }
         }
 
-        private void OnDragPerformEvent(DragPerformEvent e)
+        void OnDragPerformEvent(DragPerformEvent e)
         {
             var selection = DragAndDrop.GetGenericData("DragSelection") as List<ISelectable>;
 
@@ -110,33 +107,33 @@ namespace UnityEditor.AddressableAssets.GraphBuild
             }
         }
 
-        protected void OnRequestNodeCreation(NodeCreationContext context)
+        protected void OnRequestNodeCreation(NodeCreationContext iContext)
         {
-            SearchWindow.Open(new SearchWindowContext(context.screenMousePosition), this);
+            SearchWindow.Open(new SearchWindowContext(iContext.screenMousePosition), this);
         }
- 
-        public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext context)
+
+        public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext iContext)
         {
             var tree = new List<SearchTreeEntry>();
 
-            tree.Add(new SearchTreeGroupEntry(new GUIContent("Create Node"), 0));
+            tree.Add(new SearchTreeGroupEntry(new GUIContent("Create Node")));
             foreach(var t in NodeTypes)
                 tree.Add(new SearchTreeEntry(new GUIContent(t.Name)) { level = 1, userData = t });
 
             return tree;
         }
-        
-        public bool OnSelectEntry(SearchTreeEntry entry, SearchWindowContext context)
+
+        public bool OnSelectEntry(SearchTreeEntry entry, SearchWindowContext iContext)
         {
             if (entry is SearchTreeGroupEntry)
                 return false;
             var dataNode = graphData.CreateNode(entry.userData as Type, PrettyType(entry.userData as Type));
-            dataNode.position = graphView.WorldToLocal(context.screenMousePosition - graphView.contentRect.position);
+            dataNode.position = graphView.WorldToLocal(iContext.screenMousePosition - graphView.contentRect.position);
             AddVisualNode(dataNode);
             return true;
         }
 
-        private GraphViewChange GraphViewChanged(GraphViewChange graphViewChange)
+        GraphViewChange GraphViewChanged(GraphViewChange graphViewChange)
         {
             if (graphViewChange.elementsToRemove != null)
             {
@@ -153,7 +150,7 @@ namespace UnityEditor.AddressableAssets.GraphBuild
             {
                 foreach (Edge edge in graphViewChange.edgesToCreate)
                 {
-                    var linkId = graphData.CreateLink( (Hash128)edge.output.node.userData, new PortIdentifier() { node = (Hash128)edge.input.node.userData, name = edge.input.portName });
+                    var linkId = graphData.CreateLink( (Hash128)edge.output.node.userData, new PortIdentifier { node = (Hash128)edge.input.node.userData, name = edge.input.portName });
                     edge.persistenceKey = linkId.ToString();
                     edge.userData = linkId.id;
                 }
@@ -173,14 +170,13 @@ namespace UnityEditor.AddressableAssets.GraphBuild
             return graphViewChange;
         }
 
-        private Node AddVisualNode(BuildNode node)
+        void AddVisualNode(BuildNode node)
         {
             var nodeUI = new BuildGraphViewNode(this, node);
             graphView.AddElement(nodeUI);
-            return nodeUI;
         }
 
-        private void CreateEdge(BuildLink link)
+        void CreateEdge(BuildLink link)
         {
             var inputNode = graphView.Q(link.target.node.ToString());
             var inputPort = inputNode.Q<Port>(link.target.name);
@@ -243,10 +239,10 @@ namespace UnityEditor.AddressableAssets.GraphBuild
 
         class BuildGraphViewNode : Node
         {
-            BuildGraphGUI graphWindow;
+            BuildGraphGUI m_GraphWindow;
             public BuildGraphViewNode(BuildGraphGUI window, BuildNode node)
             {
-                graphWindow = window;
+                m_GraphWindow = window;
                 title = node.name + " (" + PrettyType(node.OutputType) + ")";
 
                 capabilities |= Capabilities.Movable;
@@ -262,27 +258,27 @@ namespace UnityEditor.AddressableAssets.GraphBuild
                     inputPort.portName = i.name;
                     inputContainer.Add(inputPort);
                 }
-                
+
 
                 if (node.OutputType != null)
                 {
                     var outputPort = Port.Create<Edge>(Orientation.Horizontal, Direction.Output, Port.Capacity.Multi, node.OutputType);
                     outputPort.name = "Output";
                     outputPort.portName = "Output";
-                    
+
                     outputContainer.Add(outputPort);
                 }
             }
 
             public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
             {
-                if (evt.target is BuildGraphViewNode && graphWindow.context != null)
+                if (evt.target is BuildGraphViewNode && m_GraphWindow.context != null)
                 {
-                    var node = graphWindow.graphData.GetNode((Hash128)(evt.target as BuildGraphViewNode).userData);
+                    var node = m_GraphWindow.graphData.GetNode((Hash128)(evt.target as BuildGraphViewNode).userData);
 #if UNITY_2018_3_OR_NEWER
-                    evt.menu.AppendAction("Evaluate", a => Debug.LogFormat("Result {0}", graphWindow.graphData.EvaluateNode(node.id, graphWindow.context)), a=> DropdownMenu.MenuAction.StatusFlags.Normal);
+                    evt.menu.AppendAction("Evaluate", a => Debug.LogFormat("Result {0}", m_GraphWindow.graphData.EvaluateNode(node.id, m_GraphWindow.context)), a=> DropdownMenu.MenuAction.StatusFlags.Normal);
 #else
-                    evt.menu.AppendAction("Evaluate", a => Debug.LogFormat("Result {0}", graphWindow.graphData.EvaluateNode(node.id, graphWindow.context)),
+                    evt.menu.AppendAction("Evaluate", a => Debug.LogFormat("Result {0}", m_GraphWindow.graphData.EvaluateNode(node.id, m_GraphWindow.context)),
                         ContextualMenu.MenuAction.AlwaysEnabled);
 #endif
                 }
@@ -290,14 +286,14 @@ namespace UnityEditor.AddressableAssets.GraphBuild
                 base.BuildContextualMenu(evt);
             }
         }
-        static private List<Type> s_types;
-        static public List<Type> NodeTypes
+        static List<Type> s_Types;
+        public static List<Type> NodeTypes
         {
             get
             {
-                if (s_types == null)
+                if (s_Types == null)
                 {
-                    s_types = new List<Type>();
+                    s_Types = new List<Type>();
                     try
                     {
                         var interfaceType = typeof(IBuildNodeProcessor);
@@ -310,7 +306,7 @@ namespace UnityEditor.AddressableAssets.GraphBuild
 #endif
                             {
                                 if (t != interfaceType && interfaceType.IsAssignableFrom(t) && !t.IsAbstract)
-                                    s_types.Add(t);
+                                    s_Types.Add(t);
                             }
                         }
                     }
@@ -319,7 +315,7 @@ namespace UnityEditor.AddressableAssets.GraphBuild
                         Debug.LogException(ex);
                     }
                 }
-                return s_types;
+                return s_Types;
             }
         }
 

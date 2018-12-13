@@ -1,29 +1,19 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using UnityEngine;
-using System.Linq;
-using UnityEditor.Build.Utilities;
-using UnityEditor.Build.Pipeline;
-using UnityEditor.Build.Pipeline.Interfaces;
-using UnityEditor.Build.Pipeline.Tasks;
-using UnityEditor.Build.Pipeline.Utilities;
-using UnityEngine.ResourceManagement;
-using UnityEngine.AddressableAssets;
-using UnityEditor.SceneManagement;
+﻿using System;
+using System.Collections.Generic;
 using UnityEditor.IMGUI.Controls;
-using System.Runtime.Serialization.Formatters.Binary;
-using System;
+using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
-    internal class ContentUpdatePreviewWindow : EditorWindow
+    class ContentUpdatePreviewWindow : EditorWindow
     {
         internal static bool PrepareForContentUpdate(AddressableAssetSettings settings, string buildPath)
         {
             var modifiedEntries = ContentUpdateScript.GatherModifiedEntries(settings, buildPath);
             if (modifiedEntries == null)
                 return false;
-            var previewWindow = EditorWindow.GetWindow<ContentUpdatePreviewWindow>();
+            var previewWindow = GetWindow<ContentUpdatePreviewWindow>();
             previewWindow.Show(settings, modifiedEntries);
             return true;
         }
@@ -32,19 +22,19 @@ namespace UnityEditor.AddressableAssets
         {
             class Item : TreeViewItem
             {
-                internal AddressableAssetEntry m_entry;
-                internal bool m_enabled;
+                internal AddressableAssetEntry entry;
+                internal bool enabled;
                 public Item(AddressableAssetEntry entry) : base(entry.guid.GetHashCode())
                 {
-                    m_entry = entry;
-                    m_enabled = true;
+                    this.entry = entry;
+                    enabled = true;
                 }
             }
 
-            ContentUpdatePreviewWindow m_preview;
+            ContentUpdatePreviewWindow m_Preview;
             public ContentUpdateTreeView(ContentUpdatePreviewWindow preview, TreeViewState state, MultiColumnHeaderState mchs) : base(state, new MultiColumnHeader(mchs))
             {
-                m_preview = preview;
+                m_Preview = preview;
             }
 
             internal List<AddressableAssetEntry> GetEnabledEntries()
@@ -55,8 +45,8 @@ namespace UnityEditor.AddressableAssets
                     var item = i as Item;
                     if (item != null)
                     {
-                        if (item.m_enabled)
-                            result.Add(item.m_entry);
+                        if (item.enabled)
+                            result.Add(item.entry);
                     }
                 }
                 return result;
@@ -66,7 +56,7 @@ namespace UnityEditor.AddressableAssets
             {
                 var root = new TreeViewItem(-1, -1);
                 root.children = new List<TreeViewItem>();
-                foreach (var k in m_preview.m_entries)
+                foreach (var k in m_Preview.m_Entries)
                     root.AddChild(new Item(k));
 
                 return root;
@@ -82,22 +72,23 @@ namespace UnityEditor.AddressableAssets
                 }
                 for (int i = 0; i < args.GetNumVisibleColumns(); ++i)
                 {
-                    CellGUI(args.GetCellRect(i), item, args.GetColumn(i), ref args);
+                    CellGUI(args.GetCellRect(i), item, args.GetColumn(i));
                 }
             }
-            private void CellGUI(Rect cellRect, Item item, int column, ref RowGUIArgs args)
+
+            void CellGUI(Rect cellRect, Item item, int column)
             {
                 if (column == 0)
                 {
-                    item.m_enabled = EditorGUI.Toggle(cellRect, item.m_enabled);
+                    item.enabled = EditorGUI.Toggle(cellRect, item.enabled);
                 }
                 else if (column == 1)
                 {
-                    EditorGUI.LabelField(cellRect, item.m_entry.address);
+                    EditorGUI.LabelField(cellRect, item.entry.address);
                 }
                 else if (column == 2)
                 {
-                    EditorGUI.LabelField(cellRect, item.m_entry.AssetPath);
+                    EditorGUI.LabelField(cellRect, item.entry.AssetPath);
                 }
             }
 
@@ -135,51 +126,53 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        AddressableAssetSettings m_settings;
-        List<AddressableAssetEntry> m_entries;
-        Vector2 m_scrollPosition;
-        ContentUpdateTreeView tree = null;
+        AddressableAssetSettings m_Settings;
+        List<AddressableAssetEntry> m_Entries;
+        Vector2 m_ScrollPosition;
+        ContentUpdateTreeView m_Tree;
+        [FormerlySerializedAs("treeState")]
         [SerializeField]
-        TreeViewState treeState;
+        TreeViewState m_TreeState;
+        [FormerlySerializedAs("mchs")]
         [SerializeField]
-        MultiColumnHeaderState mchs;
+        MultiColumnHeaderState m_Mchs;
 
         public void Show(AddressableAssetSettings settings, List<AddressableAssetEntry> entries)
         {
-            m_settings = settings;
-            m_entries = entries;
+            m_Settings = settings;
+            m_Entries = entries;
             Show();
         }
 
         public void OnGUI()
         {
-            if (m_entries == null)
+            if (m_Entries == null)
                 return;
             Rect contentRect = new Rect(0, 0, position.width, position.height - 50);
-            if (tree == null)
+            if (m_Tree == null)
             {
-                if (treeState == null)
-                    treeState = new TreeViewState();
+                if (m_TreeState == null)
+                    m_TreeState = new TreeViewState();
 
                 var headerState = ContentUpdateTreeView.CreateDefaultMultiColumnHeaderState();
-                if (MultiColumnHeaderState.CanOverwriteSerializedFields(mchs, headerState))
-                    MultiColumnHeaderState.OverwriteSerializedFields(mchs, headerState);
-                mchs = headerState;
+                if (MultiColumnHeaderState.CanOverwriteSerializedFields(m_Mchs, headerState))
+                    MultiColumnHeaderState.OverwriteSerializedFields(m_Mchs, headerState);
+                m_Mchs = headerState;
 
-                tree = new ContentUpdateTreeView(this, treeState, mchs);
-                tree.Reload();
+                m_Tree = new ContentUpdateTreeView(this, m_TreeState, m_Mchs);
+                m_Tree.Reload();
             }
 
-            tree.OnGUI(contentRect);
+            m_Tree.OnGUI(contentRect);
             GUILayout.BeginArea(new Rect(0, position.height - 50, position.width, 50));
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Cancel"))
                 Close();
-            using (new EditorGUI.DisabledScope(tree.GetEnabledEntries().Count == 0))
+            using (new EditorGUI.DisabledScope(m_Tree.GetEnabledEntries().Count == 0))
             {
                 if (GUILayout.Button("Apply Changes"))
                 {
-                    ContentUpdateScript.CreateContentUpdateGroup(m_settings, tree.GetEnabledEntries(), "Content Update");
+                    ContentUpdateScript.CreateContentUpdateGroup(m_Settings, m_Tree.GetEnabledEntries(), "Content Update");
                     Close();
                 }
             }

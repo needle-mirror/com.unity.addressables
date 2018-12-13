@@ -1,6 +1,5 @@
 using System;
-using System.Collections.Generic;
-using UnityEngine.ResourceManagement;
+using UnityEngine.Serialization;
 
 namespace UnityEngine.AddressableAssets
 {
@@ -10,33 +9,37 @@ namespace UnityEngine.AddressableAssets
     [Serializable]
     public class ResourceLocationData
     {
+        [FormerlySerializedAs("m_keys")]
         [SerializeField]
-        private string[] m_keys;
+        string[] m_Keys;
         /// <summary>
         /// The collection of keys for this location.
         /// </summary>
-        public string[] Keys { get { return m_keys; } }
+        public string[] Keys { get { return m_Keys; } }
 
+        [FormerlySerializedAs("m_internalId")]
         [SerializeField]
-        private string m_internalId;
+        string m_InternalId;
         /// <summary>
         /// The internal id.
         /// </summary>
-        public string InternalId { get { return m_internalId; } }
+        public string InternalId { get { return m_InternalId; } }
 
+        [FormerlySerializedAs("m_provider")]
         [SerializeField]
-        private string m_provider;
+        string m_Provider;
         /// <summary>
         /// The provider id.
         /// </summary>
-        public string Provider { get { return m_provider; } }
+        public string Provider { get { return m_Provider; } }
 
+        [FormerlySerializedAs("m_dependencies")]
         [SerializeField]
-        private string[] m_dependencies;
+        string[] m_Dependencies;
         /// <summary>
         /// The collection of dependencies for this location.
         /// </summary>
-        public string[] Dependencies { get { return m_dependencies; } }
+        public string[] Dependencies { get { return m_Dependencies; } }
 
 
         /// <summary>
@@ -48,10 +51,10 @@ namespace UnityEngine.AddressableAssets
         /// <param name="dependencies">Optional array of dependencies.</param>
         public ResourceLocationData(string[] keys, string id, Type provider, string[] dependencies = null)
         {
-            m_keys = keys;
-            m_internalId = id;
-            m_provider = provider == null ? "" : provider.FullName;
-            m_dependencies = dependencies == null ? new string[0] : dependencies;
+            m_Keys = keys;
+            m_InternalId = id;
+            m_Provider = provider == null ? "" : provider.FullName;
+            m_Dependencies = dependencies == null ? new string[0] : dependencies;
         }
     }
 }

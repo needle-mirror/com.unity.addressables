@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
@@ -10,35 +11,30 @@ using UnityEngine.ResourceManagement;
 
 namespace UnityEditor.AddressableAssets
 {
-    internal enum BundleMode
+    enum BundleMode
     {
         PackTogether,
         PackSeparately
     }
 
-    internal interface IAddressableAssetsBuildContext : IContextObject
-    {
-    }
+    interface IAddressableAssetsBuildContext : IContextObject { }
 
-    internal class AddressableAssetsBuildContext : IAddressableAssetsBuildContext
+    class AddressableAssetsBuildContext : IAddressableAssetsBuildContext
     {
-        public AddressableAssetSettings m_settings;
-        public ResourceManagerRuntimeData m_runtimeData;
-        public List<ContentCatalogDataEntry> m_locations;
-        public Dictionary<string, AddressableAssetGroup> m_bundleToAssetGroup;
-        public Dictionary<AddressableAssetGroup, List<string>> m_assetGroupToBundles;
-        public VirtualAssetBundleRuntimeData m_virtualBundleRuntimeData;
+        public AddressableAssetSettings settings;
+        public ResourceManagerRuntimeData runtimeData;
+        public List<ContentCatalogDataEntry> locations;
+        public Dictionary<string, AddressableAssetGroup> bundleToAssetGroup;
+        public Dictionary<AddressableAssetGroup, List<string>> assetGroupToBundles;
+        public VirtualAssetBundleRuntimeData virtualBundleRuntimeData;
     }
 
     [CreateAssetMenu(fileName = "BuildScriptVirtual.asset", menuName = "Addressable Assets/Data Builders/Virtual Mode")]
-    internal class BuildScriptVirtualMode : BuildScriptBase
+    class BuildScriptVirtualMode : BuildScriptBase
     {
         public override string Name
         {
-            get
-            {
-                return "Virtual Mode";
-            }
+            get { return "Virtual Mode"; }
         }
 
         public override IDataBuilderGUI CreateGUI(IDataBuilderContext context)
@@ -50,10 +46,12 @@ namespace UnityEditor.AddressableAssets
         {
             return typeof(T) == typeof(AddressablesPlayModeBuildResult);
         }
-        string pathFormat = "{0}Library/com.unity.addressables/{1}_BuildScriptVirtualMode.json";
+
+        string m_PathFormat = "{0}Library/com.unity.addressables/{1}_BuildScriptVirtualMode.json";
+
         public override T BuildData<T>(IDataBuilderContext context)
         {
-            var timer = new System.Diagnostics.Stopwatch();
+            var timer = new Stopwatch();
             timer.Start();
             var aaSettings = context.GetValue<AddressableAssetSettings>(AddressablesBuildDataBuilderContext.BuildScriptContextConstants.kAddressableAssetSettings);
 
@@ -66,6 +64,7 @@ namespace UnityEditor.AddressableAssets
             var runtimeData = new ResourceManagerRuntimeData();
             runtimeData.ProfileEvents = ProjectConfigData.postProfilerEvents;
             runtimeData.LogResourceManagerExceptions = aaSettings.buildSettings.LogResourceManagerExceptions;
+            runtimeData.ProfileEvents = ProjectConfigData.postProfilerEvents;
             bool needsLegacyProvider = false;
             foreach (var assetGroup in aaSettings.groups)
             {
@@ -82,7 +81,7 @@ namespace UnityEditor.AddressableAssets
                 var packTogether = schema.BundleMode == BundledAssetGroupSchema.BundlePackingMode.PackTogether;
 
                 var bundleInputDefs = new List<AssetBundleBuild>();
-                ProcessGroup(assetGroup, bundleInputDefs, locations, packTogether, scenesToAdd);
+                ProcessGroup(assetGroup, bundleInputDefs, packTogether, scenesToAdd);
                 for (int i = 0; i < bundleInputDefs.Count; i++)
                 {
                     if (bundleToAssetGroup.ContainsKey(bundleInputDefs[i].assetBundleName))
@@ -92,13 +91,15 @@ namespace UnityEditor.AddressableAssets
                         var newName = bid.assetBundleName;
                         while (bundleToAssetGroup.ContainsKey(newName) && count < 1000)
                             newName = bid.assetBundleName.Replace(".bundle", string.Format("{0}.bundle", count++));
-                        bundleInputDefs[i] = new AssetBundleBuild() { assetBundleName = newName, addressableNames = bid.addressableNames, assetBundleVariant = bid.assetBundleVariant, assetNames = bid.assetNames };
+                        bundleInputDefs[i] = new AssetBundleBuild { assetBundleName = newName, addressableNames = bid.addressableNames, assetBundleVariant = bid.assetBundleVariant, assetNames = bid.assetNames };
                     }
 
                     bundleToAssetGroup.Add(bundleInputDefs[i].assetBundleName, assetGroup);
                 }
+
                 allBundleInputDefs.AddRange(bundleInputDefs);
             }
+
             if (allBundleInputDefs.Count > 0)
             {
                 if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -116,10 +117,10 @@ namespace UnityEditor.AddressableAssets
 
                 var aaContext = new AddressableAssetsBuildContext
                 {
-                    m_settings = aaSettings,
-                    m_runtimeData = runtimeData,
-                    m_bundleToAssetGroup = bundleToAssetGroup,
-                    m_locations = locations
+                    settings = aaSettings,
+                    runtimeData = runtimeData,
+                    bundleToAssetGroup = bundleToAssetGroup,
+                    locations = locations
                 };
 
                 IBundleBuildResults results;
@@ -128,45 +129,51 @@ namespace UnityEditor.AddressableAssets
                 if (exitCode < ReturnCode.Success)
                     return AddressableAssetBuildResult.CreateResult<T>(0, timer.Elapsed.TotalSeconds, "SBP Error" + exitCode);
             }
+
             //save catalog
-            WriteFile(string.Format(pathFormat, "", "catalog"), JsonUtility.ToJson(new ContentCatalogData(locations)));
+            WriteFile(string.Format(m_PathFormat, "", "catalog"), JsonUtility.ToJson(new ContentCatalogData(locations)));
 
             //create runtime data
-            runtimeData.CatalogLocations.Add(new ResourceLocationData(new string[] { "catalogs" }, string.Format(pathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"), typeof(JsonAssetProvider)));
+            runtimeData.CatalogLocations.Add(new ResourceLocationData(new[] { "catalogs" }, string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"), typeof(JsonAssetProvider)));
 
-            { //serialize the bundle provider
+            {
+                //serialize the bundle provider
                 var bapData = ObjectInitializationData.CreateSerializedInitializationData<VirtualAssetBundleProvider>(typeof(AssetBundleProvider).FullName);
                 var cpData = ObjectInitializationData.CreateSerializedInitializationData<CachedProvider>(typeof(AssetBundleProvider).FullName,
-                    new CachedProvider.Settings() { MaxLRUAge = 1, MaxLRUCount = 10, InternalProviderData = bapData });
+                    new CachedProvider.Settings { maxLruAge = 1, maxLruCount = 10, InternalProviderData = bapData });
                 runtimeData.ResourceProviderData.Add(cpData);
             }
 
-            { //serialize the bundled asset provider
+            {
+                //serialize the bundled asset provider
                 var bapData = ObjectInitializationData.CreateSerializedInitializationData<VirtualBundledAssetProvider>(typeof(BundledAssetProvider).FullName);
                 var cpData = ObjectInitializationData.CreateSerializedInitializationData<CachedProvider>(typeof(BundledAssetProvider).FullName,
-                    new CachedProvider.Settings() { MaxLRUAge = 1, MaxLRUCount = 10, InternalProviderData = bapData });
+                    new CachedProvider.Settings { maxLruAge = 1, maxLruCount = 10, InternalProviderData = bapData });
                 runtimeData.ResourceProviderData.Add(cpData);
             }
-
 
             //            runtimeData.ResourceProviderData.Add(CachedProvider.CreateProviderData<VirtualAssetBundleProvider>(typeof(AssetBundleProvider).FullName, 5, 1));
             if (needsLegacyProvider)
                 runtimeData.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(typeof(LegacyResourcesProvider)));
             runtimeData.InstanceProviderData = ObjectInitializationData.CreateSerializedInitializationData<InstanceProvider>();
             runtimeData.SceneProviderData = ObjectInitializationData.CreateSerializedInitializationData<SceneProvider>();
-            foreach (IObjectInitializationDataProvider io in aaSettings.InitializationObjects)
-                runtimeData.InitializationObjects.Add(io.CreateObjectInitializationData());
-            WriteFile(string.Format(pathFormat, "", "settings"), JsonUtility.ToJson(runtimeData));
+            foreach (var io in aaSettings.InitializationObjects)
+            {
+                if (io is IObjectInitializationDataProvider)
+                    runtimeData.InitializationObjects.Add((io as IObjectInitializationDataProvider).CreateObjectInitializationData());
+            }
+
+            WriteFile(string.Format(m_PathFormat, "", "settings"), JsonUtility.ToJson(runtimeData));
 
             //inform runtime of the init data path
-            var settingsPath = string.Format(pathFormat, "file://{UnityEngine.Application.dataPath}/../", "settings");
+            var settingsPath = string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "settings");
             PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath, settingsPath);
 
-            IDataBuilderResult res = new AddressablesPlayModeBuildResult() { ScenesToAdd = scenesToAdd, Duration = timer.Elapsed.TotalSeconds, LocationCount = locations.Count };
+            IDataBuilderResult res = new AddressablesPlayModeBuildResult { ScenesToAdd = scenesToAdd, Duration = timer.Elapsed.TotalSeconds, LocationCount = locations.Count };
             return (T)res;
         }
 
-        static internal void ProcessGroup(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, List<ContentCatalogDataEntry> locationData, bool packTogether, List<EditorBuildSettingsScene> scenesToAdd)
+        static void ProcessGroup(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, bool packTogether, List<EditorBuildSettingsScene> scenesToAdd)
         {
             if (packTogether)
             {
@@ -186,7 +193,7 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        static private void GenerateBuildInputDefinitions(List<AddressableAssetEntry> allEntries, List<AssetBundleBuild> buildInputDefs, string groupName, string address, List<EditorBuildSettingsScene> scenesToAdd)
+        static void GenerateBuildInputDefinitions(List<AddressableAssetEntry> allEntries, List<AssetBundleBuild> buildInputDefs, string groupName, string address, List<EditorBuildSettingsScene> scenesToAdd)
         {
             var scenes = new List<AddressableAssetEntry>();
             var assets = new List<AddressableAssetEntry>();
@@ -200,23 +207,23 @@ namespace UnityEditor.AddressableAssets
                 else
                     assets.Add(e);
             }
+
             if (assets.Count > 0)
                 buildInputDefs.Add(GenerateBuildInputDefinition(assets, groupName + "_assets_" + address + ".bundle"));
             if (scenes.Count > 0)
                 buildInputDefs.Add(GenerateBuildInputDefinition(scenes, groupName + "_scenes_" + address + ".bundle"));
         }
 
-        static private AssetBundleBuild GenerateBuildInputDefinition(List<AddressableAssetEntry> assets, string name)
+        static AssetBundleBuild GenerateBuildInputDefinition(List<AddressableAssetEntry> assets, string name)
         {
             var assetsInputDef = new AssetBundleBuild();
             assetsInputDef.assetBundleName = name.ToLower().Replace(" ", "").Replace('\\', '/').Replace("//", "/");
             var assetIds = new List<string>(assets.Count);
-            var assetGuids = new List<string>(assets.Count);
             foreach (var a in assets)
             {
                 assetIds.Add(a.AssetPath);
-                assetGuids.Add(a.guid);
             }
+
             assetsInputDef.assetNames = assetIds.ToArray();
             assetsInputDef.addressableNames = new string[0];
             return assetsInputDef;

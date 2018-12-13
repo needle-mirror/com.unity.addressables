@@ -1,29 +1,32 @@
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor.IMGUI.Controls;
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using UnityEditor.Build.Pipeline.Utilities;
+using UnityEditor.IMGUI.Controls;
+using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Serialization;
+// ReSharper disable DelegateSubtraction
 
 namespace UnityEditor.AddressableAssets
 {
     [Serializable]
-    internal class AddressableAssetsSettingsGroupEditor
+    class AddressableAssetsSettingsGroupEditor
     {
+        [FormerlySerializedAs("treeState")]
         [SerializeField]
-        TreeViewState treeState;
+        TreeViewState m_TreeState;
+        [FormerlySerializedAs("mchs")]
         [SerializeField]
-        MultiColumnHeaderState mchs;
-        AddressableAssetEntryTreeView entryTree;
+        MultiColumnHeaderState m_Mchs;
+        AddressableAssetEntryTreeView m_EntryTree;
 
         public AddressableAssetsWindow window;
 
-        SearchField searchField;
+        SearchField m_SearchField;
         const int k_SearchHeight = 20;
         internal AddressableAssetSettings settings { get { return AddressableAssetSettingsDefaultObject.Settings; } }
 
-        bool m_ResizingVerticalSplitter = false;
+        bool m_ResizingVerticalSplitter;
         Rect m_VerticalSplitterRect = new Rect(0, 0, 10, k_SplitterWidth);
         [SerializeField]
         float m_VerticalSplitterPercent;
@@ -38,7 +41,7 @@ namespace UnityEditor.AddressableAssets
 
         void OnSettingsModification(AddressableAssetSettings s, AddressableAssetSettings.ModificationEvent e, object o)
         {
-            if (entryTree == null)
+            if (m_EntryTree == null)
                 return;
 
             switch (e)
@@ -51,21 +54,14 @@ namespace UnityEditor.AddressableAssets
                 case AddressableAssetSettings.ModificationEvent.GroupRenamed:
                 case AddressableAssetSettings.ModificationEvent.EntryModified:
                 case AddressableAssetSettings.ModificationEvent.BatchModification:
-                    entryTree.Reload();
+                    m_EntryTree.Reload();
                     if (window != null)
                         window.Repaint();
                     break;
-                case AddressableAssetSettings.ModificationEvent.EntryCreated:
-                case AddressableAssetSettings.ModificationEvent.LabelAdded:
-                case AddressableAssetSettings.ModificationEvent.LabelRemoved:
-                case AddressableAssetSettings.ModificationEvent.ProfileAdded:
-                case AddressableAssetSettings.ModificationEvent.ProfileRemoved:
-                case AddressableAssetSettings.ModificationEvent.ProfileModified:
-                default:
-                    break;
             }
         }
-        private GUIStyle GetStyle(string styleName)
+
+        GUIStyle GetStyle(string styleName)
         {
             GUIStyle s = GUI.skin.FindStyle(styleName);
             if (s == null)
@@ -79,28 +75,26 @@ namespace UnityEditor.AddressableAssets
         }
 
         [NonSerialized]
-        List<GUIStyle> searchStyles = null;
+        List<GUIStyle> m_SearchStyles;
         [NonSerialized]
-        GUIStyle buttonStyle = null;
-        bool analyzeMode = false;
-        //bool hostMode = false;
+        GUIStyle m_ButtonStyle;
+        bool m_AnalyzeMode;
         [NonSerialized]
-        public Texture2D cogIcon = null;
+        Texture2D m_CogIcon;
 
         void TopToolbar(Rect toolbarPos)
         {
-            var settings = AddressableAssetSettingsDefaultObject.Settings;
-            if (searchStyles == null)
+            if (m_SearchStyles == null)
             {
-                searchStyles = new List<GUIStyle>();
-                searchStyles.Add(GetStyle("ToolbarSeachTextFieldPopup")); //GetStyle("ToolbarSeachTextField");
-                searchStyles.Add(GetStyle("ToolbarSeachCancelButton"));
-                searchStyles.Add(GetStyle("ToolbarSeachCancelButtonEmpty"));
+                m_SearchStyles = new List<GUIStyle>();
+                m_SearchStyles.Add(GetStyle("ToolbarSeachTextFieldPopup")); //GetStyle("ToolbarSeachTextField");
+                m_SearchStyles.Add(GetStyle("ToolbarSeachCancelButton"));
+                m_SearchStyles.Add(GetStyle("ToolbarSeachCancelButtonEmpty"));
             }
-            if (buttonStyle == null)
-                buttonStyle = GetStyle("ToolbarButton");
-            if (cogIcon == null)
-                cogIcon = EditorGUIUtility.FindTexture("_Popup");
+            if (m_ButtonStyle == null)
+                m_ButtonStyle = GetStyle("ToolbarButton");
+            if (m_CogIcon == null)
+                m_CogIcon = EditorGUIUtility.FindTexture("_Popup");
 
 
             GUILayout.BeginArea(new Rect(0, 0, toolbarPos.width, k_SearchHeight));
@@ -112,7 +106,7 @@ namespace UnityEditor.AddressableAssets
                 CreateDropdown();
                 GUILayout.Space(8);
 
-                if (GUILayout.Button("Hosting", buttonStyle))
+                if (GUILayout.Button("Hosting", m_ButtonStyle))
                     EditorWindow.GetWindow<HostingServicesWindow>().Show(settings);
 
                 {
@@ -148,20 +142,17 @@ namespace UnityEditor.AddressableAssets
                     }
                 }
 
-                var p = GUILayout.Toggle(analyzeMode, "Analyze", buttonStyle);
-                if (p != analyzeMode)
-                {
-                    analyzeMode = p;
-                }
-
+                m_AnalyzeMode = GUILayout.Toggle(m_AnalyzeMode, "Analyze", m_ButtonStyle);
+                
                 var guiBuild = new GUIContent("Build");
                 Rect rBuild = GUILayoutUtility.GetRect(guiBuild, EditorStyles.toolbarDropDown);
                 if (EditorGUI.DropdownButton(rBuild, guiBuild, FocusType.Passive, EditorStyles.toolbarDropDown))
                 {
                     //GUIUtility.hotControl = 0;
                     var menu = new GenericMenu();
-                    menu.AddItem(new GUIContent("Clean/All Cached Data"), false, OnCleanAll);
-                    menu.AddItem(new GUIContent("Clean/Addressables Cache"), false, OnCleanAddressables);
+                    menu.AddItem(new GUIContent("Build Player Content"), false, OnBuildPlayerData);
+                    menu.AddItem(new GUIContent("Clean/All Data"), false, OnCleanAll);
+                    menu.AddItem(new GUIContent("Clean/Player Content"), false, OnCleanAddressables);
                     menu.AddItem(new GUIContent("Clean/Build Pipeline Cache"), false, OnCleanSBP);
                     menu.AddItem(new GUIContent("Prepare For Content Update"), false, OnPrepareUpdate);
                     menu.AddItem(new GUIContent("Build For Content Update"), false, OnUpdateBuild);
@@ -173,7 +164,7 @@ namespace UnityEditor.AddressableAssets
 
                 GUILayout.Space(spaceBetween * 2f);
 
-                Rect searchRect = GUILayoutUtility.GetRect(0, toolbarPos.width * 0.6f, 16f, 16f, searchStyles[0], GUILayout.MinWidth(65), GUILayout.MaxWidth(300));
+                Rect searchRect = GUILayoutUtility.GetRect(0, toolbarPos.width * 0.6f, 16f, 16f, m_SearchStyles[0], GUILayout.MinWidth(65), GUILayout.MaxWidth(300));
                 Rect popupPosition = searchRect;
                 popupPosition.width = 20;
 
@@ -185,18 +176,18 @@ namespace UnityEditor.AddressableAssets
                 }
                 else
                 {
-                    var baseSearch = ProjectConfigData.hierarchicalSearch ? entryTree.customSearchString : entryTree.searchString;
-                    var searchString = searchField.OnGUI(searchRect, baseSearch, searchStyles[0], searchStyles[1], searchStyles[2]);
+                    var baseSearch = ProjectConfigData.hierarchicalSearch ? m_EntryTree.customSearchString : m_EntryTree.searchString;
+                    var searchString = m_SearchField.OnGUI(searchRect, baseSearch, m_SearchStyles[0], m_SearchStyles[1], m_SearchStyles[2]);
                     if (baseSearch != searchString)
                     {
                         if (ProjectConfigData.hierarchicalSearch)
                         {
-                            entryTree.customSearchString = searchString;
+                            m_EntryTree.customSearchString = searchString;
                             Reload();
                         }
                         else
                         {
-                            entryTree.searchString = searchString;
+                            m_EntryTree.searchString = searchString;
                         }
                     }
                 }
@@ -205,39 +196,39 @@ namespace UnityEditor.AddressableAssets
             GUILayout.EndArea();
         }
 
-        private void OnCleanAll()
+        void OnCleanAll()
         {
             OnCleanAddressables();
             OnCleanSBP();
         }
 
-        private void OnCleanAddressables()
+        void OnCleanAddressables()
         {
-            var aa = AddressableAssetSettingsDefaultObject.Settings;
-            if (aa == null)
-                return;
-
-            foreach (var s in aa.DataBuilders)
-            {
-                var builder = s as IDataBuilder;
-                if(builder != null)
-                    builder.ClearCachedData();
-            }
+            AddressableAssetSettings.CleanPlayerContent();
         }
 
-        private void OnCleanSBP()
+        void OnCleanSBP()
         {
             BuildCache.PurgeCache();
         }
 
-        private void OnPrepareUpdate()
+        void OnPrepareUpdate()
         {
-            ContentUpdatePreviewWindow.PrepareForContentUpdate(AddressableAssetSettingsDefaultObject.Settings, ContentUpdateScript.GetContentStateDataPath(true));
+            var path = ContentUpdateScript.GetContentStateDataPath(true);
+            if (!string.IsNullOrEmpty(path))
+                ContentUpdatePreviewWindow.PrepareForContentUpdate(AddressableAssetSettingsDefaultObject.Settings, path);
         }
 
-        private void OnUpdateBuild()
+        void OnBuildPlayerData()
         {
-            ContentUpdateScript.BuildContentUpdate(AddressableAssetSettingsDefaultObject.Settings, ContentUpdateScript.GetContentStateDataPath(true));
+            AddressableAssetSettings.BuildPlayerContent();
+        }
+
+        void OnUpdateBuild()
+        {
+            var path = ContentUpdateScript.GetContentStateDataPath(true);
+            if(!string.IsNullOrEmpty(path))
+                ContentUpdateScript.BuildContentUpdate(AddressableAssetSettingsDefaultObject.Settings, path);
         }
 
         void OnSetActiveBuildScript(object context)
@@ -249,27 +240,22 @@ namespace UnityEditor.AddressableAssets
             AddressableAssetSettingsDefaultObject.Settings.ActivePlayModeDataBuilderIndex = (int)context;
         }
 
-        void OnSendProfileClick()
-        {
-            ProjectConfigData.postProfilerEvents = !ProjectConfigData.postProfilerEvents;
-        }
         void OnHierSearchClick()
         {
             ProjectConfigData.hierarchicalSearch = !ProjectConfigData.hierarchicalSearch;
-            entryTree.ClearSearch();
+            m_EntryTree.ClearSearch();
         }
         void CreateDropdown()
         {
-            var settings = AddressableAssetSettingsDefaultObject.Settings;
             var activeProfileName = settings.profileSettings.GetProfileName(settings.activeProfileId);
-            if (settings.activeProfileId != null && string.IsNullOrEmpty(activeProfileName))
+            if (string.IsNullOrEmpty(activeProfileName))
             {
-                settings.activeProfileId = settings.profileSettings.GetProfileId(AddressableAssetProfileSettings.k_rootProfileName);
+                settings.activeProfileId = null; //this will reset it to default.
                 activeProfileName = settings.profileSettings.GetProfileName(settings.activeProfileId);
             }
             var profileButton = new GUIContent("Profile: " + activeProfileName);
 
-            Rect r = GUILayoutUtility.GetRect(profileButton, buttonStyle, GUILayout.Width(115f));
+            Rect r = GUILayoutUtility.GetRect(profileButton, m_ButtonStyle, GUILayout.Width(115f));
             if (EditorGUI.DropdownButton(r, profileButton, FocusType.Passive, EditorStyles.toolbarDropDown))
             {
                 //GUIUtility.hotControl = 0;
@@ -292,19 +278,20 @@ namespace UnityEditor.AddressableAssets
             var n = context as string;
             AddressableAssetSettingsDefaultObject.Settings.activeProfileId = AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileId(n);
         }
-        private void GoToSettingsAsset()
+
+        void GoToSettingsAsset()
         {
             EditorGUIUtility.PingObject(AddressableAssetSettingsDefaultObject.Settings);
             Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
         }
 
-        private bool m_modificationRegistered = false;
+        bool m_ModificationRegistered;
         public void OnEnable()
         {
             if (AddressableAssetSettingsDefaultObject.Settings == null)
                 return;
             AddressableAssetSettingsDefaultObject.Settings.OnModification += OnSettingsModification;
-            m_modificationRegistered = true;
+            m_ModificationRegistered = true;
         }
 
         public void OnDisable()
@@ -312,46 +299,46 @@ namespace UnityEditor.AddressableAssets
             if (AddressableAssetSettingsDefaultObject.Settings == null)
                 return;
             AddressableAssetSettingsDefaultObject.Settings.OnModification -= OnSettingsModification;
-            m_modificationRegistered = false;
+            m_ModificationRegistered = false;
         }
 
+        [FormerlySerializedAs("m_analyzeEditor")]
         [SerializeField]
-        AssetSettingsAnalyze m_analyzeEditor = null;
+        AssetSettingsAnalyze m_AnalyzeEditor;
 
         public bool OnGUI(Rect pos)
         {
-            var settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
                 return false;
 
-            if (!m_modificationRegistered)
+            if (!m_ModificationRegistered)
             {
-                m_modificationRegistered = true;
+                m_ModificationRegistered = true;
                 settings.OnModification -= OnSettingsModification; //just in case...
                 settings.OnModification += OnSettingsModification;
             }
 
 
 
-            if (entryTree == null)
+            if (m_EntryTree == null)
             {
-                if (treeState == null)
-                    treeState = new TreeViewState();
+                if (m_TreeState == null)
+                    m_TreeState = new TreeViewState();
 
                 var headerState = AddressableAssetEntryTreeView.CreateDefaultMultiColumnHeaderState();
-                if (MultiColumnHeaderState.CanOverwriteSerializedFields(mchs, headerState))
-                    MultiColumnHeaderState.OverwriteSerializedFields(mchs, headerState);
-                mchs = headerState;
+                if (MultiColumnHeaderState.CanOverwriteSerializedFields(m_Mchs, headerState))
+                    MultiColumnHeaderState.OverwriteSerializedFields(m_Mchs, headerState);
+                m_Mchs = headerState;
 
-                searchField = new SearchField();
-                entryTree = new AddressableAssetEntryTreeView(treeState, mchs, this);
-                entryTree.Reload();
+                m_SearchField = new SearchField();
+                m_EntryTree = new AddressableAssetEntryTreeView(m_TreeState, m_Mchs, this);
+                m_EntryTree.Reload();
             }
 
             HandleVerticalResize(pos);
             var width = pos.width - k_SplitterWidth * 2;
             var inRectY = pos.height;
-            if (analyzeMode)
+            if (m_AnalyzeMode)
                 inRectY = m_VerticalSplitterRect.yMin - pos.yMin;
 
             var searchRect = new Rect(pos.xMin, pos.yMin, pos.width, k_SearchHeight);
@@ -360,16 +347,16 @@ namespace UnityEditor.AddressableAssets
 
             TopToolbar(searchRect);
 
-            if (!analyzeMode)
+            if (!m_AnalyzeMode)
             {
-                entryTree.OnGUI(treeRect);
+                m_EntryTree.OnGUI(treeRect);
             }
             else
             {
-                entryTree.OnGUI(treeRect);
-                if (m_analyzeEditor == null)
-                    m_analyzeEditor = new AssetSettingsAnalyze();
-                m_analyzeEditor.OnGUI(botRect, settings);
+                m_EntryTree.OnGUI(treeRect);
+                if (m_AnalyzeEditor == null)
+                    m_AnalyzeEditor = new AssetSettingsAnalyze();
+                m_AnalyzeEditor.OnGUI(botRect, settings);
             }
 
 
@@ -379,11 +366,11 @@ namespace UnityEditor.AddressableAssets
 
         public void Reload()
         {
-            if (entryTree != null)
-                entryTree.Reload();
+            if (m_EntryTree != null)
+                m_EntryTree.Reload();
         }
 
-        private void HandleVerticalResize(Rect position)
+        void HandleVerticalResize(Rect position)
         {
             m_VerticalSplitterRect.y = (int)(position.yMin + position.height * m_VerticalSplitterPercent);
             m_VerticalSplitterRect.width = position.width;

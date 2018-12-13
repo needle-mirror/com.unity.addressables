@@ -1,31 +1,28 @@
-using UnityEngine;
-using System.Collections.Generic;
-using UnityEditor.IMGUI.Controls;
-using System.Linq;
 using System;
+using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
-    internal class ProfilesEditor
+    class ProfilesEditor
     {
-        static public string ValueGUILayout(AddressableAssetSettings settings, string label, string currentID)
+        public static string ValueGUILayout(AddressableAssetSettings settings, string label, string currentId)
         {
-            string result = currentID;
+            string result = currentId;
             if (settings == null)
                 return result;
 
             var displayNames = settings.profileSettings.GetVariableNames();
-            AddressableAssetProfileSettings.ProfileIDData data = settings.profileSettings.GetProfileDataById(currentID);
+            AddressableAssetProfileSettings.ProfileIdData data = settings.profileSettings.GetProfileDataById(currentId);
             bool custom = data == null;
 
             int currentIndex = displayNames.Count;
             string toolTip = string.Empty;
             if (!custom)
             {
-                currentIndex = displayNames.IndexOf(data.Name);
+                currentIndex = displayNames.IndexOf(data.ProfileName);
                 toolTip = data.Evaluate(settings.profileSettings, settings.activeProfileId);
             }
-            displayNames.Add(AddressableAssetProfileSettings.k_customEntryString);
+            displayNames.Add(AddressableAssetProfileSettings.customEntryString);
       
 
             var content = new GUIContent(label, toolTip);
@@ -33,7 +30,7 @@ namespace UnityEditor.AddressableAssets
             var newIndex = EditorGUILayout.Popup(content, currentIndex, displayNames.ToArray());
             if (newIndex != currentIndex)
             {
-                if (displayNames[newIndex] == AddressableAssetProfileSettings.k_customEntryString)
+                if (displayNames[newIndex] == AddressableAssetProfileSettings.customEntryString)
                 {
                     custom = true;
                     result = "<undefined>";
@@ -55,39 +52,39 @@ namespace UnityEditor.AddressableAssets
             return result;
         }
 
-        static public float CalcGUIHeight(AddressableAssetSettings settings, string label, string currentID)
+        public static float CalcGUIHeight(AddressableAssetSettings settings, string label, string currentId)
         {
             var labelContent = new GUIContent(label);
             var size = EditorStyles.popup.CalcSize(labelContent);
             var height = size.y + EditorGUIUtility.standardVerticalSpacing;
-            AddressableAssetProfileSettings.ProfileIDData data = settings.profileSettings.GetProfileDataById(currentID);
+            AddressableAssetProfileSettings.ProfileIdData data = settings.profileSettings.GetProfileDataById(currentId);
             if (data != null)
             {
                 var val = data.Evaluate(settings.profileSettings, settings.activeProfileId);
                 var h = EditorStyles.helpBox.CalcHeight(new GUIContent(val), EditorGUIUtility.currentViewWidth - 20);
                 return height + h;
             }
-            return height + EditorStyles.textField.CalcHeight(new GUIContent(currentID), EditorGUIUtility.currentViewWidth - 20);
+            return height + EditorStyles.textField.CalcHeight(new GUIContent(currentId), EditorGUIUtility.currentViewWidth - 20);
         }
 
-        static public string ValueGUI(Rect rect, AddressableAssetSettings settings, string label, string currentID)
+        public static string ValueGUI(Rect rect, AddressableAssetSettings settings, string label, string currentId)
         {
-            string result = currentID;
+            string result = currentId;
             if (settings == null)
                 return result;
 
             var displayNames = settings.profileSettings.GetVariableNames();
-            AddressableAssetProfileSettings.ProfileIDData data = settings.profileSettings.GetProfileDataById(currentID);
+            AddressableAssetProfileSettings.ProfileIdData data = settings.profileSettings.GetProfileDataById(currentId);
             bool custom = data == null;
 
             int currentIndex = displayNames.Count;
             string toolTip = string.Empty;
             if (!custom)
             {
-                currentIndex = displayNames.IndexOf(data.Name);
+                currentIndex = displayNames.IndexOf(data.ProfileName);
                 toolTip = data.Evaluate(settings.profileSettings, settings.activeProfileId);
             }
-            displayNames.Add(AddressableAssetProfileSettings.k_customEntryString);
+            displayNames.Add(AddressableAssetProfileSettings.customEntryString);
 
             var labelContent = new GUIContent(label);
             var size = EditorStyles.popup.CalcSize(labelContent);
@@ -96,7 +93,7 @@ namespace UnityEditor.AddressableAssets
             var newIndex = EditorGUI.Popup(topRect, label, currentIndex, displayNames.ToArray());
             if (newIndex != currentIndex)
             {
-                if (displayNames[newIndex] == AddressableAssetProfileSettings.k_customEntryString)
+                if (displayNames[newIndex] == AddressableAssetProfileSettings.customEntryString)
                 {
                     custom = true;
                     result = "<undefined>";

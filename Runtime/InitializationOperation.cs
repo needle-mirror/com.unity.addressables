@@ -28,7 +28,7 @@ namespace UnityEngine.AddressableAssets
             Addressables.LogFormat("Addressables - runtime data operation completed with status = {0}, result = {1}.", op.Status, op.Result);
             if (op.Result == null)
             {
-                Addressables.LogWarningFormat("Addressables - Unable to load runtime data at location {0}.", (op.Context as IResourceLocation).InternalId);
+                Addressables.LogWarningFormat("Addressables - Unable to load runtime data at location {0}.", ((IResourceLocation)op.Context).InternalId);
                 SetResult(null);
                 InvokeCompletionEvent();
                 return;
@@ -97,7 +97,7 @@ namespace UnityEngine.AddressableAssets
         void LoadContentCatalog(IList<IResourceLocation> catalogs, int index)
         {
             Addressables.LogFormat("Addressables - loading content catalog from {0}.", catalogs[index].InternalId);
-            ResourceManager.ProvideResource<ContentCatalogData>(catalogs[index]).Completed += (op) =>
+            ResourceManager.ProvideResource<ContentCatalogData>(catalogs[index]).Completed += op =>
             {
                 if (op.Result != null)
                 {
@@ -109,11 +109,11 @@ namespace UnityEngine.AddressableAssets
                 }
                 else
                 {
-                    Addressables.LogFormat("Addressables - failed to load content catalog from {0}.", (op.Context as IResourceLocation).InternalId);
+                    Addressables.LogFormat("Addressables - failed to load content catalog from {0}.", ((IResourceLocation)op.Context).InternalId);
                     if (index + 1 >= catalogs.Count)
                     {
-                        Addressables.LogWarningFormat("Addressables - initialization failed.", (op.Context as IResourceLocation).InternalId);
-                        OperationException = op.OperationException;
+                        Addressables.LogWarningFormat("Addressables - initialization failed.", ((IResourceLocation)op.Context).InternalId);
+                        m_Error = op.OperationException;
                         SetResult(null);
                         Status = AsyncOperationStatus.Failed;
                         InvokeCompletionEvent();

@@ -1,4 +1,6 @@
-﻿using UnityEngine.ResourceManagement;
+﻿using System;
+using UnityEngine.ResourceManagement;
+using UnityEngine.Serialization;
 
 namespace UnityEngine.AddressableAssets
 {
@@ -8,8 +10,9 @@ namespace UnityEngine.AddressableAssets
     [CreateAssetMenu(fileName = "CacheInitializationSettings.asset", menuName = "Addressable Assets/Initialization/Cache Initialization Settings")]
     public class CacheInitializationSettings : ScriptableObject, IObjectInitializationDataProvider
     {
+        [FormerlySerializedAs("m_data")]
         [SerializeField]
-        CacheInitializationData m_data = new CacheInitializationData();
+        CacheInitializationData m_Data = new CacheInitializationData();
         public string Name { get { return "Asset Bundle Cache Settings"; } }
         /// <summary>
         /// The cache initialization data that will be serialized and applied during Addressables initialization.
@@ -18,11 +21,11 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
-                return m_data;
+                return m_Data;
             }
             set
             {
-                m_data = value;
+                m_Data = value;
             }
         }
 
@@ -32,7 +35,7 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The serialized data for the initialization class and the data.</returns>
         public ObjectInitializationData CreateObjectInitializationData()
         {
-            return ObjectInitializationData.CreateSerializedInitializationData<CacheInitialization>(typeof(CacheInitialization).Name, m_data);
+            return ObjectInitializationData.CreateSerializedInitializationData<CacheInitialization>(typeof(CacheInitialization).Name, m_Data);
         }
     }
 }

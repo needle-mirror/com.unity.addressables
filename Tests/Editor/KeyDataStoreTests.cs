@@ -1,12 +1,13 @@
-﻿using NUnit.Framework;
+﻿using System;
 using System.Collections.Generic;
+using NUnit.Framework;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
     public class KeyDataStoreTests
     {
 
-        [System.Serializable]
+        [Serializable]
         class CustomTestClass1
         {
             public string name;
@@ -14,7 +15,7 @@ namespace UnityEditor.AddressableAssets.Tests
             public float floatValue;
         }
 
-        [System.Serializable]
+        [Serializable]
         class CustomTestClass2
         {
             public string name;
@@ -30,7 +31,7 @@ namespace UnityEditor.AddressableAssets.Tests
             store.SetData("key", val);
             store.OnBeforeSerialize();
             store.OnAfterDeserialize();
-            var v = store.GetData<T>("key", default(T));
+            var v = store.GetData("key", default(T));
             Assert.AreEqual(val, v);
         }
 
@@ -41,7 +42,7 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        public void SerializePODType()
+        public void SerializePodType()
         {
             Serialize(5);
             Serialize("test string");
@@ -59,8 +60,8 @@ namespace UnityEditor.AddressableAssets.Tests
         public void SerializeComplexType()
         {
             var store = new KeyDataStore();
-            var obj = new CustomTestClass2() { floatValue = 3.14f, intValue = 7, name = "test object", objectValue = new CustomTestClass1() { name = "sub object", intValue = 14, floatValue = .99999f } };
-            obj.listValue = new List<CustomTestClass1>() { new CustomTestClass1() { name = "list item 1", intValue = 33, floatValue = .234534f } };
+            var obj = new CustomTestClass2 { floatValue = 3.14f, intValue = 7, name = "test object", objectValue = new CustomTestClass1 { name = "sub object", intValue = 14, floatValue = .99999f } };
+            obj.listValue = new List<CustomTestClass1> { new CustomTestClass1 { name = "list item 1", intValue = 33, floatValue = .234534f } };
             store.SetData("obj", obj);
             store.OnBeforeSerialize();
             store.OnAfterDeserialize();

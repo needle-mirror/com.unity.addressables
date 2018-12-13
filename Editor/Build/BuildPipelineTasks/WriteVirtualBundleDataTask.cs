@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using UnityEditor.Build.Pipeline;
-using UnityEditor.Build.Pipeline.Interfaces;
-using UnityEngine.ResourceManagement;
-using UnityEngine.AddressableAssets;
 using System.IO;
 using System.Linq;
+using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Injector;
+using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEngine.ResourceManagement;
 
 namespace UnityEditor.AddressableAssets
 {
-    internal class WriteVirtualBundleDataTask : IBuildTask
+    class WriteVirtualBundleDataTask : IBuildTask
     {
         const int k_Version = 1;
         public int Version { get { return k_Version; } }
@@ -18,7 +17,7 @@ namespace UnityEditor.AddressableAssets
 
 #pragma warning disable 649
         [InjectContext(ContextUsage.In)]
-        IAddressableAssetsBuildContext m_AABuildContext;
+        IAddressableAssetsBuildContext m_AaBuildContext;
 
         [InjectContext]
         IBundleWriteData m_WriteData;
@@ -31,11 +30,13 @@ namespace UnityEditor.AddressableAssets
 
         public ReturnCode Run()
         {
-            var aaContext = m_AABuildContext as AddressableAssetsBuildContext;
+            var aaContext = m_AaBuildContext as AddressableAssetsBuildContext;
+            if (aaContext == null)
+                return ReturnCode.Error;
 
-            var locations = aaContext.m_locations;
+            var locations = aaContext.locations;
 
-            aaContext.m_virtualBundleRuntimeData = new VirtualAssetBundleRuntimeData(ProjectConfigData.localLoadSpeed, ProjectConfigData.remoteLoadSpeed);
+            aaContext.virtualBundleRuntimeData = new VirtualAssetBundleRuntimeData(ProjectConfigData.localLoadSpeed, ProjectConfigData.remoteLoadSpeed);
             var bundledAssets = new Dictionary<object, List<string>>();
             foreach (var loc in locations)
             {
@@ -46,7 +47,7 @@ namespace UnityEditor.AddressableAssets
                     for (int i = 0; i < loc.Dependencies.Count; i++)
                     {
                         var dep = loc.Dependencies[i];
-                        List<string> assetsInBundle = null;
+                        List<string> assetsInBundle;
                         if (!bundledAssets.TryGetValue(dep, out assetsInBundle))
                             bundledAssets.Add(dep, assetsInBundle = new List<string>());
                         if (i == 0) //only add the asset to the first bundle...
@@ -64,10 +65,10 @@ namespace UnityEditor.AddressableAssets
                 long headerSize = 0;
                 foreach (var a in bd.Value)
                 {
-                    var size = ComputeSize(m_WriteData, a);
+                    var size = ComputeSize(a);
                     bundleData.Assets.Add(new VirtualAssetBundleEntry(a, size));
                     dataSize += size;
-                    headerSize += (long)(a.Length * 5); //assume 5x path length overhead size per item, probably much less
+                    headerSize += a.Length * 5; //assume 5x path length overhead size per item, probably much less
                 }
                 if (bd.Value.Count == 0)
                 {
@@ -75,14 +76,14 @@ namespace UnityEditor.AddressableAssets
                     headerSize = 1024;
                 }
                 bundleData.SetSize(dataSize, headerSize);
-                aaContext.m_virtualBundleRuntimeData.AssetBundles.Add(bundleData);
+                aaContext.virtualBundleRuntimeData.AssetBundles.Add(bundleData);
             }
             if (m_SaveData)
-                aaContext.m_virtualBundleRuntimeData.Save();
+                aaContext.virtualBundleRuntimeData.Save();
             return ReturnCode.Success;
         }
 
-        private static long ComputeSize(IBundleWriteData writeData, string a)
+        static long ComputeSize(string a)
         {
             var guid = AssetDatabase.AssetPathToGUID(a);
             if (string.IsNullOrEmpty(guid) || guid.Length < 2)

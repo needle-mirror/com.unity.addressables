@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 namespace UnityEditor.AddressableAssets
 {
     //TODO: deprecate and remove once most users have transitioned to newer external data files
     [Serializable]
-    internal class AddressableAssetGroupDeprecated
+    class AddressableAssetGroupDeprecated
     {
         [SerializeField]
         public string m_name;
@@ -25,7 +24,7 @@ namespace UnityEditor.AddressableAssets
         public bool m_readOnly;
     }
 
-    internal static class AddressableAssetGroupDeprecationExtensions
+    static class AddressableAssetGroupDeprecationExtensions
     {
         public static void ConvertDeprecatedGroupData(this AddressableAssetSettings settings, AddressableAssetGroupDeprecated old, bool staticContent)
         {

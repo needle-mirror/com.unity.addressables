@@ -1,12 +1,13 @@
+using System;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Diagnostics
 {
-    internal class GraphLayerLabel : GraphLayerBase
+    class GraphLayerLabel : GraphLayerBase
     {
-        System.Func<int, string> m_labelFunc;
-        Color m_bgColor;
-        internal GraphLayerLabel(int stream, string name, string desc, Color color, Color bgColor, System.Func<int, string> func) : base(stream, name, desc, color) { m_labelFunc = func; m_bgColor = bgColor; }
+        Func<int, string> m_LabelFunc;
+        Color m_BgColor;
+        internal GraphLayerLabel(int stream, string name, string desc, Color color, Color bgColor, Func<int, string> func) : base(stream, name, desc, color) { m_LabelFunc = func; m_BgColor = bgColor; }
         public override void Draw(EventDataSet dataSet, Rect rect, int startFrame, int frameCount, int inspectFrame, bool expanded, Material material, int maxValue)
         {
             if (dataSet == null)
@@ -33,12 +34,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                     var val = stream.GetValue(inspectFrame);
                     if (val > 0)
                     {
-                        var text = new GUIContent(m_labelFunc(val));
+                        var text = new GUIContent(m_LabelFunc(val));
                         var size = GUI.skin.label.CalcSize(text);
                         var x = GraphUtility.ValueToPixel(inspectFrame, startFrame, endTime, rect.width);
                         float pixelVal = GraphUtility.ValueToPixel(val, 0, maxValue, rect.height);
                         var labelRect = new Rect(rect.xMin + x + 5, rect.yMax - (pixelVal + size.y), size.x, size.y);
-                        GUI.DrawTexture(labelRect, EditorGUIUtility.whiteTexture, ScaleMode.StretchToFill, true, 0, m_bgColor, 50, 5);
+                        GUI.DrawTexture(labelRect, EditorGUIUtility.whiteTexture, ScaleMode.StretchToFill, true, 0, m_BgColor, 50, 5);
                         EditorGUI.LabelField(labelRect, text, GUI.skin.label);
                     }
                 }

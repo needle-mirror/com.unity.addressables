@@ -22,7 +22,7 @@ namespace UnityEngine.AddressableAssets
         }
 #endif
 
-        static Dictionary<string, string> s_cachedValues = new Dictionary<string, string>();
+        static Dictionary<string, string> s_CachedValues = new Dictionary<string, string>();
 
         /// <summary>
         /// Predefine a runtime property.
@@ -31,7 +31,7 @@ namespace UnityEngine.AddressableAssets
         /// <param name="val">The property value.</param>
         public static void SetPropertyValue(string name, string val)
         {
-            s_cachedValues.Add(name, val);
+            s_CachedValues.Add(name, val);
         }
 
         /// <summary>
@@ -41,13 +41,13 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The value of the property.  If not found, the name is returned.</returns>
         public static string EvaluateProperty(string name)
         {
-            Debug.Assert(s_cachedValues != null, "ResourceManagerConfig.GetGlobalVar - s_cachedValues == null.");
+            Debug.Assert(s_CachedValues != null, "ResourceManagerConfig.GetGlobalVar - s_cachedValues == null.");
 
             if (string.IsNullOrEmpty(name))
                 return string.Empty;
 
-            string cachedValue = null;
-            if (s_cachedValues.TryGetValue(name, out cachedValue))
+            string cachedValue;
+            if (s_CachedValues.TryGetValue(name, out cachedValue))
                 return cachedValue;
 
             int i = name.LastIndexOf('.');
@@ -69,7 +69,7 @@ namespace UnityEngine.AddressableAssets
                         var v = pi.GetValue(null, null);
                         if (v != null)
                         {
-                            s_cachedValues.Add(name, v.ToString());
+                            s_CachedValues.Add(name, v.ToString());
                             return v.ToString();
                         }
                     }
@@ -79,13 +79,14 @@ namespace UnityEngine.AddressableAssets
                         var v = fi.GetValue(null);
                         if (v != null)
                         {
-                            s_cachedValues.Add(name, v.ToString());
+                            s_CachedValues.Add(name, v.ToString());
                             return v.ToString();
                         }
                     }
                 }
                 catch (Exception)
                 {
+                    // ignored
                 }
             }
             return name;

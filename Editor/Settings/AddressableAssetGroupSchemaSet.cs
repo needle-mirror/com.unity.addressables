@@ -1,26 +1,45 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Serialization;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets
 {
+    /// <summary>
+    /// Collection of AddressableAssetGroupSchema objects
+    /// </summary>
     [Serializable]
-    internal class AddressableAssetGroupSchemaSet
+    public class AddressableAssetGroupSchemaSet
     {
+        [FormerlySerializedAs("m_schemas")]
         [SerializeField]
-        private List<AddressableAssetGroupSchema> m_schemas = new List<AddressableAssetGroupSchema>();
+        List<AddressableAssetGroupSchema> m_Schemas = new List<AddressableAssetGroupSchema>();
 
         /// <summary>
         /// List of schemas for this group.
         /// </summary>
-        public List<AddressableAssetGroupSchema> Schemas { get { return m_schemas; } }
+        public List<AddressableAssetGroupSchema> Schemas { get { return m_Schemas; } }
+        /// <summary>
+        /// Get the list of schema types.
+        /// </summary>
+        public List<Type> Types
+        {
+            get
+            {
+                var types = new List<Type>(m_Schemas.Count);
+                foreach (var s in m_Schemas)
+                    types.Add(s.GetType());
+                return types;
+            }
+        }
 
         /// <summary>
         /// Adds a copy of the provided schema object.
         /// </summary>
         /// <param name="schema">The schema to copy.</param>
+        /// <param name="pathFunc">A function that returns the path where this method can save the schema asset.  Set to null to not create an in-project asset.</param>
         /// <returns>The created schema object.</returns>
         public AddressableAssetGroupSchema AddSchema(AddressableAssetGroupSchema schema, Func<Type, string> pathFunc)
         {
@@ -39,7 +58,7 @@ namespace UnityEditor.AddressableAssets
 
             if (pathFunc == null)
             {
-                m_schemas.Add(schema);
+                m_Schemas.Add(schema);
                 return schema;
             }
 
@@ -48,20 +67,20 @@ namespace UnityEditor.AddressableAssets
             {
                 Debug.LogWarningFormat("Schema asset already exists at path {0}, relinking.", assetName);
                 var existingSchema = AssetDatabase.LoadAssetAtPath(assetName, type) as AddressableAssetGroupSchema;
-                m_schemas.Add(existingSchema);
+                m_Schemas.Add(existingSchema);
                 return existingSchema;
             }
 
-            var newSchema = UnityEngine.Object.Instantiate(schema) as AddressableAssetGroupSchema;
+            var newSchema = Object.Instantiate(schema);
             if (!string.IsNullOrEmpty(assetName))
             {
                 var dir = Path.GetDirectoryName(assetName);
-                if (!Directory.Exists(dir))
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
                 AssetDatabase.CreateAsset(newSchema, assetName);
             }
 
-            m_schemas.Add(newSchema);
+            m_Schemas.Add(newSchema);
             return newSchema;
         }
 
@@ -69,6 +88,7 @@ namespace UnityEditor.AddressableAssets
         /// Creates and adds a schema of a given type to this group.  The schema asset will be created in the GroupSchemas directory relative to the settings asset.
         /// </summary>
         /// <param name="type">The schema type. This type must not already be added.</param>
+        /// <param name="pathFunc">A function that returns the path where this method can save the schema asset.  Set to null to not create an in-project asset.</param>
         /// <returns>The created schema object.</returns>
         public AddressableAssetGroupSchema AddSchema(Type type, Func<Type, string> pathFunc)
         {
@@ -96,20 +116,20 @@ namespace UnityEditor.AddressableAssets
             {
                 Debug.LogWarningFormat("Schema asset already exists at path {0}, relinking.", assetName);
                 var existingSchema = AssetDatabase.LoadAssetAtPath(assetName, type) as AddressableAssetGroupSchema;
-                m_schemas.Add(existingSchema);
+                m_Schemas.Add(existingSchema);
                 return existingSchema;
             }
 
-            var schema = AddressableAssetGroupSchema.CreateInstance(type) as AddressableAssetGroupSchema;
+            var schema = ScriptableObject.CreateInstance(type) as AddressableAssetGroupSchema;
             if (!string.IsNullOrEmpty(assetName))
             {
                 var dir = Path.GetDirectoryName(assetName);
-                if (!Directory.Exists(dir))
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
                 AssetDatabase.CreateAsset(schema, assetName);
             }
 
-            m_schemas.Add(schema);
+            m_Schemas.Add(schema);
             return schema;
         }
 
@@ -120,12 +140,12 @@ namespace UnityEditor.AddressableAssets
         /// <returns>True if the schema was found and removed, false otherwise.</returns>
         public bool RemoveSchema(Type type)
         {
-            for (int i = 0; i < m_schemas.Count; i++)
+            for (int i = 0; i < m_Schemas.Count; i++)
             {
-                var s = m_schemas[i];
+                var s = m_Schemas[i];
                 if (s.GetType() == type)
                 {
-                    m_schemas.RemoveAt(i);
+                    m_Schemas.RemoveAt(i);
                     string guid;
                     long lfid;
                     if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(s, out guid, out lfid))
@@ -139,7 +159,7 @@ namespace UnityEditor.AddressableAssets
         /// <summary>
         /// Gets an added schema of the specified type.
         /// </summary>
-        /// <param name="type">The schema type.</typeparam>
+        /// <param name="type">The schema type.</param>
         /// <returns>The schema if found, otherwise null.</returns>
         public AddressableAssetGroupSchema GetSchema(Type type)
         {
@@ -155,7 +175,7 @@ namespace UnityEditor.AddressableAssets
                 return null;
             }
 
-            foreach (var s in m_schemas)
+            foreach (var s in m_Schemas)
                 if (type == s.GetType())
                     return s;
             return null;
@@ -169,16 +189,16 @@ namespace UnityEditor.AddressableAssets
         {
             if (deleteAssets)
             {
-                for (int i = 0; i < m_schemas.Count; i++)
+                for (int i = 0; i < m_Schemas.Count; i++)
                 {
-                    var s = m_schemas[i];
+                    var s = m_Schemas[i];
                     string guid;
                     long lfid;
                     if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(s, out guid, out lfid))
                         AssetDatabase.DeleteAsset(AssetDatabase.GUIDToAssetPath(guid));
                 }
             }
-            m_schemas.Clear();
+            m_Schemas.Clear();
         }
     }
 }

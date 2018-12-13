@@ -1,8 +1,9 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
-using System;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -15,14 +16,18 @@ namespace UnityEditor.AddressableAssets
         [Serializable]
         internal struct Entry
         {
-            [SerializeField] string m_assemblyName;
-            internal string AssemblyName { get { return m_assemblyName; } set { m_assemblyName = value; } }
-            [SerializeField] string m_className;
-            internal string ClassName { get { return m_className; } set { m_className = value; } }
-            [SerializeField] string m_data;
-            internal string Data { get { return m_data; } set { m_data = value; } }
-            [SerializeField] string m_key;
-            internal string Key { get { return m_key; } set { m_key = value; } }
+            [FormerlySerializedAs("m_assemblyName")]
+            [SerializeField] string m_AssemblyName;
+            internal string AssemblyName { get { return m_AssemblyName; } set { m_AssemblyName = value; } }
+            [FormerlySerializedAs("m_className")]
+            [SerializeField] string m_ClassName;
+            internal string ClassName { get { return m_ClassName; } set { m_ClassName = value; } }
+            [FormerlySerializedAs("m_data")]
+            [SerializeField] string m_Data;
+            internal string Data { get { return m_Data; } set { m_Data = value; } }
+            [FormerlySerializedAs("m_key")]
+            [SerializeField] string m_Key;
+            internal string Key { get { return m_Key; } set { m_Key = value; } }
 
             /// <inheritdoc/>
             public override string ToString()
@@ -33,13 +38,14 @@ namespace UnityEditor.AddressableAssets
 
         internal void Reset()
         {
-            m_serializedData = null;
-            m_entryMap = new Dictionary<string, object>();
+            m_SerializedData = null;
+            m_EntryMap = new Dictionary<string, object>();
         }
 
+        [FormerlySerializedAs("m_serializedData")]
         [SerializeField]
-        List<Entry> m_serializedData;
-        Dictionary<string, object> m_entryMap = new Dictionary<string, object>();
+        List<Entry> m_SerializedData;
+        Dictionary<string, object> m_EntryMap = new Dictionary<string, object>();
         /// <summary>
         /// Delegate that is invoked when data is modified.
         /// </summary>
@@ -50,12 +56,12 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public void OnBeforeSerialize()
         {
-            m_serializedData = new List<Entry>(m_entryMap.Count);
-            foreach (var k in m_entryMap)
-                m_serializedData.Add(CreateEntry(k.Key, k.Value));
+            m_SerializedData = new List<Entry>(m_EntryMap.Count);
+            foreach (var k in m_EntryMap)
+                m_SerializedData.Add(CreateEntry(k.Key, k.Value));
         }
 
-        private Entry CreateEntry(string key, object value)
+        Entry CreateEntry(string key, object value)
         {
             var entry = new Entry();
             entry.Key = key;
@@ -74,7 +80,7 @@ namespace UnityEditor.AddressableAssets
                 }
                 else
                 {
-                    var parseMethod = objType.GetMethod("Parse", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, System.Reflection.CallingConventions.Any, new Type[] { typeof(string) }, null);
+                    var parseMethod = objType.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public, null, CallingConventions.Any, new[] { typeof(string) }, null);
                     if (parseMethod == null || parseMethod.ReturnType != objType)
                         entry.Data = JsonUtility.ToJson(value);
                     else
@@ -88,17 +94,17 @@ namespace UnityEditor.AddressableAssets
             return entry;
         }
 
-        private object CreateObject(Entry e)
+        object CreateObject(Entry e)
         {
             try
             {
-                var assembly = System.Reflection.Assembly.Load(e.AssemblyName);
+                var assembly = Assembly.Load(e.AssemblyName);
                 var objType = assembly.GetType(e.ClassName);
                 if (objType == typeof(string))
                     return e.Data;
                 if (objType.IsEnum)
                     return Enum.Parse(objType, e.Data);
-                var parseMethod = objType.GetMethod("Parse", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, System.Reflection.CallingConventions.Any, new Type[] { typeof(string) }, null);
+                var parseMethod = objType.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public, null, CallingConventions.Any, new[] { typeof(string) }, null);
                 if (parseMethod == null || parseMethod.ReturnType != objType)
                     return JsonUtility.FromJson(e.Data, objType);
                 return parseMethod.Invoke(null, new object[] { e.Data });
@@ -115,16 +121,16 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public void OnAfterDeserialize()
         {
-            m_entryMap = new Dictionary<string, object>(m_serializedData.Count);
-            foreach (var e in m_serializedData)
-                m_entryMap.Add(e.Key, CreateObject(e));
-            m_serializedData = null;
+            m_EntryMap = new Dictionary<string, object>(m_SerializedData.Count);
+            foreach (var e in m_SerializedData)
+                m_EntryMap.Add(e.Key, CreateObject(e));
+            m_SerializedData = null;
         }
 
         /// <summary>
         /// The collection of keys stored.
         /// </summary>
-        public IEnumerable<string> Keys { get { return m_entryMap.Keys; } }
+        public IEnumerable<string> Keys { get { return m_EntryMap.Keys; } }
 
         /// <summary>
         /// Set the value of a specified key.
@@ -133,8 +139,8 @@ namespace UnityEditor.AddressableAssets
         /// <param name="data">The data to store.  Supported types are strings, POD types, objects that have a static method named 'Parse' that convert a string to an object, and object that are serializable via JSONUtilty.</param>
         public void SetData(string key, object data)
         {
-            var isNew = m_entryMap.ContainsKey(key);
-            m_entryMap[key] = data;
+            var isNew = m_EntryMap.ContainsKey(key);
+            m_EntryMap[key] = data;
             if (OnSetData != null)
                 OnSetData(key, data, isNew);
         }
@@ -149,13 +155,14 @@ namespace UnityEditor.AddressableAssets
             var existingType = GetDataType(key);
             if (existingType == null)
                 SetData(key, data);
-            SetData(key, CreateObject(new Entry() { AssemblyName = existingType.Assembly.FullName, ClassName = existingType.FullName, Data = data, Key = key }));
+            else
+                SetData(key, CreateObject(new Entry { AssemblyName = existingType.Assembly.FullName, ClassName = existingType.FullName, Data = data, Key = key }));
         }
 
         internal Type GetDataType(string key)
         {
             object val;
-            if (m_entryMap.TryGetValue(key, out val))
+            if (m_EntryMap.TryGetValue(key, out val))
                 return val.GetType();
             return null;
 
@@ -164,7 +171,7 @@ namespace UnityEditor.AddressableAssets
         internal string GetDataString(string key, string defaultValue)
         {
             object val;
-            if (m_entryMap.TryGetValue(key, out val))
+            if (m_EntryMap.TryGetValue(key, out val))
                 return CreateEntry(key, val).ToString();
             return defaultValue;
         }
@@ -182,10 +189,13 @@ namespace UnityEditor.AddressableAssets
             try
             {
                 object val;
-                if (m_entryMap.TryGetValue(key, out val))
+                if (m_EntryMap.TryGetValue(key, out val))
                     return (T)val;
             }
-            catch (Exception) { }
+            catch (Exception)
+            {
+                // ignored
+            }
 
             if (addDefault)
                 SetData(key, defaultValue);
@@ -197,10 +207,10 @@ namespace UnityEditor.AddressableAssets
             List<string> keys = new List<string>(Keys); //copy key list to avoid dictionary errors.
             foreach (var key in keys)
             {
-                var itemType = m_entryMap[key].GetType();
+                var itemType = m_EntryMap[key].GetType();
                 if (itemType == typeof(string))
                 {
-                    string currValue = m_entryMap[key].ToString();
+                    string currValue = m_EntryMap[key].ToString();
                     var newValue = ProfilesEditor.ValueGUILayout(parent.Settings, key, currValue);
                     if (newValue != currValue)
                     {
@@ -214,16 +224,16 @@ namespace UnityEditor.AddressableAssets
                     //do custom UI for type...
                     if (itemType.IsEnum)
                     {
-                        var currValue = m_entryMap[key] as System.Enum;
+                        var currValue = m_EntryMap[key] as Enum;
                         var newValue = EditorGUILayout.EnumPopup(currValue);
-                        if (currValue != newValue)
+                        if (currValue == null || !currValue.Equals(newValue))
                         {
                             SetData(key, newValue);
                         }
                     }
                     else if (itemType.IsPrimitive)
                     {
-                        var currValue = m_entryMap[key];
+                        var currValue = m_EntryMap[key];
                         if (itemType == typeof(bool))
                         {
                             var newValue = EditorGUILayout.Toggle((bool)currValue);

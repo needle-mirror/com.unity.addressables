@@ -1,5 +1,7 @@
-﻿using UnityEngine;
+﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -8,11 +10,12 @@ namespace UnityEditor.AddressableAssets
     /// </summary>
     public class AddressableAssetEntryCollection : ScriptableObject
     {
+        [FormerlySerializedAs("m_serializeEntries")]
         [SerializeField]
-        private List<AddressableAssetEntry> m_serializeEntries = new List<AddressableAssetEntry>();
+        List<AddressableAssetEntry> m_SerializeEntries = new List<AddressableAssetEntry>();
         /// <summary>
         /// The collection of entries.
         /// </summary>
-        public List<AddressableAssetEntry> Entries { get { return m_serializeEntries; } }
+        public List<AddressableAssetEntry> Entries { get { return m_SerializeEntries; } }
     }
 }

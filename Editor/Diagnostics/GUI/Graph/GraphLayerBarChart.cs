@@ -1,39 +1,40 @@
-﻿using UnityEngine;
+﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Diagnostics
 {
-    internal class GraphLayerBarChartMesh : GraphLayerBase
+    class GraphLayerBarChartMesh : GraphLayerBase
     {
-        Mesh m_mesh;
-        List<Vector3> m_verts = new List<Vector3>();
-        List<int> m_indices = new List<int>();
-        List<Color32> m_colors = new List<Color32>();
+        Mesh m_Mesh;
+        List<Vector3> m_Verts = new List<Vector3>();
+        List<int> m_Indices = new List<int>();
 
-        Rect m_bounds;
-        Vector2 m_gridSize;
+        Rect m_Bounds;
+        Vector2 m_GridSize;
 
         public GraphLayerBarChartMesh(int stream, string name, string description, Color color) : base(stream, name, description, color) { }
-        private void AddQuadToMesh(float left, float right, float bot, float top)
+
+        void AddQuadToMesh(float left, float right, float bot, float top)
         {
-            float xLeft = m_bounds.xMin + left * m_gridSize.x;
-            float xRight = m_bounds.xMin + right * m_gridSize.x;
-            float yBot = m_bounds.yMax - bot * m_gridSize.y;
-            float yTop = m_bounds.yMax - top * m_gridSize.y;
+            float xLeft = m_Bounds.xMin + left * m_GridSize.x;
+            float xRight = m_Bounds.xMin + right * m_GridSize.x;
+            float yBot = m_Bounds.yMax - bot * m_GridSize.y;
+            float yTop = m_Bounds.yMax - top * m_GridSize.y;
 
-            int start = m_verts.Count;
-            m_verts.Add(new Vector3(xLeft, yBot, 0));
-            m_verts.Add(new Vector3(xLeft, yTop, 0));
-            m_verts.Add(new Vector3(xRight, yTop, 0));
-            m_verts.Add(new Vector3(xRight, yBot, 0));
+            int start = m_Verts.Count;
+            m_Verts.Add(new Vector3(xLeft, yBot, 0));
+            m_Verts.Add(new Vector3(xLeft, yTop, 0));
+            m_Verts.Add(new Vector3(xRight, yTop, 0));
+            m_Verts.Add(new Vector3(xRight, yBot, 0));
 
-            m_indices.Add(start);
-            m_indices.Add(start + 1);
-            m_indices.Add(start + 2);
+            m_Indices.Add(start);
+            m_Indices.Add(start + 1);
+            m_Indices.Add(start + 2);
 
-            m_indices.Add(start);
-            m_indices.Add(start + 2);
-            m_indices.Add(start + 3);
+            m_Indices.Add(start);
+            m_Indices.Add(start + 2);
+            m_Indices.Add(start + 3);
         }
 
         public override void Draw(EventDataSet dataSet, Rect rect, int startFrame, int frameCount, int inspectFrame, bool expanded, Material material, int maxValue)
@@ -42,42 +43,41 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                 return;
 
             var stream = dataSet.GetStream(Stream);
-            if (stream != null && stream.m_samples.Count > 0)
+            if (stream != null && stream.samples.Count > 0)
             {
                 material.color = GraphColor;
 
-                if (m_mesh == null)
-                    m_mesh = new Mesh();
-                m_verts.Clear();
-                m_indices.Clear();
-                m_colors.Clear();
+                if (m_Mesh == null)
+                    m_Mesh = new Mesh();
+                m_Verts.Clear();
+                m_Indices.Clear();
                 var endTime = startFrame + frameCount;
 
-                m_bounds = new Rect(rect);
-                m_gridSize.x = m_bounds.width / (float)frameCount;
-                m_gridSize.y = m_bounds.height / maxValue;
+                m_Bounds = new Rect(rect);
+                m_GridSize.x = m_Bounds.width / frameCount;
+                m_GridSize.y = m_Bounds.height / maxValue;
 
                 int previousFrameNumber = endTime;
                 int currentFrame = endTime;
 
-                for (int i = stream.m_samples.Count - 1; i >= 0 && currentFrame > startFrame; --i)
+                for (int i = stream.samples.Count - 1; i >= 0 && currentFrame > startFrame; --i)
                 {
-                    currentFrame = stream.m_samples[i].frame;
+                    currentFrame = stream.samples[i].frame;
                     var frame = Mathf.Max(currentFrame, startFrame);
-                    if (stream.m_samples[i].data > 0)
+                    if (stream.samples[i].data > 0)
                     {
-                        AddQuadToMesh(frame - startFrame, previousFrameNumber - startFrame, 0, stream.m_samples[i].data);
+                        AddQuadToMesh(frame - startFrame, previousFrameNumber - startFrame, 0, stream.samples[i].data);
                     }
                     previousFrameNumber = frame;
                 }
 
-                if (m_verts.Count > 0)
+                if (m_Verts.Count > 0)
                 {
-                    m_mesh.Clear(true);
-                    m_mesh.SetVertices(m_verts);
-                    m_mesh.triangles = m_indices.ToArray();
+                    m_Mesh.Clear(true);
+                    m_Mesh.SetVertices(m_Verts);
+                    m_Mesh.triangles = m_Indices.ToArray();
                     material.SetPass(0);
-                    Graphics.DrawMeshNow(m_mesh, Vector3.zero, Quaternion.identity);
+                    Graphics.DrawMeshNow(m_Mesh, Vector3.zero, Quaternion.identity);
                 }
             }
         }

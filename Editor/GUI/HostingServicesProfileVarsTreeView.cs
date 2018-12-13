@@ -1,12 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
-    internal class HostingServicesProfileVarsTreeView : TreeView
+    class HostingServicesProfileVarsTreeView : TreeView
     {
-        private class ProfileVarItem : TreeViewItem
+        class ProfileVarItem : TreeViewItem
         {
             public string Key { get; private set; }
             public string Value { get; set; }
@@ -63,7 +64,7 @@ namespace UnityEditor.AddressableAssets
             return header;
         }
 
-        private readonly Dictionary<string, ProfileVarItem> m_itemMap;
+        readonly Dictionary<string, ProfileVarItem> m_ItemMap;
 
         public float RowHeight
         {
@@ -74,36 +75,36 @@ namespace UnityEditor.AddressableAssets
         {
             showBorder = true;
             showAlternatingRowBackgrounds = true;
-            m_itemMap = new Dictionary<string, ProfileVarItem>();
+            m_ItemMap = new Dictionary<string, ProfileVarItem>();
             Reload();
         }
 
         public void ClearItems()
         {
-            m_itemMap.Clear();
+            m_ItemMap.Clear();
         }
 
         public void AddOrUpdateItem(string key, string value)
         {
-            if (m_itemMap.ContainsKey(key))
+            if (m_ItemMap.ContainsKey(key))
             {
-                if (m_itemMap[key].Value == value)
+                if (m_ItemMap[key].Value == value)
                     return;
 
-                m_itemMap[key].Value = value;
+                m_ItemMap[key].Value = value;
                 Reload();
                 return;
             }
 
-            var item = new ProfileVarItem(key, value) {id = m_itemMap.Count};
-            m_itemMap.Add(key, item);
+            var item = new ProfileVarItem(key, value) {id = m_ItemMap.Count};
+            m_ItemMap.Add(key, item);
             Reload();
         }
 
         protected override TreeViewItem BuildRoot()
         {
             var root = new TreeViewItem(-1, -1) {children = new List<TreeViewItem>()};
-            foreach (var item in m_itemMap.Values)
+            foreach (var item in m_ItemMap.Values)
                 root.AddChild(item);
 
             return root;
@@ -117,7 +118,7 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        private void CellGui(ref RowGUIArgs args, int i)
+        void CellGui(ref RowGUIArgs args, int i)
         {
             var cellRect = args.GetCellRect(i);
             CenterRectUsingSingleLineHeight(ref cellRect);

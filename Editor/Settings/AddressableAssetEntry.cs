@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
-using System.Linq;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -19,35 +19,39 @@ namespace UnityEditor.AddressableAssets
         internal const string ResourcesName = "Resources";
         internal const string ResourcesPath = "*/Resources/";
 
+        [FormerlySerializedAs("m_guid")]
         [SerializeField]
-        string m_guid;
+        string m_GUID;
+        [FormerlySerializedAs("m_address")]
         [SerializeField]
-        string m_address;
+        string m_Address;
+        [FormerlySerializedAs("m_readOnly")]
         [SerializeField]
-        bool m_readOnly;
+        bool m_ReadOnly;
 
+        [FormerlySerializedAs("m_serializedLabels")]
         [SerializeField]
-        List<string> m_serializedLabels;
-        HashSet<string> m_labels = new HashSet<string>();
+        List<string> m_SerializedLabels;
+        HashSet<string> m_Labels = new HashSet<string>();
 
         internal virtual bool HasSettings() { return false; }
 
 
         [NonSerialized]
-        private AddressableAssetGroup m_parentGroup;
+        AddressableAssetGroup m_ParentGroup;
         /// <summary>
         /// The asset group that this entry belongs to.  An entry can only belong to a single group at a time.
         /// </summary>
         public AddressableAssetGroup parentGroup
         {
-            get { return m_parentGroup; }
-            set { m_parentGroup = value; }
+            get { return m_ParentGroup; }
+            set { m_ParentGroup = value; }
         }
         
         /// <summary>
         /// The asset guid.
         /// </summary>
-        public string guid { get { return m_guid; } }
+        public string guid { get { return m_GUID; } }
 
         /// <summary>
         /// The address of the entry.  This is treated as the primary key in the ResourceManager system.
@@ -56,7 +60,7 @@ namespace UnityEditor.AddressableAssets
         {
             get
             {
-                return m_address;
+                return m_Address;
             }
             set
             {
@@ -67,15 +71,15 @@ namespace UnityEditor.AddressableAssets
         /// <summary>
         /// Set the address of the entry.
         /// </summary>
-        /// <param name="address">The address.</param>
+        /// <param name="addr">The address.</param>
         /// <param name="postEvent">Post modification event.</param>
-        public void SetAddress(string address, bool postEvent = true)
+        public void SetAddress(string addr, bool postEvent = true)
         {
-            if (m_address != address)
+            if (m_Address != addr)
             {
-                m_address = address;
-                if (string.IsNullOrEmpty(m_address))
-                    m_address = AssetPath;
+                m_Address = addr;
+                if (string.IsNullOrEmpty(m_Address))
+                    m_Address = AssetPath;
                 SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
             }
         }
@@ -87,13 +91,13 @@ namespace UnityEditor.AddressableAssets
         {
             get
             {
-                return m_readOnly;
+                return m_ReadOnly;
             }
             set
             {
-                if (m_readOnly != value)
+                if (m_ReadOnly != value)
                 {
-                    m_readOnly = value;
+                    m_ReadOnly = value;
                     SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, true);
                 }
             }
@@ -114,8 +118,8 @@ namespace UnityEditor.AddressableAssets
         /// <summary>
         /// TODO - doc
         /// </summary>
-        bool m_checkedIsScene = false;
-        bool m_isScene = false;
+        bool m_CheckedIsScene;
+        bool m_IsScene;
         /// <summary>
         /// Is this entry for a scene.
         /// </summary>
@@ -123,19 +127,19 @@ namespace UnityEditor.AddressableAssets
         {
             get
             {
-                if (!m_checkedIsScene)
+                if (!m_CheckedIsScene)
                 {
-                    m_checkedIsScene = true;
-                    m_isScene = AssetDatabase.GUIDToAssetPath(m_guid).EndsWith(".unity");
+                    m_CheckedIsScene = true;
+                    m_IsScene = AssetDatabase.GUIDToAssetPath(m_GUID).EndsWith(".unity");
                 }
-                return m_isScene;
+                return m_IsScene;
             }
 
         }
         /// <summary>
         /// The set of labels for this entry.  There is no inherent limit to the number of labels.
         /// </summary>
-        public HashSet<string> labels { get { return m_labels; } }
+        public HashSet<string> labels { get { return m_Labels; } }
         /// <summary>
         /// Set or unset a label on this entry.
         /// </summary>
@@ -147,7 +151,7 @@ namespace UnityEditor.AddressableAssets
         {
             if (val)
             {
-                if (m_labels.Add(label))
+                if (m_Labels.Add(label))
                 {
                     SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
                     return true;
@@ -155,7 +159,7 @@ namespace UnityEditor.AddressableAssets
             }
             else
             {
-                if (m_labels.Remove(label))
+                if (m_Labels.Remove(label))
                 {
                     SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
                     return true;
@@ -194,9 +198,9 @@ namespace UnityEditor.AddressableAssets
 
         internal AddressableAssetEntry(string guid, string address, AddressableAssetGroup parent, bool readOnly)
         {
-            m_guid = guid;
-            m_address = address;
-            m_readOnly = readOnly;
+            m_GUID = guid;
+            m_Address = address;
+            m_ReadOnly = readOnly;
             parentGroup = parent;
             IsInResources = false;
             IsInSceneList = false;
@@ -204,11 +208,11 @@ namespace UnityEditor.AddressableAssets
 
         internal void SerializeForHash(BinaryFormatter formatter, Stream stream)
         {
-            formatter.Serialize(stream, m_guid);
-            formatter.Serialize(stream, m_address);
-            formatter.Serialize(stream, m_readOnly);
-            formatter.Serialize(stream, m_labels.Count);
-            foreach (var t in m_labels)
+            formatter.Serialize(stream, m_GUID);
+            formatter.Serialize(stream, m_Address);
+            formatter.Serialize(stream, m_ReadOnly);
+            formatter.Serialize(stream, m_Labels.Count);
+            foreach (var t in m_Labels)
                 formatter.Serialize(stream, t);
 
             formatter.Serialize(stream, IsInResources);
@@ -235,15 +239,15 @@ namespace UnityEditor.AddressableAssets
         {
             get
             {
-                if (string.IsNullOrEmpty(m_guid))
+                if (string.IsNullOrEmpty(m_GUID))
                     return string.Empty;
 
-                if (m_guid == EditorSceneListName)
+                if (m_GUID == EditorSceneListName)
                     return EditorSceneListPath;
-                if (m_guid == ResourcesName)
+                if (m_GUID == ResourcesName)
                     return ResourcesPath;
 
-                return AssetDatabase.GUIDToAssetPath(m_guid);
+                return AssetDatabase.GUIDToAssetPath(m_GUID);
             }
         }
 
@@ -294,7 +298,7 @@ namespace UnityEditor.AddressableAssets
         {
             var settings = parentGroup.Settings;
 
-            if (m_guid == EditorSceneListName)
+            if (m_GUID == EditorSceneListName)
             {
                 foreach (var s in EditorBuildSettings.scenes)
                 {
@@ -304,13 +308,13 @@ namespace UnityEditor.AddressableAssets
                         if (entry != null) //TODO - it's probably really bad if this is ever null. need some error detection
                         {
                             entry.IsInSceneList = true;
-                            entry.m_labels = m_labels;
+                            entry.m_Labels = m_Labels;
                             assets.Add(entry);
                         }
                     }
                 }
             }
-            else if (m_guid == ResourcesName)
+            else if (m_GUID == ResourcesName)
             {
                 foreach (var resourcesDir in Directory.GetDirectories("Assets", "Resources", SearchOption.AllDirectories))
                 {
@@ -324,7 +328,7 @@ namespace UnityEditor.AddressableAssets
                             if (entry != null) //TODO - it's probably really bad if this is ever null. need some error detection
                             {
                                 entry.IsInResources = true;
-                                entry.m_labels = m_labels;
+                                entry.m_Labels = m_Labels;
                                 assets.Add(entry);
                             }
                         }
@@ -339,7 +343,7 @@ namespace UnityEditor.AddressableAssets
                                 if (entry != null) //TODO - it's probably really bad if this is ever null. need some error detection
                                 {
                                     entry.IsInResources = true;
-                                    entry.m_labels = m_labels;
+                                    entry.m_Labels = m_Labels;
                                     assets.Add(entry);
                                 }
                             }
@@ -349,7 +353,7 @@ namespace UnityEditor.AddressableAssets
             }
             else
             {
-                var path = AssetDatabase.GUIDToAssetPath(m_guid);
+                var path = AssetDatabase.GUIDToAssetPath(m_GUID);
                 if (string.IsNullOrEmpty(path))
                     return;
 
@@ -364,7 +368,7 @@ namespace UnityEditor.AddressableAssets
                             if (entry != null)
                             {
                                 entry.IsInResources = IsInResources; //if this is a sub-folder of Resources, copy it on down
-                                entry.m_labels = m_labels;
+                                entry.m_Labels = m_Labels;
                                 assets.Add(entry);
                             }
                         }
@@ -380,7 +384,7 @@ namespace UnityEditor.AddressableAssets
                                 if (entry != null)
                                 {
                                     entry.IsInResources = IsInResources; //if this is a sub-folder of Resources, copy it on down
-                                    entry.m_labels = m_labels;
+                                    entry.m_Labels = m_Labels;
                                     assets.Add(entry);
                                 }
                             }
@@ -402,7 +406,7 @@ namespace UnityEditor.AddressableAssets
                                     entry.IsInResources = e.IsInResources;
                                     foreach (var l in e.labels)
                                         entry.SetLabel(l, true, false);
-                                    foreach (var l in m_labels)
+                                    foreach (var l in m_Labels)
                                         entry.SetLabel(l, true, false);
                                     assets.Add(entry);
                                 }
@@ -418,7 +422,7 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        private string GetRelativePath(string file, string path)
+        string GetRelativePath(string file, string path)
         {
             return file.Substring(path.Length);
         }
@@ -428,9 +432,9 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public void OnBeforeSerialize()
         {
-            m_serializedLabels = new List<string>();
-            foreach (var t in m_labels)
-                m_serializedLabels.Add(t);
+            m_SerializedLabels = new List<string>();
+            foreach (var t in m_Labels)
+                m_SerializedLabels.Add(t);
         }
 
         /// <summary>
@@ -438,10 +442,10 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public void OnAfterDeserialize()
         {
-            m_labels = new HashSet<string>();
-            foreach (var s in m_serializedLabels)
-                m_labels.Add(s);
-            m_serializedLabels = null;
+            m_Labels = new HashSet<string>();
+            foreach (var s in m_SerializedLabels)
+                m_Labels.Add(s);
+            m_SerializedLabels = null;
         }
     }
 }

@@ -1,7 +1,8 @@
 using System;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
-
+using System.Runtime.Serialization.Formatters.Binary;
+using UnityEngine;
+using UnityEngine.Serialization;
 #if UNITY_2018_3_OR_NEWER
 using BuildCompression = UnityEngine.BuildCompression;
 #else
@@ -21,59 +22,63 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public BuildCompression compression
         {
-            get { return m_compression; }
+            get { return m_Compression; }
             set
             {
-                m_compression = value;
+                m_Compression = value;
                 SetDirty();
             }
         }
 
-        [UnityEngine.SerializeField]
+        [FormerlySerializedAs("m_compression")]
+        [SerializeField]
 #if UNITY_2018_3_OR_NEWER
-        private BuildCompression m_compression = BuildCompression.LZ4;
+        BuildCompression m_Compression = BuildCompression.LZ4;
 #else
-        private BuildCompression m_compression = BuildCompression.DefaultLZ4;
+        BuildCompression m_Compression = BuildCompression.DefaultLZ4;
 #endif
         /// <summary>
         /// Controls whether to compile scripts when running in virtual mode.  When disabled, build times are faster but the simulated bundle contents may not be accurate due to including editor code.
         /// </summary>
         public bool compileScriptsInVirtualMode
         {
-            get { return m_compileScriptsInVirtualMode; }
+            get { return m_CompileScriptsInVirtualMode; }
             set
             {
-                m_compileScriptsInVirtualMode = value;
+                m_CompileScriptsInVirtualMode = value;
                 SetDirty();
             }
         }
-        [UnityEngine.SerializeField]
-        private bool m_compileScriptsInVirtualMode = false;
+        [FormerlySerializedAs("m_compileScriptsInVirtualMode")]
+        [SerializeField]
+        bool m_CompileScriptsInVirtualMode;
 
         /// <summary>
         /// Controls whether to remove temporary files after each build.  When disabled, build times in packed mode are faster, but may not reflect all changes in assets.
         /// </summary>
         public bool cleanupStreamingAssetsAfterBuilds
         {
-            get { return m_cleanupStreamingAssetsAfterBuilds; }
+            get { return m_CleanupStreamingAssetsAfterBuilds; }
             set
             {
-                m_cleanupStreamingAssetsAfterBuilds = value;
+                m_CleanupStreamingAssetsAfterBuilds = value;
                 SetDirty();
             }
         }
-        [UnityEngine.SerializeField]
-        private bool m_cleanupStreamingAssetsAfterBuilds = true;
+        [FormerlySerializedAs("m_cleanupStreamingAssetsAfterBuilds")]
+        [SerializeField]
+        bool m_CleanupStreamingAssetsAfterBuilds = true;
 
-        [UnityEngine.SerializeField]
-        private bool m_logResourceManagerExceptions = true;
+        [FormerlySerializedAs("m_logResourceManagerExceptions")]
+        [SerializeField]
+        bool m_LogResourceManagerExceptions = true;
         /// <summary>
         /// When enabled, the ResourceManager.ExceptionHandler is set to (op, ex) => Debug.LogException(ex);
         /// </summary>
         public bool LogResourceManagerExceptions
         {
-            get { return m_logResourceManagerExceptions; }
-            set { m_logResourceManagerExceptions = value; }
+            get { return m_LogResourceManagerExceptions; }
+            set { m_LogResourceManagerExceptions = value; }
         }
 
         /// <summary>
@@ -81,16 +86,17 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         public string bundleBuildPath
         {
-            get { return m_bundleBuildPath; }
+            get { return m_BundleBuildPath; }
             set
             {
-                m_bundleBuildPath = value;
+                m_BundleBuildPath = value;
                 SetDirty();
             }
         }
 
-        [UnityEngine.SerializeField]
-        private string m_bundleBuildPath = "Temp/com.unity.addressables/AssetBundles";
+        [FormerlySerializedAs("m_bundleBuildPath")]
+        [SerializeField]
+        string m_BundleBuildPath = "Temp/com.unity.addressables/AssetBundles";
 
         internal void SerializeForHash(BinaryFormatter formatter, Stream stream)
         {

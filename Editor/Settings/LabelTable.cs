@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -8,19 +10,20 @@ namespace UnityEditor.AddressableAssets
     /// TODO - doc
     /// </summary>
     [Serializable]
-    internal class LabelTable
+    class LabelTable
     {
+        [FormerlySerializedAs("m_labelNames")]
         [SerializeField]
-        private List<string> m_labelNames = new List<string>(new string[] { "default" });
+        List<string> m_LabelNames = new List<string>(new[] { "default" });
 
-        internal List<string> labelNames { get { return m_labelNames; } }
-        private const int kNameCountCap = 3;
+        internal List<string> labelNames { get { return m_LabelNames; } }
+        const int k_KNameCountCap = 3;
         
         internal void AddLabelName(string name)
         {
-            if(!m_labelNames.Contains(name))
+            if(!m_LabelNames.Contains(name))
             { 
-                m_labelNames.Add(name);
+                m_LabelNames.Add(name);
             }
         }
 
@@ -30,9 +33,9 @@ namespace UnityEditor.AddressableAssets
             int counter = 1;
             while (counter < 100)
             {
-                if (!m_labelNames.Contains(newName))
+                if (!m_LabelNames.Contains(newName))
                     return newName;
-                newName = name + counter.ToString();
+                newName = name + counter;
                 counter++;
             }
             return string.Empty;
@@ -40,7 +43,7 @@ namespace UnityEditor.AddressableAssets
 
         internal bool RemoveLabelName(string name)
         {
-            return m_labelNames.Remove(name);
+            return m_LabelNames.Remove(name);
         }
 
         /// <summary>
@@ -48,24 +51,22 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         internal string GetString(HashSet<string> val, float width) //TODO - use width to add the "..." in the right place.
         {
-            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            StringBuilder sb = new StringBuilder();
             int counter = 0;
-            foreach (var v in m_labelNames)
+            foreach (var v in m_LabelNames)
             {
                 if (val.Contains(v))
                 {
-                    if (counter >= kNameCountCap)
+                    if (counter >= k_KNameCountCap)
                     {
                         sb.Append("...");
                         break;
                     }
-                    else
-                    {
-                        if (counter > 0)
-                            sb.Append(", ");
-                        sb.Append(v);
-                        counter++;
-                    }
+
+                    if (counter > 0)
+                        sb.Append(", ");
+                    sb.Append(v);
+                    counter++;
                 }
             }
             return sb.ToString();
@@ -80,9 +81,9 @@ namespace UnityEditor.AddressableAssets
                 return 0;
             long one = 1;
             long val = 0;
-            for (int i = 0; i < m_labelNames.Count; i++)
-                if (maskSet.Contains(m_labelNames[i]))
-                    val |= (long)(one << i);
+            for (int i = 0; i < m_LabelNames.Count; i++)
+                if (maskSet.Contains(m_LabelNames[i]))
+                    val |= one << i;
             return val;
         }
     }

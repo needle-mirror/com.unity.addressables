@@ -8,7 +8,7 @@ namespace UnityEditor.AddressableAssets.Tests
 {
     public class HttpHostingServiceTests
     {
-        private class MyWebClient : WebClient
+        class MyWebClient : WebClient
         {
             protected override WebRequest GetWebRequest(Uri uri)
             {
@@ -19,16 +19,16 @@ namespace UnityEditor.AddressableAssets.Tests
             }
         }
 
-        private HttpHostingService m_service;
-        private string m_contentRoot;
-        private readonly WebClient m_client;
+        HttpHostingService m_Service;
+        string m_ContentRoot;
+        readonly WebClient m_Client;
 
         public HttpHostingServiceTests()
         {
-            m_client = new MyWebClient();
+            m_Client = new MyWebClient();
         }
 
-        private static byte[] GetRandomBytes(int size)
+        static byte[] GetRandomBytes(int size)
         {
             var rand = new Random();
             var buf = new byte[size];
@@ -39,21 +39,21 @@ namespace UnityEditor.AddressableAssets.Tests
         [OneTimeSetUp]
         public void SetUp()
         {
-            m_service = new HttpHostingService();
+            m_Service = new HttpHostingService();
             var dirName = Path.GetRandomFileName();
-            m_contentRoot = Path.Combine(Path.GetTempPath(), dirName);
-            Assert.IsNotEmpty(m_contentRoot);
-            Directory.CreateDirectory(m_contentRoot);
-            m_service.HostingServiceContentRoots.Add(m_contentRoot);
+            m_ContentRoot = Path.Combine(Path.GetTempPath(), dirName);
+            Assert.IsNotEmpty(m_ContentRoot);
+            Directory.CreateDirectory(m_ContentRoot);
+            m_Service.HostingServiceContentRoots.Add(m_ContentRoot);
         }
 
         [OneTimeTearDown]
         public void TearDown()
         {
-            m_service.StopHostingService();
+            m_Service.StopHostingService();
 
-            if (!string.IsNullOrEmpty(m_contentRoot) && Directory.Exists(m_contentRoot))
-                Directory.Delete(m_contentRoot, true);
+            if (!string.IsNullOrEmpty(m_ContentRoot) && Directory.Exists(m_ContentRoot))
+                Directory.Delete(m_ContentRoot, true);
         }
 
         [Test]
@@ -68,16 +68,16 @@ namespace UnityEditor.AddressableAssets.Tests
 
             foreach (var fileName in fileNames)
             {
-                var filePath = Path.Combine(m_contentRoot, fileName);
+                var filePath = Path.Combine(m_ContentRoot, fileName);
                 var bytes = GetRandomBytes(1024);
                 Directory.CreateDirectory(Path.GetDirectoryName(filePath));
                 File.WriteAllBytes(filePath, bytes);
-                m_service.StartHostingService();
-                Assert.IsTrue(m_service.IsHostingServiceRunning);
-                var url = string.Format("http://127.0.0.1:{0}/{1}", m_service.HostingServicePort, fileName);
+                m_Service.StartHostingService();
+                Assert.IsTrue(m_Service.IsHostingServiceRunning);
+                var url = string.Format("http://127.0.0.1:{0}/{1}", m_Service.HostingServicePort, fileName);
                 try
                 {
-                    var data = m_client.DownloadData(url);
+                    var data = m_Client.DownloadData(url);
                     Assert.AreEqual(data.Length, bytes.Length);
                     for (var i = 0; i < data.Length; i++)
                         if (bytes[i] != data[i])
@@ -93,12 +93,12 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void ShouldRespondWithStatus404IfFileDoesNotExist()
         {
-            m_service.StartHostingService();
-            Assert.IsTrue(m_service.IsHostingServiceRunning);
-            var url = string.Format("http://127.0.0.1:{0}/{1}", m_service.HostingServicePort, "foo");
+            m_Service.StartHostingService();
+            Assert.IsTrue(m_Service.IsHostingServiceRunning);
+            var url = string.Format("http://127.0.0.1:{0}/{1}", m_Service.HostingServicePort, "foo");
             try
             {
-                m_client.DownloadData(url);
+                m_Client.DownloadData(url);
             }
             catch (WebException e)
             {
@@ -116,8 +116,8 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void StartHostingServiceShould_AssignPortIfUnassigned()
         {
-            m_service.StartHostingService();
-            Assert.Greater(m_service.HostingServicePort, 0);
+            m_Service.StartHostingService();
+            Assert.Greater(m_Service.HostingServicePort, 0);
         }
 
         // OnBeforeSerialize
@@ -125,10 +125,10 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void OnBeforeSerializeShould_PersistExpectedDataToKeyDataStore()
         {
-            m_service.StartHostingService();
-            var port = m_service.HostingServicePort;
+            m_Service.StartHostingService();
+            var port = m_Service.HostingServicePort;
             var data = new KeyDataStore();
-            m_service.OnBeforeSerialize(data);
+            m_Service.OnBeforeSerialize(data);
             Assert.AreEqual(port, data.GetData("HostingServicePort", 0));
         }
 
@@ -139,8 +139,8 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             var data = new KeyDataStore();
             data.SetData("HostingServicePort", 1234);
-            m_service.OnAfterDeserialize(data);
-            Assert.AreEqual(1234, m_service.HostingServicePort);
+            m_Service.OnAfterDeserialize(data);
+            Assert.AreEqual(1234, m_Service.HostingServicePort);
         }
 
         // ResetListenPort
@@ -148,32 +148,32 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void ResetListenPortShould_AssignTheGivenPort()
         {
-            m_service.ResetListenPort(1234);
-            Assert.AreEqual(1234, m_service.HostingServicePort);
+            m_Service.ResetListenPort(1234);
+            Assert.AreEqual(1234, m_Service.HostingServicePort);
         }
 
         [Test]
         public void ResetListenPortShould_AssignRandomPortIfZero()
         {
-            m_service.ResetListenPort();
-            m_service.StartHostingService();
-            Assert.Greater(m_service.HostingServicePort, 0);
+            m_Service.ResetListenPort();
+            m_Service.StartHostingService();
+            Assert.Greater(m_Service.HostingServicePort, 0);
         }
 
         [Test]
         public void ResetListenPortShouldNot_StartServiceIfItIsNotRunning()
         {
-            m_service.StopHostingService();
-            m_service.ResetListenPort();
-            Assert.IsFalse(m_service.IsHostingServiceRunning);
+            m_Service.StopHostingService();
+            m_Service.ResetListenPort();
+            Assert.IsFalse(m_Service.IsHostingServiceRunning);
         }
 
         [Test]
         public void ResetListenPortShould_RestartServiceIfRunning()
         {
-            m_service.StartHostingService();
-            m_service.ResetListenPort();
-            Assert.IsTrue(m_service.IsHostingServiceRunning);
+            m_Service.StartHostingService();
+            m_Service.ResetListenPort();
+            Assert.IsTrue(m_Service.IsHostingServiceRunning);
         }
     }
 }

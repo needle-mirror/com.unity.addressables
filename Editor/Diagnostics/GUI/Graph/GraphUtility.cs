@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Diagnostics
 {
-    internal static class GraphUtility
+    static class GraphUtility
     {
         public static float ValueToPixel(float value, float min, float max, float pixelRange)
         {
@@ -32,25 +32,25 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         public static IEnumerable<Segment> IterateSegments(EventDataSetStream stream, int minFrame, int maxFrame, IsContinuationOfSegmentDelegate segmentCallback)
         {
-            if (stream.m_samples.Count > 0)
+            if (stream.samples.Count > 0)
             {
                 // find last visible event. This can be the event that is right before the minFrame
                 int segStartIdx;
-                for (segStartIdx = stream.m_samples.Count - 1; segStartIdx > 0; segStartIdx--)
-                    if (stream.m_samples[segStartIdx].frame < minFrame)
+                for (segStartIdx = stream.samples.Count - 1; segStartIdx > 0; segStartIdx--)
+                    if (stream.samples[segStartIdx].frame < minFrame)
                         break;
 
                 int curIdx = segStartIdx + 1;
 
-                for (; curIdx < stream.m_samples.Count; curIdx++)
+                for (; curIdx < stream.samples.Count; curIdx++)
                 {
                     // keep iterating samples until the callback tells us this should be reported as a new segment
-                    if (segmentCallback(stream.m_samples[segStartIdx].data, stream.m_samples[curIdx].data))
+                    if (segmentCallback(stream.samples[segStartIdx].data, stream.samples[curIdx].data))
                     {
                         Segment segment;
-                        segment.frameStart = Math.Max(stream.m_samples[segStartIdx].frame, minFrame);
-                        segment.frameEnd = stream.m_samples[curIdx].frame;
-                        segment.data = stream.m_samples[segStartIdx].data;
+                        segment.frameStart = Math.Max(stream.samples[segStartIdx].frame, minFrame);
+                        segment.frameEnd = stream.samples[curIdx].frame;
+                        segment.data = stream.samples[segStartIdx].data;
                         yield return segment;
                         // start working on a new segment from the current location
                         segStartIdx = curIdx;
@@ -59,9 +59,9 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
                 // close off the last segment all the way to the end of the maxFrame
                 Segment lastSegment;
-                lastSegment.frameStart = Math.Max(stream.m_samples[segStartIdx].frame, minFrame);
+                lastSegment.frameStart = Math.Max(stream.samples[segStartIdx].frame, minFrame);
                 lastSegment.frameEnd = maxFrame;
-                lastSegment.data = stream.m_samples[segStartIdx].data;
+                lastSegment.data = stream.samples[segStartIdx].data;
                 yield return lastSegment;
             }
         }

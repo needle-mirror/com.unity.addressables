@@ -1,40 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets.Diagnostics
 {
     [Serializable]
-    internal class EventDataSet
+    class EventDataSet
     {
+        [FormerlySerializedAs("m_streams")]
         [SerializeField]
-        List<EventDataSetStream> m_streams = new List<EventDataSetStream>();
-        int m_firstSampleFrame = int.MaxValue;
-        string m_name;
-        string m_graph;
-        Dictionary<string, EventDataSet> m_children = null;
+        List<EventDataSetStream> m_Streams = new List<EventDataSetStream>();
+        int m_FirstSampleFrame = int.MaxValue;
+        string m_EventName;
+        string m_Graph;
+        Dictionary<string, EventDataSet> m_Children;
 
-        public string Name { get { return m_name; } }
-        public string Graph { get { return m_graph; } }
-        public IEnumerable<EventDataSet> Children { get { return m_children.Values; } }
-        internal bool HasChildren { get { return m_children != null && m_children.Count > 0; } }
-        internal int FirstSampleFrame { get { return m_firstSampleFrame; } }
+        public string EventName { get { return m_EventName; } }
+        public string Graph { get { return m_Graph; } }
+        public IEnumerable<EventDataSet> Children { get { return m_Children.Values; } }
+        internal bool HasChildren { get { return m_Children != null && m_Children.Count > 0; } }
+        internal int FirstSampleFrame { get { return m_FirstSampleFrame; } }
 
         internal EventDataSet() { }
         internal EventDataSet(string n, string g)
         {
-            m_name = n;
-            m_graph = g;
+            m_EventName = n;
+            m_Graph = g;
         }
 
         internal bool HasDataAfterFrame(int frame)
         {
-            foreach (var s in m_streams)
+            foreach (var s in m_Streams)
                 if (s != null && s.HasDataAfterFrame(frame))
                     return true;
-            if (m_children != null)
+            if (m_Children != null)
             {
-                foreach (var c in m_children)
+                foreach (var c in m_Children)
                     if (c.Value.HasDataAfterFrame(frame))
                         return true;
             }
@@ -45,17 +47,17 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         {
             if (string.IsNullOrEmpty(entryName))
                 return null;
-            if (m_children == null)
+            if (m_Children == null)
             {
                 if (!create)
                     return null;
-                m_children = new Dictionary<string, EventDataSet>();
+                m_Children = new Dictionary<string, EventDataSet>();
                 entryCreated = true;
             }
-            EventDataSet entry = null;
-            if (!m_children.TryGetValue(entryName, out entry) && create)
+            EventDataSet entry;
+            if (!m_Children.TryGetValue(entryName, out entry) && create)
             {
-                m_children.Add(entryName, entry = new EventDataSet(entryName, graph));
+                m_Children.Add(entryName, entry = new EventDataSet(entryName, graph));
                 entryCreated = true;
             }
             return entry;
@@ -63,13 +65,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         internal void AddSample(int stream, int frame, int val)
         {
-            if (frame < m_firstSampleFrame)
-                m_firstSampleFrame = frame;
-            while (stream >= m_streams.Count)
-                m_streams.Add(null);
-            if (m_streams[stream] == null)
-                m_streams[stream] = new EventDataSetStream();
-            m_streams[stream].AddSample(frame, val);
+            if (frame < m_FirstSampleFrame)
+                m_FirstSampleFrame = frame;
+            while (stream >= m_Streams.Count)
+                m_Streams.Add(null);
+            if (m_Streams[stream] == null)
+                m_Streams[stream] = new EventDataSetStream();
+            m_Streams[stream].AddSample(frame, val);
         }
 
         internal int GetStreamValue(int s, int frame)
@@ -82,9 +84,9 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         internal EventDataSetStream GetStream(int s)
         {
-            if (s >= m_streams.Count)
+            if (s >= m_Streams.Count)
                 return null;
-            return m_streams[s];
+            return m_Streams[s];
         }
 
         internal int GetStreamMaxValue(int s)
@@ -93,14 +95,14 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             if (stream == null)
                 return 0;
 
-            return stream.m_maxValue;
+            return stream.maxValue;
         }
 
         internal void Clear()
         {
-            m_firstSampleFrame = int.MaxValue;
-            m_children.Clear();
-            m_streams.Clear();
+            m_FirstSampleFrame = int.MaxValue;
+            m_Children.Clear();
+            m_Streams.Clear();
         }
     }
 

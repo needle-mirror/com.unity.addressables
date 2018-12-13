@@ -1,7 +1,6 @@
 
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -15,40 +14,40 @@ namespace UnityEditor.AddressableAssets
             public string[] movedFromAssetPaths;
         }
 
-        static List<ImportSet> m_buffer;
-        static Action<string[], string[], string[], string[]> m_handler;
+        static List<ImportSet> s_Buffer;
+        static Action<string[], string[], string[], string[]> s_Handler;
         public static Action<string[], string[], string[], string[]> OnPostProcess
         {
             get
             {
-                return m_handler;
+                return s_Handler;
             }
             set
             {
-                m_handler = value;
-                if (m_handler != null && m_buffer != null)
+                s_Handler = value;
+                if (s_Handler != null && s_Buffer != null)
                 {
-                    foreach (var b in m_buffer)
-                        m_handler(b.importedAssets, b.deletedAssets, b.movedAssets, b.movedFromAssetPaths);
-                    m_buffer = null;
+                    foreach (var b in s_Buffer)
+                        s_Handler(b.importedAssets, b.deletedAssets, b.movedAssets, b.movedFromAssetPaths);
+                    s_Buffer = null;
                 }
             }
         }
         static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
 
-            if (m_handler != null)
+            if (s_Handler != null)
             {
-                m_handler(importedAssets, deletedAssets, movedAssets, movedFromAssetPaths);
+                s_Handler(importedAssets, deletedAssets, movedAssets, movedFromAssetPaths);
             }
             else
             {
                 //only buffer imports if they will be consumed by the settings object
                 if (AddressableAssetSettingsDefaultObject.SettingsExists)
                 {
-                    if (m_buffer == null)
-                        m_buffer = new List<ImportSet>();
-                    m_buffer.Add(new ImportSet() { importedAssets = importedAssets, deletedAssets = deletedAssets, movedAssets = movedAssets, movedFromAssetPaths = movedFromAssetPaths });
+                    if (s_Buffer == null)
+                        s_Buffer = new List<ImportSet>();
+                    s_Buffer.Add(new ImportSet { importedAssets = importedAssets, deletedAssets = deletedAssets, movedAssets = movedAssets, movedFromAssetPaths = movedFromAssetPaths });
                 }
             }
         }

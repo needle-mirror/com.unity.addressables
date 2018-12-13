@@ -1,7 +1,7 @@
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor.IMGUI.Controls;
 using System;
+using System.Collections.Generic;
+using UnityEditor.IMGUI.Controls;
+using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -22,7 +22,8 @@ namespace UnityEditor.AddressableAssets
 
         [NonSerialized]
         List<AnalyzeRule> m_Rules;
-        private List<AnalyzeRule> rules
+
+        List<AnalyzeRule> rules
         {
             get
             {
@@ -112,7 +113,7 @@ namespace UnityEditor.AddressableAssets
             root.children = new List<TreeViewItem>();
             foreach(var res in m_AnalyzeSetting.ruleResults)
             {
-                var resPath = res.name.Split(AnalyzeRule.kDelimiter);
+                var resPath = res.resultName.Split(AnalyzeRule.kDelimiter);
                 
                 var parentNode = root;
                 var nameThusFar = string.Empty;

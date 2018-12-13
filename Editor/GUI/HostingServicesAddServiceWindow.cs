@@ -3,15 +3,15 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
-    internal class HostingServicesAddServiceWindow : EditorWindow
+    class HostingServicesAddServiceWindow : EditorWindow
     {
-        private MonoScript m_script;
-        private string m_name;
-        private bool m_useCustomScript;
-        private AddressableAssetSettings m_settings;
-        private Type[] m_serviceTypes;
-        private string[] m_serviceTypeNames;
-        private int m_serviceTypeIndex;
+        MonoScript m_Script;
+        string m_HostingName;
+        bool m_UseCustomScript;
+        AddressableAssetSettings m_Settings;
+        Type[] m_ServiceTypes;
+        string[] m_ServiceTypeNames;
+        int m_ServiceTypeIndex;
 
         /// <summary>
         /// Initialize the dialog for the given <see cref="AddressableAssetSettings"/>
@@ -19,71 +19,71 @@ namespace UnityEditor.AddressableAssets
         /// <param name="settings"></param>
         public void Initialize(AddressableAssetSettings settings)
         {
-            m_settings = settings;
-            m_name = string.Format("My Hosting Service {0}", m_settings.HostingServicesManager.NextInstanceId);
+            m_Settings = settings;
+            m_HostingName = string.Format("My Hosting Service {0}", m_Settings.HostingServicesManager.NextInstanceId);
             PopulateServiceTypes();
         }
 
-        private void PopulateServiceTypes()
+        void PopulateServiceTypes()
         {
-            if (m_settings == null) return;
-            m_serviceTypes = m_settings.HostingServicesManager.RegisteredServiceTypes;
-            m_serviceTypeNames = new string[m_serviceTypes.Length];
-            for (var i = 0; i < m_serviceTypes.Length; i++)
-                m_serviceTypeNames[i] = m_serviceTypes[i].Name;
+            if (m_Settings == null) return;
+            m_ServiceTypes = m_Settings.HostingServicesManager.RegisteredServiceTypes;
+            m_ServiceTypeNames = new string[m_ServiceTypes.Length];
+            for (var i = 0; i < m_ServiceTypes.Length; i++)
+                m_ServiceTypeNames[i] = m_ServiceTypes[i].Name;
         }
 
-        private void OnGUI()
+        void OnGUI()
         {
-            if (m_settings == null) return;
-            var toggleState = !m_useCustomScript;
+            if (m_Settings == null) return;
+            var toggleState = !m_UseCustomScript;
 
             EditorGUILayout.BeginHorizontal();
             {
                 toggleState = GUILayout.Toggle(toggleState, " Service Type", "Radio");
-                m_useCustomScript = !toggleState;
+                m_UseCustomScript = !toggleState;
 
-                using (new EditorGUI.DisabledScope(m_useCustomScript))
-                    m_serviceTypeIndex = EditorGUILayout.Popup(m_serviceTypeIndex, m_serviceTypeNames);
+                using (new EditorGUI.DisabledScope(m_UseCustomScript))
+                    m_ServiceTypeIndex = EditorGUILayout.Popup(m_ServiceTypeIndex, m_ServiceTypeNames);
             }
             EditorGUILayout.EndHorizontal();
 
-            toggleState = m_useCustomScript;
+            toggleState = m_UseCustomScript;
             toggleState = GUILayout.Toggle(toggleState, " Custom", "Radio");
-            m_useCustomScript = toggleState;
+            m_UseCustomScript = toggleState;
 
-            if (m_useCustomScript)
+            if (m_UseCustomScript)
             {
                 EditorGUILayout.HelpBox("Select a script that implements the IHostingService interface.", MessageType.Info);
                 var script =
-                    EditorGUILayout.ObjectField("Hosting Service Script", m_script, typeof(MonoScript), false) as MonoScript;
+                    EditorGUILayout.ObjectField("Hosting Service Script", m_Script, typeof(MonoScript), false) as MonoScript;
 
-                if (script != m_script && script != null)
+                if (script != m_Script && script != null)
                 {
                     var scriptType = script.GetClass();
                     if (scriptType == null)
                     {
                         EditorUtility.DisplayDialog("Error", "Unable to find a valid type from the specified script.", "Ok");
-                        m_script = null;
+                        m_Script = null;
                     }
                     else if (scriptType.IsAbstract)
                     {
                         EditorUtility.DisplayDialog("Error", "Script cannot be an Abstract class", "Ok");
-                        m_script = null;                       
+                        m_Script = null;                       
                     }
                     else if (!typeof(IHostingService).IsAssignableFrom(scriptType))
                     {
                         EditorUtility.DisplayDialog("Error", "Selected script does not implement the IHostingService interface", "Ok");
-                        m_script = null;
+                        m_Script = null;
                     }
                     else
                     {
-                        m_script = script;
+                        m_Script = script;
                     }
                 }
             }
 
-            m_name = EditorGUILayout.TextField("Descriptive Name", m_name);
+            m_HostingName = EditorGUILayout.TextField("Descriptive EventName", m_HostingName);
 
             EditorGUILayout.BeginHorizontal();
             {
@@ -95,18 +95,18 @@ namespace UnityEditor.AddressableAssets
                     FocusWindowIfItsOpen<HostingServicesWindow>();
                 }
 
-                var okDisabled = string.IsNullOrEmpty(m_name) || (m_useCustomScript && m_script == null);
+                var okDisabled = string.IsNullOrEmpty(m_HostingName) || (m_UseCustomScript && m_Script == null);
                 using (new EditorGUI.DisabledGroupScope(okDisabled))
                 {
                     if (GUILayout.Button("Add", GUILayout.MaxWidth(75f)))
                     {
                         try
                         {
-                            var t = m_useCustomScript && m_script != null
-                                ? m_script.GetClass()
-                                : m_serviceTypes[m_serviceTypeIndex];
+                            var t = m_UseCustomScript && m_Script != null
+                                ? m_Script.GetClass()
+                                : m_ServiceTypes[m_ServiceTypeIndex];
 
-                            m_settings.HostingServicesManager.AddHostingService(t, m_name);
+                            m_Settings.HostingServicesManager.AddHostingService(t, m_HostingName);
                         }
                         finally
                         {
@@ -119,7 +119,7 @@ namespace UnityEditor.AddressableAssets
             EditorGUILayout.EndHorizontal();
         }
 
-        private void OnEnable()
+        void OnEnable()
         {
             PopulateServiceTypes();
         }

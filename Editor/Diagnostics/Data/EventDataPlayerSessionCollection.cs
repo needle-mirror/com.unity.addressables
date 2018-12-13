@@ -5,22 +5,22 @@ using UnityEngine.ResourceManagement.Diagnostics;
 namespace UnityEditor.AddressableAssets.Diagnostics
 {
     [Serializable]
-    internal class EventDataPlayerSessionCollection
+    class EventDataPlayerSessionCollection
     {
-        List<EventDataPlayerSession> m_playerSessions = new List<EventDataPlayerSession>();
-        Action<EventDataPlayerSession, DiagnosticEvent, bool> m_onEvent;
-        Func<DiagnosticEvent, bool> m_onRecordEvent;
+        List<EventDataPlayerSession> m_PlayerSessions = new List<EventDataPlayerSession>();
+        Action<EventDataPlayerSession, DiagnosticEvent, bool> m_OnEvent;
+        Func<DiagnosticEvent, bool> m_OnRecordEvent;
 
         public EventDataPlayerSessionCollection(Action<EventDataPlayerSession, DiagnosticEvent, bool> onEvent, Func<DiagnosticEvent, bool> onRecordEvent)
         {
-            m_onEvent = onEvent;
-            m_onRecordEvent = onRecordEvent;
+            m_OnEvent = onEvent;
+            m_OnRecordEvent = onRecordEvent;
         }
 
         bool RecordEvent(DiagnosticEvent e)
         {
-            if (m_onRecordEvent != null)
-                return m_onRecordEvent(e);
+            if (m_OnRecordEvent != null)
+                return m_OnRecordEvent(e);
             return false;
         }
 
@@ -29,26 +29,26 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             var session = GetPlayerSession(sessionId, true);
             bool entryCreated = false;
             session.AddSample(diagnosticEvent, RecordEvent(diagnosticEvent), ref entryCreated);
-            m_onEvent(session, diagnosticEvent, entryCreated);
+            m_OnEvent(session, diagnosticEvent, entryCreated);
         }
 
         public EventDataPlayerSession GetSessionByIndex(int index)
         {
-            if (m_playerSessions.Count == 0 || m_playerSessions.Count <= index)
+            if (m_PlayerSessions.Count == 0 || m_PlayerSessions.Count <= index)
                 return null;
 
-            return m_playerSessions[index];
+            return m_PlayerSessions[index];
         }
 
         public EventDataPlayerSession GetPlayerSession(int playerId, bool create)
         {
-            foreach (var c in m_playerSessions)
+            foreach (var c in m_PlayerSessions)
                 if (c.PlayerId == playerId)
                     return c;
             if (create)
             {
                 var c = new EventDataPlayerSession("Player " + playerId, playerId);
-                m_playerSessions.Add(c);
+                m_PlayerSessions.Add(c);
                 return c;
             }
             return null;
@@ -56,15 +56,15 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         public string[] GetConnectionNames()
         {
-            string[] names = new string[m_playerSessions.Count];// + 1];
-            for (int i = 0; i < m_playerSessions.Count; i++)
-                names[i] = m_playerSessions[i].Name;
+            string[] names = new string[m_PlayerSessions.Count];// + 1];
+            for (int i = 0; i < m_PlayerSessions.Count; i++)
+                names[i] = m_PlayerSessions[i].EventName;
             return names;
         }
 
         public void AddSession(string name, int id)
         {
-            m_playerSessions.Add(new EventDataPlayerSession(name, id));
+            m_PlayerSessions.Add(new EventDataPlayerSession(name, id));
         }
     }
 }

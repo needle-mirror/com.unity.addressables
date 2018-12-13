@@ -22,7 +22,7 @@ Virtual mode analyzes content for layout and dependencies without creating Asset
 
 Virtual mode helps you simulate load strategies and tweak your content groups to find that right balance for a production release.
 
-Packed mode fully packs content and creates Asset bundles on disk. This mode takes the most time to prepare and provides the most accurate behavior for resource loading.
+Packed mode uses asset bundles that have already been built. This mode will most closely match a deployed player build but it requires the data to be built as a separate step.  If assets are not being modified, this mode will be the fastest since it does not process any data when entering play mode.  To build the content to be used by this mode, you must either select _Build->Build Player Content_ in the __Addressables__ window or use the `AddressableAssetSettings.BuildPlayerContent()` API.
 
 Each mode has its own time and place during development and deployment.
 

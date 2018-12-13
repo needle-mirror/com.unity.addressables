@@ -1,38 +1,35 @@
-﻿using UnityEngine;
-using System;
-using UnityEditor.IMGUI.Controls;
+﻿using System;
 using System.Collections.Generic;
-using UnityEngine.AddressableAssets;
-using System.Linq;
-using UnityEngine.ResourceManagement;
 using System.Reflection;
+using UnityEngine;
+using UnityEngine.ResourceManagement;
 
 namespace UnityEditor.AddressableAssets
 {
     [CustomPropertyDrawer(typeof(SerializedType), true)]
     public class SerializedTypeDrawer : PropertyDrawer
     {
-        List<Type> m_types;
-        FieldInfo m_fieldInfo;
-        SerializedProperty m_property;
+        List<Type> m_Types;
+        FieldInfo m_SerializedFieldInfo;
+        SerializedProperty m_Property;
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             label.text = ObjectNames.NicifyVariableName(property.propertyPath);
-            m_property = property;
-            if (m_fieldInfo == null)
-                m_fieldInfo = GetFieldInfo(property);
-            if (m_types == null)
-                m_types = GetTypes(m_fieldInfo);
+            m_Property = property;
+            if (m_SerializedFieldInfo == null)
+                m_SerializedFieldInfo = GetFieldInfo(property);
+            if (m_Types == null)
+                m_Types = GetTypes(m_SerializedFieldInfo);
 
             EditorGUI.BeginProperty(position, label, property);
             var smallPos = EditorGUI.PrefixLabel(position, label);
-            var st = (SerializedType)m_fieldInfo.GetValue(property.serializedObject.targetObject);
+            var st = (SerializedType)m_SerializedFieldInfo.GetValue(property.serializedObject.targetObject);
             if (EditorGUI.DropdownButton(smallPos, new GUIContent(st.ToString()), FocusType.Keyboard))
             {
                 var menu = new GenericMenu();
-                for (int i = 0; i < m_types.Count; i++)
+                for (int i = 0; i < m_Types.Count; i++)
                 {
-                    var type = m_types[i];
+                    var type = m_Types[i];
                     menu.AddItem(new GUIContent(type.Name, ""), false, OnSetType, type);
                 }
                 menu.ShowAsContext();
@@ -43,10 +40,10 @@ namespace UnityEditor.AddressableAssets
 
         void OnSetType(object context)
         {
-            Undo.RecordObject(m_property.serializedObject.targetObject, "Set Serialized Type");
+            Undo.RecordObject(m_Property.serializedObject.targetObject, "Set Serialized Type");
             var type = context as Type;
-            m_fieldInfo.SetValue(m_property.serializedObject.targetObject, new SerializedType() { Value = type });
-            EditorUtility.SetDirty(m_property.serializedObject.targetObject);
+            m_SerializedFieldInfo.SetValue(m_Property.serializedObject.targetObject, new SerializedType { Value = type });
+            EditorUtility.SetDirty(m_Property.serializedObject.targetObject);
         }
 
         static FieldInfo GetFieldInfo(SerializedProperty property)
@@ -63,7 +60,7 @@ namespace UnityEditor.AddressableAssets
         static List<Type> GetTypes(FieldInfo fieldInfo)
         {
             var attrs = fieldInfo.GetCustomAttributes(typeof(SerializedTypeRestrictionAttribute), false);
-            if (attrs.Length == 0)
+            if (attrs.Length == 0 || !(attrs[0] is SerializedTypeRestrictionAttribute))
                 return null;
             return AddressableAssetUtility.GetTypes((attrs[0] as SerializedTypeRestrictionAttribute).type);
         }

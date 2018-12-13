@@ -1,39 +1,44 @@
+using System;
 using System.IO;
-using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
-    internal class ProjectConfigData
+    class ProjectConfigData
     {
-        [System.Serializable]
-        private class ConfigSaveData
+        [Serializable]
+        class ConfigSaveData
         {
+            [FormerlySerializedAs("m_postProfilerEvents")]
             [SerializeField]
-            internal bool m_postProfilerEvents = false;
+            internal bool postProfilerEventsInternal;
+            [FormerlySerializedAs("m_localLoadSpeed")]
             [SerializeField]
-            internal long m_localLoadSpeed = 1024 * 1024 * 10;
+            internal long localLoadSpeedInternal = 1024 * 1024 * 10;
+            [FormerlySerializedAs("m_remoteLoadSpeed")]
             [SerializeField]
-            internal long m_remoteLoadSpeed = 1024 * 1024 * 1;
+            internal long remoteLoadSpeedInternal = 1024 * 1024 * 1;
+            [FormerlySerializedAs("m_hierarchicalSearch")]
             [SerializeField]
-            internal bool m_hierarchicalSearch = false;
+            internal bool hierarchicalSearchInternal;
         }
-        private static ConfigSaveData s_data = null;
 
+        static ConfigSaveData s_Data;
 
         internal static bool postProfilerEvents
         {
             get
             {
                 ValidateData();
-                return s_data.m_postProfilerEvents;
+                return s_Data.postProfilerEventsInternal;
             }
             set
             {
                 ValidateData();
-                s_data.m_postProfilerEvents = value;
+                s_Data.postProfilerEventsInternal = value;
                 SaveData();
             }
         }
@@ -42,12 +47,12 @@ namespace UnityEditor.AddressableAssets
             get
             {
                 ValidateData();
-                return s_data.m_localLoadSpeed;
+                return s_Data.localLoadSpeedInternal;
             }
             set
             {
                 ValidateData();
-                s_data.m_localLoadSpeed = value;
+                s_Data.localLoadSpeedInternal = value;
                 SaveData();
             }
         }
@@ -56,12 +61,12 @@ namespace UnityEditor.AddressableAssets
             get
             {
                 ValidateData();
-                return s_data.m_remoteLoadSpeed;
+                return s_Data.remoteLoadSpeedInternal;
             }
             set
             {
                 ValidateData();
-                s_data.m_remoteLoadSpeed = value;
+                s_Data.remoteLoadSpeedInternal = value;
                 SaveData();
             }
         }
@@ -70,12 +75,12 @@ namespace UnityEditor.AddressableAssets
             get
             {
                 ValidateData();
-                return s_data.m_hierarchicalSearch;
+                return s_Data.hierarchicalSearchInternal;
             }
             set
             {
                 ValidateData();
-                s_data.m_hierarchicalSearch = value;
+                s_Data.hierarchicalSearchInternal = value;
                 SaveData();
             }
         }
@@ -84,14 +89,14 @@ namespace UnityEditor.AddressableAssets
         {
             ValidateData();
             BinaryFormatter formatter = new BinaryFormatter();
-            formatter.Serialize(stream, s_data);
+            formatter.Serialize(stream, s_Data);
         }
 
-        private static void ValidateData()
+        static void ValidateData()
         {
-            if (s_data == null)
+            if (s_Data == null)
             {
-                var dataPath = System.IO.Path.GetFullPath(".");
+                var dataPath = Path.GetFullPath(".");
                 dataPath = dataPath.Replace("\\", "/");
                 dataPath += "/Library/AddressablesConfig.dat";
 
@@ -105,7 +110,7 @@ namespace UnityEditor.AddressableAssets
                             var data = bf.Deserialize(file) as ConfigSaveData;
                             if (data != null)
                             {
-                                s_data = data;
+                                s_Data = data;
                             }
                         }
                     }
@@ -113,20 +118,21 @@ namespace UnityEditor.AddressableAssets
                     {
                         //if the current class doesn't match what's in the file, Deserialize will throw. since this data is non-critical, we just wipe it
                         Addressables.LogWarning("Error reading Addressable Asset project config (play mode, etc.). Resetting to default.");
-                        System.IO.File.Delete(dataPath);
+                        File.Delete(dataPath);
                     }
                 }
 
                 //check if some step failed.
-                if (s_data == null)
+                if (s_Data == null)
                 {
-                    s_data = new ConfigSaveData();
+                    s_Data = new ConfigSaveData();
                 }
             }
         }
-        private static void SaveData()
+
+        static void SaveData()
         {
-            if (s_data == null)
+            if (s_Data == null)
                 return;
 
             var dataPath = Path.GetFullPath(".");
@@ -136,7 +142,7 @@ namespace UnityEditor.AddressableAssets
             BinaryFormatter bf = new BinaryFormatter();
             FileStream file = File.Create(dataPath);
 
-            bf.Serialize(file, s_data);
+            bf.Serialize(file, s_Data);
             file.Close();
         }
     }

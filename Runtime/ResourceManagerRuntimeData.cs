@@ -1,82 +1,92 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine.ResourceManagement;
-using System;
-using System.IO;
-
+using UnityEngine.Serialization;
 
 namespace UnityEngine.AddressableAssets
 {
     /// <summary>
     /// Runtime data that is used to initialize the Addressables system.
     /// </summary>
+    [Serializable]
     public class ResourceManagerRuntimeData
     {
+        [FormerlySerializedAs("m_settingsHash")]
         [SerializeField]
-        string m_settingsHash;
+        string m_SettingsHash;
         /// <summary>
         /// The hash of the settings that generated this runtime data.
         /// </summary>
-        public string SettingsHash { get { return m_settingsHash; } set { m_settingsHash = value; } }
+        public string SettingsHash { get { return m_SettingsHash; } set { m_SettingsHash = value; } }
+        [FormerlySerializedAs("m_catalogLocations")]
         [SerializeField]
-        List<ResourceLocationData> m_catalogLocations = new List<ResourceLocationData>();
+        List<ResourceLocationData> m_CatalogLocations = new List<ResourceLocationData>();
         /// <summary>
         /// List of catalog locations to download in order (try remote first, then local)
         /// </summary>
-        public List<ResourceLocationData> CatalogLocations { get { return m_catalogLocations; } }
+        public List<ResourceLocationData> CatalogLocations { get { return m_CatalogLocations; } }
+        [FormerlySerializedAs("m_profileEvents")]
         [SerializeField]
-        bool m_profileEvents = false;
+        bool m_ProfileEvents;
         /// <summary>
         /// Flag to control whether the ResourceManager sends profiler events.
         /// </summary>
-        public bool ProfileEvents { get { return m_profileEvents; } set { m_profileEvents = value; } }
+        public bool ProfileEvents { get { return m_ProfileEvents; } set { m_ProfileEvents = value; } }
 
+        [FormerlySerializedAs("m_logResourceManagerExceptions")]
         [SerializeField]
-        bool m_logResourceManagerExceptions = true;
+        bool m_LogResourceManagerExceptions = true;
         /// <summary>
         /// When enabled, the ResourceManager.ExceptionHandler is set to (op, ex) => Debug.LogException(ex);
         /// </summary>
-        public bool LogResourceManagerExceptions { get { return m_logResourceManagerExceptions; } set { m_logResourceManagerExceptions = value; } }
+        public bool LogResourceManagerExceptions { get { return m_LogResourceManagerExceptions; } set { m_LogResourceManagerExceptions = value; } }
 
+        [FormerlySerializedAs("m_usePooledInstanceProvider")]
         [SerializeField]
-        bool m_usePooledInstanceProvider = false;
+        bool m_UsePooledInstanceProvider;
         /// <summary>
         ///  obsolete - this will be refactored out of here.
         /// </summary>
         [Obsolete("This data has been moved to the ResourceProviderData for the instance provider.")]
-        public bool UsePooledInstanceProvider { get { return m_usePooledInstanceProvider; } set { m_usePooledInstanceProvider = value; } }
+        public bool UsePooledInstanceProvider { get { return m_UsePooledInstanceProvider; } set { m_UsePooledInstanceProvider = value; } }
 
+        [FormerlySerializedAs("m_assetCacheSize")]
         [SerializeField]
-        int m_assetCacheSize = 25;
+        int m_AssetCacheSize = 25;
         /// <summary>
         /// obsolete - this will be refactored out of here.
         /// </summary>
         [Obsolete("This data has been moved to the ResourceProviderData for each provider.")]
-        public int AssetCacheSize { get { return m_assetCacheSize; } set { m_assetCacheSize = value; } }
+        public int AssetCacheSize { get { return m_AssetCacheSize; } set { m_AssetCacheSize = value; } }
+         [FormerlySerializedAs("m_assetCacheAge")]
          [SerializeField]
-        float m_assetCacheAge = 5;
+        float m_AssetCacheAge = 5;
         /// <summary>
         /// obsolete - this will be refactored out of here.
         /// </summary>
         [Obsolete("This data has been moved to the ResourceProviderData for each provider.")]
-        public float AssetCacheAge { get { return m_assetCacheAge; } set { m_assetCacheAge = value; } }
+        public float AssetCacheAge { get { return m_AssetCacheAge; } set { m_AssetCacheAge = value; } }
+        [FormerlySerializedAs("m_bundleCacheSize")]
         [SerializeField]
-        int m_bundleCacheSize = 5;
+        int m_BundleCacheSize = 5;
         /// <summary>
         /// obsolete - this will be refactored out of here.
         /// </summary>
         [Obsolete("This data has been moved to the ResourceProviderData for each provider.")]
-        public int BundleCacheSize { get { return m_bundleCacheSize; } set { m_bundleCacheSize = value; } }
+        public int BundleCacheSize { get { return m_BundleCacheSize; } set { m_BundleCacheSize = value; } }
 
+        [FormerlySerializedAs("m_bundleCacheAge")]
         [SerializeField]
-        float m_bundleCacheAge = 5;
+        float m_BundleCacheAge = 5;
         /// <summary>
         /// obsolete - this will be refactored out of here.
         /// </summary>
         [Obsolete("This data has been moved to the ResourceProviderData for each provider.")]
-        public float BundleCacheAge { get { return m_bundleCacheAge; } set { m_bundleCacheAge = value; } }
+        public float BundleCacheAge { get { return m_BundleCacheAge; } set { m_BundleCacheAge = value; } }
 
+        [FormerlySerializedAs("m_instanceProviderData")]
         [SerializeField]
-        ObjectInitializationData m_instanceProviderData;
+        ObjectInitializationData m_InstanceProviderData;
         /// <summary>
         /// Data for the ResourceManager.InstanceProvider initialization;
         /// </summary>
@@ -84,16 +94,17 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
-                return m_instanceProviderData;
+                return m_InstanceProviderData;
             }
             set
             {
-                m_instanceProviderData = value;
+                m_InstanceProviderData = value;
             }
         }
 
+        [FormerlySerializedAs("m_sceneProviderData")]
         [SerializeField]
-        ObjectInitializationData m_sceneProviderData;
+        ObjectInitializationData m_SceneProviderData;
         /// <summary>
         /// Data for the ResourceManager.SceneProvider initialization.
         /// </summary>
@@ -101,26 +112,28 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
-                return m_sceneProviderData;
+                return m_SceneProviderData;
             }
             set
             {
-                m_sceneProviderData = value;
+                m_SceneProviderData = value;
             }
         }
 
+        [FormerlySerializedAs("m_resourceProviderData")]
         [SerializeField]
-        List<ObjectInitializationData> m_resourceProviderData = new List<ObjectInitializationData>();
+        List<ObjectInitializationData> m_ResourceProviderData = new List<ObjectInitializationData>();
         /// <summary>
         /// The list of resource provider data.  Each entry will add an IResourceProvider to the ResourceManager.ResourceProviders list.
         /// </summary>
-        public List<ObjectInitializationData> ResourceProviderData { get { return m_resourceProviderData; } }
+        public List<ObjectInitializationData> ResourceProviderData { get { return m_ResourceProviderData; } }
 
+        [FormerlySerializedAs("m_extraInitializationData")]
         [SerializeField]
-        List<ObjectInitializationData> m_extraInitializationData = new List<ObjectInitializationData>();
+        List<ObjectInitializationData> m_ExtraInitializationData = new List<ObjectInitializationData>();
         /// <summary>
         /// The list of initialization data.  These objects will get deserialized and initialized during the Addressables initialization process.  This happens after resource providers have been set up but before any catalogs are loaded.
         /// </summary>
-        public List<ObjectInitializationData> InitializationObjects { get { return m_extraInitializationData; } }
+        public List<ObjectInitializationData> InitializationObjects { get { return m_ExtraInitializationData; } }
     }
 }

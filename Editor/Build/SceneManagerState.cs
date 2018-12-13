@@ -1,8 +1,9 @@
-using UnityEditor.SceneManagement;
 using System;
-using System.IO;
-using UnityEngine;
 using System.Collections.Generic;
+using System.IO;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -15,47 +16,52 @@ namespace UnityEditor.AddressableAssets
         [Serializable]
         internal class SceneState
         {
+            [FormerlySerializedAs("m_isActive")]
             [SerializeField]
-            internal bool m_isActive;
+            internal bool isActive;
+            [FormerlySerializedAs("m_isLoaded")]
             [SerializeField]
-            internal bool m_isLoaded;
+            internal bool isLoaded;
+            [FormerlySerializedAs("m_path")]
             [SerializeField]
-            internal string m_path;
+            internal string path;
 
             internal SceneState() { }
             internal SceneState(SceneSetup s)
             {
-                m_isActive = s.isActive;
-                m_isLoaded = s.isLoaded;
-                m_path = s.path;
+                isActive = s.isActive;
+                isLoaded = s.isLoaded;
+                path = s.path;
             }
 
             internal SceneSetup ToSceneSetup()
             {
                 var ss = new SceneSetup();
-                ss.isActive = m_isActive;
-                ss.isLoaded = m_isLoaded;
-                ss.path = m_path;
+                ss.isActive = isActive;
+                ss.isLoaded = isLoaded;
+                ss.path = path;
                 return ss;
             }
         }
 
         [Serializable]
-        internal class EBSSceneState
+        internal class EbsSceneState
         {
+            [FormerlySerializedAs("m_guid")]
             [SerializeField]
-            internal string m_guid;
+            internal string guid;
+            [FormerlySerializedAs("m_enabled")]
             [SerializeField]
-            internal bool m_enabled;
-            internal EBSSceneState() { }
-            internal EBSSceneState(EditorBuildSettingsScene s) { m_guid = s.guid.ToString(); m_enabled = s.enabled; }
-            internal EditorBuildSettingsScene GetBuildSettingsScene() { return new EditorBuildSettingsScene(new GUID(m_guid), m_enabled); }
+            internal bool enabled;
+            internal EbsSceneState() { }
+            internal EbsSceneState(EditorBuildSettingsScene s) { guid = s.guid.ToString(); enabled = s.enabled; }
+            internal EditorBuildSettingsScene GetBuildSettingsScene() { return new EditorBuildSettingsScene(new GUID(guid), enabled); }
         }
 
         [SerializeField]
         internal SceneState[] openSceneState;
         [SerializeField]
-        internal EBSSceneState[] editorBuildSettingsSceneState;
+        internal EbsSceneState[] editorBuildSettingsSceneState;
 
         static SceneManagerState Create(SceneSetup[] scenes)
         {
@@ -64,9 +70,9 @@ namespace UnityEditor.AddressableAssets
             foreach (var s in scenes)
                 scenesList.Add(new SceneState(s));
             state.openSceneState = scenesList.ToArray();
-            var edbss = new List<EBSSceneState>();
+            var edbss = new List<EbsSceneState>();
             foreach (var s in EditorBuildSettings.scenes)
-                edbss.Add(new EBSSceneState(s));
+                edbss.Add(new EbsSceneState(s));
             state.editorBuildSettingsSceneState = edbss.ToArray();
             return state;
         }
@@ -79,7 +85,7 @@ namespace UnityEditor.AddressableAssets
             return setups.ToArray();
         }
 
-        private EditorBuildSettingsScene[] GetEditorBuildSettingScenes()
+        EditorBuildSettingsScene[] GetEditorBuildSettingScenes()
         {
             var scenes = new List<EditorBuildSettingsScene>();
             foreach (var s in editorBuildSettingsSceneState)
@@ -87,17 +93,17 @@ namespace UnityEditor.AddressableAssets
             return scenes.ToArray();
         }
 
-        const string defaultPath = "Library/com.unity.addressables/SceneManagerState.json";
+        const string k_DefaultPath = "Library/com.unity.addressables/SceneManagerState.json";
         /// <summary>
         /// Record the state of the EditorSceneManager and save to a JSON file.
         /// </summary>
         /// <param name="path">The path to save the recorded state.</param>
-        public static void Record(string path = defaultPath)
+        public static void Record(string path = k_DefaultPath)
         {
             try
             {
                 var dir = Path.GetDirectoryName(path);
-                if (!Directory.Exists(dir))
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
                 File.WriteAllText(path, JsonUtility.ToJson(Create(EditorSceneManager.GetSceneManagerSetup())));
             }
@@ -127,7 +133,7 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         /// <param name="path">The path to load the state data from.  This file is generated by calling SceneManagerState.Record.</param>
         /// <param name="restoreSceneManagerSetup">If true, the recorded active scenes are restored. EditorBuildSettings.scenes are always restored.</param>
-        public static void Restore(string path = defaultPath, bool restoreSceneManagerSetup = false)
+        public static void Restore(string path = k_DefaultPath, bool restoreSceneManagerSetup = false)
         {
             try
             {

@@ -1,26 +1,28 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Text;
 using UnityEngine;
 
 namespace UnityEngine.AddressableAssets
 {
-    internal static class SerializationUtilities
+    static class SerializationUtilities
     {
         internal enum ObjectType
         {
-            ASCIIString,
+            AsciiString,
             UnicodeString,
             UInt16,
             UInt32,
             Int32,
             Hash128,
+            Type,
             JsonObject
         }
 
         internal static int ReadInt32FromByteArray(byte[] data, int offset)
         {
-            return ((int)data[offset]) | (((int)data[offset + 1]) << 8) | (((int)data[offset + 2]) << 16) | (((int)data[offset + 3]) << 24);
+            return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24);
         }
 
         internal static int WriteInt32ToByteArray(byte[] data, int val, int offset)
@@ -49,32 +51,33 @@ namespace UnityEngine.AddressableAssets
                     case ObjectType.UnicodeString:
                         {
                             var dataLength = BitConverter.ToInt32(keyData, dataIndex);
-                            return System.Text.Encoding.Unicode.GetString(keyData, dataIndex + 4, dataLength);
+                            return Encoding.Unicode.GetString(keyData, dataIndex + 4, dataLength);
                         }
-                    case ObjectType.ASCIIString:
+                    case ObjectType.AsciiString:
                         {
                             var dataLength = BitConverter.ToInt32(keyData, dataIndex);
-                            return System.Text.Encoding.ASCII.GetString(keyData, dataIndex + 4, dataLength);
+                            return Encoding.ASCII.GetString(keyData, dataIndex + 4, dataLength);
                         }
                     case ObjectType.UInt16: return BitConverter.ToUInt16(keyData, dataIndex);
                     case ObjectType.UInt32: return BitConverter.ToUInt32(keyData, dataIndex);
                     case ObjectType.Int32: return BitConverter.ToInt32(keyData, dataIndex);
-                    case ObjectType.Hash128: return Hash128.Parse(System.Text.Encoding.ASCII.GetString(keyData, dataIndex + 1, keyData[dataIndex]));
+                    case ObjectType.Hash128: return Hash128.Parse(Encoding.ASCII.GetString(keyData, dataIndex + 1, keyData[dataIndex]));
+                    case ObjectType.Type: return Type.GetTypeFromCLSID(new Guid(Encoding.ASCII.GetString(keyData, dataIndex + 1, keyData[dataIndex])));
                     case ObjectType.JsonObject:
                         {
                             int assemblyNameLength = keyData[dataIndex];
                             dataIndex++;
-                            string assemblyName = System.Text.Encoding.ASCII.GetString(keyData, dataIndex, assemblyNameLength);
+                            string assemblyName = Encoding.ASCII.GetString(keyData, dataIndex, assemblyNameLength);
                             dataIndex += assemblyNameLength;
 
                             int classNameLength = keyData[dataIndex];
                             dataIndex++;
-                            string className = System.Text.Encoding.ASCII.GetString(keyData, dataIndex, classNameLength);
+                            string className = Encoding.ASCII.GetString(keyData, dataIndex, classNameLength);
                             dataIndex += classNameLength;
                             int jsonLength = BitConverter.ToInt32(keyData, dataIndex);
                             dataIndex += 4;
-                            string jsonText = System.Text.Encoding.Unicode.GetString(keyData, dataIndex, jsonLength);
-                            var assembly = System.Reflection.Assembly.Load(assemblyName);
+                            string jsonText = Encoding.Unicode.GetString(keyData, dataIndex, jsonLength);
+                            var assembly = Assembly.Load(assemblyName);
                             var t = assembly.GetType(className);
                             return JsonUtility.FromJson(jsonText, t);
                         }
@@ -99,91 +102,106 @@ namespace UnityEngine.AddressableAssets
             if (objectType == typeof(string))
             {
                 string str = obj as string;
-                byte[] tmp = System.Text.Encoding.Unicode.GetBytes(str);
-                byte[] tmp2 = System.Text.Encoding.ASCII.GetBytes(str);
-                if (System.Text.Encoding.Unicode.GetString(tmp) == System.Text.Encoding.ASCII.GetString(tmp2))
+                if (str == null)
+                    str = string.Empty;
+                byte[] tmp = Encoding.Unicode.GetBytes(str);
+                byte[] tmp2 = Encoding.ASCII.GetBytes(str);
+                if (Encoding.Unicode.GetString(tmp) == Encoding.ASCII.GetString(tmp2))
                 {
-                    buffer.Add((byte)ObjectType.ASCIIString);
+                    buffer.Add((byte)ObjectType.AsciiString);
                     buffer.AddRange(BitConverter.GetBytes(tmp2.Length));
                     buffer.AddRange(tmp2);
                     return tmp2.Length + 5;
                 }
-                else
-                {
-                    buffer.Add((byte)ObjectType.UnicodeString);
-                    buffer.AddRange(BitConverter.GetBytes(tmp.Length));
-                    buffer.AddRange(tmp);
-                    return tmp.Length + 5;
-                }
+
+                buffer.Add((byte)ObjectType.UnicodeString);
+                buffer.AddRange(BitConverter.GetBytes(tmp.Length));
+                buffer.AddRange(tmp);
+                return tmp.Length + 5;
             }
-            else if (objectType == typeof(UInt32))
+
+            if (objectType == typeof(UInt32))
             {
                 byte[] tmp = BitConverter.GetBytes((UInt32)obj);
                 buffer.Add((byte)ObjectType.UInt32);
                 buffer.AddRange(tmp);
                 return tmp.Length + 1;
             }
-            else if (objectType == typeof(UInt16))
+
+            if (objectType == typeof(UInt16))
             {
                 byte[] tmp = BitConverter.GetBytes((UInt16)obj);
                 buffer.Add((byte)ObjectType.UInt16);
                 buffer.AddRange(tmp);
                 return tmp.Length + 1;
             }
-            else if (objectType == typeof(Int32))
+
+            if (objectType == typeof(Int32))
             {
                 byte[] tmp = BitConverter.GetBytes((Int32)obj);
                 buffer.Add((byte)ObjectType.Int32);
                 buffer.AddRange(tmp);
                 return tmp.Length + 1;
             }
-            else if (objectType == typeof(int))
+
+            if (objectType == typeof(int))
             {
                 byte[] tmp = BitConverter.GetBytes((UInt32)obj);
                 buffer.Add((byte)ObjectType.UInt32);
                 buffer.AddRange(tmp);
                 return tmp.Length + 1;
             }
-            else if (objectType == typeof(Hash128))
+
+            if (objectType == typeof(Hash128))
             {
                 var guid = (Hash128)obj;
-                byte[] tmp = System.Text.Encoding.ASCII.GetBytes(guid.ToString());
+                byte[] tmp = Encoding.ASCII.GetBytes(guid.ToString());
                 buffer.Add((byte)ObjectType.Hash128);
                 buffer.Add((byte)tmp.Length);
                 buffer.AddRange(tmp);
                 return tmp.Length + 2;
             }
-            else
+
+            if (objectType == typeof(Type))
             {
-                var attrs = objectType.GetCustomAttributes(typeof(System.SerializableAttribute), true);
-                if (attrs == null || attrs.Length == 0)
-                    return 0;
-                int length = 0;
-                buffer.Add((byte)ObjectType.JsonObject);
-                length++;
-
-                //write assembly name
-                byte[] tmpAssemblyName = System.Text.Encoding.ASCII.GetBytes(objectType.Assembly.FullName);
-                buffer.Add((byte)tmpAssemblyName.Length);
-                length++;
-                buffer.AddRange(tmpAssemblyName);
-                length += tmpAssemblyName.Length;
-
-                //write class name
-                byte[] tmpClassName = System.Text.Encoding.ASCII.GetBytes(objectType.FullName);
-                buffer.Add((byte)tmpClassName.Length);
-                length++;
-                buffer.AddRange(tmpClassName);
-                length += tmpClassName.Length;
-
-                //write json data
-                byte[] tmpJson = System.Text.Encoding.Unicode.GetBytes(JsonUtility.ToJson(obj));
-                buffer.AddRange(BitConverter.GetBytes((Int32)tmpJson.Length));
-                length += 4;
-                buffer.AddRange(tmpJson);
-                length += tmpJson.Length;
-                return length;
+                byte[] tmp = objectType.GUID.ToByteArray();
+                buffer.Add((byte)ObjectType.Type);
+                buffer.Add((byte)tmp.Length);
+                buffer.AddRange(tmp);
+                return tmp.Length + 2;
             }
+
+            var attrs = objectType.GetCustomAttributes(typeof(SerializableAttribute), true);
+            if (attrs.Length == 0)
+                return 0;
+            int length = 0;
+            buffer.Add((byte)ObjectType.JsonObject);
+            length++;
+
+            //write assembly name
+            byte[] tmpAssemblyName = Encoding.ASCII.GetBytes(objectType.Assembly.FullName);
+            buffer.Add((byte)tmpAssemblyName.Length);
+            length++;
+            buffer.AddRange(tmpAssemblyName);
+            length += tmpAssemblyName.Length;
+
+            //write class name
+            var objName = objectType.FullName;
+            if (objName == null)
+                objName = string.Empty;
+            byte[] tmpClassName = Encoding.ASCII.GetBytes(objName);
+            buffer.Add((byte)tmpClassName.Length);
+            length++;
+            buffer.AddRange(tmpClassName);
+            length += tmpClassName.Length;
+
+            //write json data
+            byte[] tmpJson = Encoding.Unicode.GetBytes(JsonUtility.ToJson(obj));
+            buffer.AddRange(BitConverter.GetBytes(tmpJson.Length));
+            length += 4;
+            buffer.AddRange(tmpJson);
+            length += tmpJson.Length;
+            return length;
         }
 
     }

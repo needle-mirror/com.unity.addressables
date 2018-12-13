@@ -1,19 +1,22 @@
-﻿using NUnit.Framework;
-using UnityEngine;
-using UnityEditor;
-using UnityEditor.AddressableAssets;
-using UnityEngine.AddressableAssets;
+﻿using System;
 using System.Collections.Generic;
-using UnityEngine.ResourceManagement;
+using System.Diagnostics;
 using System.Linq;
-using System.Collections;
+using System.Text;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement;
+using Debug = UnityEngine.Debug;
+using Random = UnityEngine.Random;
 
 public class ContentCatalogTests
 {
-    List<object> keys;
-    List<System.Type> providers;
+    List<object> m_Keys;
+    List<Type> m_Providers;
 
-    [System.Serializable]
+    [Serializable]
     public class SerializableKey
     {
         public int index;
@@ -23,8 +26,8 @@ public class ContentCatalogTests
     [OneTimeSetUp]
     public void Init()
     {
-        keys = new List<object>();
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        m_Keys = new List<object>();
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 1000; i++)
         {
             var r = Random.Range(0, 100);
@@ -33,38 +36,38 @@ public class ContentCatalogTests
                 int len = Random.Range(1, 5);
                 for (int j = 0; j < len; j++)
                     sb.Append(GUID.Generate().ToString());
-                keys.Add(sb.ToString());
+                m_Keys.Add(sb.ToString());
                 sb.Length = 0;
             }
             else if (r < 40)
             {
-                keys.Add((ushort)(i * 13));
+                m_Keys.Add((ushort)(i * 13));
             }
             else if (r < 50)
             {
-                keys.Add((int)(i * 13));
+                m_Keys.Add(i * 13);
             }
             else if (r < 60)
             {
-                keys.Add((uint)(i * 13));
+                m_Keys.Add((uint)(i * 13));
             }
             else if (r < 80)
             {
-                keys.Add(new SerializableKey() { index = i, path = GUID.Generate().ToString() });
+                m_Keys.Add(new SerializableKey { index = i, path = GUID.Generate().ToString() });
             }
             else
             {
-                keys.Add(Hash128.Parse(GUID.Generate().ToString()));
+                m_Keys.Add(Hash128.Parse(GUID.Generate().ToString()));
             }
         }
-        providers = new List<System.Type>();
-        providers.Add(typeof(BundledAssetProvider));
-        providers.Add(typeof(AssetBundleProvider));
-        providers.Add(typeof(AssetDatabaseProvider));
-        providers.Add(typeof(LegacyResourcesProvider));
-        providers.Add(typeof(JsonAssetProvider));
-        providers.Add(typeof(RawDataProvider));
-        providers.Add(typeof(TextDataProvider));
+        m_Providers = new List<Type>();
+        m_Providers.Add(typeof(BundledAssetProvider));
+        m_Providers.Add(typeof(AssetBundleProvider));
+        m_Providers.Add(typeof(AssetDatabaseProvider));
+        m_Providers.Add(typeof(LegacyResourcesProvider));
+        m_Providers.Add(typeof(JsonAssetProvider));
+        m_Providers.Add(typeof(RawDataProvider));
+        m_Providers.Add(typeof(TextDataProvider));
     }
 
     List<T> GetRandomSubset<T>(List<T> keys, int count)
@@ -77,14 +80,14 @@ public class ContentCatalogTests
         return entryKeys.ToList();
     }
 
-    [System.Serializable]
+    [Serializable]
     public class EvenData
     {
         public int index;
         public string path;
     }
 
-    [System.Serializable]
+    [Serializable]
     public class OddData
     {
         public int index;
@@ -94,7 +97,7 @@ public class ContentCatalogTests
     [Test]
     public void AssetBundleRequestOptionsTest()
     {
-        var options = new AssetBundleRequestOptions()
+        var options = new AssetBundleRequestOptions
         {
             ChunkedTransfer = true,
             Crc = 123,
@@ -125,7 +128,7 @@ public class ContentCatalogTests
     [Test]
     public void VerifySerialization()
     {
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
         sw.Start();
         var catalog = new ContentCatalogData();
         var entries = new List<ContentCatalogDataEntry>();
@@ -133,15 +136,15 @@ public class ContentCatalogTests
 
         for (int i = 0; i < 1000; i++)
         {
-            var internalId = "Assets/TestPath/" + GUID.Generate().ToString() + ".asset";
-            var eKeys = GetRandomSubset(keys, Random.Range(1, 5));
-            object data = null;
+            var internalId = "Assets/TestPath/" + GUID.Generate() + ".asset";
+            var eKeys = GetRandomSubset(m_Keys, Random.Range(1, 5));
+            object data;
             if (i % 2 == 0)
-                data = new EvenData() { index = i, path = internalId };
+                data = new EvenData { index = i, path = internalId };
             else
-                data = new OddData() { index = i, path = internalId };
+                data = new OddData { index = i, path = internalId };
 
-            var e = new ContentCatalogDataEntry(internalId, providers[Random.Range(0, providers.Count)].FullName, eKeys, GetRandomSubset(availableKeys, Random.Range(0, 1)), data);
+            var e = new ContentCatalogDataEntry(internalId, m_Providers[Random.Range(0, m_Providers.Count)].FullName, eKeys, GetRandomSubset(availableKeys, Random.Range(0, 1)), data);
             availableKeys.Add(eKeys[0]);
             entries.Add(e);
         }
@@ -160,7 +163,7 @@ public class ContentCatalogTests
             foreach (var loc in k.Value)
             {
                 var entry = entries.Find(e => e.InternalId == loc.InternalId);
-                Assert.AreEqual(entry.Provider.ToString(), loc.ProviderId);
+                Assert.AreEqual(entry.Provider, loc.ProviderId);
 
                 var deps = loc.Dependencies;
                 if (deps != null)

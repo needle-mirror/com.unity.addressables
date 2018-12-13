@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine.ResourceManagement;
 using System.Linq;
+using UnityEngine.ResourceManagement;
+using UnityEngine.Serialization;
 
 namespace UnityEngine.AddressableAssets
 {
@@ -58,7 +59,7 @@ namespace UnityEngine.AddressableAssets
         /// <param name="dependencies">Optional collection of keys for dependencies.</param>
         /// <param name="extraData">Optional additional data to be passed to the provider.  For example, AssetBundleProviders use this for cache and crc data.</param>
         [Obsolete("Use the version of ContentCatalogDataEntry that takes a list of keys instead of explicit address and guid.")]
-        public ContentCatalogDataEntry(string address, string guid, string internalId, System.Type provider, HashSet<string> labels = null, IEnumerable<object> dependencies = null, object extraData = null)
+        public ContentCatalogDataEntry(string address, string guid, string internalId, Type provider, HashSet<string> labels = null, IEnumerable<object> dependencies = null, object extraData = null)
         {
             InternalId = internalId;
             Provider = provider == null ? "" : provider.FullName;
@@ -84,18 +85,24 @@ namespace UnityEngine.AddressableAssets
     {
 
 
+        [FormerlySerializedAs("m_providerIds")]
         [SerializeField]
-        string[] m_providerIds = null;
+        string[] m_ProviderIds;
+        [FormerlySerializedAs("m_internalIds")]
         [SerializeField]
-        string[] m_internalIds = null;
+        string[] m_InternalIds;
+        [FormerlySerializedAs("m_keyDataString")]
         [SerializeField]
-        string m_keyDataString = null;
+        string m_KeyDataString;
+        [FormerlySerializedAs("m_bucketDataString")]
         [SerializeField]
-        string m_bucketDataString = null;
+        string m_BucketDataString;
+        [FormerlySerializedAs("m_entryDataString")]
         [SerializeField]
-        string m_entryDataString = null;
+        string m_EntryDataString;
+        [FormerlySerializedAs("m_extraDataString")]
         [SerializeField]
-        string m_extraDataString = null;
+        string m_ExtraDataString;
 
         struct Bucket
         {
@@ -105,40 +112,40 @@ namespace UnityEngine.AddressableAssets
 
         struct CompactLocation : IResourceLocation
         {
-            ResourceLocationMap m_locator;
-            string m_internalId;
-            string m_providerId;
-            object m_dependency;
-            object m_data;
-            public string InternalId { get { return m_internalId; } }
-            public string ProviderId { get { return m_providerId; } }
+            ResourceLocationMap m_Locator;
+            string m_InternalId;
+            string m_ProviderId;
+            object m_Dependency;
+            object m_Data;
+            public string InternalId { get { return m_InternalId; } }
+            public string ProviderId { get { return m_ProviderId; } }
             public IList<IResourceLocation> Dependencies
             {
                 get
                 {
-                    if (m_dependency == null)
+                    if (m_Dependency == null)
                         return null;
                     IList<IResourceLocation> results;
-                    m_locator.Locate(m_dependency, out results);
+                    m_Locator.Locate(m_Dependency, out results);
                     return results;
                 }
             }
-            public bool HasDependencies { get { return m_dependency != null; } }
+            public bool HasDependencies { get { return m_Dependency != null; } }
 
-            public object Data { get { return m_data; } }
+            public object Data { get { return m_Data; } }
 
             public override string ToString()
             {
-                return m_internalId;
+                return m_InternalId;
             }
 
             public CompactLocation(ResourceLocationMap locator, string internalId, string providerId, object dependencyKey, object data)
             {
-                m_locator = locator;
-                m_internalId = internalId;
-                m_providerId = providerId;
-                m_dependency = dependencyKey;
-                m_data = data;
+                m_Locator = locator;
+                m_InternalId = internalId;
+                m_ProviderId = providerId;
+                m_Dependency = dependencyKey;
+                m_Data = data;
             }
         }
 
@@ -148,7 +155,7 @@ namespace UnityEngine.AddressableAssets
         /// <returns>ResourceLocationMap, which implements the IResourceLocator interface.</returns>
         public ResourceLocationMap CreateLocator()
         {
-            var bucketData = Convert.FromBase64String(m_bucketDataString);
+            var bucketData = Convert.FromBase64String(m_BucketDataString);
             int bucketCount = BitConverter.ToInt32(bucketData, 0);
             var buckets = new Bucket[bucketCount];
             int bi = 4;
@@ -164,11 +171,11 @@ namespace UnityEngine.AddressableAssets
                     entryArray[c] = SerializationUtilities.ReadInt32FromByteArray(bucketData, bi);
                     bi += 4;
                 }
-                buckets[i] = new Bucket() { entries = entryArray, dataOffset = index };
+                buckets[i] = new Bucket { entries = entryArray, dataOffset = index };
             }
 
-            var extraData = Convert.FromBase64String(m_extraDataString);
-            var keyData = Convert.FromBase64String(m_keyDataString);
+            var extraData = Convert.FromBase64String(m_ExtraDataString);
+            var keyData = Convert.FromBase64String(m_KeyDataString);
             var keyCount = BitConverter.ToInt32(keyData, 0);
             var keys = new object[keyCount];
             for (int i = 0; i < buckets.Length; i++)
@@ -176,7 +183,7 @@ namespace UnityEngine.AddressableAssets
 
             var locator = new ResourceLocationMap(buckets.Length);
 
-            var entryData = Convert.FromBase64String(m_entryDataString);
+            var entryData = Convert.FromBase64String(m_EntryDataString);
             int count = SerializationUtilities.ReadInt32FromByteArray(entryData, 0);
             List<IResourceLocation> locations = new List<IResourceLocation>(count);
             for (int i = 0; i < count; i++)
@@ -187,8 +194,8 @@ namespace UnityEngine.AddressableAssets
                 var dependency = SerializationUtilities.ReadInt32FromByteArray(entryData, index + 8);
                 var dataIndex = SerializationUtilities.ReadInt32FromByteArray(entryData, index + 12);
                 object data = dataIndex < 0 ? null : SerializationUtilities.ReadObjectFromByteArray(extraData, dataIndex);
-                locations.Add(new CompactLocation(locator, ResourceManager.ResolveInternalId(m_internalIds[internalId]),
-                    m_providerIds[providerIndex], dependency < 0 ? null : keys[dependency], data));
+                locations.Add(new CompactLocation(locator, ResourceManager.ResolveInternalId(m_InternalIds[internalId]),
+                    m_ProviderIds[providerIndex], dependency < 0 ? null : keys[dependency], data));
             }
 
             for (int i = 0; i < buckets.Length; i++)
@@ -226,24 +233,22 @@ namespace UnityEngine.AddressableAssets
                     Add(keyCollection);
             }
 
-            public bool Add(IEnumerable<T> keyCollection)
+            public void Add(IEnumerable<T> keyCollection)
             {
                 bool isNew = false;
                 foreach (var key in keyCollection)
                     Add(key, ref isNew);
-                return isNew;
             }
 
-            public int Add(T key, ref bool isNew)
+            public void Add(T key, ref bool isNew)
             {
                 int index;
                 if (!map.TryGetValue(key, out index))
                 {
                     isNew = true;
-                    map.Add(key, index = values.Count);
+                    map.Add(key, values.Count);
                     values.Add(key);
                 }
-                return index;
             }
         }
 
@@ -260,35 +265,20 @@ namespace UnityEngine.AddressableAssets
                     Add(keyCollection, func);
             }
 
-            public KeyIndexer(IEnumerable<TVal> valCollection, Func<TVal, TKey> func, int capacity)
-            {
-                values = new List<TVal>(capacity);
-                map = new Dictionary<TKey, int>(capacity);
-                if (valCollection != null)
-                    Add(valCollection, func);
-            }
-
-            public void Add(IEnumerable<TKey> keyCollection, Func<TKey, TVal> func)
+            void Add(IEnumerable<TKey> keyCollection, Func<TKey, TVal> func)
             {
                 foreach (var key in keyCollection)
                     Add(key, func(key));
             }
 
-            public void Add(IEnumerable<TVal> valCollection, Func<TVal, TKey> func)
-            {
-                foreach (var val in valCollection)
-                    Add(func(val), val);
-            }
-
-            public int Add(TKey key, TVal val)
+            public void Add(TKey key, TVal val)
             {
                 int index;
                 if (!map.TryGetValue(key, out index))
                 {
-                    map.Add(key, index = values.Count);
+                    map.Add(key, values.Count);
                     values.Add(val);
                 }
-                return index;
             }
 
             public TVal this[TKey key] { get { return values[map[key]]; } }
@@ -331,7 +321,7 @@ namespace UnityEngine.AddressableAssets
                 foreach (var k in e.Keys)
                     keyIndexToEntries[k].Add(e);
             }
-            m_extraDataString = Convert.ToBase64String(extraDataList.ToArray());
+            m_ExtraDataString = Convert.ToBase64String(extraDataList.ToArray());
 
             //create extra entries for dependency sets
             int originalEntryCount = data.Count;
@@ -362,8 +352,8 @@ namespace UnityEngine.AddressableAssets
             }
 
             //serialize internal ids and providers
-            m_internalIds = internalIds.values.ToArray();
-            m_providerIds = providers.values.ToArray();
+            m_InternalIds = internalIds.values.ToArray();
+            m_ProviderIds = providers.values.ToArray();
 
             //serialize entries
             {
@@ -377,7 +367,7 @@ namespace UnityEngine.AddressableAssets
                     entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, e.Dependencies.Count == 0 ? -1 : keyIndexToEntries.map[e.Dependencies[0]], entryDataOffset);
                     entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, entryIndexToExtraDataIndex[i], entryDataOffset);
                 }
-                m_entryDataString = Convert.ToBase64String(entryData);
+                m_EntryDataString = Convert.ToBase64String(entryData);
             }
 
             //serialize keys and mappings
@@ -398,8 +388,8 @@ namespace UnityEngine.AddressableAssets
                     foreach (var e in entries)
                         bucketDataOffset = SerializationUtilities.WriteInt32ToByteArray(bucketData, entryToIndex[e], bucketDataOffset);
                 }
-                m_bucketDataString = Convert.ToBase64String(bucketData);
-                m_keyDataString = Convert.ToBase64String(keyData.ToArray());
+                m_BucketDataString = Convert.ToBase64String(bucketData);
+                m_KeyDataString = Convert.ToBase64String(keyData.ToArray());
             }
         }
 

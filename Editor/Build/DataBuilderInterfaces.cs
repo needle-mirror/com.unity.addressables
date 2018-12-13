@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 using UnityEngine.Experimental.UIElements;
-using UnityEngine.ResourceManagement;
 
 namespace UnityEditor.AddressableAssets
 {

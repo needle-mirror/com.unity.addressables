@@ -1,14 +1,13 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using UnityEditor.AddressableAssets;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement;
 
 namespace UnityEditor.AddressableAssets
 {
-    internal class BuildScriptBase : ScriptableObject, IDataBuilder
+    class BuildScriptBase : ScriptableObject, IDataBuilder
     {
         public virtual string Name
         {
@@ -43,6 +42,10 @@ namespace UnityEditor.AddressableAssets
                 assetGroup.GatherAllAssets(entries, true, true);
                 foreach (var a in entries)
                 {
+                    if (!playerDataSchema.IncludeBuildSettingsScenes && a.IsInSceneList)
+                        continue;
+                    if (!playerDataSchema.IncludeResourcesFolders && a.IsInResources)
+                        continue;
                     string providerId = a.IsScene ? typeof(SceneProvider).FullName : typeof(LegacyResourcesProvider).FullName;
                     locations.Add(new ContentCatalogDataEntry(a.GetAssetLoadPath(false), providerId, a.CreateKeyList()));
                     if (!a.IsScene)
@@ -52,17 +55,17 @@ namespace UnityEditor.AddressableAssets
             return needsLegacyProvider;
         }
 
-        static protected bool WriteFile(string path, string content)
+        protected static bool WriteFile(string path, string content)
         {
             try
             {
                 var dir = Path.GetDirectoryName(path);
-                if (!Directory.Exists(dir))
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
                 File.WriteAllText(path, content);
                 return true;
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 Debug.LogException(ex);
                 return false;

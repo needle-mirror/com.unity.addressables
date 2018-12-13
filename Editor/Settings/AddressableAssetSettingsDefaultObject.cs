@@ -1,10 +1,12 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System;
 using UnityEngine;
-using UnityEditor;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets
 {
+    /// <summary>
+    /// Class used to get and set the default Addressable Asset settings object.
+    /// </summary>
     public class AddressableAssetSettingsDefaultObject : ScriptableObject
     {
         /// <summary>
@@ -31,20 +33,21 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
+        [FormerlySerializedAs("m_addressableAssetSettingsGuid")]
         [SerializeField]
-        string m_addressableAssetSettingsGuid;
+        string m_AddressableAssetSettingsGuid;
 
         AddressableAssetSettings LoadSettingsObject()
         {
-            if (string.IsNullOrEmpty(m_addressableAssetSettingsGuid))
+            if (string.IsNullOrEmpty(m_AddressableAssetSettingsGuid))
             {
                 Debug.LogError("Invalid guid for default AddressableAssetSettings object.");
                 return null;
             }
-            var path = AssetDatabase.GUIDToAssetPath(m_addressableAssetSettingsGuid);
+            var path = AssetDatabase.GUIDToAssetPath(m_AddressableAssetSettingsGuid);
             if (string.IsNullOrEmpty(path))
             {
-                Debug.LogErrorFormat("Unable to determine path for default AddressableAssetSettings object with guid {0}.", m_addressableAssetSettingsGuid);
+                Debug.LogErrorFormat("Unable to determine path for default AddressableAssetSettings object with guid {0}.", m_AddressableAssetSettingsGuid);
                 return null;
             }
             var settings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
@@ -57,20 +60,20 @@ namespace UnityEditor.AddressableAssets
         {
             if (settings == null)
             {
-                m_addressableAssetSettingsGuid = null;
+                m_AddressableAssetSettingsGuid = null;
                 return;
             }
             var path = AssetDatabase.GetAssetPath(settings);
             if (string.IsNullOrEmpty(path))
             {
-                Debug.LogErrorFormat("Unable to determine path for default AddressableAssetSettings object with guid {0}.", m_addressableAssetSettingsGuid);
+                Debug.LogErrorFormat("Unable to determine path for default AddressableAssetSettings object with guid {0}.", m_AddressableAssetSettingsGuid);
                 return;
             }
             AddressablesAssetPostProcessor.OnPostProcess = settings.OnPostprocessAllAssets;
-            m_addressableAssetSettingsGuid = AssetDatabase.AssetPathToGUID(path);
+            m_AddressableAssetSettingsGuid = AssetDatabase.AssetPathToGUID(path);
         }
 
-        static AddressableAssetSettings m_defaultSettingsObject;
+        static AddressableAssetSettings s_DefaultSettingsObject;
 
         /// <summary>
         /// Used to determine if a default settings asset exists.
@@ -81,7 +84,7 @@ namespace UnityEditor.AddressableAssets
             {
                 AddressableAssetSettingsDefaultObject so;
                 if (EditorBuildSettings.TryGetConfigObject(kDefaultConfigObjectName, out so))
-                    return !string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(so.m_addressableAssetSettingsGuid));
+                    return !string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(so.m_AddressableAssetSettingsGuid));
                 return false;
             }
         }
@@ -93,21 +96,21 @@ namespace UnityEditor.AddressableAssets
         {
             get
             {
-                if (m_defaultSettingsObject == null && !EditorApplication.isUpdating && !EditorApplication.isCompiling)
+                if (s_DefaultSettingsObject == null && !EditorApplication.isUpdating && !EditorApplication.isCompiling)
                 {
                     AddressableAssetSettingsDefaultObject so;
                     if (EditorBuildSettings.TryGetConfigObject(kDefaultConfigObjectName, out so))
                     {
-                        m_defaultSettingsObject = so.LoadSettingsObject();
+                        s_DefaultSettingsObject = so.LoadSettingsObject();
                     }
                     else
                     {
                         //legacy support, try to get the old config object and then remove it
-                        if (EditorBuildSettings.TryGetConfigObject(kDefaultConfigAssetName, out m_defaultSettingsObject))
+                        if (EditorBuildSettings.TryGetConfigObject(kDefaultConfigAssetName, out s_DefaultSettingsObject))
                         {
                             EditorBuildSettings.RemoveConfigObject(kDefaultConfigAssetName);
                             so = CreateInstance<AddressableAssetSettingsDefaultObject>();
-                            so.SetSettingsObject(m_defaultSettingsObject);
+                            so.SetSettingsObject(s_DefaultSettingsObject);
                             AssetDatabase.CreateAsset(so, kDefaultConfigFolder + "/DefaultObject.asset");
                             EditorUtility.SetDirty(so);
                             AssetDatabase.SaveAssets();
@@ -115,7 +118,7 @@ namespace UnityEditor.AddressableAssets
                         }
                     }
                 }
-                return m_defaultSettingsObject;
+                return s_DefaultSettingsObject;
             }
             set
             {
@@ -129,7 +132,7 @@ namespace UnityEditor.AddressableAssets
                     }
                 }
 
-                m_defaultSettingsObject = value;
+                s_DefaultSettingsObject = value;
                 AddressableAssetSettingsDefaultObject so;
                 if (!EditorBuildSettings.TryGetConfigObject(kDefaultConfigObjectName, out so))
                 {
@@ -138,7 +141,7 @@ namespace UnityEditor.AddressableAssets
                     AssetDatabase.SaveAssets();
                     EditorBuildSettings.AddConfigObject(kDefaultConfigObjectName, so, true);
                 }
-                so.SetSettingsObject(m_defaultSettingsObject);
+                so.SetSettingsObject(s_DefaultSettingsObject);
                 EditorUtility.SetDirty(so);
                 AssetDatabase.SaveAssets();
             }

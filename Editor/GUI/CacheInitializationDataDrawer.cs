@@ -14,38 +14,34 @@ namespace UnityEditor.AddressableAssets
             var r = new Rect(position.x, position.y, position.width, s.y);
 
             {
-                var prop = property.FindPropertyRelative("m_compressionEnabled");
-                var val = EditorGUI.Toggle(r, new GUIContent("Compress Bundles", "Bundles are recompressed into LZ4 format to optimize load times."), prop.boolValue);
-                if (val != prop.boolValue)
-                    prop.boolValue = val;
+                var prop = property.FindPropertyRelative("m_CompressionEnabled");
+                prop.boolValue  = EditorGUI.Toggle(r, new GUIContent("Compress Bundles", "Bundles are recompressed into LZ4 format to optimize load times."), prop.boolValue);
                 r.y += s.y + EditorGUIUtility.standardVerticalSpacing;
             }
 
 
             {
-                var prop = property.FindPropertyRelative("m_cacheDirectoryOverride");
-                var val = EditorGUI.TextField(r, new GUIContent("Cache Directory Override", "Specify custom directory for cache.  Leave blank for default."), prop.stringValue);
-                if (val != prop.stringValue)
-                    prop.stringValue = val;
+                var prop = property.FindPropertyRelative("m_CacheDirectoryOverride");
+                prop.stringValue = EditorGUI.TextField(r, new GUIContent("Cache Directory Override", "Specify custom directory for cache.  Leave blank for default."), prop.stringValue);
                 r.y += s.y + EditorGUIUtility.standardVerticalSpacing;
             }
 
             {
-                var prop = property.FindPropertyRelative("m_expirationDelay");
-                var val = EditorGUI.IntSlider(r, new GUIContent("Expiration Delay (in seconds)", "Controls how long items are left in the cache before deleting."), prop.intValue, 0, 12960000);
+                var prop = property.FindPropertyRelative("m_ExpirationDelay");
+                prop.intValue  = EditorGUI.IntSlider(r, new GUIContent("Expiration Delay (in seconds)", "Controls how long items are left in the cache before deleting."), prop.intValue, 0, 12960000);
                 r.y += s.y + EditorGUIUtility.standardVerticalSpacing;
-                var ts = new System.TimeSpan(0, 0, val);
+                var ts = new TimeSpan(0, 0, prop.intValue );
                 EditorGUI.LabelField(new Rect(r.x + 16, r.y, r.width - 16, r.height), new GUIContent(NicifyTimeSpan(ts)));
-                if (val != prop.intValue)
-                    prop.intValue = val;
+                
                 r.y += s.y + EditorGUIUtility.standardVerticalSpacing;
             }
 
             {
-                var limProp = property.FindPropertyRelative("m_limitCacheSize");
-                if (limProp.boolValue = EditorGUI.ToggleLeft(r, new GUIContent("Limit Cache Size"), limProp.boolValue))
+                var limProp = property.FindPropertyRelative("m_LimitCacheSize");
+                limProp.boolValue = EditorGUI.ToggleLeft(r, new GUIContent("Limit Cache Size"), limProp.boolValue);
+                if (limProp.boolValue)
                 {
-                    var prop = property.FindPropertyRelative("m_maximumCacheSize");
+                    var prop = property.FindPropertyRelative("m_MaximumCacheSize");
                     if (prop.longValue == long.MaxValue)
                         prop.longValue = (1024 * 1024 * 1024);//default to 1GB
 
@@ -59,14 +55,14 @@ namespace UnityEditor.AddressableAssets
             EditorGUI.EndProperty();
         }
 
-        private string NicifyTimeSpan(TimeSpan ts)
+        string NicifyTimeSpan(TimeSpan ts)
         {
             if (ts.Days >= 1)
                 return string.Format("{0} days, {1} hours, {2} minutes, {3} seconds.", ts.Days, ts.Hours, ts.Minutes, ts.Seconds);
             if (ts.Hours >= 1)
-                return string.Format("{1} hours, {2} minutes, {3} seconds.", ts.Days, ts.Hours, ts.Minutes, ts.Seconds);
+                return string.Format("{0} hours, {1} minutes, {2} seconds.", ts.Hours, ts.Minutes, ts.Seconds);
             if (ts.Minutes >= 1)
-                return string.Format("{2} minutes, {3} seconds.", ts.Days, ts.Hours, ts.Minutes, ts.Seconds);
+                return string.Format("{0} minutes, {1} seconds.", ts.Minutes, ts.Seconds);
             return string.Format("{0} seconds.", ts.Seconds);
         }
 

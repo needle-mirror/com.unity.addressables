@@ -1,35 +1,31 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEditor.IMGUI.Controls;
-using System;
-using System.Linq;
-using UnityEditor.Build.Pipeline.Utilities;
-using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets
 {
     class LabelMaskPopupContent : PopupWindowContent
     {
-        AddressableAssetSettings m_settings;
-        List<AddressableAssetEntry> m_entries;
-        Dictionary<string, int> m_labelCount;
+        AddressableAssetSettings m_Settings;
+        List<AddressableAssetEntry> m_Entries;
+        Dictionary<string, int> m_LabelCount;
 
-        GUIStyle toggleMixed = null;
+        GUIStyle m_ToggleMixed;
 
 
-        int lastItemCount = -1;
-        Vector2 rect = new Vector2();
+        int m_LastItemCount = -1;
+        Vector2 m_Rect;
         public LabelMaskPopupContent(AddressableAssetSettings settings, List<AddressableAssetEntry> e, Dictionary<string, int> count)
         {
-            m_settings = settings;
-            m_entries = e;
-            m_labelCount = count;
+            m_Settings = settings;
+            m_Entries = e;
+            m_LabelCount = count;
         }
 
         public override Vector2 GetWindowSize()
         {
-            var labelTable = m_settings.labelTable;
-            if (lastItemCount != labelTable.labelNames.Count)
+            var labelTable = m_Settings.labelTable;
+            if (m_LastItemCount != labelTable.labelNames.Count)
             {
                 int maxLen = 0;
                 string maxStr = "";
@@ -46,58 +42,52 @@ namespace UnityEditor.AddressableAssets
                 var content = new GUIContent(maxStr);
                 GUI.skin.toggle.CalcMinMaxWidth(content, out minWidth, out maxWidth);
                 var height = GUI.skin.toggle.CalcHeight(content, maxWidth) + 3.5f;
-                rect = new Vector2(Mathf.Clamp(maxWidth + 40, 60, 600), Mathf.Clamp(labelTable.labelNames.Count * height, 30, 150));
-                lastItemCount = labelTable.labelNames.Count;
+                m_Rect = new Vector2(Mathf.Clamp(maxWidth + 40, 60, 600), Mathf.Clamp(labelTable.labelNames.Count * height, 30, 150));
+                m_LastItemCount = labelTable.labelNames.Count;
             }
-            return rect;
+            return m_Rect;
         }
 
-        private void SetLabelForEntries(string label, bool value)
+        void SetLabelForEntries(string label, bool value)
         {
-            m_settings.SetLabelValueForEntries(m_entries, label, value);
-            m_labelCount[label] = value ? m_entries.Count : 0;
+            m_Settings.SetLabelValueForEntries(m_Entries, label, value);
+            m_LabelCount[label] = value ? m_Entries.Count : 0;
         }
 
-        [SerializeField]
-        Vector2 m_scrollPosition = new Vector2();
+        Vector2 m_ScrollPosition;
         public override void OnGUI(Rect rect)
         {
-            if (m_entries.Count == 0)
+            if (m_Entries.Count == 0)
                 return;
 
 
-            var labelTable = m_settings.labelTable;
+            var labelTable = m_Settings.labelTable;
 
             GUILayout.BeginArea(new Rect(rect.xMin + 3, rect.yMin + 3, rect.width - 6, rect.height - 6));
-            m_scrollPosition = GUILayout.BeginScrollView(m_scrollPosition);
+            m_ScrollPosition = GUILayout.BeginScrollView(m_ScrollPosition);
 
             //string toRemove = null;
             foreach (var labelName in labelTable.labelNames)
             {
                 EditorGUILayout.BeginHorizontal();
 
-                bool oldState = false;
-                bool newState = false;
-                int count = 0;
-                if (m_labelCount == null)
-                    count = m_entries[0].labels.Contains(labelName) ? m_entries.Count : 0;
+                bool newState;
+                int count;
+                if (m_LabelCount == null)
+                    count = m_Entries[0].labels.Contains(labelName) ? m_Entries.Count : 0;
                 else
-                    m_labelCount.TryGetValue(labelName, out count);
+                    m_LabelCount.TryGetValue(labelName, out count);
 
-                if (count == 0)
+                bool oldState = count == m_Entries.Count;
+                if (count == 0 || count == m_Entries.Count)
                 {
-                    newState = GUILayout.Toggle(oldState, new GUIContent(labelName), GUILayout.ExpandWidth(false));
-                }
-                else if (count == m_entries.Count)
-                {
-                    oldState = true;
                     newState = GUILayout.Toggle(oldState, new GUIContent(labelName), GUILayout.ExpandWidth(false));
                 }
                 else
                 {
-                    if (toggleMixed == null)
-                        toggleMixed = new GUIStyle("ToggleMixed");
-                    newState = GUILayout.Toggle(oldState, new GUIContent(labelName), toggleMixed, GUILayout.ExpandWidth(false));
+                    if (m_ToggleMixed == null)
+                        m_ToggleMixed = new GUIStyle("ToggleMixed");
+                    newState = GUILayout.Toggle(oldState, new GUIContent(labelName), m_ToggleMixed, GUILayout.ExpandWidth(false));
                 }
                 if (oldState != newState)
                 {

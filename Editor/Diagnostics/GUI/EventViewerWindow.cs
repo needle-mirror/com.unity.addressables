@@ -1,49 +1,51 @@
-using UnityEngine;
 using System;
+using System.Collections.Generic;
 using UnityEditor.IMGUI.Controls;
 using UnityEditor.Networking.PlayerConnection;
-using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Networking.PlayerConnection;
 using UnityEngine.ResourceManagement.Diagnostics;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets.Diagnostics
 {
-    internal class EventViewerWindow : EditorWindow, IComparer<EventDataSet>
+    class EventViewerWindow : EditorWindow, IComparer<EventDataSet>
     {
+        [FormerlySerializedAs("m_eventData")]
         [SerializeField]
-        EventDataPlayerSessionCollection m_eventData;
-        GUIContent m_prevFrameIcon;
-        GUIContent m_nextFrameIcon;
-        int m_playerSessionIndex = 0;
-        int m_inspectFrame = 0;
-        bool m_record = true;
-        int m_eventListFrame = -1;
-        VerticalSplitter m_verticalSplitter = new VerticalSplitter();
-        HorizontalSplitter m_horizontalSplitter = new HorizontalSplitter();
-        float m_lastEventListUpdate = 0;
-        bool m_draggingInspectLine = false;
-        bool m_registeredWithRM = false;
-        int m_latestFrame = 0;
+        EventDataPlayerSessionCollection m_EventData;
+        GUIContent m_PrevFrameIcon;
+        GUIContent m_NextFrameIcon;
+        int m_PlayerSessionIndex;
+        int m_InspectFrame;
+        bool m_Record = true;
+        int m_EventListFrame = -1;
+        VerticalSplitter m_VerticalSplitter = new VerticalSplitter();
+        HorizontalSplitter m_HorizontalSplitter = new HorizontalSplitter();
+        float m_LastEventListUpdate;
+        bool m_DraggingInspectLine;
+        bool m_RegisteredWithRm;
+        int m_LatestFrame;
 
-        TreeViewState m_eventListTreeViewState;
-        MultiColumnHeaderState m_eventListMCHS;
-        EventListView m_eventList;
+        TreeViewState m_EventListTreeViewState;
+        MultiColumnHeaderState m_EventListMchs;
+        EventListView m_EventList;
 
-        TreeViewState m_graphListTreeViewState;
-        MultiColumnHeaderState m_graphListMCHS;
-        EventGraphListView m_graphList;
+        TreeViewState m_GraphListTreeViewState;
+        MultiColumnHeaderState m_GraphListMchs;
+        EventGraphListView m_GraphList;
 
-        EventDataPlayerSession activeSession { get { return m_eventData == null ? null : m_eventData.GetSessionByIndex(m_playerSessionIndex); } }
+        EventDataPlayerSession activeSession { get { return m_EventData == null ? null : m_EventData.GetSessionByIndex(m_PlayerSessionIndex); } }
         protected virtual bool ShowEventDetailPanel { get { return false; } }
         protected virtual bool ShowEventPanel { get { return false; } }
 
-
-        private void OnEnable()
+        void OnEnable()
         {
-            m_lastEventListUpdate = 0;
-            m_prevFrameIcon = EditorGUIUtility.IconContent("Profiler.PrevFrame", "|Go back one frame");
-            m_nextFrameIcon = EditorGUIUtility.IconContent("Profiler.NextFrame", "|Go one frame forwards");
-            m_eventData = new EventDataPlayerSessionCollection(OnEventProcessed, OnRecordEvent);
-            m_eventData.AddSession("Editor", m_playerSessionIndex = 0);
+            m_LastEventListUpdate = 0;
+            m_PrevFrameIcon = EditorGUIUtility.IconContent("Profiler.PrevFrame", "|Go back one frame");
+            m_NextFrameIcon = EditorGUIUtility.IconContent("Profiler.NextFrame", "|Go one frame forwards");
+            m_EventData = new EventDataPlayerSessionCollection(OnEventProcessed, OnRecordEvent);
+            m_EventData.AddSession("Editor", m_PlayerSessionIndex = 0);
             EditorConnection.instance.Initialize();
             EditorConnection.instance.Register(DiagnosticEventCollector.EditorConnectionMessageId, OnPlayerConnectionMessage);
             EditorConnection.instance.RegisterConnection(OnPlayerConnection);
@@ -52,7 +54,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             RegisterEventHandler(true);
         }
 
-        private void OnDisable()
+        void OnDisable()
         {
             EditorConnection.instance.Unregister(DiagnosticEventCollector.EditorConnectionMessageId, OnPlayerConnectionMessage);
             RegisterEventHandler(false);
@@ -61,10 +63,11 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         void RegisterEventHandler(bool reg)
         {
-            if (reg == m_registeredWithRM)
+            if (reg == m_RegisteredWithRm)
                 return;
 
-            if (m_registeredWithRM = reg)
+            m_RegisteredWithRm = reg;
+            if (m_RegisteredWithRm)
                 DiagnosticEventCollector.RegisterEventHandler(OnEvent);
             else
                 DiagnosticEventCollector.UnregisterEventHandler(OnEvent);
@@ -72,27 +75,27 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         public void OnEvent(DiagnosticEvent diagnosticEvent)
         {
-            m_eventData.ProcessEvent(diagnosticEvent, 0);
+            m_EventData.ProcessEvent(diagnosticEvent, 0);
         }
 
         void OnPlayerConnection(int id)
         {
-            m_eventData.GetPlayerSession(id, true).IsActive = true;
+            m_EventData.GetPlayerSession(id, true).IsActive = true;
         }
 
         void OnPlayerDisconnection(int id)
         {
-            var c = m_eventData.GetPlayerSession(id, false);
+            var c = m_EventData.GetPlayerSession(id, false);
             if (c != null)
                 c.IsActive = false;
         }
 
-        void OnPlayerConnectionMessage(UnityEngine.Networking.PlayerConnection.MessageEventArgs args)
+        void OnPlayerConnectionMessage(MessageEventArgs args)
         {
-            if (!m_record)
+            if (!m_Record)
                 return;
             var evt = DiagnosticEvent.Deserialize(args.data);
-            m_eventData.ProcessEvent(evt, args.playerId);
+            m_EventData.ProcessEvent(evt, args.playerId);
         }
 
         public int Compare(EventDataSet x, EventDataSet y)
@@ -112,14 +115,14 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         protected virtual bool OnCanHandleEvent(string graph) { return true; }
 
-        private void OnEditorPlayModeChanged(PlayModeStateChange state)
+        void OnEditorPlayModeChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.EnteredPlayMode)
             {
-                m_lastEventListUpdate = 0;
-                m_inspectFrame = -1;
-                m_latestFrame = -1;
-                m_playerSessionIndex = 0;
+                m_LastEventListUpdate = 0;
+                m_InspectFrame = -1;
+                m_LatestFrame = -1;
+                m_PlayerSessionIndex = 0;
                 RegisterEventHandler(true);
             }
             else if (state == PlayModeStateChange.EnteredEditMode)
@@ -138,16 +141,16 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             if (!CanHandleEvent(diagnosticEvent.Graph))
                 return;
 
-            bool moveInspectFrame = m_latestFrame < 0 || m_inspectFrame == m_latestFrame;
-            m_latestFrame = diagnosticEvent.Frame;
+            bool moveInspectFrame = m_LatestFrame < 0 || m_InspectFrame == m_LatestFrame;
+            m_LatestFrame = diagnosticEvent.Frame;
             if (entryCreated)
             {
-                if (m_graphList != null)
-                    m_graphList.Reload();
+                if (m_GraphList != null)
+                    m_GraphList.Reload();
             }
 
             if (moveInspectFrame)
-                SetInspectFrame(m_latestFrame);
+                SetInspectFrame(m_LatestFrame);
 
             if (diagnosticEvent.EventId == "Events")
             {
@@ -157,19 +160,19 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         void SetInspectFrame(int frame)
         {
-            m_inspectFrame = frame;
-            if (m_inspectFrame > m_latestFrame)
-                m_inspectFrame = m_latestFrame;
-            if (m_inspectFrame < 0)
-                m_inspectFrame = 0;
+            m_InspectFrame = frame;
+            if (m_InspectFrame > m_LatestFrame)
+                m_InspectFrame = m_LatestFrame;
+            if (m_InspectFrame < 0)
+                m_InspectFrame = 0;
 
-            if(m_eventList != null)
-                m_eventList.SetEvents(activeSession == null ? null : activeSession.GetFrameEvents(m_inspectFrame));
-            m_lastEventListUpdate = Time.unscaledTime;
-            m_eventListFrame = m_inspectFrame;
+            if(m_EventList != null)
+                m_EventList.SetEvents(activeSession == null ? null : activeSession.GetFrameEvents(m_InspectFrame));
+            m_LastEventListUpdate = Time.unscaledTime;
+            m_EventListFrame = m_InspectFrame;
         }
 
-        private void OnGUI()
+        void OnGUI()
         {
             var session = activeSession;
             if (session == null)
@@ -181,12 +184,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             {
                 if (Event.current.keyCode == KeyCode.RightArrow)
                 {
-                    SetInspectFrame(m_inspectFrame + 1);
+                    SetInspectFrame(m_InspectFrame + 1);
                     return;
                 }
                 if (Event.current.keyCode == KeyCode.LeftArrow)
                 {
-                    SetInspectFrame(m_inspectFrame - 1);
+                    SetInspectFrame(m_InspectFrame - 1);
                     return;
                 }
             }
@@ -195,15 +198,15 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
             var r = EditorGUILayout.GetControlRect();
             Rect contentRect = new Rect(r.x, r.y, r.width, position.height - (r.y + r.x));
-            var graphRect = m_graphList.GraphRect;
+            var graphRect = m_GraphList.GraphRect;
             if (ShowEventPanel)
             {
                 Rect top, bot;
-                bool resizingVer = m_verticalSplitter.OnGUI(contentRect, out top, out bot);
+                bool resizingVer = m_VerticalSplitter.OnGUI(contentRect, out top, out bot);
 
                 ProcessInspectFrame(graphRect);
 
-                m_graphList.DrawGraphs(top, m_inspectFrame);
+                m_GraphList.DrawGraphs(top, m_InspectFrame);
 
                 DrawInspectFrame(graphRect);
 
@@ -211,13 +214,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                 if (ShowEventDetailPanel)
                 {
                     Rect left, right;
-                    resizingHor = m_horizontalSplitter.OnGUI(bot, out left, out right);
-                    m_eventList.OnGUI(left);
-                    OnDrawEventDetail(right, m_eventList.selectedEvent);
+                    resizingHor = m_HorizontalSplitter.OnGUI(bot, out left, out right);
+                    m_EventList.OnGUI(left);
+                    OnDrawEventDetail(right, m_EventList.selectedEvent);
                 }
                 else
                 {
-                    m_eventList.OnGUI(bot);
+                    m_EventList.OnGUI(bot);
                 }
                 if (resizingVer || resizingHor)
                     Repaint();
@@ -225,7 +228,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             else
             {
                 ProcessInspectFrame(graphRect);
-                m_graphList.DrawGraphs(contentRect, m_inspectFrame);
+                m_GraphList.DrawGraphs(contentRect, m_InspectFrame);
                 DrawInspectFrame(graphRect);
             }
         }
@@ -234,44 +237,44 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         {
         }
 
-        private void OnInspectorUpdate()
+        void OnInspectorUpdate()
         {
             Repaint();
         }
 
-        private void ProcessInspectFrame(Rect graphRect)
+        void ProcessInspectFrame(Rect graphRect)
         {
             if (Event.current.type == EventType.MouseDown && graphRect.Contains(Event.current.mousePosition))
             {
                 if (EditorApplication.isPlaying)
                     EditorApplication.isPaused = true;
-                m_draggingInspectLine = true;
-                SetInspectFrame(m_inspectFrame);
+                m_DraggingInspectLine = true;
+                SetInspectFrame(m_InspectFrame);
             }
 
-            if (m_draggingInspectLine && (Event.current.type == EventType.MouseDrag || Event.current.type == EventType.Repaint))
-                SetInspectFrame(m_graphList.visibleStartTime + (int)GraphUtility.PixelToValue(Event.current.mousePosition.x, graphRect.xMin, graphRect.xMax, m_graphList.visibleDuration));
+            if (m_DraggingInspectLine && (Event.current.type == EventType.MouseDrag || Event.current.type == EventType.Repaint))
+                SetInspectFrame(m_GraphList.visibleStartTime + (int)GraphUtility.PixelToValue(Event.current.mousePosition.x, graphRect.xMin, graphRect.xMax, m_GraphList.visibleDuration));
             if (Event.current.type == EventType.MouseUp)
             {
-                m_draggingInspectLine = false;
-                SetInspectFrame(m_inspectFrame);
+                m_DraggingInspectLine = false;
+                SetInspectFrame(m_InspectFrame);
             }
         }
 
-        private void DrawInspectFrame(Rect graphPanelRect)
+        void DrawInspectFrame(Rect graphPanelRect)
         {
-            if (m_inspectFrame != m_latestFrame)
+            if (m_InspectFrame != m_LatestFrame)
             {
-                var ix = graphPanelRect.xMin + GraphUtility.ValueToPixel(m_inspectFrame, m_graphList.visibleStartTime, m_graphList.visibleStartTime + m_graphList.visibleDuration, graphPanelRect.width);
+                var ix = graphPanelRect.xMin + GraphUtility.ValueToPixel(m_InspectFrame, m_GraphList.visibleStartTime, m_GraphList.visibleStartTime + m_GraphList.visibleDuration, graphPanelRect.width);
                 EditorGUI.DrawRect(new Rect(ix - 1, graphPanelRect.yMin, 3, graphPanelRect.height), Color.white * .8f);
             }
         }
 
-        private void DrawToolBar(EventDataPlayerSession session)
+        void DrawToolBar(EventDataPlayerSession session)
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             GUILayout.FlexibleSpace();
-            m_record = GUILayout.Toggle(m_record, "Record", EditorStyles.toolbarButton, GUILayout.ExpandWidth(false));
+            m_Record = GUILayout.Toggle(m_Record, "Record", EditorStyles.toolbarButton, GUILayout.ExpandWidth(false));
 
             if (GUILayout.Button("Clear", EditorStyles.toolbarButton))
                 session.Clear();
@@ -281,20 +284,20 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                 EditorUtility.DisplayDialog("Feature not implemented", "Saving and loading profile data is not yet supported", "Close");
 
             GUILayout.FlexibleSpace();
-            GUILayout.Label(m_inspectFrame == m_latestFrame ? "Frame:     " : "Frame: " + m_inspectFrame + "/" + m_latestFrame, EditorStyles.miniLabel);
+            GUILayout.Label(m_InspectFrame == m_LatestFrame ? "Frame:     " : "Frame: " + m_InspectFrame + "/" + m_LatestFrame, EditorStyles.miniLabel);
 
-            using (new EditorGUI.DisabledScope(m_inspectFrame <= 0))
-                if (GUILayout.Button(m_prevFrameIcon, EditorStyles.toolbarButton))
-                    SetInspectFrame(m_inspectFrame - 1);
+            using (new EditorGUI.DisabledScope(m_InspectFrame <= 0))
+                if (GUILayout.Button(m_PrevFrameIcon, EditorStyles.toolbarButton))
+                    SetInspectFrame(m_InspectFrame - 1);
 
 
-            using (new EditorGUI.DisabledScope(m_inspectFrame >= m_latestFrame))
-                if (GUILayout.Button(m_nextFrameIcon, EditorStyles.toolbarButton))
-                    SetInspectFrame(m_inspectFrame + 1);
+            using (new EditorGUI.DisabledScope(m_InspectFrame >= m_LatestFrame))
+                if (GUILayout.Button(m_NextFrameIcon, EditorStyles.toolbarButton))
+                    SetInspectFrame(m_InspectFrame + 1);
 
 
             if (GUILayout.Button("Current", EditorStyles.toolbarButton, GUILayout.ExpandWidth(false)))
-                SetInspectFrame(m_latestFrame);
+                SetInspectFrame(m_LatestFrame);
 
             GUILayout.EndHorizontal();
         }
@@ -326,53 +329,53 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             }
         }
 
-        private void InitializeGui()
+        void InitializeGui()
         {
-            if (m_graphList == null)
+            if (m_GraphList == null)
             {
-                if (m_graphListTreeViewState == null)
-                    m_graphListTreeViewState = new TreeViewState();
+                if (m_GraphListTreeViewState == null)
+                    m_GraphListTreeViewState = new TreeViewState();
 
                 var headerState = EventGraphListView.CreateDefaultHeaderState();
-                if (MultiColumnHeaderState.CanOverwriteSerializedFields(m_graphListMCHS, headerState))
-                    MultiColumnHeaderState.OverwriteSerializedFields(m_graphListMCHS, headerState);
+                if (MultiColumnHeaderState.CanOverwriteSerializedFields(m_GraphListMchs, headerState))
+                    MultiColumnHeaderState.OverwriteSerializedFields(m_GraphListMchs, headerState);
 
-                m_graphListMCHS = headerState;
-                m_graphList = new EventGraphListView(activeSession, m_graphListTreeViewState, m_graphListMCHS, CanHandleEvent, this);
-                InitializeGraphView(m_graphList);
-                m_graphList.Reload();
+                m_GraphListMchs = headerState;
+                m_GraphList = new EventGraphListView(activeSession, m_GraphListTreeViewState, m_GraphListMchs, CanHandleEvent, this);
+                InitializeGraphView(m_GraphList);
+                m_GraphList.Reload();
             }
 
-            if (m_eventList == null)
+            if (m_EventList == null)
             {
-                if (m_eventListTreeViewState == null)
-                    m_eventListTreeViewState = new TreeViewState();
+                if (m_EventListTreeViewState == null)
+                    m_EventListTreeViewState = new TreeViewState();
 
                 var columns = new List<string>();
                 var sizes = new List<float>();
                 OnGetColumns(columns, sizes);
                 var headerState = EventListView.CreateDefaultMultiColumnHeaderState(columns, sizes);
-                if (MultiColumnHeaderState.CanOverwriteSerializedFields(m_eventListMCHS, headerState))
-                    MultiColumnHeaderState.OverwriteSerializedFields(m_eventListMCHS, headerState);
+                if (MultiColumnHeaderState.CanOverwriteSerializedFields(m_EventListMchs, headerState))
+                    MultiColumnHeaderState.OverwriteSerializedFields(m_EventListMchs, headerState);
 
-                m_eventListMCHS = headerState;
-                m_eventList = new EventListView(m_eventListTreeViewState, m_eventListMCHS, DrawColumnCell, OnRecordEvent);
-                m_eventList.Reload();
+                m_EventListMchs = headerState;
+                m_EventList = new EventListView(m_EventListTreeViewState, m_EventListMchs, DrawColumnCell, OnRecordEvent);
+                m_EventList.Reload();
             }
 
-            if (m_eventListFrame != m_inspectFrame && m_inspectFrame != m_latestFrame && !m_draggingInspectLine && Time.unscaledTime - m_lastEventListUpdate > .25f)
+            if (m_EventListFrame != m_InspectFrame && m_InspectFrame != m_LatestFrame && !m_DraggingInspectLine && Time.unscaledTime - m_LastEventListUpdate > .25f)
             {
-                m_eventList.SetEvents(activeSession.GetFrameEvents(m_inspectFrame));
-                m_lastEventListUpdate = Time.unscaledTime;
-                m_eventListFrame = m_inspectFrame;
+                m_EventList.SetEvents(activeSession.GetFrameEvents(m_InspectFrame));
+                m_LastEventListUpdate = Time.unscaledTime;
+                m_EventListFrame = m_InspectFrame;
             }
             
-            if (m_graphListMCHS != null && m_graphListMCHS.columns.Length > 2)
+            if (m_GraphListMchs != null && m_GraphListMchs.columns.Length > 2)
             {
                 string warningText = string.Empty;
                 if (!ProjectConfigData.postProfilerEvents)
                     warningText = "Warning: Profile events must be enabled in your Addressable Asset settings to view profile data";
-                    m_graphListMCHS.columns[2].headerContent.text = warningText;
+                    m_GraphListMchs.columns[2].headerContent.text = warningText;
             }
         }
 
@@ -382,52 +385,53 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             OnInitializeGraphView(graphView);
         }
 
-        virtual protected void OnInitializeGraphView(EventGraphListView graphView) { }
+        protected virtual void OnInitializeGraphView(EventGraphListView graphView) { }
     }
 
     [Serializable]
     class VerticalSplitter
     {
         [NonSerialized]
-        Rect m_rect = new Rect(0, 0, 0, 3);
-        public Rect SplitterRect { get { return m_rect; } }
+        Rect m_Rect = new Rect(0, 0, 0, 3);
+        public Rect SplitterRect { get { return m_Rect; } }
+        [FormerlySerializedAs("m_currentPercent")]
         [SerializeField]
-        float m_currentPercent = .8f;
+        float m_CurrentPercent;
 
-        bool m_resizing = false;
-        float m_minPercent = .2f;
-        float m_maxPercent = .9f;
+        bool m_Resizing;
+        float m_MinPercent;
+        float m_MaxPercent;
         public VerticalSplitter(float percent = .8f, float minPer = .2f, float maxPer = .9f)
         {
-            m_currentPercent = percent;
-            m_minPercent = minPer;
-            m_maxPercent = maxPer;
+            m_CurrentPercent = percent;
+            m_MinPercent = minPer;
+            m_MaxPercent = maxPer;
         }
 
         public bool OnGUI(Rect content, out Rect top, out Rect bot)
         {
-            m_rect.x = content.x;
-            m_rect.y = (int)(content.y + content.height * m_currentPercent);
-            m_rect.width = content.width;
+            m_Rect.x = content.x;
+            m_Rect.y = (int)(content.y + content.height * m_CurrentPercent);
+            m_Rect.width = content.width;
 
-            EditorGUIUtility.AddCursorRect(m_rect, MouseCursor.ResizeVertical);
-            if (Event.current.type == EventType.MouseDown && m_rect.Contains(Event.current.mousePosition))
-                m_resizing = true;
+            EditorGUIUtility.AddCursorRect(m_Rect, MouseCursor.ResizeVertical);
+            if (Event.current.type == EventType.MouseDown && m_Rect.Contains(Event.current.mousePosition))
+                m_Resizing = true;
 
-            if (m_resizing)
+            if (m_Resizing)
             {
                 EditorGUIUtility.AddCursorRect(content, MouseCursor.ResizeVertical);
 
                 var mousePosInRect = Event.current.mousePosition.y - content.y;
-                m_currentPercent = Mathf.Clamp(mousePosInRect / content.height, m_minPercent, m_maxPercent);
-                m_rect.y = Mathf.Min((int)(content.y + content.height * m_currentPercent), content.yMax - m_rect.height);
+                m_CurrentPercent = Mathf.Clamp(mousePosInRect / content.height, m_MinPercent, m_MaxPercent);
+                m_Rect.y = Mathf.Min((int)(content.y + content.height * m_CurrentPercent), content.yMax - m_Rect.height);
                 if (Event.current.type == EventType.MouseUp)
-                    m_resizing = false;
+                    m_Resizing = false;
             }
 
-            top = new Rect(content.x, content.y, content.width, m_rect.yMin - content.yMin);
-            bot = new Rect(content.x, m_rect.yMax, content.width, content.yMax - m_rect.yMax);
-            return m_resizing;
+            top = new Rect(content.x, content.y, content.width, m_Rect.yMin - content.yMin);
+            bot = new Rect(content.x, m_Rect.yMax, content.width, content.yMax - m_Rect.yMax);
+            return m_Resizing;
         }
     }
 
@@ -435,45 +439,46 @@ namespace UnityEditor.AddressableAssets.Diagnostics
     class HorizontalSplitter
     {
         [NonSerialized]
-        Rect m_rect = new Rect(0, 0, 3, 0);
-        public Rect SplitterRect { get { return m_rect; } }
+        Rect m_Rect = new Rect(0, 0, 3, 0);
+        public Rect SplitterRect { get { return m_Rect; } }
+        [FormerlySerializedAs("m_currentPercent")]
         [SerializeField]
-        float m_currentPercent = .8f;
+        float m_CurrentPercent;
 
-        bool m_resizing = false;
-        float m_minPercent = .2f;
-        float m_maxPercent = .9f;
+        bool m_Resizing;
+        float m_MinPercent;
+        float m_MaxPercent;
         public HorizontalSplitter(float percent = .8f, float minPer = .2f, float maxPer = .9f)
         {
-            m_currentPercent = percent;
-            m_minPercent = minPer;
-            m_maxPercent = maxPer;
+            m_CurrentPercent = percent;
+            m_MinPercent = minPer;
+            m_MaxPercent = maxPer;
         }
 
         public bool OnGUI(Rect content, out Rect left, out Rect right)
         {
-            m_rect.y = content.y;
-            m_rect.x = (int)(content.x + content.width * m_currentPercent);
-            m_rect.height = content.height;
+            m_Rect.y = content.y;
+            m_Rect.x = (int)(content.x + content.width * m_CurrentPercent);
+            m_Rect.height = content.height;
 
-            EditorGUIUtility.AddCursorRect(m_rect, MouseCursor.ResizeHorizontal);
-            if (Event.current.type == EventType.MouseDown && m_rect.Contains(Event.current.mousePosition))
-                m_resizing = true;
+            EditorGUIUtility.AddCursorRect(m_Rect, MouseCursor.ResizeHorizontal);
+            if (Event.current.type == EventType.MouseDown && m_Rect.Contains(Event.current.mousePosition))
+                m_Resizing = true;
 
-            if (m_resizing)
+            if (m_Resizing)
             {
                 EditorGUIUtility.AddCursorRect(content, MouseCursor.ResizeHorizontal);
 
                 var mousePosInRect = Event.current.mousePosition.x - content.x;
-                m_currentPercent = Mathf.Clamp(mousePosInRect / content.width, m_minPercent, m_maxPercent);
-                m_rect.x = Mathf.Min((int)(content.x + content.width * m_currentPercent), content.xMax - m_rect.width);
+                m_CurrentPercent = Mathf.Clamp(mousePosInRect / content.width, m_MinPercent, m_MaxPercent);
+                m_Rect.x = Mathf.Min((int)(content.x + content.width * m_CurrentPercent), content.xMax - m_Rect.width);
                 if (Event.current.type == EventType.MouseUp)
-                    m_resizing = false;
+                    m_Resizing = false;
             }
 
-            left = new Rect(content.x, content.y, m_rect.xMin, content.height);
-            right = new Rect(m_rect.xMax, content.y, content.width - m_rect.xMax, content.height);
-            return m_resizing;
+            left = new Rect(content.x, content.y, m_Rect.xMin, content.height);
+            right = new Rect(m_Rect.xMax, content.y, content.width - m_Rect.xMax, content.height);
+            return m_Resizing;
         }
     }
 }

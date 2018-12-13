@@ -1,17 +1,14 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.TestTools;
-using System.IO;
-using UnityEngine.ResourceManagement;
 using UnityEngine.AddressableAssets;
-using System;
-
+using UnityEngine.ResourceManagement;
+using Random = UnityEngine.Random;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
+#if UNITY_EDITOR
 public class AddressablesVirtualModeTests : AddressablesBaseTests
 {
     protected override void CreateLocations(ResourceLocationMap locations)
@@ -34,7 +31,7 @@ public class AddressablesVirtualModeTests : AddressablesBaseTests
         }
         virtualBundleData.AssetBundles.AddRange(sharedBundles);
 
-        object[] labels = new object[] { "label1", "label2", "label3", "label4", "label5", 1234, new Hash128(234, 3456, 55, 22) };
+        object[] labels = { "label1", "label2", "label3", "label4", "label5", 1234, new Hash128(234, 3456, 55, 22) };
         for (int b = 0; b < 5; b++)
         {
             var isLocal = b % 2 == 0;
@@ -43,9 +40,9 @@ public class AddressablesVirtualModeTests : AddressablesBaseTests
             for (int a = 0; a < 10; a++)
             {
                 HashSet<object> labelSet = new HashSet<object>();
-                int count = UnityEngine.Random.Range(1, labels.Length);
+                int count = Random.Range(1, labels.Length);
                 for (int l = 0; l < count; l++)
-                    labelSet.Add(labels[UnityEngine.Random.Range(1, labels.Length)]);
+                    labelSet.Add(labels[Random.Range(1, labels.Length)]);
                 object[] labelsArray = new object[labelSet.Count + 2];
                 labelsArray[0] = "asset" + a;
                 labelsArray[1] = GUID.Generate();
@@ -55,17 +52,17 @@ public class AddressablesVirtualModeTests : AddressablesBaseTests
                 var assetPath = RootFolder + "/" + objectName + ".prefab";
                 CreateAsset(assetPath, objectName);
 
-                var asset = new VirtualAssetBundleEntry(assetPath, UnityEngine.Random.Range(1024, 1024 * 1024));
+                var asset = new VirtualAssetBundleEntry(assetPath, Random.Range(1024, 1024 * 1024));
                 bundle.Assets.Add(asset);
-                AddLocation(locations, new ResourceLocationBase(objectName, assetPath, typeof(BundledAssetProvider).FullName, bundleLocation, sharedBundleLocations[UnityEngine.Random.Range(0, sharedBundleLocations.Count)], sharedBundleLocations[UnityEngine.Random.Range(0, sharedBundleLocations.Count)]), labelSet);
+                AddLocation(locations, new ResourceLocationBase(objectName, assetPath, typeof(BundledAssetProvider).FullName, bundleLocation, sharedBundleLocations[Random.Range(0, sharedBundleLocations.Count)], sharedBundleLocations[Random.Range(0, sharedBundleLocations.Count)]), labelSet);
             }
             bundle.OnAfterDeserialize();
             virtualBundleData.AssetBundles.Add(bundle);
         }
         var abManager = new GameObject("AssetBundleSimulator", typeof(VirtualAssetBundleManager)).GetComponent<VirtualAssetBundleManager>();
-        abManager.Initialize(virtualBundleData, (s) => s);
-        ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new VirtualAssetBundleProvider(abManager, typeof(AssetBundleProvider).FullName), 0, 0));
-        ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new VirtualBundledAssetProvider(), 0, 0));
+        abManager.Initialize(virtualBundleData, s => s);
+        ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new VirtualAssetBundleProvider(abManager, typeof(AssetBundleProvider).FullName)));
+        ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new VirtualBundledAssetProvider()));
     }
-
 }
+#endif

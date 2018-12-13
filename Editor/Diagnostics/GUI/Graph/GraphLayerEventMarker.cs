@@ -1,11 +1,12 @@
+using System;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Diagnostics
 {
-    internal class GraphLayerEventMarker : GraphLayerBase
+    class GraphLayerEventMarker : GraphLayerBase
     {
-        Color m_endColor;
-        internal GraphLayerEventMarker(int stream, string name, string desc, Color startColor, Color endColor) : base(stream, name, desc, startColor) { m_endColor = endColor; }
+        Color m_EndColor;
+        internal GraphLayerEventMarker(int stream, string name, string desc, Color startColor, Color endColor) : base(stream, name, desc, startColor) { m_EndColor = endColor; }
         public override void Draw(EventDataSet dataSet, Rect rect, int startFrame, int frameCount, int inspectFrame, bool expanded, Material material, int maxValue)
         {
             if (dataSet == null)
@@ -15,18 +16,18 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             var stream = dataSet.GetStream(Stream);
             if (stream != null)
             {
-                for (int i = stream.m_samples.Count - 1; i >= 0; --i)
+                for (int i = stream.samples.Count - 1; i >= 0; --i)
                 {
-                    var frame = stream.m_samples[i].frame;
+                    var frame = stream.samples[i].frame;
                     if (frame < startFrame)
                         break;
-                    EditorGUI.DrawRect(new Rect(rect.xMin + GraphUtility.ValueToPixel(frame, startFrame, endTime, rect.width), rect.yMin, 2, rect.height), stream.m_samples[i].data == 0 ? m_endColor : GraphColor);
+                    EditorGUI.DrawRect(new Rect(rect.xMin + GraphUtility.ValueToPixel(frame, startFrame, endTime, rect.width), rect.yMin, 2, rect.height), stream.samples[i].data == 0 ? m_EndColor : GraphColor);
                 }
             }
         }
     }
 
-    internal class GraphLayerVertValueLine : GraphLayerBase
+    class GraphLayerVertValueLine : GraphLayerBase
     {
         internal GraphLayerVertValueLine(int stream, string name, string desc, Color color) : base(stream, name, desc, color) { }
         public override void Draw(EventDataSet dataSet, Rect rect, int startFrame, int frameCount, int inspectFrame, bool expanded, Material material, int maxValue)
@@ -38,12 +39,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             var stream = dataSet.GetStream(Stream);
             if (stream != null)
             {
-                for (int i = stream.m_samples.Count - 1; i >= 0; --i)
+                for (int i = stream.samples.Count - 1; i >= 0; --i)
                 {
-                    var frame = stream.m_samples[i].frame;
+                    var frame = stream.samples[i].frame;
                     if (frame < startFrame)
                         break;
-                    float pixelVal = GraphUtility.ValueToPixel(stream.m_samples[i].data, 0, maxValue, rect.height);
+                    float pixelVal = GraphUtility.ValueToPixel(stream.samples[i].data, 0, maxValue, rect.height);
                     EditorGUI.DrawRect(new Rect(rect.xMin + GraphUtility.ValueToPixel(frame, startFrame, endTime, rect.width) - 1, rect.yMax - pixelVal, 2, pixelVal), GraphColor);
                 }
             }

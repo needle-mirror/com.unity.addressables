@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using UnityEngine.Serialization;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -10,26 +12,40 @@ namespace UnityEditor.AddressableAssets
     /// </summary>
     public class HostingServicesWindow : EditorWindow, ISerializationCallbackReceiver, ILogHandler
     {
-        private const float k_defaultSplitterRatio = 0.67f;
-        private const int k_splitterHeight = 15;
+        const float k_DefaultSplitterRatio = 0.67f;
+        const int k_SplitterHeight = 15;
 
-        [SerializeField] private string m_logText;
-        [SerializeField] private Vector2 m_logScrollPos;
-        [SerializeField] private Vector2 m_servicesScrollPos;
-        [SerializeField] private bool m_profileVarsFoldout = true;
-        [SerializeField] private bool m_servicesFoldout = true;
-        [SerializeField] private float m_splitterRatio = k_defaultSplitterRatio;
-        [SerializeField] private AddressableAssetSettings m_settings;
+        [FormerlySerializedAs("m_logText")]
+        [SerializeField]
+        string m_LogText;
+        [FormerlySerializedAs("m_logScrollPos")]
+        [SerializeField]
+        Vector2 m_LogScrollPos;
+        [FormerlySerializedAs("m_servicesScrollPos")]
+        [SerializeField]
+        Vector2 m_ServicesScrollPos;
+        [FormerlySerializedAs("m_profileVarsFoldout")]
+        [SerializeField]
+        bool m_ProfileVarsFoldout = true;
+        [FormerlySerializedAs("m_servicesFoldout")]
+        [SerializeField]
+        bool m_ServicesFoldout = true;
+        [FormerlySerializedAs("m_splitterRatio")]
+        [SerializeField]
+        float m_SplitterRatio = k_DefaultSplitterRatio;
+        [FormerlySerializedAs("m_settings")]
+        [SerializeField]
+        AddressableAssetSettings m_Settings;
 
-        private ILogger m_logger;
-        private bool m_newLogContent;
-        private bool m_isResizingSplitter;
+        ILogger m_Logger;
+        bool m_NewLogContent;
+        bool m_IsResizingSplitter;
 
-        private readonly Dictionary<object, HostingServicesProfileVarsTreeView> m_profileVarTables =
+        readonly Dictionary<object, HostingServicesProfileVarsTreeView> m_ProfileVarTables =
             new Dictionary<object, HostingServicesProfileVarsTreeView>();
 
-        private readonly List<IHostingService> m_removalQueue = new List<IHostingService>();
-        private HostingServicesProfileVarsTreeView m_globalProfileVarTable;
+        readonly List<IHostingService> m_RemovalQueue = new List<IHostingService>();
+        HostingServicesProfileVarsTreeView m_GlobalProfileVarTable;
 
         /// <summary>
         /// Show the <see cref="HostingServicesWindow"/>, initialized with the given <see cref="AddressableAssetSettings"/>
@@ -41,16 +57,16 @@ namespace UnityEditor.AddressableAssets
             Show();
         }
 
-        private void Initialize(AddressableAssetSettings settings)
+        void Initialize(AddressableAssetSettings settings)
         {
-            if (m_settings == null)
-                m_settings = settings;
+            if (m_Settings == null)
+                m_Settings = settings;
 
-            m_settings.HostingServicesManager.Logger = m_logger;
+            m_Settings.HostingServicesManager.Logger = m_Logger;
         }
 
         [MenuItem("Window/Asset Management/Hosting Services", priority = 2052)]
-        private static void InitializeWithDefaultSettings()
+        static void InitializeWithDefaultSettings()
         {
             var defaultSettings = AddressableAssetSettingsDefaultObject.Settings;
             if (defaultSettings == null)
@@ -62,43 +78,43 @@ namespace UnityEditor.AddressableAssets
             GetWindow<HostingServicesWindow>().Show(defaultSettings);
         }
 
-        private void Awake()
+        void Awake()
         {
             titleContent = new GUIContent("Hosting");
-            m_logger = new Logger(this);
+            m_Logger = new Logger(this);
         }
 
-        private void OnGUI()
+        void OnGUI()
         {
-            if (m_settings == null) return;
+            if (m_Settings == null) return;
 
-            if (m_isResizingSplitter)
-                m_splitterRatio = Mathf.Clamp((Event.current.mousePosition.y - k_splitterHeight / 2f) / position.height, 0.2f, 0.9f);
+            if (m_IsResizingSplitter)
+                m_SplitterRatio = Mathf.Clamp((Event.current.mousePosition.y - k_SplitterHeight / 2f) / position.height, 0.2f, 0.9f);
 
-            var itemRect = new Rect(0, 0, position.width, position.height * m_splitterRatio);
-            var splitterRect = new Rect(0, itemRect.height, position.width, k_splitterHeight);
-            var logRect = new Rect(0, itemRect.height + k_splitterHeight, position.width,
-                position.height - itemRect.height - k_splitterHeight);
+            var itemRect = new Rect(0, 0, position.width, position.height * m_SplitterRatio);
+            var splitterRect = new Rect(0, itemRect.height, position.width, k_SplitterHeight);
+            var logRect = new Rect(0, itemRect.height + k_SplitterHeight, position.width,
+                position.height - itemRect.height - k_SplitterHeight);
 
             EditorGUI.LabelField(splitterRect, string.Empty, GUI.skin.horizontalSlider);
             EditorGUIUtility.AddCursorRect(splitterRect, MouseCursor.ResizeVertical);
             if (Event.current.type == EventType.MouseDown && splitterRect.Contains(Event.current.mousePosition))
-                m_isResizingSplitter = true;
+                m_IsResizingSplitter = true;
             else if (Event.current.type == EventType.MouseUp)
-                m_isResizingSplitter = false;
+                m_IsResizingSplitter = false;
 
             GUILayout.BeginArea(itemRect);
             {
                 EditorGUILayout.Space();
 
-                m_profileVarsFoldout = EditorGUILayout.Foldout(m_profileVarsFoldout, "Global Profile Variables");
-                if (m_profileVarsFoldout)
+                m_ProfileVarsFoldout = EditorGUILayout.Foldout(m_ProfileVarsFoldout, "Global Profile Variables");
+                if (m_ProfileVarsFoldout)
                     DrawGlobalProfileVarsArea();
 
                 EditorGUILayout.Space();
 
-                m_servicesFoldout = EditorGUILayout.Foldout(m_servicesFoldout, "Hosting Services");
-                if (m_servicesFoldout)
+                m_ServicesFoldout = EditorGUILayout.Foldout(m_ServicesFoldout, "Hosting Services");
+                if (m_ServicesFoldout)
                     DrawServicesArea();
             }
             GUILayout.EndArea();
@@ -109,13 +125,13 @@ namespace UnityEditor.AddressableAssets
             }
             GUILayout.EndArea();
 
-            if (m_isResizingSplitter)
+            if (m_IsResizingSplitter)
                 Repaint();
         }
 
-        private void DrawGlobalProfileVarsArea()
+        void DrawGlobalProfileVarsArea()
         {
-            var manager = m_settings.HostingServicesManager;
+            var manager = m_Settings.HostingServicesManager;
             DrawProfileVarTable(this, manager.GlobalProfileVariables);
 
             GUILayout.BeginHorizontal();
@@ -127,18 +143,18 @@ namespace UnityEditor.AddressableAssets
             GUILayout.EndHorizontal();
         }
 
-        private void DrawServicesArea()
+        void DrawServicesArea()
         {
-            var manager = m_settings.HostingServicesManager;
-            m_servicesScrollPos = EditorGUILayout.BeginScrollView(m_servicesScrollPos);
+            var manager = m_Settings.HostingServicesManager;
+            m_ServicesScrollPos = EditorGUILayout.BeginScrollView(m_ServicesScrollPos);
             var svcList = manager.HostingServices;
 
-            if (m_removalQueue.Count > 0)
+            if (m_RemovalQueue.Count > 0)
             {
-                foreach (var svc in m_removalQueue)
+                foreach (var svc in m_RemovalQueue)
                     manager.RemoveHostingService(svc);
 
-                m_removalQueue.Clear();
+                m_RemovalQueue.Clear();
             }
 
             var i = 0;
@@ -162,7 +178,7 @@ namespace UnityEditor.AddressableAssets
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Add Service...", GUILayout.MaxWidth(125f)))
                 {
-                    GetWindow<HostingServicesAddServiceWindow>(true, "Add Service").Initialize(m_settings);
+                    GetWindow<HostingServicesAddServiceWindow>(true, "Add Service").Initialize(m_Settings);
                 }
             }
             GUILayout.EndHorizontal();
@@ -170,18 +186,18 @@ namespace UnityEditor.AddressableAssets
             GUILayout.EndScrollView();
         }
 
-        private void DrawServiceElement(IHostingService svc)
+        void DrawServiceElement(IHostingService svc)
         {
             EditorGUILayout.BeginHorizontal();
             {
-                svc.DescriptiveName = EditorGUILayout.DelayedTextField("Service Name", svc.DescriptiveName);
+                svc.DescriptiveName = EditorGUILayout.DelayedTextField("Service EventName", svc.DescriptiveName);
 
                 var newIsServiceEnabled = GUILayout.Toggle(svc.IsHostingServiceRunning, "Enable Service", "Button", GUILayout.MaxWidth(150f));
 
                 if (GUILayout.Button("Remove...", GUILayout.MaxWidth(75f)))
                 {
                     if (EditorUtility.DisplayDialog("Remove Service", "Are you sure?", "Ok", "Cancel"))
-                        m_removalQueue.Add(svc);
+                        m_RemovalQueue.Add(svc);
                 }
                 else if (newIsServiceEnabled != svc.IsHostingServiceRunning)
                 {
@@ -209,28 +225,28 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        private void DrawLogArea(Rect rect)
+        void DrawLogArea(Rect rect)
         {
-            if (m_newLogContent)
+            if (m_NewLogContent)
             {
-                var height = GUI.skin.GetStyle("Label").CalcHeight(new GUIContent(m_logText), rect.width);
-                m_logScrollPos = new Vector2(0f, height);
-                m_newLogContent = false;
+                var height = GUI.skin.GetStyle("Label").CalcHeight(new GUIContent(m_LogText), rect.width);
+                m_LogScrollPos = new Vector2(0f, height);
+                m_NewLogContent = false;
             }
 
-            m_logScrollPos = EditorGUILayout.BeginScrollView(m_logScrollPos);
-            GUILayout.Label(m_logText);
+            m_LogScrollPos = EditorGUILayout.BeginScrollView(m_LogScrollPos);
+            GUILayout.Label(m_LogText);
             EditorGUILayout.EndScrollView();
         }
 
-        private void DrawProfileVarTable(object tableKey, IEnumerable<KeyValuePair<string, string>> data)
+        void DrawProfileVarTable(object tableKey, IEnumerable<KeyValuePair<string, string>> data)
         {
             HostingServicesProfileVarsTreeView table;
-            if (!m_profileVarTables.TryGetValue(tableKey, out table))
+            if (!m_ProfileVarTables.TryGetValue(tableKey, out table))
             {
                 table = new HostingServicesProfileVarsTreeView(new TreeViewState(),
                     HostingServicesProfileVarsTreeView.CreateHeader());
-                m_profileVarTables[tableKey] = table;
+                m_ProfileVarTables[tableKey] = table;
             }
 
             var rowHeight = table.RowHeight;
@@ -247,7 +263,7 @@ namespace UnityEditor.AddressableAssets
         }
 
         /// <inheritdoc/>
-        public void LogFormat(LogType logType, UnityEngine.Object context, string format, params object[] args)
+        public void LogFormat(LogType logType, Object context, string format, params object[] args)
         {
             IHostingService svc = null;
 
@@ -256,15 +272,15 @@ namespace UnityEditor.AddressableAssets
 
             if (svc != null)
             {
-                m_logText += string.Format("[{0}] ", svc.DescriptiveName) + string.Format(format, args) + "\n";
-                m_newLogContent = true;
+                m_LogText += string.Format("[{0}] ", svc.DescriptiveName) + string.Format(format, args) + "\n";
+                m_NewLogContent = true;
             }
 
             Debug.unityLogger.LogFormat(logType, context, format, args);
         }
 
         /// <inheritdoc/>
-        public void LogException(Exception exception, UnityEngine.Object context)
+        public void LogException(Exception exception, Object context)
         {
             Debug.unityLogger.LogException(exception, context);
         }
@@ -278,8 +294,8 @@ namespace UnityEditor.AddressableAssets
         /// <inheritdoc/>
         public void OnAfterDeserialize()
         {
-            m_logger = new Logger(this);
-            Initialize(m_settings);
+            m_Logger = new Logger(this);
+            Initialize(m_Settings);
         }
     }
 }
