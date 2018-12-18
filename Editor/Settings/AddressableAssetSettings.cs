@@ -661,7 +661,7 @@ namespace UnityEditor.AddressableAssets
             if (m_SchemaTemplates == null)
                 m_SchemaTemplates = new List<AddressableAssetGroupSchemaTemplate>();
             if (m_SchemaTemplates.Count == 0)
-                AddSchemaTemplate("Packed Assets", "Pack asset sinto asset bundles.", typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
+                AddSchemaTemplate("Packed Assets", "Pack assets into asset bundles.", typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
             if (m_BuildSettings == null)
                 m_BuildSettings = new AddressableAssetBuildSettings();
             if (m_ProfileSettings == null)
@@ -679,7 +679,7 @@ namespace UnityEditor.AddressableAssets
                 m_DataBuilders.Add(CreateScriptAsset<BuildScriptPackedMode>());
             }
             if(m_DataBuilders.Find(s=>s.GetType() == typeof(BuildScriptPackedPlayMode)) == null)
-                m_DataBuilders.Add(CreateScriptAsset<BuildScriptPackedMode>());
+                m_DataBuilders.Add(CreateScriptAsset<BuildScriptPackedPlayMode>());
 
             if (!ActivePlayerDataBuilder.CanBuildData<AddressablesPlayerBuildResult>())
                 ActivePlayerDataBuilderIndex = m_DataBuilders.IndexOf(m_DataBuilders.Find(s => s.GetType() == typeof(BuildScriptPackedMode)));
