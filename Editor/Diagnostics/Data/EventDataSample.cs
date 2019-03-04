@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace UnityEditor.AddressableAssets.Diagnostics
+namespace UnityEditor.AddressableAssets.Diagnostics.Data
 {
     [Serializable]
     struct EventDataSample

@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Utilities;
+using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     static class AddressableAssetUtility
     {
@@ -147,6 +150,52 @@ namespace UnityEditor.AddressableAssets
                     return s_Types;
                 }
             }
+        }
+        
+        internal static bool SafeMoveResourcesToGroup(AddressableAssetSettings settings, AddressableAssetGroup targetGroup, List<string> paths)
+        {
+            var guids = new List<string>();
+            foreach (var p in paths)
+            {
+                guids.Add(AssetDatabase.AssetPathToGUID(p));
+            }
+            return SafeMoveResourcesToGroup(settings, targetGroup, paths, guids);
+        }
+        internal static bool SafeMoveResourcesToGroup(AddressableAssetSettings settings, AddressableAssetGroup targetGroup, List<string> paths, List<string> guids)
+        {
+            if (guids == null || guids.Count == 0 || paths == null || guids.Count != paths.Count)
+            {
+                Debug.LogWarning("No valid Resources found to move");
+                return false;
+            }
+
+            if (targetGroup == null)
+            {
+                Debug.LogWarning("No valid group to move Resources to");
+                return false;
+            }
+
+            Dictionary<string, string> guidToNewPath = new Dictionary<string, string>();
+
+            var message = "Any assets in Resources that you wish to mark as Addressable must be moved within the project. We will move the files to:\n\n";
+            for (int i = 0; i < guids.Count; i++)
+            {
+                var newName = paths[i].Replace("\\", "/");
+                newName = newName.Replace("Resources", "Resources_moved");
+                newName = newName.Replace("resources", "resources_moved");
+                if (newName == paths[i])
+                    continue;
+
+                guidToNewPath.Add(guids[i], newName);
+                message += newName + "\n";
+            }
+            message += "\nAre you sure you want to proceed?";
+            if (EditorUtility.DisplayDialog("Move From Resources", message, "Yes", "No"))
+            {
+                settings.MoveAssetsFromResources(guidToNewPath, targetGroup);
+                return true;
+            }
+            return false;
         }
     }
 }

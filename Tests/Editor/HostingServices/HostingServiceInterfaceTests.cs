@@ -1,9 +1,12 @@
 ﻿using System;
 using System.IO;
 using NUnit.Framework;
+using UnityEditor.AddressableAssets.HostingServices;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets.Tests
+namespace UnityEditor.AddressableAssets.Tests.HostingServices
 {
     [TestFixtureSource("HostingServices")]
     public class HostingServiceInterfaceTests

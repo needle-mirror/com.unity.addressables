@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     class AddressableAssetEntryTreeView : TreeView
     {
@@ -35,7 +36,7 @@ namespace UnityEditor.AddressableAssets
             columnIndexForTreeFoldouts = 0;
             multiColumnHeader.sortingChanged += OnSortingChanged;
 
-            EditorBuildSettings.sceneListChanged += OnScenesChanged;
+            BuiltinSceneCache.sceneListChanged += OnScenesChanged;
         }
 
         void OnScenesChanged()
@@ -296,7 +297,7 @@ namespace UnityEditor.AddressableAssets
             {
                 m_LabelStyle = new GUIStyle("PR Label");
                 if (m_LabelStyle == null)
-                    m_LabelStyle = GUI.skin.GetStyle("Label");
+                    m_LabelStyle = UnityEngine.GUI.skin.GetStyle("Label");
             }
 
             var item = args.item as AssetEntryTreeViewItem;
@@ -306,6 +307,8 @@ namespace UnityEditor.AddressableAssets
             }
             else if (item.group != null)
             {
+                if (item.isRenaming && !args.isRenaming)
+                    item.isRenaming = false;
                 using (new EditorGUI.DisabledScope(item.group.ReadOnly))
                 {
                     base.RowGUI(args);
@@ -341,11 +344,16 @@ namespace UnityEditor.AddressableAssets
                     break;
                 case ColumnId.Path:
                     if (Event.current.type == EventType.Repaint)
-                        m_LabelStyle.Draw(cellRect, item.entry.AssetPath, false, false, args.selected, args.focused);
+                    {
+                        var path = item.entry.AssetPath;
+                        if (string.IsNullOrEmpty(path))
+                            path = "Missing File";
+                        m_LabelStyle.Draw(cellRect, path, false, false, args.selected, args.focused);
+                    }
                     break;
                 case ColumnId.Type:
                     if (item.assetIcon != null)
-                        GUI.DrawTexture(cellRect, item.assetIcon, ScaleMode.ScaleToFit, true);
+                        UnityEngine.GUI.DrawTexture(cellRect, item.assetIcon, ScaleMode.ScaleToFit, true);
                     break;
                 case ColumnId.Labels:
                     if (EditorGUI.DropdownButton(cellRect, new GUIContent(m_Editor.settings.labelTable.GetString(item.entry.labels, cellRect.width)), FocusType.Passive))
@@ -538,13 +546,17 @@ namespace UnityEditor.AddressableAssets
             }
 
             GenericMenu menu = new GenericMenu();
+            PopulateGeneralContextMenu(ref menu);
+            menu.ShowAsContext();
+        }
+
+        void PopulateGeneralContextMenu(ref GenericMenu menu)
+        {
             foreach (var st in m_Editor.settings.SchemaTemplates)
                 menu.AddItem(new GUIContent("Create New Group/" + st.DisplayName, st.Description), false, CreateNewGroup, st);
             var bundleList = AssetDatabase.GetAllAssetBundleNames();
             if (bundleList != null && bundleList.Length > 0)
                 menu.AddItem(new GUIContent("Convert Legacy Bundles"), false, m_Editor.window.OfferToConvert);
-
-            menu.ShowAsContext();
         }
 
         protected override void ContextClickedItem(int id)
@@ -606,11 +618,13 @@ namespace UnityEditor.AddressableAssets
             {
                 if (isGroup)
                 {
-                    menu.AddItem(new GUIContent("Remove Group(s)"), false, RemoveGroup, selectedNodes);
+                    var group = selectedNodes.First().group; 
+                    if (!group.IsDefaultGroup())
+                        menu.AddItem(new GUIContent("Remove Group(s)"), false, RemoveGroup, selectedNodes);
 
                     if (selectedNodes.Count == 1)
                     {
-                        if (!selectedNodes.First().group.Default)
+                        if (!group.IsDefaultGroup() && group.CanBeSetAsDefault())
                             menu.AddItem(new GUIContent("Set as Default"), false, SetGroupAsDefault, selectedNodes);
                         menu.AddItem(new GUIContent("Inspect Group Settings"), false, GoToGroupAsset, selectedNodes);
                     }
@@ -667,6 +681,10 @@ namespace UnityEditor.AddressableAssets
                 if (CheckForRename(selectedNodes.First(), false))
                     menu.AddItem(new GUIContent("Rename"), false, RenameItem, selectedNodes);
             }
+            
+            
+            PopulateGeneralContextMenu(ref menu);
+            
             menu.ShowAsContext();
         }
 
@@ -696,7 +714,7 @@ namespace UnityEditor.AddressableAssets
             }
             if (index < 1)
                 return null;
-            var prefix = names[0].Substring(0, index - 1);
+            var prefix = names[0].Substring(0, index);
             return prefix.Trim(' ', '-');
         }
 
@@ -774,52 +792,7 @@ namespace UnityEditor.AddressableAssets
                     paths.Add(child.entry.AssetPath);
                 }
             }
-            return SafeMoveResourcesToGroup(targetGroup, paths, guids);
-        }
-        bool SafeMoveResourcesToGroup(AddressableAssetGroup targetGroup, List<string> paths)
-        {
-            var guids = new List<string>();
-            foreach (var p in paths)
-            {
-                guids.Add(AssetDatabase.AssetPathToGUID(p));
-            }
-            return SafeMoveResourcesToGroup(targetGroup, paths, guids);
-        }
-        bool SafeMoveResourcesToGroup(AddressableAssetGroup targetGroup, List<string> paths, List<string> guids)
-        {
-            if (guids == null || guids.Count == 0 || paths == null || guids.Count != paths.Count)
-            {
-                Debug.LogWarning("No valid Resources found to move");
-                return false;
-            }
-
-            if (targetGroup == null)
-            {
-                Debug.LogWarning("No valid group to move Resources to");
-                return false;
-            }
-
-            Dictionary<string, string> guidToNewPath = new Dictionary<string, string>();
-
-            var message = "Any assets in Resources that you wish to mark as Addressable must be moved within the project. We will move the files to:\n\n";
-            for (int i = 0; i < guids.Count; i++)
-            {
-                var newName = paths[i].Replace("\\", "/");
-                newName = newName.Replace("Resources", "Resources_moved");
-                newName = newName.Replace("resources", "resources_moved");
-                if (newName == paths[i])
-                    continue;
-
-                guidToNewPath.Add(guids[i], newName);
-                message += newName + "\n";
-            }
-            message += "\nAre you sure you want to proceed?";
-            if (EditorUtility.DisplayDialog("Move From Resources", message, "Yes", "No"))
-            {
-                m_Editor.settings.MoveAssetsFromResources(guidToNewPath, targetGroup);
-                return true;
-            }
-            return false;
+            return AddressableAssetUtility.SafeMoveResourcesToGroup(m_Editor.settings, targetGroup, paths, guids);
         }
 
         void MoveEntriesToNewGroup(object context)
@@ -840,7 +813,7 @@ namespace UnityEditor.AddressableAssets
                     entries.Add(item.entry);
             }
             if (entries.Count > 0)
-                m_Editor.settings.MoveEntriesToGroup(entries, targetGroup);
+                m_Editor.settings.MoveEntries(entries, targetGroup);
         }
 
         protected void CreateNewGroup(object context)
@@ -1028,6 +1001,9 @@ namespace UnityEditor.AddressableAssets
             if (target.entry != null && target.entry.ReadOnly)
                 return DragAndDropVisualMode.None;
 
+            if (target.group != null && target.group.ReadOnly)
+                return DragAndDropVisualMode.None;
+
 
             if (DragAndDrop.paths != null && DragAndDrop.paths.Length > 0)
             {
@@ -1058,7 +1034,7 @@ namespace UnityEditor.AddressableAssets
                         bool canMarkNonResources = true;
                         if (resourcePaths.Count > 0)
                         {
-                            canMarkNonResources = SafeMoveResourcesToGroup(parent, resourcePaths);
+                            canMarkNonResources = AddressableAssetUtility.SafeMoveResourcesToGroup(m_Editor.settings, parent, resourcePaths);
                         }
                         if (canMarkNonResources)
                         {
@@ -1186,14 +1162,14 @@ namespace UnityEditor.AddressableAssets
             if (Event.current.type != EventType.Repaint)
                 return;
 
-            Color orgColor = GUI.color;
-            GUI.color = GUI.color * color;
-            GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, size), EditorGUIUtility.whiteTexture);
-            GUI.DrawTexture(new Rect(rect.x, rect.yMax - size, rect.width, size), EditorGUIUtility.whiteTexture);
-            GUI.DrawTexture(new Rect(rect.x, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
-            GUI.DrawTexture(new Rect(rect.xMax - size, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
+            Color orgColor = UnityEngine.GUI.color;
+            UnityEngine.GUI.color = UnityEngine.GUI.color * color;
+            UnityEngine.GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, size), EditorGUIUtility.whiteTexture);
+            UnityEngine.GUI.DrawTexture(new Rect(rect.x, rect.yMax - size, rect.width, size), EditorGUIUtility.whiteTexture);
+            UnityEngine.GUI.DrawTexture(new Rect(rect.x, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
+            UnityEngine.GUI.DrawTexture(new Rect(rect.xMax - size, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
 
-            GUI.color = orgColor;
+            UnityEngine.GUI.color = orgColor;
         }
     }
 }

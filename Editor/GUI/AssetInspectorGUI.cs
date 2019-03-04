@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     [InitializeOnLoad]
     static class AddressableAssetInspectorGUI
@@ -32,7 +34,12 @@ namespace UnityEditor.AddressableAssets
                     if (AddressableAssetUtility.GetPathAndGUIDFromTarget(t, out path, ref guid))
                     {
                         if (create)
-                            entriesAdded.Add(aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup, false, false));
+                        {
+                            if (AddressableAssetUtility.IsInResources(path))
+                                AddressableAssetUtility.SafeMoveResourcesToGroup(aaSettings, aaSettings.DefaultGroup, new List<string> {path});
+                            else
+                                entriesAdded.Add(aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup, false, false));
+                        }
                         else
                             aaSettings.RemoveAssetEntry(guid);
                     }

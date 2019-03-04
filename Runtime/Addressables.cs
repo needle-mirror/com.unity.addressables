@@ -2,10 +2,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
+using UnityEngine.AddressableAssets.Initialization;
+using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.Diagnostics;
+using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.SceneManagement;
+
+[assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
 
 namespace UnityEngine.AddressableAssets
 {
@@ -50,6 +59,30 @@ namespace UnityEngine.AddressableAssets
     /// </summary>
     public static class Addressables
     {
+        static ResourceManager m_ResourceManager;
+        public static ResourceManager ResourceManager
+        {
+            get
+            {
+                if (m_ResourceManager == null)
+                    m_ResourceManager = new ResourceManager();
+                return m_ResourceManager;
+            }
+        }
+
+        /// <summary>
+        /// Used to resolve a string using addressables config values
+        /// </summary>
+        public static string ResolveInternalId(string id)
+        {
+            var path = AddressablesRuntimeProperties.EvaluateString(id);
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_XBOXONE
+            if (path.Length >= 260 && path.StartsWith(Application.dataPath))
+                path = path.Substring(Application.dataPath.Length + 1);
+#endif
+            return path;
+        }
+
         /// <summary>
         /// Enumerates the supported modes of merging the results of requests.
         /// If keys (A, B) mapped to results ([1,2,4],[3,4,5])...
@@ -75,11 +108,22 @@ namespace UnityEngine.AddressableAssets
         const string k_AddressablesLogConditional = "ADDRESSABLES_LOG_ALL";
 
         /// <summary>
+        /// The subfolder used by the Addressables system for its initialization data.
+        /// </summary>
+        public static string StreamingAssetsSubFolder
+        {
+            get
+            {
+                return "aa";
+            }
+        }
+
+        /// <summary>
         /// The path used by the Addressables system for its initialization data.
         /// </summary>
         public static string BuildPath
         {
-            get { return "Assets/StreamingAssets/com.unity.addressables"; }
+            get { return "Assets/StreamingAssets/" + StreamingAssetsSubFolder; }
         }
 
         /// <summary>
@@ -87,7 +131,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public static string RuntimePath
         {
-            get { return Application.streamingAssetsPath + "/com.unity.addressables"; }
+            get { return Application.streamingAssetsPath + "/" + StreamingAssetsSubFolder; }
         }
 
         static List<IResourceLocator> s_ResourceLocators = new List<IResourceLocator>();
@@ -174,7 +218,7 @@ namespace UnityEngine.AddressableAssets
         /// <param name="msg">The msg to log</param>
         public static void LogException(IAsyncOperation op, Exception ex)
         {
-            Debug.LogErrorFormat("{0} encounterd in operation {1}.", ex.GetType().Name, op);
+            Debug.LogErrorFormat("{0} encountered in operation {1}.", ex.GetType().Name, op);
             Debug.LogException(ex);
         }
 
@@ -298,9 +342,8 @@ namespace UnityEngine.AddressableAssets
                 Debug.LogWarning("Application.persistentDataPath has been stripped!");
 #endif
             ResourceManager.ExceptionHandler = LogException;
-            ResourceManager.OnResolveInternalId = AddressablesRuntimeProperties.EvaluateString;
 
-            var runtimeDataPath = ResourceManager.ResolveInternalId(PlayerPrefs.GetString(kAddressablesRuntimeDataPath, RuntimePath + "/settings.json"));
+            var runtimeDataPath = Addressables.ResolveInternalId(PlayerPrefs.GetString(kAddressablesRuntimeDataPath, RuntimePath + "/settings.json"));
 
             if (string.IsNullOrEmpty(runtimeDataPath))
                 return new CompletedOperation<IResourceLocator>().Start(null, null, null, new InvalidKeyException(runtimeDataPath));
@@ -315,19 +358,21 @@ namespace UnityEngine.AddressableAssets
             s_RecordInstanceListAction = RecordInstanceListLocation;
             DiagnosticEventCollector.ResourceManagerProfilerEventsEnabled = true;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
-            return (s_InitializationOperation = new InitializationOperation(runtimeDataPath, true));
+            return (s_InitializationOperation = new InitializationOperation(runtimeDataPath, null));
         }
 
         /// <summary>
         /// Additively load catalogs from runtime data.  The settings are not used.
         /// </summary>
-        /// <param name="runtimeDataPath">The path to the runtime data.</param>
+        /// <param name="catalogPath">The path to the runtime data.</param>
+        /// <param name="providerSuffix">This value, if not null or empty, will be appended to all provider ids loaded from this data.</param>
         /// <returns>IAsync operation for initialization.</returns>
-        public static IAsyncOperation<IResourceLocator> LoadCatalogsFromRuntimeData(string runtimeDataPath)
+        public static IAsyncOperation<IResourceLocator> LoadContentCatalog(string catalogPath, string providerSuffix = null)
         {
+            var catalogLoc = new ResourceLocationBase(catalogPath, catalogPath, typeof(JsonAssetProvider).FullName);
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IResourceLocator, IResourceLocator>>().Start(null, runtimeDataPath, InitializationOperation, op => new InitializationOperation(runtimeDataPath, false)).Retain();
-            return new InitializationOperation(runtimeDataPath, false);
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IResourceLocator, IResourceLocator>>().Start(null, catalogLoc, InitializationOperation, op => LoadContentCatalog(catalogPath, providerSuffix)).Retain();
+            return Initialization.InitializationOperation.LoadContentCatalog(catalogLoc, providerSuffix);
         }
 
         /// <summary>
@@ -401,6 +446,8 @@ namespace UnityEngine.AddressableAssets
                 LogWarningFormat("RecordInstance() - scene is not valid and loaded " + gameObject.scene);
                 return;
             }
+
+
 
             s_InstanceToLocationMap.Add(gameObject, location);
             s_InstanceToScene.Add(gameObject, gameObject.scene);
@@ -481,7 +528,7 @@ namespace UnityEngine.AddressableAssets
         /// <param name="location">The location of the asset.</param>        
         public static IAsyncOperation<TObject> LoadAsset<TObject>(IResourceLocation location) where TObject : class
         {
-            var loadOp = ResourceManager.ProvideResource<TObject>(location);
+            var loadOp = Addressables.ResourceManager.ProvideResource<TObject>(location);
             (loadOp as IAsyncOperation).Completed += s_RecordAssetAction;
             loadOp.Key = location;
             return loadOp;
@@ -513,13 +560,13 @@ namespace UnityEngine.AddressableAssets
                     var provider = ResourceManager.GetResourceProvider<TObject>(loc);
                     if (provider != null)
                     {
-                        var op = provider.Provide<TObject>(loc, ResourceManager.LoadDependencies(loc)).Retain();
+                        var op = ResourceManager.ProvideResource<TObject>(loc);
                         (op as IAsyncOperation).Completed += s_RecordAssetAction;
                         op.Key = key;
                         return op;
                     }
                 }
-                throw new UnknownResourceProviderException(locations[0]);
+                return new CompletedOperation<TObject>().Start(null, key, null, new UnknownResourceProviderException(locations[0]));
             }
             return new CompletedOperation<TObject>().Start(null, key, null, new InvalidKeyException(key));
         }
@@ -532,7 +579,7 @@ namespace UnityEngine.AddressableAssets
         public static IAsyncOperation<IList<TObject>> LoadAssets<TObject>(IList<IResourceLocation> locations, Action<IAsyncOperation<TObject>> callback)
             where TObject : class
         {
-            var loadOp = ResourceManager.ProvideResources(locations, callback);
+            var loadOp = Addressables.ResourceManager.ProvideResources(locations, callback);
             (loadOp as IAsyncOperation).Completed += s_RecordAssetListAction;
             loadOp.Key = locations;
             return loadOp;
@@ -544,8 +591,8 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="keys">List of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
-        /// <param name="mode">Merge method of locations.</param>
-        public static IAsyncOperation<IList<TObject>> LoadAssets<TObject>(IList<object> keys, Action<IAsyncOperation<TObject>> callback, MergeMode mode = MergeMode.UseFirst)
+        /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
+        public static IAsyncOperation<IList<TObject>> LoadAssets<TObject>(IList<object> keys, Action<IAsyncOperation<TObject>> callback, MergeMode mode)
             where TObject : class
         {
             if (!InitializationOperation.IsDone)
@@ -598,27 +645,25 @@ namespace UnityEngine.AddressableAssets
         public static void ReleaseAsset<TObject>(TObject asset)
             where TObject : class
         {
+            if (asset == null)
+            {
+                LogWarning("ResourceManager.Release() - trying to relase null asset.");
+                return;
+            }
             KeyValuePair<IResourceLocation, int> info;
             if (!s_AssetToLocationMap.TryGetValue(asset, out info))
             {
-                LogWarningFormat("ResourceManager.Release() - unable to find location info for asset {0}.", asset);
+                LogWarningFormat("Addressables.ResourceManager.Release() - unable to find location info for asset {0}.", asset);
                 return;
             }
             if (info.Value <= 1)
                 s_AssetToLocationMap.Remove(asset);
             else
                 s_AssetToLocationMap[asset] = new KeyValuePair<IResourceLocation, int>(info.Key, info.Value - 1);
-            ResourceManager.ReleaseResource(asset, info.Key);
+            Addressables.ResourceManager.ReleaseResource(asset, info.Key);
         }
 
-        /// <summary>
-        /// Asynchronously loads only the dependencies for the specified list of <paramref name="keys"/>s.
-        /// </summary>
-        /// <returns>An async operation that will complete when all individual async load operations are complete.</returns>
-        /// <param name="keys">List of keys for which to load dependencies.</param>
-        /// <param name="callback">This callback will be invoked once for each object that is loaded.</param>
-        /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
-        public static IAsyncOperation<IList<TObject>> PreloadDependencies<TObject>(IList<object> keys, Action<IAsyncOperation<TObject>> callback, MergeMode mode = MergeMode.UseFirst) where TObject : class
+        private static IAsyncOperation<IList<TObject>> PreloadDependencies<TObject>(IList<object> keys, Action<IAsyncOperation<TObject>> callback, MergeMode mode) where TObject : class
         {
             if (!InitializationOperation.IsDone)
                 return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, IResourceLocator>>().Start(null, keys, InitializationOperation, op => PreloadDependencies(keys, callback, mode)).Retain();
@@ -643,13 +688,7 @@ namespace UnityEngine.AddressableAssets
             return loadOp;
         }
 
-        /// <summary>
-        /// Asynchronously loads only the dependencies for the specified <paramref name="key"/>.
-        /// </summary>
-        /// <returns>An async operation that will complete when all individual async load operations are complete.</returns>
-        /// <param name="key">key for which to load dependencies.</param>
-        /// <param name="callback">This callback will be invoked once for each object that is loaded.</param>
-        public static IAsyncOperation<IList<TObject>> PreloadDependencies<TObject>(object key, Action<IAsyncOperation<TObject>> callback) where TObject : class
+        private static IAsyncOperation<IList<TObject>> PreloadDependencies<TObject>(object key, Action<IAsyncOperation<TObject>> callback) where TObject : class
         {
             if (!InitializationOperation.IsDone)
                 return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, IResourceLocator>>().Start(null, key, InitializationOperation, op => PreloadDependencies(key, callback)).Retain();
@@ -673,11 +712,66 @@ namespace UnityEngine.AddressableAssets
             loadOp.Key = key;
             return loadOp;
         }
+        /// <summary>
+        /// Asynchronously loads only the dependencies for the specified <paramref name="key"/>.
+        /// </summary>
+        /// <returns>An async operation that will complete when all individual async load operations are complete.</returns>
+        /// <param name="key">key for which to load dependencies.</param>
+        /// <param name="callback">This callback will be invoked once for each object that is loaded.</param>
+        public static IAsyncOperation<long> GetDownloadSize(object key)
+        {
+            if (!InitializationOperation.IsDone)
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<long, IResourceLocator>>().Start(null, key, InitializationOperation, op => GetDownloadSize(key)).Retain();
+
+            IList<IResourceLocation> locations;
+            if (typeof(IList<IResourceLocation>).IsAssignableFrom(key.GetType()))
+                locations = key as IList<IResourceLocation>;
+            else if (typeof(IResourceLocation).IsAssignableFrom(key.GetType()))
+            {
+                locations = new List<IResourceLocation>(1);
+                locations.Add(key as IResourceLocation);
+            }
+            else
+            {
+                if (!GetResourceLocations(key, out locations))
+                    return new CompletedOperation<long>().Start(locations, key, 0, new InvalidKeyException(key));
+            }
+
+            var locHash = new HashSet<IResourceLocation>();
+            foreach (var loc in locations)
+            {
+                if (loc.HasDependencies)
+                {
+                    foreach (var dep in loc.Dependencies)
+                        locHash.Add(dep);
+                }
+            }
+
+            long size = 0;
+            foreach (var d in locHash)
+            {
+                var sizeData = d.Data as ILocationSizeData;
+                if (sizeData != null)
+                    size += sizeData.ComputeSize(d);
+            }
+            return new CompletedOperation<long>().Start(locations, key, size);
+        }
 
         /// <summary>
-        /// Downloads dependencies of assets marked with the specified label.  
+        /// Downloads dependencies of assets marked with the specified labels and addresses.  
         /// </summary>
-        /// <param name="key">The key of the asset to load dependencies for.</param>
+        /// <param name="keys">The keys of the assets to load dependencies for.</param>
+        /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
+        /// <returns>The IAsyncOperation for the dependency load.</returns>
+        public static IAsyncOperation DownloadDependencies(IList<object> keys, MergeMode mode)
+        {
+            return PreloadDependencies<object>(keys, null, mode);
+        }
+        
+        /// <summary>
+        /// Downloads dependencies of assets marked with the specified label or address.  
+        /// </summary>
+        /// <param name="key">The key of the asset(s) to load dependencies for.</param>
         /// <returns>The IAsyncOperation for the dependency load.</returns>
         public static IAsyncOperation DownloadDependencies(object key)
         {
@@ -691,7 +785,7 @@ namespace UnityEngine.AddressableAssets
         internal static void InternalReleaseLocations(IList<IResourceLocation> locations)
         {
             foreach (var loc in locations)
-                ResourceManager.ReleaseResource<object>(null, loc);
+                Addressables.ResourceManager.ReleaseResource<object>(null, loc);
         }
 
         /// <summary>
@@ -699,10 +793,9 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>
         /// <param name="instantiateParameters">Parameters for instantiation.</param>
-        public static IAsyncOperation<TObject> Instantiate<TObject>(IResourceLocation location, InstantiationParameters instantiateParameters)
-            where TObject : Object
+        public static IAsyncOperation<GameObject> Instantiate(IResourceLocation location, InstantiationParameters instantiateParameters)
         {
-            var instOp = ResourceManager.ProvideInstance<TObject>(location, instantiateParameters);
+            var instOp = Addressables.ResourceManager.ProvideInstance<GameObject>(location, instantiateParameters);
             (instOp as IAsyncOperation).Completed += s_RecordInstanceAction;
             instOp.Key = location;
             return instOp;
@@ -714,18 +807,17 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
         /// <param name="instantiateParameters">Parameters for instantiation.</param>
-        public static IAsyncOperation<TObject> Instantiate<TObject>(object key, InstantiationParameters instantiateParameters)
-            where TObject : Object
+        public static IAsyncOperation<GameObject> Instantiate(object key, InstantiationParameters instantiateParameters)
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<TObject, IResourceLocator>>().Start(null, key, InitializationOperation, op => Instantiate<TObject>(key, instantiateParameters)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<GameObject, IResourceLocator>>().Start(null, key, InitializationOperation, op => Instantiate(key, instantiateParameters)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                return new CompletedOperation<TObject>().Start(locations, key, null, new InvalidKeyException(key));
+                return new CompletedOperation<GameObject>().Start(locations, key, null, new InvalidKeyException(key));
 
 
-            var instOp = Instantiate<TObject>(locations[0], instantiateParameters);
+            var instOp = Instantiate(locations[0], instantiateParameters);
             instOp.Key = key;
             return instOp;
         }
@@ -736,9 +828,9 @@ namespace UnityEngine.AddressableAssets
         /// <param name="location">The location of the Object to instantiate.</param>
         /// <param name="parent">Parent transform for instantiated object.</param>
         /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
-        public static IAsyncOperation<TObject> Instantiate<TObject>(IResourceLocation location, Transform parent = null, bool instantiateInWorldSpace = false) where TObject : Object
+        public static IAsyncOperation<GameObject> Instantiate(IResourceLocation location, Transform parent = null, bool instantiateInWorldSpace = false)
         {
-            return Instantiate<TObject>(location, new InstantiationParameters(parent, instantiateInWorldSpace));
+            return Instantiate(location, new InstantiationParameters(parent, instantiateInWorldSpace));
         }
 
         /// <summary>
@@ -748,9 +840,9 @@ namespace UnityEngine.AddressableAssets
         /// <param name="position">The position of the instantiated object.</param>
         /// <param name="rotation">The rotation of the instantiated object.</param>
         /// <param name="parent">Parent transform for instantiated object.</param>
-        public static IAsyncOperation<TObject> Instantiate<TObject>(IResourceLocation location, Vector3 position, Quaternion rotation, Transform parent = null) where TObject : Object
+        public static IAsyncOperation<GameObject> Instantiate(IResourceLocation location, Vector3 position, Quaternion rotation, Transform parent = null)
         {
-            return Instantiate<TObject>(location, new InstantiationParameters(position, rotation, parent));
+            return Instantiate(location, new InstantiationParameters(position, rotation, parent));
         }
 
         /// <summary>
@@ -759,9 +851,9 @@ namespace UnityEngine.AddressableAssets
         /// <param name="key">The key of the location of the Object to instantiate.</param>
         /// <param name="parent">Parent transform for instantiated object.</param>
         /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
-        public static IAsyncOperation<TObject> Instantiate<TObject>(object key, Transform parent = null, bool instantiateInWorldSpace = false) where TObject : Object
+        public static IAsyncOperation<GameObject> Instantiate(object key, Transform parent = null, bool instantiateInWorldSpace = false)
         {
-            return Instantiate<TObject>(key, new InstantiationParameters(parent, instantiateInWorldSpace));
+            return Instantiate(key, new InstantiationParameters(parent, instantiateInWorldSpace));
         }
 
         /// <summary>
@@ -771,9 +863,9 @@ namespace UnityEngine.AddressableAssets
         /// <param name="position">The position of the instantiated object.</param>
         /// <param name="rotation">The rotation of the instantiated object.</param>
         /// <param name="parent">Parent transform for instantiated object.</param>
-        public static IAsyncOperation<TObject> Instantiate<TObject>(object key, Vector3 position, Quaternion rotation, Transform parent = null) where TObject : Object
+        public static IAsyncOperation<GameObject> Instantiate(object key, Vector3 position, Quaternion rotation, Transform parent = null)
         {
-            return Instantiate<TObject>(key, new InstantiationParameters(position, rotation, parent));
+            return Instantiate(key, new InstantiationParameters(position, rotation, parent));
         }
 
         /// <summary>
@@ -783,8 +875,7 @@ namespace UnityEngine.AddressableAssets
         /// <param name="callback">Callback Action that is called per load operation</param>
         /// <param name="parent">Parent transform for instantiated objects.</param>
         /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
-        public static IAsyncOperation<IList<TObject>> InstantiateAll<TObject>(object key, Action<IAsyncOperation<TObject>> callback, Transform parent = null, bool instantiateInWorldSpace = false)
-            where TObject : Object
+        public static IAsyncOperation<IList<GameObject>> InstantiateAll(object key, Action<IAsyncOperation<GameObject>> callback, Transform parent = null, bool instantiateInWorldSpace = false)
         {
             return InstantiateAll(key, callback, new InstantiationParameters(parent, instantiateInWorldSpace));
         }
@@ -795,15 +886,14 @@ namespace UnityEngine.AddressableAssets
         /// <param name="key">The key of the location of the objects to instantiate.</param>
         /// <param name="callback">This callback will be invoked once for each object that is instantiated.</param>
         /// <param name="instantiateParameters">Parameters for instantiation.</param>
-        public static IAsyncOperation<IList<TObject>> InstantiateAll<TObject>(object key, Action<IAsyncOperation<TObject>> callback, InstantiationParameters instantiateParameters)
-            where TObject : Object
+        public static IAsyncOperation<IList<GameObject>> InstantiateAll(object key, Action<IAsyncOperation<GameObject>> callback, InstantiationParameters instantiateParameters)
         {
             if (!InitializationOperation.IsDone)
-                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<TObject>, IResourceLocator>>().Start(null, key, InitializationOperation, op => InstantiateAll(key, callback, instantiateParameters)).Retain();
+                return AsyncOperationCache.Instance.Acquire<ChainOperation<IList<GameObject>, IResourceLocator>>().Start(null, key, InitializationOperation, op => InstantiateAll(key, callback, instantiateParameters)).Retain();
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                return new CompletedOperation<IList<TObject>>().Start(locations, key, null, new InvalidKeyException(key));
+                return new CompletedOperation<IList<GameObject>>().Start(locations, key, null, new InvalidKeyException(key));
 
 
             var instOp = InstantiateAll(locations, callback, instantiateParameters);
@@ -817,10 +907,9 @@ namespace UnityEngine.AddressableAssets
         /// <param name="locations">The locations of the objects to instantiate.</param>
         /// <param name="callback">This callback will be invoked once for each object that is instantiated.</param>
         /// <param name="instantiateParameters">Parameters for instantiation.</param>
-        public static IAsyncOperation<IList<TObject>> InstantiateAll<TObject>(IList<IResourceLocation> locations, Action<IAsyncOperation<TObject>> callback, InstantiationParameters instantiateParameters)
-            where TObject : Object
+        public static IAsyncOperation<IList<GameObject>> InstantiateAll(IList<IResourceLocation> locations, Action<IAsyncOperation<GameObject>> callback, InstantiationParameters instantiateParameters)
         {
-            var instOp = ResourceManager.ProvideInstances(locations, callback, instantiateParameters);
+            var instOp = Addressables.ResourceManager.ProvideInstances(locations, callback, instantiateParameters);
             (instOp as IAsyncOperation).Completed += s_RecordInstanceListAction;
             instOp.Key = locations;
             return instOp;
@@ -831,7 +920,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="instance">The instantiated object to release.</param>
         /// <param name="delay">The time delay in seconds to wait until releasing the instantiated object.  If this value is less than 0, it will release immediately.</param>
-        public static void ReleaseInstance(Object instance, float delay = 0)
+        public static void ReleaseInstance(GameObject instance, float delay = 0)
         {
             if (delay > 0)
             {
@@ -840,7 +929,7 @@ namespace UnityEngine.AddressableAssets
             }
             if (instance == null)
             {
-                LogWarning("ResourceManager.ReleaseInstance() - trying to release null instance");
+                LogWarning("Addressables.ResourceManager.ReleaseInstance() - trying to release null instance");
                 return;
             }
             if (s_CurrentFrame != Time.frameCount)
@@ -853,32 +942,27 @@ namespace UnityEngine.AddressableAssets
             if (s_InstancesReleasedInCurrentFrame.Contains(instance))
                 return;
 
-            var go = instance as GameObject;
-            if (go == null)
-            {
-                LogWarning("ResourceManager.ReleaseInstance() - only GameObject types are supported");
-                Object.Destroy(go);
-                return;
-            }
-
             s_InstancesReleasedInCurrentFrame.Add(instance);
             IResourceLocation location;
-            if (!s_InstanceToLocationMap.TryGetValue(go, out location))
+            if (!s_InstanceToLocationMap.TryGetValue(instance, out location))
             {
                 //TODO - need to keep this around for to-be-implemented a verbose loggging option
-                //Addressables.LogWarningFormat("ResourceManager.ReleaseInstance() - unable to find location for instance {0}.", instance.GetInstanceID());
-                Object.Destroy(go);
+                //Addressables.LogWarningFormat("Addressables.ResourceManager.ReleaseInstance() - unable to find location for instance {0}.", instance.GetInstanceID());
+                if (Application.isPlaying)
+                    Object.Destroy(instance);
+                else
+                    Object.DestroyImmediate(instance);
                 return;
             }
 
-            if (!s_SceneToInstances[go.scene].Remove(go))
-                LogWarningFormat("Instance {0} was not found in scene {1}.", go.GetInstanceID(), go.scene);
-            if (!s_InstanceToScene.Remove(go))
-                LogWarningFormat("Instance {0} was not found instance->scene map.", go.GetInstanceID());
+            if (!s_SceneToInstances[instance.scene].Remove(instance))
+                LogWarningFormat("Instance {0} was not found in scene {1}.", instance.GetInstanceID(), instance.scene);
+            if (!s_InstanceToScene.Remove(instance))
+                LogWarningFormat("Instance {0} was not found instance->scene map.", instance.GetInstanceID());
 
 
-            s_InstanceToLocationMap.Remove(go);
-            ResourceManager.ReleaseInstance(go, location);
+            s_InstanceToLocationMap.Remove(instance);
+            Addressables.ResourceManager.ReleaseInstance(instance, location);
         }
 
         /// <summary>
@@ -911,7 +995,7 @@ namespace UnityEngine.AddressableAssets
             if (loadMode == LoadSceneMode.Single)
                 ValidateSceneInstances();
 
-            var loadOp = ResourceManager.ProvideScene(location, loadMode);
+            var loadOp = Addressables.ResourceManager.ProvideScene(location, loadMode);
             loadOp.Completed += op => s_SceneToLocationMap.Add(op.Result, location);
             loadOp.Key = location;
             return loadOp;
@@ -928,7 +1012,7 @@ namespace UnityEngine.AddressableAssets
                 return new CompletedOperation<Scene>().Start(null, scene, default(Scene), new ArgumentNullException("scene", string.Format("UnloadScene - unable to find location for scene {0}.", scene)));
 
             s_SceneToLocationMap.Remove(scene);
-            return ResourceManager.ReleaseScene(scene, location);
+            return Addressables.ResourceManager.ReleaseScene(scene, location);
         }
 
 
@@ -970,8 +1054,12 @@ namespace UnityEngine.AddressableAssets
             {
                 foreach (var go in instances)
                 {
+                    if(IsDontDestroyOnLoad(go))
+                        continue;
+
                     if (s_InstancesReleasedInCurrentFrame.Contains(go))
                         continue;
+
 
                     IResourceLocation loc;
                     if (s_InstanceToLocationMap.TryGetValue(go, out loc))
@@ -980,7 +1068,7 @@ namespace UnityEngine.AddressableAssets
                             LogWarningFormat("Scene not found for instance {0}", go);
 
                         s_InstanceToLocationMap.Remove(go);
-                        ResourceManager.ReleaseInstance(go, loc);
+                        Addressables.ResourceManager.ReleaseInstance(go, loc);
                     }
                     else
                     {
@@ -993,6 +1081,30 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
+        private static string m_DontDestroyOnLoadSceneName = "DontDestroyOnLoad";
+        static bool IsDontDestroyOnLoad(GameObject go)
+        {
+            if (go != null && go.scene.name == m_DontDestroyOnLoadSceneName)
+            {
+                Scene temp;
+                if (!s_InstanceToScene.TryGetValue(go, out temp))
+                    s_InstanceToScene.Add(go, go.scene);
+                else
+                    s_InstanceToScene[go] = go.scene;
+
+                HashSet<GameObject> newInstances;
+                if (!s_SceneToInstances.TryGetValue(go.scene, out newInstances))
+                    s_SceneToInstances.Add(go.scene, newInstances = new HashSet<GameObject>());
+
+                if(!newInstances.Contains(go))
+                    newInstances.Add(go);
+
+                return true;
+            }
+
+            return false;
+        }
+
         static void ValidateSceneInstances()
         {
             var objectsThatNeedToBeFixed = new List<KeyValuePair<Scene, GameObject>>();
@@ -1002,13 +1114,13 @@ namespace UnityEngine.AddressableAssets
                 {
                     if (go == null)
                     {
-                        LogWarningFormat("GameObject instance has been destroyed, use ResourceManager.ReleaseInstance to ensure proper reference counts.");
+                        LogWarningFormat("GameObject instance has been destroyed, use Addressables.ResourceManager.ReleaseInstance to ensure proper reference counts.");
                     }
                     else
                     {
                         if (go.scene != kvp.Key)
                         {
-                            LogWarningFormat("GameObject instance {0} has been moved to from scene {1} to scene {2}.  When moving tracked instances, use ResourceManager.RecordInstanceSceneChange to ensure that reference counts are accurate.", go, kvp.Key, go.scene.GetHashCode());
+                            LogWarningFormat("GameObject instance {0} has been moved to from scene {1} to scene {2}.  When moving tracked instances, use Addressables.ResourceManager.RecordInstanceSceneChange to ensure that reference counts are accurate.", go, kvp.Key, go.scene.GetHashCode());
                             objectsThatNeedToBeFixed.Add(new KeyValuePair<Scene, GameObject>(kvp.Key, go));
                         }
                     }

@@ -3,7 +3,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     /// <summary>
     /// Contains data for AddressableAssetGroups. 

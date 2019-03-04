@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     /// <summary>
     /// Contains the collection of asset entries associated with this group.
@@ -306,14 +309,20 @@ namespace UnityEditor.AddressableAssets
             m_SerializeEntries.Clear();
             foreach (var e in entries)
                 m_SerializeEntries.Add(e);
-            m_SerializeEntries.Sort(this);
 
+            m_SerializeEntries.Sort(this);
         }
 
         /// <summary>
         /// Converts data from serializable format.
         /// </summary>
         public void OnAfterDeserialize()
+        {
+            ResetEntryMap();
+            m_SerializeEntries.Clear();
+        }
+
+        internal void ResetEntryMap()
         {
             m_EntryMap.Clear();
             foreach (var e in m_SerializeEntries)
@@ -330,13 +339,13 @@ namespace UnityEditor.AddressableAssets
                     Debug.LogException(ex);
                 }
             }
-            m_SerializeEntries.Clear();
+            
         }
 
         void OnEnable()
         {
             Validate();
-        } 
+        }
 
         internal void Validate()
         {
@@ -388,28 +397,25 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        //TODO: deprecate and remove once most users have transitioned to newer external data files
-        internal void Initialize(AddressableAssetSettings settings, string groupName, AddressableAssetGroupDeprecated old, bool staticContent)
+        internal void DedupeEnteries()
         {
-            m_Settings = settings;
-            m_GroupName = groupName;
-            m_ReadOnly = old.m_readOnly;
-            m_GUID = old.m_guid;
-            m_SerializeEntries = old.m_serializeEntries;
+            List<AddressableAssetEntry> removeEntries = new List<AddressableAssetEntry>();
+            foreach (AddressableAssetEntry e in m_EntryMap.Values)
+            {
+                AddressableAssetEntry lookedUpEntry = m_Settings.FindAssetEntry(e.guid);
+                if (lookedUpEntry.parentGroup != this)
+                {
+                    Debug.LogWarning(  e.address
+                                     + " is already a member of group "
+                                     + lookedUpEntry.parentGroup
+                                     + " but group "
+                                     + m_GroupName
+                                     + " contained a reference to it.  Removing referece.");
+                    removeEntries.Add(e);
+                }
+            }
 
-            if (old.m_processorClass.Contains("PlayerDataAssetGroupProcessor"))
-            {
-                AddSchema<PlayerDataGroupSchema>();
-            }
-            else
-            {
-                var schema = AddSchema<BundledAssetGroupSchema>();
-                schema.BuildPath.SetVariableByName(settings, old.m_data.GetDataString("BuildPath", ""));
-                schema.LoadPath.SetVariableByName(settings, old.m_data.GetDataString("LoadPath", ""));
-                schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
-                AddSchema<ContentUpdateGroupSchema>().StaticContent = false;
-            }
-            OnAfterDeserialize();
+            RemoveAssetEntries(removeEntries);
         }
 
         internal void Initialize(AddressableAssetSettings settings, string groupName, string guid, bool readOnly)
@@ -462,7 +468,7 @@ namespace UnityEditor.AddressableAssets
         {
             if (Settings != null)
             {
-                if (Settings.IsPersisted)
+                if (Settings.IsPersisted && this != null)
                     EditorUtility.SetDirty(this);
                 Settings.SetDirty(modificationEvent, eventData, postEvent);
             }
@@ -479,6 +485,34 @@ namespace UnityEditor.AddressableAssets
             entry.parentGroup = null;
             SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, entry, postEvent);
         }
-    }
 
+        internal void RemoveAssetEntries(IEnumerable<AddressableAssetEntry> removeEntries, bool postEvent = true)
+        {
+            foreach (AddressableAssetEntry entry in removeEntries)
+            {
+                m_EntryMap.Remove(entry.guid);
+                entry.parentGroup = null;
+            }
+
+            SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, removeEntries.ToArray(), postEvent);
+        }
+
+        /// <summary>
+        /// Check to see if a group is the Default Group.
+        /// </summary>
+        /// <returns></returns>
+        public bool IsDefaultGroup()
+        {
+            return Guid == m_Settings.DefaultGroup.Guid;
+        }
+
+        /// <summary>
+        /// Check if a group has the appropriate schemas and attributes that the Default Group requires.
+        /// </summary>
+        /// <returns></returns>
+        public bool CanBeSetAsDefault()
+        {
+            return !m_ReadOnly && HasSchema<BundledAssetGroupSchema>();
+        }
+    }
 }

@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 {
     /// <summary>
     /// Schema for the player data asset group

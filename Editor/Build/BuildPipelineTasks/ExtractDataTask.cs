@@ -3,7 +3,7 @@ using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Injector;
 using UnityEditor.Build.Pipeline.Interfaces;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 {
     class ExtractDataTask : IBuildTask
     {

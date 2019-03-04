@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq;
 using NUnit.Framework;
-using UnityEditor.AddressableAssets.Diagnostics;
+using UnityEditor.AddressableAssets.Diagnostics.Data;
+using UnityEditor.AddressableAssets.Diagnostics.GUI.Graph;
 
-namespace UnityEditor.AddressableAssets.Tests
+namespace UnityEditor.AddressableAssets.Tests.Diagnostics
 {
     public class SegmentIterationTests
     {

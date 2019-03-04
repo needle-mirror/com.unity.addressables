@@ -1,9 +1,11 @@
 ﻿using System;
+using UnityEditor.AddressableAssets.HostingServices;
 using UnityEngine;
-using UnityEngine.ResourceManagement;
+using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 {
     /// <summary>
     /// Schema used for bundled asset groups.
@@ -42,25 +44,92 @@ namespace UnityEditor.AddressableAssets
                 SetDirty(true);
             }
         }
-
-
-        [FormerlySerializedAs("m_contentCatalogLoadOrder")]
         [SerializeField]
-        [Tooltip("The order in which the content catalog from this group will be loaded.  Usually remote catalogs are tried first and would have a lower value.  If this value is less than 0, no catalog will be generated.")]
-        int m_ContentCatalogLoadOrder;
+        [SerializedTypeRestriction(type = typeof(IResourceProvider))]
+        [Tooltip("The provider type to use for loading assets from bundles.")]
+        SerializedType m_BundledAssetProviderType;
         /// <summary>
-        ///The order in which the content catalog from this group will be loaded.  Usually remote catalogs are tried first and would have a lower value.  If this value is less than 0, no catalog will be generated.
+        /// The provider type to use for loading assets from bundles.
         /// </summary>
-        public int ContentCataLogLoadOrder
+        public SerializedType BundledAssetProviderType { get { return m_BundledAssetProviderType; } }
+
+        [SerializeField]
+        [Tooltip("If true, the bundle and asset provider for assets in this group will get unique provider ids and will only provide for assets in this group.")]
+        bool m_ForceUniqueProvider = false;
+        /// <summary>
+        /// If true, the bundle and asset provider for assets in this group will get unique provider ids and will only provide for assets in this group.
+        /// </summary>
+        public bool ForceUniqueProvider
         {
-            get { return m_ContentCatalogLoadOrder; }
+            get { return m_ForceUniqueProvider; }
             set
             {
-                m_ContentCatalogLoadOrder = value;
+                m_ForceUniqueProvider = value;
+                SetDirty(true);
+            }
+        }
+        [SerializeField]
+        [Tooltip("A unique bundle CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.")]
+        int m_BundleCachedProviderMaxLRUCount = 0;
+        /// <summary>
+        /// A unique bundle CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.
+        /// </summary>
+        public int BundleCachedProviderMaxLRUCount
+        {
+            get { return m_BundleCachedProviderMaxLRUCount; }
+            set
+            {
+                m_BundleCachedProviderMaxLRUCount = value;
                 SetDirty(true);
             }
         }
 
+        [SerializeField]
+        [Tooltip("A unique bundle CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.")]
+        float m_BundleCachedProviderMaxLRUAge = 0;
+        /// <summary>
+        /// A unique bundle CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.
+        /// </summary>
+        public float BundleCachedProviderMaxLRUAge
+        {
+            get { return m_BundleCachedProviderMaxLRUAge; }
+            set
+            {
+                m_BundleCachedProviderMaxLRUAge = value;
+                SetDirty(true);
+            }
+        }
+        [SerializeField]
+        [Tooltip("A unique asset CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.")]
+        int m_AssetCachedProviderMaxLRUCount = 0;
+        /// <summary>
+        /// A unique asset CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.
+        /// </summary>
+        public int AssetCachedProviderMaxLRUCount
+        {
+            get { return m_AssetCachedProviderMaxLRUCount; }
+            set
+            {
+                m_AssetCachedProviderMaxLRUCount = value;
+                SetDirty(true);
+            }
+        }
+
+        [SerializeField]
+        [Tooltip("A unique asset CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.")]
+        float m_AssetCachedProviderMaxLRUAge = 0;
+        /// <summary>
+        /// A unique asset CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.
+        /// </summary>
+        public float AssetCachedProviderMaxLRUAge
+        {
+            get { return m_AssetCachedProviderMaxLRUAge; }
+            set
+            {
+                m_AssetCachedProviderMaxLRUAge = value;
+                SetDirty(true);
+            }
+        }
 
         [FormerlySerializedAs("m_useAssetBundleCache")]
         [SerializeField]
@@ -206,8 +275,10 @@ namespace UnityEditor.AddressableAssets
                 if (LoadPath != null) 
                     LoadPath.SetVariableByName(@group.Settings, AddressableAssetSettings.kLocalLoadPath);
             }
-            if(m_AssetBundleProviderType.Value == null)
+            if (m_AssetBundleProviderType.Value == null)
                 m_AssetBundleProviderType.Value = typeof(AssetBundleProvider);
+            if (m_BundledAssetProviderType.Value == null)
+                m_BundledAssetProviderType.Value = typeof(BundledAssetProvider);
         }
 
         /// <summary>
@@ -225,8 +296,36 @@ namespace UnityEditor.AddressableAssets
         {
             BuildPath.OnValueChanged += s=> SetDirty(true);
             LoadPath.OnValueChanged += s => SetDirty(true);
-            if(m_AssetBundleProviderType.Value == null)
+            if (m_AssetBundleProviderType.Value == null)
                 m_AssetBundleProviderType.Value = typeof(AssetBundleProvider);
+            if (m_BundledAssetProviderType.Value == null)
+                m_BundledAssetProviderType.Value = typeof(BundledAssetProvider);
+
         }
+
+        /// <summary>
+        /// Returns the id of the asset provider needed to load from this group.
+        /// </summary>
+        /// <returns>The id of the cached provider needed for this group.</returns>
+        public string GetAssetCachedProviderId()
+        {
+            var pid = ForceUniqueProvider ? string.Format("{0}_{1}", BundledAssetProviderType.Value.FullName, Group.Guid) : BundledAssetProviderType.Value.FullName;
+            if (AssetCachedProviderMaxLRUAge < 0 && AssetCachedProviderMaxLRUCount < 0)
+                return pid;
+            return string.Format("{0}_{1}_{2}", pid, AssetCachedProviderMaxLRUCount, (int)(AssetCachedProviderMaxLRUAge * 1000));
+        }
+
+        /// <summary>
+        /// Returns the id of the bundle provider needed to load from this group.
+        /// </summary>
+        /// <returns>The id of the cached provider needed for this group.</returns>
+        public string GetBundleCachedProviderId()
+        {
+            var pid = ForceUniqueProvider ? string.Format("{0}_{1}", AssetBundleProviderType.Value.FullName, Group.Guid) : AssetBundleProviderType.Value.FullName;
+            if (BundleCachedProviderMaxLRUAge < 0 && BundleCachedProviderMaxLRUCount < 0)
+                return pid;
+            return string.Format("{0}_{1}_{2}", pid, BundleCachedProviderMaxLRUCount, (int)(BundleCachedProviderMaxLRUAge * 1000));
+        }
+
     }
 }

@@ -1,8 +1,9 @@
 ﻿using System;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditorInternal;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     [CustomEditor(typeof(AddressableAssetEntryCollection))]
     class AddressableAssetEntryCollectionEditor : Editor
@@ -23,12 +24,12 @@ namespace UnityEditor.AddressableAssets
 
         void DrawHeader(Rect rect)
         {
-            GUI.Label(rect, "Asset Entries");
+            UnityEngine.GUI.Label(rect, "Asset Entries");
         }
 
         void DrawEntry(Rect rect, int index, bool isActive, bool isFocused)
         {
-            GUI.Label(rect, m_Collection.Entries[index].address);
+            UnityEngine.GUI.Label(rect, m_Collection.Entries[index].address);
         }
 
         public override void OnInspectorGUI()

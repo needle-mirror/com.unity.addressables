@@ -1,5 +1,7 @@
 ﻿using System;
 using NUnit.Framework;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 
 namespace UnityEditor.AddressableAssets.Tests
 {

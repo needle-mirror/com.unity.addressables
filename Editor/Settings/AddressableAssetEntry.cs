@@ -5,7 +5,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     /// <summary>
     /// Contains data for an addressable asset entry.
@@ -130,7 +130,7 @@ namespace UnityEditor.AddressableAssets
                 if (!m_CheckedIsScene)
                 {
                     m_CheckedIsScene = true;
-                    m_IsScene = AssetDatabase.GUIDToAssetPath(m_GUID).EndsWith(".unity");
+                    m_IsScene = AssetDatabase.GUIDToAssetPath(guid).EndsWith(".unity");
                 }
                 return m_IsScene;
             }
@@ -182,10 +182,9 @@ namespace UnityEditor.AddressableAssets
                 keys.Add(h);
             if (IsScene && IsInSceneList)
             {
-                var g = new GUID(guid);
-                for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
-                    if (EditorBuildSettings.scenes[i].guid == g)
-                        keys.Add(i);
+                int index = BuiltinSceneCache.GetSceneIndex(new GUID(guid));
+                if (index != -1)
+                    keys.Add(index);
             }
 
             if (labels != null)
@@ -227,11 +226,6 @@ namespace UnityEditor.AddressableAssets
                 parentGroup.SetDirty(e, o, postEvent);
         }
 
-        static bool IsValidAsset(string p)
-        {
-            return !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(p));
-        }
-
         /// <summary>
         /// The path of the asset.
         /// </summary>
@@ -239,15 +233,19 @@ namespace UnityEditor.AddressableAssets
         {
             get
             {
-                if (string.IsNullOrEmpty(m_GUID))
+                
+                if (string.IsNullOrEmpty(guid))
                     return string.Empty;
 
-                if (m_GUID == EditorSceneListName)
-                    return EditorSceneListPath;
-                if (m_GUID == ResourcesName)
-                    return ResourcesPath;
+                string path;
+                if (guid == EditorSceneListName)
+                    path = EditorSceneListPath;
+                else if (guid == ResourcesName)
+                    path = ResourcesPath;
+                else
+                    path = AssetDatabase.GUIDToAssetPath(guid);
 
-                return AssetDatabase.GUIDToAssetPath(m_GUID);
+                return path;
             }
         }
 
@@ -298,9 +296,9 @@ namespace UnityEditor.AddressableAssets
         {
             var settings = parentGroup.Settings;
 
-            if (m_GUID == EditorSceneListName)
+            if (guid == EditorSceneListName)
             {
-                foreach (var s in EditorBuildSettings.scenes)
+                foreach (var s in BuiltinSceneCache.scenes)
                 {
                     if (s.enabled)
                     {
@@ -314,13 +312,13 @@ namespace UnityEditor.AddressableAssets
                     }
                 }
             }
-            else if (m_GUID == ResourcesName)
+            else if (guid == ResourcesName)
             {
                 foreach (var resourcesDir in Directory.GetDirectories("Assets", "Resources", SearchOption.AllDirectories))
                 {
                     foreach (var file in Directory.GetFiles(resourcesDir, "*.*", recurseAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
                     {
-                        if (IsValidAsset(file))
+                        if (AddressableAssetUtility.IsPathValidForEntry(file))
                         {
                             var g = AssetDatabase.AssetPathToGUID(file);
                             var addr = GetResourcesPath(file);
@@ -353,7 +351,7 @@ namespace UnityEditor.AddressableAssets
             }
             else
             {
-                var path = AssetDatabase.GUIDToAssetPath(m_GUID);
+                var path = AssetDatabase.GUIDToAssetPath(guid);
                 if (string.IsNullOrEmpty(path))
                     return;
 
@@ -362,14 +360,18 @@ namespace UnityEditor.AddressableAssets
                     foreach (var fi in Directory.GetFiles(path, "*.*", recurseAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
                     {
                         var file = fi.Replace('\\', '/');
-                        if (IsValidAsset(file))
+                        if (AddressableAssetUtility.IsPathValidForEntry(file))
                         {
-                            var entry = settings.CreateSubEntryIfUnique(AssetDatabase.AssetPathToGUID(file), address + GetRelativePath(file, path), this);
-                            if (entry != null)
-                            {
-                                entry.IsInResources = IsInResources; //if this is a sub-folder of Resources, copy it on down
-                                entry.m_Labels = m_Labels;
-                                assets.Add(entry);
+                            var subGuid = AssetDatabase.AssetPathToGUID(file);
+                            if (!BuiltinSceneCache.Contains(new GUID(subGuid)))
+                            { 
+                                var entry = settings.CreateSubEntryIfUnique(subGuid, address + GetRelativePath(file, path), this);
+                                if (entry != null)
+                                {
+                                    entry.IsInResources = IsInResources; //if this is a sub-folder of Resources, copy it on down
+                                    entry.m_Labels = m_Labels;
+                                    assets.Add(entry);
+                                }
                             }
                         }
                     }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace UnityEditor.AddressableAssets.Diagnostics
+namespace UnityEditor.AddressableAssets.Diagnostics.Data
 {
     [Serializable]
     class EventDataSetStream

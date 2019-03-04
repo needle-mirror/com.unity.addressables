@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
-using UnityEngine.ResourceManagement;
+using UnityEngine.ResourceManagement.Util;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     [CustomPropertyDrawer(typeof(SerializedType), true)]
     public class SerializedTypeDrawer : PropertyDrawer

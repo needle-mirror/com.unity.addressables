@@ -1,10 +1,12 @@
 ﻿using System;
 using System.IO;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Build
 {
     /// <summary>
     /// Entry point to set callbacks for builds.
@@ -17,26 +19,6 @@ namespace UnityEditor.AddressableAssets
         public static Action<AddressableAssetBuildResult> buildCompleted;
     }
 
-    class CopyContentStateIntoBuild : IPostprocessBuildWithReport
-    {
-        public int callbackOrder { get { return 0; } }
-    
-        public void OnPostprocessBuild(BuildReport report)
-        {
-            if (report.summary.result == BuildResult.Succeeded)
-            {
-                var libraryPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/addressables_content_state.bin";
-                if (!string.IsNullOrEmpty(libraryPath))
-                {
-                    var newPath = ContentUpdateScript.GetContentStateDataPath(false);
-                    if (File.Exists(newPath))
-                        File.Delete(newPath);
-                    File.Copy(libraryPath, newPath);
-                }
-            }
-        }
-    }
-
     static class AddressablesBuildScriptHooks
     {
         [InitializeOnLoadMethod]
@@ -44,7 +26,7 @@ namespace UnityEditor.AddressableAssets
         {
             EditorApplication.playModeStateChanged += OnEditorPlayModeChanged;
         }
-
+        
         static void OnEditorPlayModeChanged(PlayModeStateChange state)
         {  
             if (state == PlayModeStateChange.ExitingEditMode)
@@ -71,7 +53,6 @@ namespace UnityEditor.AddressableAssets
                     return;
                 }
 
-                SceneManagerState.Record();
                 var res = settings.ActivePlayModeDataBuilder.BuildData<AddressablesPlayModeBuildResult>(new AddressablesBuildDataBuilderContext(settings));
                 if (!string.IsNullOrEmpty(res.Error))
                 {
@@ -80,17 +61,12 @@ namespace UnityEditor.AddressableAssets
                 }
                 else
                 {
-                    SceneManagerState.AddScenesForPlayMode(res.ScenesToAdd);
                     if (BuildScript.buildCompleted != null)
                         BuildScript.buildCompleted(res);
                     settings.DataBuilderCompleted(settings.ActivePlayModeDataBuilder, res);
                 }
-            }
-            else if (state == PlayModeStateChange.EnteredEditMode)
-            {
-                var settings = AddressableAssetSettingsDefaultObject.Settings;
-                if(settings != null && settings.ActivePlayModeDataBuilder != null && settings.ActivePlayModeDataBuilder.CanBuildData<AddressablesPlayModeBuildResult>())
-                    SceneManagerState.Restore();
+
+                EditorUtility.SetDirty(settings);
             }
         }
     }

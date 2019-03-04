@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.HostingServices
 {
     /// <summary>
     /// <see cref="IHostingService"/> implementations serve Addressable content from the Unity Editor to players running

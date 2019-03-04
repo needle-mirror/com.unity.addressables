@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.HostingServices
 {
     // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
     /// <summary>

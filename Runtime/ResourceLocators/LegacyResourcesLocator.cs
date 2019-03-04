@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine.ResourceManagement;
+using UnityEngine.ResourceManagement.ResourceLocations;
 
-namespace UnityEngine.AddressableAssets
+namespace UnityEngine.AddressableAssets.ResourceLocators
 {
     /// <summary>
     /// Simple locator that acts as a passthrough for assets loaded from resources directories.
@@ -25,5 +25,17 @@ namespace UnityEngine.AddressableAssets
             locations.Add(new LegacyResourcesLocation(strKey));
             return true;
         }
+
+        /// <summary>
+        /// The keys available in this locator.
+        /// </summary>
+        public IEnumerable<object> Keys
+        {
+            get
+            {
+                return null;
+            }
+        }
+
     }
 }

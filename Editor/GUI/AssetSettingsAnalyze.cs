@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Build.AnalyzeRules;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     [Serializable]
     class AssetSettingsAnalyze
@@ -179,7 +181,7 @@ namespace UnityEditor.AddressableAssets
                         break;
                 }
                 
-                GUI.Label(new Rect(args.rowRect.x + baseIndent, args.rowRect.y, args.rowRect.width - baseIndent, args.rowRect.height), new GUIContent(icon, string.Empty));
+                UnityEngine.GUI.Label(new Rect(args.rowRect.x + baseIndent, args.rowRect.y, args.rowRect.width - baseIndent, args.rowRect.height), new GUIContent(icon, string.Empty));
             }
             base.RowGUI(args);
         }

@@ -1,9 +1,10 @@
 using System;
 using NUnit.Framework;
-using UnityEditor.AddressableAssets.Tests;
+using UnityEditor.AddressableAssets.Build.AnalyzeRules;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
 {
     class CheckDupeDependencyTests : AddressableAssetTestBase
     {

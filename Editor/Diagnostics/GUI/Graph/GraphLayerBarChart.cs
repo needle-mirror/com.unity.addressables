@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Diagnostics.Data;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets.Diagnostics
+namespace UnityEditor.AddressableAssets.Diagnostics.GUI.Graph
 {
     class GraphLayerBarChartMesh : GraphLayerBase
     {

@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets.Diagnostics
+namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 {
     static class GraphColors
     {

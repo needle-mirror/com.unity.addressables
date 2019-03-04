@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets.Tests
+namespace UnityEditor.AddressableAssets.Tests.HostingServices
 {
     class TestHostingService : AbstractTestHostingService
     {

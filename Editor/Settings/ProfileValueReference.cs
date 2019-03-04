@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     /// <summary>
     /// Used to store references to profile variables.  This class is intended to be used for fields in user scripts, specifically ones that subclass AddressableAssetGroupSchema.

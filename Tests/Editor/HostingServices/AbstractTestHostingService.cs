@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.HostingServices;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets.Tests
+namespace UnityEditor.AddressableAssets.Tests.HostingServices
 {
     public abstract class AbstractTestHostingService : IHostingService
     {

@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     /// <summary>
     /// Collection of AddressableAssetGroupSchema objects
@@ -195,7 +195,11 @@ namespace UnityEditor.AddressableAssets
                     string guid;
                     long lfid;
                     if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(s, out guid, out lfid))
-                        AssetDatabase.DeleteAsset(AssetDatabase.GUIDToAssetPath(guid));
+                    {
+                        var path = AssetDatabase.GUIDToAssetPath(guid);
+                        if (File.Exists(path))
+                            AssetDatabase.DeleteAsset(path);
+                    }
                 }
             }
             m_Schemas.Clear();

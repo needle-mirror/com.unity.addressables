@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Injector;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 {
     class GenerateLocationListsTask : IBuildTask
     {
@@ -56,22 +60,29 @@ namespace UnityEditor.AddressableAssets
             var assetGroupToBundle = (aaContext.assetGroupToBundles = new Dictionary<AddressableAssetGroup, List<string>>());
             foreach (var kvp in bundleToAssets)
             {
-                AddressableAssetGroup assetGroup;
-                if (!bundleToAssetGroup.TryGetValue(kvp.Key, out assetGroup))
-                    assetGroup = aaSettings.DefaultGroup;
+                AddressableAssetGroup assetGroup = aaSettings.DefaultGroup;
+                string groupGuid;
+                if (bundleToAssetGroup.TryGetValue(kvp.Key, out groupGuid))
+                    assetGroup = aaSettings.FindGroup(g => g.Guid == groupGuid);
+
                 List<string> bundles;
                 if (!assetGroupToBundle.TryGetValue(assetGroup, out bundles))
                     assetGroupToBundle.Add(assetGroup, bundles = new List<string>());
                 bundles.Add(kvp.Key);
-                CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetProviderName(assetGroup), kvp.Value, assetsToBundles, locations);
+                CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetBundleProviderName(assetGroup), GetAssetProviderName(assetGroup), kvp.Value, assetsToBundles, locations);
             }
 
             return ReturnCode.Success;
         }
 
-        static string GetProviderName(AddressableAssetGroup group)
+        static string GetBundleProviderName(AddressableAssetGroup group)
         {
-            return group.GetSchema<BundledAssetGroupSchema>().AssetBundleProviderType.Value.FullName;
+            return group.GetSchema<BundledAssetGroupSchema>().GetBundleCachedProviderId();
+        }
+
+        static string GetAssetProviderName(AddressableAssetGroup group)
+        {
+            return group.GetSchema<BundledAssetGroupSchema>().GetAssetCachedProviderId();
         }
 
         static string GetLoadPath(AddressableAssetGroup group, string name)
@@ -84,6 +95,7 @@ namespace UnityEditor.AddressableAssets
         string bundleName,
         string bundleInternalId,
         string bundleProvider,
+        string assetProvider,
         List<GUID> assetsInBundle,
         Dictionary<GUID, List<string>> assetsToBundles,
         List<ContentCatalogDataEntry> locations)
@@ -108,7 +120,7 @@ namespace UnityEditor.AddressableAssets
                 foreach (var l in entry.labels)
                     keys.Add(l);
 
-                locations.Add(new ContentCatalogDataEntry(assetPath, typeof(BundledAssetProvider).FullName, keys, assetsToBundles[a].ToArray()));
+                locations.Add(new ContentCatalogDataEntry(assetPath, assetProvider, keys, assetsToBundles[a].ToArray()));
             }
         }
     }

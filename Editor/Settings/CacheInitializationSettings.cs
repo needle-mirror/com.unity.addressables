@@ -1,8 +1,10 @@
 ﻿using System;
-using UnityEngine.ResourceManagement;
+using UnityEngine;
+using UnityEngine.AddressableAssets.Initialization;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 
-namespace UnityEngine.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     /// <summary>
     /// Asset container for CacheInitializationData.

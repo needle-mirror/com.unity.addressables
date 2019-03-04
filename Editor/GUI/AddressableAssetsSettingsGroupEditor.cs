@@ -1,13 +1,17 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Build;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Serialization;
+
 // ReSharper disable DelegateSubtraction
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     [Serializable]
     class AddressableAssetsSettingsGroupEditor
@@ -63,7 +67,7 @@ namespace UnityEditor.AddressableAssets
 
         GUIStyle GetStyle(string styleName)
         {
-            GUIStyle s = GUI.skin.FindStyle(styleName);
+            GUIStyle s = UnityEngine.GUI.skin.FindStyle(styleName);
             if (s == null)
                 s = EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).FindStyle(styleName);
             if (s == null)
@@ -151,8 +155,13 @@ namespace UnityEditor.AddressableAssets
                     //GUIUtility.hotControl = 0;
                     var menu = new GenericMenu();
                     menu.AddItem(new GUIContent("Build Player Content"), false, OnBuildPlayerData);
-                    menu.AddItem(new GUIContent("Clean/All Data"), false, OnCleanAll);
-                    menu.AddItem(new GUIContent("Clean/Player Content"), false, OnCleanAddressables);
+                    menu.AddItem(new GUIContent("Clean/All"), false, OnCleanAll);
+                    menu.AddItem(new GUIContent("Clean/Data Builders/All"), false, OnCleanAddressables, null);
+                    for (int i = 0; i < settings.DataBuilders.Count; i++)
+                    {
+                        var m = settings.GetDataBuilder(i);
+                        menu.AddItem(new GUIContent("Clean/Data Builders/" + m.Name), false, OnCleanAddressables, m);
+                    }
                     menu.AddItem(new GUIContent("Clean/Build Pipeline Cache"), false, OnCleanSBP);
                     menu.AddItem(new GUIContent("Prepare For Content Update"), false, OnPrepareUpdate);
                     menu.AddItem(new GUIContent("Build For Content Update"), false, OnUpdateBuild);
@@ -198,18 +207,18 @@ namespace UnityEditor.AddressableAssets
 
         void OnCleanAll()
         {
-            OnCleanAddressables();
+            OnCleanAddressables(null);
             OnCleanSBP();
         }
 
-        void OnCleanAddressables()
+        void OnCleanAddressables(object builder)
         {
-            AddressableAssetSettings.CleanPlayerContent();
+            AddressableAssetSettings.CleanPlayerContent(builder as IDataBuilder);
         }
 
         void OnCleanSBP()
         {
-            BuildCache.PurgeCache();
+            BuildCache.PurgeCache(true);
         }
 
         void OnPrepareUpdate()

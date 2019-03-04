@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.ResourceManagement.Diagnostics;
 
-namespace UnityEditor.AddressableAssets.Diagnostics
+namespace UnityEditor.AddressableAssets.Diagnostics.Data
 {
     [Serializable]
     class EventDataPlayerSessionCollection

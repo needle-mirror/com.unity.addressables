@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEditor;
+using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.Serialization;
 
 namespace UnityEngine.AddressableAssets
@@ -21,38 +24,25 @@ namespace UnityEngine.AddressableAssets
         {
             return LoadAsset<TObject>();
         }
-        /// <summary>
-        /// Instantiate the referenced asset as type TObject.
-        /// </summary>
-        /// <param name="position">The position of the instantiated object.</param>
-        /// <param name="rotation">The rotation of the instantiated object.</param>
-        /// <param name="parent">The parent transformation of the instantiated object.</param>
-        /// <returns></returns>
-        public IAsyncOperation<TObject> Instantiate(Vector3 position, Quaternion rotation, Transform parent = null)
+        
+        /// <inheritdoc/>
+        public override bool ValidateAsset(Object obj)
         {
-            return Instantiate<TObject>(position, rotation, parent);
-        }
-
-        /// <summary>
-        /// Instantiate the referenced asset as type TObject.
-        /// </summary>
-        /// <param name="parent">The parent transform of the instantiated object.</param>
-        /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
-        /// <returns></returns>
-        public IAsyncOperation<TObject> Instantiate(Transform parent = null, bool instantiateInWorldSpace = false)
-        {
-            return Instantiate<TObject>(parent, instantiateInWorldSpace);
-        }
-
-        /// <summary>
-        /// Ensure that the referenced asset is of the correct type.
-        /// </summary>
-        /// <param name="type">The type to validate.</param>
-        /// <returns></returns>
-        public override bool ValidateType(Type type)
-        {
+            var type = obj.GetType();
             return typeof(TObject).IsAssignableFrom(type);
         }
+        
+        /// <inheritdoc/>
+        public override bool ValidateAsset(string path)
+        {
+#if UNITY_EDITOR
+            var type = AssetDatabase.GetMainAssetTypeAtPath(path);
+            return typeof(TObject).IsAssignableFrom(type);
+#else
+            return false;
+#endif
+        }
+        
     }
 
     /// <summary>
@@ -75,15 +65,33 @@ namespace UnityEngine.AddressableAssets
     /// </summary>
     [Serializable]
     public class AssetReferenceTexture3D : AssetReferenceT<Texture3D> { }
+
     /// <summary>
     /// Sprite only asset reference.
     /// </summary>
     [Serializable]
-    public class AssetReferenceSprite : AssetReferenceT<Sprite> { }
+    public class AssetReferenceSprite : AssetReferenceT<Sprite>
+    {
+        /// <inheritdoc/>
+        public override bool ValidateAsset(string path)
+        {
+#if UNITY_EDITOR
+            var type = AssetDatabase.GetMainAssetTypeAtPath(path);
+            bool isTexture = typeof(Texture2D).IsAssignableFrom(type);
+            if (isTexture)
+            {
+                var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                return (importer != null) && (importer.spriteImportMode != SpriteImportMode.None);
+            }
+#endif
+            return false;
+        }
+    }
     //TODO: implement more of these....
 
     /// <summary>
     /// Reference to an addressable asset.  This can be used in script to provide fields that can be easily set in the editor and loaded dynamically at runtime.
+    /// To determine if the reference is set, use RuntimeKey.isValid.  
     /// </summary>
     [Serializable]
     public class AssetReference
@@ -94,7 +102,7 @@ namespace UnityEngine.AddressableAssets
         Object m_LoadedAsset;
 
         /// <summary>
-        /// The actual key used to request the asset at runtime.
+        /// The actual key used to request the asset at runtime. RuntimeKey.isValid can be used to determine if this reference was set.
         /// </summary>
         public Hash128 RuntimeKey { get { return Hash128.Parse(m_AssetGUID); } }
 
@@ -158,14 +166,13 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Instantiate the referenced asset as type TObject.
         /// </summary>
-        /// <typeparam name="TObject">The object type.</typeparam>
         /// <param name="position">Position of the instantiated object.</param>
         /// <param name="rotation">Rotation of the instantiated object.</param>
         /// <param name="parent">The parent of the instantiated object.</param>
         /// <returns></returns>
-        public IAsyncOperation<TObject> Instantiate<TObject>(Vector3 position, Quaternion rotation, Transform parent = null) where TObject : Object
+        public IAsyncOperation<GameObject> Instantiate(Vector3 position, Quaternion rotation, Transform parent = null)
         {
-            return Addressables.Instantiate<TObject>(RuntimeKey, position, rotation, parent);
+            return Addressables.Instantiate(RuntimeKey, position, rotation, parent);
         }
 
         /// <summary>
@@ -175,38 +182,16 @@ namespace UnityEngine.AddressableAssets
         /// <param name="parent">The parent of the instantiated object.</param>
         /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
         /// <returns></returns>
-        public IAsyncOperation<TObject> Instantiate<TObject>(Transform parent = null, bool instantiateInWorldSpace = false) where TObject : Object
+        public IAsyncOperation<GameObject> Instantiate(Transform parent = null, bool instantiateInWorldSpace = false)
         {
-            return Addressables.Instantiate<TObject>(RuntimeKey, parent, instantiateInWorldSpace);
-        }
-
-        /// <summary>
-        /// Release the refrerenced asset.
-        /// </summary>
-        /// <typeparam name="TObject">The object type.</typeparam>
-        [Obsolete("Use ReleaseAsset without parameters.  It will release the asset loaded via LoadAsset.")]
-        public void ReleaseAsset<TObject>(Object asset) where TObject : Object
-        {
-            if (asset != m_LoadedAsset)
-            {
-                Debug.LogWarning("Attempting to release the wrong asset to an AssetReference.");
-                return;
-            }
-            if (m_LoadedAsset == null)
-            {
-                Debug.LogWarning("Cannot release null asset.");
-                return;
-            }
-            Addressables.ReleaseAsset(m_LoadedAsset);
-            m_LoadedAsset = null;
+            return Addressables.Instantiate(RuntimeKey, parent, instantiateInWorldSpace);
         }
 
 
         /// <summary>
-        /// Release the refrerenced asset.
+        /// Release the referenced asset.
         /// </summary>
-        /// <typeparam name="TObject">The object type.</typeparam>
-        public void ReleaseAsset<TObject>() where TObject : Object
+        public void ReleaseAsset()
         {
             if (m_LoadedAsset == null)
             {
@@ -220,19 +205,28 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Release an instantiated object.
         /// </summary>
-        /// <typeparam name="TObject">The object type.</typeparam>
         /// <param name="obj">The object to release.</param>
-        public void ReleaseInstance<TObject>(TObject obj) where TObject : Object
+        public void ReleaseInstance(GameObject obj)
         {
             Addressables.ReleaseInstance(obj);
         }
 
         /// <summary>
-        /// Validates that the referenced asset is the correct type.
+        /// Validates that the referenced asset allowable for this asset reference.
         /// </summary>
-        /// <param name="type">The type to validate.</param>
-        /// <returns>Whether the referenced asset is the specified type.</returns>
-        public virtual bool ValidateType(Type type)
+        /// <param name="obj">The Object to validate.</param>
+        /// <returns>Whether the referenced asset is valid.</returns>
+        public virtual bool ValidateAsset(Object obj)
+        {
+            return true;
+        }
+        
+        /// <summary>
+        /// Validates that the referenced asset allowable for this asset reference.
+        /// </summary>
+        /// <param name="path">The path to the asset in question.</param>
+        /// <returns>Whether the referenced asset is valid.</returns>
+        public virtual bool ValidateAsset(string path)
         {
             return true;
         }
@@ -245,46 +239,62 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
-                if (m_CachedAsset != null)
+                if (m_CachedAsset != null || string.IsNullOrEmpty(m_AssetGUID))
                     return m_CachedAsset;
-                return (m_CachedAsset = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(m_AssetGUID)));
+                var assetPath = AssetDatabase.GUIDToAssetPath(m_AssetGUID);
+                var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
+                return (m_CachedAsset = AssetDatabase.LoadAssetAtPath(assetPath, mainType));
             }
-
-            set
+        }
+        /// <summary>
+        /// Sets the asset on the AssetReference.  Only valid in the editor, this sets both the editorAsset attribute,
+        ///   and the internal asset GUID, which drives the RuntimeKey attribute.
+        /// <param name="value">Object to reference</param>
+        /// </summary>
+        public bool SetEditorAsset(Object value)
+        {
+            if(value == null)
             {
-                if(value == null)
-                {
-                    m_CachedAsset = null;
-                    m_AssetGUID = string.Empty;
-                    return;
-                }
+                m_CachedAsset = null;
+                m_AssetGUID = string.Empty;
+                return true;
+            }
 
-                if (m_CachedAsset != value)
+            if (m_CachedAsset != value)
+            {
+                var path = AssetDatabase.GetAssetOrScenePath(value);
+                if (string.IsNullOrEmpty(path))
                 {
-                    var path = AssetDatabase.GetAssetOrScenePath(value);
-                    if (string.IsNullOrEmpty(path))
-                    {
-                        Addressables.LogWarningFormat("Invalid object for AssetReference {0}.", value);
-                        return;
-                    }
-                    var type = AssetDatabase.GetMainAssetTypeAtPath(path);
-                    if (!ValidateType(type))
-                    {
-                        Addressables.LogWarningFormat("Invalid type for AssetReference {0}, path = '{1}'.", type.FullName, path);
-                    }
-                    else
-                    {
-                        m_AssetGUID = AssetDatabase.AssetPathToGUID(path);
-                        m_CachedAsset = value;
-                    }
+                    Addressables.LogWarningFormat("Invalid object for AssetReference {0}.", value);
+                    return false;
+                }
+                if (!ValidateAsset(path))
+                {
+                    Addressables.LogWarningFormat("Invalid asset for AssetReference path = '{0}'.", path);
+                    return false;
+                }
+                else
+                {
+                    m_AssetGUID = AssetDatabase.AssetPathToGUID(path);
+                    m_CachedAsset = value;
                 }
             }
+
+            return true;
         }
 #endif
     }
 
     class AssetReferenceLocator : IResourceLocator
     {
+        public IEnumerable<object> Keys
+        {
+            get
+            {
+                return null;
+            }
+        }
+
         public bool Locate(object key, out IList<IResourceLocation> locations)
         {
             locations = null;
@@ -295,108 +305,5 @@ namespace UnityEngine.AddressableAssets
         }
     }
 
-    /// <summary>
-    /// Used to restrict an AssetReference field or property to only allow items wil specific labels.  This is only enforced through the UI.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    public sealed class AssetReferenceLabelRestriction : Attribute
-    {
-        string[] m_AllowedLabels;
-        string m_CachedToString;
-        /// <summary>
-        /// The labels allowed for the attributed AssetReference.
-        /// </summary>
-        public ICollection<string> AllowedLabels { get { return m_AllowedLabels; } }
-        /// <summary>
-        /// Construct a new AssetReferenceLabelAttribute.
-        /// </summary>
-        /// <param name="allowedLabels">The labels allowed for the attributed AssetReference.</param>
-        public AssetReferenceLabelRestriction(params string[] allowedLabels)
-        {
-            m_AllowedLabels = allowedLabels;
-        }
-        ///<inheritdoc/>
-        public override string ToString()
-        {
-            if (m_CachedToString == null)
-            {
-                StringBuilder sb = new StringBuilder();
-                bool first = true;
-                foreach (var t in m_AllowedLabels)
-                {
-                    if (!first)
-                        sb.Append(',');
-                    first = false;
-                    sb.Append(t);
-                }
-                m_CachedToString = sb.ToString();
-            }
-            return m_CachedToString;
-        }
-        /// <summary>
-        /// Validate the set of labels against the allowed labels.
-        /// </summary>
-        /// <param name="labels">The set of labels to validate.</param>
-        /// <returns>Returns true if the labels set is null or it contains any of the allowed labels.</returns>
-        public bool Validate(HashSet<string> labels)
-        {
-            if (labels == null)
-                return true;
-            foreach (var tt in m_AllowedLabels)
-                if (labels.Contains(tt))
-                    return true;
-            return false;
-        }
-    }
 
-    /// <summary>
-    /// Used to restrict an AssetReference field or property to only allow assignment of assets of specific types.  This is only enforced through the UI.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    public sealed class AssetReferenceTypeRestriction : Attribute
-    {
-        Type[] m_AllowedTypes;
-        string m_CachedToString;
-        /// <summary>
-        /// The allowed types for the asset reference.
-        /// </summary>
-        public ICollection<Type> AllowedTypes { get { return m_AllowedTypes; } }
-        public AssetReferenceTypeRestriction(params Type[] allowedTypes)
-        {
-            m_AllowedTypes = allowedTypes;
-        }
-        ///<inheritdoc/>
-        public override string ToString()
-        {
-            if (m_CachedToString == null)
-            {
-                StringBuilder sb = new StringBuilder();
-                bool first = true;
-                foreach (var t in m_AllowedTypes)
-                {
-                    if (!first)
-                        sb.Append(',');
-                    first = false;
-                    sb.Append(t.Name);
-                }
-                m_CachedToString = sb.ToString();
-            }
-            return m_CachedToString;
-        }
-
-        /// <summary>
-        /// Validates the type against the set of allowed types.
-        /// </summary>
-        /// <param name="type">The type to validate.</param>
-        /// <returns>Whether the type is contained in the set of allowed types.</returns>
-        public bool Validate(Type type)
-        {
-            if (type == null)
-                return false;
-            foreach (var tt in m_AllowedTypes)
-                if (tt.IsAssignableFrom(type))
-                    return true;
-            return false;
-        }
-    }
 }

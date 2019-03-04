@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Diagnostics.Data;
+using UnityEditor.AddressableAssets.Diagnostics.GUI.Graph;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets.Diagnostics
+namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 {
     class EventGraphListView : TreeView
     {
@@ -139,7 +141,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                 case 0:
                     {
                         var maximized = IsItemMaximized(item.id);
-                        if (GUI.Button(cellRect, maximized ? m_MinusGUIContent : m_PlusGUIContent, EditorStyles.toolbarButton))
+                        if (UnityEngine.GUI.Button(cellRect, maximized ? m_MinusGUIContent : m_PlusGUIContent, EditorStyles.toolbarButton))
                         {
                             if (!IsSelected(item.id))
                             {

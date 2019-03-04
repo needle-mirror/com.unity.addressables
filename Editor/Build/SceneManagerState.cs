@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Build
 {
     /// <summary>
     /// Serializable object that can be used to save and restore the state of the editor scene manager.
@@ -71,7 +72,7 @@ namespace UnityEditor.AddressableAssets
                 scenesList.Add(new SceneState(s));
             state.openSceneState = scenesList.ToArray();
             var edbss = new List<EbsSceneState>();
-            foreach (var s in EditorBuildSettings.scenes)
+            foreach (var s in BuiltinSceneCache.scenes)
                 edbss.Add(new EbsSceneState(s));
             state.editorBuildSettingsSceneState = edbss.ToArray();
             return state;
@@ -122,9 +123,9 @@ namespace UnityEditor.AddressableAssets
             if (playModeScenes != null)
             {
                 List<EditorBuildSettingsScene> newScenesList = new List<EditorBuildSettingsScene>();
-                newScenesList.AddRange(EditorBuildSettings.scenes);
+                newScenesList.AddRange(BuiltinSceneCache.scenes);
                 newScenesList.AddRange(playModeScenes);
-                EditorBuildSettings.scenes = newScenesList.ToArray();
+                BuiltinSceneCache.scenes = newScenesList.ToArray();
             }
         }
 
@@ -140,7 +141,7 @@ namespace UnityEditor.AddressableAssets
                 var state = JsonUtility.FromJson<SceneManagerState>(File.ReadAllText(path));
                 if(restoreSceneManagerSetup)
                     EditorSceneManager.RestoreSceneManagerSetup(state.GetSceneSetups());
-                EditorBuildSettings.scenes = state.GetEditorBuildSettingScenes();
+                BuiltinSceneCache.scenes = state.GetEditorBuildSettingScenes();
             }
             catch (Exception ex)
             {

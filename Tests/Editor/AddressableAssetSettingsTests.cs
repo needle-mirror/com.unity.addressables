@@ -1,16 +1,11 @@
 ﻿using System;
 using NUnit.Framework;
+using UnityEditor.AddressableAssets.Settings;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
     public class AddressableAssetSettingsTests : AddressableAssetTestBase
     {
-        [Test]
-        public void IsValid()
-        {
-            Assert.IsNotNull(m_Settings);
-        }
-
         [Test]
         public void HasDefaultInitialGroups()
         {

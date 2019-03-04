@@ -1,9 +1,11 @@
 using System;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     class AddressableAssetsWindow : EditorWindow
     {
@@ -64,10 +66,12 @@ namespace UnityEditor.AddressableAssets
                 GUILayout.Space(50);
                 if (GUILayout.Button("Create Addressables Settings"))
                 {
+                    m_GroupEditor = null;
                     AddressableAssetSettingsDefaultObject.Settings = AddressableAssetSettings.Create(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, AddressableAssetSettingsDefaultObject.kDefaultConfigAssetName, true, true);
                 }
                 if (GUILayout.Button("Import Addressables Settings"))
                 {
+                    m_GroupEditor = null;
                     var path = EditorUtility.OpenFilePanel("Addressables Settings Object", AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, "asset");
                     if (!string.IsNullOrEmpty(path))
                     {
@@ -79,13 +83,18 @@ namespace UnityEditor.AddressableAssets
                             var obj = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
                             if (obj != null)
                                 AddressableAssetSettingsDefaultObject.Settings = obj;
+                            else
+                                Debug.LogWarning("Unable to load asset settings from: "
+                                                 + path
+                                                 + "\nPlease ensure the location included in the project directory."
+                                );
                         }
                     }
                 }
                 GUILayout.Space(20);
                 GUILayout.BeginHorizontal();
                 GUILayout.Space(50);
-                GUI.skin.label.wordWrap = true;
+                UnityEngine.GUI.skin.label.wordWrap = true;
                 GUILayout.Label("Click the \"Create\" or \"Import\" button above or simply drag an asset into this window to start using Addressables.  Once you begin, the Addressables system will save some assets to your project to keep up with its data");
                 GUILayout.Space(50);
                 GUILayout.EndHorizontal();

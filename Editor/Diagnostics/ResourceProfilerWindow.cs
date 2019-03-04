@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using UnityEditor.AddressableAssets.Diagnostics.GUI;
+using UnityEditor.AddressableAssets.Diagnostics.GUI.Graph;
 using UnityEngine;
 using UnityEngine.ResourceManagement.Diagnostics;
+using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEditor.AddressableAssets.Diagnostics
 {

@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Diagnostics.Data;
+using UnityEditor.AddressableAssets.Diagnostics.GUI.Graph;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEditor.Networking.PlayerConnection;
 using UnityEngine;
@@ -7,7 +10,7 @@ using UnityEngine.Networking.PlayerConnection;
 using UnityEngine.ResourceManagement.Diagnostics;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets.Diagnostics
+namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 {
     class EventViewerWindow : EditorWindow, IComparer<EventDataSet>
     {
@@ -277,7 +280,11 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             m_Record = GUILayout.Toggle(m_Record, "Record", EditorStyles.toolbarButton, GUILayout.ExpandWidth(false));
 
             if (GUILayout.Button("Clear", EditorStyles.toolbarButton))
+            {
                 session.Clear();
+                if (m_GraphList != null)
+                    m_GraphList.Reload();
+            }
             if (GUILayout.Button("Load", EditorStyles.toolbarButton))
                 EditorUtility.DisplayDialog("Feature not implemented", "Saving and loading profile data is not yet supported", "Close");
             if (GUILayout.Button("Save", EditorStyles.toolbarButton))

@@ -1,5 +1,6 @@
 ﻿using System;
 using NUnit.Framework;
+using UnityEditor.AddressableAssets.Settings;
 
 namespace UnityEditor.AddressableAssets.Tests
 {

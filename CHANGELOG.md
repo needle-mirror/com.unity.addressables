@@ -4,6 +4,63 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.6.6-preview] - 2019-03-05
+ - *BREAKING CODE CHANGES* 
+   - to ease code navigation, we have added several layers of namespace to the code.  
+   - All Instantiate API calls (Adddressables and AssetReference) have been changed to only work with GameObjects.
+   - any hardcoded profile path to com.unity.addressables (specifically LocalLoadPath, RemoteLoadPath, etc) should use UnityEngine.AddressableAssets.Addressables.RuntimePath instead.  
+       For build paths, replace Assets/StreamingAssets/com.unity.addressables/[BuildTarget] with [UnityEngine.AddressableAssets.Addressables.BuildPath]/[BuildTarget]
+	   For load paths,  replace Assets/StreamingAssets/com.unity.addressables/[BuildTarget] with {UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]
+   - We have removed attribute AssetReferenceTypeRestriction as it is cleaner to enforce type via generics
+   - Attribute AssetReferenceLabelRestriction is renamed to AssetReferenceUILabelRestriction and must be surrounded by #if UNITY_EDITOR in your game code, to enforce it's editor-only capability
+   - Modifications to IResourceProvider API.
+   - Removed PreloadDependencies API.  Instead use DownloadDependencies
+ - Content Update calculation has changed, this will invalide previously generated addressables_content_state.bin files.
+   - Some types for content update were made private as a result of the above change.
+ - Minimum Unity version is now 2018.3 to address a build-time bug with progressive lightmapper.
+ - Moved all of the Resource Manager package to be contained within Addressables (no longer a stand alone package).  No code change implications. 
+ - Change to content catalog building: 
+   - Previous model built one catalog per group, wherever that group built it's data.
+   - New model builds one catalog locally, and optionally one "remote".  Remote location is set on the top level AddressableAssetSettings object.
+   - Loading will now always check if remote has changes (if remote exists), and use local otherwise (or cached version of remote).
+ - LoadScene API now takes the LoadSceneParameters that were added to the engine in 2018.2
+ - Exposed AddressablesBuildDataBuilderContext.BuildScriptContextConstants for use in build scripts.
+ - Refactored AddressablesBuildDataBuilderContext.GetValue to take default parameter.
+ - Fixed Scene asset path to be consistent between different play modes in the catalog data.
+ - Exposed the various IDataBuilder implementations as public classes.
+ - Exposed asset and bundle provider types for BundledAssetGroupSchema.
+ - Fixed several bugs when loading catalogs from other projects.
+ - Added provider suffix to Initialization operation and Adddressables.LoadCatalogsFromRuntimeData API to better support overriding providers.
+ - Exposed CachedProvider options in BundledAssetGroupSchema.  Each unique set of parameters will generate a separate provider.  There is also an option to force a group to have its own providers.
+ - Added IEnumerable<object> Keys property to IResourceLocator interface.
+ - Exposed InitializationOperation as public API.
+ - Added BuildTarget to ResourceManagerRuntimeData.  This is used to check if the generated player content was built with the same build target as the player or the editor when entering play mode.
+ - Removed warnings generated from not finding the cached catalog hash files, which is not an error.
+ - Fixed bug where scenes were not unloading.
+ - Fixed GUI exception thrown in group inspector.
+ - Fixed error case where an asset (usually a bundle) was loaded multiple times as different types (object and AssetBundle).
+ - Fixed divide by zero bug when computing load percent of simulated asset bundles.
+ - AddressableAssetBuildResult.CreateResult now takes the settingsPath as a parameter to pass this to the result.
+ - Fix AssetReference GUI when the AssetReference is inside an array of classes, part of a SerializedObject, or private.
+ - Fix AssetReferenceSprite to properly support sprites (as opposed to Texture2D's).
+ - Fixed bug involving scenes being repeatedly added to the build scenes list.
+ - Removed deprecated and obsolete code.  If you are upgrading from a very old version of Addressables, please update to 0.5.3-preview first.
+ - Removed the default MergeMode on LoadAssets calls to enforce explicit behavior. 
+ - Added IAsyncOperation<long> GetDownloadSize(object key) API to compute remaining data needed to load an asset
+ - Fixed assets being stuck in a read-only state in UI
+ - Unified asset moving API to clean up public interface
+ - Added PlayerVersion override to AddressableAssetSettings
+ - Ensure UI cannot show invalide assets (such as .cs files)
+ - Renamed Adddressables.LoadAddtionalCatalogs to Addressables.LoadContentCatalog and now it takes the path of the catalog instead of the settings file
+ - Moved provider information from ResourceManagerRuntimeDate into ContentCatalogData
+ - Updating ResourceManager to be a non-static class
+ - Fixed bugs surrounding assets moving in or out of Resources (outside Addressables UI) 
+ - Fixed the AssetReference dropdown to properly filter valid assets (no Resources and honoring type or label limitations). 
+ - Fixed AssetReferences to handle assets inside folders marked as Addressable.
+ - Added attribute AssetReferenceUIRestriction to support user-created AssetReference restrictions (they are only enforced in UI, for dropdown and drag&drop)
+ - Changed addressables_content_state.bin to only build to the folder containing the AddressableAssetSettings object (Assets/AddressableAssetsData/ in most cases)
+ - Fixed issue where the wrong scene would sometimes be open post-build.
+ 
 ## [0.5.3-preview] - 2018-12-19
  - fixed upgrade bug from 0.4.x or lower to 0.5.x or higher. During upgrade, the "Packed Mode" option was removed from play mode.  Now it's back and upgrades are safe from 0.4.x or from 0.5.x to 0.5.3
  

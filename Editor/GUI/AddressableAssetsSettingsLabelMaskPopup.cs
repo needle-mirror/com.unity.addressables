@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     class LabelMaskPopupContent : PopupWindowContent
     {
@@ -40,8 +41,8 @@ namespace UnityEditor.AddressableAssets
                 }
                 float minWidth, maxWidth;
                 var content = new GUIContent(maxStr);
-                GUI.skin.toggle.CalcMinMaxWidth(content, out minWidth, out maxWidth);
-                var height = GUI.skin.toggle.CalcHeight(content, maxWidth) + 3.5f;
+                UnityEngine.GUI.skin.toggle.CalcMinMaxWidth(content, out minWidth, out maxWidth);
+                var height = UnityEngine.GUI.skin.toggle.CalcHeight(content, maxWidth) + 3.5f;
                 m_Rect = new Vector2(Mathf.Clamp(maxWidth + 40, 60, 600), Mathf.Clamp(labelTable.labelNames.Count * height, 30, 150));
                 m_LastItemCount = labelTable.labelNames.Count;
             }

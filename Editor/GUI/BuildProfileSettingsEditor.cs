@@ -1,7 +1,8 @@
 using System;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     class ProfilesEditor
     {
@@ -33,7 +34,7 @@ namespace UnityEditor.AddressableAssets
                 if (displayNames[newIndex] == AddressableAssetProfileSettings.customEntryString)
                 {
                     custom = true;
-                    result = "<undefined>";
+                    result = AddressableAssetProfileSettings.undefinedEntryValue;
                 }
                 else
                 {
@@ -96,7 +97,7 @@ namespace UnityEditor.AddressableAssets
                 if (displayNames[newIndex] == AddressableAssetProfileSettings.customEntryString)
                 {
                     custom = true;
-                    result = "<undefined>";
+                    result = AddressableAssetProfileSettings.undefinedEntryValue;
                 }
                 else
                 {

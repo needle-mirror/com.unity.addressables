@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.Serialization;
+
 // ReSharper disable DelegateSubtraction
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     /// <summary>
     /// Contains user defined variables to control build parameters.
@@ -288,6 +290,7 @@ namespace UnityEditor.AddressableAssets
         }
 
         internal const string customEntryString = "<custom>";
+        internal const string undefinedEntryValue = "<undefined>";
 
         internal ProfileIdData GetProfileDataById(string id)
         {

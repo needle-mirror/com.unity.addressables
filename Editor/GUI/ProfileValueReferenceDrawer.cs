@@ -1,7 +1,9 @@
 ﻿using System;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     [CustomPropertyDrawer(typeof(ProfileValueReference), true)]
     class ProfileValueReferenceDrawer : PropertyDrawer

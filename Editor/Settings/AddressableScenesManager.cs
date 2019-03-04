@@ -1,25 +1,25 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
-    [InitializeOnLoad]
     static class AddressableScenesManager
     {
-        static AddressableScenesManager()
+        static public void InitializeGlobalState()
         {
-            EditorBuildSettings.sceneListChanged += OnScenesChanged;
-            RegisterForSettingsCallback(AddressableAssetSettingsDefaultObject.Settings);
+            BuiltinSceneCache.sceneListChanged += OnScenesChanged;
+            AddressableAssetSettings.OnModificationGlobal += OnSettingsChanged;
         }
 
-        internal static void RegisterForSettingsCallback(AddressableAssetSettings settings)
+        static public void ShutdownGlobalState()
         {
-            if (settings != null)
-                settings.OnModification += OnSettingsChanged;
+            AddressableAssetSettings.OnModificationGlobal -= OnSettingsChanged;
+            BuiltinSceneCache.sceneListChanged -= OnScenesChanged;
         }
 
-        static void OnSettingsChanged(AddressableAssetSettings settings, AddressableAssetSettings.ModificationEvent evt, object obj)
+        internal static void OnSettingsChanged(AddressableAssetSettings settings, AddressableAssetSettings.ModificationEvent evt, object obj)
         {
             switch (evt)
             {
@@ -48,7 +48,7 @@ namespace UnityEditor.AddressableAssets
             if (settings == null)
                 return;
             
-            foreach (var scene in EditorBuildSettings.scenes)
+            foreach (var scene in BuiltinSceneCache.scenes)
             {
                 if (scene.enabled)
                 {
@@ -60,8 +60,6 @@ namespace UnityEditor.AddressableAssets
                     }
                 }
             }
-
-
         }
 
         static void CheckForScenesInBuildList(IList<AddressableAssetEntry> entries)
@@ -69,26 +67,26 @@ namespace UnityEditor.AddressableAssets
             if (entries == null)
                 return;
 
-            var sceneListCopy = EditorBuildSettings.scenes;
+            EditorBuildSettingsScene[] scenes = BuiltinSceneCache.scenes;
             bool changed = false;
             foreach (var entry in entries)
             {
                 if (entry == null)
                     continue;
 
-                for (int index = 0; index < sceneListCopy.Length; index++)
+                for (int index = 0; index < scenes.Length; index++)
                 {
-                    var scene = sceneListCopy[index];
+                    var scene = scenes[index];
                     if (scene.enabled && entry.AssetPath == scene.path)
                     {
                         Debug.LogWarning("A scene from the EditorBuildScenes list has been marked as addressable. It has thus been disabled in the build scenes list.  " + scene.path);
-                        sceneListCopy[index].enabled = false;
+                        scenes[index].enabled = false;
                         changed = true;
                     }
                 }
             }
             if (changed)
-                EditorBuildSettings.scenes = sceneListCopy;
+                BuiltinSceneCache.scenes = scenes;
         }
     }
 }

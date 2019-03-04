@@ -9,7 +9,7 @@ using BuildCompression = UnityEngine.BuildCompression;
 using BuildCompression = UnityEditor.Build.Content.BuildCompression;
 #endif
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     /// <summary>
     /// Build settings for addressables.
@@ -73,7 +73,7 @@ namespace UnityEditor.AddressableAssets
         [SerializeField]
         bool m_LogResourceManagerExceptions = true;
         /// <summary>
-        /// When enabled, the ResourceManager.ExceptionHandler is set to (op, ex) => Debug.LogException(ex);
+        /// When enabled, the Addressables.ResourceManager.ExceptionHandler is set to (op, ex) => Debug.LogException(ex);
         /// </summary>
         public bool LogResourceManagerExceptions
         {

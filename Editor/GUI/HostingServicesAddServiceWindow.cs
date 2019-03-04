@@ -1,7 +1,9 @@
 ﻿using System;
+using UnityEditor.AddressableAssets.HostingServices;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     class HostingServicesAddServiceWindow : EditorWindow
     {

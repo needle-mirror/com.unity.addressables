@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     /// <summary>
     /// Contains a list of AddressableAssetEntries that can be included in the settings.  The purpose of this class is to provide a way of combining entries from external sources such as packages into your project settings.

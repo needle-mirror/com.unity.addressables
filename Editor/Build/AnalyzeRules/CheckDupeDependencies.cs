@@ -1,16 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
+using UnityEngine.AddressableAssets.Initialization;
+using UnityEngine.AddressableAssets.ResourceLocators;
 using Debug = UnityEngine.Debug;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
     class CheckDupeDependencies : AnalyzeRule
     {
@@ -37,7 +42,7 @@ namespace UnityEditor.AddressableAssets
             //gather entries
             var locations = new List<ContentCatalogDataEntry>();
             var allBundleInputDefs = new List<AssetBundleBuild>();
-            var bundleToAssetGroup = new Dictionary<string, AddressableAssetGroup>();
+            var bundleToAssetGroup = new Dictionary<string, string>();
             var runtimeData = new ResourceManagerRuntimeData();
             runtimeData.LogResourceManagerExceptions = aaSettings.buildSettings.LogResourceManagerExceptions;
 
@@ -62,7 +67,7 @@ namespace UnityEditor.AddressableAssets
                         bundleInputDefs[i] = new AssetBundleBuild { assetBundleName = newName, addressableNames = bid.addressableNames, assetBundleVariant = bid.assetBundleVariant, assetNames = bid.assetNames };
                     }
 
-                    bundleToAssetGroup.Add(bundleInputDefs[i].assetBundleName, assetGroup);
+                    bundleToAssetGroup.Add(bundleInputDefs[i].assetBundleName, assetGroup.Guid);
                 }
                 allBundleInputDefs.AddRange(bundleInputDefs);
             }
@@ -98,7 +103,7 @@ namespace UnityEditor.AddressableAssets
 
                 if (exitCode < ReturnCode.Success)
                 {
-                    Debug.LogError("Analyze build failed.");
+                    Debug.LogError("Analyze build failed. " + exitCode);
                     return emptyResult;
                 }
                 
@@ -139,25 +144,29 @@ namespace UnityEditor.AddressableAssets
                         foreach (var file in g.Value)
                         {
                             var bun = extractData.WriteData.FileToBundle[file];
-                            AddressableAssetGroup group;
-                            if (aaContext.bundleToAssetGroup.TryGetValue(bun, out group))
+                            string groupGuid;
+                            if (aaContext.bundleToAssetGroup.TryGetValue(bun, out groupGuid))
                             {
-                                Dictionary<string, List<string>> groupData;
-                                if (!allIssues.TryGetValue(group.Name, out groupData))
+                                var group = aaSettings.FindGroup(grp => grp.Guid == groupGuid);
+                                if (group != null)
                                 {
-                                    groupData = new Dictionary<string, List<string>>();
-                                    allIssues.Add(group.Name, groupData);
-                                }
+                                    Dictionary<string, List<string>> groupData;
+                                    if (!allIssues.TryGetValue(group.Name, out groupData))
+                                    {
+                                        groupData = new Dictionary<string, List<string>>();
+                                        allIssues.Add(group.Name, groupData);
+                                    }
 
-                                List<string> assets;
-                                if (!groupData.TryGetValue(bun, out assets))
-                                {
-                                    assets = new List<string>();
-                                    groupData.Add(bun, assets);
-                                }
-                                assets.Add(path);
+                                    List<string> assets;
+                                    if (!groupData.TryGetValue(bun, out assets))
+                                    {
+                                        assets = new List<string>();
+                                        groupData.Add(bun, assets);
+                                    }
+                                    assets.Add(path);
 
-                                m_ImplicitAssets.Add(g.Key);
+                                    m_ImplicitAssets.Add(g.Key);
+                                }
                             }
                         }
                     }
@@ -196,7 +205,7 @@ namespace UnityEditor.AddressableAssets
             buildTasks.Add(new CalculateSceneDependencyData());
             buildTasks.Add(new CalculateAssetDependencyData());
             buildTasks.Add(new StripUnusedSpriteSources());
-            buildTasks.Add(new CreateBuiltInShadersBundle("UnityBuiltInShaders"));
+            buildTasks.Add(new CreateBuiltInShadersBundle("UnityBuiltInShaders.bundle"));
 
             // Packing
             buildTasks.Add(new GenerateBundlePacking());
@@ -204,7 +213,7 @@ namespace UnityEditor.AddressableAssets
             buildTasks.Add(new GenerateLocationListsTask());
 
             buildTasks.Add(new GenerateBundleCommands());
-            buildTasks.Add(new GenerateSpritePathMaps());
+            buildTasks.Add(new GenerateSubAssetPathMaps());
             buildTasks.Add(new GenerateBundleMaps());
 
             return buildTasks;

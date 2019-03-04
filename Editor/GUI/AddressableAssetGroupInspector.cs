@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
+
 // ReSharper disable DelegateSubtraction
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     [CustomEditor(typeof(AddressableAssetGroup))]
     class AddressableAssetGroupInspector : Editor
@@ -85,12 +87,14 @@ namespace UnityEditor.AddressableAssets
                                     else
                                         newFoldoutstate[j] = m_FoldoutState[i + 1];
                                 }
+
                                 m_FoldoutState = newFoldoutstate;
                                 EditorGUILayout.EndHorizontal();
                                 break;
                             }
                         }
                     }
+
                     EditorGUILayout.EndHorizontal();
                     if (m_FoldoutState[i])
                     {
@@ -107,7 +111,7 @@ namespace UnityEditor.AddressableAssets
 
 
 
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                EditorGUILayout.LabelField("", UnityEngine.GUI.skin.horizontalSlider);
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
                 if (!m_GroupTarget.ReadOnly)
@@ -120,12 +124,18 @@ namespace UnityEditor.AddressableAssets
                             var type = m_SchemaTypes[i];
                             menu.AddItem(new GUIContent(type.Name, ""), false, OnAddSchema, type);
                         }
+
                         menu.ShowAsContext();
                     }
                 }
+
                 EditorGUILayout.EndHorizontal();
 
                 serializedObject.ApplyModifiedProperties();
+            }
+            catch (UnityEngine.ExitGUIException )
+            {
+                throw;
             }
             catch (Exception e)
             {

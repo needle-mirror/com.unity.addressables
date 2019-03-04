@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Build;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditorInternal;
 using UnityEngine;
-using UnityEngine.ResourceManagement;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     [CustomEditor(typeof(AddressableAssetSettings))]
     class AddressableAssetSettingsInspector : Editor
@@ -93,6 +95,21 @@ namespace UnityEditor.AddressableAssets
             m_InitObjectsRl.onRemoveCallback = OnRemoveInitializationObject;
         }
 
+        GUIContent m_SendProfilerEvents =  
+            new GUIContent("Send Profiler Events", 
+                "Turning this on enables the use of the Addressables Profiler window.");
+        GUIContent m_LogRuntimeExceptions = 
+            new GUIContent("Log Runtime Exceptions", 
+                "Addressables does not throw exceptions at run time when there are loading issues, instead it adds to the error state of the IAsyncOperation.  With this flag enabled, exceptions will also be logged.");
+        GUIContent m_OverridePlayerVersion =
+            new GUIContent("Player Version Override", "If set, this will be used as the player version instead of one based off of a time stamp.");
+        GUIContent m_BuildRemoteCatalog =
+            new GUIContent("Build Remote Catalog", "If set, this will create a copy of the content catalog for storage on a remote server.  This catalog can be overwritten later for content updates.");
+        GUIContent m_RemoteCatBuildPath =
+            new GUIContent("Remote Catalog Build Path", "The path for a remote content catalog.");
+        GUIContent m_RemoteCatLoadPath =
+            new GUIContent("Remote Catalog Load Path", "The path to load a remote content catalog.");
+        
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -100,8 +117,18 @@ namespace UnityEditor.AddressableAssets
             m_GeneralFoldout = EditorGUILayout.Foldout(m_GeneralFoldout, "General");
             if (m_GeneralFoldout)
             {
-                ProjectConfigData.postProfilerEvents = EditorGUILayout.Toggle("Send Profiler Events", ProjectConfigData.postProfilerEvents);
-                m_AasTarget.buildSettings.LogResourceManagerExceptions = EditorGUILayout.Toggle("Log Resource Manager Exceptions", m_AasTarget.buildSettings.LogResourceManagerExceptions);
+                ProjectConfigData.postProfilerEvents = EditorGUILayout.Toggle(m_SendProfilerEvents, ProjectConfigData.postProfilerEvents);
+                m_AasTarget.buildSettings.LogResourceManagerExceptions = EditorGUILayout.Toggle(m_LogRuntimeExceptions, m_AasTarget.buildSettings.LogResourceManagerExceptions);
+                m_AasTarget.OverridePlayerVersion = EditorGUILayout.TextField(m_OverridePlayerVersion, m_AasTarget.OverridePlayerVersion);
+                
+                m_AasTarget.BuildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
+                if ( (m_AasTarget.RemoteCatalogBuildPath != null && m_AasTarget.RemoteCatalogLoadPath != null) // these will never actually be null, as the accessor initializes them.
+                    && (m_AasTarget.BuildRemoteCatalog))
+                {
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogBuildPath"), m_RemoteCatBuildPath);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogLoadPath"), m_RemoteCatLoadPath);
+                }
+
             }
             GUILayout.Space(6);
             m_GroupFoldout = EditorGUILayout.Foldout(m_GroupFoldout, "Groups");
@@ -140,12 +167,15 @@ namespace UnityEditor.AddressableAssets
                     bool cannotEdit = m_CurrentProfileIndex==0;// profileNames[m_CurrentProfileIndex] == AddressableAssetProfileSettings.k_RootProfileName;
                     using (new EditorGUI.DisabledScope(cannotEdit))
                     {
-                        var newName = EditorGUILayout.DelayedTextField("EventName", profileNames[m_CurrentProfileIndex]);
+                        var newName = EditorGUILayout.DelayedTextField("Profile Name", profileNames[m_CurrentProfileIndex]);
                         if (newName != profileNames[m_CurrentProfileIndex])
                         {
-                            var profile = m_AasTarget.profileSettings.profiles[m_CurrentProfileIndex];
-                            profile.profileName = newName;
-                            m_AasTarget.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, profile.id, true);
+                            if (!profileNames.Contains(newName))
+                            {
+                                var profile = m_AasTarget.profileSettings.profiles[m_CurrentProfileIndex];
+                                profile.profileName = newName;
+                                m_AasTarget.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, profile.id, true);
+                            }
                         }
                     }
                     EditorGUILayout.BeginHorizontal();
@@ -299,7 +329,7 @@ namespace UnityEditor.AddressableAssets
                 GUILayout.Space(5);
                 Event evt = Event.current;
                 bool hitEnter = evt.type == EventType.KeyDown && (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter);
-                GUI.SetNextControlName("LabelName");
+                UnityEngine.GUI.SetNextControlName("LabelName");
                 name = EditorGUILayout.TextField("New Tag EventName", name);
                 if (needsFocus)
                 {
@@ -307,7 +337,7 @@ namespace UnityEditor.AddressableAssets
                     EditorGUI.FocusTextInControl("LabelName");
                 }
 
-                GUI.enabled = name.Length != 0;
+                UnityEngine.GUI.enabled = name.Length != 0;
                 if (GUILayout.Button("Save") || hitEnter)
                 {
                     if (string.IsNullOrEmpty(name))
@@ -364,7 +394,7 @@ namespace UnityEditor.AddressableAssets
         void DrawSchemaTemplateCallback(Rect rect, int index, bool isActive, bool isFocused)
         {
             var template = m_AasTarget.SchemaTemplates[index];
-            GUI.Label(rect, template.DisplayName);
+            UnityEngine.GUI.Label(rect, template.DisplayName);
         }
 
         void OnRemoveSchemaTemplate(ReorderableList list)
@@ -406,7 +436,7 @@ namespace UnityEditor.AddressableAssets
                 GUILayout.Space(5);
                 Event evt = Event.current;
                 bool hitEnter = evt.type == EventType.KeyDown && (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter);
-                GUI.SetNextControlName("LabelName");
+                UnityEngine.GUI.SetNextControlName("LabelName");
                 name = EditorGUILayout.TextField("Schema Template EventName", name);
                 description = EditorGUILayout.TextField("Description", description);
                 if (needsFocus)
@@ -438,7 +468,7 @@ namespace UnityEditor.AddressableAssets
                     menu.ShowAsContext();
                 }
 
-                GUI.enabled = name.Length != 0;
+                UnityEngine.GUI.enabled = name.Length != 0;
                 if (GUILayout.Button("Save") || hitEnter)
                 {
                     if (string.IsNullOrEmpty(name))

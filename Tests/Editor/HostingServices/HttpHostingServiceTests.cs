@@ -1,10 +1,13 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Net;
 using NUnit.Framework;
+using UnityEditor.AddressableAssets.HostingServices;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEngine;
+using Random = System.Random;
 
-namespace UnityEditor.AddressableAssets.Tests
+namespace UnityEditor.AddressableAssets.Tests.HostingServices
 {
     public class HttpHostingServiceTests
     {

@@ -1,8 +1,10 @@
 using System;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     [CustomPropertyDrawer(typeof(AssetLabelReference), true)]
     class AssetLabelReferenceDrawer : PropertyDrawer

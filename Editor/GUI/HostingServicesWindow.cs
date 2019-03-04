@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.HostingServices;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     /// <summary>
-    /// Configuration GUI for <see cref="T:UnityEditor.AddressableAssets.HostingServicesManager" />
+    /// Configuration GUI for <see cref="T:UnityEditor.AddressableAssets.HostingServices.HostingServicesManager" />
     /// </summary>
     public class HostingServicesWindow : EditorWindow, ISerializationCallbackReceiver, ILogHandler
     {
@@ -96,7 +99,7 @@ namespace UnityEditor.AddressableAssets
             var logRect = new Rect(0, itemRect.height + k_SplitterHeight, position.width,
                 position.height - itemRect.height - k_SplitterHeight);
 
-            EditorGUI.LabelField(splitterRect, string.Empty, GUI.skin.horizontalSlider);
+            EditorGUI.LabelField(splitterRect, string.Empty, UnityEngine.GUI.skin.horizontalSlider);
             EditorGUIUtility.AddCursorRect(splitterRect, MouseCursor.ResizeVertical);
             if (Event.current.type == EventType.MouseDown && splitterRect.Contains(Event.current.mousePosition))
                 m_IsResizingSplitter = true;
@@ -229,7 +232,7 @@ namespace UnityEditor.AddressableAssets
         {
             if (m_NewLogContent)
             {
-                var height = GUI.skin.GetStyle("Label").CalcHeight(new GUIContent(m_LogText), rect.width);
+                var height = UnityEngine.GUI.skin.GetStyle("Label").CalcHeight(new GUIContent(m_LogText), rect.width);
                 m_LogScrollPos = new Vector2(0f, height);
                 m_NewLogContent = false;
             }

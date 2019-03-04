@@ -1,7 +1,12 @@
 ﻿using System;
 using System.IO;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
+using UnityEditor.AddressableAssets.Build;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -98,6 +103,51 @@ namespace UnityEditor.AddressableAssets.Tests
             var buildOp = ContentUpdateScript.BuildContentUpdate(m_Settings, tempPath);
             Assert.IsNotNull(buildOp);
             Assert.IsTrue(string.IsNullOrEmpty(buildOp.Error));
+        }
+
+        [Test]
+        public void IsCacheDataValid_WhenNoPreviousRemoteCatalogPath_ReturnsFalseWithError()
+        {
+            AddressablesContentState cacheData = new AddressablesContentState();
+            cacheData.editorVersion = Application.unityVersion;
+            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(m_Settings, cacheData));
+            LogAssert.Expect(LogType.Error, new Regex("Previous build had 'Build Remote Catalog' disabled.*"));
+        }
+
+        [Test]
+        public void IsCacheDataValid_WhenRemoteCatalogDisabled_ReturnsFalseWithError()
+        {
+            AddressablesContentState cacheData = new AddressablesContentState();
+            cacheData.editorVersion = Application.unityVersion;
+            cacheData.remoteCatalogLoadPath = "somePath";
+            var oldSetting = m_Settings.BuildRemoteCatalog;
+            m_Settings.BuildRemoteCatalog = false;
+            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(m_Settings, cacheData));
+            LogAssert.Expect(LogType.Error, new Regex("Current settings have 'Build Remote Catalog' disabled.*"));
+            m_Settings.BuildRemoteCatalog = oldSetting;
+        }
+
+        [Test]
+        public void IsCacheDataValid_WhenMismatchedCatalogPaths_ReturnsFalseWithError()
+        {
+            AddressablesContentState cacheData = new AddressablesContentState();
+            cacheData.editorVersion = Application.unityVersion;
+            cacheData.remoteCatalogLoadPath = "somePath";
+            var oldSetting = m_Settings.BuildRemoteCatalog;
+            m_Settings.BuildRemoteCatalog = true;
+            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(m_Settings, cacheData));
+            LogAssert.Expect(LogType.Error, new Regex("Current 'Remote Catalog Load Path' does not match load path of original player.*"));
+            m_Settings.BuildRemoteCatalog = oldSetting;
+        }
+
+        [Test]
+        public void IsCacheDataValid_WhenMismatchedEditorVersions_LogsWarning()
+        {
+            AddressablesContentState cacheData = new AddressablesContentState();
+            cacheData.editorVersion = "invalid";
+            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(m_Settings, cacheData));
+            LogAssert.Expect(LogType.Warning, new Regex(".*with version `" + cacheData.editorVersion + "`.*"));
+            LogAssert.Expect(LogType.Error, new Regex("Previous.*"));
         }
     }
 }

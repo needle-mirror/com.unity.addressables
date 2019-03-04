@@ -1,8 +1,8 @@
-
 using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     class AddressablesAssetPostProcessor : AssetPostprocessor
     {

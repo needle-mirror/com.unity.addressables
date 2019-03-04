@@ -1,6 +1,7 @@
 ﻿using System;
+using UnityEditor.AddressableAssets.Settings;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.HostingServices
 {
     /// <summary>
     /// Interface for providing configuration data for <see cref="IHostingService"/> implementations

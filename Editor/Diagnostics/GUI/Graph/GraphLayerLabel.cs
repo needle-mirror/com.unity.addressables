@@ -1,7 +1,8 @@
 using System;
+using UnityEditor.AddressableAssets.Diagnostics.Data;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets.Diagnostics
+namespace UnityEditor.AddressableAssets.Diagnostics.GUI.Graph
 {
     class GraphLayerLabel : GraphLayerBase
     {
@@ -17,12 +18,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             var stream = dataSet.GetStream(Stream);
             if (stream != null)
             {
-                var prevCol = GUI.color;
-                GUI.color = GraphColor;
+                var prevCol = UnityEngine.GUI.color;
+                UnityEngine.GUI.color = GraphColor;
                 if (expanded)
                 {
                     var text = new GUIContent(maxValue.ToString());
-                    var size = GUI.skin.label.CalcSize(text);
+                    var size = UnityEngine.GUI.skin.label.CalcSize(text);
                     var labelRect = new Rect(rect.xMin + 2, rect.yMin, size.x, size.y);
                     EditorGUI.LabelField(labelRect, text);
                     labelRect = new Rect(rect.xMax - size.x, rect.yMin, size.x, size.y);
@@ -35,15 +36,15 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                     if (val > 0)
                     {
                         var text = new GUIContent(m_LabelFunc(val));
-                        var size = GUI.skin.label.CalcSize(text);
+                        var size = UnityEngine.GUI.skin.label.CalcSize(text);
                         var x = GraphUtility.ValueToPixel(inspectFrame, startFrame, endTime, rect.width);
                         float pixelVal = GraphUtility.ValueToPixel(val, 0, maxValue, rect.height);
                         var labelRect = new Rect(rect.xMin + x + 5, rect.yMax - (pixelVal + size.y), size.x, size.y);
-                        GUI.DrawTexture(labelRect, EditorGUIUtility.whiteTexture, ScaleMode.StretchToFill, true, 0, m_BgColor, 50, 5);
-                        EditorGUI.LabelField(labelRect, text, GUI.skin.label);
+                        UnityEngine.GUI.DrawTexture(labelRect, EditorGUIUtility.whiteTexture, ScaleMode.StretchToFill, true, 0, m_BgColor, 50, 5);
+                        EditorGUI.LabelField(labelRect, text, UnityEngine.GUI.skin.label);
                     }
                 }
-                GUI.color = prevCol;
+                UnityEngine.GUI.color = prevCol;
             }
         }
     }

@@ -3,9 +3,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using NUnit.Framework;
+using UnityEditor.AddressableAssets.HostingServices;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets.Tests
+namespace UnityEditor.AddressableAssets.Tests.HostingServices
 {
     public class HostingServicesManagerTests
     {

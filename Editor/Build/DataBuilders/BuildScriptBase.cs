@@ -1,13 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
-using UnityEngine.ResourceManagement;
+using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.ResourceProviders;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Build.DataBuilders
 {
-    class BuildScriptBase : ScriptableObject, IDataBuilder
+    /// <summary>
+    /// Base class for build script assets
+    /// </summary>
+    public class BuildScriptBase : ScriptableObject, IDataBuilder
     {
         public virtual string Name
         {
@@ -25,11 +30,6 @@ namespace UnityEditor.AddressableAssets
         public virtual bool CanBuildData<T>() where T : IDataBuilderResult
         {
             return false;
-        }
-
-        public virtual IDataBuilderGUI CreateGUI(IDataBuilderContext context)
-        {
-            return null;
         }
 
         protected bool CreateLocationsForPlayerData(AddressableAssetGroup assetGroup, List<ContentCatalogDataEntry> locations)
@@ -54,7 +54,19 @@ namespace UnityEditor.AddressableAssets
             }
             return needsLegacyProvider;
         }
+        protected static void DeleteFile(string path)
+        {
+            try
+            {
 
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+        }
         protected static bool WriteFile(string path, string content)
         {
             try

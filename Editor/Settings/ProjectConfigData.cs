@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Serialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Settings
 {
     class ProjectConfigData
     {
@@ -28,7 +28,7 @@ namespace UnityEditor.AddressableAssets
 
         static ConfigSaveData s_Data;
 
-        internal static bool postProfilerEvents
+        public static bool postProfilerEvents
         {
             get
             {
@@ -42,7 +42,7 @@ namespace UnityEditor.AddressableAssets
                 SaveData();
             }
         }
-        internal static long localLoadSpeed
+        public static long localLoadSpeed
         {
             get
             {
@@ -56,7 +56,7 @@ namespace UnityEditor.AddressableAssets
                 SaveData();
             }
         }
-        internal static long remoteLoadSpeed
+        public static long remoteLoadSpeed
         {
             get
             {
@@ -70,7 +70,7 @@ namespace UnityEditor.AddressableAssets
                 SaveData();
             }
         }
-        internal static bool hierarchicalSearch
+        public static bool hierarchicalSearch
         {
             get
             {

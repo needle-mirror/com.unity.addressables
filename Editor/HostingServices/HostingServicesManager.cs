@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 // ReSharper disable DelegateSubtraction
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.HostingServices
 {
     /// <summary>
     /// Manages the hosting services.
@@ -315,7 +317,12 @@ namespace UnityEditor.AddressableAssets
             m_HostingServiceInfoMap = new Dictionary<IHostingService, HostingServiceInfo>();
             foreach (var svcInfo in m_HostingServiceInfos)
             {
-                var svc = CreateHostingServiceInstance(svcInfo.classRef);
+                var classRef = svcInfo.classRef;
+                //handle change to namespace that happened just before Addressables 1.0.0.  Can remove once upgrades from 0.5.x are no longer expected
+                if (classRef.Contains("UnityEditor.AddressableAssets.HttpHostingService"))
+                    classRef = classRef.Replace("UnityEditor.AddressableAssets.HttpHostingService", "UnityEditor.AddressableAssets.HostingServices.HttpHostingService");
+                
+                var svc = CreateHostingServiceInstance(classRef);
                 if (svc == null) continue;
                 svc.OnAfterDeserialize(svcInfo.dataStore);
                 m_HostingServiceInfoMap.Add(svc, svcInfo);
@@ -424,7 +431,7 @@ namespace UnityEditor.AddressableAssets
             }
             catch (Exception e)
             {
-                m_Logger.LogFormat(LogType.Error, "Could not creat IHostingService from class ref '{0}'", classRef);
+                m_Logger.LogFormat(LogType.Error, "Could not create IHostingService from class ref '{0}'", classRef);
                 m_Logger.LogFormat(LogType.Error, e.Message);
             }
 

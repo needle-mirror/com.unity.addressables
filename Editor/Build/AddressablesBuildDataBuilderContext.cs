@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
-
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.Build
 {
     /// <summary>
     /// Data builder context object for Addressables.
     /// </summary>
     public class AddressablesBuildDataBuilderContext : IDataBuilderContext
     {
-        internal static class BuildScriptContextConstants
+        /// <summary>
+        /// Names of common context data objects.
+        /// </summary>
+        public static class BuildScriptContextConstants
         {
             public const string kAddressableAssetSettings = "AddressableAssetSettings";
             public const string kCurrentAssetGroup = "AddressableAssetGroup";
@@ -21,6 +24,8 @@ namespace UnityEditor.AddressableAssets
             public const string kBuildTargetGroup = "BuildTargetGroup";
             public const string kBuildTarget = "BuildTarget";
             public const string kPlayerBuildVersion = "PlayerBuildVersion";
+            public const string kRuntimeSettingsFilename = "RuntimeSettingsFilename";
+            public const string kRuntimeCatalogFilename = "RuntimeCatalogFilename";
         }
 
         Dictionary<string, object> m_Values = new Dictionary<string, object>();
@@ -41,7 +46,7 @@ namespace UnityEditor.AddressableAssets
         public AddressablesBuildDataBuilderContext(IDataBuilderContext toCopy)
         {
             foreach (var v in toCopy.Keys)
-                m_Values.Add(v, toCopy.GetValue(v));
+                m_Values.Add(v, toCopy.GetValue<object>(v));
         }
 
         /// <summary>
@@ -82,25 +87,14 @@ namespace UnityEditor.AddressableAssets
         /// </summary>
         /// <typeparam name="T">The type of the context value to retrieve.</typeparam>
         /// <param name="key">The key for the value.</param>
+        /// <param name="defaultValue">The default value.</param>
         /// <returns>The value cast to the type T.</returns>
-        public T GetValue<T>(string key)
+        public T GetValue<T>(string key, T defaultValue)
         {
-            return (T)GetValue(key);
-        }
-
-        /// <summary>
-        /// Get a context value.
-        /// </summary>
-        /// <param name="key">The key for the value.</param>
-        /// <returns>The value as an object.</returns>
-        public object GetValue(string key)
-        {
-            if (!m_Values.ContainsKey(key))
-            {
-                Debug.LogErrorFormat("Missing key {0}.", key);
-                return null;
-            }
-            return m_Values[key];
+            object res = null;
+            if (!m_Values.TryGetValue(key, out res))
+                return defaultValue;
+            return (T)res;
         }
 
         /// <summary>

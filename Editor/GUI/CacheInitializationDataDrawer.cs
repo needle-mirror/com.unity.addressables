@@ -1,8 +1,8 @@
 ﻿using System;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
+using UnityEngine.AddressableAssets.Initialization;
 
-namespace UnityEditor.AddressableAssets
+namespace UnityEditor.AddressableAssets.GUI
 {
     [CustomPropertyDrawer(typeof(CacheInitializationData), true)]
     class CacheInitializationDataDrawer : PropertyDrawer
