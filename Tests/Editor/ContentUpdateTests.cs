@@ -84,6 +84,11 @@ namespace UnityEditor.AddressableAssets.Tests
         public void BuildContentUpdate()
         {
             var group = m_Settings.CreateGroup("LocalStuff3", false, false, false, null);
+            m_Settings.BuildRemoteCatalog = true;
+            m_Settings.RemoteCatalogBuildPath = new ProfileValueReference();
+            m_Settings.RemoteCatalogBuildPath.SetVariableByName(m_Settings, AddressableAssetSettings.kRemoteBuildPath);
+            m_Settings.RemoteCatalogLoadPath = new ProfileValueReference();
+            m_Settings.RemoteCatalogLoadPath.SetVariableByName(m_Settings, AddressableAssetSettings.kRemoteLoadPath);
             var schema = group.AddSchema<BundledAssetGroupSchema>();
             schema.BuildPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalBuildPath);
             schema.LoadPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalLoadPath);

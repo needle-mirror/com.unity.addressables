@@ -4,6 +4,9 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.6.7-preview] - 2019-03-07
+ - Fix for iOS and Android. Symptom was NullReferenceException dring startup resulting in nothing working.  Fix requires re-running Build Player Content
+ 
 ## [0.6.6-preview] - 2019-03-05
  - *BREAKING CODE CHANGES* 
    - to ease code navigation, we have added several layers of namespace to the code.  

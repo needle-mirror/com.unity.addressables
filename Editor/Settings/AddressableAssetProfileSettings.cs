@@ -364,7 +364,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
                 AddProfile(k_RootProfileName, null);
                 CreateValue("BuildTarget", "[UnityEditor.EditorUserBuildSettings.activeBuildTarget]");
-                CreateValue(AddressableAssetSettings.kLocalBuildPath, Addressables.BuildPath + "/[BuildTarget]");
+                CreateValue(AddressableAssetSettings.kLocalBuildPath, "[UnityEngine.AddressableAssets.Addressables.BuildPath]/[BuildTarget]");
                 CreateValue(AddressableAssetSettings.kLocalLoadPath, "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]");
                 CreateValue(AddressableAssetSettings.kRemoteBuildPath, "ServerData/[BuildTarget]");
                 CreateValue(AddressableAssetSettings.kRemoteLoadPath, "http://localhost/[BuildTarget]");

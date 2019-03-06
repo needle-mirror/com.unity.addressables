@@ -174,7 +174,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public bool IsPersisted { get { return !m_IsTemporary; } }
 
         [SerializeField]
-        bool m_BuildRemoteCatalog = true;
+        bool m_BuildRemoteCatalog = false;
 
         /// <summary>
         /// Determine if a remote catalog should be built-for and loaded-by the app.

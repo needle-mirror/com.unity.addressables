@@ -100,6 +100,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                             InternalProviderData = bundleProviderData
                         });
                     linker.AddTypes(bundleCachedProviderData.GetRuntimeTypes());
+                    linker.AddTypes(typeof(CachedProvider));
                     resourceProviderData.Add(bundleCachedProviderData);
                 }
 
@@ -119,6 +120,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         });
                     resourceProviderData.Add(assetCachedProviderData);
                     linker.AddTypes(assetProviderData.GetRuntimeTypes());
+                    linker.AddTypes(typeof(CachedProvider));
                     linker.AddTypes(assetCachedProviderData.GetRuntimeTypes());
                 }
 
