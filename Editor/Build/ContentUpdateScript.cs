@@ -289,10 +289,11 @@ namespace UnityEditor.AddressableAssets.Build
                 false,
                 cacheData.playerVersion);
 
+            Cleanup(!s_StreamingAssetsExists);
+
             SceneManagerState.Record();
             var buildOp = settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
             SceneManagerState.Restore();
-            Cleanup(!s_StreamingAssetsExists);
             return buildOp;
         }
 

@@ -6,6 +6,7 @@ using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.TestTools;
 
 namespace UnityEditor.AddressableAssets.Tests
@@ -153,6 +154,30 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(m_Settings, cacheData));
             LogAssert.Expect(LogType.Warning, new Regex(".*with version `" + cacheData.editorVersion + "`.*"));
             LogAssert.Expect(LogType.Error, new Regex("Previous.*"));
+        }
+
+        [Test]
+        public void BuildContentUpdate_DoesNotDeleteBuiltData()
+        {
+            var group = m_Settings.CreateGroup("LocalStuff3", false, false, false, null);
+            var schema = group.AddSchema<BundledAssetGroupSchema>();
+            schema.BuildPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalBuildPath);
+            schema.LoadPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalLoadPath);
+            schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
+            group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
+            m_Settings.CreateOrMoveEntry(m_AssetGUID, group);
+            var context = new AddressablesBuildDataBuilderContext(m_Settings,
+                BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
+                EditorUserBuildSettings.activeBuildTarget,
+                false, false,
+                m_Settings.PlayerBuildVersion);
+
+            var op = m_Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+
+            Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/addressables_content_state.bin";
+            ContentUpdateScript.BuildContentUpdate(m_Settings, tempPath);
+            Assert.IsTrue(Directory.Exists(Addressables.BuildPath));
         }
     }
 }
