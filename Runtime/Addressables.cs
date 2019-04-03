@@ -178,10 +178,8 @@ namespace UnityEngine.AddressableAssets
         private static void RecordAsset(object asset, IResourceLocation location)
         {
             if (asset == null)
-            {
-                Debug.LogWarningFormat("RecordInstance() - parameter asset cannot be null.");
                 return;
-            }
+
             if (location == null)
             {
                 Debug.LogWarningFormat("RecordInstance() - parameter location cannot be null.");
@@ -223,10 +221,7 @@ namespace UnityEngine.AddressableAssets
         private static void RecordInstance(GameObject gameObject, IResourceLocation location)
         {
             if (gameObject == null)
-            {
-                Debug.LogWarningFormat("RecordInstance() - parameter gameObject cannot be null.");
                 return;
-            }
            
             if (location == null)
             {
@@ -394,7 +389,8 @@ namespace UnityEngine.AddressableAssets
             IList<IResourceLocation> locations;
             if (GetResourceLocations(keys, mode, out locations))
                 return LoadAssets(locations, callback);
-            throw new InvalidKeyException(keys);
+
+            return new EmptyOperation<IList<TObject>>().Start(locations, null, new InvalidKeyException(keys));
         }
 
 
@@ -416,7 +412,7 @@ namespace UnityEngine.AddressableAssets
             if (GetResourceLocations(key, out locations))
                 return LoadAssets(locations, callback);
 
-            throw new InvalidKeyException(key);
+            return new EmptyOperation<IList<TObject>>().Start(locations, null, new InvalidKeyException(key));
         }
 
         /// <summary>
@@ -452,7 +448,8 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(keys, mode, out locations))
-                throw new InvalidKeyException(keys);
+                return new EmptyOperation<IList<object>>().Start(locations, null, new InvalidKeyException(keys));
+
 
             var locHash = new HashSet<IResourceLocation>();
             foreach (var loc in locations)
@@ -481,7 +478,8 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                throw new InvalidKeyException(key);
+                return new EmptyOperation<IList<object>>().Start(locations, null, new InvalidKeyException(key));
+
 
             var locHash = new HashSet<IResourceLocation>();
             foreach (var loc in locations)
@@ -534,7 +532,8 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                throw new InvalidKeyException(key);
+                return new EmptyOperation<TObject>().Start(locations, null, new InvalidKeyException(key));
+
 
             return Instantiate<TObject>(locations[0], instantiateParameters);
         }
@@ -611,7 +610,8 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                throw new InvalidKeyException(key);
+                return new EmptyOperation<IList<TObject>>().Start(locations, null, new InvalidKeyException(key));
+
 
             return InstantiateAll(locations, callback, instantiateParameters);
         }
@@ -669,7 +669,9 @@ namespace UnityEngine.AddressableAssets
             IResourceLocation location;
             if (!s_instanceToLocationMap.TryGetValue(go, out location))
             {
-                Debug.LogWarningFormat("ResourceManager.ReleaseInstance() - unable to find location for instance {0}.", instance.GetInstanceID());
+                //TODO - need to keep this around for to-be-implemented a verbose loggging option
+                //Debug.LogWarningFormat("ResourceManager.ReleaseInstance() - unable to find location for instance {0}.", instance.GetInstanceID());
+                GameObject.Destroy(go);
                 return;
             }
 
@@ -695,7 +697,8 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                throw new InvalidKeyException(key);
+                return new EmptyOperation<Scene>().Start(locations, default(Scene), new InvalidKeyException(key));
+
 
             return LoadScene(locations[0], loadMode);
         }
@@ -723,7 +726,7 @@ namespace UnityEngine.AddressableAssets
         {
             IResourceLocation location;
             if (!s_sceneToLocationMap.TryGetValue(scene, out location))
-                throw new InvalidKeyException(string.Format("UnloadScene - unable to find location for scene {0}.", scene));
+                return new EmptyOperation<Scene>().Start(null, default(Scene), new ArgumentNullException("scene", string.Format("UnloadScene - unable to find location for scene {0}.", scene)));
 
             s_sceneToLocationMap.Remove(scene);
             return ResourceManager.ReleaseScene(location, scene);

@@ -127,14 +127,11 @@ namespace UnityEditor.AddressableAssets
                 {
                     List<string> bundleList = new List<string>();
                     List<GUID> assetList = null;
-                    foreach (var f in k.Value)
-                    {
-                        var bundle = preview.m_bundleWriteData.FileToBundle[f];
-                        if (!bundleToAssets.TryGetValue(bundle, out assetList))
-                            bundleToAssets.Add(bundle, assetList = new List<GUID>());
-                        if (!bundleList.Contains(bundle))
-                            bundleList.Add(bundle);
-                    }
+                    var bundle = preview.m_bundleWriteData.FileToBundle[k.Value[0]];
+                    if (!bundleToAssets.TryGetValue(bundle, out assetList))
+                        bundleToAssets.Add(bundle, assetList = new List<GUID>());
+                    if (!bundleList.Contains(bundle))
+                        bundleList.Add(bundle);
                     assetList.Add(k.Key);
                 }
 

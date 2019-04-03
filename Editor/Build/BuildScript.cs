@@ -22,9 +22,9 @@ namespace UnityEditor.AddressableAssets
     {
         public AddressableAssetSettings m_settings;
         public ResourceManagerRuntimeData m_runtimeData;
-        public List<ResourceLocationData> m_locations;
-        public Dictionary<string, AddressableAssetSettings.AssetGroup> m_bundleToAssetGroup;
-        public Dictionary<AddressableAssetSettings.AssetGroup, List<string>> m_assetGroupToBundles;
+        public Dictionary<object, ContentCatalogData.DataEntry> m_locations;
+        public Dictionary<string, AddressableAssetGroup> m_bundleToAssetGroup;
+        public Dictionary<AddressableAssetGroup, List<string>> m_assetGroupToBundles;
         public VirtualAssetBundleRuntimeData m_virtualBundleRuntimeData;
     }
     /// <summary>
@@ -32,7 +32,7 @@ namespace UnityEditor.AddressableAssets
     /// </summary>
     public class BuildScript
     {
-        static int codeVersion = 10;
+        static int codeVersion = 13;
         [InitializeOnLoadMethod]
         static void Init()
         {
@@ -74,6 +74,32 @@ namespace UnityEditor.AddressableAssets
                 if (playMode == ResourceManagerRuntimeData.EditorPlayMode.VirtualMode)
                     VirtualAssetBundleRuntimeData.DeleteFromLibrary();
                 return false;
+            }
+            if (playMode == ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
+            {
+                runtimeData.Save(contentCatalog, playMode);
+                var locator = contentCatalog.CreateLocator();
+                var pathsToCheck = new HashSet<string>();
+                foreach (var d in locator.m_locations)
+                {
+                    foreach (var l in d.Value)
+                    {
+                        if (l.ProviderId == typeof(AssetBundleProvider).FullName)
+                        {
+                            var path = l.InternalId;
+                            if (path.StartsWith("file://"))
+                                path = path.Substring("file://".Length);
+                            pathsToCheck.Add(path);
+                        }
+                    }
+                }
+                foreach (var p in pathsToCheck)
+                {
+                    if (!File.Exists(p))
+                    {
+                        return false;
+                    }
+                }
             }
             return true;
         }
@@ -191,25 +217,29 @@ namespace UnityEditor.AddressableAssets
                 return false;
             }
 
+            if (playMode == ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
+            {
+                var catalogCacheDir = Application.persistentDataPath + "/Unity/AddressablesCatalogCache";
+                if (Directory.Exists(catalogCacheDir))
+                    Directory.Delete(catalogCacheDir, true);
+            }
+
             contentCatalog = new ContentCatalogData();
             runtimeData = new ResourceManagerRuntimeData();
-            List<ResourceLocationData> locations = new List<ResourceLocationData>();
+            // List<ResourceLocationData> locations = new List<ResourceLocationData>();
+            var locations = new Dictionary<object, ContentCatalogData.DataEntry>();
             runtimeData.profileEvents = allowProfilerEvents && ProjectConfigData.postProfilerEvents;
             if (playMode == ResourceManagerRuntimeData.EditorPlayMode.FastMode)
             {
                 foreach (var a in allEntries)
                 {
-                    var t = AssetDatabase.GetMainAssetTypeAtPath(a.assetPath);
-                    if (t == null)
-                        continue;
-
-                    locations.Add(new ResourceLocationData(a.address, a.guid, a.GetAssetLoadPath(false), typeof(AssetDatabaseProvider), true, ResourceLocationData.LocationType.String, aaSettings.labelTable.GetMask(a.labels), t.FullName, null));
+                    locations.Add(a.address, new ContentCatalogData.DataEntry(a.address, a.guid, a.GetAssetLoadPath(false), typeof(AssetDatabaseProvider), a.labels));
                 }
             }
             else
             {
                 var allBundleInputDefs = new List<AssetBundleBuild>();
-                var bundleToAssetGroup = new Dictionary<string, AddressableAssetSettings.AssetGroup>();
+                var bundleToAssetGroup = new Dictionary<string, AddressableAssetGroup>();
                 foreach (var assetGroup in aaSettings.groups)
                 {
                     var bundleInputDefs = new List<AssetBundleBuild>();
@@ -267,7 +297,7 @@ namespace UnityEditor.AddressableAssets
                 runtimeData.contentVersion = "X";
 
             runtimeData.settingsHash = settingsHash;
-            contentCatalog.SetData(locations, aaSettings.labelTable.labelNames);
+            contentCatalog.SetData(locations.Values.ToList());
 
             if (playMode == ResourceManagerRuntimeData.EditorPlayMode.PackedMode)
             {
@@ -278,7 +308,7 @@ namespace UnityEditor.AddressableAssets
             }
             else
             {
-                runtimeData.catalogLocations.Add(new ResourceLocationData("Catalog" + playMode, "", ResourceManagerRuntimeData.GetPlayerCatalogLoadLocation(playMode), typeof(JsonAssetProvider), true));
+                runtimeData.catalogLocations.Add(new ResourceLocationData("Catalog" + playMode, "", ResourceManagerRuntimeData.GetPlayerCatalogLoadLocation(playMode), typeof(JsonAssetProvider)));
             }
 
             runtimeData.Save(contentCatalog, ProjectConfigData.editorPlayMode);
@@ -288,7 +318,7 @@ namespace UnityEditor.AddressableAssets
             return true;
         }
 
-        private static void AddAddressableScenesToEditorBuildSettingsSceneList(List<AddressableAssetSettings.AssetGroup.AssetEntry> entries, ResourceManagerRuntimeData runtimeData)
+        private static void AddAddressableScenesToEditorBuildSettingsSceneList(List<AddressableAssetEntry> entries, ResourceManagerRuntimeData runtimeData)
         {
             var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             foreach (var entry in entries)
@@ -312,7 +342,7 @@ namespace UnityEditor.AddressableAssets
 
             var runtimeData = new ResourceManagerRuntimeData();
             //var contentCatalog = new ResourceLocationList();
-            var locations = new List<ResourceLocationData>();
+            var locations = new Dictionary<object, ContentCatalogData.DataEntry>();
             var allBundleInputDefs = new List<AssetBundleBuild>();
             foreach (var assetGroup in aaSettings.groups)
                 assetGroup.processor.ProcessGroup(aaSettings, assetGroup, allBundleInputDefs, locations);
@@ -370,15 +400,15 @@ namespace UnityEditor.AddressableAssets
 
 
 
-        static internal HashSet<GUID> ExtractCommonAssets(AddressableAssetSettings aaSettings, List<AddressableAssetSettings.AssetGroup> groups)
+        static internal HashSet<GUID> ExtractCommonAssets(AddressableAssetSettings aaSettings, List<AddressableAssetGroup> groups)
         {
             var buildTarget = EditorUserBuildSettings.activeBuildTarget;
             var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
 
             var allBundleInputDefs = new List<AssetBundleBuild>();
-            var bundleToAssetGroup = new Dictionary<string, AddressableAssetSettings.AssetGroup>();
+            var bundleToAssetGroup = new Dictionary<string, AddressableAssetGroup>();
             var runtimeData = new ResourceManagerRuntimeData();
-            var locations = new List<ResourceLocationData>();
+            var locations = new Dictionary<object, ContentCatalogData.DataEntry>();
             foreach (var assetGroup in groups)
             {
                 var bundleInputDefs = new List<AssetBundleBuild>();

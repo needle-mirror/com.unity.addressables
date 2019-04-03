@@ -44,12 +44,13 @@ namespace UnityEditor.AddressableAssets
                     if (!bundleToAssets.ContainsKey(fileBundle))
                         bundleToAssets.Add(fileBundle, new List<GUID>());
                 }
+
                 assetList.Add(k.Key);
             }
-            var assetGroupToBundle = (aabc.m_assetGroupToBundles = new Dictionary<AddressableAssetSettings.AssetGroup, List<string>>());
+            var assetGroupToBundle = (aabc.m_assetGroupToBundles = new Dictionary<AddressableAssetGroup, List<string>>());
             foreach (var kvp in bundleToAssets)
             {
-                AddressableAssetSettings.AssetGroup assetGroup = null;
+                AddressableAssetGroup assetGroup = null;
                 if (!bundleToAssetGroup.TryGetValue(kvp.Key, out assetGroup))
                     assetGroup = aaSettings.DefaultGroup;
                 List<string> bundles;

@@ -9,7 +9,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             var group = settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
             Assert.IsNotNull(group);
-            var entry = new AddressableAssetSettings.AssetGroup.AssetEntry(assetGUID, "test", group, false);
+            var entry = new AddressableAssetEntry(assetGUID, "test", group, false);
             group.AddAssetEntry(entry);
             Assert.IsNotNull(group.GetAssetEntry(assetGUID));
             group.RemoveAssetEntry(entry);

@@ -571,7 +571,7 @@ namespace UnityEditor.AddressableAssets
             return false;
         }
 
-        void AddGroupChildrenBuild(AddressableAssetSettings.AssetGroup group, TreeViewItem root)
+        void AddGroupChildrenBuild(AddressableAssetGroup group, TreeViewItem root)
         {
             var groupItem = new AssetEntryTreeViewItem(group, 0);
             root.AddChild(groupItem);
@@ -585,12 +585,13 @@ namespace UnityEditor.AddressableAssets
             }
         }
 
-        void AddAndRecurseEntriesBuild(AddressableAssetSettings.AssetGroup.AssetEntry entry, AssetEntryTreeViewItem parent, int depth)
+        void AddAndRecurseEntriesBuild(AddressableAssetEntry entry, AssetEntryTreeViewItem parent, int depth)
         {
             var item = new AssetEntryTreeViewItem(entry, depth);
             parent.AddChild(item);
-            var subAssets = entry.GetSubAssets(editor.settings);
-            if (subAssets != null && subAssets.Count > 0)
+            var subAssets = new List<AddressableAssetEntry>();
+            entry.GatherAllAssets(subAssets, false, false);
+            if (subAssets.Count > 0)
             {
                 foreach (var e in subAssets)
                 {
@@ -699,7 +700,7 @@ namespace UnityEditor.AddressableAssets
                     {
                         var selection = GetItemsForContext(args.item.id);
                         Dictionary<string, int> labelCounts = new Dictionary<string, int>();
-                        List<AddressableAssetSettings.AssetGroup.AssetEntry> entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+                        List<AddressableAssetEntry> entries = new List<AddressableAssetEntry>();
                         bool readOnly = false;
                         var newSelection = new List<int>();
                         foreach (var s in selection)
@@ -958,7 +959,7 @@ namespace UnityEditor.AddressableAssets
                 }
                 else if (item.entry != null)
                 {
-                    if (item.entry.assetPath == AddressableAssetSettings.AssetGroup.AssetEntry.ResourcesPath)
+                    if (item.entry.assetPath == AddressableAssetEntry.ResourcesPath)
                     {
                         if (selectedNodes.Count > 1)
                             return;
@@ -986,8 +987,19 @@ namespace UnityEditor.AddressableAssets
             {
                 if (isGroup)
                 {
+                    Type selectedProcessorType = selectedNodes[0].group.Procesor.GetType();
+                    for(int i = 1; i < selectedNodes.Count; i++)
+                    {
+                        if (selectedNodes[i].group.Procesor.GetType() != selectedProcessorType)
+                        {
+                            selectedProcessorType = null;
+                            break;
+                        }
+                    }
                     foreach (var ty in AssetGroupProcessorManager.types)
                     {
+                        bool isSameType = (selectedProcessorType == ty);
+
                         var name = string.Empty;
                         var attr = ty.GetCustomAttributes(true);
                         foreach (var a in attr)
@@ -1001,7 +1013,8 @@ namespace UnityEditor.AddressableAssets
 
                         if (name != string.Empty)
                         {
-                            menu.AddItem(new GUIContent("Convert Group Type/" + name), false, ConvertGroupsToProcessor, new KeyValuePair<string, List<AssetEntryTreeViewItem>>(ty.FullName, selectedNodes));
+                            if(!isSameType)
+                                menu.AddItem(new GUIContent("Convert Group Type/" + name), false, ConvertGroupsToProcessor, new KeyValuePair<string, List<AssetEntryTreeViewItem>>(ty.FullName, selectedNodes));
                             if (selectedNodes.Count > 1)
                                 menu.AddItem(new GUIContent("Merge Groups/" + name), false, MergeGroupsToNewGroup, new KeyValuePair<string, List<AssetEntryTreeViewItem>>(ty.FullName, selectedNodes));
                         }
@@ -1077,7 +1090,7 @@ namespace UnityEditor.AddressableAssets
 
         void MoveAllResourcesToGroup(object context)
         {
-            var targetGroup = context as AddressableAssetSettings.AssetGroup;
+            var targetGroup = context as AddressableAssetGroup;
             var firstID = GetSelection().First();
             var item = FindItemInVisibleRows(firstID) as AssetEntryTreeViewItem;
             if (item != null)
@@ -1088,7 +1101,7 @@ namespace UnityEditor.AddressableAssets
 
         void MoveResourcesToGroup(object context)
         {
-            var targetGroup = context as AddressableAssetSettings.AssetGroup;
+            var targetGroup = context as AddressableAssetGroup;
             var itemList = new List<AssetEntryTreeViewItem>();
             foreach (var nodeID in GetSelection())
             {
@@ -1100,7 +1113,7 @@ namespace UnityEditor.AddressableAssets
             SafeMoveResourcesToGroup(targetGroup, itemList);
         }
 
-        void SafeMoveResourcesToGroup(AddressableAssetSettings.AssetGroup targetGroup, List<AssetEntryTreeViewItem> itemList)
+        void SafeMoveResourcesToGroup(AddressableAssetGroup targetGroup, List<AssetEntryTreeViewItem> itemList)
         {
             Dictionary<string, string> guidToNewPath = new Dictionary<string, string>();
 
@@ -1123,8 +1136,8 @@ namespace UnityEditor.AddressableAssets
 
         void MoveEntriesToGroup(object context)
         {
-            var targetGroup = context as AddressableAssetSettings.AssetGroup;
-            var entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+            var targetGroup = context as AddressableAssetGroup;
+            var entries = new List<AddressableAssetEntry>();
             foreach (var nodeID in GetSelection())
             {
                 var item = FindItemInVisibleRows(nodeID) as AssetEntryTreeViewItem;
@@ -1150,7 +1163,7 @@ namespace UnityEditor.AddressableAssets
             if (EditorUtility.DisplayDialog("Group Deletion", "Are you sure you want to delete the selected groups?", "Yes", "No"))
             {
                 List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
-                var groups = new List<AddressableAssetSettings.AssetGroup>();
+                var groups = new List<AddressableAssetGroup>();
                 foreach (var item in selectedNodes)
                 {
                     editor.settings.RemoveGroup(item.group, false);
@@ -1171,8 +1184,8 @@ namespace UnityEditor.AddressableAssets
         {
             var data = (KeyValuePair<string, List<AssetEntryTreeViewItem>>)context;
             var newGroup = editor.settings.CreateGroup("", data.Key);
-            var entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
-            var groups = new List<AddressableAssetSettings.AssetGroup>();
+            var entries = new List<AddressableAssetEntry>();
+            var groups = new List<AddressableAssetGroup>();
             foreach (var item in data.Value)
             {
                 var g = item.group;
@@ -1192,7 +1205,7 @@ namespace UnityEditor.AddressableAssets
         protected void ExtractCommonAssets(object context)
         {
             var data = (KeyValuePair<string, List<AssetEntryTreeViewItem>> )context;
-            var groups = new List<AddressableAssetSettings.AssetGroup>();
+            var groups = new List<AddressableAssetGroup>();
             foreach (var item in data.Value)
                 if (item.group != null)
                     groups.Add(item.group);
@@ -1201,7 +1214,7 @@ namespace UnityEditor.AddressableAssets
             if (common.Count > 0)
             {
                 var group = editor.settings.CreateGroup("Common", data.Key);
-                var entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+                var entries = new List<AddressableAssetEntry>();
                 foreach (var guid in common)
                     entries.Add(editor.settings.CreateOrMoveEntry(guid.ToString(), group));
                 editor.settings.PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryMoved, entries);
@@ -1211,7 +1224,7 @@ namespace UnityEditor.AddressableAssets
         protected void SimplifyAddresses(object context)
         {
             List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
-            var entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+            var entries = new List<AddressableAssetEntry>();
 
             foreach (var item in selectedNodes)
             {
@@ -1224,7 +1237,7 @@ namespace UnityEditor.AddressableAssets
         protected void RemoveEntry(object context)
         {
             List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
-            var entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+            var entries = new List<AddressableAssetEntry>();
             foreach (var item in selectedNodes)
             {
                 editor.settings.RemoveAssetEntry(item.entry.guid, false);
@@ -1254,16 +1267,25 @@ namespace UnityEditor.AddressableAssets
                     if (m_types == null)
                     {
                         m_types = new List<Type>();
-                        var rootType = typeof(AssetGroupProcessor);
-                        var listOfTypes = (from domainAssembly in AppDomain.CurrentDomain.GetAssemblies()
-                                           from assemblyType in domainAssembly.GetExportedTypes()
-                                           where rootType.IsAssignableFrom(assemblyType)
-                                           select assemblyType).ToArray();
-
-                        foreach (var t in listOfTypes)
+                        try
                         {
-                            if (t != rootType)
-                                m_types.Add(t);
+                            var rootType = typeof(AssetGroupProcessor);
+                            foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
+                            {
+#if NET_4_6
+                                foreach (var t in a.ExportedTypes)
+#else
+                                foreach (var t in a.GetExportedTypes())
+#endif
+                                {
+                                    if (t != rootType && rootType.IsAssignableFrom(t) && !t.IsAbstract)
+                                        m_types.Add(t);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogException(ex);
                         }
                     }
                     return m_types;
@@ -1311,11 +1333,11 @@ namespace UnityEditor.AddressableAssets
                     if (item.entry != null)
                     {
                         //can't drag the root "EditorSceneList" entry
-                        if (item.entry.guid == AddressableAssetSettings.AssetGroup.AssetEntry.EditorSceneListName)
+                        if (item.entry.guid == AddressableAssetEntry.EditorSceneListName)
                             return false;
 
                         //can't drag the root "Resources" entry
-                        if (item.entry.guid == AddressableAssetSettings.AssetGroup.AssetEntry.ResourcesName)
+                        if (item.entry.guid == AddressableAssetEntry.ResourcesName)
                             return false;
 
                         //if we're dragging resources, we should _only_ drag resources.
@@ -1365,7 +1387,7 @@ namespace UnityEditor.AddressableAssets
                 visualMode = DragAndDropVisualMode.Copy;
                 if (args.performDrop)
                 {
-                    AddressableAssetSettings.AssetGroup parent = null;
+                    AddressableAssetGroup parent = null;
                     if (target.group != null)
                         parent = target.group;
                     else if (target.entry != null)
@@ -1373,7 +1395,7 @@ namespace UnityEditor.AddressableAssets
 
                     if (parent != null)
                     {
-                        var entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+                        var entries = new List<AddressableAssetEntry>();
                         foreach (var p in DragAndDrop.paths)
                             entries.Add(editor.settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(p), parent, false, false));
                         editor.settings.PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryMoved, entries);
@@ -1388,7 +1410,7 @@ namespace UnityEditor.AddressableAssets
                     visualMode = DragAndDropVisualMode.Copy;
                     if (args.performDrop)
                     {
-                        AddressableAssetSettings.AssetGroup parent = null;
+                        AddressableAssetGroup parent = null;
                         if (target.group != null)
                             parent = target.group;
                         else if (target.entry != null)
@@ -1402,7 +1424,7 @@ namespace UnityEditor.AddressableAssets
                             }
                             else
                             {
-                                var entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+                                var entries = new List<AddressableAssetEntry>();
                                 foreach (var node in draggedNodes)
                                     entries.Add(editor.settings.CreateOrMoveEntry(node.entry.guid, parent, false, false));
                                 editor.settings.PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryMoved, entries);
@@ -1419,18 +1441,18 @@ namespace UnityEditor.AddressableAssets
 
     internal class AssetEntryTreeViewItem : TreeViewItem
     {
-        public AddressableAssetSettings.AssetGroup.AssetEntry entry;
-        public AddressableAssetSettings.AssetGroup group;
+        public AddressableAssetEntry entry;
+        public AddressableAssetGroup group;
         public Texture2D assetIcon;
 
-        public AssetEntryTreeViewItem(AddressableAssetSettings.AssetGroup.AssetEntry e, int d) : base((e.address + e.guid).GetHashCode(), d, e.address)
+        public AssetEntryTreeViewItem(AddressableAssetEntry e, int d) : base((e.address + e.guid).GetHashCode(), d, e.address)
         {
             entry = e;
             group = null;
             assetIcon = AssetDatabase.GetCachedIcon(e.assetPath) as Texture2D;
         }
 
-        public AssetEntryTreeViewItem(AddressableAssetSettings.AssetGroup g, int d) : base(g.guid.GetHashCode(), d, g.displayName)
+        public AssetEntryTreeViewItem(AddressableAssetGroup g, int d) : base(g.guid.GetHashCode(), d, g.displayName)
         {
             entry = null;
             group = g;
@@ -1444,7 +1466,7 @@ namespace UnityEditor.AddressableAssets
     class LabelMaskPopupContent : PopupWindowContent
     {
         AddressableAssetSettings m_settings;
-        List<AddressableAssetSettings.AssetGroup.AssetEntry> m_entries;
+        List<AddressableAssetEntry> m_entries;
         Dictionary<string, int> m_labelCount;
 
         GUIStyle toggleMixed = null;
@@ -1452,7 +1474,7 @@ namespace UnityEditor.AddressableAssets
 
         int lastItemCount = -1;
         Vector2 rect = new Vector2();
-        public LabelMaskPopupContent(AddressableAssetSettings settings, List<AddressableAssetSettings.AssetGroup.AssetEntry> e, Dictionary<string, int> count)
+        public LabelMaskPopupContent(AddressableAssetSettings settings, List<AddressableAssetEntry> e, Dictionary<string, int> count)
         {
             m_settings = settings;
             m_entries = e;
@@ -1570,8 +1592,8 @@ namespace UnityEditor.AddressableAssets
 
     internal class AssetDetailsView
     {
-        public AddressableAssetSettings.AssetGroup group;
-        public List<AddressableAssetSettings.AssetGroup.AssetEntry> entries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+        public AddressableAssetGroup group;
+        public List<AddressableAssetEntry> entries = new List<AddressableAssetEntry>();
 
         public bool SelectionHasSettings()
         {

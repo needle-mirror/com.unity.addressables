@@ -3,57 +3,78 @@ using System;
 using UnityEditor.IMGUI.Controls;
 using System.Collections.Generic;
 using UnityEngine.AddressableAssets;
+using System.Linq;
 
 namespace UnityEditor.AddressableAssets
 {
-    [CustomPropertyDrawer(typeof(AssetReference))]
+    [CustomPropertyDrawer(typeof(AssetReference), true)]
     internal class AssetReferenceDrawer : PropertyDrawer
     {
         public string newGuid;
         public string newGuidPropertyPath;
         string assetName;
         Rect smallPos;
-
+        bool filtersGathered = false;
         public AssetReferenceLabelRestriction labelFilter;
         public AssetReferenceTypeRestriction typeFilter;
         public const string k_noAssetString = "None (AddressableAsset)";
+        bool SetObject(SerializedProperty property, UnityEngine.Object obj, out string guid)
+        {
+            guid = null;
+            try
+            {
+                AssetReference assetRefObject = property.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo);
+                if (obj == null || assetRefObject == null || assetRefObject.ValidateType(obj.GetType()))
+                {
+                    long lfid;
+                    if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out lfid))
+                    {
+                        var objProp = property.FindPropertyRelative("_cachedAsset");
+                        objProp.objectReferenceValue = obj;
+                        var guidProp = property.FindPropertyRelative("assetGUID");
+                        guidProp.stringValue = guid;
+                    }
+                    return true;
+                }
+                return false;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
+            
             label.text = ObjectNames.NicifyVariableName(property.propertyPath);
             EditorGUI.BeginProperty(position, label, property);
 
-            GatherFilters(property, out labelFilter, out typeFilter);
-            
+            GatherFilters(property, ref labelFilter, ref typeFilter);
             var guidProp = property.FindPropertyRelative("assetGUID");
+            string guid = guidProp.stringValue;
 
             if (!string.IsNullOrEmpty(newGuid) && newGuidPropertyPath == property.propertyPath)
             {
-                var objProp = property.FindPropertyRelative("_cachedAsset");
                 if (newGuid == k_noAssetString)
                 {
-                    guidProp.stringValue = string.Empty;
-                    objProp.objectReferenceValue = null;
-
-                    newGuid = string.Empty;
+                    if (SetObject(property, null, out guid))
+                        newGuid = string.Empty;
                 }
                 else
                 {
-                    guidProp.stringValue = newGuid;
-
-                    var obj = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(AssetDatabase.GUIDToAssetPath(newGuid));
-                    objProp.objectReferenceValue = obj;
-
-                    newGuid = string.Empty;
+                    if (SetObject(property, AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(AssetDatabase.GUIDToAssetPath(newGuid)), out guid))
+                        newGuid = string.Empty;
                 }
             }
 
             assetName = k_noAssetString;
             Texture2D icon = null;
             var aaSettings = AddressableAssetSettings.GetDefault(false, false);
-            if (aaSettings != null && !string.IsNullOrEmpty(guidProp.stringValue))
+            if (aaSettings != null && !string.IsNullOrEmpty(guid))
             {
-                var entry = aaSettings.FindAssetEntry(guidProp.stringValue);
+                var entry = aaSettings.FindAssetEntry(guid);
                 if (entry != null)
                 {
                     assetName = entry.address;
@@ -116,8 +137,7 @@ namespace UnityEditor.AddressableAssets
                     {
                         if (DragAndDrop.paths.Length == 1)
                         {
-                            var guid = AssetDatabase.AssetPathToGUID(DragAndDrop.paths[0]);
-                            var entry = aaSettings.FindAssetEntry(guid);
+                            var entry = aaSettings.FindAssetEntry(AssetDatabase.AssetPathToGUID(DragAndDrop.paths[0]));
                             //for now, do not allow creation of new AssetEntries when there is a label filter on the property.
                             //This could be changed in the future to be configurable via the attribute if desired (allowEntryCreate = true)
                             if (entry == null)
@@ -140,12 +160,7 @@ namespace UnityEditor.AddressableAssets
                 if (aaEntries != null)
                 {
                     if (aaEntries.Count == 1)
-                    {
-                        var entry = aaEntries[0].entry;
-                        guidProp.stringValue = entry.guid;
-                        var objProp = property.FindPropertyRelative("_cachedAsset");
-                        objProp.objectReferenceValue = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(entry.assetPath);
-                    }
+                        SetObject(property, AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(aaEntries[0].entry.assetPath), out guid);
                 }
                 else
                 {
@@ -154,25 +169,29 @@ namespace UnityEditor.AddressableAssets
                         UnityEngine.Object obj = null;
                         if (DragAndDrop.objectReferences != null && DragAndDrop.objectReferences.Length == 1)
                             obj = DragAndDrop.objectReferences[0];
-                        var newPath = DragAndDrop.paths[0];
-                        var newGuid = AssetDatabase.AssetPathToGUID(newPath);
-                        var entry = aaSettings.FindAssetEntry(newGuid);
-                        if (entry == null && !string.IsNullOrEmpty(newGuid))
+                        else
+                            obj = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(DragAndDrop.paths[0]);
+
+                        if (SetObject(property, obj, out guid))
                         {
-                            aaSettings.CreateOrMoveEntry(newGuid, aaSettings.DefaultGroup);
-                            Debug.Log("Creating AddressableAsset " + newPath + " in group " + aaSettings.DefaultGroup.name);
+                            var entry = aaSettings.FindAssetEntry(guid);
+                            if (entry == null && !string.IsNullOrEmpty(guid))
+                            {
+                                entry = aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup);
+                                Debug.LogFormat("Created AddressableAsset {0} in group {1}.", entry.address, aaSettings.DefaultGroup.name);
+                            }
                         }
-                        guidProp.stringValue = newGuid;
-                        var objProp = property.FindPropertyRelative("_cachedAsset");
-                        objProp.objectReferenceValue = obj;
                     }
                 }
             }
             EditorGUI.EndProperty();
         }
 
-        private void GatherFilters(SerializedProperty property, out AssetReferenceLabelRestriction labelFilter, out AssetReferenceTypeRestriction typeFilter)
+        private void GatherFilters(SerializedProperty property, ref AssetReferenceLabelRestriction labelFilter, ref AssetReferenceTypeRestriction typeFilter)
         {
+            if (filtersGathered)
+                return;
+
             labelFilter = null;
             typeFilter = null;
             var o = property.serializedObject.targetObject;
@@ -201,6 +220,7 @@ namespace UnityEditor.AddressableAssets
                     }
                 }
             }
+            filtersGathered = true;
         }
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
@@ -358,4 +378,41 @@ namespace UnityEditor.AddressableAssets
             }
         }
     }
+
+    public static class SerializedPropertyExtensions
+    {
+        public static T GetActualObjectForSerializedProperty<T>(this SerializedProperty property, System.Reflection.FieldInfo field) where T : class
+        {
+            try
+            {
+                var serializedObject = property.serializedObject;
+                if (serializedObject == null)
+                {
+                    return null;
+                }
+                var targetObject = serializedObject.targetObject;
+                var obj = field.GetValue(targetObject);
+                if (obj == null)
+                {
+                    return null;
+                }
+                T actualObject = null;
+                if (obj.GetType().IsArray)
+                {
+                    var index = Convert.ToInt32(new string(property.propertyPath.Where(c => char.IsDigit(c)).ToArray()));
+                    actualObject = ((T[])obj)[index];
+                }
+                else
+                {
+                    actualObject = obj as T;
+                }
+                return actualObject;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
 }

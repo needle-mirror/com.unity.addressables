@@ -22,7 +22,6 @@ namespace UnityEditor.AddressableAssets
         }
         protected abstract string GetBuildPath(AddressableAssetSettings settings);
         protected abstract string GetBundleLoadPath(AddressableAssetSettings settings, string bundleName);
-        protected abstract System.Type GetBundleLoadProvider(AddressableAssetSettings settings);
         protected System.Type GetAssetLoadProvider(AddressableAssetSettings settings)
         {
             return typeof(BundledAssetProvider);
@@ -32,49 +31,51 @@ namespace UnityEditor.AddressableAssets
 
         internal override void CreateResourceLocationData(
             AddressableAssetSettings settings,
-            AddressableAssetSettings.AssetGroup assetGroup,
+            AddressableAssetGroup assetGroup,
             string bundleName,
             List<GUID> assetsInBundle,
             Dictionary<GUID, List<string>> assetsToBundles,
-            List<ResourceLocationData> locations)
+            Dictionary<object, ContentCatalogData.DataEntry> locations)
         {
-            locations.Add(new ResourceLocationData(bundleName, string.Empty, GetBundleLoadPath(settings, bundleName), GetBundleLoadProvider(settings), false, ResourceLocationData.LocationType.String, 0, typeof(UnityEngine.AssetBundle).FullName, null));
+            locations.Add(bundleName, new ContentCatalogData.DataEntry(bundleName, null, GetBundleLoadPath(settings, bundleName), typeof(AssetBundleProvider)));
+
+            var assets = new List<AddressableAssetEntry>();
+            assetGroup.GatherAllAssets(assets, true, true);
+            var guidToEntry = new Dictionary<string, AddressableAssetEntry>();
+            foreach (var a in assets)
+                guidToEntry.Add(a.guid, a);
 
             foreach (var a in assetsInBundle)
-            {  
-                var assetEntry = settings.FindAssetEntry(a.ToString());
-                if (assetEntry == null)
+            {
+                AddressableAssetEntry entry;
+                if (!guidToEntry.TryGetValue(a.ToString(), out entry))
                     continue;
-                var t = AssetDatabase.GetMainAssetTypeAtPath(assetEntry.assetPath);
-                var assetType = t == null ? string.Empty : t.FullName;
-                if (t == null)
-                    Debug.Log("Can't get asset type for " + assetEntry.assetPath);
-                var assetPath = assetEntry.GetAssetLoadPath(ProjectConfigData.editorPlayMode == ResourceManagerRuntimeData.EditorPlayMode.PackedMode);
-                locations.Add(new ResourceLocationData(assetEntry.address, assetEntry.guid, assetPath, GetAssetLoadProvider(settings), true, ResourceLocationData.LocationType.String, settings.labelTable.GetMask(assetEntry.labels), assetType, assetsToBundles[a].ToArray()));
+                var assetPath = entry.GetAssetLoadPath(ProjectConfigData.editorPlayMode == ResourceManagerRuntimeData.EditorPlayMode.PackedMode);
+                locations.Add(entry.address, new ContentCatalogData.DataEntry(entry.address, entry.guid, assetPath, GetAssetLoadProvider(settings), entry.labels, assetsToBundles[a].ToArray()));
             }
         }
 
-        internal override void ProcessGroup(AddressableAssetSettings settings, AddressableAssetSettings.AssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, List<ResourceLocationData> locationData)
+        internal override void ProcessGroup(AddressableAssetSettings settings, AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, Dictionary<object, ContentCatalogData.DataEntry> locationData)
         {
             if (GetBundleMode(settings) == BundleMode.PackTogether)
             {
-                var allEntries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+                var allEntries = new List<AddressableAssetEntry>();
                 foreach (var a in assetGroup.entries)
-                    a.GatherAllAssets(allEntries, settings);
+                    a.GatherAllAssets(allEntries, settings, true);
                 GenerateBuildInputDefinitions(allEntries, bundleInputDefs, assetGroup.name, "all");
             }
             else
             {
                 foreach (var a in assetGroup.entries)
                 {
-                    var allEntries = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
-                    a.GatherAllAssets(allEntries, settings);
+                    var allEntries = new List<AddressableAssetEntry>();
+                    a.GatherAllAssets(allEntries, settings, true);
                     GenerateBuildInputDefinitions(allEntries, bundleInputDefs, assetGroup.name, a.address);
                 }
             }
         }
 
-        internal override void PostProcessBundles(AddressableAssetSettings settings, AddressableAssetSettings.AssetGroup assetGroup, List<string> bundles, IBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData)
+        internal override void PostProcessBundles(AddressableAssetSettings settings, AddressableAssetGroup assetGroup, List<string> bundles, IBundleBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData, Dictionary<object, ContentCatalogData.DataEntry> locations)
         {
             var path = GetBuildPath(settings);
             if (string.IsNullOrEmpty(path))
@@ -82,17 +83,25 @@ namespace UnityEditor.AddressableAssets
 
             foreach (var bundleName in bundles)
             {
-                var targetPath = Path.Combine(path, bundleName);
+                var info = buildResult.BundleInfos[bundleName];
+                var targetPath = Path.Combine(path, bundleName.Replace(".bundle", "_" + info.Hash + ".bundle"));
+                ContentCatalogData.DataEntry dataEntry;
+                if (locations.TryGetValue(bundleName, out dataEntry))
+                {
+                    var cacheData = new AssetBundleProvider.CacheInfo() { m_crc = info.Crc, m_hash = info.Hash.ToString() };
+                    dataEntry.m_data = cacheData;
+                    dataEntry.m_internalId = dataEntry.m_internalId.Replace(".bundle", "_" + info.Hash + ".bundle");
+                }
                 if (!Directory.Exists(Path.GetDirectoryName(targetPath)))
                     Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
                 File.Copy(Path.Combine(settings.buildSettings.bundleBuildPath, bundleName), targetPath, true);
             }
         }
 
-        private void GenerateBuildInputDefinitions(List<AddressableAssetSettings.AssetGroup.AssetEntry> allEntries, List<AssetBundleBuild> buildInputDefs, string groupName, string address)
+        private void GenerateBuildInputDefinitions(List<AddressableAssetEntry> allEntries, List<AssetBundleBuild> buildInputDefs, string groupName, string address)
         {
-            var scenes = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
-            var assets = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
+            var scenes = new List<AddressableAssetEntry>();
+            var assets = new List<AddressableAssetEntry>();
             foreach (var e in allEntries)
             {
                 if (e.assetPath.EndsWith(".unity"))
@@ -106,7 +115,7 @@ namespace UnityEditor.AddressableAssets
                 buildInputDefs.Add(GenerateBuildInputDefinition(scenes, groupName + "_scenes_" + address + ".bundle"));
         }
 
-        private AssetBundleBuild GenerateBuildInputDefinition(List<AddressableAssetSettings.AssetGroup.AssetEntry> assets, string name)
+        private AssetBundleBuild GenerateBuildInputDefinition(List<AddressableAssetEntry> assets, string name)
         {
             var assetsInputDef = new AssetBundleBuild();
             assetsInputDef.assetBundleName = name.ToLower().Replace(" ", "").Replace('\\', '/').Replace("//", "/");
@@ -121,5 +130,32 @@ namespace UnityEditor.AddressableAssets
             assetsInputDef.addressableNames = new string[0];
             return assetsInputDef;
         }
+
+        internal override void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetGroup group, ContentCatalogData contentCatalog, List<ResourceLocationData> locations)
+        {
+            var buildPath = GetBuildPath(aaSettings) + aaSettings.profileSettings.EvaluateString(aaSettings.activeProfileId, "/catalog_[ContentVersion].json");
+            var remoteHashLoadPath = GetBundleLoadPath(aaSettings, "catalog_{ContentVersion}.hash");
+            var localCacheLoadPath = "{UnityEngine.Application.persistentDataPath}/Unity/AddressablesCatalogCache/catalog_{ContentVersion}.hash";
+
+            var jsonText = JsonUtility.ToJson(contentCatalog);
+            var contentHash = Build.Pipeline.Utilities.HashingMethods.Calculate(jsonText).ToString();
+
+            var buildPathDir = Path.GetDirectoryName(buildPath);
+            if (!Directory.Exists(buildPathDir))
+                Directory.CreateDirectory(buildPathDir);
+            File.WriteAllText(buildPath, jsonText);
+            File.WriteAllText(buildPath.Replace(".json", ".hash"), contentHash);
+
+            var remoteHash = new ResourceLocationData("RemoteCatalogHash" + group.guid, "", remoteHashLoadPath, typeof(TextDataProvider));
+            var localHash = new ResourceLocationData("LocalCatalogHash" + group.guid, "", localCacheLoadPath, typeof(TextDataProvider));
+
+
+            int priority = GetPriority(aaSettings, group);
+            var internalId = remoteHashLoadPath.Replace(".hash", ".json");
+            locations.Add(new ResourceLocationData(priority + "_RemoteCatalog_" + group.guid, "", internalId, typeof(ContentCatalogProvider), null, new string[] { localHash.m_address, remoteHash.m_address }));
+            locations.Add(localHash);
+            locations.Add(remoteHash);
+        }
+
     }
 }

@@ -14,25 +14,25 @@ namespace UnityEditor.AddressableAssets
     {
         internal override string displayName { get { return "Player Data"; } }
 
-        internal override void ProcessGroup(AddressableAssetSettings settings, AddressableAssetSettings.AssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, List<ResourceLocationData> locationData)
+        internal override void ProcessGroup(AddressableAssetSettings settings, AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, Dictionary<object, ContentCatalogData.DataEntry> locationData)
         {
             foreach (var e in assetGroup.entries)
             {
-                var assets = new List<AddressableAssetSettings.AssetGroup.AssetEntry>();
-                e.GatherAllAssets(assets, settings);
+                var assets = new List<AddressableAssetEntry>();
+                e.GatherAllAssets(assets, true, true);
                 foreach (var s in assets)
                 {
                     var assetPath = s.GetAssetLoadPath(false);
                     if (s.isScene)
                     {
-                        locationData.Add(new ResourceLocationData(s.address, s.guid, assetPath, typeof(SceneProvider), true, ResourceLocationData.LocationType.String, 0, typeof(UnityEngine.SceneManagement.Scene).FullName, null));
+                        locationData.Add(s.address, new ContentCatalogData.DataEntry(s.address, s.guid, assetPath, typeof(SceneProvider)));
                         var indexInSceneList = IndexOfSceneInEditorBuildSettings(new GUID(s.guid));
                         if (indexInSceneList >= 0)
-                            locationData.Add(new ResourceLocationData(indexInSceneList.ToString(), s.guid, assetPath, typeof(SceneProvider), true, ResourceLocationData.LocationType.Int, 0, typeof(UnityEngine.SceneManagement.Scene).FullName, null));
+                            locationData.Add(indexInSceneList, new ContentCatalogData.DataEntry(indexInSceneList.ToString(), s.guid, assetPath, typeof(SceneProvider)));
                     }
                     else
                     {
-                        locationData.Add(new ResourceLocationData(s.address, s.guid, assetPath, typeof(SceneProvider), true, ResourceLocationData.LocationType.String, 0, typeof(UnityEngine.SceneManagement.Scene).FullName, null));
+                        locationData.Add(s.address, new ContentCatalogData.DataEntry(s.address, s.guid, assetPath, typeof(LegacyResourcesProvider)));
                     }
                 }
             }

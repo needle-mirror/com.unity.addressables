@@ -6,16 +6,12 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
-    /// <summary>
-    /// TODO - doc
-    /// </summary>
-    public partial class AddressableAssetSettings
-    {
+
         /// <summary>
         /// TODO - doc
         /// </summary>
         [Serializable]
-        public partial class AssetGroup
+        public partial class AddressableAssetGroup
         {
             /// <summary>
             /// TODO - doc
@@ -38,18 +34,20 @@ namespace UnityEditor.AddressableAssets
                 set
                 {
                     name = value;
-                    PostModificationEvent(ModificationEvent.GroupRenamed, this);
+                    PostModificationEvent(AddressableAssetSettings.ModificationEvent.GroupRenamed, this);
                 }
             }
 
-            private Dictionary<string, AssetEntry> entryMap = new Dictionary<string, AssetEntry>();
+            private Dictionary<string, AddressableAssetEntry> entryMap = new Dictionary<string, AddressableAssetEntry>();
             [SerializeField]
-            private List<AssetEntry> m_serializeEntries = new List<AssetEntry>();
-            private AddressableAssetSettings settings { get { return AddressableAssetSettings.GetDefault(false, false); } }
+            private List<AddressableAssetEntry> m_serializeEntries = new List<AddressableAssetEntry>();
+            [NonSerialized]
+            AddressableAssetSettings m_settings;
+            internal AddressableAssetSettings settings { get { return m_settings; } }
             /// <summary>
             /// TODO - doc
             /// </summary>
-            public Dictionary<string, AssetEntry>.ValueCollection entries
+            public Dictionary<string, AddressableAssetEntry>.ValueCollection entries
             {
                 get { return entryMap.Values;  }
             }
@@ -97,6 +95,7 @@ namespace UnityEditor.AddressableAssets
 
             internal void OnAfterDeserialize(AddressableAssetSettings settings)
             {
+                m_settings = settings;
                 entryMap.Clear();
                 foreach (var e in m_serializeEntries)
                 {
@@ -118,8 +117,8 @@ namespace UnityEditor.AddressableAssets
             /// <summary>
             /// TODO - doc
             /// </summary>
-            internal AssetGroup() {}
-            internal AssetGroup(string n, AssetGroupProcessor p, bool setAsDefault, string g)
+            internal AddressableAssetGroup() {}
+            internal AddressableAssetGroup(string n, AssetGroupProcessor p, bool setAsDefault, string g)
             {
                 name = n;
                 processor = p;
@@ -129,10 +128,19 @@ namespace UnityEditor.AddressableAssets
                 readOnly = false;
             }
 
+            /// <summary>
+            /// TODO - doc
+            /// </summary>
+            public void GatherAllAssets(List<AddressableAssetEntry> results, bool includeSelf, bool recurseAll)
+            {
+                foreach (var e in entries)
+                    e.GatherAllAssets(results, includeSelf, recurseAll);
+            }
+
             internal void ReplaceProcessor(AssetGroupProcessor proc, string newGUID)
             {
-                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-                UnityEditor.AssetDatabase.DeleteAsset(path);
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                AssetDatabase.DeleteAsset(path);
                 processor = proc;
                 guid = newGUID;
             }
@@ -140,26 +148,26 @@ namespace UnityEditor.AddressableAssets
             /// <summary>
             /// TODO - doc
             /// </summary>
-            internal void AddAssetEntry(AssetEntry e, bool postEvent = true)
+            internal void AddAssetEntry(AddressableAssetEntry e, bool postEvent = true)
             {
                 e.isSubAsset = false;
                 e.parentGroup = this;
                 entryMap[e.guid] = e;
                 if(postEvent)
-                    PostModificationEvent(ModificationEvent.EntryAdded, e);
+                    PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryAdded, e);
             }
 
             /// <summary>
             /// TODO - doc
             /// </summary>
-            public AssetEntry GetAssetEntry(string guid)
+            public AddressableAssetEntry GetAssetEntry(string guid)
             {
                 if (entryMap.ContainsKey(guid))
                     return entryMap[guid];
                 return null;
             }
 
-            internal void PostModificationEvent(ModificationEvent e, object o)
+            internal void PostModificationEvent(AddressableAssetSettings.ModificationEvent e, object o)
             {
                 if (settings != null)
                     settings.PostModificationEvent(e, o);
@@ -168,14 +176,13 @@ namespace UnityEditor.AddressableAssets
             /// <summary>
             /// TODO - doc
             /// </summary>
-            internal void RemoveAssetEntry(AssetEntry entry, bool postEvent = true)
+            internal void RemoveAssetEntry(AddressableAssetEntry entry, bool postEvent = true)
             {
                 entryMap.Remove(entry.guid);
                 entry.parentGroup = null;
                 if(postEvent)
-                    PostModificationEvent(ModificationEvent.EntryRemoved, entry);
+                    PostModificationEvent(AddressableAssetSettings.ModificationEvent.EntryRemoved, entry);
             }
         }
-
-    }
+   
 }

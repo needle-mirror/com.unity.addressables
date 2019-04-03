@@ -23,6 +23,8 @@ namespace UnityEngine.AddressableAssets
                         var remoteHash = op.Result[1] as string;
                         if (remoteHash == localHash || string.IsNullOrEmpty(remoteHash))
                         {
+                            if (string.IsNullOrEmpty(remoteHash))
+                                Debug.LogFormat("Unable to load remote catalog hash: {0}.", op.OperationException);
                             var depOps = op.Context as IList<IResourceLocation>;
                             var localDataPath = depOps[0].InternalId.Replace(".hash", ".json");
                             ResourceManager.ProvideResource<ContentCatalogData>(new ResourceLocationBase(localDataPath, localDataPath, typeof(JsonAssetProvider).FullName)).Completed += OnCatalogLoaded;
@@ -63,6 +65,9 @@ namespace UnityEngine.AddressableAssets
                 InvokeCompletionEvent();
                 if (op.Result != null && !string.IsNullOrEmpty(m_hashValue) && !string.IsNullOrEmpty(m_localDataPath))
                 {
+                    var dir = Path.GetDirectoryName(m_localDataPath);
+                    if (!Directory.Exists(dir))
+                        Directory.CreateDirectory(dir);
                     var localCachePath = m_localDataPath;
                     File.WriteAllText(localCachePath, JsonUtility.ToJson(op.Result));
                     File.WriteAllText(localCachePath.Replace(".json", ".hash"), m_hashValue);

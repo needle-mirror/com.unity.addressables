@@ -46,20 +46,6 @@ namespace UnityEditor.AddressableAssets
                 return m_loadPrefixId;
             }
         }
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        public System.Type bundleLoadProvider
-        {
-            get
-            {
-                if (m_bundleLoadProvider == null)
-                {
-                    m_bundleLoadProvider = typeof(RemoteAssetBundleProvider);
-                }
-                return m_bundleLoadProvider;
-            }
-        }
 
 
         internal override void Initialize(AddressableAssetSettings settings)
@@ -76,7 +62,6 @@ namespace UnityEditor.AddressableAssets
             formatter.Serialize(stream, bundleMode);
             formatter.Serialize(stream, buildPathId);
             formatter.Serialize(stream, loadPrefixId);
-            formatter.Serialize(stream, bundleLoadProvider);
         }
 
         protected override string GetBuildPath(AddressableAssetSettings settings)
@@ -89,11 +74,6 @@ namespace UnityEditor.AddressableAssets
             return AddressableAssetSettings.ProfileSettings.ProfileIDData.Evaluate(settings.profileSettings, settings.activeProfileId, loadPrefixId) + "/" + postfixPath;
         }
 
-        protected override System.Type GetBundleLoadProvider(AddressableAssetSettings settings)
-        {
-            return bundleLoadProvider;
-        }
-        
         protected override BundleMode GetBundleMode(AddressableAssetSettings settings)
         {
             return bundleMode;
@@ -115,14 +95,12 @@ namespace UnityEditor.AddressableAssets
 
             var newBP = ProfilesWindow.ValueGUI(settings, "Build Path", buildPathId);
             var newLP = ProfilesWindow.ValueGUI(settings, "Load Prefix", loadPrefixId);
-            var newLM = EditorGUILayout.DelayedTextField(new GUIContent("Load Method"), bundleLoadProvider.ToString());
             GUILayout.EndScrollView();
             GUILayout.EndArea();
-            if (newBP != buildPathId || newLP != loadPrefixId || newLM != bundleLoadProvider.FullName)
+            if (newBP != buildPathId || newLP != loadPrefixId )
             {
                 m_buildPathId = newBP;
                 m_loadPrefixId = newLP;
-                m_bundleLoadProvider = System.Type.GetType(newLM);
                 settings.PostModificationEvent(AddressableAssetSettings.ModificationEvent.GroupProcessorModified, this);
             }
 

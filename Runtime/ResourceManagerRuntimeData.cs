@@ -15,10 +15,11 @@ namespace UnityEngine.AddressableAssets
         /// TODO - doc
         /// </summary>
         public static string PlayerSettingsLocation { get { return Path.Combine(Application.streamingAssetsPath, "Addressables_settings.json").Replace('\\', '/'); } }
+        public static string PlayerCatalogLocation { get { return Path.Combine(Application.streamingAssetsPath, "Addressables_catalog.json").Replace('\\', '/'); } }
         public static string GetPlayerSettingsLoadLocation(EditorPlayMode mode)
         {
             if (mode == EditorPlayMode.PackedMode)
-                return "file://{UnityEngine.Application.streamingAssetsPath}/Addressables_settings.json";
+                return "{UnityEngine.Application.streamingAssetsPath}/Addressables_settings.json";
             var p = System.IO.Path.GetDirectoryName(UnityEngine.Application.dataPath);
             return "file://" + System.IO.Path.Combine(p, "Library/Addressables_settings_" + mode + ".json");
         }
@@ -26,7 +27,7 @@ namespace UnityEngine.AddressableAssets
         public static string GetPlayerCatalogLoadLocation(EditorPlayMode mode)
         {
             if (mode == EditorPlayMode.PackedMode)
-                return "file://{UnityEngine.Application.streamingAssetsPath}/Addressables_catalog.json";
+                return "{UnityEngine.Application.streamingAssetsPath}/Addressables_catalog.json";
             var p = System.IO.Path.GetDirectoryName(UnityEngine.Application.dataPath);
             return "file://" + System.IO.Path.Combine(p, "Library/Addressables_catalog_" + mode + ".json");
         }
@@ -128,20 +129,20 @@ namespace UnityEngine.AddressableAssets
         {
             try
             {
-                var data = JsonUtility.ToJson(this);
+                var settingsData = JsonUtility.ToJson(this);
+                var catalogData = JsonUtility.ToJson(catalog);
                 if (mode == EditorPlayMode.PackedMode)
                 {
                     if (!Directory.Exists(Path.GetDirectoryName(PlayerSettingsLocation)))
                         Directory.CreateDirectory(Path.GetDirectoryName(PlayerSettingsLocation));
-                    File.WriteAllText(PlayerSettingsLocation, data);
+                    File.WriteAllText(PlayerSettingsLocation, settingsData);
+                    File.WriteAllText(PlayerCatalogLocation, catalogData);
                 }
 
                 if (!Directory.Exists(Path.GetDirectoryName(LibrarySettingsLocation(mode))))
                     Directory.CreateDirectory(Path.GetDirectoryName(LibrarySettingsLocation(mode)));
-
-                File.WriteAllText(LibrarySettingsLocation(mode), data);
-                data = JsonUtility.ToJson(catalog);
-                File.WriteAllText(LibraryCatalogLocation(mode), data);
+                File.WriteAllText(LibrarySettingsLocation(mode), settingsData);
+                File.WriteAllText(LibraryCatalogLocation(mode), catalogData);
             }
             catch (Exception e)
             {

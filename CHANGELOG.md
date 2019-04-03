@@ -4,6 +4,25 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2018-06-11
+ - fixed Application.streamingAssetsPath being stripped in IL2CPP platforms
+
+## [0.1.1] - 2018-06-07
+ - MIN VERSION NOW 2018.2.0b6
+ - updated dependency
+ 
+## [0.1.0] - 2018-06-05
+ - MIN VERSION NOW 2018.2.0b6
+ - added better checks for detecting modified assets in order to invalidate cache
+ - fixed preview window showing scenes in wrong bundle
+ - exclude current processor type from conversion context menu
+ - fixed exception when right clicking asset groups
+ - added support for adding extra data to resource locations
+ - made Addressables.ReleaseInstance destroy even non-addressable assets.
+ - append hash to all bundle names
+ - pass crc & hash to bundle provider
+ - clear catalog cache whenever packed mode content is rebuilt
+ 
 ## [0.0.27-preview] - 2018-05-31
  - fixed ResourceManager initialization to work as the stand-alone player 
  

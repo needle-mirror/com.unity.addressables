@@ -257,7 +257,7 @@ namespace UnityEditor.AddressableAssets
                     
                     AddProfile(k_rootProfileName, null);
                     CreateValue("LocalBuildPath", "Assets/StreamingAssets");
-                    CreateValue("LocalLoadPrefix", "file://{UnityEngine.Application.streamingAssetsPath}");
+                    CreateValue("LocalLoadPrefix", "{UnityEngine.Application.streamingAssetsPath}");
                     CreateValue("RemoteBuildPath", "ServerData/[UnityEditor.EditorUserBuildSettings.activeBuildTarget]");
                     CreateValue("RemoteLoadPrefix", "http://localhost/[UnityEditor.EditorUserBuildSettings.activeBuildTarget]");
 

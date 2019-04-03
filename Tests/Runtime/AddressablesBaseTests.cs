@@ -137,6 +137,19 @@ public abstract class AddressablesBaseTests : IPrebuildSetup, IPostBuildCleanup
         }
         yield return null;
     }
+    [UnityTest]
+    public IEnumerator CanDestroyNonAddressable()
+    {
+        GameObject go = GameObject.Instantiate(GameObject.CreatePrimitive(PrimitiveType.Cube));
+        go.name = "TestCube";
+
+        Addressables.ReleaseInstance(go); 
+        yield return null;
+
+        GameObject foundObj = GameObject.Find("TestCube");
+        Assert.IsNull(foundObj);
+        yield return null;
+    }
 
     [UnityTest]
     public IEnumerator CanLoadAssetWithCallback()

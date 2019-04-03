@@ -39,7 +39,7 @@ namespace UnityEditor.AddressableAssets
             var aaSettings = AddressableAssetSettings.GetDefault(false, false);
             string path = string.Empty;
             var guid = string.Empty;
-            AddressableAssetSettings.AssetGroup.AssetEntry entry = null;
+            AddressableAssetEntry entry = null;
 
             if (editor.targets.Length > 0)
             {

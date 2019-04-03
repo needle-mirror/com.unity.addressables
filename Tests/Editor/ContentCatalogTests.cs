@@ -12,6 +12,13 @@ public class ContentCatalogTests
     List<object> keys;
     List<System.Type> providers;
 
+    [System.Serializable]
+    public class SerializableKey
+    {
+        public int index;
+        public string path;
+    }
+
     [OneTimeSetUp]
     public void Init()
     {
@@ -32,13 +39,17 @@ public class ContentCatalogTests
             {
                 keys.Add((ushort)(i * 13));
             }
-            else if (r < 60)
+            else if (r < 50)
             {
                 keys.Add((int)(i * 13));
             }
-            else if (r < 80)
+            else if (r < 60)
             {
                 keys.Add((uint)(i * 13));
+            }
+            else if (r < 80)
+            {
+                keys.Add(new SerializableKey() { index = i, path = GUID.Generate().ToString() });
             }
             else
             {
@@ -47,7 +58,7 @@ public class ContentCatalogTests
         }
         providers = new List<System.Type>();
         providers.Add(typeof(BundledAssetProvider));
-        providers.Add(typeof(RemoteAssetBundleProvider));
+        providers.Add(typeof(AssetBundleProvider));
         providers.Add(typeof(AssetDatabaseProvider));
         providers.Add(typeof(LegacyResourcesProvider));
         providers.Add(typeof(JsonAssetProvider));
@@ -65,6 +76,20 @@ public class ContentCatalogTests
         return entryKeys.ToList();
     }
 
+    [System.Serializable]
+    public class EvenData
+    {
+        public int index;
+        public string path;
+    }
+
+    [System.Serializable]
+    public class OddData
+    {
+        public int index;
+        public string path;
+    }
+
     [Test]
     public void VerifySerialization()
     {
@@ -76,8 +101,15 @@ public class ContentCatalogTests
 
         for (int i = 0; i < 1000; i++)
         {
+            var internalId = "Assets/TestPath/" + GUID.Generate().ToString() + ".asset";
             var eKeys = GetRandomSubset(keys, Random.Range(1, 5));
-            var e = new ContentCatalogData.DataEntry("Assets/TestPath/" + GUID.Generate().ToString() + ".asset", providers[Random.Range(0, providers.Count)].FullName, eKeys, GetRandomSubset(availableKeys, Random.Range(0, 1)));
+            object data = null;
+            if (i % 2 == 0)
+                data = new EvenData() { index = i, path = internalId };
+            else
+                data = new OddData() { index = i, path = internalId };
+
+            var e = new ContentCatalogData.DataEntry(internalId, providers[Random.Range(0, providers.Count)].FullName, eKeys, GetRandomSubset(availableKeys, Random.Range(0, 1)), data);
             availableKeys.Add(eKeys[0]);
             entries.Add(e);
         }
@@ -97,6 +129,7 @@ public class ContentCatalogTests
             {
                 var entry = entries.Find(e => e.m_internalId == loc.InternalId);
                 Assert.AreEqual(entry.m_provider.ToString(), loc.ProviderId);
+                
                 var deps = loc.Dependencies;
                 if (deps != null)
                 {

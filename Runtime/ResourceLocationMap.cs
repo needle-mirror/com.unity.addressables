@@ -49,11 +49,10 @@ namespace UnityEngine.AddressableAssets
             {
                 IResourceLocation loc = kvp.Value;
                 ResourceLocationData rlData = dataMap[kvp.Key];
-                if (!rlData.m_isLoadable)
-                    continue;
-
-                Add(rlData.m_address, loc);
-                Add(rlData.m_guid, loc);
+                if(!string.IsNullOrEmpty(rlData.m_address))
+                    Add(rlData.m_address, loc);
+                if (!string.IsNullOrEmpty(rlData.m_guid))
+                    Add(rlData.m_guid, loc);
             }
         }
 

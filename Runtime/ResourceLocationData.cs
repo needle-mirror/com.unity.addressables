@@ -10,16 +10,7 @@ namespace UnityEngine.AddressableAssets
     [Serializable]
     public class ResourceLocationData
     {
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        public enum LocationType
-        {
-            String,
-            Int,
-            Enum,
-            Custom // ??? hmmm
-        }
+ 
         /// <summary>
         /// TODO - doc
         /// </summary>
@@ -31,14 +22,6 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public LocationType m_type;
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
-        public string m_typeName;
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
         public string m_internalId;
         /// <summary>
         /// TODO - doc
@@ -47,36 +30,22 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public long m_labelMask;
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
         public string[] m_dependencies;
         /// <summary>
         /// TODO - doc
         /// </summary>
-        public bool m_isLoadable;
-        public ResourceLocationData(string address, string guid, string id, Type provider, bool isLoadable, LocationType locationType = LocationType.String, long labels = 0, string objectType = "", string[] dependencies = null)
+        public object m_data;
+        public IEnumerable<string> m_labels;
+        public ResourceLocationData(string address, string guid, string id, Type provider, IEnumerable<string> labels = null, string[] dependencies = null, object data = null)
         {
-            m_isLoadable = isLoadable;
             m_address = address;
+            m_labels = labels;
             m_guid = guid;
+            m_data = data;
             m_internalId = id;
             m_provider = provider.FullName;
-            m_typeName = objectType;
-            m_type = locationType;
             m_dependencies = dependencies == null ? new string[0] : dependencies;
-            m_labelMask = labels;
         }
 
-        internal object GetKeyObject()
-        {
-            switch (m_type)
-            {
-                case LocationType.String: return m_address;
-                case LocationType.Int: return int.Parse(m_address);
-            }
-            return m_address;
-        }
     }
 }

@@ -29,9 +29,8 @@ public class AddressablesVirtualModeTests : AddressablesBaseTests
         for (int i = 0; i < 10; i++)
         {
             var bundleName = "shared" + i;
-            var isLocal = i % 2 == 0;
             sharedBundles.Add(new VirtualAssetBundle("shared" + i, i % 2 == 0));
-            sharedBundleLocations.Add(new ResourceLocationBase(bundleName, bundleName, isLocal ? typeof(LocalAssetBundleProvider).FullName : typeof(RemoteAssetBundleProvider).FullName));
+            sharedBundleLocations.Add(new ResourceLocationBase(bundleName, bundleName, typeof(AssetBundleProvider).FullName));
         }
         virtualBundleData.AssetBundles.AddRange(sharedBundles);
 
@@ -40,7 +39,7 @@ public class AddressablesVirtualModeTests : AddressablesBaseTests
         {
             var isLocal = b % 2 == 0;
             var bundle = new VirtualAssetBundle("bundle" + b, isLocal);
-            var bundleLocation = new ResourceLocationBase(bundle.Name, bundle.Name, isLocal ? typeof(LocalAssetBundleProvider).FullName : typeof(RemoteAssetBundleProvider).FullName);
+            var bundleLocation = new ResourceLocationBase(bundle.Name, bundle.Name, typeof(AssetBundleProvider).FullName);
             for (int a = 0; a < 10; a++)
             {
                 HashSet<object> labelSet = new HashSet<object>();

@@ -19,7 +19,7 @@ namespace UnityEditor.AddressableAssets
         {
         }
 
-        internal virtual void ProcessGroup(AddressableAssetSettings settings, AddressableAssetSettings.AssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, List<ResourceLocationData> locationData)
+        internal virtual void ProcessGroup(AddressableAssetSettings settings, AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, Dictionary<object, ContentCatalogData.DataEntry> locationData)
         {
         }
 
@@ -29,11 +29,11 @@ namespace UnityEditor.AddressableAssets
         {
         }
 
-        internal virtual void CreateResourceLocationData(AddressableAssetSettings settings, AddressableAssetSettings.AssetGroup assetGroup, string bundleName, List<GUID> assetsInBundle, Dictionary<GUID, List<string>> assetsToBundles, List<ResourceLocationData> locations)
+        internal virtual void CreateResourceLocationData(AddressableAssetSettings settings, AddressableAssetGroup assetGroup, string bundleName, List<GUID> assetsInBundle, Dictionary<GUID, List<string>> assetsToBundles, Dictionary<object, ContentCatalogData.DataEntry> locations)
         {
         }
 
-        internal virtual void PostProcessBundles(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup assetGroup, List<string> bundles, IBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData)
+        internal virtual void PostProcessBundles(AddressableAssetSettings aaSettings, AddressableAssetGroup assetGroup, List<string> bundles, IBundleBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData, Dictionary<object, ContentCatalogData.DataEntry> locations)
         {
         }
 
@@ -42,16 +42,16 @@ namespace UnityEditor.AddressableAssets
             
         }
 
-        internal virtual void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group, ContentCatalogData contentCatalog, List<ResourceLocationData> locations)
+        internal virtual void CreateCatalog(AddressableAssetSettings aaSettings, AddressableAssetGroup group, ContentCatalogData contentCatalog, List<ResourceLocationData> locations)
         {
         }
 
-        internal virtual int GetPriority(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup group)
+        internal virtual int GetPriority(AddressableAssetSettings aaSettings, AddressableAssetGroup group)
         {
             return int.MaxValue;
         }
 
-        internal virtual bool Validate(AddressableAssetSettings aaSettings, AddressableAssetSettings.AssetGroup assetGroup)
+        internal virtual bool Validate(AddressableAssetSettings aaSettings, AddressableAssetGroup assetGroup)
         {
             return true;
         }

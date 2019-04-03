@@ -5,7 +5,7 @@ using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine.ResourceManagement;
 using UnityEngine.AddressableAssets;
 using System.IO;
-
+using System.Linq;
 namespace UnityEditor.AddressableAssets
 {
     public class WriteVirtualBundleDataTask : IBuildTask
@@ -26,17 +26,17 @@ namespace UnityEditor.AddressableAssets
             return Run(aaContext.m_settings, aaContext.m_runtimeData, aaContext.m_locations, context.GetContextObject<IBundleWriteData>(), m_writeData, out aaContext.m_virtualBundleRuntimeData);
         }
 
-        public static ReturnCode Run(AddressableAssetSettings aaSettings, ResourceManagerRuntimeData runtimeData, List<ResourceLocationData> locations, IBundleWriteData writeData, bool saveBundleData, out VirtualAssetBundleRuntimeData virtualBundleData)
+        public static ReturnCode Run(AddressableAssetSettings aaSettings, ResourceManagerRuntimeData runtimeData, Dictionary<object, ContentCatalogData.DataEntry> locations, IBundleWriteData writeData, bool saveBundleData, out VirtualAssetBundleRuntimeData virtualBundleData)
         {
             virtualBundleData = new VirtualAssetBundleRuntimeData(ProjectConfigData.localLoadSpeed, ProjectConfigData.remoteLoadSpeed);
-            var bundledAssets = new Dictionary<string, List<string>>();
-            foreach (var loc in locations)
+            var bundledAssets = new Dictionary<object, List<string>>();
+            foreach (var loc in locations.Values)
             {
                 if (loc.m_provider == typeof(BundledAssetProvider).FullName)
                 {
-                    if (loc.m_dependencies == null || loc.m_dependencies.Length == 0)
+                    if (loc.m_dependencies == null || loc.m_dependencies.Count == 0)
                         continue;
-                    for(int i = 0; i < loc.m_dependencies.Length; i++)
+                    for(int i = 0; i < loc.m_dependencies.Count; i++)
                     {
                         var dep = loc.m_dependencies[i];
                         List<string> assetsInBundle = null;
@@ -50,8 +50,8 @@ namespace UnityEditor.AddressableAssets
             
             foreach (var bd in bundledAssets)
             {
-                var bundleLocData = locations.Find(a => a.m_address == bd.Key);
-                var bundleData = new VirtualAssetBundle(bundleLocData.m_internalId, bundleLocData.m_provider == typeof(LocalAssetBundleProvider).FullName);
+                var bundleLocData = locations[bd.Key];
+                var bundleData = new VirtualAssetBundle(bundleLocData.m_internalId, !bundleLocData.m_internalId.Contains("://"));
 
                 long dataSize = 0;
                 long headerSize = 0;
@@ -61,6 +61,11 @@ namespace UnityEditor.AddressableAssets
                     bundleData.Assets.Add(new VirtualAssetBundle.AssetInfo(a, size));
                     dataSize += size;
                     headerSize += (long)(a.Length * 5); //assume 5x path length overhead size per item, probably much less
+                }
+                if (bd.Value.Count == 0)
+                {
+                    dataSize = 100 * 1024;
+                    headerSize = 1024;
                 }
                 bundleData.SetSize(dataSize, headerSize);
                 virtualBundleData.AssetBundles.Add(bundleData);
