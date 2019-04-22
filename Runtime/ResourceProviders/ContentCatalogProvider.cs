@@ -27,42 +27,47 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
             Cache,
             Count
         }
-        
-        public ContentCatalogProvider()
+        ResourceManager m_RM;
+        /// <summary>
+        /// Constructor for this provider.
+        /// </summary>
+        /// <param name="resourceManagerInstance">The resource manager to use.</param>
+        public ContentCatalogProvider(ResourceManager resourceManagerInstance )
         {
+            m_RM = resourceManagerInstance;
             m_BehaviourFlags = ProviderBehaviourFlags.CanProvideWithFailedDependencies;
         }
-        internal class InternalOp<TObject> : AsyncOperationBase<TObject> where TObject : class
+        internal class InternalOp
         {
-            int m_StartFrame;
+         //   int m_StartFrame;
             string m_LocalDataPath;
             string m_HashValue;
+            ProvideHandle m_ProviderInterface;
+            ResourceManager m_RM;
 
-            public IAsyncOperation<TObject> Start(IResourceLocation location, IList<object> deps)
+            public void Start(ProvideHandle providerInterface, ResourceManager rm)
             {
-                Validate();
+                m_RM = rm;
+                m_ProviderInterface = providerInterface;
                 m_LocalDataPath = null;
                 m_HashValue = null;
-                m_StartFrame = Time.frameCount;
-                m_Result = null;
-                Context = location;
+         //       m_StartFrame = Time.frameCount;
+                List<object> deps = new List<object>(); // TODO: garbage. need to pass actual count and reuse the list
+                m_ProviderInterface.GetDependencies(deps);
+                string idToLoad = DetermineIdToLoad(m_ProviderInterface.Location, deps);
 
-                string idToLoad = DetermineIdToLoad(location, deps);
-                
                 Addressables.LogFormat("Addressables - Using content catalog from {0}.", idToLoad);
-                Addressables.ResourceManager.ProvideResource<ContentCatalogData>(new ResourceLocationBase(idToLoad, idToLoad, typeof(JsonAssetProvider).FullName)).Completed += OnCatalogLoaded;
-                
-                return this;
+                rm.ProvideResource<ContentCatalogData>(new ResourceLocationBase(idToLoad, idToLoad, typeof(JsonAssetProvider).FullName)).Completed += OnCatalogLoaded;
             }
 
             internal string DetermineIdToLoad(IResourceLocation location, IList<object> dependencyObjects)
             {
                 //default to load actual local source catalog
                 string idToLoad = location.InternalId;
-                if (dependencyObjects != null && 
+                if (dependencyObjects != null &&
                     location.Dependencies != null &&
-                    dependencyObjects.Count == (int)DependencyHashIndex.Count && 
-                    location.Dependencies.Count == (int)DependencyHashIndex.Count )
+                    dependencyObjects.Count == (int)DependencyHashIndex.Count &&
+                    location.Dependencies.Count == (int)DependencyHashIndex.Count)
                 {
                     var remoteHash = dependencyObjects[(int)DependencyHashIndex.Remote] as string;
                     var cachedHash = dependencyObjects[(int)DependencyHashIndex.Cache] as string;
@@ -70,7 +75,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
 
                     if (string.IsNullOrEmpty(remoteHash)) //offline
                     {
-                        if(!string.IsNullOrEmpty(cachedHash)) //cache exists
+                        if (!string.IsNullOrEmpty(cachedHash)) //cache exists
                             idToLoad = location.Dependencies[(int)DependencyHashIndex.Cache].InternalId.Replace(".hash", ".json");
                     }
                     else //online
@@ -91,33 +96,31 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                 return idToLoad;
             }
 
-            void OnCatalogLoaded(IAsyncOperation<ContentCatalogData> op)
+            void OnCatalogLoaded(AsyncOperationHandle<ContentCatalogData> op)
             {
-                Addressables.LogFormat("Addressables - Content catalog load result = {0}.", op.Result);
-                Validate();
-                SetResult(op.Result as TObject);
-                ResourceManagerEventCollector.PostEvent(ResourceManagerEventCollector.EventType.LoadAsyncCompletion, Context, Time.frameCount - m_StartFrame);
-                InvokeCompletionEvent();
-                if (op.Result != null && !string.IsNullOrEmpty(m_HashValue) && !string.IsNullOrEmpty(m_LocalDataPath))
+                var ccd = op.Result;
+                m_RM.Release(op);
+                Addressables.LogFormat("Addressables - Content catalog load result = {0}.", ccd);
+                
+       //         ResourceManagerEventCollector.PostEvent(ResourceManagerEventCollector.EventType.LoadAsyncCompletion, m_ProviderInterface.Location, Time.frameCount - m_StartFrame);
+                m_ProviderInterface.Complete(ccd, ccd != null, null);
+                if (ccd != null && !string.IsNullOrEmpty(m_HashValue) && !string.IsNullOrEmpty(m_LocalDataPath))
                 {
                     var dir = Path.GetDirectoryName(m_LocalDataPath);
                     if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                         Directory.CreateDirectory(dir);
                     var localCachePath = m_LocalDataPath;
                     Addressables.LogFormat("Addressables - Saving cached content catalog to {0}.", localCachePath);
-                    File.WriteAllText(localCachePath, JsonUtility.ToJson(op.Result));
+                    File.WriteAllText(localCachePath, JsonUtility.ToJson(ccd));
                     File.WriteAllText(localCachePath.Replace(".json", ".hash"), m_HashValue);
                 }
             }
         }
 
         ///<inheritdoc/>
-        public override IAsyncOperation<TObject> Provide<TObject>(IResourceLocation location, IList<object> deps)
+        public override void Provide(ProvideHandle providerInterface)
         {
-            if (location == null)
-                throw new ArgumentNullException("location");
-            var operation = AsyncOperationCache.Instance.Acquire<InternalOp<TObject>>();
-            return operation.Start(location, deps);
+            new InternalOp().Start(providerInterface, m_RM);
         }
     }
 }

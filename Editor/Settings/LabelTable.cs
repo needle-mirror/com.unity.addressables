@@ -6,9 +6,6 @@ using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets.Settings
 {
-    /// <summary>
-    /// TODO - doc
-    /// </summary>
     [Serializable]
     class LabelTable
     {
@@ -46,9 +43,6 @@ namespace UnityEditor.AddressableAssets.Settings
             return m_LabelNames.Remove(name);
         }
 
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
         internal string GetString(HashSet<string> val, float width) //TODO - use width to add the "..." in the right place.
         {
             StringBuilder sb = new StringBuilder();
@@ -72,9 +66,6 @@ namespace UnityEditor.AddressableAssets.Settings
             return sb.ToString();
         }
 
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
         internal long GetMask(HashSet<string> maskSet)
         {
             if (maskSet.Count == 0)

@@ -100,7 +100,9 @@ namespace UnityEditor.AddressableAssets.GUI
                     {
                         try
                         {
+                            EditorGUI.indentLevel++;
                             schema.OnGUI();
+                            EditorGUI.indentLevel--;
                         }
                         catch (Exception se)
                         {

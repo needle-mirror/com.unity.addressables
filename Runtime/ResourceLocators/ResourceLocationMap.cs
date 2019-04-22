@@ -28,7 +28,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             if (locations == null)
                 return;
             Locations = new Dictionary<object, IList<IResourceLocation>>(locations.Count * 2);
-            var locMap = new Dictionary<string, IResourceLocation>();
+            var locMap = new Dictionary<string, ResourceLocationBase>();
             var dataMap = new Dictionary<string, ResourceLocationData>();
             //create and collect locations
             for (int i = 0; i < locations.Count; i++)
@@ -57,14 +57,14 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                 {
                     foreach (var d in data.Dependencies)
                         kvp.Value.Dependencies.Add(locMap[d]);
+                    kvp.Value.ComputeDependencyHash();
                 }
             }
-            foreach (KeyValuePair<string, IResourceLocation> kvp in locMap)
+            foreach (KeyValuePair<string, ResourceLocationBase> kvp in locMap)
             {
-                IResourceLocation loc = kvp.Value;
                 ResourceLocationData rlData = dataMap[kvp.Key];
                 foreach (var k in rlData.Keys)
-                    Add(k, loc);
+                    Add(k, kvp.Value);
             }
         }
 

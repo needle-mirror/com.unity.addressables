@@ -8,7 +8,7 @@ using UnityEngine.ResourceManagement.Util;
 namespace UnityEditor.AddressableAssets.GUI
 {
     [CustomPropertyDrawer(typeof(SerializedType), true)]
-    public class SerializedTypeDrawer : PropertyDrawer
+    internal class SerializedTypeDrawer : PropertyDrawer
     {
         List<Type> m_Types;
         FieldInfo m_SerializedFieldInfo;

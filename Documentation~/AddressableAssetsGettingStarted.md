@@ -2,7 +2,7 @@
 
 ## Installing the Addressable Assets package
 
-Requires Unity 2018.2 or later.
+Requires Unity 2018.3 or later.
 
 To install this package, follow the instructions in the [Package Manager documentation](https://docs.unity3d.com/Packages/com.unity.package-manager-ui@1.7/manual/index.html).
 
@@ -56,7 +56,7 @@ or
         Addressables.LoadAsset<GameObject>("AssetAddress").Completed += onLoadDone;
     }
 
-    private void onLoadDone(UnityEngine.ResourceManagement.IAsyncOperation<Sprite> obj)
+    private void onLoadDone(UnityEngine.ResourceManagement.AsyncOperationHandle<GameObject> obj)
     {
         // In a production environment, you should add exception handling to catch scenarios such as a null result;
         myGameObject = obj.Result;
@@ -97,11 +97,16 @@ or
 
 `LoadAsset` and `Instantiate` are asynch operations. You must provide a callback to work with the Asset once it is loaded. 
 
+### Local Data in StreamingAssets
+Addressables needs some files at runtime to know how and what to load.  Those files are generated when you build Addressables data, and wind up in the StreamingAssets folder.  This is a special folder in Unity that causes all files in that folder to be included in the build.  When you build content, we do not immediately put files into this folder.  Instead they are staged in the Library.  When you build the player, we copy the requried files over, do the build, then delete them.  This is done so that a user can build data for multiple platforms, but only get the relevant data included in their build. 
+
+In addition to the Addressables specific data, any groups that build their data for local use will also use the Library platform-specific staging location.  To make sure this works, your build path should be set to a profile variable that starts with `[UnityEngine.AddressableAssets.Addressables.BuildPath]` and the load path should start with `{UnityEngine.AddressableAssets.Addressables.RuntimePath}`.
+
 ### Downloading in Advance
 
 Calling the `Addressables.DownloadDependencies()` method loads the dependencies for the address or label that you pass in. Typically, this is the asset bundle.
 
-The `IAsyncOperation` object returned by this call includes a `PercentComplete` attribute that you can use to monitor progress of downloads. You can use the percent complete to display a progress bar and have the app wait until the content has loaded.
+The `AsyncOperationHandle` struct returned by this call includes a `PercentComplete` attribute that you can use to monitor progress of downloads. You can use the percent complete to display a progress bar and have the app wait until the content has loaded.
 
 If you wish to ask the user for consent prior to downloading, you can use `Addressables.GetDownloadSize()`.  This will tell you how much data needs to be downloaded to support a given address or label.  This does take into account any previously downloaded bundles that are still in Unity's asset bundle cache.
 
@@ -112,3 +117,11 @@ While it can be advantageous to download assets for your app in advance, there a
 2. You have an app that must be connected online to function. For example, a multiplayer game. If all the content for the app is in small bundles, you might choose to wait and download content as-needed.
 
 You can also choose to partially use the preload functionality. Rather than using the percent complete to wait until the content is loaded, you can start the download then continue on. You would need to create a loading/waiting screen later on when you actually load the asset. If the preload has finished, the load is quick, otherwise the app would need to wait until the content is loaded.
+
+### Building for Multiple Platforms
+
+When building player content for Addressables, Asset Bundles are generated that contain your Addressable Assets.  Asset Bundles are platform dependant and thus will need to be rebuilt for every unique platform you intend to support.
+
+By default, when Addressables player data is built, data for your given platform will be stored into platform specific sub-directories of the Addressables build path(s).  The runtime path will take into account these platform folders and point to the specified player data.  
+
+__Please Note:__ When in Play Mode in the Editor, if you are using Addressables Packed Play Mode script, Addressables will attempt to load data for your current active build target.  This means if your current build target data isn't compatible with your current editor platform, issues may arise in Play Mode.    

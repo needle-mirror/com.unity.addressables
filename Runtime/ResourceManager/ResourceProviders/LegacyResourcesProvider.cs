@@ -11,71 +11,62 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     /// </summary>
     public class LegacyResourcesProvider : ResourceProviderBase
     {
-        internal class InternalOp<TObject> : InternalProviderOperation<TObject>
-            where TObject : class
+        internal class InternalOp
         {
             AsyncOperation m_RequestOperation;
-            public InternalProviderOperation<TObject> StartOp(IResourceLocation location)
+            ProvideHandle m_PI;
+            
+            public void Start(ProvideHandle provideHandle)
             {
-                m_Result = null;
-                m_RequestOperation = Resources.LoadAsync<Object>(location.InternalId);
+                m_PI = provideHandle;
+                
+                m_RequestOperation = Resources.LoadAsync<Object>(m_PI.Location.InternalId);
+                m_RequestOperation.completed += AsyncOperationCompleted;
+                provideHandle.SetProgressCallback(PercentComplete);
+            }
 
-                if (m_RequestOperation.isDone)
-                    DelayedActionManager.AddAction((Action<AsyncOperation>)OnComplete, 0, m_RequestOperation);
-                else
-                    m_RequestOperation.completed += OnComplete;
-                return base.Start(location);
-            }
-            public override float PercentComplete
-            {
-                get
-                {
-                    if (IsDone)
-                        return 1;
-                    return m_RequestOperation.progress;
-                }
-            }
-            internal override TObject ConvertResult(AsyncOperation op)
+            private void AsyncOperationCompleted(AsyncOperation op)
             {
                 var request = op as ResourceRequest;
-                return request == null ? null : request.asset as TObject;
+                object result = request != null ? request.asset : null;
+                result = result != null && m_PI.Type.IsAssignableFrom(result.GetType()) ? result : null;
+                m_PI.Complete(result, result != null, null);
             }
+
+            public float PercentComplete() { return m_RequestOperation != null ? m_RequestOperation.progress : 0.0f; }
         }
 
-        /// <inheritdoc/>
-        public override IAsyncOperation<TObject> Provide<TObject>(IResourceLocation location, IList<object> deps)
+        public override void Provide(ProvideHandle pi)
         {
-            if (location == null)
-                throw new ArgumentNullException("location");
+            Type t = pi.Type;
+            bool isList = t.IsGenericType && typeof(IList<>) == t.GetGenericTypeDefinition();
 
-            var t = typeof(TObject);
-            if (t.IsArray)
-                return new CompletedOperation<TObject>().Start(location, location.InternalId, ResourceManagerConfig.CreateArrayResult<TObject>(Resources.LoadAll(location.InternalId, t.GetElementType())));
-            if (t.IsGenericType && typeof(IList<>) == t.GetGenericTypeDefinition())
-                return new CompletedOperation<TObject>().Start(location, location.InternalId, ResourceManagerConfig.CreateListResult<TObject>(Resources.LoadAll(location.InternalId, t.GetGenericArguments()[0])));
-            return AsyncOperationCache.Instance.Acquire<InternalOp<TObject>>().StartOp(location);
-        }
-
-        /// <inheritdoc/>
-        public override bool Release(IResourceLocation location, object asset)
-        {
-            if (location == null)
-                throw new ArgumentNullException("location");
-            var go = asset as GameObject;
-            if (go != null)
+            if (t.IsArray || isList)
             {
-                //GameObjects cannot be resleased via Object.Destroy because they are considered an asset
-                //but they can't be unloaded via Resources.UnloadAsset since they are NOT an asset?
-                return true;
+                object result = null;
+                if (t.IsArray)
+                    result = ResourceManagerConfig.CreateArrayResult(t, Resources.LoadAll(pi.Location.InternalId, t.GetElementType()));
+                else
+                    result = ResourceManagerConfig.CreateListResult(t, Resources.LoadAll(pi.Location.InternalId, t.GetGenericArguments()[0]));
+
+                pi.Complete(result, result != null, null);
             }
+            else
+            {
+                new InternalOp().Start(pi);
+            }
+        }
+
+        /// <inheritdoc/>
+        public override void Release(IResourceLocation location, object asset)
+        {
+            if (location == null)
+                throw new ArgumentNullException("location");
             var obj = asset as Object;
-            if (obj != null)
-            {
+            //GameObjects cannot be resleased via Object.Destroy because they are considered an asset
+            //but they can't be unloaded via Resources.UnloadAsset since they are NOT an asset?
+            if (obj != null && !(obj is GameObject))
                 Resources.UnloadAsset(obj);
-                return true;
-            }
-
-            return true;
         }
     }
 }

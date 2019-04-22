@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
@@ -19,6 +20,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
     [CreateAssetMenu(fileName = "BuildScriptFast.asset", menuName = "Addressable Assets/Data Builders/Fast Mode")]
     public class BuildScriptFastMode : BuildScriptBase
     {
+        /// <inheritdoc />
         public override string Name
         {
             get
@@ -27,82 +29,120 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
         }
 
+        /// <inheritdoc />
         public override bool CanBuildData<T>()
         {
-            return typeof(T) == typeof(AddressablesPlayModeBuildResult);
+            return typeof(T).IsAssignableFrom(typeof(AddressablesPlayModeBuildResult));
         }
 
+        /// <inheritdoc />
         public override void ClearCachedData()
         {
-            DeleteFile(string.Format(m_PathFormat, "", "catalog"));
-            DeleteFile(string.Format(m_PathFormat, "", "settings"));
+            DeleteFile(string.Format(PathFormat, "", "catalog"));
+            DeleteFile(string.Format(PathFormat, "", "settings"));
         }
 
-        string m_PathFormat = "{0}Library/com.unity.addressables/{1}_BuildScriptFastMode.json";
-        public override T BuildData<T>(IDataBuilderContext context)
+        /// <inheritdoc />
+        internal override bool IsDataBuilt()
         {
+            var catalogPath = string.Format(PathFormat, "", "catalog");
+            var settingsPath = string.Format(PathFormat, "", "settings");
+            return File.Exists(catalogPath) &&
+                   File.Exists(settingsPath);
+        }
+
+        private string m_PathFormatStore;
+        private string PathFormat
+        {
+            get
+            {
+                if(string.IsNullOrEmpty(m_PathFormatStore))
+                    m_PathFormatStore = "{0}Library/com.unity.addressables/{1}_BuildScriptFastMode.json";
+                return m_PathFormatStore;
+            }
+            set { m_PathFormatStore = value; }
+        }
+        bool m_NeedsLegacyProvider = false;
+        
+        /// <inheritdoc />
+        protected override TResult BuildDataImplementation<TResult>(AddressablesDataBuilderInput context)
+        {
+            TResult result = default(TResult);
+            
             var timer = new Stopwatch();
             timer.Start();
-            var aaSettings = context.GetValue<AddressableAssetSettings>(AddressablesBuildDataBuilderContext.BuildScriptContextConstants.kAddressableAssetSettings);
-            m_PathFormat = context.GetValue("PathFormat", m_PathFormat);
-
-            List<EditorBuildSettingsScene> scenesToAdd = new List<EditorBuildSettingsScene>();
-
-            //gather entries
-            var locations = new List<ContentCatalogDataEntry>();
-            bool needsLegacyProvider = false;
-            foreach (var assetGroup in aaSettings.groups)
-            {
-                if (assetGroup.HasSchema<PlayerDataGroupSchema>())
-                {
-                    needsLegacyProvider = CreateLocationsForPlayerData(assetGroup, locations);
-                    continue;
-                }
-
-                var allEntries = new List<AddressableAssetEntry>();
-                foreach (var a in assetGroup.entries)
-                    a.GatherAllAssets(allEntries, true, true);
-
-                foreach (var a in allEntries)
-                {
-                    locations.Add(new ContentCatalogDataEntry(a.GetAssetLoadPath(true), typeof(AssetDatabaseProvider).FullName, a.CreateKeyList()));
-                    if (a.IsScene)
-                        scenesToAdd.Add(new EditorBuildSettingsScene(new GUID(a.guid), true));
-                }
-            }
-
+            var aaSettings = context.AddressableSettings;
+            PathFormat = context.PathFormat;
 
             //create runtime data
-            var runtimeData = new ResourceManagerRuntimeData();
-            runtimeData.BuildTarget = context.GetValue<BuildTarget>(AddressablesBuildDataBuilderContext.BuildScriptContextConstants.kBuildTarget).ToString();
-            runtimeData.LogResourceManagerExceptions = aaSettings.buildSettings.LogResourceManagerExceptions;
-            runtimeData.ProfileEvents = ProjectConfigData.postProfilerEvents;
-            runtimeData.CatalogLocations.Add(new ResourceLocationData(new[] { InitializationOperation.CatalogAddress }, string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"), typeof(ContentCatalogProvider)));
-            foreach (var io in aaSettings.InitializationObjects)
+            var aaContext = new AddressableAssetsBuildContext
             {
-                if(io is IObjectInitializationDataProvider )
-                    runtimeData.InitializationObjects.Add((io as IObjectInitializationDataProvider).CreateObjectInitializationData());
+                settings = aaSettings,
+                runtimeData = new ResourceManagerRuntimeData(),
+                bundleToAssetGroup = null,
+                locations = new List<ContentCatalogDataEntry>()
+            };
+            aaContext.runtimeData.BuildTarget = context.Target.ToString();
+            aaContext.runtimeData.LogResourceManagerExceptions = aaSettings.buildSettings.LogResourceManagerExceptions;
+            aaContext.runtimeData.ProfileEvents = ProjectConfigData.postProfilerEvents;
+            aaContext.runtimeData.CatalogLocations.Add(new ResourceLocationData(new[] { ResourceManagerRuntimeData.kCatalogAddress }, string.Format(PathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"), typeof(ContentCatalogProvider)));
+
+            var errorString = ProcessAllGroups(aaContext);
+            if(!string.IsNullOrEmpty(errorString))
+                result = AddressableAssetBuildResult.CreateResult<TResult>(null, 0, errorString);
+
+            if (result == null)
+            {
+                foreach (var io in aaSettings.InitializationObjects)
+                {
+                    if (io is IObjectInitializationDataProvider)
+                        aaContext.runtimeData.InitializationObjects.Add((io as IObjectInitializationDataProvider).CreateObjectInitializationData());
+                }
+
+                var settingsPath = string.Format(PathFormat, "", "settings");
+                WriteFile(settingsPath, JsonUtility.ToJson(aaContext.runtimeData));
+
+                //save catalog
+                var catalogData = new ContentCatalogData(aaContext.locations);
+                if (m_NeedsLegacyProvider)
+                    catalogData.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(typeof(LegacyResourcesProvider)));
+                catalogData.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData<AssetDatabaseProvider>());
+                catalogData.InstanceProviderData = ObjectInitializationData.CreateSerializedInitializationData(instanceProviderType.Value);
+                catalogData.SceneProviderData = ObjectInitializationData.CreateSerializedInitializationData(sceneProviderType.Value);
+                WriteFile(string.Format(PathFormat, "", "catalog"), JsonUtility.ToJson(catalogData));
+
+
+                //inform runtime of the init data path
+                var runtimeSettingsPath = string.Format(PathFormat, "file://{UnityEngine.Application.dataPath}/../", "settings");
+                PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath, runtimeSettingsPath);
+                result = AddressableAssetBuildResult.CreateResult<TResult>(settingsPath, aaContext.locations.Count);
             }
-            var settingsPath = string.Format(m_PathFormat, "", "settings");
-            WriteFile(settingsPath, JsonUtility.ToJson(runtimeData));
+            
+            if(result != null)
+                result.Duration = timer.Elapsed.TotalSeconds;
 
-            //save catalog
-            var catalogData = new ContentCatalogData(locations);
-            if (needsLegacyProvider)
-                catalogData.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(typeof(LegacyResourcesProvider)));
-            catalogData.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData<AssetDatabaseProvider>());
-            catalogData.InstanceProviderData = ObjectInitializationData.CreateSerializedInitializationData<InstanceProvider>();
-            catalogData.SceneProviderData = ObjectInitializationData.CreateSerializedInitializationData<SceneProvider>();
-            WriteFile(string.Format(m_PathFormat, "", "catalog"), JsonUtility.ToJson(catalogData));
+            return result;
+        }
 
+        /// <inheritdoc />
+        protected override string ProcessGroup(AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
+        {
+            var errorString = string.Empty;
+            PlayerDataGroupSchema playerSchema = assetGroup.GetSchema<PlayerDataGroupSchema>();
+            if (playerSchema != null)
+            {
+                m_NeedsLegacyProvider = CreateLocationsForPlayerData(playerSchema, assetGroup, aaContext.locations);
+                return errorString;
+            }
 
-            //inform runtime of the init data path
-            var runtimeSettingsPath = string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "settings");
-            UnityEngine.Debug.LogFormat("Settings runtime path in PlayerPrefs to {0}", runtimeSettingsPath);
-            PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath, runtimeSettingsPath);
-            IDataBuilderResult res = new AddressablesPlayModeBuildResult { OutputPath = settingsPath, ScenesToAdd = scenesToAdd, Duration = timer.Elapsed.TotalSeconds, LocationCount = locations.Count };
+            var allEntries = new List<AddressableAssetEntry>();
+            foreach (var a in assetGroup.entries)
+                a.GatherAllAssets(allEntries, true, true);
 
-            return (T)res;
+            foreach (var a in allEntries)
+                aaContext.locations.Add(new ContentCatalogDataEntry(a.GetAssetLoadPath(true), typeof(AssetDatabaseProvider).FullName, a.CreateKeyList()));
+
+            return errorString;
         }
     }
 }

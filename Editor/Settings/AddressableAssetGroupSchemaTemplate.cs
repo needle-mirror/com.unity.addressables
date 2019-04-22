@@ -7,11 +7,12 @@ using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets.Settings
 {
+    // TODO: OBSELETE: This is replaced with AddressableAssetGroupTemplate, this is needed to update existing setups to new Preset method 
     /// <summary>
     /// Contains a set of schemas used by the GUI to create predefined asset groups.
     /// </summary>
     [Serializable]
-    public class AddressableAssetGroupSchemaTemplate : ISerializationCallbackReceiver
+    public class AddressableAssetGroupSchemaTemplate
     {
         [FormerlySerializedAs("m_displayName")]
         [SerializeField]
@@ -66,34 +67,5 @@ namespace UnityEditor.AddressableAssets.Settings
                 st.m_SchemaTypes.Add(new SerializedType { Value = types[i] });
             return st;
         }
-
-        //TODO: OBSOLETE: This is for upgrades from 0.5 -> 0.6.  This can be removed for 1.0 release.
-        public void OnBeforeSerialize()
-        {
-            //Do nothing...
-        }
-
-        public void OnAfterDeserialize()
-        {
-            /*There are two default schemas added when creating a new addressables group.  Since the namespaces
-            for these groups were updated between 0.5 and 0.6 we need to set the updated Type for the SerializedType for these types*/
-            for (int i = 0; i < m_SchemaTypes.Count; i++)
-            {
-                SerializedType temp = new SerializedType();
-                if (m_SchemaTypes[i].ClassName.Contains("BundledAssetGroupSchema"))
-                {
-                    temp.Value = Assembly.Load(m_SchemaTypes[i].AssemblyName)
-                        .GetType("UnityEditor.AddressableAssets.Settings.GroupSchemas.BundledAssetGroupSchema");
-                    m_SchemaTypes[i] = temp;
-                }
-                else if (m_SchemaTypes[i].ClassName.Contains("ContentUpdateGroupSchema"))
-                {
-                    temp.Value = Assembly.Load(m_SchemaTypes[i].AssemblyName)
-                        .GetType("UnityEditor.AddressableAssets.Settings.GroupSchemas.ContentUpdateGroupSchema");
-                    m_SchemaTypes[i] = temp;
-                }
-            }
-        }
-        //End 0.5 -> 0.6 upgrade
     }
 }

@@ -8,12 +8,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
     class EventDataPlayerSessionCollection
     {
         List<EventDataPlayerSession> m_PlayerSessions = new List<EventDataPlayerSession>();
-        Action<EventDataPlayerSession, DiagnosticEvent, bool> m_OnEvent;
         Func<DiagnosticEvent, bool> m_OnRecordEvent;
 
-        public EventDataPlayerSessionCollection(Action<EventDataPlayerSession, DiagnosticEvent, bool> onEvent, Func<DiagnosticEvent, bool> onRecordEvent)
+        public EventDataPlayerSessionCollection(Func<DiagnosticEvent, bool> onRecordEvent)
         {
-            m_OnEvent = onEvent;
             m_OnRecordEvent = onRecordEvent;
         }
 
@@ -24,12 +22,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             return false;
         }
 
-        public void ProcessEvent(DiagnosticEvent diagnosticEvent, int sessionId)
+        public bool ProcessEvent(DiagnosticEvent diagnosticEvent, int sessionId)
         {
             var session = GetPlayerSession(sessionId, true);
             bool entryCreated = false;
             session.AddSample(diagnosticEvent, RecordEvent(diagnosticEvent), ref entryCreated);
-            m_OnEvent(session, diagnosticEvent, entryCreated);
+            return entryCreated;
         }
 
         public EventDataPlayerSession GetSessionByIndex(int index)
@@ -39,7 +37,6 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
 
             return m_PlayerSessions[index];
         }
-
         public EventDataPlayerSession GetPlayerSession(int playerId, bool create)
         {
             foreach (var c in m_PlayerSessions)

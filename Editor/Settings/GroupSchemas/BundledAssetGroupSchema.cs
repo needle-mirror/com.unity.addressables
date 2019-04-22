@@ -25,7 +25,49 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             /// <summary>
             /// Create a bundle per entry.  This is useful if each entry is a folder as all sub entries will go to the same bundle.
             /// </summary>
-            PackSeparately
+            PackSeparately,
+            /// <summary>
+            /// Creates a bundle per unique set of labels
+            /// </summary>
+            PackTogetherByLabel
+        }
+
+        /// <summary>
+        /// Compression mode for bundles in this group.
+        /// </summary>
+        public enum BundleCompressionMode
+        {
+            Uncompressed,
+            LZ4,
+            LZMA
+        }
+
+        /// <summary>
+        /// Build compression.
+        /// </summary>
+        public BundleCompressionMode Compression
+        {
+            get { return m_Compression; }
+            set { m_Compression = value; }
+        }
+
+        [SerializeField]
+        BundleCompressionMode m_Compression = BundleCompressionMode.LZ4;
+
+        /// <summary>
+        /// Gets the build compression settings for bundles in this group.
+        /// </summary>
+        /// <returns>The build compression.</returns>
+        public virtual BuildCompression GetBuildCompressionForBundle(string bundleId)
+        {
+            //Unfortunately the BuildCompression struct is not serializable (nor is it settable), therefore this enum needs to be used to return the static members....
+            switch (m_Compression)
+            {
+                case BundleCompressionMode.Uncompressed: return BuildCompression.Uncompressed;
+                case BundleCompressionMode.LZ4: return BuildCompression.LZ4;
+                case BundleCompressionMode.LZMA: return BuildCompression.LZMA;
+            }
+            return default(BuildCompression);
         }
 
         [FormerlySerializedAs("m_includeInBuild")]
@@ -65,68 +107,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             set
             {
                 m_ForceUniqueProvider = value;
-                SetDirty(true);
-            }
-        }
-        [SerializeField]
-        [Tooltip("A unique bundle CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.")]
-        int m_BundleCachedProviderMaxLRUCount = 0;
-        /// <summary>
-        /// A unique bundle CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.
-        /// </summary>
-        public int BundleCachedProviderMaxLRUCount
-        {
-            get { return m_BundleCachedProviderMaxLRUCount; }
-            set
-            {
-                m_BundleCachedProviderMaxLRUCount = value;
-                SetDirty(true);
-            }
-        }
-
-        [SerializeField]
-        [Tooltip("A unique bundle CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.")]
-        float m_BundleCachedProviderMaxLRUAge = 0;
-        /// <summary>
-        /// A unique bundle CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.
-        /// </summary>
-        public float BundleCachedProviderMaxLRUAge
-        {
-            get { return m_BundleCachedProviderMaxLRUAge; }
-            set
-            {
-                m_BundleCachedProviderMaxLRUAge = value;
-                SetDirty(true);
-            }
-        }
-        [SerializeField]
-        [Tooltip("A unique asset CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.")]
-        int m_AssetCachedProviderMaxLRUCount = 0;
-        /// <summary>
-        /// A unique asset CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.
-        /// </summary>
-        public int AssetCachedProviderMaxLRUCount
-        {
-            get { return m_AssetCachedProviderMaxLRUCount; }
-            set
-            {
-                m_AssetCachedProviderMaxLRUCount = value;
-                SetDirty(true);
-            }
-        }
-
-        [SerializeField]
-        [Tooltip("A unique asset CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.")]
-        float m_AssetCachedProviderMaxLRUAge = 0;
-        /// <summary>
-        /// A unique asset CachedProvider will be created for each combination of BundleCachedProviderMaxLRUCount and BundleCachedProviderMaxLRUAge.
-        /// </summary>
-        public float AssetCachedProviderMaxLRUAge
-        {
-            get { return m_AssetCachedProviderMaxLRUAge; }
-            set
-            {
-                m_AssetCachedProviderMaxLRUAge = value;
                 SetDirty(true);
             }
         }
@@ -263,18 +243,24 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <param name="group">The group this schema has been added to.</param>
         protected override void OnSetGroup(AddressableAssetGroup group)
         {
-            if (BuildPath == null || string.IsNullOrEmpty(BuildPath.GetValue(group.Settings)))
+            //this can happen during the load of the addressables asset
+            if (group.Settings != null)
             {
-                m_BuildPath = new ProfileValueReference();
-                if (BuildPath != null) 
-                    BuildPath.SetVariableByName(@group.Settings, AddressableAssetSettings.kLocalBuildPath);
+                if (BuildPath == null || string.IsNullOrEmpty(BuildPath.GetValue(group.Settings)))
+                {
+                    m_BuildPath = new ProfileValueReference();
+                    if (BuildPath != null)
+                        BuildPath.SetVariableByName(group.Settings, AddressableAssetSettings.kLocalBuildPath);
+                }
+
+                if (LoadPath == null || string.IsNullOrEmpty(LoadPath.GetValue(group.Settings)))
+                {
+                    m_LoadPath = new ProfileValueReference();
+                    if (LoadPath != null)
+                        LoadPath.SetVariableByName(group.Settings, AddressableAssetSettings.kLocalLoadPath);
+                }
             }
-            if (LoadPath == null || string.IsNullOrEmpty(LoadPath.GetValue(group.Settings)))
-            {
-                m_LoadPath = new ProfileValueReference();
-                if (LoadPath != null) 
-                    LoadPath.SetVariableByName(@group.Settings, AddressableAssetSettings.kLocalLoadPath);
-            }
+
             if (m_AssetBundleProviderType.Value == null)
                 m_AssetBundleProviderType.Value = typeof(AssetBundleProvider);
             if (m_BundledAssetProviderType.Value == null)
@@ -309,10 +295,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <returns>The id of the cached provider needed for this group.</returns>
         public string GetAssetCachedProviderId()
         {
-            var pid = ForceUniqueProvider ? string.Format("{0}_{1}", BundledAssetProviderType.Value.FullName, Group.Guid) : BundledAssetProviderType.Value.FullName;
-            if (AssetCachedProviderMaxLRUAge < 0 && AssetCachedProviderMaxLRUCount < 0)
-                return pid;
-            return string.Format("{0}_{1}_{2}", pid, AssetCachedProviderMaxLRUCount, (int)(AssetCachedProviderMaxLRUAge * 1000));
+            return ForceUniqueProvider ? string.Format("{0}_{1}", BundledAssetProviderType.Value.FullName, Group.Guid) : BundledAssetProviderType.Value.FullName;
         }
 
         /// <summary>
@@ -321,10 +304,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <returns>The id of the cached provider needed for this group.</returns>
         public string GetBundleCachedProviderId()
         {
-            var pid = ForceUniqueProvider ? string.Format("{0}_{1}", AssetBundleProviderType.Value.FullName, Group.Guid) : AssetBundleProviderType.Value.FullName;
-            if (BundleCachedProviderMaxLRUAge < 0 && BundleCachedProviderMaxLRUCount < 0)
-                return pid;
-            return string.Format("{0}_{1}_{2}", pid, BundleCachedProviderMaxLRUCount, (int)(BundleCachedProviderMaxLRUAge * 1000));
+            return ForceUniqueProvider ? string.Format("{0}_{1}", AssetBundleProviderType.Value.FullName, Group.Guid) : AssetBundleProviderType.Value.FullName;
         }
 
     }

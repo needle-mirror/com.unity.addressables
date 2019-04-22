@@ -37,10 +37,17 @@ namespace UnityEditor.AddressableAssets
 
         [FormerlySerializedAs("m_addressableAssetSettingsGuid")]
         [SerializeField]
-        string m_AddressableAssetSettingsGuid;
+        internal string m_AddressableAssetSettingsGuid;
+        bool m_LoadingSettingsObject = false;
 
-        AddressableAssetSettings LoadSettingsObject()
+        internal AddressableAssetSettings LoadSettingsObject()
         {
+            //prevent re-entrant stack overflow
+            if (m_LoadingSettingsObject)
+            {
+                Debug.LogWarning("Detected stack overflow when accessing AddressableAssetSettingsDefaultObject.Settings object.");
+                return null;
+            }
             if (string.IsNullOrEmpty(m_AddressableAssetSettingsGuid))
             {
                 Debug.LogError("Invalid guid for default AddressableAssetSettings object.");
@@ -52,9 +59,11 @@ namespace UnityEditor.AddressableAssets
                 Debug.LogErrorFormat("Unable to determine path for default AddressableAssetSettings object with guid {0}.", m_AddressableAssetSettingsGuid);
                 return null;
             }
+            m_LoadingSettingsObject = true;
             var settings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
             if (settings != null)
                 AddressablesAssetPostProcessor.OnPostProcess = settings.OnPostprocessAllAssets;
+            m_LoadingSettingsObject = false;
             return settings;
         }
 

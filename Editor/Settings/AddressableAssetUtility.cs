@@ -114,13 +114,9 @@ namespace UnityEditor.AddressableAssets.Settings
                 {
                     foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
                     {
-#if NET_4_6
-                                if (a.IsDynamic)
-                                    continue;
-                                foreach (var t in a.ExportedTypes)
-#else
-                        foreach (var t in a.GetExportedTypes())
-#endif
+                        if (a.IsDynamic)
+                            continue;
+                        foreach (var t in a.ExportedTypes)
                         {
                             if (t != rootType && rootType.IsAssignableFrom(t) && !t.IsAbstract)
                                 types.Add(t);

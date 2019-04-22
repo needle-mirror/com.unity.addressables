@@ -6,6 +6,7 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.Serialization;
 
 namespace UnityEngine.AddressableAssets
@@ -14,13 +15,22 @@ namespace UnityEngine.AddressableAssets
     /// Generic version of AssetReference class.  This should not be used directly as CustomPropertyDrawers do not support generic types.  Instead use the concrete derived classes such as AssetReferenceGameObject.
     /// </summary>
     /// <typeparam name="TObject"></typeparam>
-    public class AssetReferenceT<TObject> : AssetReference where TObject : Object
+    public class AssetReferenceT<TObject> : AssetReference
     {
+
+        /// <summary>
+        /// Construct a new AssetReference object.
+        /// </summary>
+        /// <param name="guid">The guid of the asset.</param>
+        public AssetReferenceT(string guid) : base(guid)
+        {
+        }
+
         /// <summary>
         /// Load the referenced asset as type TObject.
         /// </summary>
         /// <returns>The load operation.</returns>
-        public IAsyncOperation<TObject> LoadAsset()
+        public AsyncOperationHandle<TObject> LoadAsset()
         {
             return LoadAsset<TObject>();
         }
@@ -49,22 +59,34 @@ namespace UnityEngine.AddressableAssets
     /// GameObject only asset reference.
     /// </summary>
     [Serializable]
-    public class AssetReferenceGameObject : AssetReferenceT<GameObject> { }
+    public class AssetReferenceGameObject : AssetReferenceT<GameObject>
+    {
+        public AssetReferenceGameObject(string guid) : base(guid) { }
+    }
     /// <summary>
     /// Texture only asset reference.
     /// </summary>
     [Serializable]
-    public class AssetReferenceTexture : AssetReferenceT<Texture> { }
+    public class AssetReferenceTexture : AssetReferenceT<Texture>
+    {
+        public AssetReferenceTexture(string guid) : base(guid) { }
+    }
     /// <summary>
     /// Texture2D only asset reference.
     /// </summary>
     [Serializable]
-    public class AssetReferenceTexture2D : AssetReferenceT<Texture2D> { }
+    public class AssetReferenceTexture2D : AssetReferenceT<Texture2D>
+    {
+        public AssetReferenceTexture2D(string guid) : base(guid) { }
+    }
     /// <summary>
     /// Texture3D only asset reference
     /// </summary>
     [Serializable]
-    public class AssetReferenceTexture3D : AssetReferenceT<Texture3D> { }
+    public class AssetReferenceTexture3D : AssetReferenceT<Texture3D>
+    {
+        public AssetReferenceTexture3D(string guid) : base(guid) { }
+    }
 
     /// <summary>
     /// Sprite only asset reference.
@@ -72,6 +94,8 @@ namespace UnityEngine.AddressableAssets
     [Serializable]
     public class AssetReferenceSprite : AssetReferenceT<Sprite>
     {
+        public AssetReferenceSprite(string guid) : base(guid) { }
+
         /// <inheritdoc/>
         public override bool ValidateAsset(string path)
         {
@@ -87,24 +111,25 @@ namespace UnityEngine.AddressableAssets
             return false;
         }
     }
-    //TODO: implement more of these....
 
     /// <summary>
     /// Reference to an addressable asset.  This can be used in script to provide fields that can be easily set in the editor and loaded dynamically at runtime.
-    /// To determine if the reference is set, use RuntimeKey.isValid.  
+    /// To determine if the reference is set, use RuntimeKeyIsValid().  
     /// </summary>
     [Serializable]
-    public class AssetReference
+    public class AssetReference : IKeyEvaluator
     {
         [FormerlySerializedAs("m_assetGUID")]
         [SerializeField]
-        string m_AssetGUID;
-        Object m_LoadedAsset;
-
+        string m_AssetGUID = "";
+        AsyncOperationHandle m_operation;
         /// <summary>
-        /// The actual key used to request the asset at runtime. RuntimeKey.isValid can be used to determine if this reference was set.
+        /// The actual key used to request the asset at runtime. RuntimeKeyIsValid() can be used to determine if this reference was set.
         /// </summary>
-        public Hash128 RuntimeKey { get { return Hash128.Parse(m_AssetGUID); } }
+        public object RuntimeKey
+        {
+            get { return m_AssetGUID; }
+        }
 
         /// <summary>
         /// Construct a new AssetReference object.
@@ -123,19 +148,17 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// The loaded asset.  This value is only set after the IAsyncOperation returned from LoadAsset completes.  It will not be set if only Instantiate is called.  It will be set to null if release is called.
+        /// The loaded asset.  This value is only set after the AsyncOperationHandle returned from LoadAsset completes.  It will not be set if only Instantiate is called.  It will be set to null if release is called.
         /// </summary>
         public Object Asset
         {
             get
             {
-                return m_LoadedAsset;
+                return m_operation.Result as Object;
             }
         }
 
 #if UNITY_EDITOR
-        [FormerlySerializedAs("m_cachedAsset")]
-        [SerializeField]
         Object m_CachedAsset;
 #endif
         /// <summary>
@@ -156,13 +179,23 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <typeparam name="TObject">The object type.</typeparam>
         /// <returns>The load operation.</returns>
-        public IAsyncOperation<TObject> LoadAsset<TObject>() where TObject : Object
+        public AsyncOperationHandle<TObject> LoadAsset<TObject>()
         {
-            var loadOp = Addressables.LoadAsset<TObject>(RuntimeKey);
-            loadOp.Completed += op => m_LoadedAsset = op.Result;
-            return loadOp;
+            AsyncOperationHandle<TObject> result = Addressables.LoadAsset<TObject>(RuntimeKey);
+            m_operation = result;
+            return result;
         }
 
+        /// <summary>
+        /// Loads the reference as a scene.
+        /// </summary>
+        /// <returns>The operation handle for the scene load.</returns>
+        public AsyncOperationHandle<SceneInstance> LoadScene()
+        {
+            var result = Addressables.LoadScene(RuntimeKey);
+            m_operation = result;
+            return result;
+        }
         /// <summary>
         /// Instantiate the referenced asset as type TObject.
         /// </summary>
@@ -170,9 +203,9 @@ namespace UnityEngine.AddressableAssets
         /// <param name="rotation">Rotation of the instantiated object.</param>
         /// <param name="parent">The parent of the instantiated object.</param>
         /// <returns></returns>
-        public IAsyncOperation<GameObject> Instantiate(Vector3 position, Quaternion rotation, Transform parent = null)
+        public AsyncOperationHandle<GameObject> Instantiate(Vector3 position, Quaternion rotation, Transform parent = null)
         {
-            return Addressables.Instantiate(RuntimeKey, position, rotation, parent);
+            return Addressables.Instantiate(RuntimeKey, position, rotation, parent, true);
         }
 
         /// <summary>
@@ -182,25 +215,32 @@ namespace UnityEngine.AddressableAssets
         /// <param name="parent">The parent of the instantiated object.</param>
         /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
         /// <returns></returns>
-        public IAsyncOperation<GameObject> Instantiate(Transform parent = null, bool instantiateInWorldSpace = false)
+        public AsyncOperationHandle<GameObject> Instantiate(Transform parent = null, bool instantiateInWorldSpace = false)
         {
-            return Addressables.Instantiate(RuntimeKey, parent, instantiateInWorldSpace);
+            return Addressables.Instantiate(RuntimeKey, parent, instantiateInWorldSpace, true);
         }
 
+        /// <inheritdoc/>
+        public bool RuntimeKeyIsValid()
+        {
+            Guid result;
+            return Guid.TryParse(RuntimeKey.ToString(), out result);
+        }
 
         /// <summary>
-        /// Release the referenced asset.
+        /// Release the internal operation handle.
         /// </summary>
         public void ReleaseAsset()
         {
-            if (m_LoadedAsset == null)
+            if (!m_operation.IsValid())
             {
-                Debug.LogWarning("Cannot release null asset.");
+                Debug.LogWarning("Cannot release a null or unloaded asset.");
                 return;
             }
-            Addressables.ReleaseAsset(m_LoadedAsset);
-            m_LoadedAsset = null;
+            Addressables.Release(m_operation);
+            m_operation = default(AsyncOperationHandle);
         }
+
 
         /// <summary>
         /// Release an instantiated object.
@@ -230,6 +270,7 @@ namespace UnityEngine.AddressableAssets
         {
             return true;
         }
+
 #if UNITY_EDITOR
 
         /// <summary>
@@ -284,26 +325,4 @@ namespace UnityEngine.AddressableAssets
         }
 #endif
     }
-
-    class AssetReferenceLocator : IResourceLocator
-    {
-        public IEnumerable<object> Keys
-        {
-            get
-            {
-                return null;
-            }
-        }
-
-        public bool Locate(object key, out IList<IResourceLocation> locations)
-        {
-            locations = null;
-            var ar = key as AssetReference;
-            if (ar == null)
-                return false;
-            return Addressables.GetResourceLocations(ar.RuntimeKey, out locations);
-        }
-    }
-
-
 }

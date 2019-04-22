@@ -8,7 +8,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     /// <summary>
     /// Class that contains properties to apply to instantiated objects.
     /// </summary>
-    public class InstantiationParameters
+    public struct InstantiationParameters
     {
         Vector3 m_Position;
         Quaternion m_Rotation;
@@ -70,7 +70,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <returns>Instantiated object.</returns>
         /// <typeparam name="TObject">Object type. This type must be of type UnityEngine.Object.</typeparam>
         /// </summary>
-        public virtual TObject Instantiate<TObject>(TObject source) where TObject : Object
+        public TObject Instantiate<TObject>(TObject source) where TObject : Object
         {
             TObject result;
             if (m_Parent == null)
@@ -90,41 +90,23 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             return result;
         }
     }
-
+    
     /// <summary>
     /// Interface that provides instances of objects.  This is used in ResourceManager.Instantiate* calls.
     /// </summary>
     public interface IInstanceProvider
     {
         /// <summary>
-        /// Determine whether or not this provider can provide for the given <paramref name="loadProvider"/> and <paramref name="location"/>
+        /// Provide an instance of the gameobject contained in the prefabHandle.
         /// </summary>
-        /// <returns><c>true</c>, if provide instance was caned, <c>false</c> otherwise.</returns>
-        /// <param name="loadProvider">Provider used to load the object prefab.</param>
-        /// <param name="location">Location to instantiate.</param>
-        /// <typeparam name="TObject">Object type.</typeparam>
-        bool CanProvideInstance<TObject>(IResourceProvider loadProvider, IResourceLocation location)
-        where TObject : Object;
-
+        /// <param name="prefabHandle">The operation handle for the prefab to instantiate.</param>
+        /// <param name="instantiateParameters">The parameters to use for instantation.</param>
+        /// <returns>The instantiated object.</returns>
+        GameObject ProvideInstance(ResourceManager resourceManager, AsyncOperationHandle<GameObject> prefabHandle, InstantiationParameters instantiateParameters);
         /// <summary>
-        /// Asynchronously instantiate the given <paramref name="location"/>
+        /// Release an instance.
         /// </summary>
-        /// <returns>An async operation.</returns>
-        /// <param name="loadProvider">Provider used to load the object prefab.</param>
-        /// <param name="location">Location to instantiate.</param>
-        /// <param name="loadDependencyOperation">Async operation for dependency loading.</param>
-        /// <param name="instantiateParameters">Parameters to be used by Unity's GameObject.Instantiate method</param>
-        /// <typeparam name="TObject">Instantiated object type.</typeparam>
-        IAsyncOperation<TObject> ProvideInstanceAsync<TObject>(IResourceProvider loadProvider, IResourceLocation location, IList<object> deps, InstantiationParameters instantiateParameters)
-        where TObject : Object;
-
-        /// <summary>
-        /// Releases the instance.
-        /// </summary>
-        /// <returns><c>true</c>, if instance was released, <c>false</c> otherwise.</returns>
-        /// <param name="loadProvider">Provider used to load the object prefab.</param>
-        /// <param name="location">Location to release.</param>
-        /// <param name="instance">Object instance to release.</param>
-        bool ReleaseInstance(IResourceProvider loadProvider, IResourceLocation location, Object instance);
+        /// <param name="instance">The instance to release.</param>
+        void ReleaseInstance(ResourceManager resourceManager, GameObject instance);
     }
 }

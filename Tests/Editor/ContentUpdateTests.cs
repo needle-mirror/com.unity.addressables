@@ -26,16 +26,12 @@ namespace UnityEditor.AddressableAssets.Tests
             group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
 
             m_Settings.CreateOrMoveEntry(m_AssetGUID, group);
-            var context = new AddressablesBuildDataBuilderContext(m_Settings,
-                BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
-                EditorUserBuildSettings.activeBuildTarget,
-                false, false,
-                m_Settings.PlayerBuildVersion);
+            var context = new AddressablesDataBuilderInput(m_Settings);
 
             var op = m_Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
 
             Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
-            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/addressables_content_state.bin";
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
             var cacheData = ContentUpdateScript.LoadContentState(tempPath);
             Assert.NotNull(cacheData);
         }
@@ -53,11 +49,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var entry = m_Settings.CreateOrMoveEntry(m_AssetGUID, group);
             entry.address = "test";
 
-            var context = new AddressablesBuildDataBuilderContext(m_Settings,
-                BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
-                EditorUserBuildSettings.activeBuildTarget,
-                false, false,
-                m_Settings.PlayerBuildVersion);
+            var context = new AddressablesDataBuilderInput(m_Settings);
 
             m_Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
 
@@ -70,7 +62,7 @@ namespace UnityEditor.AddressableAssets.Tests
             EditorUtility.SetDirty(obj);
 #endif
             AssetDatabase.SaveAssets();
-            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/addressables_content_state.bin";
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
             var modifiedEntries = ContentUpdateScript.GatherModifiedEntries(m_Settings, tempPath);
             Assert.IsNotNull(modifiedEntries);
             Assert.GreaterOrEqual(modifiedEntries.Count, 1);
@@ -96,16 +88,12 @@ namespace UnityEditor.AddressableAssets.Tests
             schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
             group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
             m_Settings.CreateOrMoveEntry(m_AssetGUID, group);
-            var context = new AddressablesBuildDataBuilderContext(m_Settings,
-                BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
-                EditorUserBuildSettings.activeBuildTarget,
-                false, false,
-                m_Settings.PlayerBuildVersion);
+            var context = new AddressablesDataBuilderInput(m_Settings);
 
             var op = m_Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
 
             Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
-            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/addressables_content_state.bin";
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
             var buildOp = ContentUpdateScript.BuildContentUpdate(m_Settings, tempPath);
             Assert.IsNotNull(buildOp);
             Assert.IsTrue(string.IsNullOrEmpty(buildOp.Error));
@@ -166,16 +154,12 @@ namespace UnityEditor.AddressableAssets.Tests
             schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
             group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
             m_Settings.CreateOrMoveEntry(m_AssetGUID, group);
-            var context = new AddressablesBuildDataBuilderContext(m_Settings,
-                BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
-                EditorUserBuildSettings.activeBuildTarget,
-                false, false,
-                m_Settings.PlayerBuildVersion);
+            var context = new AddressablesDataBuilderInput(m_Settings);
 
             var op = m_Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
 
             Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
-            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/addressables_content_state.bin";
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
             ContentUpdateScript.BuildContentUpdate(m_Settings, tempPath);
             Assert.IsTrue(Directory.Exists(Addressables.BuildPath));
         }

@@ -14,6 +14,9 @@ namespace UnityEditor.AddressableAssets.HostingServices
     /// </summary>
     public class HttpHostingService : BaseHostingService
     {
+        /// <summary>
+        /// Enum helper for standard Http result codes
+        /// </summary>
         protected enum ResultCode
         {
             Ok = 200,
@@ -29,6 +32,9 @@ namespace UnityEditor.AddressableAssets.HostingServices
         readonly Dictionary<string, string> m_ProfileVariables;
         
         // ReSharper disable once MemberCanBePrivate.Global
+        /// <summary>
+        /// The actual Http listener used by this service
+        /// </summary>
         protected HttpListener MyHttpListener { get; set; }
 
         /// <summary>

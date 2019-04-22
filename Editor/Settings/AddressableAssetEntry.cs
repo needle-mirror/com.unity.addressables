@@ -115,9 +115,6 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Is a sub asset.  For example an asset in an addressable folder.
         /// </summary>
         public bool IsSubAsset { get; set; }
-        /// <summary>
-        /// TODO - doc
-        /// </summary>
         bool m_CheckedIsScene;
         bool m_IsScene;
         /// <summary>
@@ -140,17 +137,21 @@ namespace UnityEditor.AddressableAssets.Settings
         /// The set of labels for this entry.  There is no inherent limit to the number of labels.
         /// </summary>
         public HashSet<string> labels { get { return m_Labels; } }
+
         /// <summary>
         /// Set or unset a label on this entry.
         /// </summary>
         /// <param name="label">The label name.</param>
-        /// <param name="val">The value to set.  Setting to true will add the label, false will remove it.</param>
+        /// <param name="enable">Setting to true will add the label, false will remove it.</param>
+        /// <param name="force">When enable is true, setting force to true will force the label to exist on the parent AddressableAssetSettings object if it does not already.</param>
         /// <param name="postEvent">Post modification event.</param>
         /// <returns></returns>
-        public bool SetLabel(string label, bool val, bool postEvent = true)
+        public bool SetLabel(string label, bool enable, bool force=false, bool postEvent = true)
         {
-            if (val)
+            if (enable)
             {
+                if(force)
+                    parentGroup.Settings.AddLabel(label, postEvent);
                 if (m_Labels.Add(label))
                 {
                     SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
@@ -177,9 +178,8 @@ namespace UnityEditor.AddressableAssets.Settings
             var keys = new List<object>();
             //the address must be the first key
             keys.Add(address);
-            var h = Hash128.Parse(guid);
-            if (h.isValid)
-                keys.Add(h);
+            if (!string.IsNullOrEmpty(guid))
+                keys.Add(guid);
             if (IsScene && IsInSceneList)
             {
                 int index = BuiltinSceneCache.GetSceneIndex(new GUID(guid));
@@ -292,7 +292,7 @@ namespace UnityEditor.AddressableAssets.Settings
             return path;
         }
 
-        internal void GatherAllAssets(List<AddressableAssetEntry> assets, bool includeSelf, bool recurseAll)
+        public void GatherAllAssets(List<AddressableAssetEntry> assets, bool includeSelf, bool recurseAll, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
             var settings = parentGroup.Settings;
 
@@ -307,7 +307,8 @@ namespace UnityEditor.AddressableAssets.Settings
                         {
                             entry.IsInSceneList = true;
                             entry.m_Labels = m_Labels;
-                            assets.Add(entry);
+                            if (entryFilter == null || entryFilter(entry))
+                                assets.Add(entry);
                         }
                     }
                 }
@@ -327,7 +328,8 @@ namespace UnityEditor.AddressableAssets.Settings
                             {
                                 entry.IsInResources = true;
                                 entry.m_Labels = m_Labels;
-                                assets.Add(entry);
+                                if (entryFilter == null || entryFilter(entry))
+                                    assets.Add(entry);
                             }
                         }
                     }
@@ -342,7 +344,8 @@ namespace UnityEditor.AddressableAssets.Settings
                                 {
                                     entry.IsInResources = true;
                                     entry.m_Labels = m_Labels;
-                                    assets.Add(entry);
+                                    if (entryFilter == null || entryFilter(entry))
+                                        assets.Add(entry);
                                 }
                             }
                         }
@@ -370,7 +373,8 @@ namespace UnityEditor.AddressableAssets.Settings
                                 {
                                     entry.IsInResources = IsInResources; //if this is a sub-folder of Resources, copy it on down
                                     entry.m_Labels = m_Labels;
-                                    assets.Add(entry);
+                                    if (entryFilter == null || entryFilter(entry))
+                                        assets.Add(entry);
                                 }
                             }
                         }
@@ -387,7 +391,8 @@ namespace UnityEditor.AddressableAssets.Settings
                                 {
                                     entry.IsInResources = IsInResources; //if this is a sub-folder of Resources, copy it on down
                                     entry.m_Labels = m_Labels;
-                                    assets.Add(entry);
+                                    if (entryFilter == null || entryFilter(entry))
+                                        assets.Add(entry);
                                 }
                             }
                         }
@@ -410,7 +415,8 @@ namespace UnityEditor.AddressableAssets.Settings
                                         entry.SetLabel(l, true, false);
                                     foreach (var l in m_Labels)
                                         entry.SetLabel(l, true, false);
-                                    assets.Add(entry);
+                                    if (entryFilter == null || entryFilter(entry))
+                                        assets.Add(entry);
                                 }
                             }
                         }
@@ -418,7 +424,8 @@ namespace UnityEditor.AddressableAssets.Settings
                     else
                     {
                         if (includeSelf)
-                            assets.Add(this);
+                            if (entryFilter == null || entryFilter(this))
+                                assets.Add(this);
                     }
                 }
             }

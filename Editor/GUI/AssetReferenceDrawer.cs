@@ -109,9 +109,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 Debug.LogError("Error rendering drawer for AssetReference property.");
                 return;
             }
-
-            m_AssetRefObject = property.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref label);
-            
+            string labelText = label.text;
+            m_AssetRefObject = property.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
+            label.text = labelText;
             if (m_AssetRefObject == null)
             {
                 return;
@@ -120,8 +120,7 @@ namespace UnityEditor.AddressableAssets.GUI
             EditorGUI.BeginProperty(position, label, property);
 
             GatherFilters(property);
-            var refKey = m_AssetRefObject.RuntimeKey;
-            string guid = refKey.isValid ? refKey.ToString() : "";
+            string guid = m_AssetRefObject.RuntimeKey.ToString();
             var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
 
             var checkToForceAddressable = string.Empty;
@@ -286,6 +285,7 @@ namespace UnityEditor.AddressableAssets.GUI
                                 var entry = aaSettings.FindAssetEntry(guid);
                                 if (entry == null && !string.IsNullOrEmpty(guid))
                                 {
+                                    aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup);
                                     newGuid = guid;
                                 }
                             }
@@ -506,18 +506,18 @@ namespace UnityEditor.AddressableAssets.GUI
         }
     }
 
-    static class SerializedPropertyExtensions
+    public static class SerializedPropertyExtensions
     {
-        public static T GetActualObjectForSerializedProperty<T>(this SerializedProperty property, FieldInfo field, ref GUIContent label) where T : class, new()
+        public static T GetActualObjectForSerializedProperty<T>(this SerializedProperty property, FieldInfo field, ref string label)
         {
             try
             {
                 if (property == null || field == null)
-                    return null;
+                    return default(T); 
                 var serializedObject = property.serializedObject;
                 if (serializedObject == null)
                 {
-                    return null;
+                    return default(T);
                 }
 
                 var targetObject = serializedObject.targetObject;
@@ -553,29 +553,29 @@ namespace UnityEditor.AddressableAssets.GUI
                     {
                         var slice = property.propertyPath.Split('[', ']');
                         if (slice.Length >= 2)
-                            label.text = "Element " + slice[slice.Length - 2];
+                            label= "Element " + slice[slice.Length - 2];
                     }
                     else
                     {
-                        label.text = slicedName.Last();
+                        label = slicedName.Last();
                     }
 
                     return DescendHierarchy<T>(targetObject, slicedName, arrayCounts, 0);
                 }
 
                 var obj = field.GetValue(targetObject);
-                return obj as T;
+                return (T)obj;
             }
             catch
             {
-                return null;
+                return default(T);
             }
         }
 
-        static T DescendHierarchy<T>(object targetObject, List<string> splitName, List<int> splitCounts, int depth) where T : class, new()
+        static T DescendHierarchy<T>(object targetObject, List<string> splitName, List<int> splitCounts, int depth)
         {
             if (depth >= splitName.Count)
-                return null;
+                return default(T);
 
             var currName = splitName[depth];
 
@@ -585,10 +585,22 @@ namespace UnityEditor.AddressableAssets.GUI
             int arrayIndex = splitCounts[depth];
 
             var newField = targetObject.GetType().GetField(currName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+            if (newField == null)
+            {
+                Type baseType = targetObject.GetType().BaseType;
+                while (baseType != null && newField == null)
+                {
+                    newField = baseType.GetField(currName,
+                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    baseType = baseType.BaseType;
+                }
+            }
+
             var newObj = newField.GetValue(targetObject);
             if (depth == splitName.Count - 1)
             {
-                T actualObject = null;
+                T actualObject = default(T);
                 if (arrayIndex >= 0)
                 {
                     if (newObj.GetType().IsArray && ((System.Array)newObj).Length > arrayIndex)
@@ -605,7 +617,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
                 else
                 {
-                    actualObject = newObj as T;
+                    actualObject = (T)newObj;
                 }
 
                 return actualObject;

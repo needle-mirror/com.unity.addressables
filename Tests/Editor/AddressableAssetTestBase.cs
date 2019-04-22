@@ -3,6 +3,7 @@ using System.IO;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -16,6 +17,8 @@ namespace UnityEditor.AddressableAssets.Tests
         [OneTimeSetUp]
         public void Init()
         {
+            //TODO: Remove when NSImage warning issue on bokken is fixed
+            Application.logMessageReceived += CheckLogForWarning;
 
             if (Directory.Exists(k_TestConfigFolder))
                 AssetDatabase.DeleteAsset(k_TestConfigFolder);
@@ -35,6 +38,21 @@ namespace UnityEditor.AddressableAssets.Tests
 #endif
             m_AssetGUID = AssetDatabase.AssetPathToGUID(k_TestConfigFolder + "/test.prefab");
             OnInit();
+
+            //TODO: Remove when NSImage warning issue on bokken is fixed
+            //Removing here in the event we didn't recieve any messages during the setup, we can respond appropriately to 
+            //logs in the tests.
+            Application.logMessageReceived -= CheckLogForWarning;
+            if (resetFailingMessages)
+                LogAssert.ignoreFailingMessages = false;
+        }
+
+        private bool resetFailingMessages = false;
+        //TODO: Remove when NSImage warning issue on bokken is fixed
+        private void CheckLogForWarning(string condition, string stackTrace, LogType type)
+        {
+            LogAssert.ignoreFailingMessages = true;
+            resetFailingMessages = true;
         }
 
         protected virtual void OnInit() { }

@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
 
@@ -552,8 +553,11 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void PopulateGeneralContextMenu(ref GenericMenu menu)
         {
-            foreach (var st in m_Editor.settings.SchemaTemplates)
-                menu.AddItem(new GUIContent("Create New Group/" + st.DisplayName, st.Description), false, CreateNewGroup, st);
+            foreach( var templateObject in m_Editor.settings.GroupTemplateObjects )
+            {
+                Assert.IsNotNull( templateObject );
+                menu.AddItem( new GUIContent( "Create New Group/" + templateObject.name ), false, CreateNewGroup, templateObject );
+            }
             var bundleList = AssetDatabase.GetAllAssetBundleNames();
             if (bundleList != null && bundleList.Length > 0)
                 menu.AddItem(new GUIContent("Convert Legacy Bundles"), false, m_Editor.window.OfferToConvert);
@@ -818,10 +822,11 @@ namespace UnityEditor.AddressableAssets.GUI
 
         protected void CreateNewGroup(object context)
         {
-            var schemaTemplate = context as AddressableAssetGroupSchemaTemplate;
-            if (schemaTemplate != null)
+            var groupTemplate = context as AddressableAssetGroupTemplate;
+            if (groupTemplate != null)
             {
-                m_Editor.settings.CreateGroup(schemaTemplate.DisplayName, false, false, true, null, schemaTemplate.GetTypes());
+                AddressableAssetGroup newGroup = m_Editor.settings.CreateGroup( groupTemplate.Name, false, false, true, null, groupTemplate.GetTypes() );
+                groupTemplate.ApplyToAddressableAssetGroup( newGroup );
             }
             else
             {

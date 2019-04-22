@@ -40,7 +40,10 @@ namespace UnityEditor.AddressableAssets.Build
                     Debug.LogError(err);
 
                     if (BuildScript.buildCompleted != null)
-                        BuildScript.buildCompleted(new AddressableAssetBuildResult { Duration = 0, Error = err });
+                    {
+                        var result = AddressableAssetBuildResult.CreateResult<AddressableAssetBuildResult>(null, 0, err);
+                        BuildScript.buildCompleted(result);
+                    }
                     return;
                 }
 
@@ -49,11 +52,16 @@ namespace UnityEditor.AddressableAssets.Build
                     var err = string.Format("Active build script {0} cannot build AddressablesPlayModeBuildResult.", settings.ActivePlayModeDataBuilder);
                     Debug.LogError(err);
                     if (BuildScript.buildCompleted != null)
-                        BuildScript.buildCompleted(new AddressableAssetBuildResult { Duration = 0, Error = err });
+                    {
+                        
+                        var result = AddressableAssetBuildResult.CreateResult<AddressableAssetBuildResult>(null, 0, err);
+                        BuildScript.buildCompleted(result);
+                    }
+
                     return;
                 }
 
-                var res = settings.ActivePlayModeDataBuilder.BuildData<AddressablesPlayModeBuildResult>(new AddressablesBuildDataBuilderContext(settings));
+                var res = settings.ActivePlayModeDataBuilder.BuildData<AddressablesPlayModeBuildResult>(new AddressablesDataBuilderInput(settings));
                 if (!string.IsNullOrEmpty(res.Error))
                 {
                     Debug.LogError(res.Error);

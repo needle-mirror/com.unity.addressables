@@ -12,88 +12,63 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     /// </summary>
     public class BundledAssetProvider : ResourceProviderBase
     {
-        internal class InternalOp<TObject> : InternalProviderOperation<TObject>
-           where TObject : class
+        internal class InternalOp
         {
             AssetBundleRequest m_RequestOperation;
-            public IAsyncOperation<TObject> Start(IResourceLocation location, IList<object> deps)
+            ProvideHandle m_ProvideHandle;
+            
+            public void Start(ProvideHandle provideHandle)
             {
-                m_Result = null;
+                m_ProvideHandle = provideHandle;
+                Type t = m_ProvideHandle.Type;
+                
+                
                 m_RequestOperation = null;
-                var bundle = AssetBundleProvider.LoadBundleFromDependecies(deps);
+
+                List<object> deps = new List<object>(); // TODO: garbage. need to pass actual count and reuse the list
+                m_ProvideHandle.GetDependencies(deps);
+                AssetBundle bundle = AssetBundleProvider.LoadBundleFromDependecies(deps);
                 if (bundle == null)
                 {
-                    m_Error = new Exception("Unable to load dependent bundle from location " + location);
-                    DelayedActionManager.AddAction((Action<AsyncOperation>)OnComplete, 0, null);
+                    m_ProvideHandle.Complete<AssetBundle>(null, false, new Exception("Unable to load dependent bundle from location " + m_ProvideHandle.Location));
                 }
                 else
                 {
-                    var t = typeof(TObject);
                     if (t.IsArray)
-                        m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(location.InternalId, t.GetElementType());
+                        m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(m_ProvideHandle.Location.InternalId, t.GetElementType());
                     else if (t.IsGenericType && typeof(IList<>) == t.GetGenericTypeDefinition())
-                        m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(location.InternalId, t.GetGenericArguments()[0]);
+                        m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(m_ProvideHandle.Location.InternalId, t.GetGenericArguments()[0]);
                     else
-                        m_RequestOperation = bundle.LoadAssetAsync<TObject>(location.InternalId);
+                        m_RequestOperation = bundle.LoadAssetAsync(m_ProvideHandle.Location.InternalId, t);
 
-                    if (m_RequestOperation.isDone)
-                        DelayedActionManager.AddAction((Action<AsyncOperation>)OnComplete, 0, m_RequestOperation);
-                    else
-                        m_RequestOperation.completed += OnComplete;
-                }
-                return base.Start(location);
-            }
-
-            public override float PercentComplete
-            {
-                get
-                {
-                    if (IsDone)
-                        return 1;
-                    return m_RequestOperation != null ? m_RequestOperation.progress : 0.0f;
+                    m_RequestOperation.completed += ActionComplete;
+                    provideHandle.SetProgressCallback(ProgressCallback);
                 }
             }
 
-            internal override TObject ConvertResult(AsyncOperation op)
+            private void ActionComplete(AsyncOperation obj)
             {
-                var t = typeof(TObject);
-                try
+                object result = null;
+                Type t = m_ProvideHandle.Type;
+                if (m_RequestOperation != null)
                 {
-                    var req = op as AssetBundleRequest;
-                    if (req == null)
-                        return null;
-                    
                     if (t.IsArray)
-                        return ResourceManagerConfig.CreateArrayResult<TObject>(req.allAssets);
+                        result = ResourceManagerConfig.CreateArrayResult(t, m_RequestOperation.allAssets);
                     if (t.IsGenericType && typeof(IList<>) == t.GetGenericTypeDefinition())
-                        return ResourceManagerConfig.CreateListResult<TObject>(req.allAssets);
-                    return req.asset as TObject;
+                        result = ResourceManagerConfig.CreateListResult(t, m_RequestOperation.allAssets);
+                    else
+                        result = (m_RequestOperation.asset != null && t.IsAssignableFrom(m_RequestOperation.asset.GetType())) ? m_RequestOperation.asset : null;
                 }
-                catch (Exception e)
-                {
-                    OperationException = e;
-                    return null;
-                }
+                m_ProvideHandle.Complete(result, result != null, null);
             }
+
+            public float ProgressCallback() { return m_RequestOperation != null ? m_RequestOperation.progress : 0.0f; }
         }
 
         /// <inheritdoc/>
-        public override IAsyncOperation<TObject> Provide<TObject>(IResourceLocation location, IList<object> loadDependencyOperation)
+        public override void Provide(ProvideHandle provideHandle)
         {
-            if (location == null)
-                throw new ArgumentNullException("location");
-            if (loadDependencyOperation == null)
-                return new CompletedOperation<TObject>().Start(location, location, default(TObject), new ArgumentNullException("IAsyncOperation<IList<object>> loadDependencyOperation"));
-
-            return AsyncOperationCache.Instance.Acquire<InternalOp<TObject>>().Start(location, loadDependencyOperation);
-        }
-
-        /// <inheritdoc/>
-        public override bool Release(IResourceLocation location, object asset)
-        {
-            if (location == null)
-                throw new ArgumentNullException("location");
-            return true;
+            new InternalOp().Start(provideHandle);
         }
     }
 }

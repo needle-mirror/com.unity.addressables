@@ -18,42 +18,47 @@ namespace UnityEngine.ResourceManagement.Tests
         List<IResourceLocation> sharedBundleLocations = null;
         Dictionary<string, VirtualAssetBundle> bundleMap = null;
         const int kBundleCount = 10;
-        protected override IResourceLocation CreateLocationForAsset(string name, string path)
+
+        protected override IResourceLocation[] SetupLocations(KeyValuePair<string, string>[] assets)
         {
-            if (virtualBundleData == null)
+            Random.InitState(0);
+            virtualBundleData = new VirtualAssetBundleRuntimeData();
+            sharedBundleLocations = new List<IResourceLocation>();
+            bundleMap = new Dictionary<string, VirtualAssetBundle>();
+            for (int i = 0; i < kBundleCount; i++)
             {
-                virtualBundleData = new VirtualAssetBundleRuntimeData();
-                sharedBundleLocations = new List<IResourceLocation>();
-                bundleMap = new Dictionary<string, VirtualAssetBundle>();
-                for (int i = 0; i < kBundleCount; i++)
-                {
-                    var bundleName = "shared" + i;
-                    var b = new VirtualAssetBundle("shared" + i, i % 2 == 0, 0, "");
-                    virtualBundleData.AssetBundles.Add(b);
-                    bundleMap.Add(b.Name, b);
-                    sharedBundleLocations.Add(new ResourceLocationBase(bundleName, bundleName, typeof(AssetBundleProvider).FullName));
-                }
+                var bundleName = "shared" + i;
+                var b = new VirtualAssetBundle("shared" + i, i % 2 == 0, 0, "");
+                virtualBundleData.AssetBundles.Add(b);
+                bundleMap.Add(b.Name, b);
+                sharedBundleLocations.Add(new ResourceLocationBase(bundleName, bundleName, typeof(AssetBundleProvider).FullName));
             }
-            IResourceLocation bundle = sharedBundleLocations[Random.Range(0, sharedBundleLocations.Count)];
-            VirtualAssetBundle vBundle = bundleMap[bundle.InternalId];
-            vBundle.Assets.Add(new VirtualAssetBundleEntry(path, Random.Range(1024, 1024 * 1024)));
-            IResourceLocation dep1Location = sharedBundleLocations[Random.Range(0, sharedBundleLocations.Count)];
-            IResourceLocation dep2Location = sharedBundleLocations[Random.Range(0, sharedBundleLocations.Count)];
-            return new ResourceLocationBase(name, path, typeof(BundledAssetProvider).FullName, bundle, dep1Location, dep2Location);
+
+            IResourceLocation []locs = new IResourceLocation[assets.Length];
+            for(int i = 0; i < locs.Length;i++)
+                locs[i] = CreateLocationForAsset(assets[i].Key, assets[i].Value);
+
+            foreach (var b in virtualBundleData.AssetBundles)
+            {
+                b.SetSize(2048, 1024);
+                b.OnAfterDeserialize();
+            }
+            m_ResourceManager.ResourceProviders.Insert(0, new VirtualAssetBundleProvider(virtualBundleData));
+            m_ResourceManager.ResourceProviders.Insert(0, new VirtualBundledAssetProvider());
+            return locs;
         }
 
-        protected override void ProcessLocations(List<IResourceLocation> locations)
+
+        protected IResourceLocation CreateLocationForAsset(string name, string path)
         {
-            if (virtualBundleData != null)
-            {
-                foreach (var b in virtualBundleData.AssetBundles)
-                {
-                    b.SetSize(2048, 1024);
-                    b.OnAfterDeserialize();
-                }
-                m_ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new VirtualAssetBundleProvider(virtualBundleData), typeof(AssetBundleProvider).FullName));
-                m_ResourceManager.ResourceProviders.Insert(0, new CachedProvider(new VirtualBundledAssetProvider(), typeof(BundledAssetProvider).FullName));
-            }
+            int sharedBundleIndex = 0;
+            Random.Range(0, sharedBundleLocations.Count-3);
+            IResourceLocation bundle = sharedBundleLocations[sharedBundleIndex];
+            VirtualAssetBundle vBundle = bundleMap[bundle.InternalId];
+            vBundle.Assets.Add(new VirtualAssetBundleEntry(path, Random.Range(1024, 1024 * 1024)));
+            IResourceLocation dep1Location = sharedBundleLocations[sharedBundleIndex+1];
+            IResourceLocation dep2Location = sharedBundleLocations[sharedBundleIndex+2];
+            return new ResourceLocationBase(name, path, typeof(BundledAssetProvider).FullName, bundle, dep1Location, dep2Location);
         }
     }
 }

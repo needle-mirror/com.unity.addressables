@@ -1,110 +1,15 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
-using UnityEngine;
-using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
+using UnityEngine.TestTools.Constraints;
 
-#if UNITY_EDITOR
-
-#endif
-
-namespace UnityEngine.ResourceManagement.Tests {
-    public class ResourceManagerUtilityTests
+namespace UnityEngine.ResourceManagement.Tests
+{
+    public class DelayedActionManagerTests
     {
-        class TestOperation<TObject> : AsyncOperationBase<TObject>
-        {
-            // ReSharper disable once StaticMemberInGenericType
-            public static int instanceCount;
-            public TestOperation()
-            {
-                instanceCount++;
-            }
-        }
-        [UnityTest]
-        public IEnumerator AsyncOperationCacheReusesReleasedOperation()
-        {
-            TestOperation<int>.instanceCount = 0;
-            AsyncOperationCache.Instance.Clear();
-            IAsyncOperation op = AsyncOperationCache.Instance.Acquire<TestOperation<int>>();
-            Assert.AreEqual(1, TestOperation<int>.instanceCount);
-            AsyncOperationCache.Instance.Release(op);
-            AsyncOperationCache.Instance.Acquire<TestOperation<int>>();
-            Assert.AreEqual(1, TestOperation<int>.instanceCount);
-            yield return null;
-        }
-
-        [UnityTest]
-        public IEnumerator AsyncOperationCacheReturnsCorrectType()
-        {
-            AsyncOperationCache.Instance.Clear();
-            IAsyncOperation op = AsyncOperationCache.Instance.Acquire<TestOperation<int>>();
-            Assert.IsNotNull(op);
-            Assert.AreEqual(op.GetType(), typeof(TestOperation<int>));
-            op = AsyncOperationCache.Instance.Acquire<TestOperation<string>>();
-            Assert.IsNotNull(op);
-            Assert.AreEqual(op.GetType(), typeof(TestOperation<string>));
-            yield return null;
-        }
-
-        ///////////////////////////
-        //class and test removed due to unkown fail
-        //TODO - re-add test.
-        ///////////////////////////
-//    class NestableTestClass : IInitializableObject, IEquatable<NestableTestClass>
-//    {
-//        public string m_id;
-//        public NestableTestClass m_child;
-//
-//        public bool Initialize(string id, string data)
-//        {
-//            m_id = id;
-//            if (!string.IsNullOrEmpty(data))
-//            {
-//                var childInfo = JsonUtility.FromJson<ObjectInitializationData>(data);
-//                m_child = childInfo.CreateInstance<NestableTestClass>();
-//            }
-//            return true;
-//        }
-//
-//#if UNITY_EDITOR
-//        public ObjectInitializationData CreateInitializationData()
-//        {
-//            object obj = null;
-//            if (m_child != null)
-//                obj = m_child.CreateInitializationData();
-//            return ObjectInitializationData.CreateSerializedInitializationData(GetType(), m_id, obj);
-//        }
-//#endif
-//
-//        public bool Equals(NestableTestClass other)
-//        {
-//            if (other == null)
-//                return false;
-//            if (m_id != other.m_id)
-//                return false;
-//            if (m_child == null)
-//            {
-//                return other.m_child == null;
-//            }
-//
-//            if (other.m_child == null)
-//                return false;
-//            return m_child.Equals(other.m_child);
-//        }
-//    }
-
-        //[UnityTest]
-        //public IEnumerator SerializedProviderTest()
-        //{
-        //    var root = new NestableTestClass() { m_id = "Root", m_child = new NestableTestClass() { m_id = "Child1", m_child = new NestableTestClass() { m_id = "Child2", m_child = new NestableTestClass() { m_id = "Child3", m_child = null } } } };
-        //    var serializedData = root.CreateInitializationData();
-        //    Debug.Log(JsonUtility.ToJson(serializedData));
-        //    var newRoot = serializedData.CreateInstance<NestableTestClass>();
-        //    Assert.IsTrue(root.Equals(newRoot));
-        //    yield return null;
-        //}
 
         class DamTest
         {
@@ -156,6 +61,134 @@ namespace UnityEngine.ResourceManagement.Tests {
             var testObj = new DamTest();
             DelayedActionManager.AddAction((Action<int, string, bool, float>)testObj.MethodWithParams, 0, 5, "testValue", true, 3.14f);
             yield return null;
+        }
+    }
+
+    public class LinkedListNodeCacheTests
+    {
+        LinkedListNodeCache<T> CreateCache<T>(int count)
+        {
+            var cache = new LinkedListNodeCache<T>();
+            var temp = new List<LinkedListNode<T>>();
+            for (int i = 0; i < count; i++)
+                temp.Add(cache.Acquire(default(T)));
+            Assert.AreEqual(count, cache.CreatedNodeCount);
+            foreach (var t in temp)
+                cache.Release(t);
+            Assert.AreEqual(count, cache.CachedNodeCount);
+            return cache;
+        }
+
+        void PopulateCache_AddRemove<T>()
+        {
+            var cache = CreateCache<T>(1);
+            Assert.That(() =>
+            {
+                cache.Release(cache.Acquire(default(T)));
+            }, TestTools.Constraints.Is.Not.AllocatingGCMemory(), "GC Allocation detected");
+            Assert.AreEqual(1, cache.CreatedNodeCount);
+            Assert.AreEqual(1, cache.CachedNodeCount);
+        }
+
+        [Test]
+        public void WhenRefTypeAndCacheNotEmpty_AddRemove_DoesNotAlloc()
+        {
+            PopulateCache_AddRemove<string>();
+        }
+
+        [Test]
+        public void WhenValueTypeAndCacheNotEmpty_AddRemove_DoesNotAlloc()
+        {
+            PopulateCache_AddRemove<int>();
+        }
+
+        [Test]
+        public void Release_ResetsValue()
+        {
+            var cache = new LinkedListNodeCache<string>();
+            var node = cache.Acquire(null);
+            Assert.IsNull(node.Value);
+            node.Value = "TestString";
+            cache.Release(node);
+            Assert.IsNull(node.Value);
+        }
+    }
+
+    public class DelegateListTests
+    {
+        [Test]
+        public void WhenDelegateRemoved_DelegateIsNotInvoked()
+        {
+            var cache = new LinkedListNodeCache<Action<string>>();
+            var delList = new DelegateList<string>(cache.Acquire, cache.Release);
+            bool called = false;
+            Action<string> del = s => { called = true; };
+            delList.Add(del);
+            delList.Remove(del);
+            delList.Invoke(null);
+            Assert.IsFalse(called);
+            Assert.AreEqual(cache.CreatedNodeCount, cache.CreatedNodeCount);
+        }
+
+        [Test]
+        public void WhenAddInsideInvoke_NewDelegatesAreCalled()
+        {
+            bool addedDelegateCalled = false;
+            var delList = CreateDelegateList<string>();
+            delList.Add(s => delList.Add(s2 => addedDelegateCalled = true));
+            delList.Invoke(null);
+            Assert.IsTrue(addedDelegateCalled);
+        }
+
+        [Test]
+        public void WhenCleared_DelegateIsNotInvoked()
+        {
+            var delList = CreateDelegateList<string>();
+            int invocationCount = 0;
+            delList.Add(s => invocationCount++);
+            delList.Clear();
+            delList.Invoke(null);
+            Assert.AreEqual(0, invocationCount);
+        }
+
+        [Test]
+        public void DuringInvoke_CanRemoveNextDelegate()
+        {
+            var delList = CreateDelegateList<string>();
+            bool del1Called = false;
+            Action<string> del1 = s => { del1Called = true; };
+            Action<string> del2 = s => delList.Remove(del1);
+            delList.Add(del2);
+            delList.Add(del1);
+            delList.Invoke(null);
+            Assert.IsFalse(del1Called);
+        }
+        
+        DelegateList<T> CreateDelegateList<T>()
+        {
+            var cache = new LinkedListNodeCache<Action<T>>();
+            return new DelegateList<T>(cache.Acquire, cache.Release);
+        }
+        void InvokeAllocTest<T>(T p)
+        {
+            var delList = CreateDelegateList<T>();
+            delList.Add(s => { });
+            Assert.That(() =>
+            {
+                delList.Invoke(p);
+            }, TestTools.Constraints.Is.Not.AllocatingGCMemory(), "GC Allocation detected");
+        }
+
+        [Test]
+        public void DelegateNoGCWithRefType()
+        {
+            InvokeAllocTest<string>(null);
+        }
+
+        [Test]
+        public void DelegateNoGCWithValueType()
+        {
+            InvokeAllocTest<int>(0);
         }
     }
 }

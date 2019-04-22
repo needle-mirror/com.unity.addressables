@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Diagnostics.GUI.Graph
 {
-    static class GraphUtility
+    static internal class GraphUtility
     {
         public static float ValueToPixel(float value, float min, float max, float pixelRange)
         {
@@ -22,7 +22,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI.Graph
             return Mathf.Clamp01((pixel - min) / (max - min)) * valueRange;
         }
 
-        public struct Segment
+        internal struct Segment
         {
             public int frameStart;
             public int frameEnd;
@@ -31,7 +31,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI.Graph
 
         public delegate bool IsContinuationOfSegmentDelegate(int prevData, int newData);
 
-        public static IEnumerable<Segment> IterateSegments(EventDataSetStream stream, int minFrame, int maxFrame, IsContinuationOfSegmentDelegate segmentCallback)
+        internal static IEnumerable<Segment> IterateSegments(EventDataSetStream stream, int minFrame, int maxFrame, IsContinuationOfSegmentDelegate segmentCallback)
         {
             if (stream.samples.Count > 0)
             {

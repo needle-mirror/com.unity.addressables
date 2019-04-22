@@ -1,14 +1,6 @@
 ﻿using NUnit.Framework;
-using System;
 using System.Collections.Generic;
-using UnityEditor;
-using UnityEngine;
-using System.Linq;
-using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
-using UnityEngine.ResourceManagement.ResourceProviders;
-using UnityEngine.TestTools;
-using System.Collections;
 
 namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 {
@@ -25,7 +17,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 		[Test]
 		public void DetermineIdToLoad_IfNoDependencies_ReturnsMainId()
 		{
-			var contentCatalogOp = new ContentCatalogProvider.InternalOp<Object>();
+			var contentCatalogOp = new ContentCatalogProvider.InternalOp();
 
 			var loadedId = contentCatalogOp.DetermineIdToLoad(m_SimpleLocation, null);
 			
@@ -35,7 +27,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 		[Test]
 		public void DetermineIdToLoad_IfTooFewDependencies_ReturnsMainId()
 		{
-			var contentCatalogOp = new ContentCatalogProvider.InternalOp<Object>();
+			var contentCatalogOp = new ContentCatalogProvider.InternalOp();
 
 			var loadedId = contentCatalogOp.DetermineIdToLoad(m_SimpleLocation, new List<object>{1});
 			
@@ -44,7 +36,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 		[Test]
 		public void DetermineIdToLoad_IfTooManyDependencies_ReturnsMainId()
 		{
-			var contentCatalogOp = new ContentCatalogProvider.InternalOp<Object>();
+			var contentCatalogOp = new ContentCatalogProvider.InternalOp();
 
 			var loadedId = contentCatalogOp.DetermineIdToLoad(m_SimpleLocation, new List<object>{1,2,3});
 			
@@ -54,7 +46,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 		[Test]
 		public void DetermineIdToLoad_IfOfflineAndNoCache_ReturnsMainId()
 		{
-			var contentCatalogOp = new ContentCatalogProvider.InternalOp<Object>();
+			var contentCatalogOp = new ContentCatalogProvider.InternalOp();
 
 			var loadedId = contentCatalogOp.DetermineIdToLoad(m_SimpleLocation, new List<object>{string.Empty, string.Empty});
 			
@@ -64,7 +56,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 		[Test]
 		public void DetermineIdToLoad_IfOfflineAndHasCache_ReturnsCacheId()
 		{
-			var contentCatalogOp = new ContentCatalogProvider.InternalOp<Object>();
+			var contentCatalogOp = new ContentCatalogProvider.InternalOp();
 
 			IResourceLocation[] dependencies = new IResourceLocation[(int)ContentCatalogProvider.DependencyHashIndex.Count];
 
@@ -81,7 +73,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 		public void DetermineIdToLoad_IfOnlineMatchesCache_ReturnsCacheId()
 		{
 			
-			var contentCatalogOp = new ContentCatalogProvider.InternalOp<Object>();
+			var contentCatalogOp = new ContentCatalogProvider.InternalOp();
 
 			IResourceLocation[] dependencies = new IResourceLocation[(int)ContentCatalogProvider.DependencyHashIndex.Count];
 
@@ -97,7 +89,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 		[Test]
 		public void DetermineIdToLoad_IfOnlineMismatchesCache_ReturnsRemoteId()
 		{
-			var contentCatalogOp = new ContentCatalogProvider.InternalOp<Object>();
+			var contentCatalogOp = new ContentCatalogProvider.InternalOp();
 
 			IResourceLocation[] dependencies = new IResourceLocation[(int)ContentCatalogProvider.DependencyHashIndex.Count];
 

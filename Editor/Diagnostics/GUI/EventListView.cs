@@ -11,7 +11,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         class EventTreeViewItem : TreeViewItem
         {
             public DiagnosticEvent entry;
-            public EventTreeViewItem(DiagnosticEvent e) : base(e.EventId.GetHashCode() + e.Stream, 0)
+            public EventTreeViewItem(DiagnosticEvent e) : base(e.ObjectId + e.Stream, 0)
             {
                 entry = e;
             }

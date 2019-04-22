@@ -2,13 +2,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEngine.ResourceManagement.ResourceProviders
 {
     /// <summary>
     /// Base class for IResourceProvider.
     /// </summary>
-    public abstract class ResourceProviderBase : IResourceProvider
+    public abstract class ResourceProviderBase : IResourceProvider, IInitializableObject
     {
         protected string m_ProviderId;
         protected ProviderBehaviourFlags m_BehaviourFlags = ProviderBehaviourFlags.None;
@@ -33,12 +34,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
 
         /// <inheritdoc/>
-        public virtual bool CanProvide<TObject>(IResourceLocation location)
-            where TObject : class
+        public virtual bool CanProvide(Type t, IResourceLocation location)
         {
-            if (location == null)
-                throw new ArgumentException("IResourceLocation location cannot be null.");
-            return ProviderId.Equals(location.ProviderId, StringComparison.Ordinal);
+            return GetDefaultType(location).IsAssignableFrom(t);
         }
 
         /// <inheritdoc/>
@@ -47,16 +45,31 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             return ProviderId;
         }
 
-        /// <inheritdoc/>
-        public abstract IAsyncOperation<TObject> Provide<TObject>(IResourceLocation location, IList<object> deps)
-        where TObject : class;
-
-        public virtual bool Release(IResourceLocation location, object asset)
+        /// <summary>
+        /// Release the specified object that was created from the specified location.
+        /// </summary>
+        /// <param name="location">The location of the object</param>
+        /// <param name="obj">The object to release.</param>
+        /// <returns></returns>
+        public virtual void Release(IResourceLocation location, object obj)
         {
-            if (location == null)
-                throw new ArgumentNullException("location");
-            return true;
         }
+
+        /// <summary>
+        /// Get the default type of object that this provider can provide.
+        /// </summary>
+        /// <param name="location"></param>
+        /// <returns></returns>
+        public virtual Type GetDefaultType(IResourceLocation location)
+        {
+            return typeof(object);
+        }
+
+        /// <summary>
+        /// Provide the object specified in the provideHandle.
+        /// </summary>
+        /// <param name="provideHandle">Contains all data needed to provide the requested object.</param>
+        public abstract void Provide(ProvideHandle provideHandle);
 
         ProviderBehaviourFlags IResourceProvider.BehaviourFlags { get { return m_BehaviourFlags; } }
     }

@@ -23,8 +23,10 @@ namespace UnityEditor.AddressableAssets.HostingServices
         [Serializable]
         class HostingServiceInfo
         {
-            public string classRef;
-            public KeyDataStore dataStore;
+            [SerializeField]
+            internal string classRef;
+            [SerializeField]
+            internal KeyDataStore dataStore;
         }
 
         [FormerlySerializedAs("m_hostingServiceInfos")]

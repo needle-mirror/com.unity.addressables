@@ -3,12 +3,105 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.Exceptions;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 
 namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
 {
+    class VBAsyncOperation
+    {
+
+    }
+
+    class VBAsyncOperation<TObject> : VBAsyncOperation
+    {
+        protected TObject m_Result;
+        protected AsyncOperationStatus m_Status;
+        protected Exception m_Error;
+        protected object m_Context;
+
+        DelegateList<VBAsyncOperation<TObject>> m_CompletedAction;
+        Action<VBAsyncOperation<TObject>> m_OnDestroyAction;
+
+        public override string ToString()
+        {
+            var instId = "";
+            var or = m_Result as Object;
+            if (or != null)
+                instId = "(" + or.GetInstanceID() + ")";
+            return string.Format("{0}, result='{1}', status='{2}', location={3}.", base.ToString(), (m_Result + instId), m_Status, m_Context);
+        }
+
+        public event Action<VBAsyncOperation<TObject>> Completed
+        {
+            add
+            {
+                if (IsDone)
+                {
+                    DelayedActionManager.AddAction(value, 0, this);
+                }
+                else
+                {
+                    if (m_CompletedAction == null)
+                        m_CompletedAction = DelegateList<VBAsyncOperation<TObject>>.CreateWithGlobalCache();
+                    m_CompletedAction.Add(value);
+                }
+            }
+
+            remove
+            {
+                m_CompletedAction.Remove(value);
+            }
+        }
+
+        public AsyncOperationStatus Status { get { return m_Status; } protected set { m_Status = value; } }
+        /// <inheritdoc />
+        public Exception OperationException
+        {
+            get { return m_Error; }
+            protected set
+            {
+                m_Error = value;
+                if (m_Error != null && ResourceManager.ExceptionHandler != null)
+                    ResourceManager.ExceptionHandler(new AsyncOperationHandle(null), value);
+            }
+        }
+        public TObject Result { get { return m_Result; } }
+        public virtual bool IsDone { get { return Status == AsyncOperationStatus.Failed || Status == AsyncOperationStatus.Succeeded; } }
+        /// <inheritdoc />
+        public virtual float PercentComplete { get { return IsDone ? 1f : 0f; } }
+        /// <inheritdoc />
+        public object Context { get { return m_Context; } set { m_Context = value; } }
+
+        public void InvokeCompletionEvent()
+        {
+            if (m_CompletedAction != null)
+            {
+                m_CompletedAction.Invoke(this);
+                m_CompletedAction.Clear();
+            }
+        }
+
+        public virtual void SetResult(TObject result)
+        {
+            m_Result = result;
+            m_Status = (m_Result == null) ? AsyncOperationStatus.Failed : AsyncOperationStatus.Succeeded;
+        }
+
+        public VBAsyncOperation<TObject> StartCompleted(object context, object key, TObject val, Exception error = null)
+        {
+            Context = context;
+            OperationException = error;
+            m_Result = val;
+            m_Status = (m_Result == null) ? AsyncOperationStatus.Failed : AsyncOperationStatus.Succeeded;
+            DelayedActionManager.AddAction((Action)InvokeCompletionEvent);
+            return this;
+        }
+    }
+
+
     /// <summary>
     /// Contains data needed to simulate a bundled asset
     /// </summary>
@@ -50,7 +143,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
     /// Contains data need to simulate an asset bundle.
     /// </summary>
     [Serializable]
-    public class VirtualAssetBundle : ISerializationCallbackReceiver
+    public class VirtualAssetBundle : ISerializationCallbackReceiver, IAssetBundleResource
     {
         [FormerlySerializedAs("m_name")]
         [SerializeField]
@@ -111,7 +204,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
                 return (float)(m_HeaderBytesLoaded + m_DataBytesLoaded) / (m_HeaderSize + m_DataSize);
             }
         }
-
         /// <summary>
         /// Construct a new VirtualAssetBundle
         /// </summary>
@@ -156,7 +248,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
                 m_AssetMap.Add(a.Name, a);
         }
 
-        class LoadAssetBundleOp : AsyncOperationBase<VirtualAssetBundle>
+        class LoadAssetBundleOp : VBAsyncOperation<VirtualAssetBundle>
         {
             VirtualAssetBundle m_Bundle;
             float m_TimeInLoadingState;
@@ -164,7 +256,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             public LoadAssetBundleOp(IResourceLocation location, VirtualAssetBundle bundle)
             {
                 Context = location;
-                Retain();
                 m_Bundle = bundle;
                 m_TimeInLoadingState = 0.0f;
             }
@@ -181,7 +272,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
 
             public void Update(long localBandwidth, long remoteBandwidth, float unscaledDeltaTime)
             {
-                Validate();
+                
                 if (!m_crcHashValidated)
                 {
                     var location = Context as IResourceLocation;
@@ -253,7 +344,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             return true;
         }
 
-        internal IAsyncOperation<VirtualAssetBundle> StartLoad(IResourceLocation location)
+        internal VBAsyncOperation<VirtualAssetBundle> StartLoad(IResourceLocation location)
         {
             if (m_BundleLoadOperation != null)
             {
@@ -273,21 +364,21 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
         /// <typeparam name="TObject"></typeparam>
         /// <param name="location"></param>
         /// <returns></returns>
-        public IAsyncOperation<TObject> LoadAssetAsync<TObject>(IResourceLocation location) where TObject : class
+        internal VBAsyncOperation<object> LoadAssetAsync(Type type, IResourceLocation location)
         {
             if (location == null)
                 throw new ArgumentException("IResourceLocation location cannot be null.");
             if (m_BundleLoadOperation == null)
-                return new CompletedOperation<TObject>().Start(location, location, default(TObject), new ResourceManagerException("LoadAssetAsync called on unloaded bundle " + m_Name));
+                return new VBAsyncOperation<object>().StartCompleted(location, location, null, new ResourceManagerException("LoadAssetAsync called on unloaded bundle " + m_Name));
 
             if (!m_BundleLoadOperation.IsDone)
-                return new CompletedOperation<TObject>().Start(location, location, default(TObject), new ResourceManagerException("LoadAssetAsync called on loading bundle " + m_Name));
+                return new VBAsyncOperation<object>().StartCompleted(location, location, null, new ResourceManagerException("LoadAssetAsync called on loading bundle " + m_Name));
 
             VirtualAssetBundleEntry assetInfo;
             if (!m_AssetMap.TryGetValue(location.InternalId, out assetInfo))
-                return new CompletedOperation<TObject>().Start(location, location, default(TObject), new ResourceManagerException(string.Format("Unable to load asset {0} from simulated bundle {1}.", location.InternalId, Name)));
+                return new VBAsyncOperation<object>().StartCompleted(location, location, null, new ResourceManagerException(string.Format("Unable to load asset {0} from simulated bundle {1}.", location.InternalId, Name)));
 
-            LoadAssetOp<TObject> op = new LoadAssetOp<TObject>(location, assetInfo);
+            var op = new LoadAssetOp<object>(location, assetInfo);
             m_AssetLoadOperations.Add(op);
             return op;
         }
@@ -311,7 +402,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             bool Load(long localBandwidth, long remoteBandwidth);
         }
 
-        class LoadAssetOp<TObject> : AsyncOperationBase<TObject>, IVirtualLoadable where TObject : class
+        // TODO: This is only needed internally. We can change this to not derive off of AsyncOperationBase and simplify the code
+        class LoadAssetOp<TObject> : VBAsyncOperation<TObject>, IVirtualLoadable where TObject : class
         {
             long m_BytesLoaded;
             float m_LastUpdateTime;
@@ -379,6 +471,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             return m_AssetLoadOperations.Count > 0;
         }
 
+        /// <summary>
+        /// Implementation of IAssetBundleResource API
+        /// </summary>
+        /// <returns>Always returns null.</returns>
+        public AssetBundle GetAssetBundle()
+        {
+            return null;
+        }
     }
 }
 #endif

@@ -67,7 +67,7 @@ namespace UnityEditor.AddressableAssets.Tests {
             m_Providers.Add(typeof(AssetDatabaseProvider));
             m_Providers.Add(typeof(LegacyResourcesProvider));
             m_Providers.Add(typeof(JsonAssetProvider));
-            m_Providers.Add(typeof(RawDataProvider));
+            m_Providers.Add(typeof(TextDataProvider));
             m_Providers.Add(typeof(TextDataProvider));
         }
 

@@ -29,9 +29,8 @@ namespace UnityEditor.AddressableAssets.GUI
         [FormerlySerializedAs("m_dataBuildersFoldout")]
         [SerializeField]
         bool m_DataBuildersFoldout = true;
-        [FormerlySerializedAs("m_schemaTemplatesFoldout")]
         [SerializeField]
-        bool m_SchemaTemplatesFoldout = true;
+        bool m_GroupTemplateObjectsFoldout = true;
         [FormerlySerializedAs("m_initObjectsFoldout")]
         [SerializeField]
         bool m_InitObjectsFoldout = true;
@@ -45,9 +44,8 @@ namespace UnityEditor.AddressableAssets.GUI
         [FormerlySerializedAs("m_dataBuildersRL")]
         [SerializeField]
         ReorderableList m_DataBuildersRl;
-        [FormerlySerializedAs("m_schemaTemplatesRL")]
         [SerializeField]
-        ReorderableList m_SchemaTemplatesRl;
+        ReorderableList m_GroupTemplateObjectsRl;
         [FormerlySerializedAs("m_initObjectsRL")]
         [SerializeField]
         ReorderableList m_InitObjectsRl;
@@ -82,11 +80,11 @@ namespace UnityEditor.AddressableAssets.GUI
             m_DataBuildersRl.onAddDropdownCallback = OnAddDataBuilder;
             m_DataBuildersRl.onRemoveCallback = OnRemoveDataBuilder;
 
-            m_SchemaTemplatesRl = new ReorderableList(m_AasTarget.SchemaTemplates, typeof(ScriptableObject), true, true, true, true);
-            m_SchemaTemplatesRl.drawElementCallback = DrawSchemaTemplateCallback;
-            m_SchemaTemplatesRl.drawHeaderCallback = DrawSchemaTemplateHeader;
-            m_SchemaTemplatesRl.onAddDropdownCallback = OnAddSchemaTemplate;
-            m_SchemaTemplatesRl.onRemoveCallback = OnRemoveSchemaTemplate;
+            m_GroupTemplateObjectsRl = new ReorderableList(m_AasTarget.GroupTemplateObjects, typeof(ScriptableObject), true, true, true, true);
+            m_GroupTemplateObjectsRl.drawElementCallback = DrawGroupTemplateObjectCallback;
+            m_GroupTemplateObjectsRl.drawHeaderCallback = DrawGroupTemplateObjectHeader;
+            m_GroupTemplateObjectsRl.onAddDropdownCallback = OnAddGroupTemplateObject;
+            m_GroupTemplateObjectsRl.onRemoveCallback = OnRemoveGroupTemplateObject;
 
             m_InitObjectsRl = new ReorderableList(m_AasTarget.InitializationObjects, typeof(ScriptableObject), true, true, true, true);
             m_InitObjectsRl.drawElementCallback = DrawInitializationObjectCallback;
@@ -228,9 +226,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 m_DataBuildersRl.DoLayoutList();
 
             GUILayout.Space(6);
-            m_SchemaTemplatesFoldout = EditorGUILayout.Foldout(m_SchemaTemplatesFoldout, "Group Schema Templates");
-            if (m_SchemaTemplatesFoldout)
-                m_SchemaTemplatesRl.DoLayoutList();
+            m_GroupTemplateObjectsFoldout = EditorGUILayout.Foldout(m_GroupTemplateObjectsFoldout, "Assets Group Templates");
+            if (m_GroupTemplateObjectsFoldout)
+                m_GroupTemplateObjectsRl.DoLayoutList();
 
             GUILayout.Space(6);
             m_InitObjectsFoldout = EditorGUILayout.Foldout(m_InitObjectsFoldout, "Initialization Objects");
@@ -386,103 +384,38 @@ namespace UnityEditor.AddressableAssets.GUI
             m_AasTarget.AddDataBuilder(builder as IDataBuilder);
         }
 
-        void DrawSchemaTemplateHeader(Rect rect)
+        void DrawGroupTemplateObjectHeader(Rect rect)
         {
-            EditorGUI.LabelField(rect, "Group Schema Templates");
+            EditorGUI.LabelField(rect, "Assets Group Templates");
         }
 
-        void DrawSchemaTemplateCallback(Rect rect, int index, bool isActive, bool isFocused)
+        void DrawGroupTemplateObjectCallback(Rect rect, int index, bool isActive, bool isFocused)
         {
-            var template = m_AasTarget.SchemaTemplates[index];
-            UnityEngine.GUI.Label(rect, template.DisplayName);
+            var so = m_AasTarget.GroupTemplateObjects[index];
+            var groupTObj = so as IGroupTemplate;
+            var label = groupTObj == null ? "" : groupTObj.Name;
+            var nb = EditorGUI.ObjectField(rect, label, so, typeof(ScriptableObject), false) as ScriptableObject;
+            if (nb != so)
+               m_AasTarget.SetGroupTemplateObjectAtIndex(index, nb as IGroupTemplate);
         }
 
-        void OnRemoveSchemaTemplate(ReorderableList list)
+        void OnRemoveGroupTemplateObject(ReorderableList list)
         {
-            m_AasTarget.RemoveSchemaTemplate(list.index);
+            m_AasTarget.RemoveGroupTemplateObject(list.index);
         }
 
-        void OnAddSchemaTemplate(Rect buttonRect, ReorderableList list)
+        void OnAddGroupTemplateObject(Rect buttonRect, ReorderableList list)
         {
-            buttonRect.x -= 400;
-            buttonRect.y -= 13;
-
-            PopupWindow.Show(buttonRect, new NewScehemaTemplatePopup(m_LabelNamesRl.elementHeight, m_AasTarget));
-        }
-
-        class NewScehemaTemplatePopup : PopupWindowContent
-        {
-            internal float rowHeight;
-            internal string name = "";
-            internal string description = "";
-            internal bool needsFocus = true;
-            internal AddressableAssetSettings settings;
-            List<Type> m_SchemaTypes;
-            List<Type> m_SelectedTypes = new List<Type>();
-            public NewScehemaTemplatePopup(float rowHeight, AddressableAssetSettings settings)
+            var assetPath = EditorUtility.OpenFilePanelWithFilters("Assets Group Templates", "Assets", new[] { "Group Template Object", "asset" });
+            if (string.IsNullOrEmpty(assetPath))
+                return;
+            var templateObj = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath.Substring(assetPath.IndexOf("Assets/")));
+            if (!typeof(IGroupTemplate).IsAssignableFrom(templateObj.GetType()))
             {
-                this.rowHeight = rowHeight;
-                this.settings = settings;
-                m_SchemaTypes = AddressableAssetUtility.GetTypes<AddressableAssetGroupSchema>();
+                Debug.LogWarningFormat("Asset at {0} does not implement the IGroupTemplate interface.", assetPath);
+                return;
             }
-
-            public override Vector2 GetWindowSize()
-            {
-                return new Vector2(400, rowHeight * (4 + m_SelectedTypes.Count));
-            }
-
-            public override void OnGUI(Rect windowRect)
-            {
-                GUILayout.Space(5);
-                Event evt = Event.current;
-                bool hitEnter = evt.type == EventType.KeyDown && (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter);
-                UnityEngine.GUI.SetNextControlName("LabelName");
-                name = EditorGUILayout.TextField("Schema Template EventName", name);
-                description = EditorGUILayout.TextField("Description", description);
-                if (needsFocus)
-                {
-                    needsFocus = false;
-                    EditorGUI.FocusTextInControl("LabelName");
-                }
-                for (int i = 0; i < m_SelectedTypes.Count; i++)
-                {
-                    var schema = m_SelectedTypes[i];
-                    EditorGUILayout.BeginHorizontal();
-                    GUILayout.Label(schema.Name);
-                    if (GUILayout.Button("X", GUILayout.Width(40)))
-                    {
-                        m_SelectedTypes.Remove(schema);
-                        EditorGUILayout.EndHorizontal();
-                        break;
-                    }
-                    EditorGUILayout.EndHorizontal();
-                }
-                if (EditorGUILayout.DropdownButton(new GUIContent("Add Schema", "Add new schema to this group."), FocusType.Keyboard))
-                {
-                    var menu = new GenericMenu();
-                    for (int i = 0; i < m_SchemaTypes.Count; i++)
-                    {
-                        var type = m_SchemaTypes[i];
-                        menu.AddItem(new GUIContent(type.Name, ""), false, OnAddSchema, type);
-                    }
-                    menu.ShowAsContext();
-                }
-
-                UnityEngine.GUI.enabled = name.Length != 0;
-                if (GUILayout.Button("Save") || hitEnter)
-                {
-                    if (string.IsNullOrEmpty(name))
-                        Debug.LogError("Schema template must have a valid name.");
-                    else
-                        settings.AddSchemaTemplate(name, description, m_SelectedTypes.ToArray());
-
-                    editorWindow.Close();
-                }
-            }
-            void OnAddSchema(object context)
-            {
-                m_SelectedTypes.Add(context as Type);
-            }
+            m_AasTarget.AddGroupTemplateObject(templateObj as IGroupTemplate);
         }
 
         void DrawInitializationObjectHeader(Rect rect)

@@ -28,7 +28,12 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
         public ReturnCode Run()
         {
-            var aaContext = m_AaBuildContext as AddressableAssetsBuildContext;
+            return Run(m_AaBuildContext, m_WriteData);
+        }
+
+        public static ReturnCode Run(IAddressableAssetsBuildContext aaBuildContext, IBundleWriteData writeData)
+        {
+            var aaContext = aaBuildContext as AddressableAssetsBuildContext;
             if (aaContext == null)
                 return ReturnCode.Error;
             var aaSettings = aaContext.settings;
@@ -36,19 +41,19 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             var bundleToAssetGroup = aaContext.bundleToAssetGroup;
             var bundleToAssets = new Dictionary<string, List<GUID>>();
             var assetsToBundles = new Dictionary<GUID, List<string>>();
-            foreach (var k in m_WriteData.AssetToFiles)
+            foreach (var k in writeData.AssetToFiles)
             {
                 List<string> bundleList = new List<string>();
                 assetsToBundles.Add(k.Key, bundleList);
                 List<GUID> assetList;
-                var bundle = m_WriteData.FileToBundle[k.Value[0]];
+                var bundle = writeData.FileToBundle[k.Value[0]];
                 if (!bundleToAssets.TryGetValue(bundle, out assetList))
                     bundleToAssets.Add(bundle, assetList = new List<GUID>());
                 if (!bundleList.Contains(bundle))
                     bundleList.Add(bundle);
                 foreach (var file in k.Value)
                 {
-                    var fileBundle = m_WriteData.FileToBundle[file];
+                    var fileBundle = writeData.FileToBundle[file];
                     if (!bundleList.Contains(fileBundle))
                         bundleList.Add(fileBundle);
                     if (!bundleToAssets.ContainsKey(fileBundle))
@@ -114,13 +119,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 if (!guidToEntry.TryGetValue(a.ToString(), out entry))
                     continue;
                 var assetPath = entry.GetAssetLoadPath(true);
-                var keys = new List<object>();
-                keys.Add(entry.address);
-                keys.Add(Hash128.Parse(entry.guid));
-                foreach (var l in entry.labels)
-                    keys.Add(l);
-
-                locations.Add(new ContentCatalogDataEntry(assetPath, assetProvider, keys, assetsToBundles[a].ToArray()));
+                locations.Add(new ContentCatalogDataEntry(assetPath, assetProvider, entry.CreateKeyList(), assetsToBundles[a].ToArray()));
             }
         }
     }

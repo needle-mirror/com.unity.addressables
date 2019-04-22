@@ -289,8 +289,8 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        internal const string customEntryString = "<custom>";
-        internal const string undefinedEntryValue = "<undefined>";
+        public const string customEntryString = "<custom>";
+        public const string undefinedEntryValue = "<undefined>";
 
         internal ProfileIdData GetProfileDataById(string id)
         {
@@ -312,6 +312,10 @@ namespace UnityEditor.AddressableAssets.Settings
             return null;
         }
 
+        /// <summary>
+        /// Clears out the list of profiles, then creates a new default one.
+        /// </summary>
+        /// <returns>Returns the ID of the newly created default profile.</returns>
         public string Reset()
         {
             m_Profiles = new List<BuildProfile>();

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using UnityEngine.Serialization;
 
@@ -10,27 +11,20 @@ namespace UnityEngine.ResourceManagement.Diagnostics
     [Serializable]
     public struct DiagnosticEvent
     {
-        [FormerlySerializedAs("m_graph")]
         [SerializeField]
         string m_Graph;  //id of graph definition to use
-        [FormerlySerializedAs("m_parent")]
         [SerializeField]
-        string m_Parent; //used to nest datagraphs
-        [FormerlySerializedAs("m_id")]
+        int[] m_Dependencies; //used to nest datagraphs
         [SerializeField]
-        string m_Id;     //id of a set of data streams
-        [FormerlySerializedAs("m_stream")]
+        int m_ObjectId;     //id of a set of data streams
+        [SerializeField]
+        string m_DisplayName;
         [SerializeField]
         int m_Stream;    //data stream
-        [FormerlySerializedAs("m_frame")]
         [SerializeField]
         int m_Frame;     //frame of the event
-        [FormerlySerializedAs("m_value")]
         [SerializeField]
         int m_Value;      //data value of event
-        [FormerlySerializedAs("m_data")]
-        [SerializeField]
-        byte[] m_Data;   //this is up to the sender/receiver to serialize/deserialize
 
         /// <summary>
         /// Gets the graph id that this event is intended for
@@ -38,15 +32,17 @@ namespace UnityEngine.ResourceManagement.Diagnostics
         /// <value>The graph Id</value>
         public string Graph { get { return m_Graph; } }
         /// <summary>
-        /// Optional id of the parent event.  This is used to structure the tree view of the event viewer
+        /// Unique object identifier for this event
         /// </summary>
-        /// <value>Parent Id</value>
-        public string Parent { get { return m_Parent; } }
+        public int ObjectId { get { return m_ObjectId; } }
         /// <summary>
-        /// The id of this event.  Ids are used to combine multiple events into a single graph
+        /// Display name for event
         /// </summary>
-        /// <value>Event Id</value>
-        public string EventId { get { return m_Id; } }
+        public string DisplayName { get { return m_DisplayName; } }
+        /// <summary>
+        /// Array of object identifiers that are dependencies for this event
+        /// </summary>
+        public int[] Dependencies { get { return m_Dependencies; } }
         /// <summary>
         /// The stream id for the event.  Each graph may display multiple streams of data for the same event Id
         /// </summary>
@@ -62,31 +58,26 @@ namespace UnityEngine.ResourceManagement.Diagnostics
         /// </summary>
         /// <value>Event value</value>
         public int Value { get { return m_Value; } }
-        /// <summary>
-        /// Serialized data for the event.  The contents depend on the event type
-        /// </summary>
-        /// <value>Event data</value>
-        public byte[] Data { get { return m_Data; } }
 
         /// <summary>
         /// DiagnosticEvent constructor
         /// </summary>
-        /// <param name="graph">Graph id</param>
-        /// <param name="parent">Parent event id</param>
-        /// <param name="id">Event id</param>
-        /// <param name="stream">Stream index</param>
-        /// <param name="frame">Frame number</param>
-        /// <param name="value">Event value</param>
-        /// <param name="data">Event data</param>
-        public DiagnosticEvent(string graph, string parent, string id, int stream, int frame, int value, byte[] data)
+        /// <param name="graph">Graph id.</param>
+        /// <param name="name">Event name.</param>
+        /// <param name="id">Event id.</param>
+        /// <param name="stream">Stream index.</param>
+        /// <param name="frame">Frame number.</param>
+        /// <param name="value">Event value.</param>
+        /// <param name="deps">Array of dependency event ids.</param>
+        public DiagnosticEvent(string graph, string name, int id, int stream, int frame, int value, int[] deps)
         {
             m_Graph = graph;
-            m_Parent = parent;
-            m_Id = id;
+            m_DisplayName = name;
+            m_ObjectId = id;
             m_Stream = stream;
             m_Frame = frame;
             m_Value = value;
-            m_Data = data;
+            m_Dependencies = deps;
         }
 
         /// <summary>

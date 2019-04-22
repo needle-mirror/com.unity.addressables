@@ -22,7 +22,11 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <summary>
         /// Get the profile variable id.
         /// </summary>
-        public string Id { get { return m_Id; } }
+        public string Id 
+        { 
+            get { return m_Id; }
+            internal set { m_Id = value; }
+        }
 
         /// <summary>
         /// Evaluate the profile value using the provided settings object.

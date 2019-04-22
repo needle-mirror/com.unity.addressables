@@ -200,6 +200,7 @@ namespace UnityEditor.AddressableAssets.Build
             var assetPath = AddressableAssetSettingsDefaultObject.kDefaultConfigFolder;
             if (AddressableAssetSettingsDefaultObject.Settings != null)
                 assetPath = AddressableAssetSettingsDefaultObject.Settings.ConfigFolder;
+            assetPath = Path.Combine(assetPath, PlatformMappingService.GetPlatform().ToString());
 
             if (browse)
             {
@@ -214,6 +215,7 @@ namespace UnityEditor.AddressableAssets.Build
                 return assetPath;
             }
 
+            Directory.CreateDirectory(assetPath);
             var path = Path.Combine(assetPath, "addressables_content_state.bin");
             return path;
         }
@@ -282,19 +284,16 @@ namespace UnityEditor.AddressableAssets.Build
                 return null;
 
             s_StreamingAssetsExists = Directory.Exists("Assets/StreamingAssets");
-            var context = new AddressablesBuildDataBuilderContext(settings,
-                BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
-                EditorUserBuildSettings.activeBuildTarget,
-                false,
-                false,
-                cacheData.playerVersion);
+            var context = new AddressablesDataBuilderInput(settings, cacheData.playerVersion);
 
             Cleanup(!s_StreamingAssetsExists);
 
             SceneManagerState.Record();
-            var buildOp = settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+            var result = settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+            if (!string.IsNullOrEmpty(result.Error))
+                Debug.LogError(result.Error);
             SceneManagerState.Restore();
-            return buildOp;
+            return result;
         }
 
         internal static bool IsCacheDataValid(AddressableAssetSettings settings, AddressablesContentState cacheData)

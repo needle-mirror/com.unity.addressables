@@ -2,9 +2,13 @@ using System;
 using System.Collections.Generic;
 // ReSharper disable DelegateSubtraction
 
-#if !UNITY_EDITOR
-using UnityEngine.Networking.PlayerConnection;
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEditor.Networking.PlayerConnection;
 #endif
+
+using UnityEngine.Networking.PlayerConnection;
+using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEngine.ResourceManagement.Diagnostics
 {
@@ -14,54 +18,70 @@ namespace UnityEngine.ResourceManagement.Diagnostics
     /// </summary>
     public class DiagnosticEventCollector : MonoBehaviour
     {
+        static Guid s_editorConnectionGuid;
+
+        Dictionary<int, DiagnosticEvent> m_CreatedEvents = new Dictionary<int, DiagnosticEvent>();
+        List<DiagnosticEvent> k_UnhandledEvents = new List<DiagnosticEvent>();
+
+        DelegateList<DiagnosticEvent> s_EventHandlers = DelegateList<DiagnosticEvent>.CreateWithGlobalCache();
+        static DiagnosticEventCollector s_Collector;
         /// <summary>
-        /// The message id used to register this class with the EditorConnection
+        /// Retrieves the global event collector.  A new one is created if needed.
         /// </summary>
-        /// <value>Guid of message id</value>
-        public static Guid EditorConnectionMessageId { get { return new Guid(1, 2, 3, new byte[] { 20, 1, 32, 32, 4, 9, 6, 44 }); } }
-        /// <summary>
-        /// Get or set whether ResourceManager events are enabled
-        /// </summary>
-        /// <value>Enabled state of profiler events</value>
-        public static bool ResourceManagerProfilerEventsEnabled { get; set; }
-
-        static readonly List<DiagnosticEvent> k_UnhandledEvents = new List<DiagnosticEvent>();
-        static Action<DiagnosticEvent> s_EventHandlers;
-        static bool s_Initialized;
-        static int s_StartFrame = -1;
-        static List<int> s_FrameEventCounts = new List<int>();
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        internal static void SendFirstFrameEvent()
+        /// <returns>The event collector global instance.</returns>
+        public static DiagnosticEventCollector FindOrCreateGlobalInstance()
         {
-            if (ResourceManagerProfilerEventsEnabled)
-                PostEvent(new DiagnosticEvent("EventCount", "", "Events", 0, 0, 0, null));
-        }
-
-        internal static void Initialize()
-        {
-            if (ResourceManagerProfilerEventsEnabled)
+            if (s_Collector == null)
             {
-                var ec = FindObjectOfType<DiagnosticEventCollector>();
-                if (ec == null)
-                {
-                    var go = new GameObject("EventCollector", typeof(DiagnosticEventCollector));
-                    go.hideFlags = HideFlags.HideAndDontSave;
-                }
+                var go = new GameObject("EventCollector", typeof(DiagnosticEventCollector));
+                s_Collector = go.GetComponent<DiagnosticEventCollector>();
+                go.hideFlags = HideFlags.DontSave;// HideFlags.HideAndDontSave;
             }
-            s_Initialized = true;
+            return s_Collector;
         }
 
         /// <summary>
-        /// Register event handler
+        /// The guid used for the PlayerConnect messaging system.
         /// </summary>
-        /// <param name="handler">Method or delegate that will handle the events</param>
-        public static void RegisterEventHandler(Action<DiagnosticEvent> handler)
+        public static Guid PlayerConnectionGuid
+        {
+            get
+            {
+                if(s_editorConnectionGuid ==  Guid.Empty)
+                    s_editorConnectionGuid = new Guid(1, 2, 3, new byte[] { 20, 1, 32, 32, 4, 9, 6, 44 });
+                return s_editorConnectionGuid;
+            }
+        }
+
+        /// <summary>
+        /// Register for diagnostic events.  If there is no collector, this will fail and return false.
+        /// </summary>
+        /// <param name="handler">The handler method action.</param>
+        /// <param name="register">Register or unregister.</param>
+        /// <param name="create">If true, the event collector will be created if needed.</param>
+        /// <returns>True if registered, false if not.</returns>
+        public static bool RegisterEventHandler(Action<DiagnosticEvent> handler, bool register, bool create)
+        {
+            var ec = s_Collector;
+            if (ec == null && create && register)
+                ec = FindOrCreateGlobalInstance();
+            if (ec == null)
+                return false;
+            if (register)
+                ec.RegisterEventHandler(handler);
+            else
+                ec.UnregisterEventHandler(handler);
+            return register;
+        }
+
+        void RegisterEventHandler(Action<DiagnosticEvent> handler)
         {
             Debug.Assert(k_UnhandledEvents != null, "DiagnosticEventCollector.RegisterEventHandler - s_unhandledEvents == null.");
             if (handler == null)
                 throw new ArgumentNullException("handler");
-            s_EventHandlers += handler;
+            s_EventHandlers.Add(handler);
+            foreach (var c in m_CreatedEvents)
+                handler(c.Value);
             foreach (var e in k_UnhandledEvents)
                 handler(e);
             k_UnhandledEvents.Clear();
@@ -71,72 +91,59 @@ namespace UnityEngine.ResourceManagement.Diagnostics
         /// Unregister event hander
         /// </summary>
         /// <param name="handler">Method or delegate that will handle the events</param>
-        public static void UnregisterEventHandler(Action<DiagnosticEvent> handler)
+        public void UnregisterEventHandler(Action<DiagnosticEvent> handler)
         {
             if (handler == null)
                 throw new ArgumentNullException("handler");
-            s_EventHandlers -= handler;
-        }
-
-        static void CountFrameEvent(int frame)
-        {
-            Debug.Assert(s_FrameEventCounts != null, "DiagnosticEventCollector.CountFrameEvent - s_frameEventCounts == null.");
-            if (frame < s_StartFrame)
-                return;
-            var index = frame - s_StartFrame;
-            while (index >= s_FrameEventCounts.Count)
-                s_FrameEventCounts.Add(0);
-            s_FrameEventCounts[index]++;
+            s_EventHandlers.Remove(handler);
         }
 
         /// <summary>
         /// Send a <see cref="DiagnosticEvent"/> event to all registered handlers
         /// </summary>
         /// <param name="diagnosticEvent">The event to send</param>
-        public static void PostEvent(DiagnosticEvent diagnosticEvent)
+        public void PostEvent(DiagnosticEvent diagnosticEvent)
         {
-            if (!s_Initialized)
-                Initialize();
-
-            if (!ResourceManagerProfilerEventsEnabled)
-                return;
+            if (diagnosticEvent.Stream == (int)ResourceManager.DiagnosticEventType.AsyncOperationCreate && !m_CreatedEvents.ContainsKey(diagnosticEvent.ObjectId))
+                m_CreatedEvents.Add(diagnosticEvent.ObjectId, diagnosticEvent);
+            else if (diagnosticEvent.Stream == (int)ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
+                m_CreatedEvents.Remove(diagnosticEvent.ObjectId);
 
             Debug.Assert(k_UnhandledEvents != null, "DiagnosticEventCollector.PostEvent - s_unhandledEvents == null.");
 
-            if (s_EventHandlers != null)
-                s_EventHandlers(diagnosticEvent);
+            if (s_EventHandlers.Count > 0)
+                s_EventHandlers.Invoke(diagnosticEvent);
             else
                 k_UnhandledEvents.Add(diagnosticEvent);
-
-            if (diagnosticEvent.EventId != "EventCount")
-                CountFrameEvent(diagnosticEvent.Frame);
         }
 
         void Awake()
         {
-#if !UNITY_EDITOR
-            RegisterEventHandler((DiagnosticEvent diagnosticEvent) => {PlayerConnection.instance.Send(EditorConnectionMessageId, diagnosticEvent.Serialize()); });
-#endif
-            SendEventCounts();
             DontDestroyOnLoad(gameObject);
-            InvokeRepeating("SendEventCounts", 0, .25f);
+#if !UNITY_EDITOR
+            RegisterEventHandler((DiagnosticEvent diagnosticEvent) => {PlayerConnection.instance.Send(DiagnosticEventCollector.PlayerConnectionGuid, diagnosticEvent.Serialize()); });
+#endif
         }
 
-        void SendEventCounts()
+        float m_lastTickSent = 0;
+        int m_lastFrame = 0;
+        float fpsAvg = 30;
+        void Update()
         {
-            Debug.Assert(s_FrameEventCounts != null, "DiagnosticEventCollector.SendEventCounts - s_frameEventCounts == null.");
-
-            int latestFrame = Time.frameCount;
-
-            if (s_StartFrame >= 0)
+            if (s_EventHandlers.Count > 0)
             {
-                while (s_FrameEventCounts.Count < latestFrame - s_StartFrame)
-                    s_FrameEventCounts.Add(0);
-                for (int i = 0; i < s_FrameEventCounts.Count; i++)
-                    PostEvent(new DiagnosticEvent("EventCount", "", "Events", 0, s_StartFrame + i, s_FrameEventCounts[i], null));
+                var elapsed = Time.realtimeSinceStartup - m_lastTickSent;
+                if (elapsed > .25f)
+                {
+                    var fps = (Time.frameCount - m_lastFrame) / elapsed;
+                    m_lastFrame = Time.frameCount;
+                    fpsAvg = (fpsAvg + fps) * .5f;
+                    m_lastTickSent = Time.realtimeSinceStartup;
+                    int heapKB = (int)(Profiling.Profiler.GetMonoUsedSizeLong() / 1024);
+                    PostEvent(new DiagnosticEvent("FrameCount", "FPS", 2, 1, Time.frameCount, (int)fpsAvg, null));
+                    PostEvent(new DiagnosticEvent("MemoryCount", "MonoHeap", 3, 2, Time.frameCount, heapKB, null));
+                }
             }
-            s_StartFrame = latestFrame;
-            s_FrameEventCounts.Clear();
         }
     }
 }

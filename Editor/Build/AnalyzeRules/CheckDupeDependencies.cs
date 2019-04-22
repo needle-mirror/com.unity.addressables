@@ -34,10 +34,10 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             m_ImplicitAssets = new HashSet<GUID>();
             List<AnalyzeResult> emptyResult = new List<AnalyzeResult>();
             emptyResult.Add(new AnalyzeResult(ruleName + " - No issues found"));
-            IDataBuilderContext context = new AddressablesBuildDataBuilderContext(settings);
+            var context = new AddressablesDataBuilderInput(settings);
             var timer = new Stopwatch();
             timer.Start();
-            var aaSettings = context.GetValue<AddressableAssetSettings>(AddressablesBuildDataBuilderContext.BuildScriptContextConstants.kAddressableAssetSettings);
+            var aaSettings = context.AddressableSettings;
 
             //gather entries
             var locations = new List<ContentCatalogDataEntry>();
@@ -52,9 +52,8 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 if (schema == null)
                     continue;
 
-                var packTogether = schema.BundleMode == BundledAssetGroupSchema.BundlePackingMode.PackTogether;
                 var bundleInputDefs = new List<AssetBundleBuild>();
-                BuildScriptPackedMode.ProcessGroup(assetGroup, bundleInputDefs, locations, packTogether);
+                BuildScriptPackedMode.PrepGroupBundlePacking(assetGroup, bundleInputDefs, locations, schema.BundleMode);
                 for (int i = 0; i < bundleInputDefs.Count; i++)
                 {
                     if (bundleToAssetGroup.ContainsKey(bundleInputDefs[i].assetBundleName))
@@ -81,13 +80,11 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                     return emptyResult;
                 }
 
-                var buildTarget = context.GetValue<BuildTarget>(AddressablesBuildDataBuilderContext.BuildScriptContextConstants.kBuildTarget);
-                var buildTargetGroup = context.GetValue<BuildTargetGroup>(AddressablesBuildDataBuilderContext.BuildScriptContextConstants.kBuildTargetGroup);
-                var buildParams = new BundleBuildParameters(buildTarget, buildTargetGroup, aaSettings.buildSettings.bundleBuildPath);
-                buildParams.UseCache = true;
-                buildParams.BundleCompression = aaSettings.buildSettings.compression;
-
-                var buildTasks = RuntimeDataBuildTasks();
+                var buildTarget = context.Target;
+                var buildTargetGroup = context.TargetGroup;
+                var buildParams = new AddressableAssetsBundleBuildParameters(aaSettings, bundleToAssetGroup, buildTarget, buildTargetGroup, aaSettings.buildSettings.bundleBuildPath);
+                var builtinShaderBundleName = aaSettings.DefaultGroup.Name.ToLower().Replace(" ", "").Replace('\\', '/').Replace("//", "/") + "_unitybuiltinshaders.bundle";
+                var buildTasks = RuntimeDataBuildTasks(builtinShaderBundleName);
                 buildTasks.Add(extractData);
 
                 var aaContext = new AddressableAssetsBuildContext
@@ -100,7 +97,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
                 IBundleBuildResults buildResults;
                 var exitCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(allBundleInputDefs), out buildResults, buildTasks, aaContext);
-
+                GenerateLocationListsTask.Run(aaContext, extractData.WriteData);
                 if (exitCode < ReturnCode.Success)
                 {
                     Debug.LogError("Analyze build failed. " + exitCode);
@@ -190,7 +187,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             }
             return emptyResult;
         }
-        static IList<IBuildTask> RuntimeDataBuildTasks()
+        static IList<IBuildTask> RuntimeDataBuildTasks(string builtinShaderBundleName)
         {
             var buildTasks = new List<IBuildTask>();
 
@@ -205,12 +202,11 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             buildTasks.Add(new CalculateSceneDependencyData());
             buildTasks.Add(new CalculateAssetDependencyData());
             buildTasks.Add(new StripUnusedSpriteSources());
-            buildTasks.Add(new CreateBuiltInShadersBundle("UnityBuiltInShaders.bundle"));
+            buildTasks.Add(new CreateBuiltInShadersBundle(builtinShaderBundleName));
 
             // Packing
             buildTasks.Add(new GenerateBundlePacking());
             buildTasks.Add(new UpdateBundleObjectLayout());
-            buildTasks.Add(new GenerateLocationListsTask());
 
             buildTasks.Add(new GenerateBundleCommands());
             buildTasks.Add(new GenerateSubAssetPathMaps());

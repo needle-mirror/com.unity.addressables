@@ -18,26 +18,6 @@ namespace UnityEditor.AddressableAssets.Settings
     public class AddressableAssetBuildSettings
     {
         /// <summary>
-        /// Build compression.
-        /// </summary>
-        public BuildCompression compression
-        {
-            get { return m_Compression; }
-            set
-            {
-                m_Compression = value;
-                SetDirty();
-            }
-        }
-
-        [FormerlySerializedAs("m_compression")]
-        [SerializeField]
-#if UNITY_2018_3_OR_NEWER
-        BuildCompression m_Compression = BuildCompression.LZ4;
-#else
-        BuildCompression m_Compression = BuildCompression.DefaultLZ4;
-#endif
-        /// <summary>
         /// Controls whether to compile scripts when running in virtual mode.  When disabled, build times are faster but the simulated bundle contents may not be accurate due to including editor code.
         /// </summary>
         public bool compileScriptsInVirtualMode
@@ -100,7 +80,6 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal void SerializeForHash(BinaryFormatter formatter, Stream stream)
         {
-            formatter.Serialize(stream, compression);
         }
 
         [NonSerialized]

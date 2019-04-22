@@ -15,6 +15,9 @@ namespace UnityEditor.AddressableAssets.Settings
         [FormerlySerializedAs("m_data")]
         [SerializeField]
         CacheInitializationData m_Data = new CacheInitializationData();
+        /// <summary>
+        /// Display name used in GUI for this object.
+        /// </summary>
         public string Name { get { return "Asset Bundle Cache Settings"; } }
         /// <summary>
         /// The cache initialization data that will be serialized and applied during Addressables initialization.

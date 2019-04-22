@@ -1,6 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
+using UnityEditor.AddressableAssets.Build;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -61,5 +67,53 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreSame(entry, foundEntry);
         }
 
+        [Test]
+        public void AddressablesClearCachedData_DoesNotThrowError()
+        {
+            //individual clean paths
+            foreach (ScriptableObject so in m_Settings.DataBuilders)
+            {
+                BuildScriptBase db = so as BuildScriptBase;
+                Assert.DoesNotThrow(() => m_Settings.CleanPlayerContentImpl(db));
+            }
+
+            //Clean all path
+            Assert.DoesNotThrow(() => m_Settings.CleanPlayerContentImpl());
+
+            //Cleanup
+            m_Settings.BuildPlayerContentImpl();
+        }
+
+        [Test]
+        public void AddressablesCleanCachedData_ClearsData()
+        {
+            //Setup
+            m_Settings.BuildPlayerContentImpl();
+
+            //Check after each clean that the data is not built
+            foreach (ScriptableObject so in m_Settings.DataBuilders)
+            {
+                BuildScriptBase db = so as BuildScriptBase;
+                m_Settings.CleanPlayerContentImpl(db);
+                Assert.IsFalse(db.IsDataBuilt());
+            }
+        }
+
+        [Test]
+        public void AddressablesCleanAllCachedData_ClearsAllData()
+        {
+            //Setup
+            m_Settings.BuildPlayerContentImpl();
+
+            //Clean ALL data builders
+            m_Settings.CleanPlayerContentImpl();
+
+            //Check none have data built
+            foreach (ScriptableObject so in m_Settings.DataBuilders)
+            {
+                BuildScriptBase db = so as BuildScriptBase;
+                Assert.IsFalse(db.IsDataBuilt());
+            }
+        }
     }
 }

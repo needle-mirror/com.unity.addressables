@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.Exceptions;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.Util;
 
@@ -13,10 +14,16 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
     public class VirtualAssetBundleProvider : ResourceProviderBase, IUpdateReceiver
     {
         VirtualAssetBundleRuntimeData m_BundleData;
-        
+
         private VirtualAssetBundleProvider()
         {
             m_ProviderId = typeof(AssetBundleProvider).FullName;
+        }
+
+        /// <inheritdoc/>
+        public override Type GetDefaultType(IResourceLocation location)
+        {
+            return typeof(IAssetBundleResource);
         }
 
         /// <summary>
@@ -49,63 +56,48 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             return InitializeInternal(id, bundleData);
         }
 
-        class InternalOp<TObject> : InternalProviderOperation<TObject>
-            where TObject : class
+        class InternalOp
         {
-            IAsyncOperation<VirtualAssetBundle> m_RequestOperation;
+            VBAsyncOperation<VirtualAssetBundle> m_RequestOperation;
             VirtualAssetBundleProvider m_Provider;
+            ProvideHandle m_PI;
 
-            public override float PercentComplete
+            public float GetPercentComplete()
             {
-                get
-                {
-                    if (IsDone)
-                        return 1;
-                    return m_RequestOperation != null ? m_RequestOperation.PercentComplete : 0.0f;
-                }
+                return m_RequestOperation != null ? m_RequestOperation.PercentComplete : 0.0f;
             }
 
-            public InternalProviderOperation<TObject> Start(VirtualAssetBundleProvider provider, IResourceLocation location, IList<object> deps)
+            public void Start(ProvideHandle provideHandle, VirtualAssetBundleProvider provider)
             {
-                Context = location;
+                provideHandle.SetProgressCallback(GetPercentComplete);
                 m_Provider = provider;
-                m_Result = null;
-                base.Start(location);
-                m_RequestOperation = m_Provider.LoadAsync(Context as IResourceLocation);
+                m_PI = provideHandle;
+
+                m_RequestOperation = m_Provider.LoadAsync(m_PI.Location);
                 m_RequestOperation.Completed += bundleOp =>
                 {
-                    // propagate exception failure. This will currently cause two failure log exceptions to print
-                    OperationException = bundleOp.OperationException;
-                    SetResult(bundleOp.Result as TObject);
-                    OnComplete();
+                    object result = (bundleOp.Result != null && m_PI.Type.IsAssignableFrom(bundleOp.Result.GetType())) ? bundleOp.Result : null;
+                    m_PI.Complete(result, (result != null && bundleOp.OperationException == null), bundleOp.OperationException);
                 };
-                return this;
             }
-
-            internal override TObject ConvertResult(AsyncOperation op) { return null; }
         }
 
-
-        /// <inheritdoc/>
-        public override IAsyncOperation<TObject> Provide<TObject>(IResourceLocation location, IList<object> deps)
+        public override void Provide(ProvideHandle provideHandle)
         {
-            if (location == null)
-                throw new ArgumentNullException("location");
-            var operation = AsyncOperationCache.Instance.Acquire<InternalOp<TObject>>();
-            return operation.Start(this, location, deps);
+            new InternalOp().Start(provideHandle, this);
         }
 
         /// <inheritdoc/>
-        public override bool Release(IResourceLocation location, object asset)
+        public override void Release(IResourceLocation location, object asset)
         {
             if (location == null)
                 throw new ArgumentNullException("location");
             if (asset == null)
             {
                 Debug.LogWarningFormat("Releasing null asset bundle from location {0}.  This is an indication that the bundle failed to load.", location);
-                return false;
+                return;
             }
-            return Unload(location);
+            Unload(location);
         }
 
         bool m_UpdatingActiveBundles;
@@ -132,13 +124,13 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             return bundle.Unload();
         }
 
-        internal IAsyncOperation<VirtualAssetBundle> LoadAsync(IResourceLocation location)
+        internal VBAsyncOperation<VirtualAssetBundle> LoadAsync(IResourceLocation location)
         {
             if (location == null)
                 throw new ArgumentException("IResourceLocation location cannot be null.");
             VirtualAssetBundle bundle;
             if (!m_AllBundles.TryGetValue(location.InternalId, out bundle))
-                return new CompletedOperation<VirtualAssetBundle>().Start(location, location, default(VirtualAssetBundle), new ResourceManagerException(string.Format("Unable to unload virtual bundle {0}.", location)));
+                return new VBAsyncOperation<VirtualAssetBundle>().StartCompleted(location, location, default(VirtualAssetBundle), new ResourceManagerException(string.Format("Unable to unload virtual bundle {0}.", location)));
 
             try
             {
@@ -180,7 +172,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             }
         }
 
-        bool IUpdateReceiver.NeedsUpdate { get { return true; } }
         void IUpdateReceiver.Update(float unscaledDeltaTime)
         {
             Update(unscaledDeltaTime);

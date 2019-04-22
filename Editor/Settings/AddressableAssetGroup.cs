@@ -31,7 +31,7 @@ namespace UnityEditor.AddressableAssets.Settings
         List<AddressableAssetEntry> m_SerializeEntries = new List<AddressableAssetEntry>();
         [FormerlySerializedAs("m_readOnly")]
         [SerializeField]
-        bool m_ReadOnly;
+        internal bool m_ReadOnly;
         [FormerlySerializedAs("m_settings")]
         [SerializeField]
         AddressableAssetSettings m_Settings;
@@ -79,7 +79,7 @@ namespace UnityEditor.AddressableAssets.Settings
                                     Debug.LogError("Rename of Group failed. " + setPath);
                                 }
                                 m_GroupName = name;
-                                
+
                             }
                         }
                     }
@@ -157,6 +157,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <summary>
         /// Creates and adds a schema of a given type to this group.
         /// </summary>
+        /// <param name="postEvent">Determines if this method call will post an event to the internal addressables event system</param>
         /// <typeparam name="TSchema">The schema type. This type must not already be added.</typeparam>
         /// <returns>The created schema object.</returns>
         public TSchema AddSchema<TSchema>(bool postEvent = true) where TSchema : AddressableAssetGroupSchema
@@ -182,13 +183,14 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <summary>
         ///  Remove a given schema from this group.
         /// </summary>
+        /// <param name="postEvent">Determines if this method call will post an event to the internal addressables event system</param>
         /// <typeparam name="TSchema">The schema type.</typeparam>
         /// <returns>True if the schema was found and removed, false otherwise.</returns>
         public bool RemoveSchema<TSchema>(bool postEvent = true)
         {
             return RemoveSchema(typeof(TSchema), postEvent);
         }
-        
+
         /// <summary>
         /// Gets an added schema of the specified type.
         /// </summary>
@@ -339,7 +341,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     Debug.LogException(ex);
                 }
             }
-            
+
         }
 
         void OnEnable()
@@ -349,7 +351,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal void Validate()
         {
-            
+
             bool allValid = false;
             while (!allValid)
             {
@@ -362,11 +364,12 @@ namespace UnityEditor.AddressableAssets.Settings
                         allValid = false;
                         break;
                     }
-                    m_SchemaSet.Schemas[i].Group = this;
+                    if(m_SchemaSet.Schemas[i].Group == null)
+                        m_SchemaSet.Schemas[i].Group = this;
                 }
             }
 
-            var editorList = GetAssetEntry(AddressableAssetEntry.EditorSceneListName); 
+            var editorList = GetAssetEntry(AddressableAssetEntry.EditorSceneListName);
             if (editorList != null)
             {
                 if (m_GroupName == null)
@@ -382,18 +385,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 if (m_GroupName == null)
                     m_GroupName = Settings.FindUniqueGroupName("Packed Content Group");
-                if (m_Data != null)
-                {
-                    if (!HasSchema<BundledAssetGroupSchema>())
-                    {
-                        var schema = AddSchema<BundledAssetGroupSchema>();
-                        schema.BuildPath.SetVariableById(Settings, m_Data.GetData("BuildPath", Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kLocalBuildPath).Id));
-                        schema.LoadPath.SetVariableById(Settings, m_Data.GetData("LoadPath", Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kLocalLoadPath).Id));
-                        schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
-                        AddSchema<ContentUpdateGroupSchema>().StaticContent = m_Data.GetData("StaticContent", "false") == "true";
-                    }
-                    m_Data = null;
-                }
+                m_Data = null;
             }
         }
 
@@ -432,10 +424,12 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="results">The generated list of entries.  For simple entries, this will contain just the entry itself if specified.</param>
         /// <param name="includeSelf">Determines if the entry should be contained in the result list or just sub entries.</param>
         /// <param name="recurseAll">Determines if full recursion should be done when gathering entries.</param>
-        public virtual void GatherAllAssets(List<AddressableAssetEntry> results, bool includeSelf, bool recurseAll)
+        /// <param name="entryFilter">Optional predicate to run against each entry, only returning those that pass.  A null filter will return all entries</param>
+        public virtual void GatherAllAssets(List<AddressableAssetEntry> results, bool includeSelf, bool recurseAll, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
             foreach (var e in entries)
-                e.GatherAllAssets(results, includeSelf, recurseAll);
+                if(entryFilter == null || entryFilter(e))
+                    e.GatherAllAssets(results, includeSelf, recurseAll, entryFilter);
         }
 
         internal void AddAssetEntry(AddressableAssetEntry e, bool postEvent = true)
@@ -512,7 +506,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <returns></returns>
         public bool CanBeSetAsDefault()
         {
-            return !m_ReadOnly && HasSchema<BundledAssetGroupSchema>();
+            return !m_ReadOnly;
         }
     }
 }

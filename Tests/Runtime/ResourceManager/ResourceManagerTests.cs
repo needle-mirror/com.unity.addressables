@@ -7,61 +7,15 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
+using System.Linq;
+using UnityEngine.TestTools.Constraints;
 
 namespace UnityEngine.ResourceManagement.Tests
 {
     public class ResourceManagerTests
     {
-        Action<IAsyncOperation, Exception> m_PrevHandler;
-        class MockProvider : IResourceProvider, IUpdateReceiver
-        {
-            public string _ProviderId = "MockProvider";
-            public ProviderBehaviourFlags _BehaviourFlags = ProviderBehaviourFlags.None;
-            
-            public bool NeedUpdateResult = true;
-            public int UpdateCount = 0;
-            public bool NeedsUpdate { get { return NeedUpdateResult; } }
-
-            public string ProviderId { get { return _ProviderId; } }
-
-            public ProviderBehaviourFlags BehaviourFlags { get { return _BehaviourFlags; } }
-
-            public Func<IResourceLocation, Type, IList<object>, IAsyncOperation> ProviderCallback;
-
-            public Func<Type, IResourceLocation, bool> CanProvideCallback = (x, y) => true;
-
-            public void Update(float unscaledDeltaTime)
-            {
-                UpdateCount++;
-            }
-
-            public IAsyncOperation<TObject> Provide<TObject>(IResourceLocation location, IList<object> deps) where TObject : class
-            {
-                if (ProviderCallback != null)
-                {
-                    return (IAsyncOperation<TObject>)ProviderCallback(location, typeof(TObject), deps);
-                }
-                throw new NotImplementedException();
-            }
-
-            public bool CanProvide<TObject>(IResourceLocation location) where TObject : class
-            {
-                if(ProviderId == location.ProviderId)
-                    return CanProvideCallback(typeof(TObject), location);
-                return false;
-            }
-
-            public bool Release(IResourceLocation location, object asset)
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool Initialize(string id, string data)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
+        Action<AsyncOperationHandle, Exception> m_PrevHandler;
+       
         [OneTimeSetUp]
         public void OneTimeSetup()
         {
@@ -86,11 +40,32 @@ namespace UnityEngine.ResourceManagement.Tests
         [TearDown]
         public void TearDown()
         {
+            Assert.Zero(m_ResourceManager.OperationCacheCount);
             m_ResourceManager.Dispose();
         }
 
+        class IntOperation : AsyncOperationBase<int>
+        {
+            string msg = "msg";
+            protected override void Execute()
+            {
+                Complete(0, true, msg);
+            }
+        }
+
         [Test]
-        public void WhenProviderImplementsIReceiverUpdate_AndNeedsUpdate_UpdateIsCalledWhileInProviderList()
+        public void WhenOperationReturnsValueType_NoGCAllocs()
+        {
+            var op = new IntOperation();
+            Assert.That(() =>
+            {
+                var handle = m_ResourceManager.StartOperation(op, default);
+                handle.Release();
+            }, TestTools.Constraints.Is.Not.AllocatingGCMemory(), "GC Allocation detected");
+        }
+
+        [Test]
+        public void WhenProviderImplementsIReceiverUpdate_UpdateIsCalledWhileInProviderList()
         {
             MockProvider provider = new MockProvider();
             m_ResourceManager.ResourceProviders.Add(provider);
@@ -101,16 +76,6 @@ namespace UnityEngine.ResourceManagement.Tests
             m_ResourceManager.ResourceProviders.Remove(provider);
             m_ResourceManager.Update(0.0f);
             Assert.AreEqual(1, provider.UpdateCount);
-        }
-
-        [Test]
-        public void WhenProviderImplementsIReceiverUpdate_AndDoesNotNeedsUpdate_UpdateNotCalled()
-        {
-            MockProvider provider = new MockProvider();
-            provider.NeedUpdateResult = false;
-            m_ResourceManager.ResourceProviders.Add(provider);
-            m_ResourceManager.Update(0.0f);
-            Assert.AreEqual(0, provider.UpdateCount);
         }
 
         [UnityTest]
@@ -128,37 +93,116 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.AreEqual(beforeGOCount, GameObject.FindObjectsOfType<MonoBehaviourCallbackHooks>().Length);
         }
 
-        [Test]
-        public void ProvideResource_WhenDependencyFailsToLoad_AndProviderCannotLoadWithFailedDependencies_ProvideNotCalled()
+
+        class MockInstanceProvider : IInstanceProvider
         {
-            MockProvider provider = new MockProvider();
-            provider.ProviderCallback = (x, y, z) => { throw new Exception("This Should Not Have Been Called"); };
-            m_ResourceManager.ResourceProviders.Add(provider);
-            ResourceLocationBase locDep = new ResourceLocationBase("depasset", "depasset", "unkonwn");
-            ResourceLocationBase locRoot = new ResourceLocationBase("rootasset", "rootasset", provider.ProviderId, locDep);
-            IAsyncOperation<object> op = m_ResourceManager.ProvideResource<object>(locRoot);
-            DelayedActionManager.Wait(0, 1.0f);
-            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
+            public Func<ResourceManager, AsyncOperationHandle<GameObject>, InstantiationParameters, GameObject> ProvideInstanceCallback;
+            public Action<ResourceManager, GameObject> ReleaseInstanceCallback;
+            public GameObject ProvideInstance(ResourceManager rm, AsyncOperationHandle<GameObject> prefabHandle, InstantiationParameters instantiateParameters)
+            {
+                return ProvideInstanceCallback(rm, prefabHandle, instantiateParameters);
+            }
+
+            public void ReleaseInstance(ResourceManager rm, GameObject instance)
+            {
+                ReleaseInstanceCallback(rm, instance);
+            }
         }
 
-        [Test]
-        public void ProvideResource_WhenDependencyFailsToLoad_AndProviderCanLoadWithFailedDependencies_ProviderStillProvides()
+        class GameObjectProvider : IResourceProvider
         {
-            MockProvider provider = new MockProvider();
-            provider._BehaviourFlags = ProviderBehaviourFlags.CanProvideWithFailedDependencies;
-            provider.ProviderCallback = (loc, type, deps) =>
+            public string ProviderId { get { return "GOPRovider"; } }
+
+            public ProviderBehaviourFlags BehaviourFlags { get { return ProviderBehaviourFlags.None; } }
+
+            public bool CanProvide(Type t, IResourceLocation location)
             {
-                var op2 = new CompletedOperation<object>();
-                op2.Start(loc, loc, 5);
-                return op2;
-            };
-            m_ResourceManager.ResourceProviders.Add(provider);
-            ResourceLocationBase locDep = new ResourceLocationBase("depasset", "depasset", "unkonwn");
-            ResourceLocationBase locRoot = new ResourceLocationBase("rootasset", "rootasset", provider.ProviderId, locDep);
-            IAsyncOperation<object> op = m_ResourceManager.ProvideResource<object>(locRoot);
-            DelayedActionManager.Wait(0, 1.0f);
-            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
-            Assert.AreEqual(5, op.Result);
+                return t == typeof(GameObject);
+            }
+
+            public Type GetDefaultType(IResourceLocation location)
+            {
+                return typeof(GameObject);
+            }
+
+            public bool Initialize(string id, string data) { return true; }
+
+            public void Provide(ProvideHandle provideHandle)
+            {
+                var result = new GameObject(provideHandle.Location.InternalId);
+                provideHandle.Complete(result, true, null);
+            }
+
+            public void Release(IResourceLocation location, object asset)
+            {
+                GameObject.Destroy((GameObject)asset);
+            }
         }
+
+
+        [Test]
+        public void ReleaseInstance_BeforeDependencyCompletes_InstantiatesAndReleasesAfterDependencyCompletes()
+        {
+            var prefabProv = new MockProvider();
+            ProvideHandle[] provHandle = new ProvideHandle[1];
+            prefabProv.ProvideCallback = h => provHandle[0] = h;
+            m_ResourceManager.ResourceProviders.Add(prefabProv);
+
+            ResourceLocationBase locDep = new ResourceLocationBase("prefab", "prefab1", prefabProv.ProviderId);
+            var iProvider = new MockInstanceProvider();
+            bool provideCalled = false;
+            bool releaseCalled = false;
+            iProvider.ProvideInstanceCallback = (rm, prefabHandle, iParam) =>
+            {
+                provideCalled = true;
+                prefabHandle.Release();
+                return null;
+            };
+            iProvider.ReleaseInstanceCallback = (rm, go) =>
+            {
+                releaseCalled = true;
+            };
+            var instHandle = m_ResourceManager.ProvideInstance(iProvider, locDep, default(InstantiationParameters));
+            Assert.IsFalse(instHandle.IsDone);
+            m_ResourceManager.Release(instHandle);
+            Assert.IsTrue(instHandle.IsValid());
+            Assert.IsFalse(provideCalled);
+            Assert.IsFalse(releaseCalled);
+            provHandle[0].Complete<GameObject>(null, true, null);
+            Assert.IsTrue(provideCalled);
+            Assert.IsTrue(releaseCalled);
+        }
+
+
+        // TODO:
+        // To test: release via operation, 
+        // Edge cases: game object fails to load, callback throws exception, Release called on handle before operation completes
+        //
+        [Test]
+        public void ProvideInstance_CanProvide()
+        {
+            m_ResourceManager.ResourceProviders.Add(new GameObjectProvider());
+            ResourceLocationBase locDep = new ResourceLocationBase("prefab", "prefab1", "GOPRovider");
+
+            MockInstanceProvider iProvider = new MockInstanceProvider();
+            InstantiationParameters instantiationParameters = new InstantiationParameters(null, true);
+            AsyncOperationHandle<GameObject> []refResource = new AsyncOperationHandle<GameObject>[1];
+            iProvider.ProvideInstanceCallback = (rm, prefabHandle, iParam) =>
+            {
+                refResource[0] = prefabHandle;
+                Assert.AreEqual("prefab1", prefabHandle.Result.name);
+                return new GameObject("instance1");
+            };
+            iProvider.ReleaseInstanceCallback = (rm, go) => { rm.Release(refResource[0]); GameObject.Destroy(go); };
+
+            AsyncOperationHandle<GameObject> obj = m_ResourceManager.ProvideInstance(iProvider, locDep, instantiationParameters);
+            m_ResourceManager.Update(0.0f);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, obj.Status);
+            Assert.AreEqual("instance1", obj.Result.name);
+            Assert.AreEqual(1, m_ResourceManager.OperationCacheCount);
+            obj.Release();
+        }
+        
+
     }
 }

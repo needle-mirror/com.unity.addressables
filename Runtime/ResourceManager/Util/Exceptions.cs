@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 
-namespace UnityEngine.ResourceManagement.Util
+namespace UnityEngine.ResourceManagement.Exceptions
 {
     /// <summary>
     /// Base class for all ResourceManager related exceptions.
@@ -90,62 +90,5 @@ namespace UnityEngine.ResourceManagement.Util
             return Message;
         }
 
-    }
-
-    /// <summary>
-    /// Exception created when an IResourceProvider is unabled to load the specified location.
-    /// </summary>
-    public class ResourceProviderFailedException : ResourceManagerException
-    {
-        /// <summary>
-        /// The location that is unable to be loaded.
-        /// </summary>
-        public IResourceLocation Location { get; private set; }
-        /// <summary>
-        /// The provider that is unable to load the location.
-        /// </summary>
-        public IResourceProvider Provider { get; private set; }
-        /// <summary>
-        /// Construct a new ResourceProviderFailedException
-        /// </summary>
-        /// <param name="provider"></param>
-        /// <param name="location"></param>
-        public ResourceProviderFailedException(IResourceProvider provider, IResourceLocation location)
-        {
-            Provider = provider;
-            Location = location;
-        }
-        /// <summary>
-        /// Construct a new ResourceProviderFailedException
-        /// </summary>
-        public ResourceProviderFailedException() { }
-        /// <summary>
-        /// Construct a new ResourceProviderFailedException
-        /// </summary>
-        /// <param name="message">Message to describe the exception.</param>
-        public ResourceProviderFailedException(string message) : base(message) { }
-        /// <summary>
-        /// Construct a new ResourceProviderFailedException
-        /// </summary>
-        /// <param name="message">Message to describe the exception.</param>
-        /// <param name="innerException">Inner exception that caused this exception.</param>
-        public ResourceProviderFailedException(string message, Exception innerException) : base(message, innerException) { }
-        /// <summary>
-        /// Construct a new ResourceProviderFailedException
-        /// </summary>
-        /// <param name="message">Message to describe the exception.</param>
-        /// <param name="context">Context related to the exception.</param>
-        protected ResourceProviderFailedException(SerializationInfo message, StreamingContext context) : base(message, context) { }
-
-        /// <summary>
-        /// Returns a descriptive string for the exception.
-        /// </summary>
-        public override string Message
-        {
-            get
-            {
-                return base.Message + ", Provider=" + Provider + ", Location=" + Location;
-            }
-        }
     }
 }

@@ -4,6 +4,34 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.7.4] - 2019-04-19
+ - Removed support for .NET 3.x as it is deprecated for Unity in general. 
+ - Replaced IAsyncOperation with AsyncOperationHandle.
+   - Once the asset is no longer needed, the user can call Addressables.Release, passing in either the handle, or the result the handle provided.
+ - Exposed AsyncOperationBase for creating custom operations
+   - These operations must be started by ResourceManager.StartOperation
+ - Replaced IDataBuilderContext and it's inherited classes with simpler AddressablesDataBuilderInput.  This class is fed into all IDataBuilder.BuildData calls. 
+ - Fixed Nintendo Switch and PlayStation4 support.
+ - Simplified the IResourceProvider interface.
+ - Refactored build script interface.  Made BuildScriptBase and the provided concrete versions easier to inherit from. 
+ - Removed DelayedActionManager.
+ - Removed ISceneProvider. Users can implement custom scene loading using a custom AsyncOperationBase.
+ - Removed optional LRU caching of Assets and Bundles.
+ - Addressables Profiler now tracks all active async operations
+ - AssetBundles targetting StreamingAssets (by using the profile variable [UnityEngine.AddressableAssets.Addressables.BuildPath] now build to the Library instead of StreamingAssets.  During the player build, these files are copied into StreamingAssets, then after the build, the copies are deleted. They are also built into platform specific folders (so building for a second platform will not overwrite data from a first build).  We recommend deleting anything in Assets/StreamingAssets/aa.
+ - The addressables_content_state.bin is built into a platform specific folder within Assets/AddressableAssetsData/.  We recommend deleting the addressables_content_state.bin in Assets/AddressableAssetsData to avoid future confusion.  
+ - ScriptableBuildPipeline now purges stale data from its cache in the background after each build. 
+ - Disabled Addressables automatic initialization.  It will now initialize itself upon the first call into it (such as Load or Instantiate).  To Initialize on startup instead of first use, call Addressables.Initialize().  
+ - Optimized performance around instantiation and general garbage generation. 
+ - Added per-group bundle compression settings. 
+ - Fixes to AssetReference drawers. 
+ - Improved the group template system for creating better defined asset groups. 
+ - Fixed bug in bundle caching that caused GetDownloadSize to report incorrectly
+ - Cleaned up Load/Release calls to make sure all releases could take either the handle returned by Load, or the handle.Result.
+ - Added editor-only analytics (nothing added in runtime).  If you have Analytics disabled in your project nothing will be reported. Currently only run when you build addressables, it includes data such as Addressables version and Build Script name.
+ - Fixed null ref issue when cleaning all the data builders
+ - KNOWN ISSUE: there is still an occasional issue with code stripping on iOS.  If you run into iOS issues, try turning stripping off for now.  
+
 ## [0.6.8-preview] - 2019-03-25
 - fixed Build For Content Update to no longer delete everything it built.
 
@@ -278,4 +306,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.0.8-preview] - 2018-02-08
 - Initial submission for package distribution
+
 

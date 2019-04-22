@@ -43,7 +43,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         ILogger m_Logger = Debug.unityLogger;
 
         /// <summary>
-        /// Get and set the loger for the hosting service.
+        /// Get and set the logger for the hosting service.
         /// </summary>
         public ILogger Logger
         {
@@ -51,6 +51,11 @@ namespace UnityEditor.AddressableAssets.HostingServices
             set { m_Logger = value ?? Debug.unityLogger; }
         }
 
+        /// <summary>
+        /// Decodes a profile variable lookup ID based on string key
+        /// </summary>
+        /// <param name="key">the key to look up </param>
+        /// <returns>The variable lookup ID.</returns>
         protected virtual string DisambiguateProfileVar(string key)
         {
             return string.Format("{0}.ID_{1}", key, InstanceId);
@@ -100,21 +105,42 @@ namespace UnityEditor.AddressableAssets.HostingServices
             return newArr;
         }
 
+        /// <summary>
+        /// Logs a formatted message to the Logger specifically on this service.  <see cref="Logger"/>
+        /// </summary>
+        /// <param name="logType">Severity of the log</param>
+        /// <param name="format">The base string</param>
+        /// <param name="args">The parameters to be formatted into the base string</param>
         protected void LogFormat(LogType logType, string format, object[] args)
         {
             Logger.LogFormat(logType, format, ArrayPush(args, this));
         }
 
+        /// <summary>
+        /// Logs an info severity formatted message to the Logger specifically on this service.  <see cref="Logger"/>
+        /// </summary>
+        /// <param name="format">The base string</param>
+        /// <param name="args">The parameters to be formatted into the base string</param>
         protected void Log(string format, params object[] args)
         {
             LogFormat(LogType.Log, format, args);
         }
 
+        /// <summary>
+        /// Logs an warning severity formatted message to the Logger specifically on this service.  <see cref="Logger"/>
+        /// </summary>
+        /// <param name="format">The base string</param>
+        /// <param name="args">The parameters to be formatted into the base string</param>
         protected void LogWarning(string format, params object[] args)
         {
             LogFormat(LogType.Warning, format, args);
         }
 
+        /// <summary>
+        /// Logs an error severity formatted message to the Logger specifically on this service.  <see cref="Logger"/>
+        /// </summary>
+        /// <param name="format">The base string</param>
+        /// <param name="args">The parameters to be formatted into the base string</param>
         protected void LogError(string format, params object[] args)
         {
             LogFormat(LogType.Error, format, args);

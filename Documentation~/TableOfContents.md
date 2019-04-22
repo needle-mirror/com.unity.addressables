@@ -5,3 +5,5 @@
     * [Hosting Services](AddressableAssetsHostingServices)
     * [Migration Guide](AddressableAssetsMigrationGuide)
     * [Memory Management](MemoryManagement)
+	* [Async Operation Handle](AddressableAssetsAsyncOperationHandle)
+	* [Custom Operations](AddressableAssetsCustomOperation)

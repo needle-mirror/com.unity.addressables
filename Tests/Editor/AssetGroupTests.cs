@@ -101,8 +101,8 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CannotSetInvalidGroupAsDefault()
         {
-            AddressableAssetGroup group1 = m_Settings.CreateGroup("group1", false, false, true, null, new Type[] { });
-            LogAssert.Expect(LogType.Error, "Unable to set " + group1.Name + " as the Default Group.  Default Groups must contain a BundledAssetGroupSchema and not be ReadOnly.");
+            AddressableAssetGroup group1 = m_Settings.CreateGroup("group1", false, true, true, null, new Type[] { });
+            LogAssert.Expect(LogType.Error, "Unable to set " + group1.Name + " as the Default Group.  Default Groups must not be ReadOnly.");
             m_Settings.DefaultGroup = group1;
             Assert.AreNotEqual(m_Settings.DefaultGroup, group1);
 
@@ -113,7 +113,6 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void DefaultGroupContainsCorrectProperties()
         {
-            Assert.IsTrue(m_Settings.DefaultGroup.HasSchema<BundledAssetGroupSchema>());
             Assert.IsFalse(m_Settings.DefaultGroup.ReadOnly);
         }
 
@@ -122,11 +121,10 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             LogAssert.ignoreFailingMessages = true;
             AddressableAssetGroup oldDefault = m_Settings.DefaultGroup;
-            oldDefault.RemoveSchema<BundledAssetGroupSchema>();
+            oldDefault.m_ReadOnly = true;
             AddressableAssetGroup newDefault = m_Settings.DefaultGroup;
 
             Assert.AreNotEqual(oldDefault, newDefault);
-            Assert.IsTrue(m_Settings.DefaultGroup.HasSchema<BundledAssetGroupSchema>());
             Assert.IsFalse(m_Settings.DefaultGroup.ReadOnly);
 
             //Cleanup
@@ -137,7 +135,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void PreventNullDefaultGroup()
         {
-            LogAssert.Expect(LogType.Error, "Unable to set null as the Default Group.  Default Groups must contain a BundledAssetGroupSchema and not be ReadOnly.");
+            LogAssert.Expect(LogType.Error, "Unable to set null as the Default Group.  Default Groups must not be ReadOnly.");
             m_Settings.DefaultGroup = null;
             Assert.IsNotNull(m_Settings.DefaultGroup);
         }

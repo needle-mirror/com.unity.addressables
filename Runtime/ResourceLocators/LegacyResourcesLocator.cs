@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 
 namespace UnityEngine.AddressableAssets.ResourceLocators
 {
@@ -22,7 +23,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             if (strKey == null)
                 return false;
             locations = new List<IResourceLocation>();
-            locations.Add(new LegacyResourcesLocation(strKey));
+            locations.Add(new ResourceLocationBase("LegacyResourceLocation", strKey, typeof(LegacyResourcesProvider).FullName));
             return true;
         }
 

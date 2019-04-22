@@ -12,7 +12,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         {
             if (val > maxValue)
                 maxValue = val;
-            samples.Add(new EventDataSample(frame, val));
+            if (samples.Count > 0 && samples[samples.Count - 1].frame == frame)
+                samples[samples.Count - 1] = new EventDataSample(frame, val);
+            else
+                samples.Add(new EventDataSample(frame, val));
         }
 
         internal int GetValue(int f)

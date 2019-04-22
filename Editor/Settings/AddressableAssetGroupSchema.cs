@@ -54,7 +54,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 var prop = type.GetField(p.name, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
                 if(prop != null)
-                    EditorGUILayout.PropertyField(p, false);
+                    EditorGUILayout.PropertyField(p, true);
             }
             so.ApplyModifiedProperties();
         }
@@ -62,6 +62,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <summary>
         /// Used to notify the addressables settings that data has been modified.  This must be called by subclasses to ensure proper cache invalidation.
         /// </summary>
+        /// <param name="postEvent">Determines if this method call will post an event to the internal addressables event system</param>
         protected void SetDirty(bool postEvent)
         {
             if (m_Group != null)

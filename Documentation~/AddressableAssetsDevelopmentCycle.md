@@ -35,7 +35,7 @@ The following table shows segment of the development cycle in which a particular
 Virtual| x | x | x Asset Bundle Layout | x In Editor only |  |
 | Packed|   |   | x Asset Bundles  | x | x |
 
-## Analisys and Debugging
+## Analysis and Debugging
 
 By default, Addressables logging will only show warnings and errors.  You can enable versbose logging by adding the ADDRESSABLES_LOG_ALL compiler flag to the player settings.  Exceptions can also be disabled by unchecking the "Log Runtime Exceptions" option in the AddressableAssetSettings object inspector.  The ResourceManager.ExceptionHandler property can be set with your own exception handler if desired, but this should be done after the Addressables runtime has finished initialization.
 

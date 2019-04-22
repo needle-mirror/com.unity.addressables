@@ -12,6 +12,8 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         string m_Id;
         string m_ProviderId;
         object m_Data;
+        int m_DependencyHashCode;
+        int m_HashCode;
         List<IResourceLocation> m_Dependencies;
         /// <summary>
         /// Internal id.
@@ -34,6 +36,22 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         /// </summary>
         public object Data { get { return m_Data; } set { m_Data = value; } }
         /// <summary>
+        /// Precomputed hash code of dependencies.
+        /// </summary>
+        public int DependencyHashCode { get { return m_DependencyHashCode; } }
+
+        /// <summary>
+        /// Compute the hash of this location for the specified type.
+        /// </summary>
+        /// <param name="t">The type to hash with.</param>
+        /// <returns>The combined hash code of the location and type.</returns>
+        public int Hash(Type t)
+        {
+            var hash = m_HashCode * 31 + t.GetHashCode();
+            return hash;
+        }
+
+        /// <summary>
         /// Returns the name of the location. This is usally set to the primary key of the location, or its "address".
         /// </summary>
         /// <returns></returns>
@@ -41,6 +59,7 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         {
             return m_Name;
         }
+
         /// <summary>
         /// Construct a new ResourceLocationBase.
         /// </summary>
@@ -54,10 +73,21 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
                 throw new ArgumentNullException(id);
             if (string.IsNullOrEmpty(providerId))
                 throw new ArgumentNullException(providerId);
+            m_HashCode = (name.GetHashCode() * 31 + id.GetHashCode()) * 31 + providerId.GetHashCode();
             m_Name = name;
             m_Id = id;
             m_ProviderId = providerId;
             m_Dependencies = new List<IResourceLocation>(dependencies);
+            ComputeDependencyHash();
+        }
+        /// <summary>
+        /// Compute the dependency hash for this location
+        /// </summary>
+        public void ComputeDependencyHash() // TODO: dependency hash is no longer just objects
+        {
+            m_DependencyHashCode = m_Dependencies.Count > 0 ? 17 : 0;
+            foreach (var d in m_Dependencies)
+                m_DependencyHashCode = m_DependencyHashCode * 31 + d.Hash(typeof(object));
         }
     }
 

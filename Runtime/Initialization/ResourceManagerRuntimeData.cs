@@ -12,6 +12,11 @@ namespace UnityEngine.AddressableAssets.Initialization
     [Serializable]
     public class ResourceManagerRuntimeData
     {
+        /// <summary>
+        /// Address of the contained catalogs.
+        /// </summary>
+        public const string kCatalogAddress = "AddressablesMainContentCatalog";
+
         [SerializeField]
         string m_buildTarget;
         /// <summary>

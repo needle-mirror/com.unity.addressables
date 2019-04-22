@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 
@@ -30,8 +31,22 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
  //               Debug.LogFormat("Location {0} has invalid hash, using size of {1}", loc, BundleSize);
                 return BundleSize;
             }
-            //TODO: implement support for virtual bundle cache
- //           Debug.LogFormat("Location {0} has hash and is NOT in the cache, using size {1}", loc, BundleSize);
+#if !UNITY_SWITCH && !UNITY_PS4
+            var bundleName = Path.GetFileNameWithoutExtension(loc.InternalId);
+            if (locHash.isValid) //If we have a hash, ensure that our desired version is cached.
+            {
+                if (Caching.IsVersionCached(bundleName, locHash))
+                    return 0;
+                return BundleSize;
+            }
+            else //If we don't have a hash, any cached version will do.
+            {
+                List<Hash128> versions = new List<Hash128>();
+                Caching.GetCachedVersions(bundleName, versions);
+                if (versions.Count > 0)
+                    return 0;
+            }
+#endif //!UNITY_SWITCH && !UNITY_PS4
             return BundleSize;
         }
     }
@@ -49,59 +64,40 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             m_ProviderId = typeof(BundledAssetProvider).FullName; 
         }
 
-        class InternalOp<TObject> : InternalProviderOperation<TObject>
-            where TObject : class
+        class InternalOp
         {
-            IAsyncOperation<TObject> m_RequestOperation;
+            VBAsyncOperation<object> m_RequestOperation;
+            ProvideHandle m_PI;
 
-            public InternalProviderOperation<TObject> Start(IResourceLocation location, IList<object> deps)
+            public void Start(ProvideHandle provideHandle, VirtualAssetBundle bundle)
             {
-                m_Result = null;
-                m_RequestOperation = null;
-
-                VirtualAssetBundle bundle = deps[0] as VirtualAssetBundle;
-                if(bundle != null)
-                {
-                    m_RequestOperation = bundle.LoadAssetAsync<TObject>(location);
-                    m_RequestOperation.Completed += OnComplete;
-                }
-                else
-                {
-                    OnComplete();
-                }
-
-                return base.Start(location);
+                m_PI = provideHandle;
+                m_RequestOperation = bundle.LoadAssetAsync(m_PI.Type, m_PI.Location);
+                m_RequestOperation.Completed += RequestOperation_Completed;
             }
 
-            public override float PercentComplete
+            private void RequestOperation_Completed(VBAsyncOperation<object> obj)
             {
-                get
-                {
-                    if (IsDone)
-                        return 1;
-
-                    return m_RequestOperation != null ? m_RequestOperation.PercentComplete : 0.0f;
-                }
+                bool success = (obj.Result != null && m_PI.Type.IsAssignableFrom(obj.Result.GetType())) && obj.OperationException == null;
+                m_PI.Complete(obj.Result, success, obj.OperationException);
             }
-            internal override TObject ConvertResult(AsyncOperation operation) { return null; }
+
+            public float GetPercentComplete() { return m_RequestOperation != null ? m_RequestOperation.PercentComplete : 0.0f; }
         }
 
-        /// <inheritdoc/>
-        public override IAsyncOperation<TObject> Provide<TObject>(IResourceLocation location, IList<object> deps)
+        public override void Provide(ProvideHandle provideHandle)
         {
-            if (location == null)
-                throw new ArgumentNullException("location");
-            var operation = AsyncOperationCache.Instance.Acquire<InternalOp<TObject>>();
-            return operation.Start(location, deps);
-        }
-
-        /// <inheritdoc/>
-        public override bool Release(IResourceLocation location, object asset)
-        {
-            if (location == null)
-                throw new ArgumentNullException("location");
-            return true;
-
+            List<object> deps = new List<object>(); // TODO: garbage. need to pass actual count and reuse the list
+            provideHandle.GetDependencies(deps);
+            VirtualAssetBundle bundle = deps[0] as VirtualAssetBundle;
+            if (bundle == null)
+            {
+                provideHandle.Complete<object>(null, false, null);
+            }
+            else
+            {
+                new InternalOp().Start(provideHandle, bundle);
+            }
         }
     }
 }

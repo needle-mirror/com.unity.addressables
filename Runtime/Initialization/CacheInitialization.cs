@@ -49,7 +49,12 @@ namespace UnityEngine.AddressableAssets.Initialization
             return true;
         }
 
+#if !UNITY_SWITCH && !UNITY_PS4
+        /// <summary>
+        /// The root path of the cache.
+        /// </summary>
         public static string RootPath { get { return Path.GetDirectoryName(Caching.defaultCache.path); } }
+#endif //!UNITY_SWITCH && !UNITY_PS4
     }
 
     /// <summary>

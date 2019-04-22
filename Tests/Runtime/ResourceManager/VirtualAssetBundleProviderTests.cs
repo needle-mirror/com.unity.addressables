@@ -20,7 +20,7 @@ namespace UnityEngine.ResourceManagement.Tests
     [TestFixture]
     public class VirtualAssetBundleProviderTests
     {
-        Action<IAsyncOperation, Exception> m_PrevHandler;
+        Action<AsyncOperationHandle, Exception> m_PrevHandler;
         [OneTimeSetUp]
         public void OneTimeSetup()
         {
@@ -65,15 +65,22 @@ namespace UnityEngine.ResourceManagement.Tests
             int kUpdatesForRemoteDownload = (int)Math.Ceiling((((kDataSize * kBundleCount) / kRemoteBW) / kTimeSlize));
             int kUpdatesLocalLoad = (int)Math.Ceiling((((kHeaderSize * kBundleCount) / kLocalBW) / kTimeSlize));
 
+            ResourceManager rm = new ResourceManager();
+            rm.CallbackHooksEnabled = false;
+
             VirtualAssetBundleRuntimeData data = new VirtualAssetBundleRuntimeData(kLocalBW, kRemoteBW);
             List<ResourceLocationBase> locations = CreateBundleSet(data, kBundleCount, localBundles, kDataSize, kHeaderSize);
             VirtualAssetBundleProvider provider = new VirtualAssetBundleProvider(data);
-            var ops = locations.ConvertAll(x => provider.Provide<VirtualAssetBundle>(x, null));
-            
+            rm.ResourceProviders.Add(provider);
+            var ops = new List<AsyncOperationHandle<VirtualAssetBundle>>();
+            foreach(IResourceLocation loc in locations )
+                ops.Add(rm.ProvideResource<VirtualAssetBundle>(loc));
+
+
             int totalUpdatesNeeded = kUpdatesLocalLoad + (localBundles ? 0 : kUpdatesForRemoteDownload);
             for (int i = 0; i < totalUpdatesNeeded; i++)
             {
-                foreach(IAsyncOperation<VirtualAssetBundle> op in ops)
+                foreach(AsyncOperationHandle<VirtualAssetBundle> op in ops)
                 {
                     Assert.IsFalse(op.IsDone);
                     Assert.Less(op.PercentComplete, 1.0f);
@@ -86,21 +93,33 @@ namespace UnityEngine.ResourceManagement.Tests
                 Assert.IsTrue(op.IsDone);
                 Assert.AreEqual(1.0f, op.PercentComplete);
                 Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
+                op.Release();
             }
-        }
 
+            Assert.Zero(rm.OperationCacheCount);
+            rm.Dispose();
+        }
+        
         [UnityTest]
         public IEnumerator WhenLoadingUnknownBundle_OperationFailsWithMessage()
         {
+            ResourceManager rm = new ResourceManager();
+            rm.CallbackHooksEnabled = false;
+
             VirtualAssetBundleRuntimeData data = new VirtualAssetBundleRuntimeData();
             VirtualAssetBundleProvider provider = new VirtualAssetBundleProvider(data);
+            rm.ResourceProviders.Add(provider);
             ResourceLocationBase unknownLocation = new ResourceLocationBase("unknown", "unknown", typeof(AssetBundleProvider).FullName);
-            IAsyncOperation<VirtualAssetBundle> op = provider.Provide<VirtualAssetBundle>(unknownLocation, null);
+            var op = rm.ProvideResource<VirtualAssetBundle>(unknownLocation);
             // wait for delayed action manager. 
             // TODO: refactor delayed action manager so we can pump it instead of waiting a frame
             yield return null; 
             Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
             StringAssert.Contains("Unable to unload virtual bundle", op.OperationException.Message);
+            op.Release();
+
+            Assert.Zero(rm.OperationCacheCount);
+            rm.Dispose();
         }
 
         [Test]

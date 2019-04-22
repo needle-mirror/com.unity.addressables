@@ -27,6 +27,18 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         IList<IResourceLocation> Dependencies { get; }
 
         /// <summary>
+        /// The hash of this location combined with the specified type.
+        /// </summary>
+        /// <param name="resultType">The type of the result.</param>
+        /// <returns>The combined hash of the location and the type.</returns>
+        int Hash(Type resultType);
+
+        /// <summary>
+        /// The precomputed hash code of the dependencies.
+        /// </summary>
+        int DependencyHashCode { get; }
+
+        /// <summary>
         /// Gets the dependencies to other IResourceLocations
         /// </summary>
         /// <value>The dependencies.</value>

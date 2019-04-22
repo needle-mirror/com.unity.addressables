@@ -13,17 +13,20 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using System.Text.RegularExpressions;
+using System.Diagnostics;
+using System.Text;
+
 
 namespace AddressableAssetsIntegrationTests
 {
-    public abstract partial class AddressablesIntegrationTests : IPrebuildSetup
+    internal abstract partial class AddressablesIntegrationTests : IPrebuildSetup
     {
         [UnityTest]
         public IEnumerator VerifyProfileVariableEvaluation()
         {
             yield return Init();
-            Assert.AreEqual(string.Format("{0}", Addressables.RuntimePath), AddressablesRuntimeProperties.EvaluateString("{UnityEngine.AddressableAssets.Addressables.RuntimePath}"));
-            yield return Complete();
+            Assert.AreEqual(string.Format("{0}", m_Addressables.RuntimePath), AddressablesRuntimeProperties.EvaluateString("{UnityEngine.AddressableAssets.Addressables.RuntimePath}"));
         }
 
         [UnityTest]
@@ -48,13 +51,63 @@ namespace AddressableAssetsIntegrationTests
             locMap.Add("sizeTestBundle1", bundleLoc1);
             locMap.Add("sizeTestBundle2", bundleLoc2);
             locMap.Add("sizeTestAsset", assetLoc);
-            Addressables.ResourceLocators.Add(locMap);
+            m_Addressables.ResourceLocators.Add(locMap);
 
-            Addressables.GetDownloadSize("sizeTestAsset").Completed += op =>
-            {
-                Assert.AreEqual(expectedSize, op.Result);
-            };
-            yield return Complete();
+            var dOp = m_Addressables.GetDownloadSize("sizeTestAsset");
+            yield return dOp;
+            Assert.AreEqual(expectedSize, dOp.Result);
+            dOp.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSize_CalculatesCachedBundles()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+            long expectedSize = 0;
+            long bundleSize1 = 1000;
+            long bundleSize2 = 500;
+            var locMap = new ResourceLocationMap();
+
+            Caching.ClearCache();
+            //Simulating a cached bundle
+            string fakeCachePath = CreateFakeCachedBundle("GetDownloadSize_CalculatesCachedBundlesBundle1", "be38e35d2177c282d5d6a2e54a803aab");
+
+            var bundleLoc1 = new ResourceLocationBase("sizeTestBundle1", "http://nowhere.com/GetDownloadSize_CalculatesCachedBundlesBundle1.bundle",
+                typeof(AssetBundleProvider).FullName);
+            var sizeData1 =
+                (bundleLoc1.Data = CreateLocationSizeData("cachedSizeTestBundle1", bundleSize1, 123,
+                    "be38e35d2177c282d5d6a2e54a803aab")) as ILocationSizeData;
+            if (sizeData1 != null)
+                expectedSize += sizeData1.ComputeSize(bundleLoc1);
+
+            var bundleLoc2 = new ResourceLocationBase("cachedSizeTestBundle2", "http://nowhere.com/GetDownloadSize_CalculatesCachedBundlesBundle2.bundle",
+                typeof(AssetBundleProvider).FullName);
+            var sizeData2 =
+                (bundleLoc2.Data = CreateLocationSizeData("cachedSizeTestBundle2", bundleSize2, 123,
+                    "d9fe965a6b253fb9dbd3e1cb08b7d66f")) as ILocationSizeData;
+            if (sizeData2 != null)
+                expectedSize += sizeData2.ComputeSize(bundleLoc2);
+
+            var assetLoc = new ResourceLocationBase("cachedSizeTestAsset", "myASset.asset",
+                typeof(BundledAssetProvider).FullName, bundleLoc1, bundleLoc2);
+
+            locMap.Add("cachedSizeTestBundle1", bundleLoc1);
+            locMap.Add("cachedSizeTestBundle2", bundleLoc2);
+            locMap.Add("cachedSizeTestAsset", assetLoc);
+            m_Addressables.ResourceLocators.Add(locMap);
+
+            var dOp = m_Addressables.GetDownloadSize("cachedSizeTestAsset");
+            yield return dOp;
+            Assert.IsTrue((bundleSize1 + bundleSize2) >  dOp.Result);
+            Assert.AreEqual(expectedSize, dOp.Result);
+            dOp.Release();
+
+            Directory.Delete(fakeCachePath, true);
+#else
+            Assert.Ignore();
+            yield break;
+#endif
         }
 
         [UnityTest]
@@ -63,389 +116,433 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
             int loadCount = 0;
             int loadedCount = 0;
+            var ops = new List<AsyncOperationHandle<IList<IResourceLocation>>>();
             foreach (var k in m_KeysHashSet)
             {
                 loadCount++;
-                Addressables.LoadAssets<IResourceLocation>(k.Key, op1 => Assert.IsNotNull(op1.Result)).Completed += op =>
+                AsyncOperationHandle<IList<IResourceLocation>> op = m_Addressables.LoadResourceLocations(k.Key);
+                ops.Add(op);
+                op.Completed += op2 =>
                 {
                     loadedCount++;
-                    Assert.IsNotNull(op.Result);
-                    Assert.AreEqual(k.Value, op.Result.Count);
+                    Assert.IsNotNull(op2.Result);
+                    Assert.AreEqual(k.Value, op2.Result.Count);
                 };
-                yield return null;
+                
             }
-            while (loadedCount < loadCount)
-                yield return null;
-            yield return Complete();
+            foreach(var op in ops)
+            {
+                yield return op;
+                op.Release();
+            }
         }
-
         [UnityTest]
-        public IEnumerator CanGetResourceLocationsWithMultipleKeysMerged([Values(Addressables.MergeMode.UseFirst, Addressables.MergeMode.Intersection, Addressables.MergeMode.Union)]Addressables.MergeMode mode)
+        public IEnumerator GetResourceLocationsMergeModesFailsWithNoKeys([Values(Addressables.MergeMode.UseFirst, Addressables.MergeMode.Intersection, Addressables.MergeMode.Union)]Addressables.MergeMode mode)
         {
             yield return Init();
 
-            for (int i = 0; i < m_KeysList.Count; i++)
-            {
-                HashSet<IResourceLocation> set1 = new HashSet<IResourceLocation>();
-                HashSet<IResourceLocation> set2 = new HashSet<IResourceLocation>();
-                var key1 = m_KeysList[Random.Range(0, m_KeysList.Count / 2)];
-                var key2 = m_KeysList[Random.Range(m_KeysList.Count / 2, m_KeysList.Count)];
-                var op1 = Addressables.LoadAssets<IResourceLocation>(key1, op => set1.Add(op.Result));
-                var op2 = Addressables.LoadAssets<IResourceLocation>(key2, op => set2.Add(op.Result));
-                yield return op1;
-                yield return op2;
-                List<object> keys = new List<object>();
-                keys.Add(key1);
-                keys.Add(key2);
-                var op3 = Addressables.LoadAssets<IResourceLocation>(keys, op => { Assert.IsNotNull(op.Result); Assert.AreEqual(keys, op.Key); }, mode);
-                yield return op3;
-                Assert.NotNull(op3.Result);
-                switch (mode)
-                {
-                    case Addressables.MergeMode.UseFirst:
-                        break;
-                    case Addressables.MergeMode.Intersection:
-                        set1.IntersectWith(set2);
-                        break;
-                    case Addressables.MergeMode.Union:
-                        set1.UnionWith(set2);
-                        break;
-                }
-                Assert.AreEqual(op3.Result.Count, set1.Count);
-                var res = new List<IResourceLocation>(set1);
-                for (int r = 0; r < res.Count; r++)
-                    Assert.AreSame(res[r], op3.Result[r]);
-            }
-            yield return Complete();
+            IList<IResourceLocation> results;
+            var ret = m_Addressables.GetResourceLocations(new object[] { }, mode, out results);
+            Assert.IsFalse(ret);
+            Assert.IsNull(results);
         }
 
-
         [UnityTest]
-        public IEnumerator CanLoadAssetsWithMultipleKeysMerged([Values(Addressables.MergeMode.UseFirst, Addressables.MergeMode.Intersection, Addressables.MergeMode.Union)]Addressables.MergeMode mode)
+        public IEnumerator GetResourceLocationsMergeModesSucceedsWithSingleKey([Values(Addressables.MergeMode.UseFirst, Addressables.MergeMode.Intersection, Addressables.MergeMode.Union)]Addressables.MergeMode mode)
         {
             yield return Init();
-            int loaded = 0;
-            var assets = new List<Object>();
-            int loadCount = 0;
-            for (int i = 0; i < m_KeysList.Count; i++)
-            {
-                List<object> keys = new List<object>(new[] { m_KeysList[Random.Range(0, m_KeysList.Count / 2)], m_KeysList[Random.Range(m_KeysList.Count / 2, m_KeysList.Count)] });
-                var op3 = Addressables.LoadAssets<Object>(keys, op => { Assert.IsNotNull(op.Result); assets.Add(op.Result); }, mode);
-                yield return op3;
-                Assert.NotNull(op3.Result);
-                loadCount++;
-                Addressables.LoadAssets<IResourceLocation>(keys, op => Assert.IsNotNull(op.Result), mode).Completed += checkOp =>
-                {
-                    loaded++;
-                    Assert.AreEqual(op3.Result.Count, checkOp.Result.Count);
-                };
-            }
-            while (loaded < loadCount)
-                yield return null;
-            foreach (var a in assets)
-                Addressables.ReleaseAsset(a);
-            yield return Complete();
+
+            IList<IResourceLocation> results;
+            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, mode, out results);
+            Assert.IsTrue(ret);
+            Assert.NotNull(results);
+            Assert.GreaterOrEqual(results.Count, 1);
+        }
+
+        [UnityTest]
+        public IEnumerator GetResourceLocationsMergeModeUnionSucceedsWithValidKeys()
+        {
+            yield return Init();
+
+            IList<IResourceLocation> results;
+            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsTrue(ret);
+            Assert.NotNull(results);
+            Assert.GreaterOrEqual(results.Count, 1);
+            var evenCount = results.Count;
+
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsTrue(ret);
+            Assert.NotNull(results);
+            Assert.GreaterOrEqual(results.Count, 1);
+            var oddCount = results.Count;
+
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE" }, Addressables.MergeMode.Union, out results);
+            Assert.IsTrue(ret);
+            Assert.NotNull(results);
+            Assert.GreaterOrEqual(results.Count, 1);
+            Assert.AreEqual(oddCount + evenCount, results.Count);
+        }
+
+        [UnityTest]
+        public IEnumerator GetResourceLocationsMergeModeUnionSucceedsWithInvalidKeys()
+        {
+            yield return Init();
+
+            IList<IResourceLocation> results;
+            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsTrue(ret);
+            Assert.NotNull(results);
+            Assert.GreaterOrEqual(results.Count, 1);
+            var evenCount = results.Count;
+
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsTrue(ret);
+            Assert.NotNull(results);
+            Assert.GreaterOrEqual(results.Count, 1);
+            var oddCount = results.Count;
+
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE", "INVALIDKEY" }, Addressables.MergeMode.Union, out results);
+            Assert.IsTrue(ret);
+            Assert.NotNull(results);
+            Assert.GreaterOrEqual(results.Count, 1);
+            Assert.AreEqual(oddCount + evenCount, results.Count);
+        }
+
+
+
+        [UnityTest]
+        public IEnumerator GetResourceLocationsMergeModeIntersectionFailsIfNoResultsDueToIntersection()
+        {
+            yield return Init();
+           
+            IList<IResourceLocation> results;
+            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsTrue(ret);
+            Assert.NotNull(results);
+            Assert.GreaterOrEqual(results.Count, 1);
+
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsTrue(ret);
+            Assert.NotNull(results);
+            Assert.GreaterOrEqual(results.Count, 1);
+
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsFalse(ret);
+            Assert.IsNull(results);
         }
 
 
         [UnityTest]
-        public IEnumerator CanDestroyNonAddressable()
+        public IEnumerator GetResourceLocationsMergeModeIntersectionFailsIfNoResultsDueToInvalidKey()
+        {
+            yield return Init();
+
+            IList<IResourceLocation> results;
+            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsTrue(ret);
+            Assert.NotNull(results);
+            Assert.GreaterOrEqual(results.Count, 1);
+
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsTrue(ret);
+            Assert.NotNull(results);
+            Assert.GreaterOrEqual(results.Count, 1);
+
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE", "INVALIDKEY" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsFalse(ret);
+            Assert.IsNull(results);
+
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "INVALIDKEY" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsFalse(ret);
+            Assert.IsNull(results);
+
+            ret = m_Addressables.GetResourceLocations(new object[] { "INVALIDKEY" }, Addressables.MergeMode.Intersection, out results);
+            Assert.IsFalse(ret);
+            Assert.IsNull(results);
+        }
+
+        [UnityTest]
+        public IEnumerator CanLoadAssetsWithMultipleKeysMerged()
+        {
+            yield return Init();
+            List<object> keys = new List<object>() { AddressablesTestUtility.GetPrefabLabel("BASE"), AddressablesTestUtility.GetPrefabUniqueLabel("BASE", 0) };
+            AsyncOperationHandle<IList<GameObject>> gop = m_Addressables.LoadAssets<GameObject>(keys, null, Addressables.MergeMode.Intersection);
+            while (!gop.IsDone)
+                yield return null;
+            Assert.IsTrue(gop.IsDone);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, gop.Status);
+            Assert.NotNull(gop.Result);
+            Assert.AreEqual(1, gop.Result.Count);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, gop.Status);
+            m_Addressables.Release(gop);
+        }
+
+        [UnityTest]
+        public IEnumerator Release_WhenObjectIsUnknown_LogsErrorAndDoesNotDestroy()
         {
             yield return Init();
             GameObject go = Object.Instantiate(GameObject.CreatePrimitive(PrimitiveType.Cube));
             go.name = "TestCube";
 
-            Addressables.ReleaseInstance(go);
+            m_Addressables.Release(go);
+            LogAssert.Expect(LogType.Error, new Regex("Addressables.Release was called on.*"));
+            yield return null;
+
+            GameObject foundObj = GameObject.Find("TestCube");
+            Assert.IsNotNull(foundObj);
+            Object.Destroy(foundObj);
+        }
+
+        [UnityTest]
+        public IEnumerator ReleaseInstance_WhenObjectIsUnknown_LogsErrorAndDestroys()
+        {
+            yield return Init();
+            GameObject go = Object.Instantiate(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            go.name = "TestCube";
+
+            m_Addressables.ReleaseInstance(go);
+            LogAssert.Expect(LogType.Warning, new Regex("Addressables.ReleaseInstance was called on.*"));
             yield return null;
 
             GameObject foundObj = GameObject.Find("TestCube");
             Assert.IsNull(foundObj);
-            yield return Complete();
         }
 
         [UnityTest]
-        public IEnumerator CanLoadAssetWithCallback()
+        public IEnumerator LoadAsset_WhenEntryExists_ReturnsAsset()
         {
             yield return Init();
-            int loaded = 0;
-            int loadCount = 0;
-            var assets = new List<object>();
-            foreach (var key in m_KeysList)
-            {
-                loadCount++;
-                Addressables.LoadAsset<object>(key).Completed += op =>
-                {
-                    loaded++;
-                    Assert.IsNotNull(op.Result);
-                    assets.Add(op.Result);
-                };
-            }
-            while (loaded < loadCount)
-                yield return null;
-            foreach (var a in assets)
-                Addressables.ReleaseAsset(a);
-            yield return Complete();
+            string label = AddressablesTestUtility.GetPrefabUniqueLabel("BASE", 0);
+            AsyncOperationHandle<GameObject> op = m_Addressables.LoadAsset<GameObject>(label);
+            yield return op;
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
+            Assert.IsTrue(op.Result != null);
+            op.Release();
         }
-        
-        [UnityTest]
-        public IEnumerator CanLoadAssetFromExtraCatalogs()
-        {
-            yield return Init();
-            int loaded = 0;
-            int loadCount = 0;
-            var assets = new List<object>();
-            foreach (var key in m_KeysList)
-            {
-                if (key.GetType() == typeof(string) && (key as string).EndsWith("EXTRA"))
-                {
-                    loadCount++;
-                    Addressables.LoadAsset<object>(key).Completed += op =>
-                    {
-                        loaded++;
-                        Assert.IsNotNull(op.Result);
-                        assets.Add(op.Result);
-                    };
-                }
-            }
-            while (loaded < loadCount)
-                yield return null;
-            foreach (var a in assets)
-                Addressables.ReleaseAsset(a);
-            yield return Complete();
-        }
-        
 
         [UnityTest]
-        public IEnumerator KeyIsPassedThroughAsyncOperation()
+        public IEnumerator LoadAsset_WhenEntryDoesNotExist_OperationFails()
         {
             yield return Init();
-            object asset = null;
-            Addressables.LoadAsset<object>(m_KeysList[0]).Completed += op =>
+            AsyncOperationHandle<GameObject> op = m_Addressables.LoadAsset<GameObject>("unknownlabel");
+            yield return op;
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
+            Assert.IsTrue(op.Result == null);
+            op.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator LoadAsset_CanReleaseThroughAddressablesInCallback([Values(true, false)]bool addressableRelease)
+        {
+            yield return Init();
+            var op = m_Addressables.LoadAsset<object>(m_PrefabKeysList[0]);
+            op.Completed += x =>
             {
-                Assert.IsNotNull(op.Result);
-                Assert.AreEqual(m_KeysList[0], op.Key);
-                asset = op.Result;
+                Assert.IsNotNull(x.Result);
+                if (addressableRelease)
+                    m_Addressables.Release(x.Result);
+                else
+                    op.Release();
             };
-
-            while (asset == null)
-                yield return null;
-            Addressables.ReleaseAsset(asset);
-            yield return Complete();
+            yield return op;
         }
 
         [UnityTest]
-        public IEnumerator CanReleaseInCallback()
+        public IEnumerator LoadAsset_WhenPrefabLoadedAsMultipleTypes_ResultIsEqual()
         {
             yield return Init();
-            int loaded = 0;
-            int loadCount = 0;
 
-            bool complete = false;
-            loadCount++;
-            Addressables.LoadAsset<object>(m_KeysList[0]).Completed += op =>
-            {
-                loaded++;
-                Assert.IsNotNull(op.Result);
-                Addressables.ReleaseAsset(op.Result);
-                complete = true;
-            };
-            while (loaded < loadCount)
-                yield return null;
-            while (!complete)
-                yield return null;
-            yield return Complete();
+            string label = AddressablesTestUtility.GetPrefabUniqueLabel("BASE", 0);
+            AsyncOperationHandle<object> op1 = m_Addressables.LoadAsset<object>(label);
+            AsyncOperationHandle<GameObject> op2 = m_Addressables.LoadAsset<GameObject>(label);
+            yield return op1;
+            yield return op2;
+            Assert.AreEqual(op1.Result, op2.Result);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op1.Status);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op2.Status);
+            op1.Release();
+            op2.Release();
         }
 
         [UnityTest]
-        public IEnumerator CanLoadAssetsWithMultipleTypes()
+        public IEnumerator LoadAssets_InvokesCallbackPerAsset()
         {
             yield return Init();
-            int loaded = 0;
-            int loadCount = 0;
-            var assets = new List<object>();
-            foreach (var key in m_KeysList)
-            {
-                loadCount++;
-                Addressables.LoadAssets<object>(key, a => { Assert.IsNotNull(a.Result); assets.Add(a.Result); }).Completed += op =>
-                {
-                    loaded++;
-                    Assert.IsNotNull(op.Result);
-                    foreach (var a in op.Result)
-                        Assert.IsNotNull(a);
-                };
-            }
-            while (loaded < loadCount)
-                yield return null;
-
-            var gameObjects = new List<GameObject>();
-            foreach (var key in m_KeysList)
-            {
-                loadCount++;
-                Addressables.LoadAssets<GameObject>(key, a => { Assert.IsNotNull(a.Result); gameObjects.Add(a.Result); }).Completed += op =>
-                {
-                    loaded++;
-                    Assert.IsNotNull(op.Result);
-                    foreach (var a in op.Result)
-                        Assert.IsNotNull(a);
-                };
-            }
-            while (loaded < loadCount)
-                yield return null;
-
-            foreach (var a in gameObjects)
-                Addressables.ReleaseAsset(a);
-            foreach (var a in assets)
-                Addressables.ReleaseAsset(a);
-            yield return Complete();
+            string label = AddressablesTestUtility.GetPrefabLabel("BASE");
+            HashSet<GameObject> ops = new HashSet<GameObject>();
+            var gop = m_Addressables.LoadAssets<GameObject>(label, x => { ops.Add(x); });
+            yield return gop;
+            Assert.AreEqual(AddressablesTestUtility.kPrefabCount, ops.Count);
+            for (int i = 0; i < ops.Count; i++)
+                Assert.IsTrue(ops.Contains(gop.Result[i]));
+            gop.Release();
         }
 
+
+        // TODO: this doesn't actually check that something was downloaded. It is more: can load dependencies. 
+        // We really need to address the downloading feature
         [UnityTest]
-        public IEnumerator CanLoadAssetsWithCallback()
+        public IEnumerator DownloadDependnecies_CanDownloadDependencies()
         {
             yield return Init();
-            int loaded = 0;
-            int loadCount = 0;
-            var assets = new List<object>();
-            foreach (var key in m_KeysList)
-            {
-                loadCount++;
-                Addressables.LoadAssets<object>(key, a => { Assert.IsNotNull(a.Result); assets.Add(a.Result); }).Completed += op =>
-                {
-                    loaded++;
-                    Assert.IsNotNull(op.Result);
-                    foreach (var a in op.Result)
-                        Assert.IsNotNull(a);
-                };
-            }
-            while (loaded < loadCount)
-                yield return null;
-            foreach (var a in assets)
-                Addressables.ReleaseAsset(a);
-            yield return Complete();
+            string label = AddressablesTestUtility.GetPrefabLabel("BASE");
+            AsyncOperationHandle op = m_Addressables.DownloadDependencies(label);
+            yield return op;
+            op.Release();
         }
-
-
-        [UnityTest]
-        public IEnumerator CanLoadPreloadDependenciesForSingleKey()
-        {
-            yield return Init();
-            int loaded = 0;
-            int loadCount = 0;
-            foreach (var key in m_KeysList)
-            {
-                loadCount++;
-                Addressables.DownloadDependencies(key).Completed += op =>
-                {
-                    loaded++;
-                    Assert.IsTrue(op.IsDone);
-                    Assert.IsTrue(op.IsValid);
-                    Assert.IsNull(op.OperationException);
-                };
-            }
-
-            while (loaded < loadCount)
-                yield return null;
-            yield return Complete();
-        }
-
-        [UnityTest]
-        public IEnumerator CanLoadPreloadDependenciesForMutlipleKeys([Values(Addressables.MergeMode.UseFirst, Addressables.MergeMode.Intersection, Addressables.MergeMode.Union)]Addressables.MergeMode mode)
-        {
-            yield return Init();
-            int loaded = 0;
-            int loadCount = 0;
-            for (int i = 0; i < m_KeysList.Count; i++)
-            {
-                loadCount++;
-                List<object> keys = new List<object>(new[] { m_KeysList[Random.Range(0, m_KeysList.Count / 2)], m_KeysList[Random.Range(m_KeysList.Count / 2, m_KeysList.Count)] });
-                Addressables.DownloadDependencies(keys, mode).Completed += op3 =>
-                {
-                    Assert.IsTrue(op3.IsDone);
-                    Assert.IsTrue(op3.IsValid);
-                    Assert.IsNull(op3.OperationException);
-                    loaded++;
-                };
-            }
-            while (loaded < loadCount)
-                yield return null;
-            yield return Complete();
-        }
-
 
         [UnityTest]
         public IEnumerator StressInstantiation()
         {
             yield return Init();
+
+            // TODO: move this safety check to test fixture base
             var objs = SceneManager.GetActiveScene().GetRootGameObjects();
             foreach (var r in objs)
                 Assert.False(r.name.EndsWith("(Clone)"), "All instances from previous test were not cleaned up");
 
-            int loaded = 0;
-            int loadCount = 0;
+            var ops = new List<AsyncOperationHandle<GameObject>>();
             for (int i = 0; i < 50; i++)
             {
-                loadCount++;
-                var key = m_KeysList[Random.Range(0, m_KeysList.Count)];
-                Addressables.Instantiate(key, new InstantiationParameters(null, true)).Completed += op =>
-                {
-                    Assert.IsNotNull(op.Result);
-                    DelayedActionManager.AddAction((System.Action<GameObject, float>)Addressables.ReleaseInstance, Random.Range(.25f, .5f), op.Result, 0);
-                    loaded++;
-                };
-
-                if (Random.Range(0, 100) > 20)
-                    yield return null;
+                var key = m_PrefabKeysList[i % m_PrefabKeysList.Count];
+                ops.Add(m_Addressables.Instantiate(key));
             }
 
-            while (loaded < loadCount)
-                yield return null;
+            foreach(AsyncOperationHandle<GameObject> op in ops)
+                yield return op;
 
-            while (DelayedActionManager.IsActive)
-                yield return null;
+            foreach (AsyncOperationHandle<GameObject> op in ops)
+                m_Addressables.ReleaseInstance(op.Result);
+
+            yield return null;
 
             objs = SceneManager.GetActiveScene().GetRootGameObjects();
             foreach (var r in objs)
                 Assert.False(r.name.EndsWith("(Clone)"), "All instances from this test were not cleaned up");
-
-
-            yield return Complete();
         }
 
-
-        private const string SceneName = "DontDestroyOnLoadScene";
-        private Scene _scene;
         [UnityTest]
-        public IEnumerator DontDestroyOnLoad_DoesntDestroyAddressablesAssets()
+        public IEnumerator CanUnloadAssetReference_WithAddressables()
         {
             yield return Init();
-            string cloneName = Path.GetFileNameWithoutExtension(m_KeysList[0].ToString()) + "(Clone)";
 
-            var async = Addressables.Instantiate(m_KeysList[0]);
-            async.Completed += Async_Completed;
+            AsyncOperationHandle handle = m_Addressables.Instantiate(AssetReferenceObjectKey);
+            yield return handle;
+            Assert.IsNotNull(handle.Result as GameObject);
+            AssetReferenceTestBehavior behavior =
+                (handle.Result as GameObject).GetComponent<AssetReferenceTestBehavior>();
+            AsyncOperationHandle<GameObject> assetRefHandle = m_Addressables.Instantiate(behavior.Reference);
+            yield return assetRefHandle;
+            Assert.IsNotNull(assetRefHandle.Result);
 
-            yield return async;
+            string name = assetRefHandle.Result.name;
+            Assert.IsNotNull(GameObject.Find(name));
 
-            GameObject go = GameObject.Find(cloneName);
-            Assert.IsNotNull(go);
+            m_Addressables.ReleaseInstance(assetRefHandle.Result);
+            yield return null;
+            Assert.IsNull(GameObject.Find(name));
 
-            yield return SceneManager.UnloadSceneAsync(_scene);
-            yield return new WaitForSeconds(1.0f);
-
-            go = GameObject.Find(cloneName);
-            Assert.IsNotNull(go);
-
-            Addressables.ReleaseInstance(async.Result);
-            yield return Complete();
+            handle.Release();
         }
 
-        private void Async_Completed(IAsyncOperation<GameObject> obj)
+        [UnityTest]
+        public IEnumerator RuntimeKeyIsValid_ReturnsTrueForValidKeys()
         {
-            _scene = SceneManager.CreateScene(SceneName);
-            Scene oldScene = obj.Result.scene;
-            SceneManager.MoveGameObjectToScene(obj.Result, _scene);
-            Addressables.RecordInstanceSceneChange(obj.Result, oldScene, obj.Result.scene);
+            yield return Init();
 
-            Object.DontDestroyOnLoad(obj.Result);
+            AsyncOperationHandle handle = m_Addressables.Instantiate(AssetReferenceObjectKey);
+            yield return handle;
+            Assert.IsNotNull(handle.Result as GameObject);
+            AssetReferenceTestBehavior behavior =
+                (handle.Result as GameObject).GetComponent<AssetReferenceTestBehavior>();
+
+            Assert.IsTrue((behavior.Reference as IKeyEvaluator).RuntimeKeyIsValid());
+            Assert.IsTrue((behavior.LabelReference as IKeyEvaluator).RuntimeKeyIsValid());
+
+            handle.Release();
         }
+
+        [UnityTest]
+        public IEnumerator RuntimeKeyIsValid_ReturnsFalseForInValidKeys()
+        {
+            yield return Init();
+
+            AsyncOperationHandle handle = m_Addressables.Instantiate(AssetReferenceObjectKey);
+            yield return handle;
+            Assert.IsNotNull(handle.Result as GameObject);
+            AssetReferenceTestBehavior behavior =
+                (handle.Result as GameObject).GetComponent<AssetReferenceTestBehavior>();
+
+            Assert.IsFalse((behavior.InValidAssetReference as IKeyEvaluator).RuntimeKeyIsValid());
+            Assert.IsFalse((behavior.InvalidLabelReference as IKeyEvaluator).RuntimeKeyIsValid());
+
+            handle.Release();
+        }
+
+        string CreateFakeCachedBundle(string bundleName, string hash)
+        {
+            string fakeCachePath = string.Format("{0}/{1}/{2}", Caching.defaultCache.path, bundleName, hash);
+            Directory.CreateDirectory(fakeCachePath);
+            var dataFile = File.Create(Path.Combine(fakeCachePath, "__data"));
+            var infoFile = File.Create(Path.Combine(fakeCachePath, "__info"));
+
+            byte[] info = new UTF8Encoding(true).GetBytes(
+@"-1
+1554740658
+1
+__data");
+            infoFile.Write(info, 0, info.Length);
+
+            dataFile.Dispose();
+            infoFile.Dispose();
+
+            return fakeCachePath;
+        }
+#if ENABLE_SCENE_TESTS
+        [UnityTest]
+        public IEnumerator CanLoadSceneAdditively()
+        {
+            yield return Init();
+            var op = m_Addressables.LoadScene(m_SceneKeysList[0], LoadSceneMode.Additive);
+            yield return op;
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
+            var unloadOp = m_Addressables.UnloadScene(op);
+            yield return unloadOp;
+        }
+
+        [UnityTest]
+        public IEnumerator WhenSceneUnloaded_InstanitatedObjectsAreCleanedUp()
+        {
+            yield return Init();
+            var op = m_Addressables.LoadScene(m_SceneKeysList[0], LoadSceneMode.Additive);
+            yield return op;
+
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
+            SceneManager.SetActiveScene(op.Result.Scene);
+            var instOp = m_Addressables.Instantiate(m_PrefabKeysList[0]);
+            yield return instOp;
+
+            var unloadOp = m_Addressables.UnloadScene(op);
+            yield return unloadOp;
+        }
+
+        [UnityTest]
+        public IEnumerator WhenSceneUnloadedNotUsingAddressables_InstanitatedObjectsAreCleanedUp()
+        {
+            yield return Init();
+            var op = m_Addressables.LoadScene(m_SceneKeysList[0], LoadSceneMode.Additive);
+            yield return op;
+
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
+            SceneManager.SetActiveScene(op.Result.Scene);
+            var instOp = m_Addressables.Instantiate(m_PrefabKeysList[0]);
+            yield return instOp;
+            var unloadOp = SceneManager.UnloadSceneAsync(op.Result.Scene);
+            while (!unloadOp.isDone)
+                yield return null;
+        }
+
+#endif
     }
 }

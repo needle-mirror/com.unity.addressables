@@ -5,10 +5,7 @@ using UnityEditor;
 
 namespace UnityEngine.ResourceManagement.Util
 {
-    /// <summary>
-    /// This object allows for scheduling the invocation of Actions until a specified time has elapsed.  It is used to delay callbacks until the end of the current frame in the case that the callback is assigned when an operation is already complete.
-    /// </summary>
-    public class DelayedActionManager : MonoBehaviour
+    internal class DelayedActionManager : MonoBehaviour
     {
 
         struct DelegateInfo
@@ -69,9 +66,6 @@ namespace UnityEngine.ResourceManagement.Util
             }
             return new LinkedListNode<DelegateInfo>(del);
         }
-        /// <summary>
-        /// Destroy the current object
-        /// </summary>
         public static void Clear()
         {
             if (s_Instance != null)
@@ -84,12 +78,6 @@ namespace UnityEngine.ResourceManagement.Util
             m_DestroyOnCompletion = true;
         }
 
-        /// <summary>
-        /// Schedule an action to execute after a time delay.  If delay is less than or equal 0, the action will wait until the LateUpdate of this object to be invoked.
-        /// </summary>
-        /// <param name="action">The delegate to invoke.</param>
-        /// <param name="delay">Time delay to wait until invocation.  If less than or equal to 0, the action will be invoked during the LateUpdate call of the current frame.</param>
-        /// <param name="parameters">The parameters to be passed to the action when invoked.</param>
         public static void AddAction(Delegate action, float delay = 0, params object[] parameters)
         {
             if (s_Instance == null)
@@ -138,9 +126,6 @@ namespace UnityEngine.ResourceManagement.Util
             DontDestroyOnLoad(gameObject);
         }
 
-        /// <summary>
-        /// Returns whether the DelayedActionManager is created and has pending actions to run.
-        /// </summary>
         public static bool IsActive
         {
             get
@@ -156,11 +141,6 @@ namespace UnityEngine.ResourceManagement.Util
             }
         }
 
-        /// <summary>
-        /// Force the update loop to run until it is not active
-        /// </summary>
-        /// <param name="timeout">Optional timeout value in seconds.</param>
-        /// <returns>True if the DelayedActionManager is not active, False if the timeout is hit.</returns>
         public static bool Wait(float timeout = 0, float timeAdvanceAmount = 0)
         {
             if (!IsActive)

@@ -13,21 +13,20 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         {
             public GUIContent Content { get; private set; }
             public EventDataSet Entry { get; private set; }
-            public DataStreamEntry(EventDataSet dataSet, int depth) : base(dataSet.EventName.GetHashCode(), depth, dataSet.EventName)
+            public DataStreamEntry(EventDataSet dataSet, int depth) : base(dataSet.ObjectId, depth, dataSet.DisplayName)
             {
                 Entry = dataSet;
-                Content = new GUIContent(dataSet.EventName);
+                Content = new GUIContent(dataSet.DisplayName);
             }
         }
         Dictionary<int, bool> m_MaximizedState = new Dictionary<int, bool>();
         Func<string, bool> m_FilterFunc;
         IComparer<EventDataSet> m_DataSetComparer;
-        EventDataPlayerSession m_Data;
         Material m_GraphMaterial;
         Dictionary<string, GraphDefinition> m_GraphDefinitions = new Dictionary<string, GraphDefinition>();
         GUIContent m_PlusGUIContent = new GUIContent("+", "Expand");
         GUIContent m_MinusGUIContent = new GUIContent("-", "Collapse");
-
+        Func<EventDataSet> m_GetRootDataSetAction;
 
         float m_LastReloadTime;
         int m_InspectFrame = -1;
@@ -43,12 +42,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             }
         }
 
-        internal EventGraphListView(EventDataPlayerSession data, TreeViewState tvs, MultiColumnHeaderState mchs, Func<string, bool> filter, IComparer<EventDataSet> dsComparer) : base(tvs, new MultiColumnHeader(mchs))
+        internal EventGraphListView(Func<EventDataSet> dsFunc,  TreeViewState tvs, MultiColumnHeaderState mchs, Func<string, bool> filter, IComparer<EventDataSet> dsComparer) : base(tvs, new MultiColumnHeader(mchs))
         {
+            m_GetRootDataSetAction = dsFunc;
             showBorder = true;
             visibleStartTime = 0;
             visibleDuration = 300;
-            m_Data = data;
             m_DataSetComparer = dsComparer;
             m_FilterFunc = filter;
             columnIndexForTreeFoldouts = 1;
@@ -56,7 +55,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
         protected override TreeViewItem BuildRoot()
         {
-            return AddItems(new DataStreamEntry(m_Data.RootStreamEntry, -1));
+            var rootDS = m_GetRootDataSetAction();
+            if (rootDS == null)
+                return new TreeViewItem();
+            return AddItems(new DataStreamEntry(rootDS, -1));
         }
 
         DataStreamEntry AddItems(DataStreamEntry root)
@@ -94,20 +96,23 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             return IsItemMaximized(item.id) ? 100 : base.GetCustomRowHeight(row, item);
         }
 
-        public void DrawGraphs(Rect rect, int inspectFrame)
+        public void DrawGraphs(Rect rect, EventDataPlayerSession data, int inspectFrame)
         {
             EditorGUI.DrawRect(GraphRect, GraphColors.WindowBackground);
-            m_InspectFrame = inspectFrame;
-            if (Event.current.type == EventType.Repaint)
-                multiColumnHeader.state.columns[2].width = rect.width - (multiColumnHeader.state.columns[1].width + multiColumnHeader.state.columns[0].width + 20);
-
-            visibleDuration = Mathf.Max(300, (int)(multiColumnHeader.state.columns[2].width));
-            if (m_Data.IsActive)
-                visibleStartTime = m_Data.LatestFrame - visibleDuration;
-            if (Time.unscaledTime - m_LastReloadTime > 1 && EditorApplication.isPlaying)
+            if (data != null)
             {
-                Reload();
-                m_LastReloadTime = Time.unscaledTime;
+                m_InspectFrame = inspectFrame;
+                if (Event.current.type == EventType.Repaint)
+                    multiColumnHeader.state.columns[2].width = rect.width - (multiColumnHeader.state.columns[1].width + multiColumnHeader.state.columns[0].width + 20);
+
+                visibleDuration = Mathf.Max(300, (int)(multiColumnHeader.state.columns[2].width));
+                if (data.IsActive)
+                    visibleStartTime = data.LatestFrame - visibleDuration;
+                if (Time.unscaledTime - m_LastReloadTime > 1 && (EditorApplication.isPlaying || data.PlayerId != 0))
+                {
+                    Reload();
+                    m_LastReloadTime = Time.unscaledTime;
+                }
             }
             base.OnGUI(rect);
         }
