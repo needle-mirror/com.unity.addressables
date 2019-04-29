@@ -98,7 +98,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
             }
         }
-        
+
         /// <summary>
         /// Adds the AddressableAssetGroupSchema of type to the template.
         /// </summary>
@@ -117,39 +117,39 @@ namespace UnityEditor.AddressableAssets.Settings
                 Debug.LogWarningFormat("Invalid Schema type {0}. Schemas must inherit from AddressableAssetGroupSchema.", type.FullName);
                 return false;
             }
-            
-            foreach( AddressableAssetGroupSchema schemaObject in m_SchemaObjects )
+
+            foreach (AddressableAssetGroupSchema schemaObject in m_SchemaObjects)
             {
-                if( schemaObject.GetType() == type )
+                if (schemaObject.GetType() == type)
                 {
-                    Debug.LogError( "Scheme already exists" );
+                    Debug.LogError("Scheme already exists");
                     return false;
                 }
             }
 
-            AddressableAssetGroupSchema schemaInstance = (AddressableAssetGroupSchema)CreateInstance( type );
-            if( schemaInstance != null )
+            AddressableAssetGroupSchema schemaInstance = (AddressableAssetGroupSchema)CreateInstance(type);
+            if (schemaInstance != null)
             {
                 schemaInstance.name = type.Name;
                 try
                 {
                     schemaInstance.hideFlags |= HideFlags.HideInHierarchy;
-                    AssetDatabase.AddObjectToAsset( schemaInstance, this );
+                    AssetDatabase.AddObjectToAsset(schemaInstance, this);
                 }
-                catch( Exception e )
+                catch (Exception e)
                 {
-                    Console.WriteLine( e );
+                    Console.WriteLine(e);
                     throw;
                 }
-                m_SchemaObjects.Add( schemaInstance );
-                
+                m_SchemaObjects.Add(schemaInstance);
+
                 SetDirty(AddressableAssetSettings.ModificationEvent.GroupTemplateSchemaAdded, this, postEvent);
                 AssetDatabase.SaveAssets();
             }
 
             return schemaInstance != null;
         }
-        
+
         /// <summary>
         /// Removes the AddressableAssetGroupSchema of the type from the template.
         /// </summary>

@@ -47,10 +47,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             EditorConnection.instance.RegisterDisconnection(OnPlayerDisconnection);
 
             m_LastEventListUpdate = 0;
-            m_PrevFrameIcon = EditorGUIUtility.IconContent("Profiler.PrevFrame", "|Go back one frame");
+            m_PrevFrameIcon = EditorGUIUtility.IconContent("Profiler.PrevFrame", "|Go one frame backwards");
             m_NextFrameIcon = EditorGUIUtility.IconContent("Profiler.NextFrame", "|Go one frame forwards");
             EditorApplication.playModeStateChanged += OnEditorPlayModeChanged;
             RegisterEventHandler(true);
+            if (m_EventData == null)
+                m_EventData = new EventDataPlayerSessionCollection(OnRecordEvent);
+            m_EventData.GetPlayerSession(0, true).IsActive = true;
         }
 
         void OnDisable()
@@ -108,9 +111,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
         public int Compare(EventDataSet x, EventDataSet y)
         {
-            var vx = x.Graph == "EventCount" ? -1000 : (x.Graph == "InstantiationCount" ? -500 : x.FirstSampleFrame);
-            var vy = y.Graph == "EventCount" ? -1000 : (y.Graph == "InstantiationCount" ? -500 : y.FirstSampleFrame);
-            return vx - vy;
+            return x.CompareTo(y);
         }
 
         protected virtual bool CanHandleEvent(string graph)
@@ -126,7 +127,9 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         {
             if (state == PlayModeStateChange.EnteredPlayMode)
             {
-                m_EventData = null;
+                m_EventData = new EventDataPlayerSessionCollection(OnRecordEvent);
+                m_EventData.GetPlayerSession(0, true).IsActive = true;
+
                 m_LastEventListUpdate = 0;
                 m_InspectFrame = -1;
                 m_LatestFrame = -1;
@@ -306,10 +309,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                     m_GraphList.Reload();
                 RegisterEventHandler(true);
             }
+            
+            /*
             if (GUILayout.Button("Load", EditorStyles.toolbarButton))
                 EditorUtility.DisplayDialog("Feature not implemented", "Saving and loading profile data is not yet supported", "Close");
             if (GUILayout.Button("Save", EditorStyles.toolbarButton))
                 EditorUtility.DisplayDialog("Feature not implemented", "Saving and loading profile data is not yet supported", "Close");
+             */
 
             GUILayout.FlexibleSpace();
             GUILayout.Label(m_InspectFrame == m_LatestFrame ? "Frame:     " : "Frame: " + m_InspectFrame + "/" + m_LatestFrame, EditorStyles.miniLabel);

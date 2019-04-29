@@ -9,13 +9,18 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
     [Serializable]
     class EventDataSet
     {
-        [FormerlySerializedAs("m_streams")]
+        internal const int kFPSSortOrder = -100;
+        internal const int kMonoHeapSortOrder = -99;
+        internal const int kEventCountSortOrder = -98;
+        internal const int kInstanceCountSortOrder = -97;
+
         [SerializeField]
         List<EventDataSetStream> m_Streams = new List<EventDataSetStream>();
         int m_FirstSampleFrame = int.MaxValue;
         int m_ObjectId;
         string m_DisplayName;
         string m_Graph;
+        int m_SortOrder = 0;
         public int ObjectId { get { return m_ObjectId; } }
         public string DisplayName { get { return m_DisplayName; }  set { m_DisplayName = value; } }
         public string Graph { get { return m_Graph; } }
@@ -24,8 +29,9 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         internal int FirstSampleFrame { get { return m_FirstSampleFrame; } }
         Dictionary<int, EventDataSet> m_Children;
         internal EventDataSet() { }
-        internal EventDataSet(int id, string graph, string displayName)
+        internal EventDataSet(int id, string graph, string displayName, int sortOrder)
         {
+            m_SortOrder = sortOrder;
             m_ObjectId = id;
             m_Graph = graph;
             m_DisplayName = displayName;
@@ -39,8 +45,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             m_ObjectId = evt.ObjectId;
             m_DisplayName = evt.DisplayName;
             m_Graph = evt.Graph;
+            if (m_DisplayName == "MonoHeap")
+                m_SortOrder = kMonoHeapSortOrder;
+            else if (m_DisplayName == "FPS")
+                m_SortOrder = kFPSSortOrder;
         }
-        
+
         internal bool HasDataAfterFrame(int frame)
         {
             foreach (var s in m_Streams)
@@ -53,6 +63,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
                         return true;
             }
             return false;
+        }
+
+        internal int CompareTo(EventDataSet other)
+        {
+            var x = m_SortOrder < 0 ? m_SortOrder : FirstSampleFrame;
+            var y = other.m_SortOrder < 0 ? other.m_SortOrder : other.FirstSampleFrame;
+            return x - y;
         }
 
         internal void AddSample(int stream, int frame, int val)

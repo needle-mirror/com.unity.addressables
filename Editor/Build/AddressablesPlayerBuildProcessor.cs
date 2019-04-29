@@ -15,14 +15,21 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
     {
         string addressablesStreamingAssets =
             Application.streamingAssetsPath + "/" + Addressables.StreamingAssetsSubFolder;
-        if(Directory.Exists(Addressables.PlayerBuildDataPath))
+        if (Directory.Exists(Addressables.PlayerBuildDataPath))
+        {
+            Debug.Log(string.Format("Deleting Addressables data from {0}.", Addressables.PlayerBuildDataPath));
             Directory.Delete(Addressables.PlayerBuildDataPath, true);
-        if(Directory.GetFiles(addressablesStreamingAssets).Length == 0)
+        }
+
+        if (Directory.GetFiles(addressablesStreamingAssets).Length == 0)
             Directory.Delete(addressablesStreamingAssets);
     }
 
     public void OnPreprocessBuild(BuildReport report)
     {
+        Debug.Log(string.Format(
+            "Copying Addressables data from {0} to {1}.  These copies will be deleted at the end of the build.",
+            Addressables.BuildPath, Addressables.PlayerBuildDataPath));
         DirectoryCopy(Addressables.BuildPath, Addressables.PlayerBuildDataPath, true);
     }
 

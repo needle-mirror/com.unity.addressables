@@ -263,6 +263,20 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator WhenLoadWithInvalidKey_ReturnedOpIsFailed()
+        {
+            yield return Init();
+            List<object> keys = new List<object>() { "INVALID1", "INVALID2" };
+            AsyncOperationHandle<IList<GameObject>> gop = m_Addressables.LoadAssets<GameObject>(keys, null, Addressables.MergeMode.Intersection);
+            while (!gop.IsDone)
+                yield return null;
+            Assert.IsTrue(gop.IsDone);
+            Assert.AreEqual(AsyncOperationStatus.Failed, gop.Status);
+            m_Addressables.Release(gop);
+        }
+
+
+        [UnityTest]
         public IEnumerator CanLoadAssetsWithMultipleKeysMerged()
         {
             yield return Init();

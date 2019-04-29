@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.7.5] - 2019-04-26
+ - Fixed issue with scene loading in the player. If problems persist, please do Build->Clean->All from the Addressables Window. 
+ - Fixed the Addressables Profiler window.  It was occasionally not drawing.
+ - Fixed the return value of LoadAssets when the key is unknown.
+ - Added logging to inform what's going on (copies of data) during a player build.
+ 
 ## [0.7.4] - 2019-04-19
  - Removed support for .NET 3.x as it is deprecated for Unity in general. 
  - Replaced IAsyncOperation with AsyncOperationHandle.

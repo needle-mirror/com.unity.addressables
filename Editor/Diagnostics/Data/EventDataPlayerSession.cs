@@ -9,7 +9,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
     [Serializable]
     class EventDataPlayerSession
     {
-        EventDataSet m_RootStreamEntry = new EventDataSet(0, null, null);
+        EventDataSet m_RootStreamEntry = new EventDataSet(0, null, null, -1);
         string m_EventName;
         int m_PlayerId;
         bool m_IsActive;
@@ -78,7 +78,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
                     {
                         if (m_eventCountDataSet == null)
                         {
-                            m_eventCountDataSet = new EventDataSet(0, "EventCount", "Event Counts");
+                            m_eventCountDataSet = new EventDataSet(0, "EventCount", "Event Counts", EventDataSet.kEventCountSortOrder);
                             RootStreamEntry.AddChild(m_eventCountDataSet);
                         }
                         m_eventCountDataSet.AddSample(0, lastFrameWithEvents, m_FrameEvents[lastFrameWithEvents].Count);
@@ -99,7 +99,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
                         {
                             if (m_instantitationCountDataSet == null)
                             {
-                                m_instantitationCountDataSet = new EventDataSet(1, "InstantiationCount", "Instantiation Counts");
+                                m_instantitationCountDataSet = new EventDataSet(1, "InstantiationCount", "Instantiation Counts", EventDataSet.kInstanceCountSortOrder);
                                 RootStreamEntry.AddChild(m_instantitationCountDataSet);
                             }
                             m_instantitationCountDataSet.AddSample(0, lastInstantiationCountFrame, lastInstantiationCountValue);
@@ -111,14 +111,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
                 }
                 return;
             }
-/*
-            if (evt.Stream == (int)ResourceManager.DiagnosticEventType.AsyncOperationDisplayName)
-            {
-                EventDataSet ds;
-                if(m_dataSets.TryGetValue(evt.ObjectId, out ds))
-                    ds.DisplayName = evt.DisplayName;
-            }
-*/           
+
             //if creation event, create a data set and update all dependecies
             if (!m_dataSets.ContainsKey(evt.ObjectId))
             {

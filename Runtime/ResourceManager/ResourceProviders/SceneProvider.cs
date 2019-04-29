@@ -47,17 +47,16 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
             protected override void Execute()
             {
-                bool loadingFromBundle = true;
-#if UNITY_EDITOR
-                loadingFromBundle = false;
-                if (m_DepOp.IsValid() && m_DepOp.Result.Count > 0)
+                var loadingFromBundle = false;
+                if (m_DepOp.IsValid())
                 {
-                    var depOpHandle = m_DepOp.Result[0];
-                    var abResource = depOpHandle.Result as IAssetBundleResource;
-                    if (abResource != null && abResource.GetAssetBundle() != null)
-                        loadingFromBundle = true;
+                    foreach (var d in m_DepOp.Result)
+                    {
+                        var abResource = d.Result as IAssetBundleResource;
+                        if (abResource != null && abResource.GetAssetBundle() != null)
+                            loadingFromBundle = true;
+                    }
                 }
-#endif
                 m_Inst = InternalLoadScene(m_Location, loadingFromBundle, m_LoadMode, m_ActivateOnLoad, m_Priority);
                 ((IUpdateReceiver)this).Update(0.0f);
             }
@@ -92,7 +91,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
             void IUpdateReceiver.Update(float unscaledDeltaTime)
             {
-                if (m_Inst.m_Operation.isDone || !m_ActivateOnLoad && m_Inst.m_Operation.progress == .9f)
+                if (m_Inst.m_Operation.isDone || (!m_ActivateOnLoad && m_Inst.m_Operation.progress == .9f))
                     Complete(m_Inst, true, null);
             }
         }

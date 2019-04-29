@@ -386,7 +386,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             return m_GroupTemplateObjects[Mathf.Clamp(index, 0, m_GroupTemplateObjects.Count)] as IGroupTemplate;
         }
-        
+
         /// <summary>
         /// Adds a AddressableAssetsGroupTemplate object.
         /// </summary>
@@ -406,7 +406,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 Debug.LogWarning("Group Template objects must inherit from ScriptableObject.");
                 return false;
             }
-        
+
             m_GroupTemplateObjects.Add(so);
             SetDirty(ModificationEvent.GroupTemplateAdded, so, postEvent);
             return true;
@@ -825,22 +825,33 @@ namespace UnityEditor.AddressableAssets.Settings
             HostingServicesManager.OnDisable();
         }
 
+        private string m_DefaultGroupTemplateName = "Packed Assets";
         void Validate()
         {
             // Begin update any SchemaTemplate to GroupTemplateObjects
-            if( m_SchemaTemplates != null && m_SchemaTemplates.Count > 0 )
+            if (m_SchemaTemplates != null && m_SchemaTemplates.Count > 0)
             {
-                for( int i = m_SchemaTemplates.Count - 1; i >= 0; --i )
+                for (int i = m_SchemaTemplates.Count - 1; i >= 0; --i)
                 {
-                    if( CreateAndAddGroupTemplate( m_SchemaTemplates[i].DisplayName, m_SchemaTemplates[i].Description, m_SchemaTemplates[i].GetTypes() ) )
-                        m_SchemaTemplates.RemoveAt( i );
+                    string assetPath = GroupTemplateFolder + "/" + m_SchemaTemplates[i].DisplayName + ".asset";
+                    if (File.Exists(assetPath))
+                    {
+                        if(LoadGroupTemplateObject(this, assetPath))
+                            m_SchemaTemplates.RemoveAt(i);
+                    }
+                    else
+                    {
+                        if (CreateAndAddGroupTemplate(m_SchemaTemplates[i].DisplayName,
+                                m_SchemaTemplates[i].Description, m_SchemaTemplates[i].GetTypes()))
+                            m_SchemaTemplates.RemoveAt(i);
+                    }
                 }
                 m_SchemaTemplates = null;
             }
-            if( m_GroupTemplateObjects.Count == 0 )
-                CreateDefaultGroupTemplate( this );
+            if (m_GroupTemplateObjects.Count == 0)
+                CreateDefaultGroupTemplate(this);
             // End update of SchemaTemplate to GroupTemplates
-            
+
             if (m_BuildSettings == null)
                 m_BuildSettings = new AddressableAssetBuildSettings();
             if (m_ProfileSettings == null)
@@ -918,7 +929,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             return aa;
         }
-        
+
         /// <summary>
         /// Creates a new AddressableAssetGroupTemplate Object with the set of schema types with default settings for use in the editor GUI.
         /// </summary>
@@ -927,6 +938,32 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="types">The schema types for the template.</param>
         /// <returns>True if the template was added, false otherwise.</returns>
         public bool CreateAndAddGroupTemplate(string displayName, string description, params Type[] types)
+        {
+            string assetPath = GroupTemplateFolder + "/" + displayName + ".asset";
+
+            if (!CanCreateGroupTemplate(displayName, assetPath, types))
+                return false;
+
+            if (!Directory.Exists(GroupTemplateFolder))
+                Directory.CreateDirectory(GroupTemplateFolder);
+            
+            AddressableAssetGroupTemplate newAssetGroupTemplate = ScriptableObject.CreateInstance<AddressableAssetGroupTemplate>();
+            newAssetGroupTemplate.Description = description;
+
+            AssetDatabase.CreateAsset(newAssetGroupTemplate, assetPath);
+            AssetDatabase.SaveAssets();
+
+            AddGroupTemplateObject(newAssetGroupTemplate);
+
+            foreach (Type type in types)
+                newAssetGroupTemplate.AddSchema(type);
+
+            
+
+            return true;
+        }
+
+        private bool CanCreateGroupTemplate(string displayName, string assetPath, Type[] types)
         {
             if (string.IsNullOrEmpty(displayName))
             {
@@ -939,7 +976,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             }
             bool typesAreValid = true;
-            for(int i = 0; i < types.Length; i++)
+            for (int i = 0; i < types.Length; i++)
             {
                 var t = types[i];
                 if (t == null)
@@ -959,28 +996,12 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             }
 
-            string assetPath = GroupTemplateFolder + "/" + displayName + ".asset";
-            if( File.Exists( assetPath ) )
+            if (File.Exists(assetPath))
             {
                 Debug.LogWarningFormat("CreateAndAddGroupTemplate - Group template {0} already exists at location {1}.", displayName, assetPath);
                 return false;
             }
-            
-            if (!Directory.Exists(GroupTemplateFolder))
-                Directory.CreateDirectory(GroupTemplateFolder);
-            
-            AddressableAssetGroupTemplate newAssetGroupTemplate = ScriptableObject.CreateInstance<AddressableAssetGroupTemplate>();
-            newAssetGroupTemplate.Description = description;
-            AssetDatabase.CreateAsset(newAssetGroupTemplate, assetPath);
-            AssetDatabase.SaveAssets();
-            AddGroupTemplateObject( newAssetGroupTemplate );
-            
-            foreach( Type type in types )
-            {
-                if( !newAssetGroupTemplate.AddSchema( type ) )
-                    return false;
-            }
-            
+
             return true;
         }
 
@@ -1067,9 +1088,19 @@ namespace UnityEditor.AddressableAssets.Settings
             return localGroup;
         }
         
-        private static bool CreateDefaultGroupTemplate( AddressableAssetSettings aa )
+        private static bool CreateDefaultGroupTemplate( AddressableAssetSettings aa)
         {
-            return aa.CreateAndAddGroupTemplate("Packed Assets", "Pack assets into asset bundles.", typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
+            string assetPath = aa.GroupTemplateFolder + "/" + aa.m_DefaultGroupTemplateName + ".asset";
+
+            if (File.Exists(assetPath))
+                return LoadGroupTemplateObject(aa, assetPath);
+
+            return aa.CreateAndAddGroupTemplate(aa.m_DefaultGroupTemplateName, "Pack assets into asset bundles.", typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
+        }
+
+        private static bool LoadGroupTemplateObject(AddressableAssetSettings aa, string assetPath)
+        {
+            return aa.AddGroupTemplateObject(AssetDatabase.LoadAssetAtPath(assetPath, typeof(ScriptableObject)) as IGroupTemplate);
         }
 
         AddressableAssetEntry CreateEntry(string guid, string address, AddressableAssetGroup parent, bool readOnly, bool postEvent = true)

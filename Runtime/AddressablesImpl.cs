@@ -439,7 +439,7 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, out locations))
-                ResourceManager.CreateCompletedOperation<IList<AsyncOperationHandle<TObject>>>(null, new InvalidKeyException(key).Message);
+                return ResourceManager.CreateCompletedOperation<IList<TObject>>(null, new InvalidKeyException(key).Message);
 
             return LoadAssets(locations, callback);
         }
