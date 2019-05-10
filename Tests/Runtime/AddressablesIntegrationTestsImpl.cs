@@ -53,7 +53,7 @@ namespace AddressableAssetsIntegrationTests
             locMap.Add("sizeTestAsset", assetLoc);
             m_Addressables.ResourceLocators.Add(locMap);
 
-            var dOp = m_Addressables.GetDownloadSize("sizeTestAsset");
+            var dOp = m_Addressables.GetDownloadSizeAsync("sizeTestAsset");
             yield return dOp;
             Assert.AreEqual(expectedSize, dOp.Result);
             dOp.Release();
@@ -97,7 +97,7 @@ namespace AddressableAssetsIntegrationTests
             locMap.Add("cachedSizeTestAsset", assetLoc);
             m_Addressables.ResourceLocators.Add(locMap);
 
-            var dOp = m_Addressables.GetDownloadSize("cachedSizeTestAsset");
+            var dOp = m_Addressables.GetDownloadSizeAsync("cachedSizeTestAsset");
             yield return dOp;
             Assert.IsTrue((bundleSize1 + bundleSize2) >  dOp.Result);
             Assert.AreEqual(expectedSize, dOp.Result);
@@ -120,7 +120,7 @@ namespace AddressableAssetsIntegrationTests
             foreach (var k in m_KeysHashSet)
             {
                 loadCount++;
-                AsyncOperationHandle<IList<IResourceLocation>> op = m_Addressables.LoadResourceLocations(k.Key);
+                AsyncOperationHandle<IList<IResourceLocation>> op = m_Addressables.LoadResourceLocationsAsync(k.Key);
                 ops.Add(op);
                 op.Completed += op2 =>
                 {
@@ -267,7 +267,7 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
             List<object> keys = new List<object>() { "INVALID1", "INVALID2" };
-            AsyncOperationHandle<IList<GameObject>> gop = m_Addressables.LoadAssets<GameObject>(keys, null, Addressables.MergeMode.Intersection);
+            AsyncOperationHandle<IList<GameObject>> gop = m_Addressables.LoadAssetsAsync<GameObject>(keys, null, Addressables.MergeMode.Intersection);
             while (!gop.IsDone)
                 yield return null;
             Assert.IsTrue(gop.IsDone);
@@ -281,7 +281,7 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
             List<object> keys = new List<object>() { AddressablesTestUtility.GetPrefabLabel("BASE"), AddressablesTestUtility.GetPrefabUniqueLabel("BASE", 0) };
-            AsyncOperationHandle<IList<GameObject>> gop = m_Addressables.LoadAssets<GameObject>(keys, null, Addressables.MergeMode.Intersection);
+            AsyncOperationHandle<IList<GameObject>> gop = m_Addressables.LoadAssetsAsync<GameObject>(keys, null, Addressables.MergeMode.Intersection);
             while (!gop.IsDone)
                 yield return null;
             Assert.IsTrue(gop.IsDone);
@@ -328,7 +328,7 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
             string label = AddressablesTestUtility.GetPrefabUniqueLabel("BASE", 0);
-            AsyncOperationHandle<GameObject> op = m_Addressables.LoadAsset<GameObject>(label);
+            AsyncOperationHandle<GameObject> op = m_Addressables.LoadAssetAsync<GameObject>(label);
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.IsTrue(op.Result != null);
@@ -339,7 +339,7 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator LoadAsset_WhenEntryDoesNotExist_OperationFails()
         {
             yield return Init();
-            AsyncOperationHandle<GameObject> op = m_Addressables.LoadAsset<GameObject>("unknownlabel");
+            AsyncOperationHandle<GameObject> op = m_Addressables.LoadAssetAsync<GameObject>("unknownlabel");
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
             Assert.IsTrue(op.Result == null);
@@ -350,7 +350,7 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator LoadAsset_CanReleaseThroughAddressablesInCallback([Values(true, false)]bool addressableRelease)
         {
             yield return Init();
-            var op = m_Addressables.LoadAsset<object>(m_PrefabKeysList[0]);
+            var op = m_Addressables.LoadAssetAsync<object>(m_PrefabKeysList[0]);
             op.Completed += x =>
             {
                 Assert.IsNotNull(x.Result);
@@ -368,8 +368,8 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
 
             string label = AddressablesTestUtility.GetPrefabUniqueLabel("BASE", 0);
-            AsyncOperationHandle<object> op1 = m_Addressables.LoadAsset<object>(label);
-            AsyncOperationHandle<GameObject> op2 = m_Addressables.LoadAsset<GameObject>(label);
+            AsyncOperationHandle<object> op1 = m_Addressables.LoadAssetAsync<object>(label);
+            AsyncOperationHandle<GameObject> op2 = m_Addressables.LoadAssetAsync<GameObject>(label);
             yield return op1;
             yield return op2;
             Assert.AreEqual(op1.Result, op2.Result);
@@ -385,7 +385,7 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
             string label = AddressablesTestUtility.GetPrefabLabel("BASE");
             HashSet<GameObject> ops = new HashSet<GameObject>();
-            var gop = m_Addressables.LoadAssets<GameObject>(label, x => { ops.Add(x); });
+            var gop = m_Addressables.LoadAssetsAsync<GameObject>(label, x => { ops.Add(x); });
             yield return gop;
             Assert.AreEqual(AddressablesTestUtility.kPrefabCount, ops.Count);
             for (int i = 0; i < ops.Count; i++)
@@ -401,7 +401,7 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
             string label = AddressablesTestUtility.GetPrefabLabel("BASE");
-            AsyncOperationHandle op = m_Addressables.DownloadDependencies(label);
+            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(label);
             yield return op;
             op.Release();
         }
@@ -420,7 +420,7 @@ namespace AddressableAssetsIntegrationTests
             for (int i = 0; i < 50; i++)
             {
                 var key = m_PrefabKeysList[i % m_PrefabKeysList.Count];
-                ops.Add(m_Addressables.Instantiate(key));
+                ops.Add(m_Addressables.InstantiateAsync(key));
             }
 
             foreach(AsyncOperationHandle<GameObject> op in ops)
@@ -441,12 +441,12 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
 
-            AsyncOperationHandle handle = m_Addressables.Instantiate(AssetReferenceObjectKey);
+            AsyncOperationHandle handle = m_Addressables.InstantiateAsync(AssetReferenceObjectKey);
             yield return handle;
             Assert.IsNotNull(handle.Result as GameObject);
             AssetReferenceTestBehavior behavior =
                 (handle.Result as GameObject).GetComponent<AssetReferenceTestBehavior>();
-            AsyncOperationHandle<GameObject> assetRefHandle = m_Addressables.Instantiate(behavior.Reference);
+            AsyncOperationHandle<GameObject> assetRefHandle = m_Addressables.InstantiateAsync(behavior.Reference);
             yield return assetRefHandle;
             Assert.IsNotNull(assetRefHandle.Result);
 
@@ -465,7 +465,7 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
 
-            AsyncOperationHandle handle = m_Addressables.Instantiate(AssetReferenceObjectKey);
+            AsyncOperationHandle handle = m_Addressables.InstantiateAsync(AssetReferenceObjectKey);
             yield return handle;
             Assert.IsNotNull(handle.Result as GameObject);
             AssetReferenceTestBehavior behavior =
@@ -482,7 +482,7 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
 
-            AsyncOperationHandle handle = m_Addressables.Instantiate(AssetReferenceObjectKey);
+            AsyncOperationHandle handle = m_Addressables.InstantiateAsync(AssetReferenceObjectKey);
             yield return handle;
             Assert.IsNotNull(handle.Result as GameObject);
             AssetReferenceTestBehavior behavior =
@@ -518,10 +518,10 @@ __data");
         public IEnumerator CanLoadSceneAdditively()
         {
             yield return Init();
-            var op = m_Addressables.LoadScene(m_SceneKeysList[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(m_SceneKeysList[0], LoadSceneMode.Additive);
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
-            var unloadOp = m_Addressables.UnloadScene(op);
+            var unloadOp = m_Addressables.UnloadSceneAsync(op);
             yield return unloadOp;
         }
 
@@ -529,15 +529,15 @@ __data");
         public IEnumerator WhenSceneUnloaded_InstanitatedObjectsAreCleanedUp()
         {
             yield return Init();
-            var op = m_Addressables.LoadScene(m_SceneKeysList[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(m_SceneKeysList[0], LoadSceneMode.Additive);
             yield return op;
 
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             SceneManager.SetActiveScene(op.Result.Scene);
-            var instOp = m_Addressables.Instantiate(m_PrefabKeysList[0]);
+            var instOp = m_Addressables.InstantiateAsync(m_PrefabKeysList[0]);
             yield return instOp;
 
-            var unloadOp = m_Addressables.UnloadScene(op);
+            var unloadOp = m_Addressables.UnloadSceneAsync(op);
             yield return unloadOp;
         }
 
@@ -545,12 +545,12 @@ __data");
         public IEnumerator WhenSceneUnloadedNotUsingAddressables_InstanitatedObjectsAreCleanedUp()
         {
             yield return Init();
-            var op = m_Addressables.LoadScene(m_SceneKeysList[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(m_SceneKeysList[0], LoadSceneMode.Additive);
             yield return op;
 
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             SceneManager.SetActiveScene(op.Result.Scene);
-            var instOp = m_Addressables.Instantiate(m_PrefabKeysList[0]);
+            var instOp = m_Addressables.InstantiateAsync(m_PrefabKeysList[0]);
             yield return instOp;
             var unloadOp = SceneManager.UnloadSceneAsync(op.Result.Scene);
             while (!unloadOp.isDone)

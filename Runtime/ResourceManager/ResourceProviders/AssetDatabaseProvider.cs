@@ -37,7 +37,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_ProvideHandle = provideHandle;
                 if (loadDelay < 0)
                     LoadImmediate();
-                DelayedActionManager.AddAction((Action)LoadImmediate, loadDelay);
+                else
+                    DelayedActionManager.AddAction((Action)LoadImmediate, loadDelay);
             }
             
             void LoadImmediate()

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.AddressableAssets.Utility;
+using UnityEngine.Networking;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.Diagnostics;
@@ -54,6 +55,8 @@ namespace UnityEngine.AddressableAssets.Initialization
             }
             var rtd = m_rtdOp.Result;
             m_Addressables.Release(m_rtdOp);
+            if(rtd.CertificateHandlerType != null)
+                m_Addressables.ResourceManager.CertificateHandlerInstance = Activator.CreateInstance(rtd.CertificateHandlerType) as CertificateHandler;
 
 #if UNITY_EDITOR
             if (UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString() != rtd.BuildTarget)
@@ -175,7 +178,7 @@ namespace UnityEngine.AddressableAssets.Initialization
         }
         public static AsyncOperationHandle<IResourceLocator> LoadContentCatalog(AddressablesImpl addressables, IResourceLocation loc, string providerSuffix)
         {
-            var loadOp = addressables.LoadAsset<ContentCatalogData>(loc);
+            var loadOp = addressables.LoadAssetAsync<ContentCatalogData>(loc);
             var chainOp = addressables.ResourceManager.CreateChainOperation(loadOp, res => OnCatalogDataLoaded(addressables, res, providerSuffix));
             addressables.Release(loadOp);
             return chainOp;
@@ -183,7 +186,7 @@ namespace UnityEngine.AddressableAssets.Initialization
 
         public AsyncOperationHandle<IResourceLocator> LoadContentCatalog(IResourceLocation loc, string providerSuffix)
         {
-            var loadOp = m_Addressables.LoadAsset<ContentCatalogData>(loc);
+            var loadOp = m_Addressables.LoadAssetAsync<ContentCatalogData>(loc);
             var chainOp = m_Addressables.ResourceManager.CreateChainOperation(loadOp, res => OnCatalogDataLoaded(m_Addressables, res, providerSuffix));
             m_Addressables.Release(loadOp);
             return chainOp;

@@ -21,51 +21,19 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
             Directory.Delete(Addressables.PlayerBuildDataPath, true);
         }
 
-        if (Directory.GetFiles(addressablesStreamingAssets).Length == 0)
-            Directory.Delete(addressablesStreamingAssets);
+        //Will delete the directory only if it's empty
+        DirectoryUtility.DeleteDirectory(addressablesStreamingAssets);
     }
 
     public void OnPreprocessBuild(BuildReport report)
     {
-        Debug.Log(string.Format(
-            "Copying Addressables data from {0} to {1}.  These copies will be deleted at the end of the build.",
-            Addressables.BuildPath, Addressables.PlayerBuildDataPath));
-        DirectoryCopy(Addressables.BuildPath, Addressables.PlayerBuildDataPath, true);
-    }
-
-    private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
-    {
-        // Get the subdirectories for the specified directory.
-        DirectoryInfo dir = new DirectoryInfo(sourceDirName);
-
-        if (!dir.Exists)
+        if (Directory.Exists(Addressables.BuildPath))
         {
-            throw new DirectoryNotFoundException(
-                "Source directory does not exist or could not be found: "
-                + sourceDirName);
-        }
+            Debug.Log(string.Format(
+                "Copying Addressables data from {0} to {1}.  These copies will be deleted at the end of the build.",
+                Addressables.BuildPath, Addressables.PlayerBuildDataPath));
 
-        DirectoryInfo[] dirs = dir.GetDirectories();
-        // If the destination directory doesn't exist, create it.
-        if (!Directory.Exists(destDirName))
-            Directory.CreateDirectory(destDirName);
-
-        // Get the files in the directory and copy them to the new location.
-        FileInfo[] files = dir.GetFiles();
-        foreach (FileInfo file in files)
-        {
-            string temppath = Path.Combine(destDirName, file.Name);
-            file.CopyTo(temppath, true);
-        }
-
-        // If copying subdirectories, copy them and their contents to new location.
-        if (copySubDirs)
-        {
-            foreach (DirectoryInfo subdir in dirs)
-            {
-                string temppath = Path.Combine(destDirName, subdir.Name);
-                DirectoryCopy(subdir.FullName, temppath, true);
-            }
+            DirectoryUtility.DirectoryCopy(Addressables.BuildPath, Addressables.PlayerBuildDataPath, true);
         }
     }
 }

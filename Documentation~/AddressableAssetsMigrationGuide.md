@@ -23,11 +23,11 @@ If you would like to load an Asset based on an object rather than a string name,
 
 For example:
 
-`AssetRefMember.Load<GameObject>();`
+`AssetRefMember.LoadAssetAsync<GameObject>();`
 
 or
 
-`AssetRefMember.Instantiate<GameObject>(pos, rot);`
+`AssetRefMember.InstantiateAsync(pos, rot);`
 
 <a name="referencefolders"></a>
 ### Resource Folders
@@ -38,7 +38,7 @@ When you mark an Asset that is located in a Resources folder as addressable, the
 
 To:
 
-`Addressables.Load<GameObject>("desert/tank.prefab");`
+`Addressables.LoadAssetAsync<GameObject>("desert/tank.prefab");`
 
 <a name="assetbundles"></a>
 ### Asset Bundles

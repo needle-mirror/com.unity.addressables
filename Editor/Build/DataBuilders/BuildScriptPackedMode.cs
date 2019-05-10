@@ -62,14 +62,15 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             m_AllBundleInputDefs = new List<AssetBundleBuild>();
             var bundleToAssetGroup = new Dictionary<string, string>();
             var runtimeData = new ResourceManagerRuntimeData();
+            runtimeData.CertificateHandlerType = aaSettings.CertificateHandlerType;
             runtimeData.BuildTarget = builderInput.Target.ToString();
             runtimeData.ProfileEvents = builderInput.ProfilerEventsEnabled;
             runtimeData.LogResourceManagerExceptions = aaSettings.buildSettings.LogResourceManagerExceptions;
-
             m_Linker = new LinkXmlGenerator();
             m_Linker.SetTypeConversion(typeof(UnityEditor.Animations.AnimatorController), typeof(RuntimeAnimatorController));
+            m_Linker.AddTypes(runtimeData.CertificateHandlerType);
+
             m_ResourceProviderData = new List<ObjectInitializationData>();
-            
             var aaContext = new AddressableAssetsBuildContext
             {
                 settings = aaSettings,
@@ -140,7 +141,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 {
                     List<string> bundles;
                     if (aaContext.assetGroupToBundles.TryGetValue(assetGroup, out bundles))
-                        PostProcessBundles(assetGroup, bundles, results, extractData.WriteData, aaContext.runtimeData, aaContext.locations);
+                        PostProcessBundles(assetGroup, bundles, results, extractData.WriteData, aaContext.runtimeData, aaContext.locations, builderInput.Registry);
                 }
                 foreach (var r in results.WriteResults)
                     m_Linker.AddTypes(r.Value.includedTypes);
@@ -151,7 +152,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             contentCatalog.ResourceProviderData.AddRange(m_ResourceProviderData);
             contentCatalog.InstanceProviderData = ObjectInitializationData.CreateSerializedInitializationData(instanceProviderType.Value);
             contentCatalog.SceneProviderData = ObjectInitializationData.CreateSerializedInitializationData(sceneProviderType.Value);
-            CreateCatalog(aaContext.settings, contentCatalog, aaContext.runtimeData.CatalogLocations, playerBuildVersion, builderInput.RuntimeCatalogFilename);
+            CreateCatalog(aaContext.settings, contentCatalog, aaContext.runtimeData.CatalogLocations, playerBuildVersion, builderInput.RuntimeCatalogFilename, builderInput.Registry);
             m_Linker.AddTypes(instanceProviderType.Value);
 
             foreach (var io in aaContext.settings.InitializationObjects)
@@ -168,7 +169,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             m_Linker.AddTypes(typeof(Addressables));
             m_Linker.Save(Addressables.BuildPath + "/link.xml");
             var settingsPath = Addressables.BuildPath + "/" + builderInput.RuntimeSettingsFilename;
-            WriteFile(settingsPath, JsonUtility.ToJson(aaContext.runtimeData));
+            WriteFile(settingsPath, JsonUtility.ToJson(aaContext.runtimeData), builderInput.Registry);
 
             var opResult = AddressableAssetBuildResult.CreateResult<TResult>(settingsPath, aaContext.locations.Count);
             //save content update data if building for the player
@@ -249,7 +250,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// <param name="schema">The BundledAssetGroupSchema to process</param>
         /// <param name="assetGroup">The group this schema was pulled from</param>
         /// <param name="aaContext">The general Addressables build builderInput</param>
-        /// <returns></returns>
+        /// <returns>The error string, if any.</returns>
         protected virtual string ProcessBundledAssetSchema(
             BundledAssetGroupSchema schema, 
             AddressableAssetGroup assetGroup,
@@ -416,14 +417,14 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return assetsInputDef;
         }
 
-        static void CreateCatalog(AddressableAssetSettings aaSettings, ContentCatalogData contentCatalog, List<ResourceLocationData> locations, string playerVersion, string localCatalogFilename)
+        static void CreateCatalog(AddressableAssetSettings aaSettings, ContentCatalogData contentCatalog, List<ResourceLocationData> locations, string playerVersion, string localCatalogFilename, FileRegistry registry)
         {
             
             var localBuildPath = Addressables.BuildPath + "/" + localCatalogFilename;
             var localLoadPath = "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/" + localCatalogFilename;
 
             var jsonText = JsonUtility.ToJson(contentCatalog);
-            WriteFile(localBuildPath, jsonText);
+            WriteFile(localBuildPath, jsonText, registry);
 
             string[] dependencyHashes = null;
             if (aaSettings.BuildRemoteCatalog)
@@ -446,8 +447,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     var remoteJsonBuildPath = remoteBuildFolder + versionedFileName + ".json";
                     var remoteHashBuildPath = remoteBuildFolder + versionedFileName + ".hash";
 
-                    WriteFile(remoteJsonBuildPath, jsonText);
-                    WriteFile(remoteHashBuildPath, contentHash);
+                    WriteFile(remoteJsonBuildPath, jsonText, registry);
+                    WriteFile(remoteHashBuildPath, contentHash, registry);
 
                     dependencyHashes = new string[((int)ContentCatalogProvider.DependencyHashIndex.Count)];
                     dependencyHashes[(int)ContentCatalogProvider.DependencyHashIndex.Remote] = ResourceManagerRuntimeData.kCatalogAddress + "RemoteHash";
@@ -513,7 +514,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return path.StartsWith("{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
         }
 
-        static void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> bundles, IBundleBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations)
+        static void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> bundles, IBundleBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry)
         {
             var schema = assetGroup.GetSchema<BundledAssetGroupSchema>();
             if (schema == null)
@@ -554,6 +555,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 if (!Directory.Exists(Path.GetDirectoryName(targetPath)))
                     Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
                 File.Copy(Path.Combine(assetGroup.Settings.buildSettings.bundleBuildPath, originalBundleName), targetPath, true);
+                registry.AddFile(targetPath);
             }
         }
 
@@ -568,7 +570,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 Debug.LogException(e);
                 return 0;
             }
-
         }
 
         /// <inheritdoc />
@@ -589,7 +590,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     Debug.LogException(e);
                 }
             }
-
         }
 
         /// <inheritdoc />

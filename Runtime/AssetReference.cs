@@ -30,9 +30,19 @@ namespace UnityEngine.AddressableAssets
         /// Load the referenced asset as type TObject.
         /// </summary>
         /// <returns>The load operation.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetAsync(*)", true)]
         public AsyncOperationHandle<TObject> LoadAsset()
         {
-            return LoadAsset<TObject>();
+            return LoadAssetAsync();
+        }
+
+        /// <summary>
+        /// Load the referenced asset as type TObject.
+        /// </summary>
+        /// <returns>The load operation.</returns>
+        public AsyncOperationHandle<TObject> LoadAssetAsync()
+        {
+            return LoadAssetAsync<TObject>();
         }
         
         /// <inheritdoc/>
@@ -122,13 +132,18 @@ namespace UnityEngine.AddressableAssets
         [FormerlySerializedAs("m_assetGUID")]
         [SerializeField]
         string m_AssetGUID = "";
-        AsyncOperationHandle m_operation;
+        AsyncOperationHandle m_Operation;
         /// <summary>
         /// The actual key used to request the asset at runtime. RuntimeKeyIsValid() can be used to determine if this reference was set.
         /// </summary>
         public object RuntimeKey
         {
-            get { return m_AssetGUID; }
+            get
+            {
+                if (m_AssetGUID == null)
+                    m_AssetGUID = string.Empty;
+                return m_AssetGUID;
+            }
         }
 
         /// <summary>
@@ -148,13 +163,13 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// The loaded asset.  This value is only set after the AsyncOperationHandle returned from LoadAsset completes.  It will not be set if only Instantiate is called.  It will be set to null if release is called.
+        /// The loaded asset.  This value is only set after the AsyncOperationHandle returned from LoadAssetAsync completes.  It will not be set if only InstantiateAsync is called.  It will be set to null if release is called.
         /// </summary>
         public Object Asset
         {
             get
             {
-                return m_operation.Result as Object;
+                return m_Operation.Result as Object;
             }
         }
 
@@ -179,10 +194,56 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <typeparam name="TObject">The object type.</typeparam>
         /// <returns>The load operation.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetAsync(*)", true)]
         public AsyncOperationHandle<TObject> LoadAsset<TObject>()
         {
-            AsyncOperationHandle<TObject> result = Addressables.LoadAsset<TObject>(RuntimeKey);
-            m_operation = result;
+            return LoadAssetAsync<TObject>();
+        }
+
+        /// <summary>
+        /// Loads the reference as a scene.
+        /// </summary>
+        /// <returns>The operation handle for the scene load.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadSceneAsync(*)", true)]
+        public AsyncOperationHandle<SceneInstance> LoadScene()
+        {
+            return LoadSceneAsync();
+        }
+        /// <summary>
+        /// InstantiateAsync the referenced asset as type TObject.
+        /// </summary>
+        /// <param name="position">Position of the instantiated object.</param>
+        /// <param name="rotation">Rotation of the instantiated object.</param>
+        /// <param name="parent">The parent of the instantiated object.</param>
+        /// <returns></returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
+        public AsyncOperationHandle<GameObject> Instantiate(Vector3 position, Quaternion rotation, Transform parent = null)
+        {
+            return InstantiateAsync(position, rotation, parent);
+        }
+
+        /// <summary>
+        /// InstantiateAsync the referenced asset as type TObject.
+        /// </summary>
+        /// <typeparam name="TObject">The object type.</typeparam>
+        /// <param name="parent">The parent of the instantiated object.</param>
+        /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
+        /// <returns></returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
+        public AsyncOperationHandle<GameObject> Instantiate(Transform parent = null, bool instantiateInWorldSpace = false)
+        {
+            return InstantiateAsync(parent, instantiateInWorldSpace);
+        }
+
+        /// <summary>
+        /// Load the referenced asset as type TObject.
+        /// </summary>
+        /// <typeparam name="TObject">The object type.</typeparam>
+        /// <returns>The load operation.</returns>
+        public AsyncOperationHandle<TObject> LoadAssetAsync<TObject>()
+        {
+            AsyncOperationHandle<TObject> result = Addressables.LoadAssetAsync<TObject>(RuntimeKey);
+            m_Operation = result;
             return result;
         }
 
@@ -190,34 +251,34 @@ namespace UnityEngine.AddressableAssets
         /// Loads the reference as a scene.
         /// </summary>
         /// <returns>The operation handle for the scene load.</returns>
-        public AsyncOperationHandle<SceneInstance> LoadScene()
+        public AsyncOperationHandle<SceneInstance> LoadSceneAsync()
         {
-            var result = Addressables.LoadScene(RuntimeKey);
-            m_operation = result;
+            var result = Addressables.LoadSceneAsync(RuntimeKey);
+            m_Operation = result;
             return result;
         }
         /// <summary>
-        /// Instantiate the referenced asset as type TObject.
+        /// InstantiateAsync the referenced asset as type TObject.
         /// </summary>
         /// <param name="position">Position of the instantiated object.</param>
         /// <param name="rotation">Rotation of the instantiated object.</param>
         /// <param name="parent">The parent of the instantiated object.</param>
         /// <returns></returns>
-        public AsyncOperationHandle<GameObject> Instantiate(Vector3 position, Quaternion rotation, Transform parent = null)
+        public AsyncOperationHandle<GameObject> InstantiateAsync(Vector3 position, Quaternion rotation, Transform parent = null)
         {
-            return Addressables.Instantiate(RuntimeKey, position, rotation, parent, true);
+            return Addressables.InstantiateAsync(RuntimeKey, position, rotation, parent, true);
         }
 
         /// <summary>
-        /// Instantiate the referenced asset as type TObject.
+        /// InstantiateAsync the referenced asset as type TObject.
         /// </summary>
         /// <typeparam name="TObject">The object type.</typeparam>
         /// <param name="parent">The parent of the instantiated object.</param>
         /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
         /// <returns></returns>
-        public AsyncOperationHandle<GameObject> Instantiate(Transform parent = null, bool instantiateInWorldSpace = false)
+        public AsyncOperationHandle<GameObject> InstantiateAsync(Transform parent = null, bool instantiateInWorldSpace = false)
         {
-            return Addressables.Instantiate(RuntimeKey, parent, instantiateInWorldSpace, true);
+            return Addressables.InstantiateAsync(RuntimeKey, parent, instantiateInWorldSpace, true);
         }
 
         /// <inheritdoc/>
@@ -232,13 +293,13 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public void ReleaseAsset()
         {
-            if (!m_operation.IsValid())
+            if (!m_Operation.IsValid())
             {
                 Debug.LogWarning("Cannot release a null or unloaded asset.");
                 return;
             }
-            Addressables.Release(m_operation);
-            m_operation = default(AsyncOperationHandle);
+            Addressables.Release(m_Operation);
+            m_Operation = default(AsyncOperationHandle);
         }
 
 

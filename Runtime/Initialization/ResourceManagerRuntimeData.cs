@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 
@@ -61,5 +62,24 @@ namespace UnityEngine.AddressableAssets.Initialization
         /// The list of initialization data.  These objects will get deserialized and initialized during the Addressables initialization process.  This happens after resource providers have been set up but before any catalogs are loaded.
         /// </summary>
         public List<ObjectInitializationData> InitializationObjects { get { return m_ExtraInitializationData; } }
+
+        [SerializeField]
+        SerializedType m_CertificateHandlerType;
+
+        /// <summary>
+        /// The type of CertificateHandler to use for this provider.
+        /// </summary>
+        public Type CertificateHandlerType
+        {
+            get
+            {
+                return m_CertificateHandlerType.Value;
+            }
+            set
+            {
+                m_CertificateHandlerType.Value = value;
+            }
+        }
+
     }
 }

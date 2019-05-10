@@ -26,6 +26,10 @@ namespace UnityEditor.AddressableAssets.Build
         /// Path of runtime settings file
         /// </summary>
         public string OutputPath { get; set; }
+        /// <summary>
+        /// Registry of files created during the build
+        /// </summary>
+        public FileRegistry FileRegistry { get; set; }
 
         /// <summary>
         /// Helper method to create the desired result of a data builder.  This should always be used to create the build result

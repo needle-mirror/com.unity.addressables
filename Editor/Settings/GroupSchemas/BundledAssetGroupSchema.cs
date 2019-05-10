@@ -200,6 +200,12 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             get { return m_LoadPath; }
         }
+        
+        //placeholder for UrlSuffix support...
+        internal string UrlSuffix
+        {
+            get { return string.Empty; }
+        }
 
         [FormerlySerializedAs("m_bundleMode")]
         [SerializeField]
@@ -249,15 +255,13 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 if (BuildPath == null || string.IsNullOrEmpty(BuildPath.GetValue(group.Settings)))
                 {
                     m_BuildPath = new ProfileValueReference();
-                    if (BuildPath != null)
-                        BuildPath.SetVariableByName(group.Settings, AddressableAssetSettings.kLocalBuildPath);
+                    BuildPath.SetVariableByName(group.Settings, AddressableAssetSettings.kLocalBuildPath);
                 }
 
                 if (LoadPath == null || string.IsNullOrEmpty(LoadPath.GetValue(group.Settings)))
                 {
                     m_LoadPath = new ProfileValueReference();
-                    if (LoadPath != null)
-                        LoadPath.SetVariableByName(group.Settings, AddressableAssetSettings.kLocalLoadPath);
+                    LoadPath.SetVariableByName(group.Settings, AddressableAssetSettings.kLocalLoadPath);
                 }
             }
 

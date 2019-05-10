@@ -36,6 +36,11 @@ namespace UnityEditor.AddressableAssets.Build
         /// Bool to signify if profiler events should be broadcast.
         /// </summary>
         public bool ProfilerEventsEnabled { get; private set; }
+
+        /// <summary>
+        /// Registry of files created during the build
+        /// </summary>
+        public FileRegistry Registry { get; private set; }
         
         //used only by tests to inject custom info into build...
         internal string PathFormat = string.Empty;
@@ -88,6 +93,7 @@ namespace UnityEditor.AddressableAssets.Build
             Target = buildTarget;
             PlayerVersion = playerBuildVersion;
             ProfilerEventsEnabled = ProjectConfigData.postProfilerEvents;
+            Registry = new FileRegistry();
         }
     }
 }

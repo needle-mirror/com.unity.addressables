@@ -44,6 +44,62 @@ namespace UnityEngine.ResourceManagement.Tests
             m_ResourceManager.Dispose();
         }
 
+        class TestUpdateReceiver : IUpdateReceiver
+        {
+            public bool invoked = false;
+            public void Update(float unscaledDeltaTime)
+            {
+                invoked = true;
+            }
+        }
+
+        [Test]
+        public void WhenIUpdateReceiverAdded_CallbackIsInvoked()
+        {
+            var ur = new TestUpdateReceiver();
+            m_ResourceManager.AddUpdateReceiver(ur);
+            m_ResourceManager.Update(0);
+            Assert.IsTrue(ur.invoked);
+            m_ResourceManager.RemoveUpdateReciever(ur);
+            ur.invoked = false;
+            m_ResourceManager.Update(0);
+            Assert.IsFalse(ur.invoked);
+        }
+
+        class TestUpdateReceiverThatRemovesSelfDuringUpdate : IUpdateReceiver
+        {
+            public ResourceManager rm;
+            public bool removeSelf;
+            public int updateCount = 0;
+            public void Update(float unscaledDeltaTime)
+            {
+                updateCount++;
+                if (removeSelf)
+                    rm.RemoveUpdateReciever(this);
+            }
+        }
+
+        [Test]
+        public void WhenIUpdateReceiverRemovesSelfDuringCallback_ListIsMaintained()
+        {
+            var ur1 = new TestUpdateReceiverThatRemovesSelfDuringUpdate() { rm = m_ResourceManager, removeSelf = false };
+            var ur2 = new TestUpdateReceiverThatRemovesSelfDuringUpdate() { rm = m_ResourceManager, removeSelf = true };
+            var ur3 = new TestUpdateReceiverThatRemovesSelfDuringUpdate() { rm = m_ResourceManager, removeSelf = false };
+            m_ResourceManager.AddUpdateReceiver(ur1);
+            m_ResourceManager.AddUpdateReceiver(ur2);
+            m_ResourceManager.AddUpdateReceiver(ur3);
+            m_ResourceManager.Update(0);
+            Assert.AreEqual(1, ur1.updateCount);
+            Assert.AreEqual(1, ur2.updateCount);
+            Assert.AreEqual(1, ur3.updateCount);
+            m_ResourceManager.Update(0);
+            Assert.AreEqual(2, ur1.updateCount);
+            Assert.AreEqual(1, ur2.updateCount);
+            Assert.AreEqual(2, ur3.updateCount);
+            m_ResourceManager.RemoveUpdateReciever(ur1);
+            m_ResourceManager.RemoveUpdateReciever(ur3);
+        }
+
         class IntOperation : AsyncOperationBase<int>
         {
             string msg = "msg";

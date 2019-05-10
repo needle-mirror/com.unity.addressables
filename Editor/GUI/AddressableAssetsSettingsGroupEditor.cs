@@ -82,7 +82,6 @@ namespace UnityEditor.AddressableAssets.GUI
         List<GUIStyle> m_SearchStyles;
         [NonSerialized]
         GUIStyle m_ButtonStyle;
-        bool m_AnalyzeMode;
         [NonSerialized]
         Texture2D m_CogIcon;
 
@@ -146,8 +145,9 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                 }
 
-                m_AnalyzeMode = GUILayout.Toggle(m_AnalyzeMode, "Analyze", m_ButtonStyle);
-                
+                if (GUILayout.Button("Analyze", m_ButtonStyle))
+                    AnalyzeWindow.Initialize();
+
                 var guiBuild = new GUIContent("Build");
                 Rect rBuild = GUILayoutUtility.GetRect(guiBuild, EditorStyles.toolbarDropDown);
                 if (EditorGUI.DropdownButton(rBuild, guiBuild, FocusType.Passive, EditorStyles.toolbarDropDown))
@@ -311,10 +311,6 @@ namespace UnityEditor.AddressableAssets.GUI
             m_ModificationRegistered = false;
         }
 
-        [FormerlySerializedAs("m_analyzeEditor")]
-        [SerializeField]
-        AssetSettingsAnalyze m_AnalyzeEditor;
-
         public bool OnGUI(Rect pos)
         {
             if (settings == null)
@@ -345,31 +341,12 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             HandleVerticalResize(pos);
-            var width = pos.width - k_SplitterWidth * 2;
             var inRectY = pos.height;
-            if (m_AnalyzeMode)
-                inRectY = m_VerticalSplitterRect.yMin - pos.yMin;
-
             var searchRect = new Rect(pos.xMin, pos.yMin, pos.width, k_SearchHeight);
             var treeRect = new Rect(pos.xMin, pos.yMin + k_SearchHeight, pos.width, inRectY - k_SearchHeight);
-            var botRect = new Rect(pos.xMin + k_SplitterWidth, pos.yMin + inRectY + k_SplitterWidth, width, pos.height - inRectY - k_SplitterWidth * 2);
 
             TopToolbar(searchRect);
-
-            if (!m_AnalyzeMode)
-            {
-                m_EntryTree.OnGUI(treeRect);
-            }
-            else
-            {
-                m_EntryTree.OnGUI(treeRect);
-                if (m_AnalyzeEditor == null)
-                    m_AnalyzeEditor = new AssetSettingsAnalyze();
-                m_AnalyzeEditor.OnGUI(botRect, settings);
-            }
-
-
-
+            m_EntryTree.OnGUI(treeRect);
             return m_ResizingVerticalSplitter;
         }
 

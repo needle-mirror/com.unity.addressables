@@ -28,6 +28,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (EditorGUI.DropdownButton(smallPos, new GUIContent(st.ToString()), FocusType.Keyboard))
             {
                 var menu = new GenericMenu();
+                menu.AddItem(new GUIContent("<none>", "Clear the type."), false, OnSetType, null);
                 for (int i = 0; i < m_Types.Count; i++)
                 {
                     var type = m_Types[i];

@@ -27,6 +27,9 @@ namespace UnityEditor.AddressableAssets.Build
 
         private void AddTypeInternal(Type t)
         {
+            if (t == null)
+                return;
+            
             Type convertedType;
             if (m_TypeConversion.TryGetValue(t, out convertedType))
                 m_Types.Add(convertedType);

@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
@@ -186,25 +187,46 @@ namespace UnityEngine.AddressableAssets
         {
             m_Addressables.LogErrorFormat(format, args);
         }
-
         /// <summary>
         /// Initialize Addressables system.  Addressables will be initialized on the first API call if this is not called explicitly.
         /// </summary>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InitializeAsync(*)", true)]
         public static AsyncOperationHandle<IResourceLocator> Initialize()
         {
-            return m_Addressables.Initialize();
+            return InitializeAsync();
         }
-
+        
+        /// <summary>
+        /// Initialize Addressables system.  Addressables will be initialized on the first API call if this is not called explicitly.
+        /// </summary>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IResourceLocator> InitializeAsync()
+        {
+            return m_Addressables.InitializeAsync();
+        }
+        
         /// <summary>
         /// Additively load catalogs from runtime data.  The settings are not used.
         /// </summary>
         /// <param name="catalogPath">The path to the runtime data.</param>
         /// <param name="providerSuffix">This value, if not null or empty, will be appended to all provider ids loaded from this data.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadContentCatalogAsync(*)", true)]
         public static AsyncOperationHandle<IResourceLocator> LoadContentCatalog(string catalogPath, string providerSuffix = null)
         {
-            return m_Addressables.LoadContentCatalog(catalogPath, providerSuffix);
+            return LoadContentCatalogAsync(catalogPath, providerSuffix);
+        }
+        
+        /// <summary>
+        /// Additively load catalogs from runtime data.  The settings are not used.
+        /// </summary>
+        /// <param name="catalogPath">The path to the runtime data.</param>
+        /// <param name="providerSuffix">This value, if not null or empty, will be appended to all provider ids loaded from this data.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IResourceLocator> LoadContentCatalogAsync(string catalogPath, string providerSuffix = null)
+        {
+            return m_Addressables.LoadContentCatalogAsync(catalogPath, providerSuffix);
         }
 
         /// <summary>
@@ -217,23 +239,44 @@ namespace UnityEngine.AddressableAssets
                 return m_Addressables.InitializationOperation;
             }
         }
-
+        
         /// <summary>
         /// Load a single asset
         /// </summary>
         /// <param name="location">The location of the asset.</param>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetAsync(*)", true)]
         public static AsyncOperationHandle<TObject> LoadAsset<TObject>(IResourceLocation location)
         {
-            return m_Addressables.LoadAsset<TObject>(location);
+            return LoadAssetAsync<TObject>(location);
         }
 
         /// <summary>
         /// Load a single asset
         /// </summary>
         /// <param name="key">The key of the location of the asset.</param>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetAsync(*)", true)]
         public static AsyncOperationHandle<TObject> LoadAsset<TObject>(object key)
         {
-            return m_Addressables.LoadAsset<TObject>(key);
+            return LoadAssetAsync<TObject>(key);
+        }
+        
+        
+        /// <summary>
+        /// Load a single asset
+        /// </summary>
+        /// <param name="location">The location of the asset.</param>
+        public static AsyncOperationHandle<TObject> LoadAssetAsync<TObject>(IResourceLocation location)
+        {
+            return m_Addressables.LoadAssetAsync<TObject>(location);
+        }
+
+        /// <summary>
+        /// Load a single asset
+        /// </summary>
+        /// <param name="key">The key of the location of the asset.</param>
+        public static AsyncOperationHandle<TObject> LoadAssetAsync<TObject>(object key)
+        {
+            return m_Addressables.LoadAssetAsync<TObject>(key);
         }
  
         /// <summary>
@@ -242,9 +285,21 @@ namespace UnityEngine.AddressableAssets
         /// <param name="keys">The set of keys to use.</param>
         /// <param name="mode">The mode for merging the results of the found locations.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadResourceLocationsAsync(*)", true)]
         public static AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocations(IList<object> keys, MergeMode mode)
         {
-            return m_Addressables.LoadResourceLocations(keys, mode);
+            return LoadResourceLocationsAsync(keys, mode);
+        }
+ 
+        /// <summary>
+        /// Loads the resource locations specified by the keys.
+        /// </summary>
+        /// <param name="keys">The set of keys to use.</param>
+        /// <param name="mode">The mode for merging the results of the found locations.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(IList<object> keys, MergeMode mode)
+        {
+            return m_Addressables.LoadResourceLocationsAsync(keys, mode);
         }
 
         /// <summary>
@@ -252,9 +307,20 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="key">The key for the locations.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadResourceLocationsAsync(*)", true)]
         public static AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocations(object key)
         {
-            return m_Addressables.LoadResourceLocations(key);
+            return LoadResourceLocationsAsync(key);
+        }
+
+        /// <summary>
+        /// Request the locations for a given key.
+        /// </summary>
+        /// <param name="key">The key for the locations.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(object key)
+        {
+            return m_Addressables.LoadResourceLocationsAsync(key);
         }
 
         /// <summary>
@@ -263,9 +329,21 @@ namespace UnityEngine.AddressableAssets
         /// <param name="locations">The locations of the assets.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>        
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetsAsync(*)", true)]
         public static AsyncOperationHandle<IList<TObject>> LoadAssets<TObject>(IList<IResourceLocation> locations, Action<TObject> callback)
         {
-            return m_Addressables.LoadAssets(locations, callback);
+            return LoadAssetsAsync(locations, callback);
+        }
+
+        /// <summary>
+        /// Load multiple assets
+        /// </summary>
+        /// <param name="locations">The locations of the assets.</param>
+        /// <param name="callback">Callback Action that is called per load operation.</param>        
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<IResourceLocation> locations, Action<TObject> callback)
+        {
+            return m_Addressables.LoadAssetsAsync(locations, callback);
         }
 
         /// <summary>
@@ -275,9 +353,22 @@ namespace UnityEngine.AddressableAssets
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetsAsync(*)", true)]
         public static AsyncOperationHandle<IList<TObject>> LoadAssets<TObject>(IList<object> keys, Action<TObject> callback, MergeMode mode)
         {
-            return m_Addressables.LoadAssets(keys, callback, mode);
+            return LoadAssetsAsync(keys, callback, mode);
+        }
+
+        /// <summary>
+        /// Load mutliple assets
+        /// </summary>
+        /// <param name="keys">List of keys for the locations.</param>
+        /// <param name="callback">Callback Action that is called per load operation.</param>
+        /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<object> keys, Action<TObject> callback, MergeMode mode)
+        {
+            return m_Addressables.LoadAssetsAsync(keys, callback, mode);
         }
 
         /// <summary>
@@ -286,9 +377,21 @@ namespace UnityEngine.AddressableAssets
         /// <param name="key">Key for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetsAsync(*)", true)]
         public static AsyncOperationHandle<IList<TObject>> LoadAssets<TObject>(object key, Action<TObject> callback)
         {
-            return m_Addressables.LoadAssets(key, callback);
+            return LoadAssetsAsync(key, callback);
+        }
+
+        /// <summary>
+        /// Load mutliple assets
+        /// </summary>
+        /// <param name="key">Key for the locations.</param>
+        /// <param name="callback">Callback Action that is called per load operation.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(object key, Action<TObject> callback)
+        {
+            return m_Addressables.LoadAssetsAsync(key, callback);
         }
 
         /// <summary>
@@ -321,7 +424,7 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Releases and destroys an object that was created via Addressables.Instantiate. 
+        /// Releases and destroys an object that was created via Addressables.InstantiateAsync. 
         /// </summary>
         /// <param name="instance">The GameObject instance to be released and destroyed.</param>
         public static void ReleaseInstance(GameObject instance)
@@ -330,18 +433,18 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Releases and destroys an object that was created via Addressables.Instantiate. 
+        /// Releases and destroys an object that was created via Addressables.InstantiateAsync. 
         /// </summary>
-        /// <param name="handle">The handle to the game object to destroy, that was returned by Instantiate.</param>
+        /// <param name="handle">The handle to the game object to destroy, that was returned by InstantiateAsync.</param>
         public static void ReleaseInstance(AsyncOperationHandle handle)
         {
             m_Addressables.Release(handle);
         }
 
         /// <summary>
-        /// Releases and destroys an object that was created via Addressables.Instantiate. 
+        /// Releases and destroys an object that was created via Addressables.InstantiateAsync. 
         /// </summary>
-        /// <param name="handle">The handle to the game object to destroy, that was returned by Instantiate.</param>
+        /// <param name="handle">The handle to the game object to destroy, that was returned by InstantiateAsync.</param>
         public static void ReleaseInstance(AsyncOperationHandle<GameObject> handle)
         {
             m_Addressables.Release(handle);
@@ -354,9 +457,22 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <returns>The operation handle for the request.</returns>
         /// <param name="key">The key of the asset(s) to get the download size of.</param>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> GetDownloadSizeAsync(*)", true)]
         public static AsyncOperationHandle<long> GetDownloadSize(object key)
         {
-            return m_Addressables.GetDownloadSize(key);
+            return GetDownloadSizeAsync(key);
+        }
+
+        /// <summary>
+        /// Determines the required download size, dependencies included, for the specified <paramref name="key"/>.
+        /// Cached assets require no download and thus their download size will be 0.  The Result of the operation
+        /// is the download size in bytes.
+        /// </summary>
+        /// <returns>The operation handle for the request.</returns>
+        /// <param name="key">The key of the asset(s) to get the download size of.</param>
+        public static AsyncOperationHandle<long> GetDownloadSizeAsync(object key)
+        {
+            return m_Addressables.GetDownloadSizeAsync(key);
         }
 
         /// <summary>
@@ -364,27 +480,38 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="key">The key of the asset(s) to load dependencies for.</param>
         /// <returns>The AsyncOperationHandle for the dependency load.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> DownloadDependenciesAsync(*)", true)]
         public static AsyncOperationHandle DownloadDependencies(object key)
         {
-            return m_Addressables.DownloadDependencies(key);
+            return DownloadDependenciesAsync(key);
         }
 
+        /// <summary>
+        /// Downloads dependencies of assets marked with the specified label or address.  
+        /// </summary>
+        /// <param name="key">The key of the asset(s) to load dependencies for.</param>
+        /// <returns>The AsyncOperationHandle for the dependency load.</returns>
+        public static AsyncOperationHandle DownloadDependenciesAsync(object key)
+        {
+            return m_Addressables.DownloadDependenciesAsync(key);
+        }
 
         /// <summary>
-        /// Instantiate single object.
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.  
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>
         /// <param name="parent">Parent transform for instantiated object.</param>
         /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
         /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
         public static AsyncOperationHandle<GameObject> Instantiate(IResourceLocation location, Transform parent = null, bool instantiateInWorldSpace = false, bool trackHandle = true)
         {
-            return m_Addressables.Instantiate(location, new InstantiationParameters(parent, instantiateInWorldSpace), trackHandle);
+            return InstantiateAsync(location, new InstantiationParameters(parent, instantiateInWorldSpace), trackHandle);
         }
-
+        
         /// <summary>
-        /// Instantiate single object.
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>
         /// <param name="position">The position of the instantiated object.</param>
@@ -392,26 +519,28 @@ namespace UnityEngine.AddressableAssets
         /// <param name="parent">Parent transform for instantiated object.</param>
         /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
         public static AsyncOperationHandle<GameObject> Instantiate(IResourceLocation location, Vector3 position, Quaternion rotation, Transform parent = null, bool trackHandle = true)
         {
-            return m_Addressables.Instantiate(location, position, rotation, parent, trackHandle);
+            return InstantiateAsync(location, position, rotation, parent, trackHandle);
         }
 
         /// <summary>
-        /// Instantiate single object.
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
         /// </summary>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
         /// <param name="parent">Parent transform for instantiated object.</param>
         /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
         /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
         public static AsyncOperationHandle<GameObject> Instantiate(object key, Transform parent = null, bool instantiateInWorldSpace = false, bool trackHandle = true)
         {
-            return m_Addressables.Instantiate(key, parent, instantiateInWorldSpace, trackHandle);
+            return InstantiateAsync(key, parent, instantiateInWorldSpace, trackHandle);
         }
 
         /// <summary>
-        /// Instantiate single object.
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
         /// </summary>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
         /// <param name="position">The position of the instantiated object.</param>
@@ -419,34 +548,116 @@ namespace UnityEngine.AddressableAssets
         /// <param name="parent">Parent transform for instantiated object.</param>
         /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
         public static AsyncOperationHandle<GameObject> Instantiate(object key, Vector3 position, Quaternion rotation, Transform parent = null, bool trackHandle = true)
         {
-            return m_Addressables.Instantiate(key, position, rotation, parent, trackHandle);
+            return InstantiateAsync(key, position, rotation, parent, trackHandle);
         }
 
 
         /// <summary>
-        /// Instantiate single object.
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
         /// </summary>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
         /// <param name="instantiateParameters">Parameters for instantiation.</param>
         /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
         public static AsyncOperationHandle<GameObject> Instantiate(object key, InstantiationParameters instantiateParameters, bool trackHandle = true)
         {
-            return m_Addressables.Instantiate(key, instantiateParameters, trackHandle);
+            return InstantiateAsync(key, instantiateParameters, trackHandle);
         }
 
         /// <summary>
-        /// Instantiate object.
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>
         /// <param name="instantiateParameters">Parameters for instantiation.</param>
         /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
         public static AsyncOperationHandle<GameObject> Instantiate(IResourceLocation location, InstantiationParameters instantiateParameters, bool trackHandle = true)
         {
-            return m_Addressables.Instantiate(location, instantiateParameters, trackHandle);
+            return InstantiateAsync(location, instantiateParameters, trackHandle);
+        }
+        
+        /// <summary>
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.  
+        /// </summary>
+        /// <param name="location">The location of the Object to instantiate.</param>
+        /// <param name="parent">Parent transform for instantiated object.</param>
+        /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
+        /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<GameObject> InstantiateAsync(IResourceLocation location, Transform parent = null, bool instantiateInWorldSpace = false, bool trackHandle = true)
+        {
+            return m_Addressables.InstantiateAsync(location, new InstantiationParameters(parent, instantiateInWorldSpace), trackHandle);
+        }
+
+        /// <summary>
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
+        /// </summary>
+        /// <param name="location">The location of the Object to instantiate.</param>
+        /// <param name="position">The position of the instantiated object.</param>
+        /// <param name="rotation">The rotation of the instantiated object.</param>
+        /// <param name="parent">Parent transform for instantiated object.</param>
+        /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<GameObject> InstantiateAsync(IResourceLocation location, Vector3 position, Quaternion rotation, Transform parent = null, bool trackHandle = true)
+        {
+            return m_Addressables.InstantiateAsync(location, position, rotation, parent, trackHandle);
+        }
+
+        /// <summary>
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
+        /// </summary>
+        /// <param name="key">The key of the location of the Object to instantiate.</param>
+        /// <param name="parent">Parent transform for instantiated object.</param>
+        /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
+        /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<GameObject> InstantiateAsync(object key, Transform parent = null, bool instantiateInWorldSpace = false, bool trackHandle = true)
+        {
+            return m_Addressables.InstantiateAsync(key, parent, instantiateInWorldSpace, trackHandle);
+        }
+
+        /// <summary>
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
+        /// </summary>
+        /// <param name="key">The key of the location of the Object to instantiate.</param>
+        /// <param name="position">The position of the instantiated object.</param>
+        /// <param name="rotation">The rotation of the instantiated object.</param>
+        /// <param name="parent">Parent transform for instantiated object.</param>
+        /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<GameObject> InstantiateAsync(object key, Vector3 position, Quaternion rotation, Transform parent = null, bool trackHandle = true)
+        {
+            return m_Addressables.InstantiateAsync(key, position, rotation, parent, trackHandle);
+        }
+
+
+        /// <summary>
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
+        /// </summary>
+        /// <param name="key">The key of the location of the Object to instantiate.</param>
+        /// <param name="instantiateParameters">Parameters for instantiation.</param>
+        /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<GameObject> InstantiateAsync(object key, InstantiationParameters instantiateParameters, bool trackHandle = true)
+        {
+            return m_Addressables.InstantiateAsync(key, instantiateParameters, trackHandle);
+        }
+
+        /// <summary>
+        /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
+        /// </summary>
+        /// <param name="location">The location of the Object to instantiate.</param>
+        /// <param name="instantiateParameters">Parameters for instantiation.</param>
+        /// <param name="trackHandle">If true, Addressables will track this request to allow it to be released via the result object.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<GameObject> InstantiateAsync(IResourceLocation location, InstantiationParameters instantiateParameters, bool trackHandle = true)
+        {
+            return m_Addressables.InstantiateAsync(location, instantiateParameters, trackHandle);
         }
 
         /// <summary>
@@ -457,9 +668,10 @@ namespace UnityEngine.AddressableAssets
         /// <param name="activateOnLoad">If false, the scene will load but not activate (for background loading).  The SceneInstance returned has an Activate() method that can be called to do this at a later point.</param>
         /// <param name="priority">Async operation priority for scene loading.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadSceneAsync(*)", true)]
         public static AsyncOperationHandle<SceneInstance> LoadScene(object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
         {
-            return m_Addressables.LoadScene(key, loadMode, activateOnLoad, priority);
+            return LoadSceneAsync(key, loadMode, activateOnLoad, priority);
         }
 
         /// <summary>
@@ -470,42 +682,106 @@ namespace UnityEngine.AddressableAssets
         /// <param name="activateOnLoad">If false, the scene will load but not activate (for background loading).  The SceneInstance returned has an Activate() method that can be called to do this at a later point.</param>
         /// <param name="priority">Async operation priority for scene loading.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadSceneAsync(*)", true)]
         public static AsyncOperationHandle<SceneInstance> LoadScene(IResourceLocation location, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
         {
-            return m_Addressables.LoadScene(location, loadMode, activateOnLoad, priority);
+            return LoadSceneAsync(location, loadMode, activateOnLoad, priority);
         }
 
+        /// <summary>
+        /// Load scene.
+        /// </summary>
+        /// <param name="key">The key of the location of the scene to load.</param>
+        /// <param name="loadMode">Scene load mode.</param>
+        /// <param name="activateOnLoad">If false, the scene will load but not activate (for background loading).  The SceneInstance returned has an Activate() method that can be called to do this at a later point.</param>
+        /// <param name="priority">Async operation priority for scene loading.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<SceneInstance> LoadSceneAsync(object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
+        {
+            return m_Addressables.LoadSceneAsync(key, loadMode, activateOnLoad, priority);
+        }
+
+        /// <summary>
+        /// Load scene.
+        /// </summary>
+        /// <param name="location">The location of the scene to load.</param>
+        /// <param name="loadMode">Scene load mode.</param>
+        /// <param name="activateOnLoad">If false, the scene will load but not activate (for background loading).  The SceneInstance returned has an Activate() method that can be called to do this at a later point.</param>
+        /// <param name="priority">Async operation priority for scene loading.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<SceneInstance> LoadSceneAsync(IResourceLocation location, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
+        {
+            return m_Addressables.LoadSceneAsync(location, loadMode, activateOnLoad, priority);
+        }
+
+        
         /// <summary>
         /// Release scene
         /// </summary>
         /// <param name="scene">The SceneInstance to release.</param>
         /// <param name="autoReleaseHandle">If true, the handle will be released automatically when complete.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> UnloadSceneAsync(*)", true)]
         public static AsyncOperationHandle<SceneInstance> UnloadScene(SceneInstance scene, bool autoReleaseHandle = true)
         {
-            return m_Addressables.UnloadScene(scene, autoReleaseHandle);
+            return UnloadSceneAsync(scene, autoReleaseHandle);
         }
 
         /// <summary>
         /// Release scene
         /// </summary>
-        /// <param name="handle">The handle returned by LoadScene for the scene to release.</param>
+        /// <param name="handle">The handle returned by LoadSceneAsync for the scene to release.</param>
         /// <param name="autoReleaseHandle">If true, the handle will be released automatically when complete.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> UnloadSceneAsync(*)", true)]
         public static AsyncOperationHandle<SceneInstance> UnloadScene(AsyncOperationHandle handle, bool autoReleaseHandle = true)
         {
-            return m_Addressables.UnloadScene(handle, autoReleaseHandle);
+            return UnloadSceneAsync(handle, autoReleaseHandle);
         }
 
         /// <summary>
         /// Release scene
         /// </summary>
-        /// <param name="handle">The handle returned by LoadScene for the scene to release.</param>
+        /// <param name="handle">The handle returned by LoadSceneAsync for the scene to release.</param>
         /// <param name="autoReleaseHandle">If true, the handle will be released automatically when complete.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> UnloadSceneAsync(*)", true)]
         public static AsyncOperationHandle<SceneInstance> UnloadScene(AsyncOperationHandle<SceneInstance> handle, bool autoReleaseHandle = true)
         {
-            return m_Addressables.UnloadScene(handle, autoReleaseHandle);
+            return UnloadSceneAsync(handle, autoReleaseHandle);
+        }
+        
+        /// <summary>
+        /// Release scene
+        /// </summary>
+        /// <param name="scene">The SceneInstance to release.</param>
+        /// <param name="autoReleaseHandle">If true, the handle will be released automatically when complete.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<SceneInstance> UnloadSceneAsync(SceneInstance scene, bool autoReleaseHandle = true)
+        {
+            return m_Addressables.UnloadSceneAsync(scene, autoReleaseHandle);
+        }
+
+        /// <summary>
+        /// Release scene
+        /// </summary>
+        /// <param name="handle">The handle returned by LoadSceneAsync for the scene to release.</param>
+        /// <param name="autoReleaseHandle">If true, the handle will be released automatically when complete.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<SceneInstance> UnloadSceneAsync(AsyncOperationHandle handle, bool autoReleaseHandle = true)
+        {
+            return m_Addressables.UnloadSceneAsync(handle, autoReleaseHandle);
+        }
+
+        /// <summary>
+        /// Release scene
+        /// </summary>
+        /// <param name="handle">The handle returned by LoadSceneAsync for the scene to release.</param>
+        /// <param name="autoReleaseHandle">If true, the handle will be released automatically when complete.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<SceneInstance> UnloadSceneAsync(AsyncOperationHandle<SceneInstance> handle, bool autoReleaseHandle = true)
+        {
+            return m_Addressables.UnloadSceneAsync(handle, autoReleaseHandle);
         }
      }
 

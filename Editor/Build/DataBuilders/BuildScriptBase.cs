@@ -55,8 +55,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 Debug.LogError(message);
                 return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, message);
             }
+            
+            // Append the file registry to the results
+            var result = BuildDataImplementation<TResult>(builderInput);
+            if (result != null)
+                result.FileRegistry = builderInput.Registry;
 
-            return BuildDataImplementation<TResult>(builderInput);
+            return result;
         }
         
         /// <summary>
@@ -167,11 +172,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// </summary>
         /// <param name="path">The path of the file to write.</param>
         /// <param name="content">The content of the file.</param>
+        /// <param name="registry">The file registry used to track all produced artifacts.</param>
         /// <returns>True if the file was written.</returns>
-        protected static bool WriteFile(string path, string content)
+        protected static bool WriteFile(string path, string content, FileRegistry registry)
         {
             try
             {
+                registry.AddFile(path);
                 var dir = Path.GetDirectoryName(path);
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
@@ -181,6 +188,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             catch (Exception ex)
             {
                 Debug.LogException(ex);
+                registry.RemoveFile(path);
                 return false;
             }
 

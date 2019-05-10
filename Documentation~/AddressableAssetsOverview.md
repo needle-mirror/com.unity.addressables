@@ -19,4 +19,4 @@ When you install the Addressable Assets package, the Resource Manager and Script
 * __Build Script__ - runs Asset Group Processors to package Assets and provides the mapping between Addresses and Resource Locations for the Resource Manager.
 * __Label__ - provides an additional addressable Asset identifier for run-time loading of similar items. For example:
 
-    `PreloadDependencies("spaceHazards");`
+    `Addressables.DownloadDependenciesAsync("spaceHazards");`

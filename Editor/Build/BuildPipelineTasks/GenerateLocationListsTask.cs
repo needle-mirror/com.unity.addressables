@@ -92,7 +92,11 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
         static string GetLoadPath(AddressableAssetGroup group, string name)
         {
-            return group.GetSchema<BundledAssetGroupSchema>().LoadPath.GetValue(group.Settings) + "/" + name;
+            var bagSchema = group.GetSchema<BundledAssetGroupSchema>();
+            var loadPath = bagSchema.LoadPath.GetValue(group.Settings) + "/" + name;
+            if(!string.IsNullOrEmpty(bagSchema.UrlSuffix))
+                loadPath += bagSchema.UrlSuffix;
+            return loadPath;
         }
 
         internal static void CreateResourceLocationData(

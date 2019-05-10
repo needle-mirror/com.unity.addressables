@@ -17,6 +17,28 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             AssetBundleRequest m_RequestOperation;
             ProvideHandle m_ProvideHandle;
             
+            internal static AssetBundle LoadBundleFromDependecies(IList<object> results)
+            {
+                if (results == null || results.Count == 0)
+                    return null;
+
+                AssetBundle bundle = null;
+                bool firstBundleWrapper = true;
+                for (int i = 0; i < results.Count; i++)
+                {
+                    var abWrapper = results[i] as IAssetBundleResource;
+                    if (abWrapper != null)
+                    {
+                        //only use the first asset bundle, even if it is invalid
+                        var b = abWrapper.GetAssetBundle();
+                        if (firstBundleWrapper)
+                            bundle = b;
+                        firstBundleWrapper = false;
+                    }
+                }
+                return bundle;
+            }
+            
             public void Start(ProvideHandle provideHandle)
             {
                 m_ProvideHandle = provideHandle;
@@ -27,7 +49,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
                 List<object> deps = new List<object>(); // TODO: garbage. need to pass actual count and reuse the list
                 m_ProvideHandle.GetDependencies(deps);
-                AssetBundle bundle = AssetBundleProvider.LoadBundleFromDependecies(deps);
+                AssetBundle bundle = LoadBundleFromDependecies(deps);
                 if (bundle == null)
                 {
                     m_ProvideHandle.Complete<AssetBundle>(null, false, new Exception("Unable to load dependent bundle from location " + m_ProvideHandle.Location));

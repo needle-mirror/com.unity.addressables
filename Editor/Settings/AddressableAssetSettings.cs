@@ -555,6 +555,25 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
 
+        [SerializeField]
+        [SerializedTypeRestriction(type = typeof(UnityEngine.Networking.CertificateHandler))]
+        SerializedType m_CertificateHandlerType;
+
+        /// <summary>
+        /// The type of CertificateHandler to use for this provider.
+        /// </summary>
+        public Type CertificateHandlerType
+        {
+            get
+            {
+                return m_CertificateHandlerType.Value;
+            }
+            set
+            {
+                m_CertificateHandlerType.Value = value;
+            }
+        }
+
         [FormerlySerializedAs("m_activePlayerDataBuilderIndex")]
         [SerializeField]
         int m_ActivePlayerDataBuilderIndex = 3;

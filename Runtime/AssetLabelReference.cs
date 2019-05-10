@@ -25,7 +25,12 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public object RuntimeKey
         {
-            get { return labelString; }
+            get
+            {
+                if (labelString == null)
+                    labelString = string.Empty;
+                return labelString;
+            }
         }
 
         /// <inheritdoc/>

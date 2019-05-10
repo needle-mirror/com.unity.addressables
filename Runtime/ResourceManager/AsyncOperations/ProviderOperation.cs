@@ -6,9 +6,9 @@ using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEngine.ResourceManagement.AsyncOperations
 {
-    internal interface IProviderGeneric
+    internal interface IGenericProviderOperation
     {
-        void Init(IResourceProvider provider, IResourceLocation location, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp);
+        void Init(ResourceManager rm, IResourceProvider provider, IResourceLocation location, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp);
         int ProvideHandleVersion { get; }
         IResourceLocation Location { get; }
         int DependencyCount { get; }
@@ -16,11 +16,10 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         TDepObject GetDependency<TDepObject>(int index);
         void SetProgressCallback(Func<float> callback);
         void ProviderCompleted<T>(T result, bool status, Exception e);
-
         Type RequestedType { get; }
     }
 
-    internal class ProviderOperation<TObject> : AsyncOperationBase<TObject>, IProviderGeneric, ICachable
+    internal class ProviderOperation<TObject> : AsyncOperationBase<TObject>, IGenericProviderOperation, ICachable
     {
         private Action<int, object, bool, Exception> m_CompletionCallback;
         private Action<int, IList<object>> m_GetDepCallback;
@@ -32,6 +31,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         private TObject m_Result;
         private bool m_NeedsRelease;
         int ICachable.Hash { get; set; }
+        private ResourceManager m_ResourceManager;
 
         public int ProvideHandleVersion { get { return m_ProvideHandleVersion; } }
         public IResourceLocation Location { get { return m_Location; } }
@@ -149,7 +149,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             {
                 try
                 {
-                    m_Provider.Provide(new ProvideHandle(this));
+                    m_Provider.Provide(new ProvideHandle(m_ResourceManager, this));
                 }
                 catch (Exception e)
                 {
@@ -158,8 +158,9 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             }
         }
 
-        public void Init(IResourceProvider provider, IResourceLocation location, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
+        public void Init(ResourceManager rm, IResourceProvider provider, IResourceLocation location, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
         {
+            m_ResourceManager = rm;
             m_DepOp = depOp;
             if (m_DepOp.IsValid())
                 m_DepOp.Acquire();

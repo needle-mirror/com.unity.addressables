@@ -8,6 +8,14 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
     [Serializable]
     class AnalyzeRule
     {
+        internal virtual bool CanFix { get; set; }
+
+        [SerializeField]
+        internal List<AnalyzeResult> m_Results = new List<AnalyzeResult>();
+
+        [NonSerialized]
+        protected AnalyzeResult noErrors = new AnalyzeResult("No issues found");
+
         public const char kDelimiter = ':';
         [Serializable]
         internal class AnalyzeResult
@@ -50,7 +58,11 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
         internal virtual void ClearAnalysis()
         {
+            m_Results.Clear();
+        }
+
+        internal virtual void Revert()
+        {
         }
     }
-
 }

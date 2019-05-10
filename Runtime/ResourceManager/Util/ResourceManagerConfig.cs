@@ -244,7 +244,7 @@ namespace UnityEngine.ResourceManagement.Util
         /// <inheritdoc/>
         public override string ToString()
         {
-            return Value == null ? "" : Value.Name;
+            return Value == null ? "<none>" : Value.Name;
         }
 
         /// <summary>

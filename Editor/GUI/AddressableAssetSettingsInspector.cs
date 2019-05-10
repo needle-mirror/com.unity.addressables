@@ -107,7 +107,9 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Remote Catalog Build Path", "The path for a remote content catalog.");
         GUIContent m_RemoteCatLoadPath =
             new GUIContent("Remote Catalog Load Path", "The path to load a remote content catalog.");
-        
+        GUIContent m_CertificateHandlerType =
+             new GUIContent("Custom certificate handler", "The class to use for custom certificate handling.  This type must inherit from UnityEngine.Networking.CertificateHandler.");
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -118,7 +120,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 ProjectConfigData.postProfilerEvents = EditorGUILayout.Toggle(m_SendProfilerEvents, ProjectConfigData.postProfilerEvents);
                 m_AasTarget.buildSettings.LogResourceManagerExceptions = EditorGUILayout.Toggle(m_LogRuntimeExceptions, m_AasTarget.buildSettings.LogResourceManagerExceptions);
                 m_AasTarget.OverridePlayerVersion = EditorGUILayout.TextField(m_OverridePlayerVersion, m_AasTarget.OverridePlayerVersion);
-                
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("m_CertificateHandlerType"), m_CertificateHandlerType);
+
                 m_AasTarget.BuildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
                 if ( (m_AasTarget.RemoteCatalogBuildPath != null && m_AasTarget.RemoteCatalogLoadPath != null) // these will never actually be null, as the accessor initializes them.
                     && (m_AasTarget.BuildRemoteCatalog))

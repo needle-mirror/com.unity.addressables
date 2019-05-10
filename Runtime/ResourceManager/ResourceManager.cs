@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.Diagnostics;
 using UnityEngine.ResourceManagement.Exceptions;
@@ -48,12 +49,17 @@ namespace UnityEngine.ResourceManagement
 
         // list of all the providers in s_ResourceProviders that implement IUpdateReceiver
         ListWithEvents<IUpdateReceiver> m_UpdateReceivers = new ListWithEvents<IUpdateReceiver>();
+        List<IUpdateReceiver> m_UpdateReceiversToRemove = null;
+        bool m_UpdatingReceivers = false;
         internal int OperationCacheCount { get { return m_AssetOperationCache.Count; } }
         internal int InstanceOperationCount { get { return m_TrackedInstanceOperations.Count; } }
         //cache of type + providerId to IResourceProviders for faster lookup
         Dictionary<int, IResourceProvider> m_providerMap = new Dictionary<int, IResourceProvider>();
         Dictionary<int, IAsyncOperation> m_AssetOperationCache = new Dictionary<int, IAsyncOperation>();
         HashSet<InstanceOperation> m_TrackedInstanceOperations = new HashSet<InstanceOperation>();
+        DelegateList<float> m_UpdateCallbacks = DelegateList<float>.CreateWithGlobalCache();
+        List<IAsyncOperation> m_DeferredCompleteCallbacks = new List<IAsyncOperation>();
+
 
         Action<AsyncOperationHandle, DiagnosticEventType, int, object> m_diagnosticsHandler;
         Action<IAsyncOperation> m_ReleaseOpNonCached;
@@ -61,6 +67,38 @@ namespace UnityEngine.ResourceManagement
         Action<IAsyncOperation> m_ReleaseInstanceOp;
         static int s_GroupOperationTypeHash = typeof(GroupOperation).GetHashCode();
         static int s_InstanceOperationTypeHash = typeof(InstanceOperation).GetHashCode();
+
+        /// <summary>
+        /// Add an update reveiver. 
+        /// </summary>
+        /// <param name="receiver">The object to add. The Update method will be called until the object is removed. </param>
+        public void AddUpdateReceiver(IUpdateReceiver receiver)
+        {
+            if (receiver == null)
+                return;
+            m_UpdateReceivers.Add(receiver);
+        }
+
+        /// <summary>
+        /// Remove update receiver.
+        /// </summary>
+        /// <param name="receiver">The object to remove.</param>
+        public void RemoveUpdateReciever(IUpdateReceiver receiver)
+        {
+            if (receiver == null)
+                return;
+
+            if (m_UpdatingReceivers)
+            {
+                if (m_UpdateReceiversToRemove == null)
+                    m_UpdateReceiversToRemove = new List<IUpdateReceiver>();
+                m_UpdateReceiversToRemove.Add(receiver);
+            }
+            else
+            {
+                m_UpdateReceivers.Remove(receiver);
+            }
+        }
 
         /// <summary>
         /// The allocation strategy object.
@@ -71,6 +109,10 @@ namespace UnityEngine.ResourceManagement
         /// </summary>
         /// <value>The resource providers list.</value>
         public IList<IResourceProvider> ResourceProviders { get { return m_ResourceProviders; } }
+        /// <summary>
+        /// The CertificateHandler instance object.
+        /// </summary>
+        public CertificateHandler CertificateHandlerInstance { get; set; }
 
         /// <summary>
         /// Constructor for the resource manager.
@@ -91,14 +133,14 @@ namespace UnityEngine.ResourceManagement
         {
             IUpdateReceiver updateReceiver = obj as IUpdateReceiver;
             if (updateReceiver != null)
-                m_UpdateReceivers.Add(updateReceiver);
+                AddUpdateReceiver(updateReceiver);
         }
 
         private void OnObjectRemoved(object obj)
         {
             IUpdateReceiver updateReceiver = obj as IUpdateReceiver;
             if (updateReceiver != null)
-                m_UpdateReceivers.Remove(updateReceiver);
+                RemoveUpdateReciever(updateReceiver);
         }
 
         private void RegisterForCallbacks()
@@ -223,7 +265,7 @@ namespace UnityEngine.ResourceManagement
             if(provider == null)
                 provider = GetResourceProvider(desiredType, location);
 
-            ((IProviderGeneric)op).Init(provider, location, depOp);
+            ((IGenericProviderOperation)op).Init(this, provider, location, depOp);
 
             var handle = StartOperation(op, depOp);
 
@@ -343,6 +385,14 @@ namespace UnityEngine.ResourceManagement
         public void Release(AsyncOperationHandle handle)
         {
             handle.Release();
+        }
+        /// <summary>
+        /// Increment reference count of operation handle.
+        /// </summary>
+        /// <param name="handle">The handle to the resource to increment the reference count for.</param>
+        public void Acquire(AsyncOperationHandle handle)
+        {
+            handle.Acquire();
         }
 
         private GroupOperation AcquireGroupOpFromCache(int hash)
@@ -592,14 +642,19 @@ namespace UnityEngine.ResourceManagement
             RegisterForCallbacks();
         }
 
-        DelegateList<float> m_UpdateCallbacks = DelegateList<float>.CreateWithGlobalCache();
-        List<IAsyncOperation> m_DeferredCompleteCallbacks = new List<IAsyncOperation>();
-
         internal void Update(float unscaledDeltaTime)
         {
             m_UpdateCallbacks.Invoke(unscaledDeltaTime);
+            m_UpdatingReceivers = true;
             for (int i = 0; i < m_UpdateReceivers.Count; i++ )
                 m_UpdateReceivers[i].Update(unscaledDeltaTime);
+            m_UpdatingReceivers = false;
+            if (m_UpdateReceiversToRemove != null)
+            {
+                foreach (var r in m_UpdateReceiversToRemove)
+                    m_UpdateReceivers.Remove(r);
+                m_UpdateReceiversToRemove = null;
+            }
             ExecuteDeferredCallbacks();
         }
 

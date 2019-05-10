@@ -16,6 +16,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     public interface IAssetBundleResource
     {
         AssetBundle GetAssetBundle();
+        
     }
 
     /// <summary>
@@ -110,7 +111,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
     }
 
-
     class AssetBundleResource : IAssetBundleResource
     {
         AssetBundle m_AssetBundle;
@@ -134,6 +134,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             if (m_Options.RedirectLimit > 0)
                 webRequest.redirectLimit = m_Options.RedirectLimit;
             webRequest.chunkedTransfer = m_Options.ChunkedTransfer;
+            if (m_ProvideHandle.ResourceManager.CertificateHandlerInstance != null)
+            {
+                webRequest.certificateHandler = m_ProvideHandle.ResourceManager.CertificateHandlerInstance;
+                webRequest.disposeCertificateHandlerOnDispose = false;
+            }
             return webRequest;
         }
 
@@ -253,28 +258,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         public override Type GetDefaultType(IResourceLocation location)
         {
             return typeof(IAssetBundleResource);
-        }
-
-        internal static AssetBundle LoadBundleFromDependecies(IList<object> results)
-        {
-            if (results == null || results.Count == 0)
-                return null;
-
-            AssetBundle bundle = null;
-            bool firstBundleWrapper = true;
-            for (int i = 0; i < results.Count; i++)
-            {
-                var abWrapper = results[i] as AssetBundleResource;
-                if (abWrapper != null)
-                {
-                    //only use the first asset bundle, even if it is invalid
-                    var b = abWrapper.GetAssetBundle();
-                    if (firstBundleWrapper)
-                        bundle = b;
-                    firstBundleWrapper = false;
-                }
-            }
-            return bundle;
         }
 
         /// <summary>

@@ -216,7 +216,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     var virtualBundleRuntimeData = m_CreatedProviderIds[bundleProviderId];
                     virtualBundleRuntimeData.AssetBundles.Add(bundleData);
                 }
-
             }
             foreach (var kvp in m_CreatedProviderIds)
             {
@@ -232,7 +231,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             contentCatalog.InstanceProviderData = ObjectInitializationData.CreateSerializedInitializationData(instanceProviderType.Value);
             contentCatalog.SceneProviderData = ObjectInitializationData.CreateSerializedInitializationData(sceneProviderType.Value);
             //save catalog
-            WriteFile(string.Format(m_PathFormat, "", "catalog"), JsonUtility.ToJson(contentCatalog));
+            WriteFile(string.Format(m_PathFormat, "", "catalog"), JsonUtility.ToJson(contentCatalog), builderInput.Registry);
 
    
             foreach (var io in aaSettings.InitializationObjects)
@@ -242,7 +241,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
 
             var settingsPath = string.Format(m_PathFormat, "", "settings");
-            WriteFile(settingsPath, JsonUtility.ToJson(aaContext.runtimeData));
+            WriteFile(settingsPath, JsonUtility.ToJson(aaContext.runtimeData), builderInput.Registry);
 
             //inform runtime of the init data path
             var runtimeSettingsPath = string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "settings");

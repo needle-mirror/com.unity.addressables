@@ -40,23 +40,23 @@ You can load or instantiate an Asset at run-time. Loading an Asset loads all dep
 
 To access an Asset in script using a string address:
 
-`Addressables.LoadAsset<GameObject>("AssetAddress");`
+`Addressables.LoadAssetAsync<GameObject>("AssetAddress");`
 
 or
 
-`Addressables.Instantiate<GameObject>("AssetAddress");`
+`Addressables.InstantiateAsync("AssetAddress");`
 
-`LoadAsset` and `Instantiate` are asynch operations. You must provide a callback to work with the Asset once it is loaded. 
+`LoadAssetAsync` and `InstantiateAsync` are asynch operations. You may provide a callback to work with the asset once it is loaded. See [AsyncOperationHandle](AddressableAssetsAsyncOperationHandle) for more examples of waiting for completion.
 
 ```
     GameObject myGameObject;
     
     
         ...
-        Addressables.LoadAsset<GameObject>("AssetAddress").Completed += onLoadDone;
+        Addressables.LoadAssetAsync<GameObject>("AssetAddress").Completed += OnLoadDone;
     }
 
-    private void onLoadDone(UnityEngine.ResourceManagement.AsyncOperationHandle<GameObject> obj)
+    private void OnLoadDone(UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<GameObject> obj)
     {
         // In a production environment, you should add exception handling to catch scenarios such as a null result;
         myGameObject = obj.Result;
@@ -65,8 +65,8 @@ or
 
 #### Sub-Assets and Components
 Sub-assets and components are special cases worth looking at for asset loading.  
-* Components - you cannot load a game object via it's component.  Neither `LoadAsset<MyScript>` nor `Instantiate<MyScript>` will work.  You must load/instantiate the GameObject and then get your component off of it.
-* Sub-Assets - Loading of sub-assets is supported, but via special syntax.  Examples of sub-assets would be sprites in a sprite sheet, or animation clips in an FBX. The syntax here would be: `Addressables.LoadAsset<IList<Sprite>>("MySpriteSheetAddress");`
+* Components - you cannot load a game object via it's component.  You must load/instantiate the GameObject and then get your component off of it.
+* Sub-Assets - Loading of sub-assets is supported, but via special syntax.  Examples of sub-assets would be sprites in a sprite sheet, or animation clips in an FBX. The syntax here would be: `Addressables.LoadAssetAsync<IList<Sprite>>("MySpriteSheetAddress");`
 
 ### Using the AssetReference Class
 
@@ -89,13 +89,13 @@ To access an Addressable Asset using the *AssetReference *class:
 
 To load an `AssetReference`, call one of the methods defined on it. For example:
 
-`AssetRefMember.LoadAsset<GameObject>();`
+`AssetRefMember.LoadAssetAsync<GameObject>();`
 
 or
 
-`AssetRefMember.Instantiate<GameObject>(pos, rot);`
+`AssetRefMember.InstantiateAsync(pos, rot);`
 
-`LoadAsset` and `Instantiate` are asynch operations. You must provide a callback to work with the Asset once it is loaded. 
+`LoadAssetAsync` and `InstantiateAsync` are asynch operations. You may provide a callback to work with the asset once it is loaded. See [AsyncOperationHandle](AddressableAssetsAsyncOperationHandle) for examples of waiting for completion. 
 
 ### Local Data in StreamingAssets
 Addressables needs some files at runtime to know how and what to load.  Those files are generated when you build Addressables data, and wind up in the StreamingAssets folder.  This is a special folder in Unity that causes all files in that folder to be included in the build.  When you build content, we do not immediately put files into this folder.  Instead they are staged in the Library.  When you build the player, we copy the requried files over, do the build, then delete them.  This is done so that a user can build data for multiple platforms, but only get the relevant data included in their build. 
@@ -104,7 +104,7 @@ In addition to the Addressables specific data, any groups that build their data 
 
 ### Downloading in Advance
 
-Calling the `Addressables.DownloadDependencies()` method loads the dependencies for the address or label that you pass in. Typically, this is the asset bundle.
+Calling the `Addressables.DownloadDependenciesAsync()` method loads the dependencies for the address or label that you pass in. Typically, this is the asset bundle.
 
 The `AsyncOperationHandle` struct returned by this call includes a `PercentComplete` attribute that you can use to monitor progress of downloads. You can use the percent complete to display a progress bar and have the app wait until the content has loaded.
 

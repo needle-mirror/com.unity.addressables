@@ -79,7 +79,7 @@ namespace AddressableAssetsIntegrationTests
 #endif
                     runtimeSettingsPath = m_Addressables.ResolveInternalId(runtimeSettingsPath);
                     Debug.LogFormat("Initializing from path {0}", runtimeSettingsPath);
-                    yield return m_Addressables.Initialize(runtimeSettingsPath, "BASE");
+                    yield return m_Addressables.InitializeAsync(runtimeSettingsPath, "BASE");
 
                     foreach (var locator in m_Addressables.ResourceLocators)
                     {

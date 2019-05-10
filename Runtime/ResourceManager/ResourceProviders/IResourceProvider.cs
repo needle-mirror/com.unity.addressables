@@ -22,15 +22,16 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     public struct ProvideHandle
     {
         int m_Version;
-        IProviderGeneric m_InternalOp;
-
-        internal ProvideHandle(IProviderGeneric op)
+        IGenericProviderOperation m_InternalOp;
+        ResourceManager m_ResourceManager;
+        internal ProvideHandle(ResourceManager rm, IGenericProviderOperation op)
         {
+            m_ResourceManager = rm;
             m_InternalOp = op;
             m_Version = op.ProvideHandleVersion;
         }
 
-        IProviderGeneric InternalOp
+        IGenericProviderOperation InternalOp
         {
             get
             {
@@ -39,6 +40,17 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     throw new Exception(ProviderOperation<object>.kInvalidHandleMsg);
                 }
                 return m_InternalOp;
+            }
+        }
+
+        /// <summary>
+        /// The ResourceManager used to create the operation.
+        /// </summary>
+        public ResourceManager ResourceManager
+        {
+            get
+            {
+                return m_ResourceManager;
             }
         }
 
