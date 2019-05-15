@@ -39,9 +39,11 @@ namespace UnityEngine.AddressableAssets
                 {BuildTarget.StandaloneWindows, AddressablesPlatform.Windows},
                 {BuildTarget.StandaloneWindows64, AddressablesPlatform.Windows},
                 {BuildTarget.StandaloneOSX, AddressablesPlatform.OSX},
-                {BuildTarget.StandaloneLinux, AddressablesPlatform.Linux},
                 {BuildTarget.StandaloneLinux64, AddressablesPlatform.Linux},
+#if !UNITY_2019_2_OR_NEWER
+                {BuildTarget.StandaloneLinux, AddressablesPlatform.Linux},
                 {BuildTarget.StandaloneLinuxUniversal, AddressablesPlatform.Linux}
+#endif
             };
 #endif
         private static readonly Dictionary<RuntimePlatform, AddressablesPlatform> s_RuntimeTargetMapping =

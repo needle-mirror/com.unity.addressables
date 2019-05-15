@@ -26,6 +26,19 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             m_Operation.allowSceneActivation = true;
         }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            return Scene.GetHashCode();
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (!(obj is SceneInstance))
+                return false;
+            return Scene.Equals(((SceneInstance)obj).Scene);
+        }
     }
 
     /// <summary>
@@ -34,7 +47,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     public interface ISceneProvider
     {
         /// <summary>
-        /// Load a scene at a specificed resource location.
+        /// Load a scene at a specified resource location.
         /// </summary>
         /// <param name="resourceManager">The resource manager to use for loading dependencies.</param>
         /// <param name="location">The location of the scene.</param>

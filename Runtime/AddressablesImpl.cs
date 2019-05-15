@@ -77,6 +77,7 @@ namespace UnityEngine.AddressableAssets
                 if (s.Result.Scene == scene)
                 {
                     m_SceneInstances.Remove(s);
+                    m_resultToHandle.Remove(s.Result);
                     m_ResourceManager.ReleaseScene(SceneProvider, s);
                     break;
                 }
@@ -464,7 +465,14 @@ namespace UnityEngine.AddressableAssets
         void OnSceneHandleCompleted(AsyncOperationHandle<SceneInstance> handle)
         {
             if (handle.Status == AsyncOperationStatus.Succeeded)
+            {
                 m_SceneInstances.Add(handle);
+                if (!m_resultToHandle.ContainsKey(handle.Result))
+                {
+                    handle.Destroyed += m_OnHandleDestroyedAction;
+                    m_resultToHandle.Add(handle.Result, handle);
+                }
+            }
         }
 
         void OnHandleCompleted(AsyncOperationHandle handle)
