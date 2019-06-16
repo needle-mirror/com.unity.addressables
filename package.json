@@ -1,18 +1,23 @@
 {
-	"name": "com.unity.addressables",
-	"displayName": "Addressables System",
-	"version": "0.8.6-preview",
-	"unity": "2018.3",
-	"description": "Our new Addressable Asset System allows the developer to ask for an asset via its address and get back the thing that resides at that address. Once an asset (e.g. a prefab) is marked \"addressable\", it generates an address which can be called from anywhere. Wherever the asset resides (local or remote), the system will locate it and its dependencies, then return it.\n\nThe Addressable Asset System uses asynchronous loading to support loading from any location with any collection of dependencies. Whether you are using direct references, traditional asset bundles, or Resource folders, addressable assets provide a simpler way to make your game more dynamic. The Addressable Asset System  simultaneously opens up the world of asset bundles while managing all the complexity.",
-	"keywords": ["asset", "resources", "bundle", "bundles", "assetbundles"],
-	"category": "",
-	"dependencies": {
-		"com.unity.scriptablebuildpipeline": "1.4.1-preview"
-	},
+  "name": "com.unity.addressables",
+  "displayName": "Addressables",
+  "version": "1.1.3-preview",
+  "unity": "2018.3",
+  "description": "The Addressable Asset System allows the developer to ask for an asset via its address. Once an asset (e.g. a prefab) is marked \"addressable\", it generates an address which can be called from anywhere. Wherever the asset resides (local or remote), the system will locate it and its dependencies, then return it.\n\nUse 'Window->Asset Management->Addressables' to begin working with the system.\n\nAddressables use asynchronous loading to support loading from any location with any collection of dependencies. Whether you have been using direct references, traditional asset bundles, or Resource folders, addressables provide a simpler way to make your game more dynamic. Addressables simultaneously opens up the world of asset bundles while managing all the complexity.",
+  "keywords": [
+    "asset",
+    "resources",
+    "bundle",
+    "bundles",
+    "assetbundles"
+  ],
+  "category": "",
+  "dependencies": {
+    "com.unity.scriptablebuildpipeline": "1.5.0-preview"
+  },
   "repository": {
     "type": "git",
-    "url": "https://gitlab.cds.internal.unity3d.com/upm-packages/build-pipeline/addressablesdemo",
-	"revision": "16d79edba5c00baa36ba6e413294cd9d05bee5f1 "
+    "url": "git@github.cds.internal.unity3d.com:unity/Addressables.git",
+    "revision": "0ea6de302fcee7da30dec7f8fbe7ec957d913882"
   }
-
 }

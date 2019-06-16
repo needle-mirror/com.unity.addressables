@@ -39,7 +39,7 @@ namespace UnityEngine.ResourceManagement.Tests
             VirtualAssetBundle bundle = new VirtualAssetBundle(bundleName, local, 0, "");
             bundle.SetSize(dataSize, headerSize);
             data.AssetBundles.Add(bundle);
-            ResourceLocationBase bundleLocation = new ResourceLocationBase(bundleName, bundleName, typeof(AssetBundleProvider).FullName);
+            ResourceLocationBase bundleLocation = new ResourceLocationBase(bundleName, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource));
             bundle.SetSize(dataSize, headerSize);
             return bundleLocation;
         }
@@ -109,7 +109,7 @@ namespace UnityEngine.ResourceManagement.Tests
             VirtualAssetBundleRuntimeData data = new VirtualAssetBundleRuntimeData();
             VirtualAssetBundleProvider provider = new VirtualAssetBundleProvider(data);
             rm.ResourceProviders.Add(provider);
-            ResourceLocationBase unknownLocation = new ResourceLocationBase("unknown", "unknown", typeof(AssetBundleProvider).FullName);
+            ResourceLocationBase unknownLocation = new ResourceLocationBase("unknown", "unknown", typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource));
             var op = rm.ProvideResource<VirtualAssetBundle>(unknownLocation);
             // wait for delayed action manager. 
             // TODO: refactor delayed action manager so we can pump it instead of waiting a frame

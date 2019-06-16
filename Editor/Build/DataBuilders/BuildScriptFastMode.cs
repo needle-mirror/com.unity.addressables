@@ -43,7 +43,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         }
 
         /// <inheritdoc />
-        internal override bool IsDataBuilt()
+        public override bool IsDataBuilt()
         {
             var catalogPath = string.Format(PathFormat, "", "catalog");
             var settingsPath = string.Format(PathFormat, "", "settings");
@@ -85,7 +85,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             aaContext.runtimeData.BuildTarget = context.Target.ToString();
             aaContext.runtimeData.LogResourceManagerExceptions = aaSettings.buildSettings.LogResourceManagerExceptions;
             aaContext.runtimeData.ProfileEvents = ProjectConfigData.postProfilerEvents;
-            aaContext.runtimeData.CatalogLocations.Add(new ResourceLocationData(new[] { ResourceManagerRuntimeData.kCatalogAddress }, string.Format(PathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"), typeof(ContentCatalogProvider)));
+            aaContext.runtimeData.CatalogLocations.Add(new ResourceLocationData(new[] { ResourceManagerRuntimeData.kCatalogAddress }, string.Format(PathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"), typeof(ContentCatalogProvider), typeof(ContentCatalogData)));
 
             var errorString = ProcessAllGroups(aaContext);
             if(!string.IsNullOrEmpty(errorString))
@@ -140,7 +140,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 a.GatherAllAssets(allEntries, true, true);
 
             foreach (var a in allEntries)
-                aaContext.locations.Add(new ContentCatalogDataEntry(a.GetAssetLoadPath(true), typeof(AssetDatabaseProvider).FullName, a.CreateKeyList()));
+                a.CreateCatalogEntries(aaContext.locations, false, typeof(AssetDatabaseProvider).FullName, null, null);
 
             return errorString;
         }

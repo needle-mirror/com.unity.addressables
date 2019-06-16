@@ -19,6 +19,6 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// <param name="key">The key to use.</param>
         /// <param name="locations">The resulting set of locations for the key.</param>
         /// <returns>True if any locations were found with the specified key.</returns>
-        bool Locate(object key, out IList<IResourceLocation> locations);
+        bool Locate(object key, Type type, out IList<IResourceLocation> locations);
     }
 }

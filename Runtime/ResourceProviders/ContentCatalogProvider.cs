@@ -57,7 +57,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                 string idToLoad = DetermineIdToLoad(m_ProviderInterface.Location, deps);
 
                 Addressables.LogFormat("Addressables - Using content catalog from {0}.", idToLoad);
-                rm.ProvideResource<ContentCatalogData>(new ResourceLocationBase(idToLoad, idToLoad, typeof(JsonAssetProvider).FullName)).Completed += OnCatalogLoaded;
+                rm.ProvideResource<ContentCatalogData>(new ResourceLocationBase(idToLoad, idToLoad, typeof(JsonAssetProvider).FullName, typeof(ContentCatalogData))).Completed += OnCatalogLoaded;
             }
 
             internal string DetermineIdToLoad(IResourceLocation location, IList<object> dependencyObjects)

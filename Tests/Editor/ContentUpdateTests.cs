@@ -18,17 +18,17 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CanCreateContentStateData()
         {
-            var group = m_Settings.CreateGroup("LocalStuff", false, false, false, null);
+            var group = Settings.CreateGroup("LocalStuff", false, false, false, null);
             var schema = group.AddSchema<BundledAssetGroupSchema>();
-            schema.BuildPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalBuildPath);
-            schema.LoadPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalLoadPath);
+            schema.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalBuildPath);
+            schema.LoadPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalLoadPath);
             schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
             group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
 
-            m_Settings.CreateOrMoveEntry(m_AssetGUID, group);
-            var context = new AddressablesDataBuilderInput(m_Settings);
+            Settings.CreateOrMoveEntry(m_AssetGUID, group);
+            var context = new AddressablesDataBuilderInput(Settings);
 
-            var op = m_Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+            var op = Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
 
             Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
             var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
@@ -39,19 +39,19 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void PrepareContentUpdate()
         {
-            var group = m_Settings.CreateGroup("LocalStuff2", false, false, false, null);
+            var group = Settings.CreateGroup("LocalStuff2", false, false, false, null);
             var schema = group.AddSchema<BundledAssetGroupSchema>();
-            schema.BuildPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalBuildPath);
-            schema.LoadPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalLoadPath);
+            schema.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalBuildPath);
+            schema.LoadPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalLoadPath);
             schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
             group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
 
-            var entry = m_Settings.CreateOrMoveEntry(m_AssetGUID, group);
+            var entry = Settings.CreateOrMoveEntry(m_AssetGUID, group);
             entry.address = "test";
 
-            var context = new AddressablesDataBuilderInput(m_Settings);
+            var context = new AddressablesDataBuilderInput(Settings);
 
-            m_Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+            Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
 
             var path = AssetDatabase.GUIDToAssetPath(m_AssetGUID);
             var obj = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -63,11 +63,11 @@ namespace UnityEditor.AddressableAssets.Tests
 #endif
             AssetDatabase.SaveAssets();
             var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
-            var modifiedEntries = ContentUpdateScript.GatherModifiedEntries(m_Settings, tempPath);
+            var modifiedEntries = ContentUpdateScript.GatherModifiedEntries(Settings, tempPath);
             Assert.IsNotNull(modifiedEntries);
             Assert.GreaterOrEqual(modifiedEntries.Count, 1);
-            ContentUpdateScript.CreateContentUpdateGroup(m_Settings, modifiedEntries, "Content Update");
-            var contentGroup = m_Settings.FindGroup("Content Update");
+            ContentUpdateScript.CreateContentUpdateGroup(Settings, modifiedEntries, "Content Update");
+            var contentGroup = Settings.FindGroup("Content Update");
             Assert.IsNotNull(contentGroup);
             var movedEntry = contentGroup.GetAssetEntry(m_AssetGUID);
             Assert.AreSame(movedEntry, entry);
@@ -76,25 +76,25 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void BuildContentUpdate()
         {
-            var group = m_Settings.CreateGroup("LocalStuff3", false, false, false, null);
-            m_Settings.BuildRemoteCatalog = true;
-            m_Settings.RemoteCatalogBuildPath = new ProfileValueReference();
-            m_Settings.RemoteCatalogBuildPath.SetVariableByName(m_Settings, AddressableAssetSettings.kRemoteBuildPath);
-            m_Settings.RemoteCatalogLoadPath = new ProfileValueReference();
-            m_Settings.RemoteCatalogLoadPath.SetVariableByName(m_Settings, AddressableAssetSettings.kRemoteLoadPath);
+            var group = Settings.CreateGroup("LocalStuff3", false, false, false, null);
+            Settings.BuildRemoteCatalog = true;
+            Settings.RemoteCatalogBuildPath = new ProfileValueReference();
+            Settings.RemoteCatalogBuildPath.SetVariableByName(Settings, AddressableAssetSettings.kRemoteBuildPath);
+            Settings.RemoteCatalogLoadPath = new ProfileValueReference();
+            Settings.RemoteCatalogLoadPath.SetVariableByName(Settings, AddressableAssetSettings.kRemoteLoadPath);
             var schema = group.AddSchema<BundledAssetGroupSchema>();
-            schema.BuildPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalBuildPath);
-            schema.LoadPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalLoadPath);
+            schema.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalBuildPath);
+            schema.LoadPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalLoadPath);
             schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
             group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
-            m_Settings.CreateOrMoveEntry(m_AssetGUID, group);
-            var context = new AddressablesDataBuilderInput(m_Settings);
+            Settings.CreateOrMoveEntry(m_AssetGUID, group);
+            var context = new AddressablesDataBuilderInput(Settings);
 
-            var op = m_Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+            var op = Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
 
             Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
             var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
-            var buildOp = ContentUpdateScript.BuildContentUpdate(m_Settings, tempPath);
+            var buildOp = ContentUpdateScript.BuildContentUpdate(Settings, tempPath);
             Assert.IsNotNull(buildOp);
             Assert.IsTrue(string.IsNullOrEmpty(buildOp.Error));
         }
@@ -104,7 +104,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             AddressablesContentState cacheData = new AddressablesContentState();
             cacheData.editorVersion = Application.unityVersion;
-            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(m_Settings, cacheData));
+            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(Settings, cacheData));
             LogAssert.Expect(LogType.Error, new Regex("Previous build had 'Build Remote Catalog' disabled.*"));
         }
 
@@ -114,11 +114,11 @@ namespace UnityEditor.AddressableAssets.Tests
             AddressablesContentState cacheData = new AddressablesContentState();
             cacheData.editorVersion = Application.unityVersion;
             cacheData.remoteCatalogLoadPath = "somePath";
-            var oldSetting = m_Settings.BuildRemoteCatalog;
-            m_Settings.BuildRemoteCatalog = false;
-            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(m_Settings, cacheData));
+            var oldSetting = Settings.BuildRemoteCatalog;
+            Settings.BuildRemoteCatalog = false;
+            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(Settings, cacheData));
             LogAssert.Expect(LogType.Error, new Regex("Current settings have 'Build Remote Catalog' disabled.*"));
-            m_Settings.BuildRemoteCatalog = oldSetting;
+            Settings.BuildRemoteCatalog = oldSetting;
         }
 
         [Test]
@@ -127,11 +127,11 @@ namespace UnityEditor.AddressableAssets.Tests
             AddressablesContentState cacheData = new AddressablesContentState();
             cacheData.editorVersion = Application.unityVersion;
             cacheData.remoteCatalogLoadPath = "somePath";
-            var oldSetting = m_Settings.BuildRemoteCatalog;
-            m_Settings.BuildRemoteCatalog = true;
-            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(m_Settings, cacheData));
+            var oldSetting = Settings.BuildRemoteCatalog;
+            Settings.BuildRemoteCatalog = true;
+            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(Settings, cacheData));
             LogAssert.Expect(LogType.Error, new Regex("Current 'Remote Catalog Load Path' does not match load path of original player.*"));
-            m_Settings.BuildRemoteCatalog = oldSetting;
+            Settings.BuildRemoteCatalog = oldSetting;
         }
 
         [Test]
@@ -139,7 +139,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             AddressablesContentState cacheData = new AddressablesContentState();
             cacheData.editorVersion = "invalid";
-            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(m_Settings, cacheData));
+            Assert.IsFalse(ContentUpdateScript.IsCacheDataValid(Settings, cacheData));
             LogAssert.Expect(LogType.Warning, new Regex(".*with version `" + cacheData.editorVersion + "`.*"));
             LogAssert.Expect(LogType.Error, new Regex("Previous.*"));
         }
@@ -147,20 +147,20 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void BuildContentUpdate_DoesNotDeleteBuiltData()
         {
-            var group = m_Settings.CreateGroup("LocalStuff3", false, false, false, null);
+            var group = Settings.CreateGroup("LocalStuff3", false, false, false, null);
             var schema = group.AddSchema<BundledAssetGroupSchema>();
-            schema.BuildPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalBuildPath);
-            schema.LoadPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalLoadPath);
+            schema.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalBuildPath);
+            schema.LoadPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalLoadPath);
             schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
             group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
-            m_Settings.CreateOrMoveEntry(m_AssetGUID, group);
-            var context = new AddressablesDataBuilderInput(m_Settings);
+            Settings.CreateOrMoveEntry(m_AssetGUID, group);
+            var context = new AddressablesDataBuilderInput(Settings);
 
-            var op = m_Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+            var op = Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
 
             Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
             var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
-            ContentUpdateScript.BuildContentUpdate(m_Settings, tempPath);
+            ContentUpdateScript.BuildContentUpdate(Settings, tempPath);
             Assert.IsTrue(Directory.Exists(Addressables.BuildPath));
         }
     }

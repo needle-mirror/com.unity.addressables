@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline.Interfaces;
@@ -332,8 +333,43 @@ namespace UnityEditor.AddressableAssets.Build
                 return null;
             }
 
+            List<string> noBundledAssetGroupSchema = new List<string>();
+            List<string> noStaticContent = new List<string>();
+
             var allEntries = new List<AddressableAssetEntry>();
-            settings.GetAllAssets(allEntries, g => g.HasSchema<BundledAssetGroupSchema>() && g.GetSchema<ContentUpdateGroupSchema>().StaticContent);
+            settings.GetAllAssets(allEntries, g =>
+            {
+
+                if (!g.HasSchema<BundledAssetGroupSchema>())
+                {
+                    noBundledAssetGroupSchema.Add(g.Name);
+                    return false;
+                }
+
+                if (!g.HasSchema<ContentUpdateGroupSchema>())
+                {
+                    noStaticContent.Add(g.Name);
+                    return false;
+                }
+
+                if (!g.GetSchema<ContentUpdateGroupSchema>().StaticContent)
+                {
+                    noStaticContent.Add(g.Name);
+                    return false;
+                }
+
+                return true;
+            });
+
+            StringBuilder builder = new StringBuilder();
+            builder.AppendFormat("Skipping Prepare for Content Update on {0} group(s):\n\n",
+                noBundledAssetGroupSchema.Count + noStaticContent.Count);
+
+            
+            AddInvalidGroupsToLogMessage(builder, noBundledAssetGroupSchema, "Group Did Not Contain BundledAssetGroupSchema");
+            AddInvalidGroupsToLogMessage(builder, noStaticContent, "Static Content Not Enabled In Schemas");
+
+            Debug.Log(builder.ToString());
 
             var entryToCacheInfo = new Dictionary<string, CachedAssetState>();
             foreach (var cacheInfo in cacheData.cachedInfos)
@@ -347,6 +383,28 @@ namespace UnityEditor.AddressableAssets.Build
                     modifiedEntries.Add(entry);
             }
             return modifiedEntries;
+        }
+
+        private static void AddInvalidGroupsToLogMessage(StringBuilder builder, List<string> invalidGroupList,
+            string headerMessage)
+        {
+            if (invalidGroupList.Count > 0)
+            {
+                builder.AppendFormat("{0} ({1} groups):\n", headerMessage, invalidGroupList.Count);
+                int maxList = 15;
+                for (int i = 0; i < invalidGroupList.Count; i++)
+                {
+                    if (i > maxList)
+                    {
+                        builder.AppendLine("...");
+                        break;
+                    }
+
+                    builder.AppendLine("-" + invalidGroupList[i]);
+                }
+
+                builder.AppendLine("");
+            }
         }
 
         /// <summary>

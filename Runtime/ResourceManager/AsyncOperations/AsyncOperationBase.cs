@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.Util;
 
@@ -170,10 +171,12 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get
             {
+                var handle = WaitHandle;
                 return System.Threading.Tasks.Task.Factory.StartNew(o =>
                 {
                     var asyncOperation = o as AsyncOperationBase<TObject>;
-                    asyncOperation.WaitHandle.WaitOne();
+                    if (asyncOperation == null) return default(TObject);
+                    handle.WaitOne();
                     return asyncOperation.Result;
                 }, this);
             }

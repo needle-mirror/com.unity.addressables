@@ -172,7 +172,7 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
-        internal bool GetResourceLocations(object key, out IList<IResourceLocation> locations)
+        internal bool GetResourceLocations(object key, Type type, out IList<IResourceLocation> locations)
         {
             key = EvaluateKey(key);
 
@@ -181,7 +181,7 @@ namespace UnityEngine.AddressableAssets
             foreach (var l in m_ResourceLocators)
             {
                 IList<IResourceLocation> locs;
-                if (l.Locate(key, out locs))
+                if (l.Locate(key, type, out locs))
                 {
                     if (locations == null)
                     {
@@ -210,14 +210,14 @@ namespace UnityEngine.AddressableAssets
             return true;
         }
 
-        internal bool GetResourceLocations(IEnumerable<object> keys, Addressables.MergeMode merge, out IList<IResourceLocation> locations)
+        internal bool GetResourceLocations(IEnumerable<object> keys, Type type, Addressables.MergeMode merge, out IList<IResourceLocation> locations)
         {
             locations = null;
             HashSet<IResourceLocation> current = null;
             foreach (var key in keys)
             {
                 IList<IResourceLocation> locs;
-                if (GetResourceLocations(key, out locs))
+                if (GetResourceLocations(key, type, out locs))
                 {
                     if (locations == null)
                     {
@@ -289,9 +289,10 @@ namespace UnityEngine.AddressableAssets
                 return InitializeAsync(ResolveInternalId(PlayerPrefs.GetString(Addressables.kAddressablesRuntimeDataPath, RuntimePath + "/settings.json")));
             return m_InitializationOperation;
         }
+
         public AsyncOperationHandle<IResourceLocator> LoadContentCatalogAsync(string catalogPath, string providerSuffix = null)
         {
-            var catalogLoc = new ResourceLocationBase(catalogPath, catalogPath, typeof(JsonAssetProvider).FullName);
+            var catalogLoc = new ResourceLocationBase(catalogPath, catalogPath, typeof(JsonAssetProvider).FullName, typeof(IResourceLocator));
             if (!InitializationOperation.IsDone)
                 return ResourceManager.CreateChainOperation(InitializationOperation, op => LoadContentCatalogAsync(catalogPath, providerSuffix));
             return Initialization.InitializationOperation.LoadContentCatalog(this, catalogLoc, providerSuffix);
@@ -346,9 +347,14 @@ namespace UnityEngine.AddressableAssets
             key = EvaluateKey(key);
 
             IList<IResourceLocation> locs;
+            var t = typeof(TObject);
+            if (t.IsArray)
+                t = t.GetElementType();
+            else if (t.IsGenericType && typeof(IList<>) == t.GetGenericTypeDefinition())
+                t = t.GetGenericArguments()[0];
             for (int i = 0; i < m_ResourceLocators.Count; i++)
             {
-                if (m_ResourceLocators[i].Locate(key, out locs))
+                if (m_ResourceLocators[i].Locate(key, t, out locs))
                 {
                     foreach (var loc in locs)
                     {
@@ -366,16 +372,18 @@ namespace UnityEngine.AddressableAssets
             object m_Key;
             IList<IResourceLocation> m_locations;
             AddressablesImpl m_Addressables;
+            Type m_ResourceType;
             protected override string DebugName { get { return m_Key.ToString(); } }
 
-            public void Init(AddressablesImpl aa, object key)
+            public void Init(AddressablesImpl aa, Type t, object key)
             {
                 m_Key = key;
+                m_ResourceType = t;
                 m_Addressables = aa;
             }
             protected override void Execute()
             {
-                bool result = m_Addressables.GetResourceLocations(m_Key, out m_locations);
+                bool result = m_Addressables.GetResourceLocations(m_Key, m_ResourceType, out m_locations);
                 Complete(m_locations, result, string.Empty);
             }
         }
@@ -386,32 +394,34 @@ namespace UnityEngine.AddressableAssets
             Addressables.MergeMode m_MergeMode;
             IList<IResourceLocation> m_locations;
             AddressablesImpl m_Addressables;
+            Type m_ResourceType;
 
             protected override string DebugName { get { return "LoadResourceLocationKeysOp"; } }
-            public void Init(AddressablesImpl aa, IList<object> key, Addressables.MergeMode mergeMode)
+            public void Init(AddressablesImpl aa, Type t, IList<object> key, Addressables.MergeMode mergeMode)
             {
                 m_Key = key;
+                m_ResourceType = t;
                 m_MergeMode = mergeMode;
                 m_Addressables = aa;
             }
             protected override void Execute()
             {
-                bool result = m_Addressables.GetResourceLocations(m_Key, m_MergeMode, out m_locations);
+                bool result = m_Addressables.GetResourceLocations(m_Key, m_ResourceType, m_MergeMode, out m_locations);
                 Complete(m_locations, result, string.Empty);
             }
         }
 
-        public AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(IList<object> keys, Addressables.MergeMode mode)
+        public AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(IList<object> keys, Addressables.MergeMode mode, Type type = null)
         {
             var op = new LoadResourceLocationKeysOp();
-            op.Init(this, keys, mode);
+            op.Init(this, type, keys, mode);
             return TrackHandle(ResourceManager.StartOperation(op, InitializationOperation));
         }
 
-        public AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(object key)
+        public AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(object key, Type type = null)
         {
             var op = new LoadResourceLocationKeyOp();
-            op.Init(this, key);
+            op.Init(this, type, key);
             return TrackHandle(ResourceManager.StartOperation(op, InitializationOperation));
         }
 
@@ -431,7 +441,7 @@ namespace UnityEngine.AddressableAssets
                 return LoadAssetsWithChain(keys, callback, mode);
             
             IList<IResourceLocation> locations;
-            if (!GetResourceLocations(keys, mode, out locations))
+            if (!GetResourceLocations(keys, typeof(TObject), mode, out locations))
                 return ResourceManager.CreateCompletedOperation<IList<TObject>>(null, new InvalidKeyException(keys).Message);
 
             return LoadAssetsAsync(locations, callback);
@@ -448,7 +458,7 @@ namespace UnityEngine.AddressableAssets
                 return LoadAssetsWithChain(key, callback);
 
             IList<IResourceLocation> locations;
-            if (!GetResourceLocations(key, out locations))
+            if (!GetResourceLocations(key, typeof(TObject), out locations))
                 return ResourceManager.CreateCompletedOperation<IList<TObject>>(null, new InvalidKeyException(key).Message);
 
             return LoadAssetsAsync(locations, callback);
@@ -533,7 +543,7 @@ namespace UnityEngine.AddressableAssets
             }
             else
             {
-                if (!GetResourceLocations(key, out locations))
+                if (!GetResourceLocations(key, typeof(object), out locations))
                     return ResourceManager.CreateCompletedOperation<long>(0, new InvalidKeyException(key).Message);
             }
 
@@ -557,19 +567,55 @@ namespace UnityEngine.AddressableAssets
             return ResourceManager.CreateCompletedOperation<long>(size, string.Empty);
         }
 
-        AsyncOperationHandle<IList<IAssetBundleResource>> DownloadDependenciesWithChain(object key)
-        {
-            return ResourceManager.CreateChainOperation<IList<IAssetBundleResource>>(InitializationOperation, op => DownloadDependenciesAsync(key).Convert<IList<IAssetBundleResource>>());
-        }
-
         public AsyncOperationHandle DownloadDependenciesAsync(object key)
         {
             if (!InitializationOperation.IsDone)
-                return DownloadDependenciesWithChain(key);
+                return ResourceManager.CreateChainOperation<IList<IAssetBundleResource>>(InitializationOperation, op => DownloadDependenciesAsync(key).Convert<IList<IAssetBundleResource>>());
 
             IList<IResourceLocation> locations;
-            if (!GetResourceLocations(key, out locations))
+            if (!GetResourceLocations(key, typeof(object), out locations))
                 return ResourceManager.CreateCompletedOperation<IList<IAssetBundleResource>>(null, new InvalidKeyException(key).Message);
+
+
+            var locHash = new HashSet<IResourceLocation>();
+            foreach (var loc in locations)
+            {
+                if (loc.HasDependencies)
+                {
+                    foreach (var dep in loc.Dependencies)
+                        locHash.Add(dep);
+                }
+            }
+            return LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null);
+        }
+        
+
+        public AsyncOperationHandle DownloadDependenciesAsync(IList<IResourceLocation> locations)
+        {
+            if (!InitializationOperation.IsDone)
+                return ResourceManager.CreateChainOperation<IList<IAssetBundleResource>>(InitializationOperation, op => DownloadDependenciesAsync(locations).Convert<IList<IAssetBundleResource>>());
+
+            var locHash = new HashSet<IResourceLocation>();
+            foreach (var loc in locations)
+            {
+                if (loc.HasDependencies)
+                {
+                    foreach (var dep in loc.Dependencies)
+                        locHash.Add(dep);
+                }
+            }
+            return LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null);
+        }
+        
+
+        public AsyncOperationHandle DownloadDependenciesAsync(IList<object> keys, Addressables.MergeMode mode)
+        {
+            if (!InitializationOperation.IsDone)
+                return ResourceManager.CreateChainOperation<IList<IAssetBundleResource>>(InitializationOperation, op => DownloadDependenciesAsync(keys, mode).Convert<IList<IAssetBundleResource>>());
+
+            IList<IResourceLocation> locations;
+            if (!GetResourceLocations(keys, typeof(object), mode, out locations))
+                return ResourceManager.CreateCompletedOperation<IList<IAssetBundleResource>>(null, new InvalidKeyException(keys).Message);
 
 
             var locHash = new HashSet<IResourceLocation>();
@@ -616,7 +662,7 @@ namespace UnityEngine.AddressableAssets
             IList<IResourceLocation> locs;
             for (int i = 0; i < m_ResourceLocators.Count; i++)
             {
-                if (m_ResourceLocators[i].Locate(key, out locs))
+                if (m_ResourceLocators[i].Locate(key, typeof(GameObject), out locs))
                     return InstantiateAsync(locs[0], instantiateParameters, trackHandle);
             }
             return ResourceManager.CreateCompletedOperation<GameObject>(null, new InvalidKeyException(key).Message);
@@ -631,26 +677,21 @@ namespace UnityEngine.AddressableAssets
             return opHandle;
         }
         
-        public void ReleaseInstance(GameObject instance)
+        public bool ReleaseInstance(GameObject instance)
         {
             if (instance == null)
             {
                 LogWarning("Addressables.ReleaseInstance() - trying to release null object.");
-                return;
+                return false;
             }
 
             AsyncOperationHandle handle;
             if (m_resultToHandle.TryGetValue(instance, out handle))
                 Release(handle);
             else
-            {
-                var message = "Addressables.ReleaseInstance was called on a GameObject that Addressables was not previously aware of. '";
-                message += instance.name;
-                message += "' We will Destroy the object for now, but this functionality is Deprecated and will be removed.";
-                message += "  If this was created through Addressables, check that you set 'trackHandle=true' when instantiating.";
-                LogWarning(message);
-                Object.Destroy(instance);
-            }
+                return false;
+
+            return true;
         }
 
 
@@ -665,7 +706,7 @@ namespace UnityEngine.AddressableAssets
                 return LoadSceneWithChain(key, loadMode, activateOnLoad, priority);
 
             IList<IResourceLocation> locations;
-            if (!GetResourceLocations(key, out locations))
+            if (!GetResourceLocations(key, typeof(SceneInstance), out locations))
                 return ResourceManager.CreateCompletedOperation<SceneInstance>(default(SceneInstance), new InvalidKeyException(key).Message);
 
             return LoadSceneAsync(locations[0], loadMode, activateOnLoad, priority);

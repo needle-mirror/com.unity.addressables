@@ -14,7 +14,10 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         object m_Data;
         int m_DependencyHashCode;
         int m_HashCode;
+        Type m_Type;
         List<IResourceLocation> m_Dependencies;
+        string m_PrimaryKey;
+        
         /// <summary>
         /// Internal id.
         /// </summary>
@@ -35,17 +38,29 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         /// Data that is intended for the provider.  Objects can be serialized during the build process to be used by the provider.  An example of usage is cache usage data for AssetBundleProvider.
         /// </summary>
         public object Data { get { return m_Data; } set { m_Data = value; } }
+
+        public string PrimaryKey
+        {
+            get { return m_PrimaryKey; }
+            set { m_PrimaryKey = value; }
+        }
+
         /// <summary>
         /// Precomputed hash code of dependencies.
         /// </summary>
         public int DependencyHashCode { get { return m_DependencyHashCode; } }
 
         /// <summary>
+        /// The type of the resource for th location.
+        /// </summary>
+        public Type ResourceType { get { return m_Type; } }
+
+        /// <summary>
         /// Compute the hash of this location for the specified type.
         /// </summary>
         /// <param name="t">The type to hash with.</param>
         /// <returns>The combined hash code of the location and type.</returns>
-        public int Hash(Type t)
+                public int Hash(Type t)
         {
             var hash = m_HashCode * 31 + t.GetHashCode();
             return hash;
@@ -67,7 +82,7 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         /// <param name="id">The internal id of the location.  This is used by the IResourceProvider to identify the object to provide.  For example this may contain the file path or url of an asset.</param>
         /// <param name="providerId">The provider id.  This is set to the FullName of the type of the provder class.</param>
         /// <param name="dependencies">Locations for the dependencies of this location.</param>
-        public ResourceLocationBase(string name, string id, string providerId, params IResourceLocation[] dependencies)
+        public ResourceLocationBase(string name, string id, string providerId, Type t, params IResourceLocation[] dependencies)
         {
             if (string.IsNullOrEmpty(id))
                 throw new ArgumentNullException(id);
@@ -78,6 +93,7 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
             m_Id = id;
             m_ProviderId = providerId;
             m_Dependencies = new List<IResourceLocation>(dependencies);
+            m_Type = t;
             ComputeDependencyHash();
         }
         /// <summary>

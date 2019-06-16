@@ -49,6 +49,16 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         /// </summary>
         /// <value>The object.</value>
         object Data { get; }
+        
+        /// <summary>
+        /// Primary address for this location.
+        /// </summary>
+        string PrimaryKey { get; }
+
+        /// <summary>
+        /// The type of the resource for th location.
+        /// </summary>
+        Type ResourceType { get; }
 
     }
 }

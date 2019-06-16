@@ -16,12 +16,150 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Text;
-
+using UnityEngine.U2D;
 
 namespace AddressableAssetsIntegrationTests
 {
     internal abstract partial class AddressablesIntegrationTests : IPrebuildSetup
     {
+        [UnityTest]
+        public IEnumerator LoadResourceLocations_InvalidKeyDoesNotThrow()
+        {
+            //Setup
+            yield return Init();
+            
+            //Test
+            Assert.DoesNotThrow( () =>
+            {
+                m_Addressables.LoadResourceLocationsAsync("noSuchLabel", typeof(object));
+            });
+        }
+        
+        [UnityTest]
+        public IEnumerator LoadResourceLocations_ValidKeyDoesNotThrow()
+        {
+            //Setup
+            yield return Init();
+            
+            //Test
+            Assert.DoesNotThrow( () =>
+            {
+                m_Addressables.LoadResourceLocationsAsync(AddressablesTestUtility.GetPrefabLabel("BASE"), typeof(GameObject));
+            });
+        }
+
+        [UnityTest]
+        public IEnumerator LoadAsset_InvalidKeyThrowsInvalidKeyException()
+        {
+            //Setup
+            yield return Init();
+            
+            //Test
+            AsyncOperationHandle handle = default(AsyncOperationHandle);
+            handle = m_Addressables.LoadAssetAsync<GameObject>("noSuchLabel");
+            Assert.AreEqual("Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown., Key=noSuchLabel", handle.OperationException.Message);
+            yield return handle;
+            
+            //Cleanup
+            handle.Release();
+        }
+
+#if UNITY_SPRITE_CRASH_BUG_1146568_HAS_BEEN_FIXED
+        [UnityTest]
+        public IEnumerator CanLoadTextureAsSprite()
+        {
+            //Setup
+            yield return Init();
+
+            var op = m_Addressables.LoadAssetAsync<Sprite>("sprite");
+            yield return op;
+            Assert.IsNotNull(op.Result);
+            Assert.AreEqual(typeof(Sprite), op.Result.GetType());
+            op.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator CanLoadSpriteByName()
+        {
+            //Setup
+            yield return Init();
+
+            var op = m_Addressables.LoadAssetAsync<Sprite>("sprite.botright");
+            yield return op;
+            Assert.IsNotNull(op.Result);
+            Assert.AreEqual(typeof(Sprite), op.Result.GetType());
+            Assert.AreEqual("botright", op.Result.name);
+            op.Release();
+
+            var op2 = m_Addressables.LoadAssetAsync<Sprite>("sprite.topleft");
+            yield return op2;
+            Assert.IsNotNull(op2.Result);
+            Assert.AreEqual(typeof(Sprite), op2.Result.GetType());
+            Assert.AreEqual("topleft", op2.Result.name);
+            op2.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator CanLoadAllSpritesAsArray()
+        {
+            //Setup
+            yield return Init();
+            
+            var op = m_Addressables.LoadAssetAsync<Sprite[]>("sprite");
+            yield return op;
+            Assert.IsNotNull(op.Result);
+            Assert.AreEqual(typeof(Sprite[]), op.Result.GetType());
+            Assert.AreEqual(2, op.Result.Length);
+            op.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator CanLoadAllSpritesAsList()
+        {
+            //Setup
+            yield return Init();
+
+            var op = m_Addressables.LoadAssetAsync<IList<Sprite>>("sprite");
+            yield return op;
+            Assert.IsNotNull(op.Result);
+            Assert.IsTrue(typeof(IList<Sprite>).IsAssignableFrom(op.Result.GetType()));
+            Assert.AreEqual(2, op.Result.Count);
+            op.Release();
+        }
+
+
+        [UnityTest]
+        public IEnumerator CanLoadTextureAsTexture()
+        {
+            //Setup
+            yield return Init();
+
+            var op = m_Addressables.LoadAssetAsync<Texture2D>("sprite");
+            yield return op;
+            Assert.IsNotNull(op.Result);
+            Assert.AreEqual(typeof(Texture2D), op.Result.GetType());
+            op.Release();
+        }
+#endif
+
+        [UnityTest]
+        public IEnumerator LoadAsset_ValidKeyDoesNotThrow()
+        {
+            //Setup
+            yield return Init();
+            
+            //Test
+            AsyncOperationHandle handle = default(AsyncOperationHandle);
+            Assert.DoesNotThrow( () =>
+            {
+                handle = m_Addressables.LoadAssetAsync<GameObject>(AddressablesTestUtility.GetPrefabLabel("BASE"));
+            });
+            yield return handle;
+            
+            //Cleanup
+            handle.Release();
+        }
+            
         [UnityTest]
         public IEnumerator VerifyProfileVariableEvaluation()
         {
@@ -36,17 +174,17 @@ namespace AddressableAssetsIntegrationTests
             long expectedSize = 0;
             var locMap = new ResourceLocationMap();
 
-            var bundleLoc1 = new ResourceLocationBase("sizeTestBundle1", "http://nowhere.com/mybundle1.bundle", typeof(AssetBundleProvider).FullName);
+            var bundleLoc1 = new ResourceLocationBase("sizeTestBundle1", "http://nowhere.com/mybundle1.bundle", typeof(AssetBundleProvider).FullName, typeof(object));
             var sizeData1 = (bundleLoc1.Data = CreateLocationSizeData("sizeTestBundle1", 1000, 123, "hashstring1")) as ILocationSizeData;
             if (sizeData1 != null)
                 expectedSize += sizeData1.ComputeSize(bundleLoc1);
 
-            var bundleLoc2 = new ResourceLocationBase("sizeTestBundle2", "http://nowhere.com/mybundle2.bundle", typeof(AssetBundleProvider).FullName);
+            var bundleLoc2 = new ResourceLocationBase("sizeTestBundle2", "http://nowhere.com/mybundle2.bundle", typeof(AssetBundleProvider).FullName, typeof(object));
             var sizeData2 = (bundleLoc2.Data = CreateLocationSizeData("sizeTestBundle2", 500, 123, "hashstring2")) as ILocationSizeData;
             if (sizeData2 != null)
                 expectedSize += sizeData2.ComputeSize(bundleLoc2);
 
-            var assetLoc = new ResourceLocationBase("sizeTestAsset", "myASset.asset", typeof(BundledAssetProvider).FullName, bundleLoc1, bundleLoc2);
+            var assetLoc = new ResourceLocationBase("sizeTestAsset", "myASset.asset", typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1, bundleLoc2);
 
             locMap.Add("sizeTestBundle1", bundleLoc1);
             locMap.Add("sizeTestBundle2", bundleLoc2);
@@ -74,7 +212,7 @@ namespace AddressableAssetsIntegrationTests
             string fakeCachePath = CreateFakeCachedBundle("GetDownloadSize_CalculatesCachedBundlesBundle1", "be38e35d2177c282d5d6a2e54a803aab");
 
             var bundleLoc1 = new ResourceLocationBase("sizeTestBundle1", "http://nowhere.com/GetDownloadSize_CalculatesCachedBundlesBundle1.bundle",
-                typeof(AssetBundleProvider).FullName);
+                typeof(AssetBundleProvider).FullName, typeof(object));
             var sizeData1 =
                 (bundleLoc1.Data = CreateLocationSizeData("cachedSizeTestBundle1", bundleSize1, 123,
                     "be38e35d2177c282d5d6a2e54a803aab")) as ILocationSizeData;
@@ -82,7 +220,7 @@ namespace AddressableAssetsIntegrationTests
                 expectedSize += sizeData1.ComputeSize(bundleLoc1);
 
             var bundleLoc2 = new ResourceLocationBase("cachedSizeTestBundle2", "http://nowhere.com/GetDownloadSize_CalculatesCachedBundlesBundle2.bundle",
-                typeof(AssetBundleProvider).FullName);
+                typeof(AssetBundleProvider).FullName, typeof(object));
             var sizeData2 =
                 (bundleLoc2.Data = CreateLocationSizeData("cachedSizeTestBundle2", bundleSize2, 123,
                     "d9fe965a6b253fb9dbd3e1cb08b7d66f")) as ILocationSizeData;
@@ -90,7 +228,7 @@ namespace AddressableAssetsIntegrationTests
                 expectedSize += sizeData2.ComputeSize(bundleLoc2);
 
             var assetLoc = new ResourceLocationBase("cachedSizeTestAsset", "myASset.asset",
-                typeof(BundledAssetProvider).FullName, bundleLoc1, bundleLoc2);
+                typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1, bundleLoc2);
 
             locMap.Add("cachedSizeTestBundle1", bundleLoc1);
             locMap.Add("cachedSizeTestBundle2", bundleLoc2);
@@ -111,6 +249,17 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator GetResourceLocationsWithCorrectKeyAndWrongTypeReturnsEmptyResult()
+        {
+            yield return Init();
+            AsyncOperationHandle<IList<IResourceLocation>> op = m_Addressables.LoadResourceLocationsAsync("prefabs_evenBASE", typeof(Texture2D));
+            yield return op;
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
+            Assert.IsNull(op.Result);
+            op.Release();
+        }
+
+        [UnityTest]
         public IEnumerator CanGetResourceLocationsWithSingleKey()
         {
             yield return Init();
@@ -120,7 +269,7 @@ namespace AddressableAssetsIntegrationTests
             foreach (var k in m_KeysHashSet)
             {
                 loadCount++;
-                AsyncOperationHandle<IList<IResourceLocation>> op = m_Addressables.LoadResourceLocationsAsync(k.Key);
+                AsyncOperationHandle<IList<IResourceLocation>> op = m_Addressables.LoadResourceLocationsAsync(k.Key, typeof(object));
                 ops.Add(op);
                 op.Completed += op2 =>
                 {
@@ -142,7 +291,7 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
 
             IList<IResourceLocation> results;
-            var ret = m_Addressables.GetResourceLocations(new object[] { }, mode, out results);
+            var ret = m_Addressables.GetResourceLocations(new object[] { }, typeof(GameObject), mode, out results);
             Assert.IsFalse(ret);
             Assert.IsNull(results);
         }
@@ -153,7 +302,7 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
 
             IList<IResourceLocation> results;
-            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, mode, out results);
+            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, typeof(GameObject), mode, out results);
             Assert.IsTrue(ret);
             Assert.NotNull(results);
             Assert.GreaterOrEqual(results.Count, 1);
@@ -165,19 +314,19 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
 
             IList<IResourceLocation> results;
-            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, Addressables.MergeMode.Intersection, out results);
+            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsTrue(ret);
             Assert.NotNull(results);
             Assert.GreaterOrEqual(results.Count, 1);
             var evenCount = results.Count;
 
-            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, Addressables.MergeMode.Intersection, out results);
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsTrue(ret);
             Assert.NotNull(results);
             Assert.GreaterOrEqual(results.Count, 1);
             var oddCount = results.Count;
 
-            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE" }, Addressables.MergeMode.Union, out results);
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE" }, typeof(GameObject), Addressables.MergeMode.Union, out results);
             Assert.IsTrue(ret);
             Assert.NotNull(results);
             Assert.GreaterOrEqual(results.Count, 1);
@@ -190,19 +339,19 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
 
             IList<IResourceLocation> results;
-            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, Addressables.MergeMode.Intersection, out results);
+            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsTrue(ret);
             Assert.NotNull(results);
             Assert.GreaterOrEqual(results.Count, 1);
             var evenCount = results.Count;
 
-            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, Addressables.MergeMode.Intersection, out results);
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsTrue(ret);
             Assert.NotNull(results);
             Assert.GreaterOrEqual(results.Count, 1);
             var oddCount = results.Count;
 
-            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE", "INVALIDKEY" }, Addressables.MergeMode.Union, out results);
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE", "INVALIDKEY" }, typeof(GameObject), Addressables.MergeMode.Union, out results);
             Assert.IsTrue(ret);
             Assert.NotNull(results);
             Assert.GreaterOrEqual(results.Count, 1);
@@ -217,17 +366,17 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
            
             IList<IResourceLocation> results;
-            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, Addressables.MergeMode.Intersection, out results);
+            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsTrue(ret);
             Assert.NotNull(results);
             Assert.GreaterOrEqual(results.Count, 1);
 
-            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, Addressables.MergeMode.Intersection, out results);
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsTrue(ret);
             Assert.NotNull(results);
             Assert.GreaterOrEqual(results.Count, 1);
 
-            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE" }, Addressables.MergeMode.Intersection, out results);
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsFalse(ret);
             Assert.IsNull(results);
         }
@@ -239,25 +388,25 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
 
             IList<IResourceLocation> results;
-            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, Addressables.MergeMode.Intersection, out results);
+            var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsTrue(ret);
             Assert.NotNull(results);
             Assert.GreaterOrEqual(results.Count, 1);
 
-            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, Addressables.MergeMode.Intersection, out results);
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_oddBASE" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsTrue(ret);
             Assert.NotNull(results);
             Assert.GreaterOrEqual(results.Count, 1);
 
-            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE", "INVALIDKEY" }, Addressables.MergeMode.Intersection, out results);
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "prefabs_oddBASE", "INVALIDKEY" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsFalse(ret);
             Assert.IsNull(results);
 
-            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "INVALIDKEY" }, Addressables.MergeMode.Intersection, out results);
+            ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE", "INVALIDKEY" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsFalse(ret);
             Assert.IsNull(results);
 
-            ret = m_Addressables.GetResourceLocations(new object[] { "INVALIDKEY" }, Addressables.MergeMode.Intersection, out results);
+            ret = m_Addressables.GetResourceLocations(new object[] { "INVALIDKEY" }, typeof(GameObject), Addressables.MergeMode.Intersection, out results);
             Assert.IsFalse(ret);
             Assert.IsNull(results);
         }
@@ -315,12 +464,7 @@ namespace AddressableAssetsIntegrationTests
             GameObject go = Object.Instantiate(GameObject.CreatePrimitive(PrimitiveType.Cube));
             go.name = "TestCube";
 
-            m_Addressables.ReleaseInstance(go);
-            LogAssert.Expect(LogType.Warning, new Regex("Addressables.ReleaseInstance was called on.*"));
-            yield return null;
-
-            GameObject foundObj = GameObject.Find("TestCube");
-            Assert.IsNull(foundObj);
+            Assert.IsFalse(m_Addressables.ReleaseInstance(go));
         }
 
         [UnityTest]
@@ -332,6 +476,18 @@ namespace AddressableAssetsIntegrationTests
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.IsTrue(op.Result != null);
+            op.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator LoadAssetWithWrongType_WhenEntryExists_Fails()
+        {
+            yield return Init();
+            string label = AddressablesTestUtility.GetPrefabUniqueLabel("BASE", 0);
+            AsyncOperationHandle<Texture> op = m_Addressables.LoadAssetAsync<Texture>(label);
+            yield return op;
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
+            Assert.IsNull(op.Result);
             op.Release();
         }
 

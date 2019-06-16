@@ -16,7 +16,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             AssetBundleRequest m_RequestOperation;
             ProvideHandle m_ProvideHandle;
-            
+            string subObjectName = null;
             internal static AssetBundle LoadBundleFromDependecies(IList<object> results)
             {
                 if (results == null || results.Count == 0)
@@ -41,12 +41,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             
             public void Start(ProvideHandle provideHandle)
             {
+                subObjectName = null;
                 m_ProvideHandle = provideHandle;
-                Type t = m_ProvideHandle.Type;
-                
-                
                 m_RequestOperation = null;
-
                 List<object> deps = new List<object>(); // TODO: garbage. need to pass actual count and reuse the list
                 m_ProvideHandle.GetDependencies(deps);
                 AssetBundle bundle = LoadBundleFromDependecies(deps);
@@ -56,13 +53,33 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 }
                 else
                 {
-                    if (t.IsArray)
-                        m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(m_ProvideHandle.Location.InternalId, t.GetElementType());
-                    else if (t.IsGenericType && typeof(IList<>) == t.GetGenericTypeDefinition())
-                        m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(m_ProvideHandle.Location.InternalId, t.GetGenericArguments()[0]);
+                    var assetPath = m_ProvideHandle.Location.InternalId;
+                    if (m_ProvideHandle.Type.IsArray)
+                        m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetElementType());
+                    else if (m_ProvideHandle.Type.IsGenericType && typeof(IList<>) == m_ProvideHandle.Type.GetGenericTypeDefinition())
+                        m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetGenericArguments()[0]);
                     else
-                        m_RequestOperation = bundle.LoadAssetAsync(m_ProvideHandle.Location.InternalId, t);
-
+                    {
+                        var i = assetPath.LastIndexOf('[');
+                        if (i > 0)
+                        {
+                            var i2 = assetPath.LastIndexOf(']');
+                            if (i2 < i)
+                            {
+                                m_ProvideHandle.Complete<AssetBundle>(null, false, new Exception(string.Format("Invalid index format in internal id {0}", assetPath)));
+                            }
+                            else
+                            {
+                                subObjectName = assetPath.Substring(i + 1, i2 - (i + 1));
+                                assetPath = assetPath.Substring(0, i);
+                                m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type);
+                            }
+                        }
+                        else
+                        {
+                            m_RequestOperation = bundle.LoadAssetAsync(assetPath, m_ProvideHandle.Type);
+                        }
+                    }
                     m_RequestOperation.completed += ActionComplete;
                     provideHandle.SetProgressCallback(ProgressCallback);
                 }
@@ -71,15 +88,39 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             private void ActionComplete(AsyncOperation obj)
             {
                 object result = null;
-                Type t = m_ProvideHandle.Type;
                 if (m_RequestOperation != null)
                 {
-                    if (t.IsArray)
-                        result = ResourceManagerConfig.CreateArrayResult(t, m_RequestOperation.allAssets);
-                    if (t.IsGenericType && typeof(IList<>) == t.GetGenericTypeDefinition())
-                        result = ResourceManagerConfig.CreateListResult(t, m_RequestOperation.allAssets);
+                    if (m_ProvideHandle.Type.IsArray)
+                    {
+                        Debug.LogFormat("CreateArrayResult with type {0}, assets: {1}", m_ProvideHandle.Type.Name, m_RequestOperation.allAssets.Length);
+                        result = ResourceManagerConfig.CreateArrayResult(m_ProvideHandle.Type, m_RequestOperation.allAssets);
+                    }
+                    if (m_ProvideHandle.Type.IsGenericType && typeof(IList<>) == m_ProvideHandle.Type.GetGenericTypeDefinition())
+                        result = ResourceManagerConfig.CreateListResult(m_ProvideHandle.Type, m_RequestOperation.allAssets);
                     else
-                        result = (m_RequestOperation.asset != null && t.IsAssignableFrom(m_RequestOperation.asset.GetType())) ? m_RequestOperation.asset : null;
+                    {
+                        if (string.IsNullOrEmpty(subObjectName))
+                        {
+                            result = (m_RequestOperation.asset != null && m_ProvideHandle.Type.IsAssignableFrom(m_RequestOperation.asset.GetType())) ? m_RequestOperation.asset : null;
+                        }
+                        else
+                        {
+                            if (m_RequestOperation.allAssets != null)
+                            {
+                                foreach (var o in m_RequestOperation.allAssets)
+                                {
+                                    if (o.name == subObjectName)
+                                    {
+                                        if (m_ProvideHandle.Type.IsAssignableFrom(o.GetType()))
+                                        {
+                                            result = o;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 m_ProvideHandle.Complete(result, result != null, null);
             }

@@ -154,7 +154,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         public int Timeout { get { return m_Timeout; } set { m_Timeout = value; } }
         [FormerlySerializedAs("m_chunkedTransfer")]
         [SerializeField]
-        [Tooltip("Indicates whether the UnityWebRequest system should employ the HTTP/1.1 chunked-transfer encoding method. (Only applies to remote asset bundles)")]
+        [Tooltip("Deprecated in 2019.3+. Indicates whether the UnityWebRequest system should employ the HTTP/1.1 chunked-transfer encoding method. (Only applies to remote asset bundles)")]
         bool m_ChunkedTransfer;
         /// <summary>
         /// Indicates whether the UnityWebRequest system should employ the HTTP/1.1 chunked-transfer encoding method.

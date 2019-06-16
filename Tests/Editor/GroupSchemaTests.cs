@@ -20,7 +20,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CanAddSchemaWithSavedAsset()
         {
-            var group = m_Settings.CreateGroup("TestGroup", false, false, false, null);
+            var group = Settings.CreateGroup("TestGroup", false, false, false, null);
             var newSchema = group.AddSchema(m_TestSchemaObject);
             Assert.IsNotNull(newSchema);
             Assert.AreNotEqual(newSchema, m_TestSchemaObject);
@@ -31,7 +31,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CanAddSchemaWithSavedAssetGeneric()
         {
-            var group = m_Settings.CreateGroup("TestGroup", false, false, false, null);
+            var group = Settings.CreateGroup("TestGroup", false, false, false, null);
             var newSchema = group.AddSchema(m_TestSchemaObject);
             Assert.IsNotNull(newSchema);
             Assert.AreNotEqual(newSchema, m_TestSchemaObject);
@@ -42,7 +42,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CanAddSchemaWithNonSavedAsset()
         {
-            var group = m_Settings.CreateGroup("TestGroup", false, false, false, null);
+            var group = Settings.CreateGroup("TestGroup", false, false, false, null);
             var templateSchema = ScriptableObject.CreateInstance<CustomTestSchema>();
             var newSchema = group.AddSchema(templateSchema);
             Assert.IsNotNull(newSchema);
@@ -54,7 +54,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CanAddAndRemoveSchemaObjectByType()
         {
-            var group = m_Settings.CreateGroup("TestGroup", false, false, false, null);
+            var group = Settings.CreateGroup("TestGroup", false, false, false, null);
             var s = group.AddSchema(typeof(CustomTestSchema));
             Assert.IsNotNull(s);
             string guid;
@@ -69,7 +69,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CanAddAndRemoveSchemaObjectByGenericType()
         {
-            var group = m_Settings.CreateGroup("TestGroup", false, false, false, null);
+            var group = Settings.CreateGroup("TestGroup", false, false, false, null);
             var s = group.AddSchema<CustomTestSchema>();
             Assert.IsNotNull(s);
             string guid;
@@ -84,7 +84,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CanCheckSchemaObjectByGenericType()
         {
-            var group = m_Settings.CreateGroup("TestGroup", false, false, false, null);
+            var group = Settings.CreateGroup("TestGroup", false, false, false, null);
             Assert.IsNotNull(group.AddSchema<CustomTestSchema>());
             Assert.IsTrue(group.HasSchema<CustomTestSchema>());
             Assert.IsTrue(group.RemoveSchema<CustomTestSchema>());
@@ -93,7 +93,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CanCheckSchemaObjectAsSubclass()
         {
-            var group = m_Settings.CreateGroup("TestGroup", false, false, false, null);
+            var group = Settings.CreateGroup("TestGroup", false, false, false, null);
             Assert.IsNotNull(group.AddSchema<CustomTestSchemaSubClass>());
             Assert.IsFalse(group.HasSchema<CustomTestSchema>());
             Assert.IsTrue(group.HasSchema<CustomTestSchemaSubClass>());
@@ -104,7 +104,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CanCheckSchemaObjectAsBaseclass()
         {
-            var group = m_Settings.CreateGroup("TestGroup", false, false, false, null);
+            var group = Settings.CreateGroup("TestGroup", false, false, false, null);
             Assert.IsNotNull(group.AddSchema<CustomTestSchema>());
             Assert.IsTrue(group.HasSchema<CustomTestSchema>());
             Assert.IsFalse(group.HasSchema<CustomTestSchemaSubClass>());
@@ -115,7 +115,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CanNotAddDuplicateSchemaObjects()
         {
-            var group = m_Settings.CreateGroup("TestGroup", false, false, false, null);
+            var group = Settings.CreateGroup("TestGroup", false, false, false, null);
             var added = group.AddSchema<CustomTestSchemaSubClass>();
             Assert.IsNotNull(added);
             Assert.AreEqual(added, group.AddSchema<CustomTestSchemaSubClass>());

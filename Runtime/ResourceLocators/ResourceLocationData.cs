@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 
 namespace UnityEngine.AddressableAssets.ResourceLocators
@@ -41,6 +42,12 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// </summary>
         public string[] Dependencies { get { return m_Dependencies; } }
 
+        [SerializeField]
+        SerializedType m_ResourceType;
+        /// <summary>
+        /// The type of the resource for th location.
+        /// </summary>
+        public Type ResourceType { get { return m_ResourceType.Value; } }
 
         /// <summary>
         /// Construct a new ResourceLocationData object.
@@ -49,12 +56,13 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// <param name="id">The internal id.</param>
         /// <param name="provider">The provider id.</param>
         /// <param name="dependencies">Optional array of dependencies.</param>
-        public ResourceLocationData(string[] keys, string id, Type provider, string[] dependencies = null)
+        public ResourceLocationData(string[] keys, string id, Type provider, Type t, string[] dependencies = null)
         {
             m_Keys = keys;
             m_InternalId = id;
             m_Provider = provider == null ? "" : provider.FullName;
             m_Dependencies = dependencies == null ? new string[0] : dependencies;
+            m_ResourceType = new SerializedType() { Value = t };
         }
     }
 }

@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.Serialization;
-using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets.Settings
 {
+    using Object = UnityEngine.Object;
+    
     /// <summary>
     /// Collection of AddressableAssetGroupSchema objects
     /// </summary>

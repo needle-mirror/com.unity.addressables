@@ -158,18 +158,3 @@ Here are the implications of the above:
 
 Which setup is better for your remote content depends on your specific scenario.
 
-## Analyzing your data
-To analyze your data configuration for potential problems, open the Addressables Window, and click the **Analyze** button on the top bar of that window.  This will open a sub-pane within the Addressables window.  From there you can click "Run Tests" to execute the analyze rules in the project.  After running a test, if there are any potential problems, you can manually alter your groups and rerun, or click "Fix All" to have the system automatically do it. 
-
-### Check Duplicate Bundle Dependencies
-The only rule currently present checks for potentially duplicated assets.  It does so by scanning all groups with BundledAssetGroupSchemas, and spies on the planned asset bundle layout.  This requires essentially triggering a full build, so this check is time consuming and performance intensive.  
-
-Duplicated assets are caused by assets in different bundles sharing dependencies.  An example would be marking two prefabs that share a material as addressable in different groups.  That material (and any of its dependencies) will be pulled into the bundles with each prefab.  To prevent this, the material has to be marked as addressable, either with one of the prefabs, or in its own space.  Doing so will put the material and its dependencies in a separate bundle.  
-
-If this check finds any issues, and the "Fix All" button is pressed, a new group will be created, and all dependent assets will be moved into that group.
-
-There is one scenario in which this removal of duplicates will be incorrect.  If you have an asset containing multiple objects, it is possible for different bundles to only be pulling in portions of the asset (some objects), and not actually duplicate.  An example would be an FBX with many meshes.  If one mesh is in BundleA and another is in BundleB, this check will think that the FBX is shared, and will pull it out into its own bundle.  In this rare case, that was actually harmful as neither bundle had the full FBX asset.
-
-### Future rule structure
-Right now, Analyze only provides one rule.  In the future, the system will come with additional rules, and there will be the ability to write custom rules and integrate them into this analyze workflow. 
-

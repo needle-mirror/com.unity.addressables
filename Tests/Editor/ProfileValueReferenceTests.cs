@@ -10,67 +10,67 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void IsValueValid()
         {
-            var group = m_Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            var group = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
             Assert.IsNotNull(group);
             var schema = group.GetSchema<BundledAssetGroupSchema>();
             Assert.IsNotNull(schema);
-            var pid = m_Settings.profileSettings.GetProfileDataById(schema.BuildPath.Id);
+            var pid = Settings.profileSettings.GetProfileDataById(schema.BuildPath.Id);
             Assert.IsNotNull(pid);
-            var varVal = m_Settings.profileSettings.GetValueById(m_Settings.activeProfileId, pid.Id);
+            var varVal = Settings.profileSettings.GetValueById(Settings.activeProfileId, pid.Id);
             Assert.IsNotNull(varVal);
-            var evalVal = m_Settings.profileSettings.EvaluateString(m_Settings.activeProfileId, varVal);
-            var val = schema.BuildPath.GetValue(m_Settings);
+            var evalVal = Settings.profileSettings.EvaluateString(Settings.activeProfileId, varVal);
+            var val = schema.BuildPath.GetValue(Settings);
             Assert.AreEqual(evalVal, val);
         }
 
         [Test]
         public void CanSetValueByName()
         {
-            var group = m_Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            var group = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
             Assert.IsNotNull(group);
             var schema = group.GetSchema<BundledAssetGroupSchema>();
             Assert.IsNotNull(schema);
             bool callbackInvoked = false;
             schema.BuildPath.OnValueChanged += s => callbackInvoked = true;
-            schema.BuildPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalLoadPath);
+            schema.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalLoadPath);
             Assert.IsTrue(callbackInvoked);
-            Assert.AreEqual(schema.BuildPath.Id, m_Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kLocalLoadPath).Id);
+            Assert.AreEqual(schema.BuildPath.Id, Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kLocalLoadPath).Id);
         }
 
         [Test]
         public void CanSetValueById()
         {
-            var group = m_Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            var group = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
             Assert.IsNotNull(group);
             var schema = group.GetSchema<BundledAssetGroupSchema>();
             Assert.IsNotNull(schema);
-            schema.BuildPath.SetVariableById(m_Settings, m_Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kLocalLoadPath).Id);
-            Assert.AreEqual(schema.BuildPath.Id, m_Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kLocalLoadPath).Id);
+            schema.BuildPath.SetVariableById(Settings, Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kLocalLoadPath).Id);
+            Assert.AreEqual(schema.BuildPath.Id, Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kLocalLoadPath).Id);
         }
 
         [Test]
         public void CallbackInvokedWhenValueChanged()
         {
-            var group = m_Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            var group = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
             Assert.IsNotNull(group);
             var schema = group.GetSchema<BundledAssetGroupSchema>();
             Assert.IsNotNull(schema);
             bool callbackInvoked = false;
             schema.BuildPath.OnValueChanged += s => callbackInvoked = true;
-            schema.BuildPath.SetVariableByName(m_Settings, AddressableAssetSettings.kLocalLoadPath);
+            schema.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalLoadPath);
             Assert.IsTrue(callbackInvoked);
         }
 
         [Test]
         public void CallbackNotInvokedWhenValueNotChanged()
         {
-            var group = m_Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            var group = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
             Assert.IsNotNull(group);
             var schema = group.GetSchema<BundledAssetGroupSchema>();
             Assert.IsNotNull(schema);
             bool callbackInvoked = false;
             schema.BuildPath.OnValueChanged += s => callbackInvoked = true;
-            schema.BuildPath.SetVariableById(m_Settings, "invalid id");
+            schema.BuildPath.SetVariableById(Settings, "invalid id");
             Assert.IsFalse(callbackInvoked);
         }
     }

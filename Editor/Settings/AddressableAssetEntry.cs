@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
+using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets.Settings
@@ -455,6 +457,37 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (var s in m_SerializedLabels)
                 m_Labels.Add(s);
             m_SerializedLabels = null;
+        }
+
+        public void CreateCatalogEntries(List<ContentCatalogDataEntry> entries, bool isBundled, string providerType, IEnumerable<object> deps, object extraData)
+        {
+            var assetPath = GetAssetLoadPath(isBundled);
+            var keyList = CreateKeyList();
+            var mainType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath);
+            
+            if (mainType == typeof(SceneAsset))
+                mainType = typeof(SceneInstance);
+
+
+            HashSet<Type> typesSeen = new HashSet<Type>();
+            typesSeen.Add(mainType);
+            var objs = AssetDatabase.LoadAllAssetRepresentationsAtPath(AssetPath);
+            for (int i = 0; i < objs.Length; i++)
+            {
+                var o = objs[i];
+                var t = o.GetType();
+                var internalId = string.Format("{0}[{1}]", assetPath, o.name);
+                var namedAddress = string.Format("{0}.{1}", address, o.name);
+                entries.Add(new ContentCatalogDataEntry(t, internalId, providerType, new object[] { namedAddress }, deps, extraData));
+
+                if (!typesSeen.Contains(t))
+                {
+                    entries.Add(new ContentCatalogDataEntry(t, assetPath, providerType, keyList, deps, extraData));
+                    typesSeen.Add(t);
+                }
+            }
+
+            entries.Add(new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, deps, extraData));
         }
     }
 }

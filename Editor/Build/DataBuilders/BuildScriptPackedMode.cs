@@ -19,10 +19,11 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
-using Debug = UnityEngine.Debug;
 
 namespace UnityEditor.AddressableAssets.Build.DataBuilders
 {
+    using Debug = UnityEngine.Debug;
+    
     /// <summary>
     /// Build scripts used for player builds and running with bundles in the editor.
     /// </summary>
@@ -458,13 +459,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     locations.Add(new ResourceLocationData(
                         new[] { dependencyHashes[(int)ContentCatalogProvider.DependencyHashIndex.Remote] },
                         remoteHashLoadPath,
-                        typeof(TextDataProvider)));
+                        typeof(TextDataProvider), typeof(string)));
 
                     var cacheLoadPath = "{UnityEngine.Application.persistentDataPath}/com.unity.addressables" + versionedFileName + ".hash";
                     locations.Add(new ResourceLocationData(
                         new[] { dependencyHashes[(int)ContentCatalogProvider.DependencyHashIndex.Cache] },
                         cacheLoadPath,
-                        typeof(TextDataProvider)));
+                        typeof(TextDataProvider), typeof(string)));
                 }
             }
 
@@ -472,6 +473,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 new []{ ResourceManagerRuntimeData.kCatalogAddress },
                 localLoadPath,
                 typeof(ContentCatalogProvider),
+                typeof(ContentCatalogData),
                 dependencyHashes));
         }
 
@@ -593,7 +595,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         }
 
         /// <inheritdoc />
-        internal override bool IsDataBuilt()
+        public override bool IsDataBuilt()
         {
             var catalogPath = Addressables.BuildPath + "/catalog.json";
             var settingsPath = Addressables.BuildPath + "/settings.json";

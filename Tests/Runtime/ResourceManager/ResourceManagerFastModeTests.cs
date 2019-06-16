@@ -19,7 +19,7 @@ namespace UnityEngine.ResourceManagement.Tests
         }
         IResourceLocation CreateLocationForAsset(string name, string path)
         {
-            return new ResourceLocationBase(name, path, typeof(AssetDatabaseProvider).FullName);
+            return new ResourceLocationBase(name, path, typeof(AssetDatabaseProvider).FullName, typeof(UnityEngine.Object));
         }
     }
 }

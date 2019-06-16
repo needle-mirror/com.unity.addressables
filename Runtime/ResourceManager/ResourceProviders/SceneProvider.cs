@@ -77,7 +77,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 if (loadingFromBundle)
                     return SceneManager.LoadSceneAsync(path, new LoadSceneParameters() { loadSceneMode = mode });
                 else
+                {
+                    if (path.ToLower().LastIndexOf("assets/") == -1)
+                        path = "Assets/" + path;
+                    if (path.LastIndexOf(".unity") == -1)
+                        path += ".unity";
+                            
                     return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(path, new LoadSceneParameters() { loadSceneMode = mode });
+                }
 #endif
             }
 

@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using UnityEditor;
+
+[assembly: InternalsVisibleTo("Unity.Addressables.Editor.Tests")]
 
 namespace UnityEngine.ResourceManagement.Util
 {
@@ -194,6 +197,32 @@ namespace UnityEngine.ResourceManagement.Util
             if (m_DestroyOnCompletion && !IsActive)
                 Destroy(gameObject);
         }
+        
+        private void OnApplicationQuit()
+        {
+            if(s_Instance != null)
+                Destroy(s_Instance.gameObject);
+        }
+        
+#if UNITY_EDITOR
+        [InitializeOnLoad]
+        public static class PlayStateNotifier
+        {
+            static PlayStateNotifier()
+            {
+                EditorApplication.playModeStateChanged += ModeChanged;
+            }
+
+            static void ModeChanged(PlayModeStateChange state)
+            {
+                if (state == PlayModeStateChange.ExitingPlayMode)
+                {
+                    if(s_Instance != null)
+                        DestroyImmediate(s_Instance.gameObject);
+                }
+            }
+        }
+#endif
     }
 
 }

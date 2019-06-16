@@ -11,7 +11,18 @@ namespace UnityEditor.AddressableAssets.Tests
     {
         protected const string k_TestConfigName = "AddressableAssetSettings.Tests";
         protected const string k_TestConfigFolder = "Assets/AddressableAssetsData_AddressableAssetSettingsTests";
-        protected AddressableAssetSettings m_Settings;
+
+        private AddressableAssetSettings m_Settings;
+
+        protected AddressableAssetSettings Settings
+        {
+            get
+            {
+                if (m_Settings == null)
+                    m_Settings = AddressableAssetSettings.Create(k_TestConfigFolder, k_TestConfigName, true, PersistSettings);
+                return m_Settings;
+            }
+        }
         protected string m_AssetGUID;
         protected virtual bool PersistSettings { get { return true; } }
         [OneTimeSetUp]
@@ -28,8 +39,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 AssetDatabase.Refresh();
             }
 
-            m_Settings = AddressableAssetSettings.Create(k_TestConfigFolder, k_TestConfigName, true, PersistSettings);
-            m_Settings.labelTable.labelNames.Clear();
+            Settings.labelTable.labelNames.Clear();
             GameObject testObject = new GameObject("TestObject");
 #if UNITY_2018_3_OR_NEWER
             PrefabUtility.SaveAsPrefabAsset(testObject, k_TestConfigFolder + "/test.prefab");

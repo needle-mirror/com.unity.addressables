@@ -25,10 +25,10 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void ErrorCheckBundleSettings_FindsNoProblemsInDefaultScema()
         {
-            var group = m_Settings.CreateGroup("PackedTest", false, false, false, null, typeof(BundledAssetGroupSchema));
+            var group = Settings.CreateGroup("PackedTest", false, false, false, null, typeof(BundledAssetGroupSchema));
             var schema = group.GetSchema<BundledAssetGroupSchema>();
                
-            var errorStr = BuildScriptPackedMode.ErrorCheckBundleSettings(schema, group, m_Settings);
+            var errorStr = BuildScriptPackedMode.ErrorCheckBundleSettings(schema, group, Settings);
             LogAssert.NoUnexpectedReceived();
             Assert.IsTrue(string.IsNullOrEmpty(errorStr));
         }
@@ -36,11 +36,11 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void ErrorCheckBundleSettings_WarnsOfMismatchedBuildPath()
         {
-            var group = m_Settings.CreateGroup("PackedTest", false, false, false, null, typeof(BundledAssetGroupSchema));
+            var group = Settings.CreateGroup("PackedTest", false, false, false, null, typeof(BundledAssetGroupSchema));
             var schema = group.GetSchema<BundledAssetGroupSchema>();
             schema.BuildPath.Id = "BadPath";
                 
-            var errorStr = BuildScriptPackedMode.ErrorCheckBundleSettings(schema, group, m_Settings);
+            var errorStr = BuildScriptPackedMode.ErrorCheckBundleSettings(schema, group, Settings);
             LogAssert.NoUnexpectedReceived();
             Assert.IsTrue(errorStr.Contains("is set to the dynamic-lookup version of StreamingAssets, but BuildPath is not."));
         }
@@ -48,11 +48,11 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void ErrorCheckBundleSettings_WarnsOfMismatchedLoadPath()
         {
-            var group = m_Settings.CreateGroup("PackedTest", false, false, false, null, typeof(BundledAssetGroupSchema));
+            var group = Settings.CreateGroup("PackedTest", false, false, false, null, typeof(BundledAssetGroupSchema));
             var schema = group.GetSchema<BundledAssetGroupSchema>();
             schema.LoadPath.Id = "BadPath";
                 
-            var errorStr = BuildScriptPackedMode.ErrorCheckBundleSettings(schema, group, m_Settings);
+            var errorStr = BuildScriptPackedMode.ErrorCheckBundleSettings(schema, group, Settings);
             LogAssert.NoUnexpectedReceived();
             Assert.IsTrue(errorStr.Contains("is set to the dynamic-lookup version of StreamingAssets, but LoadPath is not."));
         }

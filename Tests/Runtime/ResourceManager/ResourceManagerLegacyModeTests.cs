@@ -14,7 +14,7 @@ namespace UnityEngine.ResourceManagement.Tests
         protected override string AssetPathPrefix { get { return "Resources/"; } }
         protected IResourceLocation CreateLocationForAsset(string name, string path)
         {
-            return new ResourceLocationBase(name, Path.GetFileNameWithoutExtension(path), typeof(LegacyResourcesProvider).FullName);
+            return new ResourceLocationBase(name, Path.GetFileNameWithoutExtension(path), typeof(LegacyResourcesProvider).FullName, typeof(UnityEngine.Object));
         }
 
         protected override IResourceLocation[] SetupLocations(KeyValuePair<string, string>[] assets)

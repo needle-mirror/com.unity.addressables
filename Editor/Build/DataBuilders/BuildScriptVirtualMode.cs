@@ -47,7 +47,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         }
 
         /// <inheritdoc />
-        internal override bool IsDataBuilt()
+        public override bool IsDataBuilt()
         {
             var catalogPath = string.Format(m_PathFormat, "", "catalog");
             var settingsPath = string.Format(m_PathFormat, "", "settings");
@@ -100,7 +100,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             aaContext.runtimeData.CatalogLocations.Add(new ResourceLocationData(
                 new[] { ResourceManagerRuntimeData.kCatalogAddress }, 
                 string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"), 
-                typeof(ContentCatalogProvider)));
+                typeof(ContentCatalogProvider), typeof(ContentCatalogData)));
 
 
             m_CreatedProviderIds = new Dictionary<string, VirtualAssetBundleRuntimeData>();
@@ -143,7 +143,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 if (exitCode < ReturnCode.Success)
                     return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, "SBP Error" + exitCode);
                 if (aaSettings == null && !string.IsNullOrEmpty(aaPath))
-                    aaSettings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(aaPath);
+                    aaContext.settings = aaSettings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(aaPath);
+
                 GenerateLocationListsTask.Run(aaContext, extractData.WriteData);
             }
 
@@ -158,7 +159,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         List<string> assetsInBundle;
                         if (!bundledAssets.TryGetValue(dep, out assetsInBundle))
                             bundledAssets.Add(dep, assetsInBundle = new List<string>());
-                        if (i == 0) //only add the asset to the first bundle...
+                        if (i == 0 && !assetsInBundle.Contains(loc.InternalId)) //only add the asset to the first bundle...
                             assetsInBundle.Add(loc.InternalId);
                     }
                 }

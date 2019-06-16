@@ -53,7 +53,39 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
             else
             {
-                new InternalOp().Start(pi);
+                string assetPath = pi.Location.InternalId;
+                var i = assetPath.LastIndexOf('[');
+                if (i > 0)
+                {
+                    var i2 = assetPath.LastIndexOf(']');
+                    if (i2 < i)
+                    {
+                        pi.Complete<AssetBundle>(null, false, new Exception(string.Format("Invalid index format in internal id {0}", assetPath)));
+                    }
+                    else
+                    {
+                        var subObjectName = assetPath.Substring(i + 1, i2 - (i + 1));
+                        assetPath = assetPath.Substring(0, i);
+                        var objs = Resources.LoadAll(assetPath, pi.Type);
+                        object result = null;
+                        foreach (var o in objs)
+                        {
+                            if (o.name == subObjectName)
+                            {
+                                if (pi.Type.IsAssignableFrom(o.GetType()))
+                                {
+                                    result = o;
+                                    break;
+                                }
+                            }
+                        }
+                        pi.Complete(result, result != null, null);
+                    }
+                }
+                else
+                {
+                    new InternalOp().Start(pi);
+                }
             }
         }
 

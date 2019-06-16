@@ -52,20 +52,37 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     result = ResourceManagerConfig.CreateListResult(m_ProvideHandle.Type, AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
                 else
                 {
-                    var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
-                    Object obj = null;
-                    if (mainType == typeof(Texture2D) && m_ProvideHandle.Type == typeof(Sprite))
+                    var i = assetPath.LastIndexOf('[');
+                    if (i > 0)
                     {
-                        obj = AssetDatabase.LoadAssetAtPath(assetPath, m_ProvideHandle.Type);
-                    }
-                    else if (mainType == typeof(GameObject) && m_ProvideHandle.Type == typeof(Mesh))
-                    {
-                        obj = AssetDatabase.LoadAssetAtPath(assetPath, m_ProvideHandle.Type);
+                        var i2 = assetPath.LastIndexOf(']');
+                        if (i2 < i)
+                        {
+                            m_ProvideHandle.Complete(result, false, new Exception(string.Format("Invalid index format in internal id {0}", assetPath)));
+                        }
+                        else
+                        {
+                            var subObjectName = assetPath.Substring(i + 1, i2 - (i + 1));
+                            assetPath = assetPath.Substring(0, i);
+                            var objs = AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
+                            foreach (var o in objs)
+                            {
+                                if (o.name == subObjectName)
+                                {
+                                    if (m_ProvideHandle.Type.IsAssignableFrom(o.GetType()))
+                                    {
+                                        result = o;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                     }
                     else
-                        obj = AssetDatabase.LoadAssetAtPath(assetPath, mainType);
-
-                    result = obj != null && m_ProvideHandle.Type.IsAssignableFrom(obj.GetType()) ? obj : null;
+                    {
+                        var obj = AssetDatabase.LoadAssetAtPath(assetPath, m_ProvideHandle.Location.ResourceType);
+                        result = obj != null && m_ProvideHandle.Type.IsAssignableFrom(obj.GetType()) ? obj : null;
+                    }
                 }
                 m_ProvideHandle.Complete(result, result != null, null);
             }

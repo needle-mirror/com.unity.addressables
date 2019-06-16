@@ -31,7 +31,7 @@ namespace UnityEngine.ResourceManagement.Tests
                 var b = new VirtualAssetBundle("shared" + i, i % 2 == 0, 0, "");
                 virtualBundleData.AssetBundles.Add(b);
                 bundleMap.Add(b.Name, b);
-                sharedBundleLocations.Add(new ResourceLocationBase(bundleName, bundleName, typeof(AssetBundleProvider).FullName));
+                sharedBundleLocations.Add(new ResourceLocationBase(bundleName, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
             }
 
             IResourceLocation []locs = new IResourceLocation[assets.Length];
@@ -58,7 +58,7 @@ namespace UnityEngine.ResourceManagement.Tests
             vBundle.Assets.Add(new VirtualAssetBundleEntry(path, Random.Range(1024, 1024 * 1024)));
             IResourceLocation dep1Location = sharedBundleLocations[sharedBundleIndex+1];
             IResourceLocation dep2Location = sharedBundleLocations[sharedBundleIndex+2];
-            return new ResourceLocationBase(name, path, typeof(BundledAssetProvider).FullName, bundle, dep1Location, dep2Location);
+            return new ResourceLocationBase(name, path, typeof(BundledAssetProvider).FullName, typeof(object), bundle, dep1Location, dep2Location);
         }
     }
 }

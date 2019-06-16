@@ -15,55 +15,55 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void HasDefaultInitialGroups()
         {
-            Assert.IsNotNull(m_Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName));
-            Assert.IsNotNull(m_Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName));
+            Assert.IsNotNull(Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName));
+            Assert.IsNotNull(Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName));
         }
 
         [Test]
         public void AddRemovelabel()
         {
             const string labelName = "Newlabel";
-            m_Settings.AddLabel(labelName);
-            Assert.Contains(labelName, m_Settings.labelTable.labelNames);
-            m_Settings.RemoveLabel(labelName);
-            Assert.False(m_Settings.labelTable.labelNames.Contains(labelName));
+            Settings.AddLabel(labelName);
+            Assert.Contains(labelName, Settings.labelTable.labelNames);
+            Settings.RemoveLabel(labelName);
+            Assert.False(Settings.labelTable.labelNames.Contains(labelName));
         }
 
         [Test]
         public void AddRemoveGroup()
         {
             const string groupName = "NewGroup";
-            var group = m_Settings.CreateGroup(groupName, false, false, false, null);
+            var group = Settings.CreateGroup(groupName, false, false, false, null);
             Assert.IsNotNull(group);
-            m_Settings.RemoveGroup(group);
-            Assert.IsNull(m_Settings.FindGroup(groupName));
+            Settings.RemoveGroup(group);
+            Assert.IsNull(Settings.FindGroup(groupName));
         }
 
         [Test]
         public void CreateNewEntry()
         {
-            var group = m_Settings.CreateGroup("NewGroupForCreateOrMoveEntryTest", false, false, false, null);
+            var group = Settings.CreateGroup("NewGroupForCreateOrMoveEntryTest", false, false, false, null);
             Assert.IsNotNull(group);
-            var entry = m_Settings.CreateOrMoveEntry(m_AssetGUID, group);
+            var entry = Settings.CreateOrMoveEntry(m_AssetGUID, group);
             Assert.IsNotNull(entry);
             Assert.AreSame(group, entry.parentGroup);
-            var localDataGroup = m_Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            var localDataGroup = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
             Assert.IsNotNull(localDataGroup);
-            entry = m_Settings.CreateOrMoveEntry(m_AssetGUID, localDataGroup);
+            entry = Settings.CreateOrMoveEntry(m_AssetGUID, localDataGroup);
             Assert.IsNotNull(entry);
             Assert.AreNotSame(group, entry.parentGroup);
             Assert.AreSame(localDataGroup, entry.parentGroup);
-            m_Settings.RemoveGroup(group);
+            Settings.RemoveGroup(group);
             localDataGroup.RemoveAssetEntry(entry);
         }
 
         [Test]
         public void FindAssetEntry()
         {
-            var localDataGroup = m_Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            var localDataGroup = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
             Assert.IsNotNull(localDataGroup);
-            var entry = m_Settings.CreateOrMoveEntry(m_AssetGUID, localDataGroup);
-            var foundEntry = m_Settings.FindAssetEntry(m_AssetGUID);
+            var entry = Settings.CreateOrMoveEntry(m_AssetGUID, localDataGroup);
+            var foundEntry = Settings.FindAssetEntry(m_AssetGUID);
             Assert.AreSame(entry, foundEntry);
         }
 
@@ -71,30 +71,30 @@ namespace UnityEditor.AddressableAssets.Tests
         public void AddressablesClearCachedData_DoesNotThrowError()
         {
             //individual clean paths
-            foreach (ScriptableObject so in m_Settings.DataBuilders)
+            foreach (ScriptableObject so in Settings.DataBuilders)
             {
                 BuildScriptBase db = so as BuildScriptBase;
-                Assert.DoesNotThrow(() => m_Settings.CleanPlayerContentImpl(db));
+                Assert.DoesNotThrow(() => Settings.CleanPlayerContentImpl(db));
             }
 
             //Clean all path
-            Assert.DoesNotThrow(() => m_Settings.CleanPlayerContentImpl());
+            Assert.DoesNotThrow(() => Settings.CleanPlayerContentImpl());
 
             //Cleanup
-            m_Settings.BuildPlayerContentImpl();
+            Settings.BuildPlayerContentImpl();
         }
 
         [Test]
         public void AddressablesCleanCachedData_ClearsData()
         {
             //Setup
-            m_Settings.BuildPlayerContentImpl();
+            Settings.BuildPlayerContentImpl();
 
             //Check after each clean that the data is not built
-            foreach (ScriptableObject so in m_Settings.DataBuilders)
+            foreach (ScriptableObject so in Settings.DataBuilders)
             {
                 BuildScriptBase db = so as BuildScriptBase;
-                m_Settings.CleanPlayerContentImpl(db);
+                Settings.CleanPlayerContentImpl(db);
                 Assert.IsFalse(db.IsDataBuilt());
             }
         }
@@ -103,13 +103,13 @@ namespace UnityEditor.AddressableAssets.Tests
         public void AddressablesCleanAllCachedData_ClearsAllData()
         {
             //Setup
-            m_Settings.BuildPlayerContentImpl();
+            Settings.BuildPlayerContentImpl();
 
             //Clean ALL data builders
-            m_Settings.CleanPlayerContentImpl();
+            Settings.CleanPlayerContentImpl();
 
             //Check none have data built
-            foreach (ScriptableObject so in m_Settings.DataBuilders)
+            foreach (ScriptableObject so in Settings.DataBuilders)
             {
                 BuildScriptBase db = so as BuildScriptBase;
                 Assert.IsFalse(db.IsDataBuilt());

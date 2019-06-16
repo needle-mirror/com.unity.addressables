@@ -9,6 +9,8 @@ using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
+using UnityEditor.SceneManagement;
+using UnityEngine;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
 
@@ -17,14 +19,17 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
     class CheckDupeDependenciesBase : AnalyzeRule
     {
         [NonSerialized]
+        internal List<GUID> m_AddressableAssets = new List<GUID>();
+        [NonSerialized]
+        internal Dictionary<string, List<GUID>> m_ResourcesToDependencies = new Dictionary<string, List<GUID>>();
+        [NonSerialized]
         internal readonly List<ContentCatalogDataEntry> m_Locations = new List<ContentCatalogDataEntry>();
-
-        [NonSerialized] internal readonly List<AssetBundleBuild> m_AllBundleInputDefs = new List<AssetBundleBuild>();
-
+        [NonSerialized]
+        internal readonly List<AssetBundleBuild> m_AllBundleInputDefs = new List<AssetBundleBuild>();
         [NonSerialized]
         internal readonly Dictionary<string, string> m_BundleToAssetGroup = new Dictionary<string, string>();
-
-        [NonSerialized] internal ExtractDataTask m_ExtractData = new ExtractDataTask();
+        [NonSerialized]
+        internal ExtractDataTask m_ExtractData = new ExtractDataTask();
 
         internal IList<IBuildTask> RuntimeDataBuildTasks(string builtinShaderBundleName)
         {
@@ -91,6 +96,40 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             return exitCode;
         }
 
+        internal List<GUID> GetAllBundleDependencies()
+        {
+            var explicitGuids = m_ExtractData.WriteData.AssetToFiles.Keys;
+            var implicitGuids = GetImplicitGuidToFilesMap().Keys;
+            var allBundleGuids = explicitGuids.Union(implicitGuids);
+
+            return allBundleGuids.ToList();
+        }
+
+        internal void IntersectResourcesDepedenciesWithBundleDependencies(List<GUID> bundleDependencyGuids)
+        {
+            foreach (var key in m_ResourcesToDependencies.Keys)
+            {
+                var bundleDependencies = bundleDependencyGuids.Intersect(m_ResourcesToDependencies[key]).ToList();
+
+                m_ResourcesToDependencies[key].Clear();
+                m_ResourcesToDependencies[key].AddRange(bundleDependencies);
+            }
+        }
+
+        internal virtual void BuiltInResourcesToDependenciesMap(string[] resourcePaths)
+        {
+            foreach (string path in resourcePaths)
+            {
+                string[] dependencies = AssetDatabase.GetDependencies(path);
+
+                if (!m_ResourcesToDependencies.ContainsKey(path))
+                    m_ResourcesToDependencies.Add(path, new List<GUID>());
+
+                m_ResourcesToDependencies[path].AddRange(from dependency in dependencies
+                    select new GUID(AssetDatabase.AssetPathToGUID(dependency)));
+            }
+        }
+
         internal void CalculateInputDefinitions(AddressableAssetSettings settings)
         {
             foreach (AddressableAssetGroup group in settings.groups)
@@ -148,11 +187,64 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             return implicitGuids;
         }
 
-        internal override void ClearAnalysis()
+        internal List<AnalyzeResult> CalculateBuiltInResourceDependenciesToBundleDependecies(AddressableAssetSettings settings, string[] builtInResourcesPaths)
+        {
+            List<AnalyzeResult> results = new List<AnalyzeResult>();
+
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                Debug.LogError("Cannot run Analyze with unsaved scenes");
+                results.Add(new AnalyzeResult{resultName = ruleName + "Cannot run Analyze with unsaved scenes"});
+                return results;
+            }
+
+            m_AddressableAssets = (from aaGroup in settings.groups
+                                   from entry in aaGroup.entries
+                                   select new GUID(entry.guid)).ToList();
+
+            
+            BuiltInResourcesToDependenciesMap(builtInResourcesPaths);
+            CalculateInputDefinitions(settings);
+
+            var context = GetBuildContext(settings);
+            ReturnCode exitCode = RefreshBuild(context);
+            if (exitCode < ReturnCode.Success)
+            {
+                Debug.LogError("Analyze build failed. " + exitCode);
+                results.Add(new AnalyzeResult{resultName = ruleName + "Analyze build failed. " + exitCode});
+                return results;
+            }
+
+            IntersectResourcesDepedenciesWithBundleDependencies(GetAllBundleDependencies());
+
+            results = (from resource in m_ResourcesToDependencies.Keys
+                       from dependency in m_ResourcesToDependencies[resource]
+
+                       let assetPath = AssetDatabase.GUIDToAssetPath(dependency.ToString())
+                       let files = m_ExtractData.WriteData.AssetToFiles[dependency]
+
+                       from file in files
+                       let bundle = m_ExtractData.WriteData.FileToBundle[file]
+
+                       select new AnalyzeResult{resultName = 
+                           resource + kDelimiter +
+                           bundle + kDelimiter +
+                           assetPath,
+                           severity = MessageType.Warning}).ToList();
+
+            if (results.Count == 0)
+                results.Add(new AnalyzeResult{resultName = ruleName + " - No issues found."});
+
+            return results;
+        }
+
+        public override void ClearAnalysis()
         {
             m_Locations.Clear();
+            m_AddressableAssets.Clear();
             m_AllBundleInputDefs.Clear();
             m_BundleToAssetGroup.Clear();
+            m_ResourcesToDependencies.Clear();
             m_ExtractData = new ExtractDataTask();
 
             base.ClearAnalysis();

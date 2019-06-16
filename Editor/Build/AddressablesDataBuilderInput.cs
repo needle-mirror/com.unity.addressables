@@ -44,8 +44,16 @@ namespace UnityEditor.AddressableAssets.Build
         
         //used only by tests to inject custom info into build...
         internal string PathFormat = string.Empty;
-        internal string RuntimeSettingsFilename = "settings.json";
-        internal string RuntimeCatalogFilename = "catalog.json";
+
+        /// <summary>
+        /// The name of the default Runtime Settings file.
+        /// </summary>
+        public string RuntimeSettingsFilename = "settings.json";
+
+        /// <summary>
+        /// The name of the default Runtime Catalog file.
+        /// </summary>
+        public string RuntimeCatalogFilename = "catalog.json";
         
 
         /// <summary>

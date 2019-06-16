@@ -8,10 +8,12 @@ using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
-using Debug = UnityEngine.Debug;
-using Random = UnityEngine.Random;
 
-namespace UnityEditor.AddressableAssets.Tests {
+namespace UnityEditor.AddressableAssets.Tests 
+{
+    using Debug = UnityEngine.Debug;
+    using Random = UnityEngine.Random;
+    
     public class ContentCatalogTests
     {
         List<object> m_Keys;
@@ -107,13 +109,13 @@ namespace UnityEditor.AddressableAssets.Tests {
                 RetryCount = 7,
                 Timeout = 12
             };
-            var dataEntry = new ContentCatalogDataEntry("internalId", "provider", new object[] { 1 }, null, options);
+            var dataEntry = new ContentCatalogDataEntry(typeof(ContentCatalogData), "internalId", "provider", new object[] { 1 }, null, options);
             var entries = new List<ContentCatalogDataEntry>();
             entries.Add(dataEntry);
             var ccData = new ContentCatalogData(entries);
             var locator = ccData.CreateLocator();
             IList<IResourceLocation> locations;
-            if (!locator.Locate(1, out locations))
+            if (!locator.Locate(1, typeof(object), out locations))
                 Assert.Fail("Unable to locate resource location");
             var loc = locations[0];
             var locOptions = loc.Data as AssetBundleRequestOptions;
@@ -145,7 +147,7 @@ namespace UnityEditor.AddressableAssets.Tests {
                 else
                     data = new OddData { index = i, path = internalId };
 
-                var e = new ContentCatalogDataEntry(internalId, m_Providers[Random.Range(0, m_Providers.Count)].FullName, eKeys, GetRandomSubset(availableKeys, Random.Range(0, 1)), data);
+                var e = new ContentCatalogDataEntry(typeof(ContentCatalogData), internalId, m_Providers[Random.Range(0, m_Providers.Count)].FullName, eKeys, GetRandomSubset(availableKeys, Random.Range(0, 1)), data);
                 availableKeys.Add(eKeys[0]);
                 entries.Add(e);
             }
@@ -172,7 +174,7 @@ namespace UnityEditor.AddressableAssets.Tests {
                         foreach (var ed in entry.Dependencies)
                         {
                             IList<IResourceLocation> depList;
-                            Assert.IsTrue(locMap.Locate(ed, out depList));
+                            Assert.IsTrue(locMap.Locate(ed, typeof(object), out depList));
                             for (int i = 0; i < depList.Count; i++)
                                 Assert.AreEqual(depList[i].InternalId, deps[i].InternalId);
                         }

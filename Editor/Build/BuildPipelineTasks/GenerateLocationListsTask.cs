@@ -10,12 +10,20 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement;
+using UnityEngine.ResourceManagement.ResourceProviders;
 
 namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 {
-    class GenerateLocationListsTask : IBuildTask
+    /// <summary>
+    /// The BuildTask used to create location lists for Addressable assets.
+    /// </summary>
+    public class GenerateLocationListsTask : IBuildTask
     {
         const int k_Version = 1;
+
+        /// <summary>
+        /// The GenerateLocationListsTask version.
+        /// </summary>
         public int Version { get { return k_Version; } }
 
 #pragma warning disable 649
@@ -26,11 +34,21 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         IBundleWriteData m_WriteData;
 #pragma warning restore 649
 
+        /// <summary>
+        /// Runs the build task with the injected context.
+        /// </summary>
+        /// <returns>The success or failure ReturnCode</returns>
         public ReturnCode Run()
         {
             return Run(m_AaBuildContext, m_WriteData);
         }
 
+        /// <summary>
+        /// Runs the build task with a give context and write data.
+        /// </summary>
+        /// <param name="aaBuildContext">The addressables build context.</param>
+        /// <param name="writeData">The write data used to generate the location lists.</param>
+        /// <returns>The success or failure ReturnCode</returns>
         public static ReturnCode Run(IAddressableAssetsBuildContext aaBuildContext, IBundleWriteData writeData)
         {
             var aaContext = aaBuildContext as AddressableAssetsBuildContext;
@@ -109,7 +127,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         Dictionary<GUID, List<string>> assetsToBundles,
         List<ContentCatalogDataEntry> locations)
         {
-            locations.Add(new ContentCatalogDataEntry(bundleInternalId, bundleProvider, new object[] { bundleName }));
+            locations.Add(new ContentCatalogDataEntry(typeof(IAssetBundleResource), bundleInternalId, bundleProvider, new object[] { bundleName }));
 
             var assets = new List<AddressableAssetEntry>();
             assetGroup.GatherAllAssets(assets, true, true);
@@ -122,8 +140,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 AddressableAssetEntry entry;
                 if (!guidToEntry.TryGetValue(a.ToString(), out entry))
                     continue;
-                var assetPath = entry.GetAssetLoadPath(true);
-                locations.Add(new ContentCatalogDataEntry(assetPath, assetProvider, entry.CreateKeyList(), assetsToBundles[a].ToArray()));
+                entry.CreateCatalogEntries(locations, true, assetProvider, assetsToBundles[a], null);
             }
         }
     }

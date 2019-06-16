@@ -14,7 +14,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void AddRemoveEntry()
         {
-            var group = m_Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            var group = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
             Assert.IsNotNull(group);
             var entry = new AddressableAssetEntry(m_AssetGUID, "test", group, false);
             group.AddAssetEntry(entry);
@@ -26,7 +26,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void RenameSlashesBecomeDashes()
         {
-            var group = m_Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            var group = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
             var oldName = group.Name;
             group.Name = "folder/name";
             Assert.AreEqual("folder-name", group.Name);
@@ -35,7 +35,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void RenameInvalidCharactersFails()
         {
-            var group = m_Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            var group = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
             var oldName = group.Name;
             string badName = "*#?@>!@*@(#";
             LogAssert.Expect(LogType.Error, "Rename of Group failed. Invalid file name: '" + badName + ".asset'");
@@ -48,8 +48,8 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             const string guid = "0000";
             const string address = "not/a/real/address";
-            AddressableAssetGroup group1 = m_Settings.CreateGroup("group1", false, false, true, null, new Type[] { });
-            AddressableAssetGroup group2 = m_Settings.CreateGroup("group2", false, false, true, null, new Type[] { });
+            AddressableAssetGroup group1 = Settings.CreateGroup("group1", false, false, true, null, new Type[] { });
+            AddressableAssetGroup group2 = Settings.CreateGroup("group2", false, false, true, null, new Type[] { });
 
             //We're making 2 identical enteries.  This is to simulate each group having it's own copy of an AA Entry that references the same object.
             //If we use the same object the call to AddAssetEntry won't give us the state we're looking for.
@@ -70,14 +70,14 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsNull(group2.GetAssetEntry(guid));
 
             //Cleanup
-            m_Settings.RemoveGroup(group1);
-            m_Settings.RemoveGroup(group2);
+            Settings.RemoveGroup(group1);
+            Settings.RemoveGroup(group2);
         }
 
         [Test]
         public void RemoveEntries_InvokesModificationNotification()
         {
-            AddressableAssetGroup group1 = m_Settings.CreateGroup("group1", false, false, true, null, new Type[] { });
+            AddressableAssetGroup group1 = Settings.CreateGroup("group1", false, false, true, null, new Type[] { });
 
             List<AddressableAssetEntry> entries = new List<AddressableAssetEntry>();
             for (int i = 0; i < 10; i++)
@@ -95,62 +95,62 @@ namespace UnityEditor.AddressableAssets.Tests
 
             //Cleanup
             AddressableAssetSettings.OnModificationGlobal -= callback;
-            m_Settings.RemoveGroup(group1);
+            Settings.RemoveGroup(group1);
         }
 
         [Test]
         public void CannotSetInvalidGroupAsDefault()
         {
-            AddressableAssetGroup group1 = m_Settings.CreateGroup("group1", false, true, true, null, new Type[] { });
+            AddressableAssetGroup group1 = Settings.CreateGroup("group1", false, true, true, null, new Type[] { });
             LogAssert.Expect(LogType.Error, "Unable to set " + group1.Name + " as the Default Group.  Default Groups must not be ReadOnly.");
-            m_Settings.DefaultGroup = group1;
-            Assert.AreNotEqual(m_Settings.DefaultGroup, group1);
+            Settings.DefaultGroup = group1;
+            Assert.AreNotEqual(Settings.DefaultGroup, group1);
 
             //Cleanup
-            m_Settings.RemoveGroup(group1);
+            Settings.RemoveGroup(group1);
         }
 
         [Test]
         public void DefaultGroupContainsCorrectProperties()
         {
-            Assert.IsFalse(m_Settings.DefaultGroup.ReadOnly);
+            Assert.IsFalse(Settings.DefaultGroup.ReadOnly);
         }
 
         [Test]
         public void DefaultGroupChangesToValidDefaultGroup()
         {
             LogAssert.ignoreFailingMessages = true;
-            AddressableAssetGroup oldDefault = m_Settings.DefaultGroup;
+            AddressableAssetGroup oldDefault = Settings.DefaultGroup;
             oldDefault.m_ReadOnly = true;
-            AddressableAssetGroup newDefault = m_Settings.DefaultGroup;
+            AddressableAssetGroup newDefault = Settings.DefaultGroup;
 
             Assert.AreNotEqual(oldDefault, newDefault);
-            Assert.IsFalse(m_Settings.DefaultGroup.ReadOnly);
+            Assert.IsFalse(Settings.DefaultGroup.ReadOnly);
 
             //Cleanup
             oldDefault.AddSchema<BundledAssetGroupSchema>();
-            m_Settings.DefaultGroup = oldDefault;
+            Settings.DefaultGroup = oldDefault;
         }
 
         [Test]
         public void PreventNullDefaultGroup()
         {
             LogAssert.Expect(LogType.Error, "Unable to set null as the Default Group.  Default Groups must not be ReadOnly.");
-            m_Settings.DefaultGroup = null;
-            Assert.IsNotNull(m_Settings.DefaultGroup);
+            Settings.DefaultGroup = null;
+            Assert.IsNotNull(Settings.DefaultGroup);
         }
 
         [Test]
         public void ValidGroupsCanBeSetAsDefault()
         {
-            AddressableAssetGroup oldDefault = m_Settings.DefaultGroup;
-            AddressableAssetGroup group1 = m_Settings.CreateGroup("group1", false, false, true, null, new Type[] { typeof(BundledAssetGroupSchema) });
-            m_Settings.DefaultGroup = group1;
-            Assert.AreEqual(group1, m_Settings.DefaultGroup);
+            AddressableAssetGroup oldDefault = Settings.DefaultGroup;
+            AddressableAssetGroup group1 = Settings.CreateGroup("group1", false, false, true, null, new Type[] { typeof(BundledAssetGroupSchema) });
+            Settings.DefaultGroup = group1;
+            Assert.AreEqual(group1, Settings.DefaultGroup);
 
             //Cleanup
-            m_Settings.DefaultGroup = oldDefault;
-            m_Settings.RemoveGroup(group1);
+            Settings.DefaultGroup = oldDefault;
+            Settings.RemoveGroup(group1);
         }
     }
 }

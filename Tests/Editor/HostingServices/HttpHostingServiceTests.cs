@@ -5,10 +5,11 @@ using NUnit.Framework;
 using UnityEditor.AddressableAssets.HostingServices;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
-using Random = System.Random;
 
 namespace UnityEditor.AddressableAssets.Tests.HostingServices
 {
+    using Random = System.Random;
+    
     public class HttpHostingServiceTests
     {
         class MyWebClient : WebClient

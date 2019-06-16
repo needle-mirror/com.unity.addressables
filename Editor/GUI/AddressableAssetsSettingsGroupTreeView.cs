@@ -7,10 +7,11 @@ using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.AddressableAssets;
-using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
+    using Object = UnityEngine.Object;
+    
     class AddressableAssetEntryTreeView : TreeView
     {
         AddressableAssetsSettingsGroupEditor m_Editor;
@@ -952,10 +953,6 @@ namespace UnityEditor.AddressableAssets.GUI
                 var item = FindItemInVisibleRows(id);
                 if (item != null)
                 {
-                    //can't drag groups
-                    if (item.group != null)
-                        return false;
-
                     if (item.entry != null)
                     {
                         //can't drag the root "EditorSceneList" entry
@@ -1000,13 +997,8 @@ namespace UnityEditor.AddressableAssets.GUI
             DragAndDropVisualMode visualMode = DragAndDropVisualMode.None;
 
             var target = args.parentItem as AssetEntryTreeViewItem;
-            if (target == null)
-                return DragAndDropVisualMode.None;
 
-            if (target.entry != null && target.entry.ReadOnly)
-                return DragAndDropVisualMode.None;
-
-            if (target.group != null && target.group.ReadOnly)
+            if (target != null && target.entry != null && target.entry.ReadOnly)
                 return DragAndDropVisualMode.None;
 
 
@@ -1060,26 +1052,52 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (draggedNodes != null && draggedNodes.Count > 0)
                 {
                     visualMode = DragAndDropVisualMode.Copy;
+                    bool isDraggingGroup = draggedNodes.First().parent == rootItem;
+                    bool dropParentIsRoot = args.parentItem == rootItem || args.parentItem == null;
+
+                    if (isDraggingGroup && !dropParentIsRoot || !isDraggingGroup && dropParentIsRoot)
+                            visualMode = DragAndDropVisualMode.Rejected;
+
                     if (args.performDrop)
                     {
-                        AddressableAssetGroup parent = null;
-                        if (target.group != null)
-                            parent = target.group;
-                        else if (target.entry != null)
-                            parent = target.entry.parentGroup;
-
-                        if (parent != null)
+                        if (args.parentItem == null || args.parentItem == rootItem && visualMode != DragAndDropVisualMode.Rejected)
                         {
-                            if (draggedNodes.First().entry.IsInResources)
-                            {
-                                SafeMoveResourcesToGroup(parent, draggedNodes);
-                            }
+                            AddressableAssetGroup group = draggedNodes.First().@group;
+                            m_Editor.settings.groups.Remove(group);
+
+                            if(args.insertAtIndex > m_Editor.settings.groups.Count)
+                                m_Editor.settings.groups.Insert(0, group);
+                            else if(args.insertAtIndex < 0)
+                                m_Editor.settings.groups.Insert(m_Editor.settings.groups.Count, group);
                             else
+                                m_Editor.settings.groups.Insert(args.insertAtIndex, group);
+
+                            m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupMoved, m_Editor.settings.groups, true);
+                            Reload();
+                        }
+                        else
+                        {
+                            AddressableAssetGroup parent = null;
+                            if (target.group != null)
+                                parent = target.group;
+                            else if (target.entry != null)
+                                parent = target.entry.parentGroup;
+
+                            if (parent != null)
                             {
-                                var entries = new List<AddressableAssetEntry>();
-                                foreach (var node in draggedNodes)
-                                    entries.Add(m_Editor.settings.CreateOrMoveEntry(node.entry.guid, parent, false, false));
-                                m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, true);
+                                if (draggedNodes.First().entry.IsInResources)
+                                {
+                                    SafeMoveResourcesToGroup(parent, draggedNodes);
+                                }
+                                else
+                                {
+                                    var entries = new List<AddressableAssetEntry>();
+                                    foreach (var node in draggedNodes)
+                                        entries.Add(m_Editor.settings.CreateOrMoveEntry(node.entry.guid, parent, false,
+                                            false));
+                                    m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved,
+                                        entries, true);
+                                }
                             }
                         }
                     }

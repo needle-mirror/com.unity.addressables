@@ -250,7 +250,10 @@ namespace UnityEditor.AddressableAssets.Settings
             get { return m_ReadOnly; }
         }
 
-        internal AddressableAssetSettings Settings
+        /// <summary>
+        /// The AddressableAssetSettings that this group belongs to.
+        /// </summary>
+        public AddressableAssetSettings Settings
         {
             get
             {

@@ -12,13 +12,14 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
-using Object = UnityEngine.Object;
 
 [assembly: InternalsVisibleTo("Unity.Addressables.Editor.Tests")]
 [assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
 
 namespace UnityEditor.AddressableAssets.Settings
 {
+    using Object = UnityEngine.Object;
+    
     /// <summary>
     /// Contains editor data for the addressables system.
     /// </summary>
@@ -86,7 +87,8 @@ namespace UnityEditor.AddressableAssets.Settings
             InitializationObjectRemoved,
             ActivePlayModeScriptChanged,
             BatchModification, // <-- posted object will be null.
-            HostingServicesManagerModified
+            HostingServicesManagerModified,
+            GroupMoved
         }
 
         /// <summary>

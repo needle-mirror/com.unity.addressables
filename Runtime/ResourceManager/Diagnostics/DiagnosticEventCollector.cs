@@ -145,5 +145,33 @@ namespace UnityEngine.ResourceManagement.Diagnostics
                 }
             }
         }
+        
+        private void OnApplicationQuit()
+        {
+            if(s_Collector != null)
+                Destroy(s_Collector.gameObject);
+        }
+        
+#if UNITY_EDITOR
+        [InitializeOnLoad]
+        public static class PlayStateNotifier
+        {
+            static PlayStateNotifier()
+            {
+                EditorApplication.playModeStateChanged += ModeChanged;
+            }
+
+            static void ModeChanged(PlayModeStateChange state)
+            {
+
+                if (state == PlayModeStateChange.ExitingPlayMode)
+                {
+                    if(s_Collector != null)
+                        DestroyImmediate(s_Collector.gameObject);
+                }
+            }
+        }
+#endif
+        
     }
 }

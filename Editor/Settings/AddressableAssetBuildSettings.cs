@@ -3,14 +3,15 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 using UnityEngine.Serialization;
-#if UNITY_2018_3_OR_NEWER
-using BuildCompression = UnityEngine.BuildCompression;
-#else
-using BuildCompression = UnityEditor.Build.Content.BuildCompression;
-#endif
 
 namespace UnityEditor.AddressableAssets.Settings
 {
+#if UNITY_2018_3_OR_NEWER
+    using BuildCompression = UnityEngine.BuildCompression;
+#else
+    using BuildCompression = UnityEditor.Build.Content.BuildCompression;
+#endif
+    
     /// <summary>
     /// Build settings for addressables.
     /// </summary>

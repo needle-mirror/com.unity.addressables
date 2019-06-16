@@ -1,5 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
@@ -7,26 +9,28 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
+    /// <summary>
+    /// Window used to execute AnalyzeRule sets.  
+    /// </summary>
     public class AnalyzeWindow : EditorWindow
     {
-
-
-        private AddressableAssetSettings m_Settings;
-
-        [SerializeField]
-        private AnalyzeRuleGUI analyzeEditor;
-
-        private Rect m_ToolbarRect
+        private static AnalyzeWindow s_Instance = null;
+        private static AnalyzeWindow instance
         {
             get
             {
-                return new Rect(0, 0,
-                    position.width,
-                    position.height * Mathf.Clamp((Event.current.mousePosition.y / 2f) / position.height, 0.2f, 0.9f));
+                if (s_Instance == null)
+                    s_Instance = GetWindow<AnalyzeWindow>(false, "Analyze", false);
+                return s_Instance;
             }
         }
+        
+        private AddressableAssetSettings m_Settings;
 
-        private Rect m_DisplayAreaRect
+        [SerializeField]
+        private AnalyzeRuleGUI m_AnalyzeEditor;
+        
+        private Rect displayAreaRect
         {
             get
             {
@@ -34,8 +38,8 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        [MenuItem("Window/Asset Management/Analyze", priority = 2052)]
-        internal static void Initialize()
+        [MenuItem("Window/Asset Management/Addressables Analyze", priority = 2052)]
+        internal static void ShowWindow()
         {
             AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
@@ -44,20 +48,45 @@ namespace UnityEditor.AddressableAssets.GUI
                 return;
             }
 
-            GetWindow<AnalyzeWindow>().Show(true);
+            instance.titleContent = new GUIContent("Analyze");
+            instance.Show();
         }
 
         void OnEnable()
         {
-            analyzeEditor = new AnalyzeRuleGUI();
-            titleContent = new GUIContent("Analyze");
+            if(m_AnalyzeEditor == null)
+                m_AnalyzeEditor = new AnalyzeRuleGUI();
+
         }
 
         void OnGUI() 
         {
-            GUILayout.BeginArea(m_DisplayAreaRect);
-            analyzeEditor.OnGUI(m_DisplayAreaRect);
+            GUILayout.BeginArea(displayAreaRect);
+            m_AnalyzeEditor.OnGUI(displayAreaRect);
             GUILayout.EndArea();
         }
+        /// <summary>
+        /// Method used to register any custom AnalyzeRules with the window.  The recommended pattern is to create
+        /// your rules like so:
+        ///   class MyRule : AnalyzeRule {}
+        ///   [InitializeOnLoad]
+        ///   class RegisterMyRule
+        ///   {
+        ///       static RegisterMyRule()
+        ///       {
+        ///           AnalyzeWindow.RegisterNewRule<MyRule>();
+        ///       }
+        ///   }
+        /// </summary>
+        public static void RegisterNewRule<TRule>() where TRule : AnalyzeRule, new()
+        {
+            foreach (var rule in AnalyzeRuleGUI.Rules)
+            {
+                if (rule.GetType().IsAssignableFrom(typeof(TRule)))
+                    return;
+            }
+            AnalyzeRuleGUI.Rules.Add(new TRule());
+        }
+
     }
 }

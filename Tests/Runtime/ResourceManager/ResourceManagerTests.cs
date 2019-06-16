@@ -204,7 +204,7 @@ namespace UnityEngine.ResourceManagement.Tests
             prefabProv.ProvideCallback = h => provHandle[0] = h;
             m_ResourceManager.ResourceProviders.Add(prefabProv);
 
-            ResourceLocationBase locDep = new ResourceLocationBase("prefab", "prefab1", prefabProv.ProviderId);
+            ResourceLocationBase locDep = new ResourceLocationBase("prefab", "prefab1", prefabProv.ProviderId, typeof(UnityEngine.GameObject));
             var iProvider = new MockInstanceProvider();
             bool provideCalled = false;
             bool releaseCalled = false;
@@ -238,7 +238,7 @@ namespace UnityEngine.ResourceManagement.Tests
         public void ProvideInstance_CanProvide()
         {
             m_ResourceManager.ResourceProviders.Add(new GameObjectProvider());
-            ResourceLocationBase locDep = new ResourceLocationBase("prefab", "prefab1", "GOPRovider");
+            ResourceLocationBase locDep = new ResourceLocationBase("prefab", "prefab1", "GOPRovider", typeof(UnityEngine.GameObject));
 
             MockInstanceProvider iProvider = new MockInstanceProvider();
             InstantiationParameters instantiationParameters = new InstantiationParameters(null, true);

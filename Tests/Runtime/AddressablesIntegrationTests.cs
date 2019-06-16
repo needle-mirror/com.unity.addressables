@@ -8,7 +8,6 @@ using NUnit.Framework;
 using System.Collections;
 using System;
 using System.Linq;
-using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -24,7 +23,23 @@ namespace AddressableAssetsIntegrationTests
         List<object> m_SceneKeysList = new List<object>();
 
         Action<AsyncOperationHandle, Exception> m_PrevHandler;
+        
+        protected const string k_TestConfigName = "AddressableAssetSettings.Tests";
+        protected const string k_TestConfigFolder = "Assets/AddressableAssetsData_AddressableAssetSettingsTests";
 
+#if UNITY_EDITOR
+        private UnityEditor.AddressableAssets.Settings.AddressableAssetSettings m_Settings;
+        protected UnityEditor.AddressableAssets.Settings.AddressableAssetSettings Settings
+        {
+            get
+            {
+                if (m_Settings == null)
+                    m_Settings =
+                        UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.Create(k_TestConfigFolder, k_TestConfigName, true, true);
+                return m_Settings;
+            }
+        }
+#endif
         protected abstract string TypeName { get; }
         protected virtual string PathFormat { get { return "Assets/{0}_AssetsToDelete_{1}"; } }
 
@@ -89,7 +104,7 @@ namespace AddressableAssetsIntegrationTests
                         foreach (var key in locator.Keys)
                         {
                             IList<IResourceLocation> locs;
-                            if (locator.Locate(key, out locs))
+                            if (locator.Locate(key, typeof(object), out locs))
                             {
                                 var isPrefab = locs.All(s => s.InternalId.EndsWith(".prefab"));
                                 if (!m_KeysHashSet.ContainsKey(key))
@@ -103,7 +118,7 @@ namespace AddressableAssetsIntegrationTests
                                     m_KeysHashSet[key] = m_KeysHashSet[key] + locs.Count;
                                 }
 
-                                var isScene = locs.All(s => s.InternalId.EndsWith(".unity"));
+                                var isScene = locs.All(s => s.ResourceType == typeof(SceneInstance));
                                 if (isScene)
                                     m_SceneKeysList.Add(key);
 

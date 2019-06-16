@@ -133,7 +133,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 webRequest.timeout = m_Options.Timeout;
             if (m_Options.RedirectLimit > 0)
                 webRequest.redirectLimit = m_Options.RedirectLimit;
+            #if !UNITY_2019_3_OR_NEWER
             webRequest.chunkedTransfer = m_Options.ChunkedTransfer;
+            #endif
             if (m_ProvideHandle.ResourceManager.CertificateHandlerInstance != null)
             {
                 webRequest.certificateHandler = m_ProvideHandle.ResourceManager.CertificateHandlerInstance;

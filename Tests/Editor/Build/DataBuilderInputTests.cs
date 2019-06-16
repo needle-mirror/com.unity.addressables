@@ -23,13 +23,13 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void BuildInput_CreatesProperBuildData()
         {
-            var input = new AddressablesDataBuilderInput(m_Settings);
+            var input = new AddressablesDataBuilderInput(Settings);
             Assert.AreEqual(EditorUserBuildSettings.activeBuildTarget, input.Target);
             Assert.AreEqual(BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), input.TargetGroup);
-            Assert.AreEqual(m_Settings.PlayerBuildVersion, input.PlayerVersion);
+            Assert.AreEqual(Settings.PlayerBuildVersion, input.PlayerVersion);
             
             
-            input = new AddressablesDataBuilderInput(m_Settings, "1234");
+            input = new AddressablesDataBuilderInput(Settings, "1234");
             Assert.AreEqual(EditorUserBuildSettings.activeBuildTarget, input.Target);
             Assert.AreEqual(BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), input.TargetGroup);
             Assert.AreEqual("1234", input.PlayerVersion);
@@ -40,11 +40,11 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             var oldState = ProjectConfigData.postProfilerEvents;
             ProjectConfigData.postProfilerEvents = true;
-            var input = new AddressablesDataBuilderInput(m_Settings);
+            var input = new AddressablesDataBuilderInput(Settings);
             Assert.AreEqual(true, input.ProfilerEventsEnabled);
             
             ProjectConfigData.postProfilerEvents = false;
-            input = new AddressablesDataBuilderInput(m_Settings);
+            input = new AddressablesDataBuilderInput(Settings);
             Assert.AreEqual(false, input.ProfilerEventsEnabled);
             
             

@@ -5,10 +5,18 @@ using System.Xml;
 
 namespace UnityEditor.AddressableAssets.Build
 {
-    internal class LinkXmlGenerator
+    /// <summary>
+    /// This can be used to create a LinkXml for your build.  This will ensure that the desired runtime types are packed into the build.
+    /// </summary>
+    public class LinkXmlGenerator
     {
         Dictionary<Type, Type> m_TypeConversion = new Dictionary<Type, Type>();
         HashSet<Type> m_Types = new HashSet<Type>();
+
+        /// <summary>
+        /// Add runtime type to the LinkXml Generator.
+        /// </summary>
+        /// <param name="types">The desired runtime types.</param>
         public void AddTypes(params Type[] types)
         {
             if (types == null)
@@ -17,6 +25,10 @@ namespace UnityEditor.AddressableAssets.Build
                 AddTypeInternal(t);
         }
 
+        /// <summary>
+        /// Add runtime type to the LinkXml Generator.
+        /// </summary>
+        /// <param name="types">The desired runtime types.</param>
         public void AddTypes(IEnumerable<Type> types)
         {
             if (types == null)
@@ -37,11 +49,20 @@ namespace UnityEditor.AddressableAssets.Build
                 m_Types.Add(t);
         }
 
+        /// <summary>
+        /// Setup runtime type conversion
+        /// </summary>
+        /// <param name="a">Convert from type.</param>
+        /// <param name="b">Convert to type.</param>
         public void SetTypeConversion(Type a, Type b)
         {
             m_TypeConversion[a] = b; 
         }
 
+        /// <summary>
+        /// Save the LinkXml to the specified path.
+        /// </summary>
+        /// <param name="path">The path to save the linker xml file.</param>
         public void Save(string path)
         {
             var assemblyMap = new Dictionary<Assembly, List<Type>> ();

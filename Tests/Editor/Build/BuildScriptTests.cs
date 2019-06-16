@@ -15,13 +15,13 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void ClearCachedData_CleansStreamingAssetFolder()
         {
-            var context = new AddressablesDataBuilderInput(m_Settings);
+            var context = new AddressablesDataBuilderInput(Settings);
             
             int builderCount = 0;
-            for (int i = 0; i < m_Settings.DataBuilders.Count; i++)
+            for (int i = 0; i < Settings.DataBuilders.Count; i++)
             {
 
-                var builder = m_Settings.DataBuilders[i] as IDataBuilder;
+                var builder = Settings.DataBuilders[i] as IDataBuilder;
                 if (builder.CanBuildData<AddressablesPlayerBuildResult>())
                 {
                     builderCount++;
@@ -49,7 +49,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             LogAssert.ignoreFailingMessages = true;
             AddressableAssetSettings oldSettings = AddressableAssetSettingsDefaultObject.Settings;
-            AddressableAssetSettingsDefaultObject.Settings = m_Settings;
+            AddressableAssetSettingsDefaultObject.Settings = Settings;
 
             bool callbackCalled = false;
             BuildScript.buildCompleted += (result) =>
@@ -100,7 +100,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void BuildScript_DoesNotBuildWrongDataType()
         {
-            var context = new AddressablesDataBuilderInput(m_Settings);
+            var context = new AddressablesDataBuilderInput(Settings);
             
             var baseScript = ScriptableObject.CreateInstance<BuildScriptTestClass>();
             baseScript.BuildData<AddressablesPlayerBuildResult>(context);

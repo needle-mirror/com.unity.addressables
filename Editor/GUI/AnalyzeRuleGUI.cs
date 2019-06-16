@@ -8,10 +8,11 @@ using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Serialization;
-using TreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
+    using TreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem;
+    
     [Serializable]
     class AnalyzeRuleGUI
     {
@@ -20,11 +21,11 @@ namespace UnityEditor.AddressableAssets.GUI
 
         AssetSettingsAnalyzeTreeView m_Tree;
 
-        internal List<AnalyzeRule> m_Rules = new List<AnalyzeRule>()
+        static List<AnalyzeRule> s_Rules = new List<AnalyzeRule>();
+        internal static List<AnalyzeRule> Rules
         {
-            new CheckBundleDupeDependencies(),
-            new CheckSceneDupeDependencies()
-        };
+            get { return s_Rules; }
+        }
 
         internal AddressableAssetSettings Settings { get { return AddressableAssetSettingsDefaultObject.Settings; } }
 
@@ -63,7 +64,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
                     m_Data = AssetDatabase.LoadAssetAtPath<AnalyzeResultData>(AnalyzeRuleDataPath);
 
-                    foreach (var rule in m_Rules)
+                    foreach (var rule in s_Rules)
                     {
                         if (!m_Data.Data.ContainsKey(rule.ruleName)) 
                             m_Data.Data.Add(rule.ruleName, new List<AnalyzeRule.AnalyzeResult>());
@@ -74,13 +75,13 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        public void OnGUI(Rect rect)
+        internal void OnGUI(Rect rect)
         {
-            if(m_TreeState == null)
-                m_TreeState = new TreeViewState();
-
             if (m_Tree == null)
             {
+                if(m_TreeState == null)
+                    m_TreeState = new TreeViewState();
+                
                 m_Tree = new AssetSettingsAnalyzeTreeView(m_TreeState, this);
                 m_Tree.Reload();
             }

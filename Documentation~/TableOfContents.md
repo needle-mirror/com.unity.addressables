@@ -7,3 +7,4 @@
     * [Memory Management](MemoryManagement)
     * [Async Operation Handle](AddressableAssetsAsyncOperationHandle)
     * [Custom Operations](AddressableAssetsCustomOperation)
+    * [Analyze](AddressableAssetsAnalyze)

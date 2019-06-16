@@ -12,10 +12,11 @@ using UnityEditor.IMGUI.Controls;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
+    using Object = UnityEngine.Object;
+    
     [CustomPropertyDrawer(typeof(AssetReference), true)]
     class AssetReferenceDrawer : PropertyDrawer
     {

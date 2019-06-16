@@ -28,7 +28,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             m_DataBuilt = false;
         }
 
-        internal override bool IsDataBuilt()
+        /// <inheritdoc />
+        public override bool IsDataBuilt()
         {
             return m_DataBuilt;
         }

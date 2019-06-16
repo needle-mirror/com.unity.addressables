@@ -66,8 +66,8 @@ namespace UnityEngine.ResourceManagement.Tests
         {
             ProvideHandle provideHandle = default(ProvideHandle);
             m_Provider2.ProvideCallback = x => { provideHandle = x; };
-            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", m_Provider2.ProviderId);
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, depLoc);
+            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", m_Provider2.ProviderId, typeof(object));
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object), depLoc);
             var op = m_RM.ProvideResource<object>(loc);
             m_RM.Update(0.0f);
             Assert.False(op.IsDone);
@@ -80,9 +80,9 @@ namespace UnityEngine.ResourceManagement.Tests
         [Test]
         public void OnDestroyed_DepOpReleasedAndProviderReleased()
         {
-            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", m_Provider2.ProviderId);
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, depLoc);
-            ResourceLocationBase loc2 = new ResourceLocationBase("2", "2", m_Provider.ProviderId, depLoc);
+            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", m_Provider2.ProviderId, typeof(object));
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object), depLoc);
+            ResourceLocationBase loc2 = new ResourceLocationBase("2", "2", m_Provider.ProviderId, typeof(object), depLoc);
             var op1 = m_RM.ProvideResource<object>(loc);
             m_RM.Update(0.0f);
             Assert.AreEqual(1, m_Provider2.ProvideLog.Count);
@@ -109,8 +109,8 @@ namespace UnityEngine.ResourceManagement.Tests
         [Test]
         public void WhenDependentOpFails_ProvideIsNotCalled()
         {
-            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", "unknown provider");
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, depLoc);
+            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", "unknown provider", typeof(object));
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object), depLoc);
             var op = m_RM.ProvideResource<object>(loc);
             m_RM.Update(0.0f);
             Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
@@ -123,8 +123,8 @@ namespace UnityEngine.ResourceManagement.Tests
         public void WhenDependentOpFails_AndProviderSupportsFailedDependencies_OperationContinues()
         {
             m_Provider._BehaviourFlags = ProviderBehaviourFlags.CanProvideWithFailedDependencies;
-            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", "unknown provider");
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, depLoc);
+            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", "unknown provider", typeof(object));
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object), depLoc);
             var op = m_RM.ProvideResource<object>(loc);
             m_RM.Update(0.0f);
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
@@ -137,8 +137,8 @@ namespace UnityEngine.ResourceManagement.Tests
         [Test]
         public void WhenProviderCompletesInsideProvideCall_CallbackIsNotDeferred()
         {
-            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", m_Provider2.ProviderId);
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, depLoc);
+            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", m_Provider2.ProviderId, typeof(object));
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object), depLoc);
             ProvideHandle depHandle = new ProvideHandle();
             m_Provider2.ProvideCallback = (x) => { depHandle = x; };
             var op = m_RM.ProvideResource<object>(loc);
@@ -157,7 +157,7 @@ namespace UnityEngine.ResourceManagement.Tests
         [Test]
         public void WhenProviderCompletesOutsideProvideCall_CallbackIsImmediate()
         {
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId);
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object));
             ProvideHandle depHandle = new ProvideHandle();
             m_Provider.ProvideCallback = (x) => { depHandle = x; };
             var op = m_RM.ProvideResource<object>(loc);
@@ -176,7 +176,7 @@ namespace UnityEngine.ResourceManagement.Tests
         [Test]
         public void UsingProviderHandleWithInvalidVersion_ThrowsException()
         {
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId);
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object));
             ProvideHandle handle = new ProvideHandle();
             m_Provider.ProvideCallback = (x) => { handle = x; };
             var op = m_RM.ProvideResource<object>(loc);
@@ -190,9 +190,9 @@ namespace UnityEngine.ResourceManagement.Tests
         public void GetDependency_InsertsDependenciesIntoList()
         {
             List<object> deps = new List<object>();
-            ResourceLocationBase depLoc = new ResourceLocationBase("dep1", "dep1", m_Provider2.ProviderId);
-            ResourceLocationBase depLoc2 = new ResourceLocationBase("dep2", "dep2", m_Provider2.ProviderId);
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, depLoc, depLoc2);
+            ResourceLocationBase depLoc = new ResourceLocationBase("dep1", "dep1", m_Provider2.ProviderId, typeof(object));
+            ResourceLocationBase depLoc2 = new ResourceLocationBase("dep2", "dep2", m_Provider2.ProviderId, typeof(object));
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object), depLoc, depLoc2);
             m_Provider.ProvideCallback = (handle) => { handle.GetDependencies(deps); handle.Complete(0, true, null); };
             var op = m_RM.ProvideResource<object>(loc);
             m_RM.Update(0.0f);
@@ -209,7 +209,7 @@ namespace UnityEngine.ResourceManagement.Tests
         [Test]
         public void WhenProviderCallsComplete_AndTypeIsIncorrect_Throws()
         {
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId);
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object));
             Exception testException = null;
             m_Provider.ProvideCallback = (x) => 
             {
@@ -234,7 +234,7 @@ namespace UnityEngine.ResourceManagement.Tests
         [Test]
         public void WhenProviderThrowsExceptionOnProvide_OperationFails()
         {
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId);
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object));
             m_Provider.ProvideCallback = (x) => { throw new Exception("I have failed"); };
             var op = m_RM.ProvideResource<Type1>(loc);
             m_RM.Update(0.0f);
@@ -246,7 +246,7 @@ namespace UnityEngine.ResourceManagement.Tests
         [Test]
         public void WhenProviderThrowsExceptionInProgressCallback_ProgressReturnsZero()
         {
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId);
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object));
             ProvideHandle handle = new ProvideHandle();
             bool didThrow = false;
             m_Provider.ProvideCallback = (x) => 
@@ -263,8 +263,8 @@ namespace UnityEngine.ResourceManagement.Tests
 
         public void ProvideWithoutSpecifiedType_UsesDefaultProviderType()
         {
-            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", m_Provider2.ProviderId);
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, depLoc);
+            ResourceLocationBase depLoc = new ResourceLocationBase("dep", "dep", m_Provider2.ProviderId, typeof(object));
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object), depLoc);
             ProvideHandle handle = default(ProvideHandle);
             m_Provider2.ProvideCallback = (x) => { handle = x; };
             m_Provider2.DefaultType = typeof(Type2);
@@ -277,7 +277,7 @@ namespace UnityEngine.ResourceManagement.Tests
 
         void ProviderCompleteTypeTest<TRequestType, TResultType>(TResultType result, string exceptionMessage)
         {
-            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId);
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object));
             ProvideHandle handle = default(ProvideHandle);
             m_Provider.ProvideCallback = (x) =>
             {
@@ -336,8 +336,8 @@ namespace UnityEngine.ResourceManagement.Tests
         {
             m_Provider.ProvideCallback = (pi) => { throw new Exception("This Should Not Have Been Called"); };
             m_RM.ResourceProviders.Add(m_Provider);
-            ResourceLocationBase locDep = new ResourceLocationBase("depasset", "depasset", "unkonwn");
-            ResourceLocationBase locRoot = new ResourceLocationBase("rootasset", "rootasset", m_Provider.ProviderId, locDep);
+            ResourceLocationBase locDep = new ResourceLocationBase("depasset", "depasset", "unkonwn", typeof(object));
+            ResourceLocationBase locRoot = new ResourceLocationBase("rootasset", "rootasset", m_Provider.ProviderId, typeof(object), locDep);
             AsyncOperationHandle<object> op = m_RM.ProvideResource<object>(locRoot);
             m_RM.Update(0.0f);
             Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
@@ -354,8 +354,8 @@ namespace UnityEngine.ResourceManagement.Tests
                 pi.Complete(5, true, null);
             };
             m_RM.ResourceProviders.Add(m_Provider);
-            ResourceLocationBase locDep = new ResourceLocationBase("depasset", "depasset", "unkonwn");
-            ResourceLocationBase locRoot = new ResourceLocationBase("rootasset", "rootasset", m_Provider.ProviderId, locDep);
+            ResourceLocationBase locDep = new ResourceLocationBase("depasset", "depasset", "unkonwn", typeof(object));
+            ResourceLocationBase locRoot = new ResourceLocationBase("rootasset", "rootasset", m_Provider.ProviderId, typeof(object), locDep);
             AsyncOperationHandle<object> op = m_RM.ProvideResource<object>(locRoot);
             m_RM.Update(0.0f);
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
@@ -373,8 +373,8 @@ namespace UnityEngine.ResourceManagement.Tests
             };
             m_RM.ResourceProviders.Add(m_Provider);
             var locations = new List<IResourceLocation>() {
-                new ResourceLocationBase("0", "0", m_Provider.ProviderId),
-                new ResourceLocationBase("1", "1", m_Provider.ProviderId),
+                new ResourceLocationBase("0", "0", m_Provider.ProviderId, typeof(object)),
+                new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object)),
             };
             AsyncOperationHandle<IList<object>> op = m_RM.ProvideResources<object>(locations);
             m_RM.Update(0.0f);
@@ -395,9 +395,9 @@ namespace UnityEngine.ResourceManagement.Tests
                 loadOrder.Add(pi.Location);
                 pi.Complete(0, true, null);
             };
-            IResourceLocation i3 = new ResourceLocationBase("3", "3", m_Provider.ProviderId);
-            IResourceLocation i2 = new ResourceLocationBase("2", "2", m_Provider.ProviderId, i3);
-            IResourceLocation i1 = new ResourceLocationBase("1", "1", m_Provider.ProviderId, i2);
+            IResourceLocation i3 = new ResourceLocationBase("3", "3", m_Provider.ProviderId, typeof(object));
+            IResourceLocation i2 = new ResourceLocationBase("2", "2", m_Provider.ProviderId, typeof(object), i3);
+            IResourceLocation i1 = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object), i2);
             var op = m_RM.ProvideResource<object>(i1);
             m_RM.Update(0.0f);
             Assert.AreEqual(5, m_RM.OperationCacheCount);

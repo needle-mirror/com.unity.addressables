@@ -36,7 +36,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             aa.ResourceManager.ResourceProviders.Add(tdp);
             aa.ResourceManager.ResourceProviders.Add(new ContentCatalogProvider(aa.ResourceManager));
 
-            var runtimeDataLocation = new ResourceLocationBase("RuntimeData", playerSettingsLocation, typeof(JsonAssetProvider).FullName);
+            var runtimeDataLocation = new ResourceLocationBase("RuntimeData", playerSettingsLocation, typeof(JsonAssetProvider).FullName, typeof(ResourceManagerRuntimeData));
 
             var initOp = new InitializationOperation(aa);
             initOp.m_rtdOp = aa.ResourceManager.ProvideResource<ResourceManagerRuntimeData>(runtimeDataLocation);
@@ -91,7 +91,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             var locMap = new ResourceLocationMap(rtd.CatalogLocations);
             m_Addressables.ResourceLocators.Add(locMap);
             IList<IResourceLocation> catalogs;
-            if (!locMap.Locate(ResourceManagerRuntimeData.kCatalogAddress, out catalogs))
+            if (!locMap.Locate(ResourceManagerRuntimeData.kCatalogAddress, typeof(ContentCatalogData), out catalogs))
             {
                 m_Addressables.LogWarningFormat("Addressables - Unable to find any catalog locations in the runtime data.");
                 m_Addressables.ResourceLocators.Remove(locMap);

@@ -141,8 +141,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         continue;
                     if (!playerDataSchema.IncludeResourcesFolders && a.IsInResources)
                         continue;
-                    string providerId = a.IsScene ? "" : typeof(LegacyResourcesProvider).FullName;
-                    locations.Add(new ContentCatalogDataEntry(a.GetAssetLoadPath(false), providerId, a.CreateKeyList()));
+                    a.CreateCatalogEntries(locations, false, a.IsScene ? "" : typeof(LegacyResourcesProvider).FullName, null, null);
                     if (!a.IsScene)
                         needsLegacyProvider = true;
                 }
@@ -205,7 +204,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// <summary>
         /// Checks to see if the data is built for the given builder.
         /// </summary>
-        internal virtual bool IsDataBuilt()
+        public virtual bool IsDataBuilt()
         {
             return false;
         }

@@ -30,7 +30,8 @@ namespace UnityEngine.AddressableAssets
         /// Load the referenced asset as type TObject.
         /// </summary>
         /// <returns>The load operation.</returns>
-        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetAsync(*)", true)]
+        //[Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetAsync(*)", true)]
+        [Obsolete]
         public AsyncOperationHandle<TObject> LoadAsset()
         {
             return LoadAssetAsync();
@@ -169,6 +170,9 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
+                if (!m_Operation.IsValid())
+                    return null;
+
                 return m_Operation.Result as Object;
             }
         }
@@ -194,7 +198,8 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <typeparam name="TObject">The object type.</typeparam>
         /// <returns>The load operation.</returns>
-        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetAsync(*)", true)]
+        //[Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetAsync(*)", true)]
+        [Obsolete]
         public AsyncOperationHandle<TObject> LoadAsset<TObject>()
         {
             return LoadAssetAsync<TObject>();
@@ -204,7 +209,8 @@ namespace UnityEngine.AddressableAssets
         /// Loads the reference as a scene.
         /// </summary>
         /// <returns>The operation handle for the scene load.</returns>
-        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadSceneAsync(*)", true)]
+        //[Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadSceneAsync(*)", true)]
+        [Obsolete]
         public AsyncOperationHandle<SceneInstance> LoadScene()
         {
             return LoadSceneAsync();
@@ -216,7 +222,8 @@ namespace UnityEngine.AddressableAssets
         /// <param name="rotation">Rotation of the instantiated object.</param>
         /// <param name="parent">The parent of the instantiated object.</param>
         /// <returns></returns>
-        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
+        //[Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
+        [Obsolete]
         public AsyncOperationHandle<GameObject> Instantiate(Vector3 position, Quaternion rotation, Transform parent = null)
         {
             return InstantiateAsync(position, rotation, parent);
@@ -229,7 +236,8 @@ namespace UnityEngine.AddressableAssets
         /// <param name="parent">The parent of the instantiated object.</param>
         /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
         /// <returns></returns>
-        [Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
+        //[Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> InstantiateAsync(*)", true)]
+        [Obsolete]
         public AsyncOperationHandle<GameObject> Instantiate(Transform parent = null, bool instantiateInWorldSpace = false)
         {
             return InstantiateAsync(parent, instantiateInWorldSpace);
@@ -381,7 +389,7 @@ namespace UnityEngine.AddressableAssets
                     m_CachedAsset = value;
                 }
             }
-
+            
             return true;
         }
 #endif

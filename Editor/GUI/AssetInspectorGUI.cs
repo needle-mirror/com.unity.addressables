@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
+    using Object = UnityEngine.Object;
+    
     [InitializeOnLoad]
     static class AddressableAssetInspectorGUI
     {

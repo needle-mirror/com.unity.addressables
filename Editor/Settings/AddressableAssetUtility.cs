@@ -5,10 +5,11 @@ using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Utilities;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets.Settings
 {
+    using Object = UnityEngine.Object;
+    
     static class AddressableAssetUtility
     {
         internal static bool IsInResources(string path)

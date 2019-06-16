@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.GUI;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
@@ -21,12 +21,12 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             public GUID DuplicatedGroupGuid;
         }
 
-        internal override bool CanFix
+        public override bool CanFix
         {
             get { return true; }
         }
         
-        internal override string ruleName
+        public override string ruleName
         { get { return "Check Duplicate Bundle Dependencies"; } }
 
         [NonSerialized]
@@ -34,7 +34,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         [SerializeField]
         internal HashSet<GUID> m_ImplicitAssets;
 
-        internal override List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)
+        public override List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)
         {
             ClearAnalysis();
             return CheckForDuplicateDependencies(settings);
@@ -46,7 +46,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             {
                 Debug.LogError("Cannot run Analyze with unsaved scenes");
-                m_Results.Add(new AnalyzeResult(ruleName + "Cannot run Analyze with unsaved scenes"));
+                m_Results.Add(new AnalyzeResult{resultName = ruleName + "Cannot run Analyze with unsaved scenes"});
                 return m_Results;
             }
 
@@ -59,7 +59,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 if (exitCode < ReturnCode.Success)
                 {
                     Debug.LogError("Analyze build failed. " + exitCode);
-                    m_Results.Add(new AnalyzeResult(ruleName + "Analyze build failed. " + exitCode));
+                    m_Results.Add(new AnalyzeResult{resultName = ruleName + "Analyze build failed. " + exitCode});
                     return m_Results;
                 }
 
@@ -70,10 +70,10 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 m_Results = (from issueGroup in m_AllIssues
                             from bundle in issueGroup.Value
                             from item in bundle.Value
-                            select new AnalyzeResult(ruleName + kDelimiter +
+                            select new AnalyzeResult {resultName = ruleName + kDelimiter +
                                                      issueGroup.Key + kDelimiter +
                                                      bundle.Key + kDelimiter +
-                                                     item, MessageType.Warning)).ToList();
+                                                     item, severity = MessageType.Warning}).ToList();
             }
 
             if (m_Results.Count == 0)
@@ -148,24 +148,36 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
              !path.ToLower().StartsWith("resources/");
         }
 
-        internal override void FixIssues(AddressableAssetSettings settings)
+        public override void FixIssues(AddressableAssetSettings settings)
         {
             if (m_ImplicitAssets == null)
                 CheckForDuplicateDependencies(settings);
 
             if (m_ImplicitAssets.Count == 0)
                 return;
-
-            var group = settings.CreateGroup("Duplicate Asset Isolation", false, false, false, null, typeof(BundledAssetGroupSchema));
+            
+            var group = settings.CreateGroup("Duplicate Asset Isolation", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
+            group.GetSchema<ContentUpdateGroupSchema>().StaticContent = true;
+            
             foreach (var asset in m_ImplicitAssets)
                 settings.CreateOrMoveEntry(asset.ToString(), group, false, false);
         }
 
-        internal override void ClearAnalysis()
+        public override void ClearAnalysis()
         {
             m_AllIssues.Clear();
             m_ImplicitAssets = null;
             base.ClearAnalysis();
+        }
+    }
+    
+
+    [InitializeOnLoad]
+    class RegisterCheckBundleDupeDependencies
+    {
+        static RegisterCheckBundleDupeDependencies()
+        {
+            AnalyzeWindow.RegisterNewRule<CheckBundleDupeDependencies>();
         }
     }
 }

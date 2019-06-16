@@ -16,14 +16,14 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// <param name="key">The key of the location.  This should be a string with the resources path of the asset.</param>
         /// <param name="locations">The list of locations.  This will have at most one item.</param>
         /// <returns>True if the key is a string object and a location was created, false otherwise.</returns>
-        public bool Locate(object key, out IList<IResourceLocation> locations)
+        public bool Locate(object key, Type type, out IList<IResourceLocation> locations)
         {
             locations = null;
             var strKey = key as string; 
             if (strKey == null)
                 return false;
             locations = new List<IResourceLocation>();
-            locations.Add(new ResourceLocationBase("LegacyResourceLocation", strKey, typeof(LegacyResourcesProvider).FullName));
+            locations.Add(new ResourceLocationBase("LegacyResourceLocation", strKey, typeof(LegacyResourcesProvider).FullName, typeof(UnityEngine.Object)));
             return true;
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
@@ -145,8 +146,9 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                 }
 
+                
                 if (GUILayout.Button("Analyze", m_ButtonStyle))
-                    AnalyzeWindow.Initialize();
+                    AnalyzeWindow.ShowWindow();
 
                 var guiBuild = new GUIContent("Build");
                 Rect rBuild = GUILayoutUtility.GetRect(guiBuild, EditorStyles.toolbarDropDown);
@@ -224,7 +226,11 @@ namespace UnityEditor.AddressableAssets.GUI
         void OnPrepareUpdate()
         {
             var path = ContentUpdateScript.GetContentStateDataPath(true);
-            if (!string.IsNullOrEmpty(path))
+            if (string.IsNullOrEmpty(path))
+                Debug.LogWarning("No path specified for Content State Data file.");
+            else if (!File.Exists(path))
+                Debug.LogWarningFormat("No Content State Data file exists at path: {0}");
+            else
                 ContentUpdatePreviewWindow.PrepareForContentUpdate(AddressableAssetSettingsDefaultObject.Settings, path);
         }
 

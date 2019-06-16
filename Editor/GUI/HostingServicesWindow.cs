@@ -6,10 +6,11 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.Serialization;
-using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
+    using Object = UnityEngine.Object;
+    
     /// <summary>
     /// Configuration GUI for <see cref="T:UnityEditor.AddressableAssets.HostingServices.HostingServicesManager" />
     /// </summary>

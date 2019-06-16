@@ -378,7 +378,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             if (!m_AssetMap.TryGetValue(location.InternalId, out assetInfo))
                 return new VBAsyncOperation<object>().StartCompleted(location, location, null, new ResourceManagerException(string.Format("Unable to load asset {0} from simulated bundle {1}.", location.InternalId, Name)));
 
-            var op = new LoadAssetOp<object>(location, assetInfo);
+            var op = new LoadAssetOp(location, assetInfo, type);
             m_AssetLoadOperations.Add(op);
             return op;
         }
@@ -403,13 +403,15 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
         }
 
         // TODO: This is only needed internally. We can change this to not derive off of AsyncOperationBase and simplify the code
-        class LoadAssetOp<TObject> : VBAsyncOperation<TObject>, IVirtualLoadable where TObject : class
+        class LoadAssetOp : VBAsyncOperation<object>, IVirtualLoadable
         {
             long m_BytesLoaded;
             float m_LastUpdateTime;
             VirtualAssetBundleEntry m_AssetInfo;
-            public LoadAssetOp(IResourceLocation location, VirtualAssetBundleEntry assetInfo)
+            Type provHandleType;
+            public LoadAssetOp(IResourceLocation location, VirtualAssetBundleEntry assetInfo, Type t)
             {
+                provHandleType = t;
                 Context = location;
                 m_AssetInfo = assetInfo;
                 m_LastUpdateTime = Time.realtimeSinceStartup;
@@ -427,22 +429,51 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
                     return true;
                 if (!(Context is IResourceLocation))
                     return false;
-                var assetPath = (Context as IResourceLocation).InternalId;
-                var t = typeof(TObject);
-                if (t.IsArray)
-                    SetResult(ResourceManagerConfig.CreateArrayResult<TObject>(AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath)));
-                else if (t.IsGenericType && typeof(IList<>) == t.GetGenericTypeDefinition())
-                    SetResult(ResourceManagerConfig.CreateListResult<TObject>(AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath)));
+                var location = Context as IResourceLocation;
+                var assetPath = location.InternalId;
+                object result = null;
+
+
+                if (provHandleType.IsArray)
+                    result = ResourceManagerConfig.CreateArrayResult(provHandleType, AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
+                else if (provHandleType.IsGenericType && typeof(IList<>) == provHandleType.GetGenericTypeDefinition())
+                    result = ResourceManagerConfig.CreateListResult(provHandleType, AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
                 else
                 {
-                    var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
-                    if (mainType == typeof(Texture2D) && typeof(TObject) == typeof(Sprite))
+                    var i = assetPath.LastIndexOf('[');
+                    if (i > 0)
                     {
-                        SetResult(AssetDatabase.LoadAssetAtPath(assetPath, typeof(TObject)) as TObject);
+                        var i2 = assetPath.LastIndexOf(']');
+                        if (i2 < i)
+                        {
+                            Debug.LogErrorFormat("Invalid index format in internal id {0}", assetPath);
+                        }
+                        else
+                        {
+
+                            var subObjectName = assetPath.Substring(i + 1, i2 - (i + 1));
+                            assetPath = assetPath.Substring(0, i);
+                            var objs = AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
+                            foreach (var o in objs)
+                            {
+                                if (o.name == subObjectName)
+                                {
+                                    if (provHandleType.IsAssignableFrom(o.GetType()))
+                                    {
+                                        result = o;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                     }
                     else
-                        SetResult(AssetDatabase.LoadAssetAtPath(assetPath, mainType) as TObject);
+                    {
+                        var obj = AssetDatabase.LoadAssetAtPath(assetPath, location.ResourceType);
+                        result = obj != null && provHandleType.IsAssignableFrom(obj.GetType()) ? obj : null;
+                    }
                 }
+                SetResult(result);
                 InvokeCompletionEvent();
                 return false;
             }

@@ -210,10 +210,10 @@ namespace UnityEditor.AddressableAssets.GUI
 
             m_CurrentDepth++;
 
-            for (int i = 0; i < m_AnalyzeSetting.m_Rules.Count; i++)
+            for (int i = 0; i < AnalyzeRuleGUI.Rules.Count; i++)
             {
                 AnalyzeRuleContainerTreeViewItem ruleContainer = new AnalyzeRuleContainerTreeViewItem(
-                    m_AnalyzeSetting.m_Rules[i].ruleName.GetHashCode(), m_CurrentDepth, m_AnalyzeSetting.m_Rules[i]);
+                    AnalyzeRuleGUI.Rules[i].ruleName.GetHashCode(), m_CurrentDepth, AnalyzeRuleGUI.Rules[i]);
 
                 if(ruleContainer.analyzeRule.CanFix)
                     fixable.AddChild(ruleContainer);

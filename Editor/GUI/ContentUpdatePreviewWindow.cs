@@ -20,6 +20,12 @@ namespace UnityEditor.AddressableAssets.GUI
             return true;
         }
 
+        void OnEnable()
+        {
+            titleContent = new GUIContent("Content Update Preview");
+        }
+
+
         class ContentUpdateTreeView : TreeView
         {
             class Item : TreeViewItem
@@ -92,11 +98,15 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     EditorGUI.LabelField(cellRect, item.entry.AssetPath);
                 }
+                else if(column == 3)
+                {
+                    EditorGUI.LabelField(cellRect, item.entry.parentGroup.Name);
+                }
             }
 
             internal static MultiColumnHeaderState CreateDefaultMultiColumnHeaderState()
             {
-                var retVal = new MultiColumnHeaderState.Column[3];
+                var retVal = new MultiColumnHeaderState.Column[4];
                 retVal[0] = new MultiColumnHeaderState.Column();
                 retVal[0].headerContent = new GUIContent("Include", "Include change in Update");
                 retVal[0].minWidth = 50;
@@ -109,7 +119,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 retVal[1] = new MultiColumnHeaderState.Column();
                 retVal[1].headerContent = new GUIContent("Address", "Data Value");
                 retVal[1].minWidth = 300;
-                retVal[1].width = 500;
+                retVal[1].width = 300;
                 retVal[1].maxWidth = 1000;
                 retVal[1].headerTextAlignment = TextAlignment.Left;
                 retVal[1].canSort = true;
@@ -118,11 +128,20 @@ namespace UnityEditor.AddressableAssets.GUI
                 retVal[2] = new MultiColumnHeaderState.Column();
                 retVal[2].headerContent = new GUIContent("Path", "Asset Path");
                 retVal[2].minWidth = 300;
-                retVal[2].width = 800;
+                retVal[2].width = 300;
                 retVal[2].maxWidth = 1000;
                 retVal[2].headerTextAlignment = TextAlignment.Left;
                 retVal[2].canSort = true;
                 retVal[2].autoResize = true;
+
+                retVal[3] = new MultiColumnHeaderState.Column();
+                retVal[3].headerContent = new GUIContent("Modified Group", "The modified Addressable group");
+                retVal[3].minWidth = 300;
+                retVal[3].width = 300;
+                retVal[3].maxWidth = 1000;
+                retVal[3].headerTextAlignment = TextAlignment.Left;
+                retVal[3].canSort = true;
+                retVal[3].autoResize = true;
 
                 return new MultiColumnHeaderState(retVal);
             }
@@ -151,6 +170,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (m_Entries == null)
                 return;
             Rect contentRect = new Rect(0, 0, position.width, position.height - 50);
+
             if (m_Tree == null)
             {
                 if (m_TreeState == null)
@@ -165,7 +185,19 @@ namespace UnityEditor.AddressableAssets.GUI
                 m_Tree.Reload();
             }
 
-            m_Tree.OnGUI(contentRect);
+            if (m_Entries.Count == 0)
+            {
+                GUILayout.BeginArea(contentRect);
+                GUILayout.BeginVertical();
+
+                GUILayout.Label("No Addressable groups with a BundledAssetGroupSchema and ContentUpdateGroupSchema (with StaticContent enabled) appear to have been modified.");
+
+                GUILayout.EndVertical();
+                GUILayout.EndArea();
+            }
+            else
+                m_Tree.OnGUI(contentRect);
+
             GUILayout.BeginArea(new Rect(0, position.height - 50, position.width, 50));
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Cancel"))

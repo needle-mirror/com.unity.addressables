@@ -32,13 +32,13 @@ namespace UnityEditor.AddressableAssets.Tests
             
             foreach (var en in GetValues(typeof(BundledAssetGroupSchema.BundleCompressionMode)))
             {
-                var g = m_Settings.CreateGroup(en.ToString(), true, false, false, null, typeof(BundledAssetGroupSchema));
+                var g = Settings.CreateGroup(en.ToString(), true, false, false, null, typeof(BundledAssetGroupSchema));
                 g.GetSchema<BundledAssetGroupSchema>().Compression = (BundledAssetGroupSchema.BundleCompressionMode)en;
                 var bName = "bundle_" + en;
                 bundleToAssetGroup.Add(bName, g.Guid);
                 bundleNames.Add(bName);
             }
-            var testParams = new AddressableAssetsBundleBuildParameters(m_Settings, bundleToAssetGroup, BuildTarget.StandaloneWindows64, BuildTargetGroup.Standalone, "Unused");
+            var testParams = new AddressableAssetsBundleBuildParameters(Settings, bundleToAssetGroup, BuildTarget.StandaloneWindows64, BuildTargetGroup.Standalone, "Unused");
 
             for(int i = 0; i < bundleNames.Count; i++)
             {

@@ -4,10 +4,32 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.8.6] - 2019-05-14
- - Fix to make UnloadSceneAsync(SceneInstance) actually unload the scene.
+## [1.1.3-preview] - 2019-06-17
+ - *BREAKING CODE CHANGES*
+   - ReleaseInstance will now return a bool saying if it successfully destroyed the instance.  If an instance is passed in that Addressables is unaware of, this will return false (as of 0.8 and earlier, it would print a log, and still destroy the instance).  It will no longer destroy unknown instances.  
+ - Added PrimaryKey to the IResourceLocation.  By default, the PrimaryKey will be the address.  This allows you to use LoadResourceLocationsAsync and then map the results back to an address. 
+ - Added ResourceType to IResourceLocation.
+   - This allows you to know the type of a location before loading it.
+   - Fixes a problem where calling Load*<Type>(key) would load all items that matched the key, then filter based on type.  Now it will do the filter before loading (after looking up location matches)
+   - This also adds a Type input to LoadResourceLocationsAsync.  null input will match all types.  
+ - Safety check AssetReference.Asset to return null if nothing loaded.
+ - New rule added to Analyze window - CheckResourcesDupeDependencies - to check for dependencies between addressables and items in Resources
+ - Added group rearranging support to the Addressables window. 
+ - Improved logging when doing a Prepare for Content Update.
+ - Added versions of DownloadDependencies to take a list of IResourceLocations or a list of keys with a MergeMode.
+ - Fixed scenario where Task completion wouldn't happen if operation was already in a certain state
+ - Made LoadResourceLocations no longer throw an exception if given unknown keys.  This method is the best way to check if an address exists.  
+ - Exposed AnalyzeRule class to support creating custom rules for Addressables analysis.
+ - Fixed some issues surrounding loading scenes in build scenes list via Addressables
+ - Removed using alias directives defined in global space.
+ - Proper disposal of DiagnosticEventCollector and DelayedActionManager when application closes. 
+ - Added support for loading named sub-objects via an "address.name" pattern.  So a sprite named "trees" with sub-sprites, could be loaded via LoadAssetAsync<Sprite>("trees.trees_0"). 
+ - Known issue: loading IList<Sprite> from a Texture2D or IList<AnimationClip> from an fbx will crash the player.  The workaround for now is to load items by name as mentioned just above.  Engine fix for this is on its way in. 
  
-## [0.8.4] - 2019-05-09
+## [0.8.6-preview] - 2019-05-14
+ - Fix to make UnloadSceneAsync(SceneInstance) actually unload the scene.
+
+## [0.8.3-preview] - 2019-05-08
  - *BREAKING CODE CHANGES* 
    - Chagned all asynchronous methods to include the word Async in method name.  This fits better with Unity's history and convention.  They should auto upgrade without actually breaking your game. 
    - Moved AsyncOperationHandle inside namespace UnityEngine.ResourceManagement
@@ -17,7 +39,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
    - CheckDupeDependencies has been renamed into CheckBundleDupeDependencies.
    - Analyze Rule operations for individuals or specific sets of Analyze Rules has been added via AnalyzeRule selections.
 
-## [0.7.4] - 2019-04-19
+## [0.7.4-preview] - 2019-04-19
  - Removed support for .NET 3.x as it is deprecated for Unity in general. 
  - Replaced IAsyncOperation with AsyncOperationHandle.
    - Once the asset is no longer needed, the user can call Addressables.Release, passing in either the handle, or the result the handle provided.
@@ -54,7 +76,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.6.6-preview] - 2019-03-05
  - *BREAKING CODE CHANGES* 
    - to ease code navigation, we have added several layers of namespace to the code.  
-   - All Instantiate API calls (Adddressables and AssetReference) have been changed to only work with GameObjects.
+   - All Instantiate API calls (Addressables and AssetReference) have been changed to only work with GameObjects.
    - any hardcoded profile path to com.unity.addressables (specifically LocalLoadPath, RemoteLoadPath, etc) should use UnityEngine.AddressableAssets.Addressables.RuntimePath instead.  
        For build paths, replace Assets/StreamingAssets/com.unity.addressables/[BuildTarget] with [UnityEngine.AddressableAssets.Addressables.BuildPath]/[BuildTarget]
 	   For load paths,  replace Assets/StreamingAssets/com.unity.addressables/[BuildTarget] with {UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]
@@ -77,7 +99,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Exposed the various IDataBuilder implementations as public classes.
  - Exposed asset and bundle provider types for BundledAssetGroupSchema.
  - Fixed several bugs when loading catalogs from other projects.
- - Added provider suffix to Initialization operation and Adddressables.LoadCatalogsFromRuntimeData API to better support overriding providers.
+ - Added provider suffix to Initialization operation and Addressables.LoadCatalogsFromRuntimeData API to better support overriding providers.
  - Exposed CachedProvider options in BundledAssetGroupSchema.  Each unique set of parameters will generate a separate provider.  There is also an option to force a group to have its own providers.
  - Added IEnumerable<object> Keys property to IResourceLocator interface.
  - Exposed InitializationOperation as public API.
@@ -98,7 +120,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Unified asset moving API to clean up public interface
  - Added PlayerVersion override to AddressableAssetSettings
  - Ensure UI cannot show invalide assets (such as .cs files)
- - Renamed Adddressables.LoadAddtionalCatalogs to Addressables.LoadContentCatalog and now it takes the path of the catalog instead of the settings file
+ - Renamed Addressables.LoadAddtionalCatalogs to Addressables.LoadContentCatalog and now it takes the path of the catalog instead of the settings file
  - Moved provider information from ResourceManagerRuntimeDate into ContentCatalogData
  - Updating ResourceManager to be a non-static class
  - Fixed bugs surrounding assets moving in or out of Resources (outside Addressables UI) 
@@ -115,7 +137,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - *IMPORTANT CHANGE TO BUILDING* 
    - We have disabled automatic asset bundle building.  That used to happen when you built the player, or entered play mode in "packed mode".  This is no longer the case.  You must now select "Build->Build Player Content" from the Addressables window, or call AddressableAssetSettings.BuildPlayerContent().  We did this because we determined that automatic building did not scale well at all for large projects.  
  - fixed regression loading local bundles
- - Added Adddressables.DownloadDependencies() interface
+ - Added Addressables.DownloadDependencies() interface
  - fixes for Nintendo Switch support
  - Fixed issues around referencing Addressables during an Awake() call
  - Code refactor and naming convention fixes

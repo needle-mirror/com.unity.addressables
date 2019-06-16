@@ -17,7 +17,7 @@ namespace UnityEditor.AddressableAssets.GUI
         [SerializeField]
         bool m_IgnoreLegacyBundles;
 
-        [MenuItem("Window/Asset Management/Addressable Assets", priority = 2050)]
+        [MenuItem("Window/Asset Management/Addressables", priority = 2050)]
         static void Init()
         {
             var window = GetWindow<AddressableAssetsWindow>();
