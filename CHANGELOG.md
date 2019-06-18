@@ -4,6 +4,9 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.1.4-preview] - 2019-06-19
+ - Fixed an issue where Editor only types were being added to the build.
+
 ## [1.1.3-preview] - 2019-06-17
  - *BREAKING CODE CHANGES*
    - ReleaseInstance will now return a bool saying if it successfully destroyed the instance.  If an instance is passed in that Addressables is unaware of, this will return false (as of 0.8 and earlier, it would print a log, and still destroy the instance).  It will no longer destroy unknown instances.  

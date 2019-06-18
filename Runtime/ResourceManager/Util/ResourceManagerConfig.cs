@@ -254,16 +254,24 @@ namespace UnityEngine.ResourceManagement.Util
         {
             get
             {
-                if (string.IsNullOrEmpty(m_AssemblyName) || string.IsNullOrEmpty(m_ClassName))
-                    return null;
-
-                if (m_CachedType == null)
+                try
                 {
-                    var assembly = Assembly.Load(m_AssemblyName);
-                    if (assembly != null)
-                        m_CachedType = assembly.GetType(m_ClassName);
+                    if (string.IsNullOrEmpty(m_AssemblyName) || string.IsNullOrEmpty(m_ClassName))
+                        return null;
+
+                    if (m_CachedType == null)
+                    {
+                        var assembly = Assembly.Load(m_AssemblyName);
+                        if (assembly != null)
+                            m_CachedType = assembly.GetType(m_ClassName);
+                    }
+                    return m_CachedType;
                 }
-                return m_CachedType;
+                catch (Exception ex)
+                {
+                    Debug.LogException(ex);
+                    return null;
+                }
             }
             set
             {

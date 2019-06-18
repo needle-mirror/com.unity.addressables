@@ -468,6 +468,8 @@ namespace UnityEditor.AddressableAssets.Settings
             if (mainType == typeof(SceneAsset))
                 mainType = typeof(SceneInstance);
 
+            if (!CheckForEditorAssembly(ref mainType, assetPath))
+                return;
 
             HashSet<Type> typesSeen = new HashSet<Type>();
             typesSeen.Add(mainType);
@@ -477,6 +479,8 @@ namespace UnityEditor.AddressableAssets.Settings
                 var o = objs[i];
                 var t = o.GetType();
                 var internalId = string.Format("{0}[{1}]", assetPath, o.name);
+                if (!CheckForEditorAssembly(ref t, internalId))
+                    continue;
                 var namedAddress = string.Format("{0}.{1}", address, o.name);
                 entries.Add(new ContentCatalogDataEntry(t, internalId, providerType, new object[] { namedAddress }, deps, extraData));
 
@@ -488,6 +492,21 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             entries.Add(new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, deps, extraData));
+        }
+
+        static bool CheckForEditorAssembly(ref Type t, string internalId)
+        {
+            if (t.Assembly.IsDefined(typeof(AssemblyIsEditorAssembly), true))
+            {
+                if (t == typeof(UnityEditor.Animations.AnimatorController))
+                {
+                    t = typeof(RuntimeAnimatorController);
+                    return true;
+                }
+                Debug.LogWarningFormat("Type {0} is in editor assembly {1}.  Asset location with internal id {2} will be stripped.", t.Name, t.Assembly.FullName, internalId);
+                return false;
+            }
+            return true;
         }
     }
 }

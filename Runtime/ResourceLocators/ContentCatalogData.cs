@@ -208,7 +208,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                 m_HashCode = internalId.GetHashCode() * 31 + providerId.GetHashCode();
                 m_DependencyHashCode = depHash;
                 m_PrimaryKey = primaryKey;
-                m_Type = type;
+                m_Type = type == null ? typeof(object) : type;
             }
         }
 
