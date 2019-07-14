@@ -88,7 +88,7 @@ namespace UnityEditor.AddressableAssets.Settings
                         //this isn't a valid asset, which means it wasn't persisted, so just set the object name to the desired display name.
                         name = m_GroupName;
                     }
-                    SetDirty(AddressableAssetSettings.ModificationEvent.GroupRenamed, this, true);
+                    SetDirty(AddressableAssetSettings.ModificationEvent.GroupRenamed, this, true, true);
                 }
             }
         }
@@ -132,7 +132,7 @@ namespace UnityEditor.AddressableAssets.Settings
             if (added != null)
             {
                 added.Group = this;
-                SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaAdded, this, postEvent);
+                SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaAdded, this, postEvent, true);
             }
             return added;
         }
@@ -149,7 +149,7 @@ namespace UnityEditor.AddressableAssets.Settings
             if (added != null)
             {
                 added.Group = this;
-                SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaAdded, this, postEvent);
+                SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaAdded, this, postEvent, true);
             }
             return added;
         }
@@ -176,7 +176,7 @@ namespace UnityEditor.AddressableAssets.Settings
             if (!m_SchemaSet.RemoveSchema(type))
                 return false;
 
-            SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaRemoved, this, postEvent);
+            SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaRemoved, this, postEvent, true);
             return true;
         }
 
@@ -229,7 +229,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public void ClearSchemas(bool deleteAssets, bool postEvent = true)
         {
             m_SchemaSet.ClearSchemas(deleteAssets);
-            SetDirty(AddressableAssetSettings.ModificationEvent.GroupRemoved, this, postEvent);
+            SetDirty(AddressableAssetSettings.ModificationEvent.GroupRemoved, this, postEvent, true);
         }
 
         /// <summary>
@@ -409,8 +409,8 @@ namespace UnityEditor.AddressableAssets.Settings
                     removeEntries.Add(e);
                 }
             }
-
-            RemoveAssetEntries(removeEntries);
+            if(removeEntries.Count > 0)
+                RemoveAssetEntries(removeEntries);
         }
 
         internal void Initialize(AddressableAssetSettings settings, string groupName, string guid, bool readOnly)
@@ -440,7 +440,7 @@ namespace UnityEditor.AddressableAssets.Settings
             e.IsSubAsset = false;
             e.parentGroup = this;
             m_EntryMap[e.guid] = e;
-            SetDirty(AddressableAssetSettings.ModificationEvent.EntryAdded, e, postEvent);
+            SetDirty(AddressableAssetSettings.ModificationEvent.EntryAdded, e, postEvent, true);
         }
 
         /// <summary>
@@ -461,13 +461,14 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="modificationEvent">The event type that is changed.</param>
         /// <param name="eventData">The object data that corresponds to the event.</param>
         /// <param name="postEvent">If true, the event is propagated to callbacks.</param>
-        public void SetDirty(AddressableAssetSettings.ModificationEvent modificationEvent, object eventData, bool postEvent)
+        /// <param name="groupModified">If true, the group asset will be marked as dirty.</param>
+        public void SetDirty(AddressableAssetSettings.ModificationEvent modificationEvent, object eventData, bool postEvent, bool groupModified = false)
         {
             if (Settings != null)
             {
-                if (Settings.IsPersisted && this != null)
+                if (groupModified && Settings.IsPersisted && this != null)
                     EditorUtility.SetDirty(this);
-                Settings.SetDirty(modificationEvent, eventData, postEvent);
+                Settings.SetDirty(modificationEvent, eventData, postEvent, false);
             }
         }
 
@@ -480,7 +481,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             m_EntryMap.Remove(entry.guid);
             entry.parentGroup = null;
-            SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, entry, postEvent);
+            SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, entry, postEvent, true);
         }
 
         internal void RemoveAssetEntries(IEnumerable<AddressableAssetEntry> removeEntries, bool postEvent = true)
@@ -490,8 +491,8 @@ namespace UnityEditor.AddressableAssets.Settings
                 m_EntryMap.Remove(entry.guid);
                 entry.parentGroup = null;
             }
-
-            SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, removeEntries.ToArray(), postEvent);
+            if(removeEntries.Count() > 0)
+                SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, removeEntries.ToArray(), postEvent, true);
         }
 
         /// <summary>

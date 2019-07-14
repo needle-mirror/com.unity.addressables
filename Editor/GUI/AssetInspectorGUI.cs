@@ -29,7 +29,7 @@ namespace UnityEditor.AddressableAssets.GUI
             //if (create || EditorUtility.DisplayDialog("Remove Addressable Asset Entries", "Do you want to remove Addressable Asset entries for " + targets.Length + " items?", "Yes", "Cancel"))
             {
                 var entriesAdded = new List<AddressableAssetEntry>();
-
+                var modifiedGroups = new HashSet<AddressableAssetGroup>();
                 foreach (var t in targets)
                 {
                     if (AddressableAssetUtility.GetPathAndGUIDFromTarget(t, out path, ref guid))
@@ -37,9 +37,13 @@ namespace UnityEditor.AddressableAssets.GUI
                         if (create)
                         {
                             if (AddressableAssetUtility.IsInResources(path))
-                                AddressableAssetUtility.SafeMoveResourcesToGroup(aaSettings, aaSettings.DefaultGroup, new List<string> {path});
+                                AddressableAssetUtility.SafeMoveResourcesToGroup(aaSettings, aaSettings.DefaultGroup, new List<string> { path });
                             else
-                                entriesAdded.Add(aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup, false, false));
+                            {
+                                var e = aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup, false, false);
+                                entriesAdded.Add(e);
+                                modifiedGroups.Add(e.parentGroup);
+                            }
                         }
                         else
                             aaSettings.RemoveAssetEntry(guid);
@@ -48,7 +52,9 @@ namespace UnityEditor.AddressableAssets.GUI
 
                 if (create)
                 {
-                    aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesAdded, true);
+                    foreach (var g in modifiedGroups)
+                        g.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesAdded, false, true);
+                    aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesAdded, true, false);
                 }
             }
         }

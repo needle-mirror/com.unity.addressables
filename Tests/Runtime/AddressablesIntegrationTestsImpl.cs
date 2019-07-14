@@ -713,6 +713,38 @@ __data");
                 yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator WhenSceneUnloaded_InstantiatedObjectsInOtherScenesAreNotCleanedUp()
+        {
+            //Setup
+            yield return Init();
+            
+            var op = m_Addressables.LoadSceneAsync(m_SceneKeysList[0], LoadSceneMode.Additive);
+            yield return op;
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
+            
+            var activeScene = m_Addressables.LoadSceneAsync(m_SceneKeysList[1], LoadSceneMode.Additive);
+            yield return activeScene;
+            SceneManager.SetActiveScene(activeScene.Result.Scene);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, activeScene.Status);
+            
+            //Test
+            AsyncOperationHandle<GameObject> inst = default(AsyncOperationHandle<GameObject>);
+            var unloadOp = m_Addressables.UnloadSceneAsync(op);
+            unloadOp.Completed += i =>
+            {
+                inst = m_Addressables.InstantiateAsync(m_PrefabKeysList[0]);
+            };
+            yield return unloadOp;
+            yield return inst;
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, inst.Status);
+            
+            Assert.NotNull(GameObject.Find(inst.Result.name));
+            
+            //Cleanup
+            var unloadActiveScene = m_Addressables.UnloadSceneAsync(activeScene);
+            yield return unloadActiveScene;
+        }
 #endif
     }
 }

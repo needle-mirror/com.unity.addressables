@@ -233,7 +233,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             m_Settings.profileSettings.RegisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
             
             m_HostingServiceInfoMap.Add(svc, info);
-            m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true);
+            m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true, true);
 
             m_NextInstanceId++;
             return svc;
@@ -252,7 +252,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             svc.StopHostingService();
             m_Settings.profileSettings.UnregisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
             m_HostingServiceInfoMap.Remove(svc);
-            m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true);
+            m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true, true);
         }
 
         /// <summary>

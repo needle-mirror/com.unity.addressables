@@ -175,7 +175,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             {
                                 var profile = m_AasTarget.profileSettings.profiles[m_CurrentProfileIndex];
                                 profile.profileName = newName;
-                                m_AasTarget.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, profile.id, true);
+                                m_AasTarget.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, profile.id, true, true);
                             }
                         }
                     }

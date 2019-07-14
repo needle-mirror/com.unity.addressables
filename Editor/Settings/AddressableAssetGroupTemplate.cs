@@ -210,7 +210,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 if (Settings.IsPersisted && this != null)
                     EditorUtility.SetDirty(this);
-                Settings.SetDirty(modificationEvent, eventData, postEvent);
+                Settings.SetDirty(modificationEvent, eventData, postEvent, false);
             }
         }
     }

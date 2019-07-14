@@ -225,7 +225,7 @@ namespace UnityEditor.AddressableAssets.Settings
         internal void SetDirty(AddressableAssetSettings.ModificationEvent e, object o, bool postEvent)
         {
             if (parentGroup != null)
-                parentGroup.SetDirty(e, o, postEvent);
+                parentGroup.SetDirty(e, o, postEvent, true);
         }
 
         /// <summary>

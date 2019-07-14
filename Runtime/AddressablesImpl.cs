@@ -82,7 +82,7 @@ namespace UnityEngine.AddressableAssets
                     break;
                 }
             }
-            m_ResourceManager.CleanupSceneInstances();
+            m_ResourceManager.CleanupSceneInstances(scene);
         }
 
         public string StreamingAssetsSubFolder

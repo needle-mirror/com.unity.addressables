@@ -505,6 +505,8 @@ namespace UnityEngine.ResourceManagement
             IInstanceProvider m_instanceProvider;
             GameObject m_instance;
             ResourceManager m_RM;
+            Scene m_scene;
+            
             public void Init(ResourceManager rm, IInstanceProvider instanceProvider, InstantiationParameters instantiationParams, AsyncOperationHandle<GameObject> dependency)
             {
                 m_RM = rm;
@@ -527,6 +529,8 @@ namespace UnityEngine.ResourceManagement
                 }
             }
 
+            public Scene InstanceScene() => m_scene;
+
             protected override void Destroy()
             {
                 m_instanceProvider.ReleaseInstance(m_RM, m_instance);
@@ -538,6 +542,8 @@ namespace UnityEngine.ResourceManagement
                 if (m_dependency.Status == AsyncOperationStatus.Succeeded)
                 {
                     m_instance = m_instanceProvider.ProvideInstance(m_RM, m_dependency, m_instantiationParams);
+                    if(m_instance != null)
+                        m_scene = m_instance.scene;
                     Complete(m_instance, true, null);
                 }
                 else
@@ -602,13 +608,16 @@ namespace UnityEngine.ResourceManagement
             m_TrackedInstanceOperations.Add(baseOp);
             return StartOperation<GameObject>(baseOp, depOp);
         }
-
-        public void CleanupSceneInstances()
+        /// <summary>
+        /// Cleans up ref counting on any instances that were in a newly closed scene.
+        /// </summary>
+        /// <param name="scene">The scene that was closed</param>
+        public void CleanupSceneInstances(Scene scene)
         {
             List<InstanceOperation> handlesToRelease = null;
             foreach (var h in m_TrackedInstanceOperations)
             {
-                if (h.Result == null)
+                if (h.Result == null && scene == h.InstanceScene())
                 {
                     if (handlesToRelease == null)
                         handlesToRelease = new List<InstanceOperation>();

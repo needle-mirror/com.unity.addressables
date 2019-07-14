@@ -852,7 +852,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (EditorUtility.DisplayDialog("Delete selected groups?", "Are you sure you want to delete the selected groups?\n\nYou cannot undo this action.", "Yes", "No"))
             {
                 List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
-                if (selectedNodes == null)
+                if (selectedNodes == null || selectedNodes.Count < 1)
                     return;
                 var groups = new List<AddressableAssetGroup>();
                 foreach (var item in selectedNodes)
@@ -860,23 +860,26 @@ namespace UnityEditor.AddressableAssets.GUI
                     m_Editor.settings.RemoveGroupInternal(item.group, true, false);
                     groups.Add(item.group);
                 }
-                m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupRemoved, groups, true);
+                m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupRemoved, groups, true, true);
             }
         }
 
         protected void SimplifyAddresses(object context)
         {
             List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
-            if (selectedNodes == null)
+            if (selectedNodes == null || selectedNodes.Count < 1)
                 return;
             var entries = new List<AddressableAssetEntry>();
-
+            HashSet<AddressableAssetGroup> modifiedGroups = new HashSet<AddressableAssetGroup>();
             foreach (var item in selectedNodes)
             {
                 item.entry.SetAddress(Path.GetFileNameWithoutExtension(item.entry.address), false);
                 entries.Add(item.entry);
+                modifiedGroups.Add(item.entry.parentGroup);
             }
-            m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, true);
+            foreach (var g in modifiedGroups)
+                g.SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, entries, false, true);
+            m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, entries, true, false);
         }
 
         protected void RemoveEntry(object context)
@@ -884,18 +887,22 @@ namespace UnityEditor.AddressableAssets.GUI
             if (EditorUtility.DisplayDialog("Delete selected entries?", "Are you sure you want to delete the selected entries?\n\nYou cannot undo this action.", "Yes", "No"))
             {
                 List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
-                if (selectedNodes == null)
+                if (selectedNodes == null || selectedNodes.Count < 1)
                     return;
                 var entries = new List<AddressableAssetEntry>();
+                HashSet<AddressableAssetGroup> modifiedGroups = new HashSet<AddressableAssetGroup>();
                 foreach (var item in selectedNodes)
                 {
                     if (item.entry != null)
                     {
                         m_Editor.settings.RemoveAssetEntry(item.entry.guid, false);
                         entries.Add(item.entry);
+                        modifiedGroups.Add(item.entry.parentGroup);
                     }
                 }
-                m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, entries, true);
+                foreach (var g in modifiedGroups)
+                    g.SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, entries, false, true);
+                m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, entries, true, false);
             }
         }
 
@@ -1036,13 +1043,17 @@ namespace UnityEditor.AddressableAssets.GUI
                         if (canMarkNonResources)
                         {
                             var entries = new List<AddressableAssetEntry>();
+                            var modifiedGroups = new HashSet<AddressableAssetGroup>();
                             foreach (var p in nonResourcePaths)
                             {
-                                entries.Add(m_Editor.settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(p), parent, false, false));
+                                var e = m_Editor.settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(p), parent, false, false);
+                                entries.Add(e);
+                                modifiedGroups.Add(e.parentGroup);
                             }
-                            m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, true);
+                            foreach (var g in modifiedGroups)
+                                g.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, false, true);
+                            m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, true, false);
                         }
-
                     }
                 }
             }
@@ -1072,7 +1083,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             else
                                 m_Editor.settings.groups.Insert(args.insertAtIndex, group);
 
-                            m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupMoved, m_Editor.settings.groups, true);
+                            m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupMoved, m_Editor.settings.groups, true, true);
                             Reload();
                         }
                         else
@@ -1092,11 +1103,16 @@ namespace UnityEditor.AddressableAssets.GUI
                                 else
                                 {
                                     var entries = new List<AddressableAssetEntry>();
+                                    var modifiedGroups = new HashSet<AddressableAssetGroup>();
                                     foreach (var node in draggedNodes)
-                                        entries.Add(m_Editor.settings.CreateOrMoveEntry(node.entry.guid, parent, false,
-                                            false));
-                                    m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved,
-                                        entries, true);
+                                    {
+                                        var e = m_Editor.settings.CreateOrMoveEntry(node.entry.guid, parent, false, false);
+                                        entries.Add(e);
+                                        modifiedGroups.Add(e.parentGroup);
+                                    }
+                                    foreach (var g in modifiedGroups)
+                                        g.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, false, true);
+                                    m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, true, false);
                                 }
                             }
                         }

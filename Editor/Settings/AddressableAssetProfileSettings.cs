@@ -505,7 +505,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public void SetDirty(AddressableAssetSettings.ModificationEvent modificationEvent, object eventData, bool postEvent)
         {
             if (m_Settings != null)
-                m_Settings.SetDirty(modificationEvent, eventData, postEvent);
+                m_Settings.SetDirty(modificationEvent, eventData, postEvent, true);
         }
 
         internal bool ValidateNewVariableName(string name)

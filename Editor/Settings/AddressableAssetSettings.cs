@@ -88,7 +88,8 @@ namespace UnityEditor.AddressableAssets.Settings
             ActivePlayModeScriptChanged,
             BatchModification, // <-- posted object will be null.
             HostingServicesManagerModified,
-            GroupMoved
+            GroupMoved,
+            CertificateHandlerChanged
         }
 
         /// <summary>
@@ -356,7 +357,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             var s = m_SchemaTemplates[index];
             m_SchemaTemplates.RemoveAt(index);
-            SetDirty(ModificationEvent.GroupSchemaRemoved, s, postEvent);
+            SetDirty(ModificationEvent.GroupSchemaRemoved, s, postEvent, true);
             return true;
         }
         
@@ -410,7 +411,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             m_GroupTemplateObjects.Add(so);
-            SetDirty(ModificationEvent.GroupTemplateAdded, so, postEvent);
+            SetDirty(ModificationEvent.GroupTemplateAdded, so, postEvent, true);
             return true;
         }
 
@@ -426,7 +427,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             var so = m_GroupTemplateObjects[index];
             m_GroupTemplateObjects.RemoveAt(index);
-            SetDirty(ModificationEvent.GroupTemplateRemoved, so, postEvent);
+            SetDirty(ModificationEvent.GroupTemplateRemoved, so, postEvent, true);
             return true;
         }
 
@@ -454,7 +455,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         
             m_GroupTemplateObjects[index] = so;
-            SetDirty(ModificationEvent.GroupTemplateAdded, so, postEvent);
+            SetDirty(ModificationEvent.GroupTemplateAdded, so, postEvent, true);
             return true;
         }
 
@@ -508,7 +509,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             m_InitializationObjects.Add(so);
-            SetDirty(ModificationEvent.InitializationObjectAdded, so, postEvent);
+            SetDirty(ModificationEvent.InitializationObjectAdded, so, postEvent, true);
             return true;
         }
 
@@ -524,7 +525,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             var so = m_InitializationObjects[index];
             m_InitializationObjects.RemoveAt(index);
-            SetDirty(ModificationEvent.InitializationObjectRemoved, so, postEvent);
+            SetDirty(ModificationEvent.InitializationObjectRemoved, so, postEvent, true);
             return true;
         }
 
@@ -552,7 +553,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             m_InitializationObjects[index] = so;
-            SetDirty(ModificationEvent.InitializationObjectAdded, so, postEvent);
+            SetDirty(ModificationEvent.InitializationObjectAdded, so, postEvent, true);
             return true;
         }
 
@@ -573,6 +574,7 @@ namespace UnityEditor.AddressableAssets.Settings
             set
             {
                 m_CertificateHandlerType.Value = value;
+                SetDirty(ModificationEvent.CertificateHandlerChanged, value, true, true);
             }
         }
 
@@ -627,7 +629,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             m_DataBuilders.Add(so);
-            SetDirty(ModificationEvent.DataBuilderAdded, so, postEvent);
+            SetDirty(ModificationEvent.DataBuilderAdded, so, postEvent, true);
             return true;
         }
 
@@ -643,7 +645,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             var so = m_DataBuilders[index];
             m_DataBuilders.RemoveAt(index);
-            SetDirty(ModificationEvent.DataBuilderRemoved, so, postEvent);
+            SetDirty(ModificationEvent.DataBuilderRemoved, so, postEvent, true);
             return true;
         }
 
@@ -671,7 +673,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             m_DataBuilders[index] = so;
-            SetDirty(ModificationEvent.DataBuilderAdded, so, postEvent);
+            SetDirty(ModificationEvent.DataBuilderAdded, so, postEvent, true);
             return true;
         }
 
@@ -709,7 +711,7 @@ namespace UnityEditor.AddressableAssets.Settings
             set
             {
                 m_ActivePlayerDataBuilderIndex = value;
-                SetDirty(ModificationEvent.ActiveBuildScriptChanged, ActivePlayerDataBuilder, true);
+                SetDirty(ModificationEvent.ActiveBuildScriptChanged, ActivePlayerDataBuilder, true, true);
             }
         }
 
@@ -725,7 +727,7 @@ namespace UnityEditor.AddressableAssets.Settings
             set
             {
                 m_ActivePlayModeDataBuilderIndex = value;
-                SetDirty(ModificationEvent.ActivePlayModeScriptChanged, ActivePlayModeDataBuilder, true);
+                SetDirty(ModificationEvent.ActivePlayModeScriptChanged, ActivePlayModeDataBuilder, true, true);
             }
         }
 
@@ -738,7 +740,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public void AddLabel(string label, bool postEvent = true)
         {
             m_LabelTable.AddLabelName(label);
-            SetDirty(ModificationEvent.LabelAdded, label, postEvent);
+            SetDirty(ModificationEvent.LabelAdded, label, postEvent, true);
         }
 
         /// <summary>
@@ -749,7 +751,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public void RemoveLabel(string label, bool postEvent = true)
         {
             m_LabelTable.RemoveLabelName(label);
-            SetDirty(ModificationEvent.LabelRemoved, label, postEvent);
+            SetDirty(ModificationEvent.LabelRemoved, label, postEvent, true);
         }
 
         [FormerlySerializedAs("m_activeProfileId")]
@@ -773,7 +775,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
                 if (oldVal != value)
                 {
-                    SetDirty(ModificationEvent.ActiveProfileSet, value, true);
+                    SetDirty(ModificationEvent.ActiveProfileSet, value, true, true);
                 }
             }
         }
@@ -827,7 +829,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 if (entry.parentGroup != null)
                     entry.parentGroup.RemoveAssetEntry(entry, postEvent);
-                SetDirty(ModificationEvent.EntryRemoved, entry, postEvent);
+                SetDirty(ModificationEvent.EntryRemoved, entry, postEvent, false);
                 return true;
             }
             return false;
@@ -1128,7 +1130,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             var entry = new AddressableAssetEntry(guid, address, parent, readOnly);
             if (!readOnly)
-                SetDirty(ModificationEvent.EntryCreated, entry, postEvent);
+                SetDirty(ModificationEvent.EntryCreated, entry, postEvent, true);
             return entry;
         }
 
@@ -1138,7 +1140,8 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="modificationEvent">The event type that is changed.</param>
         /// <param name="eventData">The object data that corresponds to the event.</param>
         /// <param name="postEvent">If true, the event is propagated to callbacks.</param>
-        public void SetDirty(ModificationEvent modificationEvent, object eventData, bool postEvent)
+        /// <param name="settingsModified">If true, the settings asset will be marked as dirty.</param>
+        public void SetDirty(ModificationEvent modificationEvent, object eventData, bool postEvent, bool settingsModified = false)
         {
             if (modificationEvent == ModificationEvent.ProfileRemoved && eventData as string == activeProfileId)
                 activeProfileId = null;
@@ -1156,7 +1159,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (unityObj != null && !string.IsNullOrEmpty(AssetDatabase.GetAssetPath(unityObj)))
                     EditorUtility.SetDirty(unityObj);
 
-                if (IsPersisted)
+                if (settingsModified && IsPersisted)
                     EditorUtility.SetDirty(this);
             }
 
@@ -1225,7 +1228,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             AssetDatabase.StopAssetEditing();
             AssetDatabase.Refresh();
-            SetDirty(ModificationEvent.EntryMoved, entries, true);
+            SetDirty(ModificationEvent.EntryMoved, entries, true, true);
         }
 
         /// <summary>
@@ -1245,7 +1248,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     MoveEntry(entry, targetParent, readOnly, false);
                 }
 
-                SetDirty(ModificationEvent.EntryMoved, entries, postEvent);
+                SetDirty(ModificationEvent.EntryMoved, entries, postEvent, false);
             }
         }
 
@@ -1367,7 +1370,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             if (setAsDefaultGroup)
                 DefaultGroup = group;
-            SetDirty(ModificationEvent.GroupAdded, group, postEvent);
+            SetDirty(ModificationEvent.GroupAdded, group, postEvent, true);
             return group;
         }
 
@@ -1425,7 +1428,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             g.ClearSchemas(true);
             groups.Remove(g);
-            SetDirty(ModificationEvent.GroupRemoved, g, postEvent);
+            SetDirty(ModificationEvent.GroupRemoved, g, postEvent, true);
             if (deleteAsset)
             {
                 string guidOfGroup;
@@ -1448,7 +1451,7 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (var e in entries)
                 e.SetLabel(label, value, false);
 
-            SetDirty(ModificationEvent.EntryModified, entries, postEvent);
+            SetDirty(ModificationEvent.EntryModified, entries, postEvent, true);
         }
 
         internal void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
@@ -1550,7 +1553,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             if (modified)
-                aa.SetDirty(ModificationEvent.BatchModification, null, true);
+                aa.SetDirty(ModificationEvent.BatchModification, null, true, true);
         }
 
         bool CheckForGroupDataDeletion(string str)

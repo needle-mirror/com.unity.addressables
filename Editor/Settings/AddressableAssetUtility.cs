@@ -81,7 +81,9 @@ namespace UnityEditor.AddressableAssets.Settings
                         imp.SetAssetBundleNameAndVariant(string.Empty, string.Empty);
                 }
             }
-            settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true);
+            
+            if(fullCount > 0)
+                settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true, true);
             EditorUtility.ClearProgressBar();
             AssetDatabase.RemoveUnusedAssetBundleNames();
         }

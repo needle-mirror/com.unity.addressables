@@ -70,7 +70,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (m_Group.Settings != null && m_Group.Settings.IsPersisted)
                     EditorUtility.SetDirty(this);
                 if (m_Group != null)
-                    m_Group.SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaModified, this, postEvent);
+                    m_Group.SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaModified, this, postEvent, false);
             }
         }
     }

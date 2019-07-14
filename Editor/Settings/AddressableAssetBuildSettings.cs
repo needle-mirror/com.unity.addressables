@@ -59,7 +59,14 @@ namespace UnityEditor.AddressableAssets.Settings
         public bool LogResourceManagerExceptions
         {
             get { return m_LogResourceManagerExceptions; }
-            set { m_LogResourceManagerExceptions = value; }
+            set
+            {
+                if (m_LogResourceManagerExceptions != value)
+                {
+                    m_LogResourceManagerExceptions = value;
+                    SetDirty();
+                }
+            }
         }
 
         /// <summary>
@@ -88,7 +95,7 @@ namespace UnityEditor.AddressableAssets.Settings
         void SetDirty()
         {
             if (m_Settings != null)
-                m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.BuildSettingsChanged, this, true);
+                m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.BuildSettingsChanged, this, true, false);
         }
         internal void OnAfterDeserialize(AddressableAssetSettings settings)
         {
