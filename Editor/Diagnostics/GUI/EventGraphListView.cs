@@ -229,7 +229,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             columns[1].headerContent = new GUIContent("Assets", "");
             columns[1].minWidth = 100;
             columns[1].width = 250;
-            columns[1].maxWidth = 500;
+            columns[1].maxWidth = 5000;
             columns[1].headerTextAlignment = TextAlignment.Left;
             columns[1].canSort = false;
             columns[1].autoResize = false;

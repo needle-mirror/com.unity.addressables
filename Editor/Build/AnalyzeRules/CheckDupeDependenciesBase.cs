@@ -219,11 +219,13 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
             results = (from resource in m_ResourcesToDependencies.Keys
                        from dependency in m_ResourcesToDependencies[resource]
+                       where m_ExtractData.WriteData.AssetToFiles.ContainsKey(dependency)
 
                        let assetPath = AssetDatabase.GUIDToAssetPath(dependency.ToString())
                        let files = m_ExtractData.WriteData.AssetToFiles[dependency]
 
                        from file in files
+                       where m_ExtractData.WriteData.FileToBundle.ContainsKey(file)
                        let bundle = m_ExtractData.WriteData.FileToBundle[file]
 
                        select new AnalyzeResult{resultName = 

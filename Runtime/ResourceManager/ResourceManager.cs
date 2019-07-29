@@ -608,6 +608,7 @@ namespace UnityEngine.ResourceManagement
             m_TrackedInstanceOperations.Add(baseOp);
             return StartOperation<GameObject>(baseOp, depOp);
         }
+		
         /// <summary>
         /// Cleans up ref counting on any instances that were in a newly closed scene.
         /// </summary>

@@ -383,8 +383,10 @@ namespace UnityEngine.AddressableAssets
             }
             protected override void Execute()
             {
-                bool result = m_Addressables.GetResourceLocations(m_Key, m_ResourceType, out m_locations);
-                Complete(m_locations, result, string.Empty);
+                m_Addressables.GetResourceLocations(m_Key, m_ResourceType, out m_locations);
+                if (m_locations == null)
+                    m_locations = new List<IResourceLocation>();
+                Complete(m_locations, true, string.Empty);
             }
         }
 
@@ -406,8 +408,10 @@ namespace UnityEngine.AddressableAssets
             }
             protected override void Execute()
             {
-                bool result = m_Addressables.GetResourceLocations(m_Key, m_ResourceType, m_MergeMode, out m_locations);
-                Complete(m_locations, result, string.Empty);
+                m_Addressables.GetResourceLocations(m_Key, m_ResourceType, m_MergeMode, out m_locations);
+                if (m_locations == null)
+                    m_locations = new List<IResourceLocation>();
+                Complete(m_locations, true, string.Empty);
             }
         }
 

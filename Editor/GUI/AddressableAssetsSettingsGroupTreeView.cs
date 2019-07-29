@@ -895,9 +895,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     if (item.entry != null)
                     {
-                        m_Editor.settings.RemoveAssetEntry(item.entry.guid, false);
                         entries.Add(item.entry);
                         modifiedGroups.Add(item.entry.parentGroup);
+                        m_Editor.settings.RemoveAssetEntry(item.entry.guid, false);
                     }
                 }
                 foreach (var g in modifiedGroups)

@@ -24,9 +24,26 @@ namespace UnityEditor.AddressableAssets.Settings
             [FormerlySerializedAs("m_hierarchicalSearch")]
             [SerializeField]
             internal bool hierarchicalSearchInternal;
+            [SerializeField]
+            internal int activePlayModeIndex = 0;
         }
 
         static ConfigSaveData s_Data;
+
+        public static int activePlayModeIndex
+        {
+            get
+            {
+                ValidateData();
+                return s_Data.activePlayModeIndex;
+            }
+            set
+            {
+                ValidateData();
+                s_Data.activePlayModeIndex = value;
+                SaveData();
+            }
+        }
 
         public static bool postProfilerEvents
         {

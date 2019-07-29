@@ -139,8 +139,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             foreach (var a in assetGroup.entries)
                 a.GatherAllAssets(allEntries, true, true);
 
+            var providerType = typeof(AssetDatabaseProvider).FullName;
             foreach (var a in allEntries)
-                a.CreateCatalogEntries(aaContext.locations, false, typeof(AssetDatabaseProvider).FullName, null, null);
+                a.CreateCatalogEntries(aaContext.locations, false, providerType, null, null);
 
             return errorString;
         }

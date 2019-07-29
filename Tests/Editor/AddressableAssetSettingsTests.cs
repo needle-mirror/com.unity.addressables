@@ -115,5 +115,30 @@ namespace UnityEditor.AddressableAssets.Tests
                 Assert.IsFalse(db.IsDataBuilt());
             }
         }
+
+        [Test]
+        public void DeletingAsset_DoesNotDeleteGroupWithSimilarName()
+        {
+            //Setup
+            const string groupName = "NewAsset";
+            const string assetPath = k_TestConfigFolder + "/" + groupName;
+            
+            var mat = new Material(Shader.Find("Unlit/Color"));
+            AssetDatabase.CreateAsset(mat, assetPath);
+
+            var group = Settings.CreateGroup(groupName, false, false, false, null);
+            Assert.IsNotNull(group);
+
+            //Test
+            AssetDatabase.DeleteAsset(assetPath);
+            
+            //Assert
+            Settings.CheckForGroupDataDeletion(groupName);
+            Assert.IsNotNull(Settings.FindGroup(groupName));
+
+            //Clean up
+            Settings.RemoveGroup(group);
+            Assert.IsNull(Settings.FindGroup(groupName));
+        }
     }
 }

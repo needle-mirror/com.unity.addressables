@@ -111,6 +111,11 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         static string GetLoadPath(AddressableAssetGroup group, string name)
         {
             var bagSchema = group.GetSchema<BundledAssetGroupSchema>();
+            if (bagSchema == null || bagSchema.LoadPath == null)
+            {
+                Debug.LogError("Unable to determine load path for " + name + ". Check that your default group is not '" + AddressableAssetSettings.PlayerDataGroupName + "'");
+                return string.Empty;
+            }
             var loadPath = bagSchema.LoadPath.GetValue(group.Settings) + "/" + name;
             if(!string.IsNullOrEmpty(bagSchema.UrlSuffix))
                 loadPath += bagSchema.UrlSuffix;

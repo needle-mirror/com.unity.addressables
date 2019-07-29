@@ -49,6 +49,8 @@ namespace UnityEngine.ResourceManagement
             m_WrappedOp.Release();
             m_DepOp.Release();
         }
+        
+        protected override float Progress => m_DepOp.PercentComplete;
     }
 
     class ChainOperationTypelessDepedency<TObject> : AsyncOperationBase<TObject>
@@ -95,5 +97,7 @@ namespace UnityEngine.ResourceManagement
             m_WrappedOp.Release();
             m_DepOp.Release();
         }
+
+        protected override float Progress => m_DepOp.PercentComplete;
     }
 }

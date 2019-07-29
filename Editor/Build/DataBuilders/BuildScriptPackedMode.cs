@@ -376,12 +376,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
                     foreach (var entryGroup in labelTable)
                     {
+                        var allEntries = new List<AddressableAssetEntry>();
                         foreach (var a in entryGroup.Value)
-                        {
-                            var allEntries = new List<AddressableAssetEntry>();
                             a.GatherAllAssets(allEntries, true, true);
-                            GenerateBuildInputDefinitions(allEntries, bundleInputDefs, assetGroup.Name, entryGroup.Key);
-                        }
+                        GenerateBuildInputDefinitions(allEntries, bundleInputDefs, assetGroup.Name, entryGroup.Key);
                     }
                 }
             }
@@ -545,8 +543,21 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         BundleSize = GetFileSize(info.FileName)
                     };
                     dataEntry.Data = requestOptions;
-                    dataEntry.InternalId = dataEntry.InternalId.Replace(".bundle", "_" + info.Hash + ".bundle");
-                    newBundleName = newBundleName.Replace(".bundle", "_" + info.Hash + ".bundle");
+                    switch (schema.BundleNaming)
+                    {
+                        case BundledAssetGroupSchema.BundleNamingStyle.AppendHash:
+                            dataEntry.InternalId = dataEntry.InternalId.Replace(".bundle", "_" + info.Hash + ".bundle");
+                            newBundleName = newBundleName.Replace(".bundle", "_" + info.Hash + ".bundle");
+                            break;
+                        case BundledAssetGroupSchema.BundleNamingStyle.NoHash:
+                            break;
+                        case BundledAssetGroupSchema.BundleNamingStyle.OnlyHash:
+                            string fileName = Path.GetFileNameWithoutExtension(dataEntry.InternalId);
+                            dataEntry.InternalId = dataEntry.InternalId.Replace(fileName, info.Hash.ToString());
+                            fileName = Path.GetFileNameWithoutExtension(newBundleName);
+                            newBundleName = newBundleName.Replace(fileName, info.Hash.ToString());
+                            break;
+                    }
                 }
                 else
                 {

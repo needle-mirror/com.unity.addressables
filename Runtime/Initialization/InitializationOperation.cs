@@ -46,10 +46,10 @@ namespace UnityEngine.AddressableAssets.Initialization
 
         protected override void Execute()
         {
-            m_Addressables.LogFormat("Addressables - runtime data operation completed with status = {0}, result = {1}.", m_rtdOp.Status, m_rtdOp.Result);
+            Addressables.LogFormat("Addressables - runtime data operation completed with status = {0}, result = {1}.", m_rtdOp.Status, m_rtdOp.Result);
             if (m_rtdOp.Result == null)
             {
-                m_Addressables.LogWarningFormat("Addressables - Unable to load runtime data at location {0}.", m_rtdOp);
+                Addressables.LogWarningFormat("Addressables - Unable to load runtime data at location {0}.", m_rtdOp);
                 Complete(m_Result, false, string.Format("Addressables - Unable to load runtime data at location {0}.", m_rtdOp));
                 return;
             }
@@ -60,7 +60,7 @@ namespace UnityEngine.AddressableAssets.Initialization
 
 #if UNITY_EDITOR
             if (UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString() != rtd.BuildTarget)
-                m_Addressables.LogErrorFormat("Addressables - runtime data was built with a different build target.  Expected {0}, but data was built with {1}.  Certain assets may not load correctly including shaders.  You can rebuild player content via the Addressable Assets window.", UnityEditor.EditorUserBuildSettings.activeBuildTarget, rtd.BuildTarget);
+                Addressables.LogErrorFormat("Addressables - runtime data was built with a different build target.  Expected {0}, but data was built with {1}.  Certain assets may not load correctly including shaders.  You can rebuild player content via the Addressable Assets window.", UnityEditor.EditorUserBuildSettings.activeBuildTarget, rtd.BuildTarget);
 #endif
             if (!rtd.LogResourceManagerExceptions)
                 ResourceManager.ExceptionHandler = null;
@@ -69,22 +69,22 @@ namespace UnityEngine.AddressableAssets.Initialization
                 m_Addressables.ResourceManager.ClearDiagnosticsCallback();
 
             //   DiagnosticEventCollector.ResourceManagerProfilerEventsEnabled = rtd.ProfileEvents;
-            m_Addressables.Log("Addressables - loading initialization objects.");
+            Addressables.Log("Addressables - loading initialization objects.");
             foreach (var i in rtd.InitializationObjects)
             {
                 if (i.ObjectType.Value == null)
                 {
-                    m_Addressables.LogFormat("Invalid initialization object type {0}.", i.ObjectType);
+                    Addressables.LogFormat("Invalid initialization object type {0}.", i.ObjectType);
                     continue;
                 }
                 try
                 {
                     var o = i.CreateInstance<object>();
-                    m_Addressables.LogFormat("Initialization object {0} created instance {1}.", i, o);
+                    Addressables.LogFormat("Initialization object {0} created instance {1}.", i, o);
                 }
                 catch (Exception ex)
                 {
-                    m_Addressables.LogErrorFormat("Exception thrown during initialization of object {0}: {1}", i, ex.ToString());
+                    Addressables.LogErrorFormat("Exception thrown during initialization of object {0}: {1}", i, ex.ToString());
                 }
             }
 
@@ -93,13 +93,13 @@ namespace UnityEngine.AddressableAssets.Initialization
             IList<IResourceLocation> catalogs;
             if (!locMap.Locate(ResourceManagerRuntimeData.kCatalogAddress, typeof(ContentCatalogData), out catalogs))
             {
-                m_Addressables.LogWarningFormat("Addressables - Unable to find any catalog locations in the runtime data.");
+                Addressables.LogWarningFormat("Addressables - Unable to find any catalog locations in the runtime data.");
                 m_Addressables.ResourceLocators.Remove(locMap);
                 Complete(m_Result, false, "Addressables - Unable to find any catalog locations in the runtime data.");
             }
             else
             {
-                m_Addressables.LogFormat("Addressables - loading content catalogs, {0} found.", catalogs.Count);
+                Addressables.LogFormat("Addressables - loading content catalogs, {0} found.", catalogs.Count);
                 LoadContentCatalogInternal(catalogs, 0, locMap);
             }
         }
@@ -195,7 +195,7 @@ namespace UnityEngine.AddressableAssets.Initialization
         //Attempts to load each catalog in order, stopping at first success. 
         void LoadContentCatalogInternal(IList<IResourceLocation> catalogs, int index, ResourceLocationMap locMap)
         {
-            m_Addressables.LogFormat("Addressables - loading content catalog from {0}.", catalogs[index].InternalId);
+            Addressables.LogFormat("Addressables - loading content catalog from {0}.", catalogs[index].InternalId);
             LoadContentCatalog(catalogs[index], m_ProviderSuffix).Completed += op =>
             {
                 if (op.Result != null)
@@ -204,14 +204,14 @@ namespace UnityEngine.AddressableAssets.Initialization
                     m_Result = op.Result;
                     Complete(m_Result, true, string.Empty);
                     m_Addressables.Release(op);
-                    m_Addressables.Log("Addressables - initialization complete.");
+                    Addressables.Log("Addressables - initialization complete.");
                 }
                 else
                 {
-                    m_Addressables.LogFormat("Addressables - failed to load content catalog from {0}.", op);
+                    Addressables.LogFormat("Addressables - failed to load content catalog from {0}.", op);
                     if (index + 1 >= catalogs.Count)
                     {
-                        m_Addressables.LogWarningFormat("Addressables - initialization failed.", op);
+                        Addressables.LogWarningFormat("Addressables - initialization failed.", op);
                         m_Addressables.ResourceLocators.Remove(locMap);
                         Complete(m_Result, false, op.OperationException != null ? op.OperationException.Message : "LoadContentCatalogInternal");
                         m_Addressables.Release(op);

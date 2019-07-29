@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using UnityEditor.AddressableAssets.Build;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -496,6 +497,9 @@ namespace UnityEditor.AddressableAssets.Settings
 
         static bool CheckForEditorAssembly(ref Type t, string internalId)
         {
+
+            if (t == null)
+                return false;
             if (t.Assembly.IsDefined(typeof(AssemblyIsEditorAssembly), true))
             {
                 if (t == typeof(UnityEditor.Animations.AnimatorController))
@@ -503,9 +507,14 @@ namespace UnityEditor.AddressableAssets.Settings
                     t = typeof(RuntimeAnimatorController);
                     return true;
                 }
+            }
+
+            if (BuildUtility.IsEditorAssembly(t.Assembly))
+            {
                 Debug.LogWarningFormat("Type {0} is in editor assembly {1}.  Asset location with internal id {2} will be stripped.", t.Name, t.Assembly.FullName, internalId);
                 return false;
             }
+
             return true;
         }
     }

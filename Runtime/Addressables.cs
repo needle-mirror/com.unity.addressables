@@ -121,7 +121,7 @@ namespace UnityEngine.AddressableAssets
         public static IList<IResourceLocator> ResourceLocators { get { return m_Addressables.ResourceLocators; } }
 
         /// <summary>
-        /// Debug.Log wrapper method that is contional on the LOG_ADDRESSABLES symbol definition.  This can be set in the Player preferences in the 'Scripting Define Symbols'.
+        /// Debug.Log wrapper method that is contional on the ADDRESSABLES_LOG_ALL symbol definition.  This can be set in the Player preferences in the 'Scripting Define Symbols'.
         /// </summary>
         /// <param name="msg">The msg to log</param>
         [Conditional(k_AddressablesLogConditional)]
@@ -131,7 +131,7 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Debug.LogFormat wrapper method that is contional on the LOG_ADDRESSABLES symbol definition.  This can be set in the Player preferences in the 'Scripting Define Symbols'.
+        /// Debug.LogFormat wrapper method that is contional on the ADDRESSABLES_LOG_ALL symbol definition.  This can be set in the Player preferences in the 'Scripting Define Symbols'.
         /// </summary>
         /// <param name="format">The string with format tags.</param>
         /// <param name="args">The args used to fill in the format tags.</param>
@@ -285,6 +285,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Loads the resource locations specified by the keys.
+        /// The method will always return success, with a valid IList of results. If nothing matches keys, IList will be empty 
         /// </summary>
         /// <param name="keys">The set of keys to use.</param>
         /// <param name="mode">The mode for merging the results of the found locations.</param>
@@ -298,6 +299,7 @@ namespace UnityEngine.AddressableAssets
  
         /// <summary>
         /// Loads the resource locations specified by the keys.
+        /// The method will always return success, with a valid IList of results. If nothing matches keys, IList will be empty
         /// </summary>
         /// <param name="keys">The set of keys to use.</param>
         /// <param name="mode">The mode for merging the results of the found locations.</param>
@@ -309,6 +311,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Request the locations for a given key.
+        /// The method will always return success, with a valid IList of results. If nothing matches key, IList will be empty
         /// </summary>
         /// <param name="key">The key for the locations.</param>
         /// <returns>The operation handle for the request.</returns>
@@ -321,6 +324,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Request the locations for a given key.
+        /// The method will always return success, with a valid IList of results. If nothing matches key, IList will be empty
         /// </summary>
         /// <param name="key">The key for the locations.</param>
         /// <returns>The operation handle for the request.</returns>

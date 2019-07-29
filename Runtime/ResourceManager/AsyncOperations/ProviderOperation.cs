@@ -125,10 +125,19 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             get
             {
                 if (m_GetProgressCallback == null)
-                    return 0.5f;
+                    return 0.0f;
                 try
                 {
-                    return m_GetProgressCallback();
+                    List<AsyncOperationHandle> allDependantOperations = new List<AsyncOperationHandle>() { m_DepOp };
+
+                    float total = m_GetProgressCallback();
+                    foreach (var handle in m_DepOp.Result)
+                        handle.GetDependencies(allDependantOperations);
+
+                    foreach (var handle in allDependantOperations)
+                        total += handle.PercentComplete;
+
+                    return total / (DependencyCount + 1);
                 }
                 catch
                 {

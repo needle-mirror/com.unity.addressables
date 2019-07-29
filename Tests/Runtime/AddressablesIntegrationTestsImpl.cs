@@ -254,8 +254,9 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
             AsyncOperationHandle<IList<IResourceLocation>> op = m_Addressables.LoadResourceLocationsAsync("prefabs_evenBASE", typeof(Texture2D));
             yield return op;
-            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
-            Assert.IsNull(op.Result);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
+            Assert.IsNotNull(op.Result);
+            Assert.AreEqual(op.Result.Count, 0);
             op.Release();
         }
 

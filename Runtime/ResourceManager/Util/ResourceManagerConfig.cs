@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using UnityEngine.Serialization;
 
@@ -269,7 +270,9 @@ namespace UnityEngine.ResourceManagement.Util
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogException(ex);
+                    //file not found is most likely an editor only type, we can ignore error. 
+                    if(ex.GetType() != typeof(FileNotFoundException))
+                        Debug.LogException(ex);
                     return null;
                 }
             }

@@ -95,7 +95,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             var bundleName = Path.GetFileNameWithoutExtension(loc.InternalId);
             if (locHash.isValid) //If we have a hash, ensure that our desired version is cached.
             {
-                if (Caching.IsVersionCached(bundleName, locHash))
+                if (Caching.IsVersionCached(new CachedAssetBundle(bundleName, locHash)))
                     return 0;
                 return BundleSize;
             }

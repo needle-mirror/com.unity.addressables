@@ -310,6 +310,29 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             return ForceUniqueProvider ? string.Format("{0}_{1}", AssetBundleProviderType.Value.FullName, Group.Guid) : AssetBundleProviderType.Value.FullName;
         }
+        
+        
+        //the next several items are temporarily internal so as to not modify API.  
+        
+        internal enum BundleNamingStyle
+        {
+            AppendHash,
+            NoHash,
+            OnlyHash
+        }
+
+        [SerializeField]
+        BundleNamingStyle m_BundleNaming;
+        /// <summary>
+        /// (to be made public in later releases) Naming style to use for generated AssetBundle(s).
+        /// </summary>
+        internal BundleNamingStyle BundleNaming
+        {
+            get { return m_BundleNaming; }
+            set { m_BundleNaming = value; }
+        }
+        
+
 
     }
 }

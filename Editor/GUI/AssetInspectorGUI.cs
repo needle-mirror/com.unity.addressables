@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
@@ -23,6 +24,13 @@ namespace UnityEditor.AddressableAssets.GUI
 
         static void SetAaEntry(AddressableAssetSettings aaSettings, Object[] targets, bool create)
         {
+
+            if (create && aaSettings.DefaultGroup.ReadOnly)
+            {
+                Debug.LogError("Current default group is ReadOnly.  Cannot add addressable assets to it");
+                return;
+            }
+            
             Undo.RecordObject(aaSettings, "AddressableAssetSettings");
             string path;
             var guid = string.Empty;
@@ -30,9 +38,11 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 var entriesAdded = new List<AddressableAssetEntry>();
                 var modifiedGroups = new HashSet<AddressableAssetGroup>();
+
+                Type mainAssetType;
                 foreach (var t in targets)
                 {
-                    if (AddressableAssetUtility.GetPathAndGUIDFromTarget(t, out path, ref guid))
+                    if (AddressableAssetUtility.GetPathAndGUIDFromTarget(t, out path, ref guid, out mainAssetType))
                     {
                         if (create)
                         {
@@ -72,8 +82,11 @@ namespace UnityEditor.AddressableAssets.GUI
                 foreach (var t in editor.targets)
                 {
                     string path;
-                    if ((AddressableAssetUtility.GetPathAndGUIDFromTarget(t, out path, ref guid)) &&
-                        (path.ToLower().Contains("assets")))
+                    Type mainAssetType;
+                    if (AddressableAssetUtility.GetPathAndGUIDFromTarget(t, out path, ref guid, out mainAssetType) &&
+                        path.ToLower().Contains("assets") &&
+                        mainAssetType != null &&
+                        !BuildUtility.IsEditorAssembly(mainAssetType.Assembly))
                     {
                         foundValidAsset = true;
 

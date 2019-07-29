@@ -73,8 +73,6 @@ namespace UnityEditor.AddressableAssets.Build
                         BuildScript.buildCompleted(res);
                     settings.DataBuilderCompleted(settings.ActivePlayModeDataBuilder, res);
                 }
-
-                EditorUtility.SetDirty(settings);
             }
         }
     }

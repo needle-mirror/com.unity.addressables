@@ -4,10 +4,29 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [1.1.5] - 2019-07-15
- - Fixed scenario where scene unload destroys instantiated objects in different scenes. 
- - Cleaned up SetDirty logic to remove excessive dirtying of assets.
+## [1.1.7] - 2019-07-30
+ - Fixed chain operation percent complete calculation.   
+ - Fixed scenario where deleting assets would also delete groups that have similar names.
+ - Fix in bundle caching bug surrounding bundles with '.' in their name
+ - Significant improvements to the manual pages
+ - Made the many init-logs not log unless ADDRESSABLES_LOG_ALL is defined in player settings (other logs always worked this way, init didn't).
+ - Prevented NullReferenceException when attempting to delete entries in the Addressables window.
+ - Fix for building by label (Bundle Mode = Pack Together By Label)
+ - Removed ability to mark editor-only assets as addressable in GUI
+ - Better fix to Editor types being added to the build
+ - Made BuiltIn Data group read-only by default.
+ - Fixed NullRef caused by an invalid (BuildIn Data) group being default during a build.
+ - Fixed path where LoadResourceLocationsAsync could still throw an exception with unknown key.  Now it should not, and is a safe way to check for valid keys.
+   - If Key does not exist but nothing else goes wrong, it will return an empty list and Success state.
+ - Fixed NullRef caused when there was a deleted scene in the scenes list.
+ - BuildCompression for Addressables can now be driven from the default group.  If necessary WebGL builds will fallback to LZ4Runtime and all other build targets will fallback to LZMA.
+ - Added options for bundle naming: AppendHash, NoHash, OnlyHash.  
+   - As a temporary workaround for updating issues, we recommend setting all groups with StaticContent=true to be NoHash.  This will make sure the updated catalog still refers to the correct unchanged bundle.  An actual fix will be out in a few releases.
  
+## [1.1.5] - 2019-07-15
+ - Fixed scenario where scene unload simultaneously destroys objects being instantiated in different scenes.
+ - Cleaned up SetDirty logic to remove excessive dirtying of assets.
+
 ## [1.1.4-preview] - 2019-06-19
  - Fixed an issue where Editor only types were being added to the build.
 

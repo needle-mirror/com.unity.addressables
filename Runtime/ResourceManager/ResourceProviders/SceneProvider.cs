@@ -96,6 +96,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 base.Destroy();
             }
 
+            protected override float Progress
+            {
+                get
+                {
+                    return (m_Inst.m_Operation.progress + m_DepOp.PercentComplete) / 2;
+                }
+            }
+
             void IUpdateReceiver.Update(float unscaledDeltaTime)
             {
                 if (m_Inst.m_Operation.isDone || (!m_ActivateOnLoad && m_Inst.m_Operation.progress == .9f))
@@ -123,6 +131,12 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 else
                     Complete(m_Instance, true, "");
             }
+
+            protected override float Progress
+            {
+                get { return m_sceneLoadHandle.PercentComplete; }
+            }
+
         }
 
         /// <inheritdoc/>

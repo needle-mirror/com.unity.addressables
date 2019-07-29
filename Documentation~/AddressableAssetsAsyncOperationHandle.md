@@ -1,74 +1,67 @@
-# AsyncOperationHandle
+# Async operation handling
+Several methods from the `Addressables` API return an `AsyncOperationHandle` struct. The main purpose of this handle is to allow access to the status and result of an operation. The result of the operation is valid until you call `Addressables.Release` or `Addressables.ReleaseInstance` with the operation (for more information on releasing assets, see documentation on [memory management](MemoryManagement.md).
 
-The `AsyncOperationHandle` struct is returned from several methods in the Addressables API. The main purpose of the `AsyncOperationHandle` is to allow access to the status and result of an operation. The result of the operation will be vaild until you call `Addressables.Release` or `Addressables.ReleaseInstance` with the operation.
+When the operation completes, the `AsyncOperationHandle.Status` property is either `AsyncOperationStatus.Succeeded` or `AsyncOperationStatus.Failed`. If successful, you can access the result through the `AsyncOperationHandle.Result` property.
 
-When the operation completes, the `AsyncOperationHandle.Status`  will be either `AsyncOperationStatus.Succeeded` or `AsyncOperationStatus.Failed`. If successful, you can access the result through the `AsyncOperationHandle.Result` property.
+You can either check the operation status periodically, or register for a completed callback using the `AsyncOperationHandle.Complete` event. When you no longer need the asset provided by a returned `AsyncOperationHandle` struct, you should [release](MemoryManagement.md) it using the `Addressables.Release` method.
 
-You can periodically check the status of the operation or register for a completed callback using the `AsyncOperationHandle.Complete` event.
+### Type vs typeless handles
+Most `Addressables` API methods return a generic `AsyncOperationHandle<T>`struct, allowing type safety for the `AsyncOperationHandle.Completed` event, and for the `AsyncOperationHandle.Result` object. There is also a non-generic `AsyncOperationHandle` struct, and you can convert between the two handles as desired. 
 
-When you no longer need the resource provided by an AsyncOperationHandle return through the Addressables API, you should release through the `Addressables.Release` method. See [Memory Management](MemoryManagement) for more details
+Note that a runtime exception occurs if you attempt to cast a non-generic handle to a generic handle of an incorrect type. For example:
 
-##### Typed vs Typeless
-Most of the Addressables API will return a generic `AsyncOperationHandle<T>`. This allows type safety for the `AsyncOperationHandle.Completed` event and for the `AsyncOperationHandle.Result`. There is also a non-generic `AsyncOperationHandle`. You can convert between the generic and non-generic handles. You will get a runtime exception if you attempt to cast a non-generic handle to a generic handle of an incorrect type. Below is an example of this conversion.
-
-```C#
+```
 AsyncOperationHandle<Texture2D> textureHandle = Addressables.LoadAssetAsync<Texture2D>("mytexture");
 
-// Convert the AsyncOperationHandle<Texture2D> to an AsyncOperationHandle
+// Convert the AsyncOperationHandle<Texture2D> to an AsyncOperationHandle:
 AsyncOperationHandle nonGenericHandle = textureHandle;
 
-// Convert the AsyncOperationHandle to an AsyncOperationHandle<Texture2D>
+// Convert the AsyncOperationHandle to an AsyncOperationHandle<Texture2D>:
 AsyncOperationHandle<Texture2D> textureHandle2 = nonGenericHandle.Convert<Texture2D>();
 
-// The exact type is required. This will throw and exception because Texture2D is required
+// This will throw and exception because Texture2D is required:
 AsyncOperationHandle<Texture> textureHandle3 = nonGenericHandle.Convert<Texture>();
 ```
 
-##### AsyncOperationHandle Usage Examples
+### AsyncOperationHandle use case examples
+Register a listener for completion events using the `AsyncOperationHandle.Completed` callback:
 
-You can register for a completion event on `AsyncOperationHandle.Completed`:
-```C#
-private void TextureHandle_Completed(AsyncOperationHandle<Texture2D> handle)
-{
-	if (handle.Status == AsyncOperationStatus.Succeeded)
-	{
-		Texture2D result = handle.Result;
-		// Texture ready for use
-	}
+```
+private void TextureHandle_Completed(AsyncOperationHandle<Texture2D> handle) {
+    if (handle.Status == AsyncOperationStatus.Succeeded) {
+        Texture2D result = handle.Result;
+        // The texture is ready for use.
+    }
 }
 
-void Start()
-{
-	AsyncOperationHandle<Texture2D> textureHandle = Addressables.LoadAsset<Texture2D>("mytexture");
-	textureHandle.Completed += TextureHandle_Completed;
+void Start() {
+    AsyncOperationHandle<Texture2D> textureHandle = Addressables.LoadAsset<Texture2D>("mytexture");
+    textureHandle.Completed += TextureHandle_Completed;
 }
 ```
 
-`AsyncOperationHandle` implements IEnumerator so it can be yielded in coroutines:
+`AsyncOperationHandle` implements `IEnumerator` so it can be yielded in coroutines:
 
-```C#
-public IEnumerator Start()
-{
-	AsyncOperationHandle<Texture2D> handle = Addressables.LoadAssetAsync<Texture2D>("mytexture");
-	yield return handle;
-	if (handle.Status == AsyncOperationStatus.Succeeded)
-	{
-		Texture2D texture = handle.Result;
-		// Texture ready for use...
-		
-		// Done. Release resource
-		Addressables.Release(handle);
-	}
+```
+public IEnumerator Start() {
+    AsyncOperationHandle<Texture2D> handle = Addressables.LoadAssetAsync<Texture2D>("mytexture");
+    yield return handle;
+    if (handle.Status == AsyncOperationStatus.Succeeded) {
+        Texture2D texture = handle.Result;
+        // The texture is ready for use.
+        // ...
+	// Release the asset after its use:
+        Addressables.Release(handle);
+    }
 }
 ```
 
-Async await is also supported through the `AsyncOperationHandle.Task` property.
-```C#
-public async Start()
-{
-	AsyncOperationHandle<Texture2D> handle = Addressables.LoadAssetAsync<Texture2D>("mytexture");
-	await handle.Task;
-	// Task has completed. Be sure to check the Status has succeeded before getting the Result
+Addressables also supports asynchronous `await` through the `AsyncOperationHandle.Task` property:
+
+```
+public async Start() {
+    AsyncOperationHandle<Texture2D> handle = Addressables.LoadAssetAsync<Texture2D>("mytexture");
+    await handle.Task;
+    // The task is complete. Be sure to check the Status is succeessful before storing the Result.
 }
 ```
-

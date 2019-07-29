@@ -581,9 +581,6 @@ namespace UnityEditor.AddressableAssets.Settings
         [FormerlySerializedAs("m_activePlayerDataBuilderIndex")]
         [SerializeField]
         int m_ActivePlayerDataBuilderIndex = 3;
-        [FormerlySerializedAs("m_activePlayModeDataBuilderIndex")]
-        [SerializeField]
-        int m_ActivePlayModeDataBuilderIndex;
         [FormerlySerializedAs("m_dataBuilders")]
         [SerializeField]
         List<ScriptableObject> m_DataBuilders = new List<ScriptableObject>();
@@ -695,7 +692,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-                return GetDataBuilder(m_ActivePlayModeDataBuilderIndex);
+                return GetDataBuilder(ProjectConfigData.activePlayModeIndex);
             }
         }
 
@@ -722,12 +719,12 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-                return m_ActivePlayModeDataBuilderIndex;
+                return ProjectConfigData.activePlayModeIndex;
             }
             set
             {
-                m_ActivePlayModeDataBuilderIndex = value;
-                SetDirty(ModificationEvent.ActivePlayModeScriptChanged, ActivePlayModeDataBuilder, true, true);
+                ProjectConfigData.activePlayModeIndex = value;
+                SetDirty(ModificationEvent.ActivePlayModeScriptChanged, ActivePlayModeDataBuilder, true, false);
             }
         }
 
@@ -1093,7 +1090,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         private static AddressableAssetGroup CreateBuiltInData(AddressableAssetSettings aa)
         {
-            var playerData = aa.CreateGroup(PlayerDataGroupName, false, false, false, null, typeof(PlayerDataGroupSchema));
+            var playerData = aa.CreateGroup(PlayerDataGroupName, false, true, false, null, typeof(PlayerDataGroupSchema));
             var resourceEntry = aa.CreateOrMoveEntry(AddressableAssetEntry.ResourcesName, playerData);
             resourceEntry.IsInResources = true;
             aa.CreateOrMoveEntry(AddressableAssetEntry.EditorSceneListName, playerData);
@@ -1154,10 +1151,6 @@ namespace UnityEditor.AddressableAssets.Settings
                     if (OnModification != null)
                         OnModification(this, modificationEvent, eventData);
                 }
-
-                var unityObj = eventData as Object;
-                if (unityObj != null && !string.IsNullOrEmpty(AssetDatabase.GetAssetPath(unityObj)))
-                    EditorUtility.SetDirty(unityObj);
 
                 if (settingsModified && IsPersisted)
                     EditorUtility.SetDirty(this);
@@ -1556,15 +1549,14 @@ namespace UnityEditor.AddressableAssets.Settings
                 aa.SetDirty(ModificationEvent.BatchModification, null, true, true);
         }
 
-        bool CheckForGroupDataDeletion(string str)
+        internal bool CheckForGroupDataDeletion(string str)
         {
             bool modified = false;
-            var fileName = Path.GetFileNameWithoutExtension(str);
             AddressableAssetGroup groupToDelete = null;
             bool deleteGroup = false;
             foreach (var group in groups)
             {
-                if (group.Name == fileName)
+                if (AssetDatabase.GUIDToAssetPath(group.Guid) == str)
                 {
                     groupToDelete = group;
                     deleteGroup = true;

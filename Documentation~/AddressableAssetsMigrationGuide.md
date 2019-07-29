@@ -1,50 +1,25 @@
-# Migration guide
+# Upgrading to the Addressables system
+This article details how to modify your existing Project to take advantage of Addressable Assets. There are three traditional methods for referencing assets:
 
-The following explains how modify your existing application to use Addressable Assets.  The three typical methods for referencing Assets are:
+* **[Direct References](#the-direct-reference-method)**: Add assets directly into components or Scenes, which the application loads automatically. 
+* **[Resource Folders](#the-resource-folders-method)**: Add assets to your _Resource_ folder and load them by filename.
+* **[Asset Bundles](#the-asset-bundles-method)**: Add assets to asset bundles, then load them with their dependencies by file path.
 
-* __[Direct References](#directreferences)__ - Adding Assets directly into components or scenes (loaded automatically). __Note__: The Addressable Asset System loads Assets asynchronously. When you update your direct references to Asset references, you must also update your code to operate asynchronously.
-* __[Resource Folders](#referencefolders) - Adding Assets to your *Resource* folder and loading them by filename.
-* __[Asset Bundles](#assetbundles)__ - Adding Assets to Asset bundles, then loading them with their dependencies by path.
+### The direct reference method
+To migrate from this approach, follow these steps:
 
-<a name="directreferences"></a>
-### Direct References
+1. Replace your direct references to objects with asset references (for example, `public GameObject directRefMember;` becomes `public AssetReference AssetRefMember;`).
+2. Drag assets onto the appropriate component’s Inspector, as you would for a direct reference.
+3. If you'd like to load an asset based on an object rather than a string name, instantiate it directly from the `AssetReference` object you created in your setup (for example, `AssetRefMember.LoadAssetAsync<GameObject>();` or `AssetRefMember.InstantiateAsync(pos, rot);`).
 
-Replace direct references to objects with Asset references. For example, change this:
+**Note**: The Addressable Asset System loads assets asynchronously. When you update your direct references to asset references, you must also update your code to operate asynchronously.
 
-`public GameObject directRefMember;`
+### The Resource folders method
+When you mark an asset in a _Resources_ folder as Addressable, the system automatically moves the asset from the _Resources_ folder to a new folder in your Project named _Resources_moved_. The default address for a moved asset is the old path, omitting the folder name. For example, your loading code might change from `Resources.LoadAsync<GameObject>("desert/tank.prefab");` to `Addressables.LoadAssetAsync<GameObject>("desert/tank.prefab");`.
 
-To:
+### The asset bundles method
+When you open the **Addressables window**, Unity offers to convert all asset bundles into Addressable Asset groups. This is the easiest way to migrate your code.
 
-`public AssetReference AssetRefMember;`
+If you choose to convert your Assets manually, click the **Ignore** button. Then, either use the direct reference or resource folder methods previously described.
 
-Then drag Assets onto the owning component’s Inspector as you would do for a direct reference.
-
-If you would like to load an Asset based on an object rather than a string name, instantiate it directly from the __AssetReference__ object you created in your setup.
-
-For example:
-
-`AssetRefMember.LoadAssetAsync<GameObject>();`
-
-or
-
-`AssetRefMember.InstantiateAsync(pos, rot);`
-
-<a name="referencefolders"></a>
-### Resource Folders
-
-When you mark an Asset that is located in a Resources folder as addressable, the  Addressable Asset System automatically moves the Asset from the Resources folder to a new folder in your Project named *Resources_moved*.  The default address for a moved Asset is the old path starting just after "Resources".  This means your loading code can change from:
-
-`Resources.LoadAsync<GameObject>("desert/tank.prefab");`
-
-To:
-
-`Addressables.LoadAssetAsync<GameObject>("desert/tank.prefab");`
-
-<a name="assetbundles"></a>
-### Asset Bundles
-
-When you open the Addressables window, Unity offers to convert all bundles into Addressable Asset Groups. This is the easiest way to migrate your code.
-
-If you choose to convert your Assets manually, click the __Ignore__ button. Then use either the direct reference or resource folder methods previously described.
-
-The default path for the address of an Asset is its file path. If you use the path as the address, you load the Asset in the same manner as you would load from a bundle. The Addressable Asset System handles the loading of the bundle and all dependencies.
+The default path for the address of an asset is its file path. If you use the path as the asset's address, you'd load the asset in the same manner as you would load from a bundle. The Addressable Asset System handles the loading of the bundle and all its dependencies.

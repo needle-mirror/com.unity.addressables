@@ -339,6 +339,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
             if (m_Status == AsyncOperationStatus.Failed)
             {
+                if (string.IsNullOrEmpty(errorMsg))
+                    errorMsg = "Unknown error in AsyncOperation";
                 m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationFail, 0, errorMsg);
                 OperationException = new Exception(errorMsg);
             }

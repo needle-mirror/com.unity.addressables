@@ -16,16 +16,17 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             return path.Replace('\\', '/').ToLower().Contains("/resources/");
         }
-        internal static bool GetPathAndGUIDFromTarget(Object t, out string path, ref string guid)
+        internal static bool GetPathAndGUIDFromTarget(Object t, out string path, ref string guid, out Type mainAssetType)
         {
+            mainAssetType = null;
             path = AssetDatabase.GetAssetOrScenePath(t);
             if (!IsPathValidForEntry(path))
                 return false;
             guid = AssetDatabase.AssetPathToGUID(path);
             if (string.IsNullOrEmpty(guid))
                 return false;
-            var mat = AssetDatabase.GetMainAssetTypeAtPath(path);
-            if (mat != t.GetType() && !typeof(AssetImporter).IsAssignableFrom(t.GetType()))
+            mainAssetType = AssetDatabase.GetMainAssetTypeAtPath(path);
+            if (mainAssetType != t.GetType() && !typeof(AssetImporter).IsAssignableFrom(t.GetType()))
                 return false;
             return true;
         }
