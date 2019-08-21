@@ -92,11 +92,12 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 {
                     if (m_ProvideHandle.Type.IsArray)
                     {
-                        Debug.LogFormat("CreateArrayResult with type {0}, assets: {1}", m_ProvideHandle.Type.Name, m_RequestOperation.allAssets.Length);
                         result = ResourceManagerConfig.CreateArrayResult(m_ProvideHandle.Type, m_RequestOperation.allAssets);
                     }
-                    if (m_ProvideHandle.Type.IsGenericType && typeof(IList<>) == m_ProvideHandle.Type.GetGenericTypeDefinition())
+                    else if (m_ProvideHandle.Type.IsGenericType && typeof(IList<>) == m_ProvideHandle.Type.GetGenericTypeDefinition())
+                    {
                         result = ResourceManagerConfig.CreateListResult(m_ProvideHandle.Type, m_RequestOperation.allAssets);
+                    }
                     else
                     {
                         if (string.IsNullOrEmpty(subObjectName))

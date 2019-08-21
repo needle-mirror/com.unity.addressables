@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
-    class CheckResourcesDupeDependencies : CheckDupeDependenciesBase
+    class CheckResourcesDupeDependencies : BundleRuleBase
     {
         public override bool CanFix
         {

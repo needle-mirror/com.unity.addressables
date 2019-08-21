@@ -402,6 +402,16 @@ namespace UnityEngine.ResourceManagement.Util
 
     static class ResourceManagerConfig
     {
+        internal static bool IsPathRemote(string path)
+        {
+            return path != null && path.StartsWith("http");
+        }
+
+        internal static bool ShouldPathUseWebRequest(string path)
+        {
+            return path != null && path.Contains("://");
+        }
+
         public static Array CreateArrayResult(Type type, Object[] allAssets)
         {
             var elementType = type.GetElementType();

@@ -178,18 +178,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     var isLocalBundle = IsInternalIdLocal(bundleLocData.InternalId);
                     uint crc = (uint)UnityEngine.Random.Range(0, int.MaxValue);
                     var hash = Guid.NewGuid().ToString();
-                    switch (schema.BundleNaming)
-                    {
-                        case BundledAssetGroupSchema.BundleNamingStyle.AppendHash:
-                            bundleLocData.InternalId = bundleLocData.InternalId.Replace(".bundle", "_" + hash + ".bundle");
-                            break;
-                        case BundledAssetGroupSchema.BundleNamingStyle.NoHash:
-                            break;
-                        case BundledAssetGroupSchema.BundleNamingStyle.OnlyHash:
-                            string fileName = Path.GetFileNameWithoutExtension(bundleLocData.InternalId);
-                            bundleLocData.InternalId = bundleLocData.InternalId.Replace(fileName, hash);
-                            break;
-                    }
+                    
+                    bundleLocData.InternalId = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, hash, bundleLocData.InternalId);
                     
 
                     var virtualBundleName = AddressablesRuntimeProperties.EvaluateString(bundleLocData.InternalId);

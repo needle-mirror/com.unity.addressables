@@ -171,6 +171,9 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get
             {
+                if(IsDone)
+                    return System.Threading.Tasks.Task.FromResult<TObject>(default(TObject));
+
                 var handle = WaitHandle;
                 return System.Threading.Tasks.Task.Factory.StartNew(o =>
                 {
@@ -201,12 +204,12 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         }
 
         bool m_InDeferredCallbackQueue;
-        void RegisterForDeferredCallbackEvent()
+        void RegisterForDeferredCallbackEvent(bool incrementReferenceCount = true)
         {
             if (IsDone && !m_InDeferredCallbackQueue)
             {
                 m_InDeferredCallbackQueue = true;
-                m_RM.RegisterForDeferredCallback(this);
+                m_RM.RegisterForDeferredCallback(this, incrementReferenceCount);
             }
         }
 
@@ -337,23 +340,28 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_Result = result;
             m_Status = success ? AsyncOperationStatus.Succeeded : AsyncOperationStatus.Failed;
 
+            m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationPercentComplete, 1);
+            m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationComplete);
+
             if (m_Status == AsyncOperationStatus.Failed)
             {
                 if (string.IsNullOrEmpty(errorMsg))
                     errorMsg = "Unknown error in AsyncOperation";
                 m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationFail, 0, errorMsg);
+
                 OperationException = new Exception(errorMsg);
+
+                ICachable cachedOperation = this as ICachable;
+                if (cachedOperation != null)
+                    m_RM.RemoveOperationFromCache(cachedOperation.Hash);
+
+                RegisterForDeferredCallbackEvent(false);
             }
-
-            // Why defer the callback?
-            //if (m_IsExecuting)
-            //    RegisterForDeferredCallbackEvent();
-            //else
-            m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationPercentComplete, 1);
-            m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationComplete);
-            InvokeCompletionEvent();
-
-            DecrementReferenceCount();
+            else
+            {
+                InvokeCompletionEvent();
+                DecrementReferenceCount();
+            }
         }
 
 

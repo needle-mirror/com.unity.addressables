@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
-    class CheckBundleDupeDependencies : CheckDupeDependenciesBase
+    class CheckBundleDupeDependencies : BundleRuleBase
     {
         internal struct CheckDupeResult
         {
@@ -139,13 +139,6 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
                 m_ImplicitAssets.Add(checkDupeResult.DuplicatedGroupGuid);
             }
-        }
-
-        bool IsValidPath(string path)
-        {
-            return AddressableAssetUtility.IsPathValidForEntry(path) &&
-             !path.ToLower().Contains("/resources/") &&
-             !path.ToLower().StartsWith("resources/");
         }
 
         public override void FixIssues(AddressableAssetSettings settings)

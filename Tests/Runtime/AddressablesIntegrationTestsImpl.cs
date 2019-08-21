@@ -23,6 +23,20 @@ namespace AddressableAssetsIntegrationTests
     internal abstract partial class AddressablesIntegrationTests : IPrebuildSetup
     {
         [UnityTest]
+        public IEnumerator AsyncCache_IsCleaned_OnFailedOperation()
+        {
+            yield return Init();
+
+            var op = m_Addressables.LoadAssetAsync<GameObject>("notARealKey");
+            op.Completed += handle =>
+            {
+                Assert.AreEqual(0, m_Addressables.ResourceManager.CachedOperationCount());
+            };
+
+            yield return op;
+        }
+
+        [UnityTest]
         public IEnumerator LoadResourceLocations_InvalidKeyDoesNotThrow()
         {
             //Setup
@@ -64,7 +78,7 @@ namespace AddressableAssetsIntegrationTests
             handle.Release();
         }
 
-#if UNITY_SPRITE_CRASH_BUG_1146568_HAS_BEEN_FIXED
+#if UNITY_2019_3_OR_NEWER
         [UnityTest]
         public IEnumerator CanLoadTextureAsSprite()
         {
@@ -158,6 +172,26 @@ namespace AddressableAssetsIntegrationTests
             
             //Cleanup
             handle.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator VerifyChainOpPercentCompleteCalculation()
+        {
+            //Setup
+            yield return Init();
+            AsyncOperationHandle<GameObject> op = m_Addressables.LoadAssetAsync<GameObject>(AddressablesTestUtility.GetPrefabLabel("BASE"));
+
+            //Test            
+            while (op.PercentComplete < 1)
+            {
+                Assert.False(op.IsDone);
+                yield return null;
+            }
+            Assert.True(op.PercentComplete == 1 && op.IsDone);
+            yield return op;
+
+            //Cleanup
+            op.Release();
         }
             
         [UnityTest]

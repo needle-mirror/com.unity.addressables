@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
 {
@@ -20,7 +21,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
         /// <returns>The size in bytes of the bundle that is needed to be downloaded.  If the local cache contains the bundle or it is a local bundle, 0 will be returned.</returns>
         public override long ComputeSize(IResourceLocation loc)
         {
-            if (!loc.InternalId.Contains("://"))
+            if (!ResourceManagerConfig.IsPathRemote(loc.InternalId))
             {
 //                Debug.LogFormat("Location {0} is local, ignoring size", loc);
                 return 0;

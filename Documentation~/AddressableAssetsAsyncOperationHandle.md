@@ -65,3 +65,6 @@ public async Start() {
     // The task is complete. Be sure to check the Status is succeessful before storing the Result.
 }
 ```
+
+#### Please Note:
+Loading scenes with `SceneManager.LoadSceneAsync` with `allowSceneActivation` set to false or using `Addressables.LoadSceneAsync` and passing in false for the `activateOnLoad` parameter can lead to subsequent async operations being blocked and unable to complete.  Please checkout the `allowSceneActivation` documentation here: https://docs.unity3d.com/ScriptReference/AsyncOperation-allowSceneActivation.html

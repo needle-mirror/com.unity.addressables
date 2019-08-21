@@ -88,7 +88,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <returns>The size in bytes of the bundle that is needed to be downloaded.  If the local cache contains the bundle or it is a local bundle, 0 will be returned.</returns>
         public virtual long ComputeSize(IResourceLocation loc)
         {
-            if (!loc.InternalId.Contains("://"))
+            if (!ResourceManagerConfig.IsPathRemote(loc.InternalId))
                 return 0;
             var locHash = Hash128.Parse(Hash);
 #if !UNITY_SWITCH && !UNITY_PS4
@@ -181,7 +181,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_RequestOperation = AssetBundle.LoadFromFileAsync(path, m_Options == null ? 0 : m_Options.Crc);
                 m_RequestOperation.completed += LocalRequestOperationCompleted;
             }
-            else if (path.Contains("://"))
+            else if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
             {
                 var req = CreateWebRequest(m_ProvideHandle.Location);
                 req.disposeDownloadHandlerOnDispose = false;
@@ -247,7 +247,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
     }
     /// <summary>
-    /// IResourceProvider for asset bundles.  Loads bundles via UnityWebRequestAssetBundle API if the internalId contains "://".  If not, it will load the bundle via AssetBundle.LoadFromFileAsync.
+    /// IResourceProvider for asset bundles.  Loads bundles via UnityWebRequestAssetBundle API if the internalId starts with "http".  If not, it will load the bundle via AssetBundle.LoadFromFileAsync.
     /// </summary>
     public class AssetBundleProvider : ResourceProviderBase
     {

@@ -224,63 +224,93 @@ namespace UnityEditor.AddressableAssets.GUI
 
             m_CurrentDepth++;
 
-            foreach (var ruleContainer in GatherAllInheritRuleContainers(baseViewItem))
+            int index = 0;
+            var ruleContainers = GatherAllInheritRuleContainers(baseViewItem);
+            foreach (var ruleContainer in ruleContainers)
             {
+
                 if (ruleContainer != null && resultData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
+                {
+                    EditorUtility.DisplayProgressBar("Calculating Results for " + ruleContainer.displayName, "", (index / ruleContainers.Count) % 100);
                     BuildResults(ruleContainer, resultData.Data[ruleContainer.analyzeRule.ruleName]);
+                }
+
+                index++;
             }
 
+            EditorUtility.ClearProgressBar();
             return root;
         }
 
+        private readonly Dictionary<int, TreeViewItem> hashToTreeViewItems = new Dictionary<int, TreeViewItem>();
         void BuildResults(TreeViewItem root, List<AnalyzeRule.AnalyzeResult> ruleResults)
         {
-            foreach (var res in ruleResults)
+            hashToTreeViewItems.Clear();
+            LinkedList<TreeViewItem> treeViewItems = new LinkedList<TreeViewItem>();
+
+            hashToTreeViewItems.Add(root.id, root);
+            float index = 0;
+
+
+            //preprocess nodes
+            foreach (var result in ruleResults)
             {
-                var resPath = res.resultName.Split(AnalyzeRule.kDelimiter);
+                var resPath = result.resultName.Split(AnalyzeRule.kDelimiter);
+                string name = string.Empty;
 
-                var parentNode = root;
-                var nameThusFar = string.Empty;
-                for (int index = 0; index < resPath.Length; index++)
+                for (int i = 0; i < resPath.Length; i++)
                 {
-                    nameThusFar += resPath[index];
-                    var hash = nameThusFar.GetHashCode();
-                    TreeViewItem currNode = null;
+                    int parentHash = name.GetHashCode();
+                    if (string.IsNullOrEmpty(name))
+                        parentHash = root.id;
+                    name += resPath[i];
+                    int hash = name.GetHashCode();
 
-                    if (parentNode.id == hash)
-                        currNode = parentNode;
+                    if (hash == root.id)
+                        treeViewItems.AddLast(root);
                     else
                     {
-                        foreach (var node in parentNode.children)
-                        {
-                            if (node.id == hash)
-                            {
-                                currNode = node;
-                                break;
-                            }
-                        }
+                        AnalyzeResultsTreeViewItem item = new AnalyzeResultsTreeViewItem(hash, i + m_CurrentDepth, resPath[i], parentHash, result.severity);
+                        item.children = new List<TreeViewItem>();
+                        treeViewItems.AddLast(item);  
                     }
+                }
 
-                    if (currNode == null)
-                    {
-                        if (index == resPath.Length - 1)
-                        {
-                            currNode = new AnalyzeResultsTreeViewItem(hash, index + m_CurrentDepth, resPath[index],
-                                res.severity);
-                        }
-                        else
-                        {
-                            currNode = new AnalyzeResultsTreeViewItem(hash, index + m_CurrentDepth, resPath[index],
-                                MessageType.None);
-                        }
+                index++;
+            }
 
-                        currNode.children = new List<TreeViewItem>();
-                        parentNode.AddChild(currNode);
-                    }
-
-                    parentNode = currNode;
+            //create dictionary
+            foreach (var item in treeViewItems)
+            {
+                if (item != null) 
+                {
+                    if (!hashToTreeViewItems.ContainsKey(item.id))
+                        hashToTreeViewItems.Add(item.id, item);
                 }
             }
+
+            //Build results tree
+            index = 0;
+            foreach (var hash in hashToTreeViewItems.Keys)
+            {
+                EditorUtility.DisplayProgressBar("Building Results Tree.", hashToTreeViewItems[hash].displayName, (index / hashToTreeViewItems.Keys.Count) % 100);
+
+                TreeViewItem item;
+                if (hashToTreeViewItems.TryGetValue(hash, out item))
+                {
+                    if ((item as AnalyzeResultsTreeViewItem) != null && hashToTreeViewItems.ContainsKey((item as AnalyzeResultsTreeViewItem).parentHash))
+                    {
+                        var parent = hashToTreeViewItems[(item as AnalyzeResultsTreeViewItem).parentHash];
+
+                        if (parent.id != item.id)
+                            parent.AddChild(item);
+                    }
+                }
+
+                index++;
+            }
+
+            EditorUtility.ClearProgressBar();
 
             List<TreeViewItem> allTreeViewItems = new List<TreeViewItem>();
             allTreeViewItems.Add(root);
@@ -394,17 +424,20 @@ namespace UnityEditor.AddressableAssets.GUI
     class AnalyzeResultsTreeViewItem : AnalyzeTreeViewItemBase
     {
         public MessageType severity { get; set; }
+        public int parentHash { get; set; }
 
         public bool IsError
         {
             get { return !displayName.Contains("No issues found"); }
         }
 
-        public AnalyzeResultsTreeViewItem(int id, int depth, string displayName, MessageType type) : base(id, depth,
+        public AnalyzeResultsTreeViewItem(int id, int depth, string displayName, int parent, MessageType type) : base(id, depth,
             displayName)
         {
             severity = type;
+            parentHash = parent;
         }
+
     }
 
     class AnalyzeRuleContainerTreeViewItem : AnalyzeTreeViewItemBase

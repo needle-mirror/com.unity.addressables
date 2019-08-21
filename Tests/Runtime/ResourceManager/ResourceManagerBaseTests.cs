@@ -149,5 +149,44 @@ namespace UnityEngine.ResourceManagement.Tests
             comp.operation.Release();
             GameObject.Destroy(go);
         }
+
+        class AsyncAwaitMultipleComponent : MonoBehaviour
+        {
+            public ResourceManager resourceManager;
+            public IResourceLocation location;
+            public GameObject result;
+            public bool done = false;
+            public AsyncOperationHandle<GameObject> operation;
+            async void Start()
+            {
+                operation = resourceManager.ProvideResource<GameObject>(location);
+                await operation.Task;
+                result = operation.Result;
+                await operation.Task;
+                await operation.Task;
+                done = true;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator WhenAsyncOperationIsDone_TaskIsCompleted()
+        {
+            // Setup
+            var go = new GameObject("test", typeof(AsyncAwaitMultipleComponent));
+            var comp = go.GetComponent<AsyncAwaitMultipleComponent>();
+            comp.resourceManager = m_ResourceManager;
+            comp.location = m_Locations[0];
+
+            // Test
+            while (!comp.done)
+                yield return null;
+            Assert.IsNotNull(comp.result);
+            Assert.True(comp.operation.PercentComplete == 1 && comp.operation.IsDone);
+            Assert.True(comp.operation.Task.IsCompleted);
+
+            // Cleanup
+            comp.operation.Release();
+            GameObject.Destroy(go);
+        }
     }
 }

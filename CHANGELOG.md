@@ -4,6 +4,20 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.1.9] - 2019-08-22
+ - Fixed drag and drop NullRef in main addressables window.
+ - Fixed AudioMixer type assets getting stripped from bundles.
+ - Fixed issue where failed async operations weren't getting released from the async operation cache.
+ - Fix unloading of scenes so that the dependencies will wait for the unload operation to complete before unloading.  This was causing an occasional 1-frame visual glitch during unload. 
+ - Fixed scenario where AsyncOperation Task fails to complete when AsyncOperation has already completed.
+ - Fixed a missed init-log that was stuck always-logging. 
+ - Fixed issue around assets losing dependencies when unloaded then reloaded.  This would manifest most often as sprites losing their texture or prefabs losing their shader/material/texture.
+ - Changed checks for determining if a path is remote or not from looking for "://" to looking for starting with "http".  "://" is still used to determine if the asset should be loaded via UnityWebRequest or not.
+ - Added Analyze Rule to show entire Asset Bundle layout
+ - Added progress bars and some optimizations for calculating analyze rules
+ - Fixed sprite sheet loading syntax LoadAssetAsync<Sprite[]>("sprite").  
+   - Note that this syntax requires an engine fix that is in 2019.3.0a10 and will be backported to 2019.2 and 2018.4.
+
 ## [1.1.7] - 2019-07-30
  - Fixed chain operation percent complete calculation.   
  - Fixed scenario where deleting assets would also delete groups that have similar names.

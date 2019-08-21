@@ -44,7 +44,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     object result = m_Provider.Convert(m_PI.Type, text);
                     m_PI.Complete(result, result != null, null);
                 }
-                else if (path.Contains("://"))
+                else if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
                 {
                     m_RequestOperation = new UnityWebRequest(path, UnityWebRequest.kHttpVerbGET, new DownloadHandlerBuffer(), null).SendWebRequest();
                     m_RequestOperation.completed += RequestOperation_completed;

@@ -5,6 +5,7 @@ using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 using UnityEngine.TestTools;
 
@@ -110,6 +111,38 @@ namespace UnityEditor.AddressableAssets.Tests
             LogAssert.Expect(LogType.Error, "Inside BuildDataInternal for test script!");
             
         }
+
+        [Test]
+        public void GetNameWithHashNaming_ReturnsNoChangeIfNoHash()
+        {
+            string source = "x/y.bundle";
+            string hash = "123abc";
+            string expected = "x/y.bundle";
+
+            var actual = BuildUtility.GetNameWithHashNaming(BundledAssetGroupSchema.BundleNamingStyle.NoHash, hash, source);
+
+            Assert.AreEqual(expected, actual);
+        }
+        [Test]
+        public void GetNameWithHashNaming_CanAppendHash()
+        {
+            string source = "x/y.bundle";
+            string hash = "123abc";
+            string expected = "x/y_123abc.bundle";
+
+            var actual = BuildUtility.GetNameWithHashNaming(BundledAssetGroupSchema.BundleNamingStyle.AppendHash, hash, source);
+
+            Assert.AreEqual(expected, actual);}
+        [Test]
+        public void GetNameWithHashNaming_CanReplaceFileNameWithHash()
+        {
+            string source = "x/y.bundle";
+            string hash = "123abc";
+            string expected = "x/123abc.bundle";
+
+            var actual = BuildUtility.GetNameWithHashNaming(BundledAssetGroupSchema.BundleNamingStyle.OnlyHash, hash, source);
+
+            Assert.AreEqual(expected, actual);}
         
     }
 }

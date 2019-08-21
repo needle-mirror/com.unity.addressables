@@ -129,18 +129,18 @@ namespace UnityEngine.AddressableAssets.Initialization
             {
                 if (indexOfExistingProvider < 0 || !string.IsNullOrEmpty(providerSuffix))
                 {
-                    addressables.LogFormat("Addressables - added provider {0} with id {1}.", provider, provider.ProviderId);
+                    Addressables.LogFormat("Addressables - added provider {0} with id {1}.", provider, provider.ProviderId);
                     addressables.ResourceManager.ResourceProviders.Add(provider);
                 }
                 else
                 {
-                    addressables.LogFormat("Addressables - replacing provider {0} at index {1}.", provider, indexOfExistingProvider);
+                    Addressables.LogFormat("Addressables - replacing provider {0} at index {1}.", provider, indexOfExistingProvider);
                     addressables.ResourceManager.ResourceProviders[indexOfExistingProvider] = provider;
                 }
             }
             else
             {
-                addressables.LogWarningFormat("Addressables - Unable to load resource provider from {0}.", providerData);
+                Addressables.LogWarningFormat("Addressables - Unable to load resource provider from {0}.", providerData);
             }
 
         }

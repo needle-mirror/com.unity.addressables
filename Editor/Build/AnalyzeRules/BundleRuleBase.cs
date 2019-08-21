@@ -16,7 +16,7 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 
 namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
-    class CheckDupeDependenciesBase : AnalyzeRule
+    class BundleRuleBase : AnalyzeRule
     {
         [NonSerialized]
         internal List<GUID> m_AddressableAssets = new List<GUID>();
@@ -72,6 +72,12 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 locations = m_Locations
             };
             return aaContext;
+        }
+        protected bool IsValidPath(string path)
+        {
+            return AddressableAssetUtility.IsPathValidForEntry(path) &&
+                   !path.ToLower().Contains("/resources/") &&
+                   !path.ToLower().StartsWith("resources/");
         }
 
         internal ReturnCode RefreshBuild(AddressableAssetsBuildContext buildContext)
@@ -165,6 +171,14 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 assetBundleName = newName, addressableNames = bid.addressableNames,
                 assetBundleVariant = bid.assetBundleVariant, assetNames = bid.assetNames
             };
+        }
+
+        internal List<GUID> GetImplicitGuidsForBundle(string fileName)
+        {
+            List<GUID> guids = (from id in m_ExtractData.WriteData.FileToObjects[fileName]
+                                where !m_ExtractData.WriteData.AssetToFiles.Keys.Contains(id.guid)
+                                select id.guid).ToList();
+            return guids;
         }
 
         internal Dictionary<GUID, List<string>> GetImplicitGuidToFilesMap()

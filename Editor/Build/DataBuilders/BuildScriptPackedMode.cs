@@ -543,21 +543,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         BundleSize = GetFileSize(info.FileName)
                     };
                     dataEntry.Data = requestOptions;
-                    switch (schema.BundleNaming)
-                    {
-                        case BundledAssetGroupSchema.BundleNamingStyle.AppendHash:
-                            dataEntry.InternalId = dataEntry.InternalId.Replace(".bundle", "_" + info.Hash + ".bundle");
-                            newBundleName = newBundleName.Replace(".bundle", "_" + info.Hash + ".bundle");
-                            break;
-                        case BundledAssetGroupSchema.BundleNamingStyle.NoHash:
-                            break;
-                        case BundledAssetGroupSchema.BundleNamingStyle.OnlyHash:
-                            string fileName = Path.GetFileNameWithoutExtension(dataEntry.InternalId);
-                            dataEntry.InternalId = dataEntry.InternalId.Replace(fileName, info.Hash.ToString());
-                            fileName = Path.GetFileNameWithoutExtension(newBundleName);
-                            newBundleName = newBundleName.Replace(fileName, info.Hash.ToString());
-                            break;
-                    }
+
+                    dataEntry.InternalId = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), dataEntry.InternalId);
+                    newBundleName = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), newBundleName);
                 }
                 else
                 {

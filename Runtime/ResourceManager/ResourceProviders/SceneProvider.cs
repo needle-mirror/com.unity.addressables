@@ -90,7 +90,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
             protected override void Destroy()
             {
-                SceneManager.UnloadSceneAsync(Result.Scene);
+                //the scene will be unloaded via the UnloadSceneOp as it waits correctlyf or the unload to complete before releasing the load op
                 if (m_DepOp.IsValid())
                     m_DepOp.Release();
                 base.Destroy();
@@ -121,15 +121,27 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 {
                     m_sceneLoadHandle = sceneLoadHandle;
                     m_Instance = m_sceneLoadHandle.Result;
-                    m_sceneLoadHandle.Destroyed += h => Complete(m_Instance, true, "");
                 }
             }
             protected override void Execute()
             {
                 if (m_sceneLoadHandle.IsValid())
-                    m_sceneLoadHandle.Release();
+                {
+                    var unloadOp = SceneManager.UnloadSceneAsync(m_sceneLoadHandle.Result.Scene);
+                    if (unloadOp == null)
+                        UnloadSceneCompleted(null);
+                    else
+                        unloadOp.completed += UnloadSceneCompleted;
+                }
                 else
                     Complete(m_Instance, true, "");
+            }
+
+            private void UnloadSceneCompleted(AsyncOperation obj)
+            {
+                if (m_sceneLoadHandle.IsValid())
+                    m_sceneLoadHandle.Release();
+                Complete(m_Instance, true, "");
             }
 
             protected override float Progress

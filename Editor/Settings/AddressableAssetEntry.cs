@@ -130,7 +130,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (!m_CheckedIsScene)
                 {
                     m_CheckedIsScene = true;
-                    m_IsScene = AssetDatabase.GUIDToAssetPath(guid).EndsWith(".unity");
+                    m_IsScene = AssetPath.EndsWith(".unity");
                 }
                 return m_IsScene;
             }
@@ -140,6 +140,21 @@ namespace UnityEditor.AddressableAssets.Settings
         /// The set of labels for this entry.  There is no inherent limit to the number of labels.
         /// </summary>
         public HashSet<string> labels { get { return m_Labels; } }
+
+        Type m_mainAssetType = null;
+        internal Type MainAssetType
+        {
+            get
+            {
+                if (m_mainAssetType == null)
+                {
+                    m_mainAssetType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath);
+                    if (m_mainAssetType == null)
+                        m_mainAssetType = typeof(object);
+                }
+                return m_mainAssetType;
+            }
+        }
 
         /// <summary>
         /// Set or unset a label on this entry.
@@ -229,6 +244,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 parentGroup.SetDirty(e, o, postEvent, true);
         }
 
+        internal string m_cachedAssetPath = null;
         /// <summary>
         /// The path of the asset.
         /// </summary>
@@ -236,19 +252,20 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-                
-                if (string.IsNullOrEmpty(guid))
-                    return string.Empty;
 
-                string path;
-                if (guid == EditorSceneListName)
-                    path = EditorSceneListPath;
-                else if (guid == ResourcesName)
-                    path = ResourcesPath;
-                else
-                    path = AssetDatabase.GUIDToAssetPath(guid);
+                if (m_cachedAssetPath == null)
+                {
+                    if (string.IsNullOrEmpty(guid))
+                        m_cachedAssetPath = string.Empty;
 
-                return path;
+                    if (guid == EditorSceneListName)
+                        m_cachedAssetPath = EditorSceneListPath;
+                    else if (guid == ResourcesName)
+                        m_cachedAssetPath = ResourcesPath;
+                    else
+                        m_cachedAssetPath = AssetDatabase.GUIDToAssetPath(guid);
+                }
+                return m_cachedAssetPath;
             }
         }
 
@@ -261,11 +278,10 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             if (!IsScene)
             {
-                var path = AssetPath;
-                int ri = path.ToLower().LastIndexOf("/resources/");
-                if (ri >= 0)
-                    path = GetResourcesPath(AssetPath);
-                return path;
+                if (IsInResources)
+                    return GetResourcesPath(AssetPath);
+                else
+                    return AssetPath;
             }
             else
             {
@@ -357,7 +373,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             else
             {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var path = AssetPath;
                 if (string.IsNullOrEmpty(path))
                     return;
 
@@ -403,7 +419,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
                 else
                 {
-                    if (AssetDatabase.GetMainAssetTypeAtPath(path) == typeof(AddressableAssetEntryCollection))
+                    if (MainAssetType == typeof(AddressableAssetEntryCollection))
                     {
                         var col = AssetDatabase.LoadAssetAtPath<AddressableAssetEntryCollection>(AssetPath);
                         if (col != null)
@@ -464,12 +480,12 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             var assetPath = GetAssetLoadPath(isBundled);
             var keyList = CreateKeyList();
-            var mainType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath);
+            var mainType = MainAssetType;
             
             if (mainType == typeof(SceneAsset))
                 mainType = typeof(SceneInstance);
 
-            if (!CheckForEditorAssembly(ref mainType, assetPath))
+            if (!CheckForEditorAssembly(ref mainType, assetPath, !IsInResources))
                 return;
 
             HashSet<Type> typesSeen = new HashSet<Type>();
@@ -480,7 +496,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 var o = objs[i];
                 var t = o.GetType();
                 var internalId = string.Format("{0}[{1}]", assetPath, o.name);
-                if (!CheckForEditorAssembly(ref t, internalId))
+                if (!CheckForEditorAssembly(ref t, internalId, false))
                     continue;
                 var namedAddress = string.Format("{0}.{1}", address, o.name);
                 entries.Add(new ContentCatalogDataEntry(t, internalId, providerType, new object[] { namedAddress }, deps, extraData));
@@ -495,23 +511,25 @@ namespace UnityEditor.AddressableAssets.Settings
             entries.Add(new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, deps, extraData));
         }
 
-        static bool CheckForEditorAssembly(ref Type t, string internalId)
+        static bool CheckForEditorAssembly(ref Type t, string internalId, bool warnIfStripped)
         {
 
             if (t == null)
                 return false;
-            if (t.Assembly.IsDefined(typeof(AssemblyIsEditorAssembly), true))
+            if (t.Assembly.IsDefined(typeof(AssemblyIsEditorAssembly), true) || BuildUtility.IsEditorAssembly(t.Assembly))
             {
                 if (t == typeof(UnityEditor.Animations.AnimatorController))
                 {
                     t = typeof(RuntimeAnimatorController);
                     return true;
                 }
-            }
-
-            if (BuildUtility.IsEditorAssembly(t.Assembly))
-            {
-                Debug.LogWarningFormat("Type {0} is in editor assembly {1}.  Asset location with internal id {2} will be stripped.", t.Name, t.Assembly.FullName, internalId);
+                if (t.FullName == "UnityEditor.Audio.AudioMixerController")
+                {
+                    t = typeof(UnityEngine.Audio.AudioMixer);
+                    return true;
+                }
+                if(warnIfStripped)
+                    Debug.LogWarningFormat("Type {0} is in editor assembly {1}.  Asset location with internal id {2} will be stripped.", t.Name, t.Assembly.FullName, internalId);
                 return false;
             }
 

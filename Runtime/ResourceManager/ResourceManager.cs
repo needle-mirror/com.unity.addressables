@@ -342,7 +342,7 @@ namespace UnityEngine.ResourceManagement
             Allocator.Release(o.GetType().GetHashCode(), o);
             var cachable = o as ICachable;
             if (cachable != null)
-                m_AssetOperationCache.Remove(cachable.Hash);
+                RemoveOperationFromCache(cachable.Hash);
         }
 
         internal T CreateOperation<T>(Type actualType, int typeHash, int operationHash, Action<IAsyncOperation> onDestroyAction) where T : IAsyncOperation
@@ -360,9 +360,33 @@ namespace UnityEngine.ResourceManagement
                 var cachable = op as ICachable;
                 if (cachable != null)
                     cachable.Hash = operationHash;
-                m_AssetOperationCache.Add(operationHash, op);
+                AddOperationToCache(operationHash, op);
                 return op;
             }
+        }
+
+        internal void AddOperationToCache(int hash, IAsyncOperation operation)
+        {
+            if(!IsOperationCached(hash))
+                m_AssetOperationCache.Add(hash, operation);
+        }
+
+        internal bool RemoveOperationFromCache(int hash)
+        {
+            if (!IsOperationCached(hash))
+                return true;
+
+            return m_AssetOperationCache.Remove(hash);
+        }
+
+        internal bool IsOperationCached(int hash)
+        {
+            return m_AssetOperationCache.ContainsKey(hash);
+        }
+
+        internal int CachedOperationCount()
+        {
+            return m_AssetOperationCache.Count;
         }
 
         /// <summary>
@@ -645,9 +669,10 @@ namespace UnityEngine.ResourceManagement
             m_DeferredCompleteCallbacks.Clear();
         }
 
-        internal void RegisterForDeferredCallback(IAsyncOperation op)
+        internal void RegisterForDeferredCallback(IAsyncOperation op, bool incrementRefCount = true)
         {
-            op.IncrementReferenceCount();
+            if(incrementRefCount)
+                op.IncrementReferenceCount();
             m_DeferredCompleteCallbacks.Add(op);
             RegisterForCallbacks();
         }

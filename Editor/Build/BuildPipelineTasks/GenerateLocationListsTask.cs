@@ -58,22 +58,21 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             var locations = aaContext.locations;
             var bundleToAssetGroup = aaContext.bundleToAssetGroup;
             var bundleToAssets = new Dictionary<string, List<GUID>>();
-            var assetsToBundles = new Dictionary<GUID, List<string>>();
+            var dependencySetForBundle = new Dictionary<string, HashSet<string>>();
             foreach (var k in writeData.AssetToFiles)
             {
-                List<string> bundleList = new List<string>();
-                assetsToBundles.Add(k.Key, bundleList);
                 List<GUID> assetList;
                 var bundle = writeData.FileToBundle[k.Value[0]];
                 if (!bundleToAssets.TryGetValue(bundle, out assetList))
                     bundleToAssets.Add(bundle, assetList = new List<GUID>());
-                if (!bundleList.Contains(bundle))
-                    bundleList.Add(bundle);
+                HashSet<string> bundleDeps;
+                if (!dependencySetForBundle.TryGetValue(bundle, out bundleDeps))
+                    dependencySetForBundle.Add(bundle, bundleDeps = new HashSet<string>());
+                for (int i = 0; i < k.Value.Count; i++)
+                    bundleDeps.Add(writeData.FileToBundle[k.Value[i]]);
                 foreach (var file in k.Value)
                 {
                     var fileBundle = writeData.FileToBundle[file];
-                    if (!bundleList.Contains(fileBundle))
-                        bundleList.Add(fileBundle);
                     if (!bundleToAssets.ContainsKey(fileBundle))
                         bundleToAssets.Add(fileBundle, new List<GUID>());
                 }
@@ -92,7 +91,9 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 if (!assetGroupToBundle.TryGetValue(assetGroup, out bundles))
                     assetGroupToBundle.Add(assetGroup, bundles = new List<string>());
                 bundles.Add(kvp.Key);
-                CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetBundleProviderName(assetGroup), GetAssetProviderName(assetGroup), kvp.Value, assetsToBundles, locations);
+                HashSet<string> bundleDeps = null;
+                dependencySetForBundle.TryGetValue(kvp.Key, out bundleDeps);
+                CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetBundleProviderName(assetGroup), GetAssetProviderName(assetGroup), kvp.Value, bundleDeps, locations);
             }
 
             return ReturnCode.Success;
@@ -129,7 +130,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         string bundleProvider,
         string assetProvider,
         List<GUID> assetsInBundle,
-        Dictionary<GUID, List<string>> assetsToBundles,
+        HashSet<string> bundleDependencies,
         List<ContentCatalogDataEntry> locations)
         {
             locations.Add(new ContentCatalogDataEntry(typeof(IAssetBundleResource), bundleInternalId, bundleProvider, new object[] { bundleName }));
@@ -139,13 +140,12 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             var guidToEntry = new Dictionary<string, AddressableAssetEntry>();
             foreach (var a in assets)
                 guidToEntry.Add(a.guid, a);
-
             foreach (var a in assetsInBundle)
             {
                 AddressableAssetEntry entry;
                 if (!guidToEntry.TryGetValue(a.ToString(), out entry))
                     continue;
-                entry.CreateCatalogEntries(locations, true, assetProvider, assetsToBundles[a], null);
+                entry.CreateCatalogEntries(locations, true, assetProvider, bundleDependencies, null);
             }
         }
     }

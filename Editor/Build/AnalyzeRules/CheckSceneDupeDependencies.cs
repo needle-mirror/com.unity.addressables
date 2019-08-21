@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
-    class CheckSceneDupeDependencies : CheckDupeDependenciesBase
+    class CheckSceneDupeDependencies : BundleRuleBase
     {
         public override bool CanFix
         {
