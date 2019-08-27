@@ -4,6 +4,10 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.1.10] - 2019-08-28
+ - Fix for all files showing "Missing File" in the addressables window.
+ - Fix for waiting on a successfully done Task
+
 ## [1.1.9] - 2019-08-22
  - Fixed drag and drop NullRef in main addressables window.
  - Fixed AudioMixer type assets getting stripped from bundles.

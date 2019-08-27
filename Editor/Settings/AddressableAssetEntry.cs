@@ -150,7 +150,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 {
                     m_mainAssetType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath);
                     if (m_mainAssetType == null)
-                        m_mainAssetType = typeof(object);
+                        return typeof(object); // do not cache a bad type lookup.
                 }
                 return m_mainAssetType;
             }
@@ -252,13 +252,11 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-
-                if (m_cachedAssetPath == null)
+                if (string.IsNullOrEmpty(m_cachedAssetPath))
                 {
                     if (string.IsNullOrEmpty(guid))
                         m_cachedAssetPath = string.Empty;
-
-                    if (guid == EditorSceneListName)
+                    else if (guid == EditorSceneListName)
                         m_cachedAssetPath = EditorSceneListPath;
                     else if (guid == ResourcesName)
                         m_cachedAssetPath = ResourcesPath;

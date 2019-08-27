@@ -171,14 +171,21 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get
             {
-                if(IsDone)
-                    return System.Threading.Tasks.Task.FromResult<TObject>(default(TObject));
+                if (Status == AsyncOperationStatus.Failed)
+                {
+                    return System.Threading.Tasks.Task.FromResult(default(TObject));
+                }
+                if (Status == AsyncOperationStatus.Succeeded)
+                {
+                    return System.Threading.Tasks.Task.FromResult(Result);
+                }
 
                 var handle = WaitHandle;
                 return System.Threading.Tasks.Task.Factory.StartNew(o =>
                 {
                     var asyncOperation = o as AsyncOperationBase<TObject>;
-                    if (asyncOperation == null) return default(TObject);
+                    if (asyncOperation == null) 
+                        return default(TObject);
                     handle.WaitOne();
                     return asyncOperation.Result;
                 }, this);
