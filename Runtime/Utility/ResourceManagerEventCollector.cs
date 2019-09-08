@@ -19,9 +19,9 @@ namespace UnityEngine.AddressableAssets.Utility
         }
     }
 
-    internal class ResourceManagerDiagnostics
+    internal class ResourceManagerDiagnostics : IDisposable
     {
-
+        ResourceManager m_ResourceManager;
         DiagnosticEventCollector m_eventCollector;
 
         /// <summary>
@@ -32,16 +32,17 @@ namespace UnityEngine.AddressableAssets.Utility
         {
             resourceManager.RegisterDiagnosticCallback(OnResourceManagerDiagnosticEvent);
             m_eventCollector = DiagnosticEventCollector.FindOrCreateGlobalInstance();
+            m_ResourceManager = resourceManager;
         }
         Dictionary<int, DiagnosticInfo> m_cachedDiagnosticInfo = new Dictionary<int, DiagnosticInfo>();
         List<AsyncOperationHandle> m_dependencyBuffer = new List<AsyncOperationHandle>();
 
-        void OnResourceManagerDiagnosticEvent(AsyncOperationHandle op, ResourceManager.DiagnosticEventType type, int eventValue, object context)
+        void OnResourceManagerDiagnosticEvent(ResourceManager.DiagnosticEventContext eventContext)
         {
-            var hashCode = op.GetHashCode();
+            var hashCode = eventContext.OperationHandle.GetHashCode();
             DiagnosticInfo diagInfo = null;
 
-            if (type == ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
+            if (eventContext.Type == ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
             {
                 if (m_cachedDiagnosticInfo.TryGetValue(hashCode, out diagInfo))
                     m_cachedDiagnosticInfo.Remove(hashCode);
@@ -51,15 +52,21 @@ namespace UnityEngine.AddressableAssets.Utility
                 if (!m_cachedDiagnosticInfo.TryGetValue(hashCode, out diagInfo))
                 {
                     m_dependencyBuffer.Clear();
-                    op.GetDependencies(m_dependencyBuffer);
+                    eventContext.OperationHandle.GetDependencies(m_dependencyBuffer);
                     var depIds = new int[m_dependencyBuffer.Count];
                     for (int i = 0; i < depIds.Length; i++)
                         depIds[i] = m_dependencyBuffer[i].GetHashCode();
-                    m_cachedDiagnosticInfo.Add(hashCode, diagInfo = new DiagnosticInfo() { ObjectId = hashCode, DisplayName = op.DebugName, Dependencies = depIds});
+                    m_cachedDiagnosticInfo.Add(hashCode, diagInfo = new DiagnosticInfo() { ObjectId = hashCode, DisplayName = eventContext.OperationHandle.DebugName, Dependencies = depIds});
                 }
             }
 
-            m_eventCollector.PostEvent(diagInfo.CreateEvent("ResourceManager", type, Time.frameCount, eventValue));
+            if( diagInfo != null )
+                m_eventCollector.PostEvent( diagInfo.CreateEvent( "ResourceManager", eventContext.Type, Time.frameCount, eventContext.EventValue ) );
+        }
+
+        public void Dispose()
+        {
+            m_ResourceManager?.UnregisterDiagnosticCallback(OnResourceManagerDiagnosticEvent);
         }
     }
 }

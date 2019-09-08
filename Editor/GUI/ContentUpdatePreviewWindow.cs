@@ -10,13 +10,7 @@ namespace UnityEditor.AddressableAssets.GUI
 {
     class ContentUpdatePreviewWindow : EditorWindow
     {
-        /// <summary>
-        /// Opens ContentUpdatePreviewWindow.
-        /// </summary>
-        /// <param name="settings"></param>
-        /// <param name="buildPath"></param>
-        /// <returns>True if successful; false if otherwise (failed to get modified entries).</returns>
-        public static bool PrepareForContentUpdate(AddressableAssetSettings settings, string buildPath)
+        internal static bool PrepareForContentUpdate(AddressableAssetSettings settings, string buildPath)
         {
             var modifiedEntries = ContentUpdateScript.GatherModifiedEntries(settings, buildPath);
             if (modifiedEntries == null)

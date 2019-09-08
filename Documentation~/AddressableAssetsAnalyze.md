@@ -2,11 +2,11 @@
 Analyze is a tool that gathers information on your Projects' Addressables layout. In some cases, Analyze may take appropriate actions to clean up the state of your Project. In others, Analyze is purely an informational tool that allows you to make more informed decisions about your Addressables layout.
 
 ## Using Analyze
-In the Editor, open the **Addressables window** (**Window** > **Asset Management** > **Addressable Assets**), then click the **Analyze** button in the menu to open the **Analyze window**.
+In the Editor, open the **Addressables window** (**Window** > **Asset Management** > **Addressables**), then click the **Analyze** button in the menu to open the **Analyze window**.
 
 The Analyze window displays a list of Analyze rules, along with the following operations: 
 
-* Analyze Secelcted Rules
+* Analyze Selected Rules
 * Fix Selected Rules
 * Clear Selected Rules
 
@@ -17,13 +17,13 @@ No action should be taken to modify any data or the state of the Project during 
 
 Rules that are purely informational and contain no fix operation are categorized as **Unfixable Rules**. Those that do have a fix operation are categorized as **Fixable Rules**.
 
+### The clear step
+This operation will remove any data gathered by the analysis and update the `TreeView` accordingly.
+
 ### The fix operation
 For **Fixable Rules**, you may choose to run the fix operation. This uses data gathered during the analyze step to perform any necessary modifications and resolve the issues.
 
 [_Check Duplicate Group Dependencies_](#check-duplicate-group-dependencies) is an example of a fixable rule, because there is a reasonably appropriate action that can be taken to resolve the issues detected in the analysis.
-
-### The clear step
-This operation will remove any data gathered by the analysis and update the `TreeView` accordingly.
 
 ## Provided Analyze rules
 ### Fixable rules
@@ -52,6 +52,18 @@ This rule detects any assets or asset dependencies that are shared between the S
 **Issues**: These duplications mean that data will be included in both the application build and the Addressables build.
 
 **Resolution**: It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any. One example of a possible manual fix is to pull the built-in Scene(s) with duplicated references out of Build Settings and make it an Addressable Scene.
+
+#### Build Bundle Layout
+This rule will show how assets explicitly marked as Addressable will be laid out in the Addressable build.  Given these explicit assets, we also show what assets are implicitly referenced by, and therefore will be pulled into, the build.
+
+Data gathered by this rule does not indicate any particular issues.  It is purely informational. 
+
+#### Check Sprite Atlas to Addressable Duplicate Dependencies
+Given an Addressable sprite atlas this rule will detect if any sprites in the atlas have been marked Addressable anywhere else.
+
+**Issues**: These duplications means sprite data will be duplicated in multiple areas in the Addressable build.
+
+**Resolution** It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any.  One example of a possible manual fix would be to remove the duplicated sprite from Addressables and have your assets reference a sprite from your Addressable sprite atlas instead of the sprite directly.
 
 ## Extending Analyze
 Each unique Project may require additional Analyze rules beyond what comes pre-packaged. The Addressable Assets System allows you to create your own custom rule classes. 

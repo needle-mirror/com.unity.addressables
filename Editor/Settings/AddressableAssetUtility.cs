@@ -44,7 +44,7 @@ namespace UnityEditor.AddressableAssets.Settings
             if (ext == ".cs" || ext == ".js" || ext == ".boo" || ext == ".exe" || ext == ".dll")
                 return false;
             var t = AssetDatabase.GetMainAssetTypeAtPath(path);
-            if (t == typeof(AddressableAssetSettings))
+            if (t != null && Build.BuildUtility.IsEditorAssembly(t.Assembly))
                 return false;
             return true;
         }

@@ -296,7 +296,7 @@ namespace UnityEngine.AddressableAssets
         {
             return LoadResourceLocationsAsync(keys, mode, type);
         }
- 
+
         /// <summary>
         /// Loads the resource locations specified by the keys.
         /// The method will always return success, with a valid IList of results. If nothing matches keys, IList will be empty
@@ -495,6 +495,18 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
+        /// Determines the required download size, dependencies included, for the specified <paramref name="keys"/>.
+        /// Cached assets require no download and thus their download size will be 0.  The Result of the operation
+        /// is the download size in bytes.
+        /// </summary>
+        /// <returns>The operation handle for the request.</returns>
+        /// <param name="keys">The keys of the asset(s) to get the download size of.</param>
+        public static AsyncOperationHandle<long> GetDownloadSizeAsync(IList<object> keys)
+        {
+            return m_Addressables.GetDownloadSizeAsync(keys);
+        }
+
+        /// <summary>
         /// Downloads dependencies of assets marked with the specified label or address.  
         /// </summary>
         /// <param name="key">The key of the asset(s) to load dependencies for.</param>
@@ -510,20 +522,22 @@ namespace UnityEngine.AddressableAssets
         /// Downloads dependencies of assets marked with the specified label or address.  
         /// </summary>
         /// <param name="key">The key of the asset(s) to load dependencies for.</param>
+        /// <param name="autoReleaseHandle">Automatically releases the handle on completion</param>
         /// <returns>The AsyncOperationHandle for the dependency load.</returns>
-        public static AsyncOperationHandle DownloadDependenciesAsync(object key)
+        public static AsyncOperationHandle DownloadDependenciesAsync(object key, bool autoReleaseHandle = false)
         {
-            return m_Addressables.DownloadDependenciesAsync(key);
+            return m_Addressables.DownloadDependenciesAsync(key, autoReleaseHandle);
         }
 
         /// <summary>
         /// Downloads dependencies of assets at given locations.  
         /// </summary>
         /// <param name="locations">The locations of the assets.</param>
+        /// <param name="autoReleaseHandle">Automatically releases the handle on completion</param>
         /// <returns>The AsyncOperationHandle for the dependency load.</returns>
-        public static AsyncOperationHandle DownloadDependenciesAsync(IList<IResourceLocation> locations)
+        public static AsyncOperationHandle DownloadDependenciesAsync(IList<IResourceLocation> locations, bool autoReleaseHandle = false)
         {
-            return m_Addressables.DownloadDependenciesAsync(locations);
+            return m_Addressables.DownloadDependenciesAsync(locations, autoReleaseHandle);
         }
 
         /// <summary>
@@ -531,10 +545,11 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="keys">List of keys for the locations.</param>
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
+        /// <param name="autoReleaseHandle">Automatically releases the handle on completion</param>
         /// <returns>The AsyncOperationHandle for the dependency load.</returns>
-        public static AsyncOperationHandle DownloadDependenciesAsync(IList<object> keys, MergeMode mode)
+        public static AsyncOperationHandle DownloadDependenciesAsync(IList<object> keys, MergeMode mode, bool autoReleaseHandle = false)
         {
-            return m_Addressables.DownloadDependenciesAsync(keys, mode);
+            return m_Addressables.DownloadDependenciesAsync(keys, mode, autoReleaseHandle);
         }
 
         /// <summary>

@@ -38,7 +38,6 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 var entriesAdded = new List<AddressableAssetEntry>();
                 var modifiedGroups = new HashSet<AddressableAssetGroup>();
-
                 Type mainAssetType;
                 foreach (var t in targets)
                 {

@@ -131,7 +131,7 @@ namespace AddressableAssetsIntegrationTests
                     ResourceManager.ExceptionHandler = null;
                 }
             }
-            m_Addressables.ResourceManager.ClearDiagnosticsCallback();
+            m_Addressables.ResourceManager.ClearDiagnosticCallbacks();
             m_StartingOpCount = m_Addressables.ResourceManager.OperationCacheCount;
             m_StartingTrackedHandleCount = m_Addressables.TrackedHandleCount;
             m_StartingInstanceCount = m_Addressables.ResourceManager.InstanceOperationCount;

@@ -1,4 +1,4 @@
-# Getting started with Addressable Assets
+# Getting Started
 ## Installing the Addressable Assets package
 
 **Important**: The Addressable Asset System requires Unity version 2018.3 or later.
@@ -31,11 +31,11 @@ When you first start using Addressable Assets, the system saves some edit-time a
 The Addressables Asset System needs to build your content into files that can be consumed by the running game before you build the application. This step is not automatic. You can build this content via the Editor or API:
 
 * To build content in the Editor, open the **Addressables window**, then select **Build** > **Build Player Content**.
-* To build content using the API, use [`AddressableAssetSettings.BuildPlayerContent()`](../api/UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.html#methods).
+* To build content using the API, use [`AddressableAssetSettings.BuildPlayerContent()`](../api/UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.html#UnityEditor_AddressableAssets_Settings_AddressableAssetSettings_BuildPlayerContent).
 
 ## Using Addressable Assets
 ### Loading or instantiating by address
-You can load or instantiate an Addressable Asset at run-time. Loading an asset loads all dependencies into memory (including the asset's bundle data if applicable), allowing you to use the asset when you need to.  This does not actually put the desired asset into your scene. To add the asset to your scene you must instantiate.  Using Addressables instantiation intefraces will load the asset, then immediately adds it to your Scene. 
+You can load or instantiate an Addressable Asset at run-time. Loading an asset loads all dependencies into memory (including the asset's bundle data if applicable), allowing you to use the asset when you need to.  This does not actually put the desired asset into your scene. To add the asset to your scene you must instantiate.  Using Addressables instantiation interfaces will load the asset, then immediately adds it to your Scene. 
 
 To access an asset from your game script using a string address, declare the `UnityEngine.AddressableAssets` namespace, then call the following methods:
 
@@ -78,10 +78,20 @@ public class AddressablesExample : MonoBehaviour {
 #### Sub-assets and components
 Sub-assets and components are special cases for asset loading.
 
-* **Components**: You cannot load a GameObject's component directly as an asset. You must load or instantiate the GameObject, then retrieve the component reference from it.
-* **Sub-assets**: The system supports loading sub-assets, but requires special syntax. Examples of potential sub-assets include sprites in a sprite sheet, or animation clips in an FBX file. To load them, use the following example syntax: 
+##### Components 
+You cannot load a GameObject's component directly through Addressables. You must load or instantiate the GameObject, then retrieve the component reference from it. To see how you could extend Addressables to support component loading, see [our ComponentReference sample](https://github.com/Unity-Technologies/Addressables-Sample/tree/master/Basic/ComponentReference).
 
+##### Sub-assets
+The system supports loading sub-assets, but requires special syntax. Examples of potential sub-assets include sprites in a sprite sheet, or animation clips in an FBX file. For examples of loading sprites directly, see [our sprite loading sample](https://github.com/Unity-Technologies/Addressables-Sample/tree/master/Basic/Sprite%20Land)
+
+To load all sub-objects in an asset, you can use the following example syntax: 
 `Addressables.LoadAssetAsync<IList<Sprite>>("MySpriteSheetAddress");`
+
+To load a single sub-object in an asset, you could do this:
+`Addressables.LoadAssetAsync<Sprite>("MySpriteSheetAddress[MySpriteName]");`
+
+The names available within an asset are visible in the main Addressables group editor window. 
+In addition, you can use an `AssetReference` to access the sub-object of an asset.  See notes in the below section. 
 
 ### Using the AssetReference class
 The `AssetReference` class provides a way to access Addressable Assets without needing to know their addresses. To access an Addressable Asset using the `AssetReference` class:
@@ -107,6 +117,10 @@ AssetRefMember.InstantiateAsync(pos, rot);
 
 **Note**: As with normal Addressable Assets, `LoadAssetAsync` and `InstantiateAsync` are asynchronous operations. You may provide a callback to work with the asset when it finishes loading (see documentation on [**Async operation handling**](AddressableAssetsAsyncOperationHandle) for more information).
 
+##### Sub-assets
+If an asset that contains sub-assets (such as a SpriteAtlas or FBX) is added to an AssetReference, you are given the option to reference the asset itself, or a sub-asset.  The single dropdown you are used to seeing becomes two. The first selects the asset itself, and the second selects the sub-asset. If you select "<none>" in the second dropdown, that will be treated as a reference to the main asset. 
+
+
 ## Build considerations
 ### Local data in StreamingAssets
 The Addressable Asset System needs some files at runtime to know what to load and how to load it. Those files are generated when you build Addressables data and wind up in the _StreamingAssets_ folder, which is a special folder in Unity that includes all its files in the build. When you build Addressables content, the system stages those files in the Library. Then, when you build the application, the system copies the required files over to _StreamingAssets_, builds, and deletes them from the folder. This way, you can build data for multiple platforms while only having the relevant data included in each build. 
@@ -120,7 +134,7 @@ The [`AsyncOperationHandle`](AddressableAssetsAsyncOperationHandle.md) struct re
 
 If you wish to ask the user for consent prior to download, use `Addressables.GetDownloadSize()` to return how much space is needed to download the content from a given address or label. Note that this takes into account any previously downloaded bundles that are still in Unity's asset bundle cache.
 
-While it can be advantageous to download assets for your app in advance, there are instances where you might choose not do so. For example:
+While it can be advantageous to download assets for your app in advance, there are instances where you might choose not to do so. For example:
 
 * If your app has a large amount of online content, and you generally expect users to only ever interact with a portion of it.
 * You have an app that must be connected online to function. If all your app's content is in small bundles, you might choose to download content as needed.

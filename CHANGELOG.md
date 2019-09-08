@@ -4,6 +4,21 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2019-09-09
+ - Made ContentUpdateScript.GatherModifiedEntries public.
+ - Added sub-object support to AssetReference.  For example, you can now have an AssetReference to a specific sprite within a sprite atlas.  
+ - Added sub-object support to addresses via [] notation.  For example, sprite atlas "myAtlas", would support loading that atlas via that address, or a sprite via "myAtlas[mySprite]"
+ - Fixed issue with Content Update workflow.  Assets that don't change groups during Content Update now remain in the same bundle.
+ - Added funtionality to allow multiple diagnostic callbacks to the ResourceManager.
+   - Added error and IResourceLocation to the callback.
+ - Added default parameter to DownloadDependenciesAsync to allow auto releasing of the the operation handle on completion.
+ - Added memory management documentation.
+ - Changed OnlyHash naming option to remove folder structure.  This is a workaround to Windows long-file-path issues.
+ - Made AssetReference interfaces virtual
+ - Fixed hash calculations to avoid collisions
+ - Fixed Addressables sprite tests
+ - Added overload for GetDownloadSizeAsync.  The overload accepts a list of keys and calculates their total download size.
+
 ## [1.1.10] - 2019-08-28
  - Fix for all files showing "Missing File" in the addressables window.
  - Fix for waiting on a successfully done Task
@@ -19,9 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Changed checks for determining if a path is remote or not from looking for "://" to looking for starting with "http".  "://" is still used to determine if the asset should be loaded via UnityWebRequest or not.
  - Added Analyze Rule to show entire Asset Bundle layout
  - Added progress bars and some optimizations for calculating analyze rules
- - Fixed sprite sheet loading syntax LoadAssetAsync<Sprite[]>("sprite").  
-   - Note that this syntax requires an engine fix that is in 2019.3.0a10 and will be backported to 2019.2 and 2018.4.
-
+ 
 ## [1.1.7] - 2019-07-30
  - Fixed chain operation percent complete calculation.   
  - Fixed scenario where deleting assets would also delete groups that have similar names.

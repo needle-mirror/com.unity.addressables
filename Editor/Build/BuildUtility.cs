@@ -42,9 +42,7 @@ namespace UnityEditor.AddressableAssets.Build
                 case BundledAssetGroupSchema.BundleNamingStyle.NoHash:
                     break;
                 case BundledAssetGroupSchema.BundleNamingStyle.OnlyHash:
-                    string fileName = Path.GetFileNameWithoutExtension(sourceBundleName);
-                    if(!string.IsNullOrEmpty(fileName))
-                        result = sourceBundleName.Replace(fileName, hash);
+                    result = hash + ".bundle";
                     break;
             }
 

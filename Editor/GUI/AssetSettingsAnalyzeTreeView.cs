@@ -71,15 +71,15 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             PerformActionForEntireRuleSelection((ruleContainer) =>
             {
-                if (resultData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
-                {
-                    var results = ruleContainer.analyzeRule.RefreshAnalysis(m_AnalyzeSetting.Settings);
-                    resultData.Data[ruleContainer.analyzeRule.ruleName] = results;
+                if (!resultData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
+                    resultData.Data.Add(ruleContainer.analyzeRule.ruleName, new List<AnalyzeRule.AnalyzeResult>());
 
-                    BuildResults(ruleContainer, resultData.Data[ruleContainer.analyzeRule.ruleName]);
-                    Reload();
-                    UpdateSelections(GetSelection());
-                }
+                var results = ruleContainer.analyzeRule.RefreshAnalysis(m_AnalyzeSetting.Settings);
+                resultData.Data[ruleContainer.analyzeRule.ruleName] = results;
+
+                BuildResults(ruleContainer, resultData.Data[ruleContainer.analyzeRule.ruleName]);
+                Reload();
+                UpdateSelections(GetSelection());
             });
         }
 
@@ -87,18 +87,17 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             PerformActionForEntireRuleSelection((ruleContainer) =>
             {
-                if (resultData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
-                {
-                    ruleContainer.analyzeRule.FixIssues(m_AnalyzeSetting.Settings);
+                if (!resultData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
+                    resultData.Data.Add(ruleContainer.analyzeRule.ruleName, new List<AnalyzeRule.AnalyzeResult>());
 
-                    var results = ruleContainer.analyzeRule.RefreshAnalysis(m_AnalyzeSetting.Settings);
-                    resultData.Data[ruleContainer.analyzeRule.ruleName] = results;
+                ruleContainer.analyzeRule.FixIssues(m_AnalyzeSetting.Settings);
 
-                    BuildResults(ruleContainer, resultData.Data[ruleContainer.analyzeRule.ruleName]);
-                    Reload();
-                    UpdateSelections(GetSelection());
-                }
+                var results = ruleContainer.analyzeRule.RefreshAnalysis(m_AnalyzeSetting.Settings);
+                resultData.Data[ruleContainer.analyzeRule.ruleName] = results;
 
+                BuildResults(ruleContainer, resultData.Data[ruleContainer.analyzeRule.ruleName]);
+                Reload();
+                UpdateSelections(GetSelection());
             });
         }
 
@@ -106,14 +105,14 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             PerformActionForEntireRuleSelection((ruleContainer) =>
             {
-                if (resultData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
-                {
-                    ruleContainer.analyzeRule.ClearAnalysis();
-                    resultData.Data[ruleContainer.analyzeRule.ruleName].Clear();
-                    BuildResults(ruleContainer, resultData.Data[ruleContainer.analyzeRule.ruleName]);
-                    Reload();
-                    UpdateSelections(GetSelection());
-                }
+                if (!resultData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
+                    resultData.Data.Add(ruleContainer.analyzeRule.ruleName, new List<AnalyzeRule.AnalyzeResult>());
+
+                ruleContainer.analyzeRule.ClearAnalysis();
+                resultData.Data[ruleContainer.analyzeRule.ruleName].Clear();
+                BuildResults(ruleContainer, resultData.Data[ruleContainer.analyzeRule.ruleName]);
+                Reload();
+                UpdateSelections(GetSelection());
             });
         }
 

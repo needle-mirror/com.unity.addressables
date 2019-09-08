@@ -39,6 +39,7 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         /// </summary>
         public object Data { get { return m_Data; } set { m_Data = value; } }
 
+        /// <inheritdoc/>
         public string PrimaryKey
         {
             get { return m_PrimaryKey; }

@@ -80,7 +80,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 settings = aaSettings,
                 runtimeData = new ResourceManagerRuntimeData(),
                 bundleToAssetGroup = null,
-                locations = new List<ContentCatalogDataEntry>()
+                locations = new List<ContentCatalogDataEntry>(),
+                providerTypes = new HashSet<Type>()
             };
             aaContext.runtimeData.BuildTarget = context.Target.ToString();
             aaContext.runtimeData.LogResourceManagerExceptions = aaSettings.buildSettings.LogResourceManagerExceptions;
@@ -106,7 +107,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 var catalogData = new ContentCatalogData(aaContext.locations);
                 if (m_NeedsLegacyProvider)
                     catalogData.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(typeof(LegacyResourcesProvider)));
+                foreach (var t in aaContext.providerTypes)
+                    catalogData.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(t));
                 catalogData.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData<AssetDatabaseProvider>());
+
                 catalogData.InstanceProviderData = ObjectInitializationData.CreateSerializedInitializationData(instanceProviderType.Value);
                 catalogData.SceneProviderData = ObjectInitializationData.CreateSerializedInitializationData(sceneProviderType.Value);
                 WriteFile(string.Format(PathFormat, "", "catalog"), JsonUtility.ToJson(catalogData), context.Registry);
@@ -123,7 +127,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             return result;
         }
-
+        
         /// <inheritdoc />
         protected override string ProcessGroup(AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
         {
@@ -131,17 +135,17 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             PlayerDataGroupSchema playerSchema = assetGroup.GetSchema<PlayerDataGroupSchema>();
             if (playerSchema != null)
             {
-                m_NeedsLegacyProvider = CreateLocationsForPlayerData(playerSchema, assetGroup, aaContext.locations);
+                m_NeedsLegacyProvider = CreateLocationsForPlayerData(playerSchema, assetGroup, aaContext.locations, aaContext.providerTypes);
                 return errorString;
             }
 
             var allEntries = new List<AddressableAssetEntry>();
             foreach (var a in assetGroup.entries)
-                a.GatherAllAssets(allEntries, true, true);
+                a.GatherAllAssets(allEntries, true, true, false);
 
             var providerType = typeof(AssetDatabaseProvider).FullName;
             foreach (var a in allEntries)
-                a.CreateCatalogEntries(aaContext.locations, false, providerType, null, null);
+                a.CreateCatalogEntries(aaContext.locations, false, typeof(AssetDatabaseProvider).FullName, null, null, aaContext.providerTypes);
 
             return errorString;
         }

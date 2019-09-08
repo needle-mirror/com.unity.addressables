@@ -69,7 +69,8 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 settings = settings,
                 runtimeData = runtimeData,
                 bundleToAssetGroup = m_BundleToAssetGroup,
-                locations = m_Locations
+                locations = m_Locations,
+                providerTypes = new HashSet<Type>()
             };
             return aaContext;
         }
@@ -144,8 +145,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 {
                     var schema = group.GetSchema<BundledAssetGroupSchema>();
                     List<AssetBundleBuild> bundleInputDefinitions = new List<AssetBundleBuild>();
-                    BuildScriptPackedMode.PrepGroupBundlePacking(group, bundleInputDefinitions, m_Locations,
-                        schema.BundleMode);
+                    BuildScriptPackedMode.PrepGroupBundlePacking(group, bundleInputDefinitions, schema.BundleMode);
 
                     for (int i = 0; i < bundleInputDefinitions.Count; i++)
                     {

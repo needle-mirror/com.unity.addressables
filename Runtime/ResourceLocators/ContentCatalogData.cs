@@ -413,6 +413,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             m_ExtraDataString = Convert.ToBase64String(extraDataList.ToArray());
 
             //create extra entries for dependency sets
+            Dictionary<int, object> hashSources = new Dictionary<int, object>();
             int originalEntryCount = data.Count;
             for (int i = 0; i < originalEntryCount; i++)
             {
@@ -420,10 +421,8 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                 if (entry.Dependencies == null || entry.Dependencies.Count < 2)
                     continue;
 
-                //seed and and factor values taken from https://stackoverflow.com/questions/1646807/quick-and-simple-hash-code-combinations
-                int hashCode = 1009;
-                foreach (var dep in entry.Dependencies)
-                    hashCode = hashCode * 9176 + dep.GetHashCode();
+                int hashCode = CalculateCollectedHash(entry.Dependencies, hashSources);
+                
                 bool isNew = false;
                 keys.Add(hashCode, ref isNew);
                 if (isNew)
@@ -488,6 +487,21 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                 m_BucketDataString = Convert.ToBase64String(bucketData);
                 m_KeyDataString = Convert.ToBase64String(keyData.ToArray());
             }
+        }
+
+        internal int CalculateCollectedHash(List<object> objects, Dictionary<int, object> hashSources)
+        {
+            var hashSource = new HashSet<object>(objects);
+            var hashCode = hashSource.GetHashCode();
+            if (hashSources.TryGetValue(hashCode, out var previousHashSource))
+            {
+                if (!hashSource.Equals(previousHashSource))
+                    throw new Exception($"INCORRECT HASH: the same hash ({hashCode}) for different dependency lists:\nsource 1: {previousHashSource}\nsource 2: {hashSource}");
+            }
+            else
+                hashSources.Add(hashCode, hashSource);
+
+            return hashCode;
         }
 
 

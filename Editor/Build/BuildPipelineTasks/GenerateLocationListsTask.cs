@@ -93,7 +93,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 bundles.Add(kvp.Key);
                 HashSet<string> bundleDeps = null;
                 dependencySetForBundle.TryGetValue(kvp.Key, out bundleDeps);
-                CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetBundleProviderName(assetGroup), GetAssetProviderName(assetGroup), kvp.Value, bundleDeps, locations);
+                CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetBundleProviderName(assetGroup), GetAssetProviderName(assetGroup), kvp.Value, bundleDeps, locations, aaContext.providerTypes);
             }
 
             return ReturnCode.Success;
@@ -131,12 +131,13 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         string assetProvider,
         List<GUID> assetsInBundle,
         HashSet<string> bundleDependencies,
-        List<ContentCatalogDataEntry> locations)
+        List<ContentCatalogDataEntry> locations,
+        HashSet<Type> providerTypes)
         {
             locations.Add(new ContentCatalogDataEntry(typeof(IAssetBundleResource), bundleInternalId, bundleProvider, new object[] { bundleName }));
 
             var assets = new List<AddressableAssetEntry>();
-            assetGroup.GatherAllAssets(assets, true, true);
+            assetGroup.GatherAllAssets(assets, true, true, false);
             var guidToEntry = new Dictionary<string, AddressableAssetEntry>();
             foreach (var a in assets)
                 guidToEntry.Add(a.guid, a);
@@ -145,7 +146,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 AddressableAssetEntry entry;
                 if (!guidToEntry.TryGetValue(a.ToString(), out entry))
                     continue;
-                entry.CreateCatalogEntries(locations, true, assetProvider, bundleDependencies, null);
+                entry.CreateCatalogEntries(locations, true, assetProvider, bundleDependencies, null, providerTypes);
             }
         }
     }

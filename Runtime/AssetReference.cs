@@ -8,6 +8,7 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.Serialization;
+using UnityEngine.U2D;
 
 namespace UnityEngine.AddressableAssets
 {
@@ -15,7 +16,7 @@ namespace UnityEngine.AddressableAssets
     /// Generic version of AssetReference class.  This should not be used directly as CustomPropertyDrawers do not support generic types.  Instead use the concrete derived classes such as AssetReferenceGameObject.
     /// </summary>
     /// <typeparam name="TObject"></typeparam>
-    public class AssetReferenceT<TObject> : AssetReference
+    public class AssetReferenceT<TObject> : AssetReference where TObject : Object
     {
 
         /// <summary>
@@ -41,7 +42,7 @@ namespace UnityEngine.AddressableAssets
         /// Load the referenced asset as type TObject.
         /// </summary>
         /// <returns>The load operation.</returns>
-        public AsyncOperationHandle<TObject> LoadAssetAsync()
+        public virtual AsyncOperationHandle<TObject> LoadAssetAsync()
         {
             return LoadAssetAsync<TObject>();
         }
@@ -63,6 +64,14 @@ namespace UnityEngine.AddressableAssets
             return false;
 #endif
         }
+                
+#if UNITY_EDITOR
+        /// <summary>
+        /// Type-specific override of parent editorAsset.  Used by the editor to represent the asset referenced.
+        /// </summary>
+        public new TObject editorAsset => (TObject)base.editorAsset;
+#endif
+
         
     }
 
@@ -111,6 +120,9 @@ namespace UnityEngine.AddressableAssets
         public override bool ValidateAsset(string path)
         {
 #if UNITY_EDITOR
+            if (AssetDatabase.GetMainAssetTypeAtPath(path) == typeof(SpriteAtlas))
+                return true;
+
             var type = AssetDatabase.GetMainAssetTypeAtPath(path);
             bool isTexture = typeof(Texture2D).IsAssignableFrom(type);
             if (isTexture)
@@ -120,6 +132,24 @@ namespace UnityEngine.AddressableAssets
             }
 #endif
             return false;
+        }
+    }
+    /// <summary>
+    /// Assetreference that only allows atlassed sprites.
+    /// </summary>
+    [Serializable]
+    public class AssetReferenceAtlasedSprite : AssetReferenceT<Sprite>
+    {
+        public AssetReferenceAtlasedSprite(string guid) : base(guid) { }
+
+        /// <inheritdoc/>
+        public override bool ValidateAsset(string path)
+        {
+#if UNITY_EDITOR
+            return AssetDatabase.GetMainAssetTypeAtPath(path) == typeof(SpriteAtlas);
+#else
+            return false;
+#endif
         }
     }
 
@@ -133,19 +163,27 @@ namespace UnityEngine.AddressableAssets
         [FormerlySerializedAs("m_assetGUID")]
         [SerializeField]
         string m_AssetGUID = "";
+        [SerializeField]
+        string m_SubObjectName;
+
         AsyncOperationHandle m_Operation;
         /// <summary>
         /// The actual key used to request the asset at runtime. RuntimeKeyIsValid() can be used to determine if this reference was set.
         /// </summary>
-        public object RuntimeKey
+        public virtual object RuntimeKey
         {
             get
             {
                 if (m_AssetGUID == null)
                     m_AssetGUID = string.Empty;
+                if (!string.IsNullOrEmpty(m_SubObjectName))
+                    return string.Format("{0}[{1}]", m_AssetGUID, m_SubObjectName);
                 return m_AssetGUID;
             }
         }
+
+        public virtual string AssetGUID { get { return m_AssetGUID; } }
+        public virtual string SubObjectName { get { return m_SubObjectName; } set { m_SubObjectName = value; } }
 
         /// <summary>
         /// Construct a new AssetReference object.
@@ -166,7 +204,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// The loaded asset.  This value is only set after the AsyncOperationHandle returned from LoadAssetAsync completes.  It will not be set if only InstantiateAsync is called.  It will be set to null if release is called.
         /// </summary>
-        public Object Asset
+        public virtual Object Asset
         {
             get
             {
@@ -248,7 +286,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <typeparam name="TObject">The object type.</typeparam>
         /// <returns>The load operation.</returns>
-        public AsyncOperationHandle<TObject> LoadAssetAsync<TObject>()
+        public virtual AsyncOperationHandle<TObject> LoadAssetAsync<TObject>()
         {
             AsyncOperationHandle<TObject> result = Addressables.LoadAssetAsync<TObject>(RuntimeKey);
             m_Operation = result;
@@ -259,7 +297,7 @@ namespace UnityEngine.AddressableAssets
         /// Loads the reference as a scene.
         /// </summary>
         /// <returns>The operation handle for the scene load.</returns>
-        public AsyncOperationHandle<SceneInstance> LoadSceneAsync()
+        public virtual AsyncOperationHandle<SceneInstance> LoadSceneAsync()
         {
             var result = Addressables.LoadSceneAsync(RuntimeKey);
             m_Operation = result;
@@ -272,7 +310,7 @@ namespace UnityEngine.AddressableAssets
         /// <param name="rotation">Rotation of the instantiated object.</param>
         /// <param name="parent">The parent of the instantiated object.</param>
         /// <returns></returns>
-        public AsyncOperationHandle<GameObject> InstantiateAsync(Vector3 position, Quaternion rotation, Transform parent = null)
+        public virtual AsyncOperationHandle<GameObject> InstantiateAsync(Vector3 position, Quaternion rotation, Transform parent = null)
         {
             return Addressables.InstantiateAsync(RuntimeKey, position, rotation, parent, true);
         }
@@ -284,13 +322,13 @@ namespace UnityEngine.AddressableAssets
         /// <param name="parent">The parent of the instantiated object.</param>
         /// <param name="instantiateInWorldSpace">Option to retain world space when instantiated with a parent.</param>
         /// <returns></returns>
-        public AsyncOperationHandle<GameObject> InstantiateAsync(Transform parent = null, bool instantiateInWorldSpace = false)
+        public virtual AsyncOperationHandle<GameObject> InstantiateAsync(Transform parent = null, bool instantiateInWorldSpace = false)
         {
             return Addressables.InstantiateAsync(RuntimeKey, parent, instantiateInWorldSpace, true);
         }
 
         /// <inheritdoc/>
-        public bool RuntimeKeyIsValid()
+        public virtual bool RuntimeKeyIsValid()
         {
             Guid result;
             return Guid.TryParse(RuntimeKey.ToString(), out result);
@@ -299,7 +337,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Release the internal operation handle.
         /// </summary>
-        public void ReleaseAsset()
+        public virtual void ReleaseAsset()
         {
             if (!m_Operation.IsValid())
             {
@@ -315,7 +353,7 @@ namespace UnityEngine.AddressableAssets
         /// Release an instantiated object.
         /// </summary>
         /// <param name="obj">The object to release.</param>
-        public void ReleaseInstance(GameObject obj)
+        public virtual void ReleaseInstance(GameObject obj)
         {
             Addressables.ReleaseInstance(obj);
         }
@@ -345,7 +383,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Used by the editor to represent the asset referenced.
         /// </summary>
-        public Object editorAsset
+        public virtual Object editorAsset
         {
             get
             {
@@ -361,12 +399,13 @@ namespace UnityEngine.AddressableAssets
         ///   and the internal asset GUID, which drives the RuntimeKey attribute.
         /// <param name="value">Object to reference</param>
         /// </summary>
-        public bool SetEditorAsset(Object value)
+        public virtual bool SetEditorAsset(Object value)
         {
             if(value == null)
             {
                 m_CachedAsset = null;
                 m_AssetGUID = string.Empty;
+                m_SubObjectName = null;
                 return true;
             }
 
@@ -386,11 +425,55 @@ namespace UnityEngine.AddressableAssets
                 else
                 {
                     m_AssetGUID = AssetDatabase.AssetPathToGUID(path);
-                    m_CachedAsset = value;
+                    var mainAsset = AssetDatabase.LoadMainAssetAtPath(path);
+                    m_CachedAsset = mainAsset;
+                    if (value != mainAsset)
+                        SetEditorSubObject(value);
                 }
             }
             
             return true;
+        }
+
+        /// <summary>
+        /// Sets the sub object for this asset reference.
+        /// </summary>
+        /// <param name="value">The sub object.</param>
+        /// <returns>True if set correctly.</returns>
+        public virtual bool SetEditorSubObject(Object value)
+        {
+            if (value == null)
+            {
+                m_SubObjectName = null;
+                return true;
+            }
+
+            if (editorAsset == null)
+                return false;
+            if (editorAsset.GetType() == typeof(SpriteAtlas))
+            {
+                var spriteName = value.name;
+                if (spriteName.EndsWith("(Clone)"))
+                    spriteName = spriteName.Replace("(Clone)", "");
+                if ((editorAsset as SpriteAtlas).GetSprite(spriteName) == null)
+                {
+                    Debug.LogWarningFormat("Unable to find sprite {0} in atlas {1}.", spriteName, editorAsset.name);
+                    return false;
+                }
+                m_SubObjectName = spriteName;
+                return true;
+            }
+
+            var subAssets = AssetDatabase.LoadAllAssetRepresentationsAtPath(AssetDatabase.GUIDToAssetPath(m_AssetGUID));
+            foreach (var s in subAssets)
+            {
+                if (s.name == value.name)
+                {
+                    m_SubObjectName = value.name;
+                    return true;
+                }
+            }
+            return false;
         }
 #endif
     }

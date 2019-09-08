@@ -37,13 +37,13 @@ The HTTP Hosting Service is now enabled and ready to serve content from the dire
 ### Profile setup
 When working with Hosting Services during development, Unity recommends creating a profile that configures all asset groups to load content from the Hosting Service using a directory or directories created specifically for that purpose.
 
-In the **Addressables window** menu (**Window** > **Asset Management** > **Addressable Assets**), select **Profiles** > **Inspect Profile Settings**. You can also access these settings via the `AddressableAssetSettings` Inspector.
+In the **Addressables window** menu (**Window** > **Asset Management** > **Addressables**), select **Profiles** > **Inspect Profile Settings**. You can also access these settings via the `AddressableAssetSettings` Inspector.
 
 Next, create a new profile. In the following example, the new profile is called "Editor Hosted".
 
 ![Creating a service profile.](images/HostingServicesProfiles_1.png)
 
-Modify the loading path fields to instead load from the Hosting Service. `HttpHostingService` is a URL that uses the local IP address and the port assigned to the service. From the **Hosting window**, you can use the profile variables named `PrivateIpAddress` and `HostingServicePort` to construct the url (for example, `http://[PrivateIpAddress]:[HostingServicePort]`).
+Modify the loading path fields to instead load from the Hosting Service. `HttpHostingService` is a URL that uses the local IP address and the port assigned to the service. From the **Hosting window**, you can use the profile variables named `PrivateIpAddress` and `HostingServicePort` to construct the URL (for example, `http://[PrivateIpAddress]:[HostingServicePort]`).
 
 Additionally, you should modify all build path variables to point to a common directory outside of the Project's _Assets_ folder.
 
@@ -84,6 +84,6 @@ To create a new custom service:
 2. Select **Custom**, then drag and drop the applicable script into the field, or select it from the object picker. The dialog validates that the selected script implements the `IHostingService` interface. 
 3. To finish adding the service, click the **Add** button. 
 
-Moving forward, your custom service will appear in the **Service Type** drop-down options.
+Moving forward, your custom service will appear in the **Service Type** dropdown options.
 
 ![Adding a custom Asset Hosting Service.](images/HostingServicesAddService_2.png)

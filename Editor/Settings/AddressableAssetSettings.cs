@@ -804,13 +804,14 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Gets all asset entries from all groups.
         /// </summary>
         /// <param name="assets">The list of asset entries.</param>
+        /// <param name="includeSubObjects">Determines if sub objects such as sprites should be included.</param>
         /// <param name="groupFilter">A method to filter groups.  Groups will be processed if filter is null, or it returns TRUE</param>
         /// <param name="entryFilter">A method to filter entries.  Entries will be processed if filter is null, or it returns TRUE</param>
-        public void GetAllAssets(List<AddressableAssetEntry> assets, Func<AddressableAssetGroup, bool> groupFilter = null, Func<AddressableAssetEntry, bool> entryFilter = null)
+        public void GetAllAssets(List<AddressableAssetEntry> assets, bool includeSubObjects, Func<AddressableAssetGroup, bool> groupFilter = null, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
             foreach (var g in groups)
                 if (groupFilter == null || groupFilter(g))
-                    g.GatherAllAssets(assets, true, true, entryFilter);
+                    g.GatherAllAssets(assets, true, true, includeSubObjects, entryFilter);
         }
 
         /// <summary>
@@ -1287,12 +1288,15 @@ namespace UnityEditor.AddressableAssets.Settings
             else //create entry
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
+
                 if (AddressableAssetUtility.IsPathValidForEntry(path))
                 {
                     entry = CreateEntry(guid, path, targetParent, readOnly, postEvent);
                 }
                 else
                 {
+                    if (AssetDatabase.GetMainAssetTypeAtPath(path) != null && BuildUtility.IsEditorAssembly(AssetDatabase.GetMainAssetTypeAtPath(path).Assembly))
+                        return null;
                     entry = CreateEntry(guid, guid, targetParent, true, postEvent);
                 }
 
@@ -1312,6 +1316,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 entry = CreateEntry(guid, address, parentEntry.parentGroup, true);
                 entry.IsSubAsset = true;
+                entry.ParentEntry = parentEntry;
                 return entry;
             }
 
@@ -1586,6 +1591,12 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 Debug.LogError("Addressable Asset Settings does not exist.");
                 return;
+            }
+
+            foreach (AddressableAssetGroup group in settings.groups)
+            {
+                foreach (AddressableAssetEntry entry in group.entries)
+                    entry.BundleFileId = null;
             }
             settings.BuildPlayerContentImpl();
         }

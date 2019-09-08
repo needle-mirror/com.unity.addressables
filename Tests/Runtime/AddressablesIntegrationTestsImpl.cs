@@ -15,6 +15,7 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using UnityEngine.U2D;
 
@@ -77,7 +78,7 @@ namespace AddressableAssetsIntegrationTests
             //Cleanup
             handle.Release();
         }
-
+/*
 #if UNITY_2019_3_OR_NEWER
         [UnityTest]
         public IEnumerator CanLoadTextureAsSprite()
@@ -98,14 +99,14 @@ namespace AddressableAssetsIntegrationTests
             //Setup
             yield return Init();
 
-            var op = m_Addressables.LoadAssetAsync<Sprite>("sprite.botright");
+            var op = m_Addressables.LoadAssetAsync<Sprite>("sprite[botright]");
             yield return op;
             Assert.IsNotNull(op.Result);
             Assert.AreEqual(typeof(Sprite), op.Result.GetType());
             Assert.AreEqual("botright", op.Result.name);
             op.Release();
 
-            var op2 = m_Addressables.LoadAssetAsync<Sprite>("sprite.topleft");
+            var op2 = m_Addressables.LoadAssetAsync<Sprite>("sprite[topleft]");
             yield return op2;
             Assert.IsNotNull(op2.Result);
             Assert.AreEqual(typeof(Sprite), op2.Result.GetType());
@@ -155,7 +156,7 @@ namespace AddressableAssetsIntegrationTests
             op.Release();
         }
 #endif
-
+*/
         [UnityTest]
         public IEnumerator LoadAsset_ValidKeyDoesNotThrow()
         {
@@ -273,9 +274,151 @@ namespace AddressableAssetsIntegrationTests
             yield return dOp;
             Assert.IsTrue((bundleSize1 + bundleSize2) >  dOp.Result);
             Assert.AreEqual(expectedSize, dOp.Result);
-            dOp.Release();
 
+            dOp.Release();
+            m_Addressables.ResourceLocators.Remove(locMap);
             Directory.Delete(fakeCachePath, true);
+#else
+            Assert.Ignore();
+            yield break;
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSize_WithList_CalculatesCachedBundles()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+            long expectedSize = 0;
+            long bundleSize1 = 1000;
+            long bundleSize2 = 500;
+            var locMap = new ResourceLocationMap();
+
+            Assert.IsTrue(Caching.ClearCache(), "Was unable to clear the cache.  Test results are affected");
+            //Simulating a cached bundle
+            string fakeCachePath = CreateFakeCachedBundle("GetDownloadSize_WithList_CalculatesCachedBundlesBundle1", "0e38e35d2177c282d5d6a2e54a803aab");
+
+            var bundleLoc1 = new ResourceLocationBase("sizeTestBundle1", "http://nowhere.com/GetDownloadSize_WithList_CalculatesCachedBundlesBundle1.bundle",
+                typeof(AssetBundleProvider).FullName, typeof(object));
+            var sizeData1 =
+                (bundleLoc1.Data = CreateLocationSizeData("cachedSizeTestBundle1", bundleSize1, 123,
+                    "0e38e35d2177c282d5d6a2e54a803aab")) as ILocationSizeData;
+            if (sizeData1 != null)
+                expectedSize += sizeData1.ComputeSize(bundleLoc1);
+
+            var bundleLoc2 = new ResourceLocationBase("cachedSizeTestBundle2", "http://nowhere.com/GetDownloadSize_WithList_CalculatesCachedBundlesBundle2.bundle",
+                typeof(AssetBundleProvider).FullName, typeof(object));
+            var sizeData2 =
+                (bundleLoc2.Data = CreateLocationSizeData("cachedSizeTestBundle2", bundleSize2, 123,
+                    "09fe965a6b253fb9dbd3e1cb08b7d66f")) as ILocationSizeData;
+            if (sizeData2 != null)
+                expectedSize += sizeData2.ComputeSize(bundleLoc2);
+
+            var assetLoc = new ResourceLocationBase("cachedSizeTestAsset", "myASset.asset",
+                typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1, bundleLoc2);
+
+            locMap.Add("cachedSizeTestBundle1", bundleLoc1);
+            locMap.Add("cachedSizeTestBundle2", bundleLoc2);
+            locMap.Add("cachedSizeTestAsset", assetLoc);
+            m_Addressables.ResourceLocators.Add(locMap);
+
+            var dOp = m_Addressables.GetDownloadSizeAsync(new List<object>()
+                {
+                    "cachedSizeTestAsset",
+                    bundleLoc1,
+                    bundleLoc2
+                }
+            );
+            yield return dOp;
+            Assert.IsTrue((bundleSize1 + bundleSize2) > dOp.Result);
+            Assert.AreEqual(expectedSize, dOp.Result);
+
+            dOp.Release();
+            m_Addressables.ResourceLocators.Remove(locMap);
+            Directory.Delete(fakeCachePath, true);
+#else
+            Assert.Ignore();
+            yield break;
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSize_WithList_CalculatesCorrectSize_WhenAssetsReferenceSameBundle()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+            long bundleSize1 = 1000;
+            long expectedSize = 0;
+
+            var bundleLoc1 = new ResourceLocationBase("sizeTestBundle1", "http://nowhere.com/GetDownloadSize_WithList_CalculatesCachedBundlesBundle1.bundle",
+                typeof(AssetBundleProvider).FullName, typeof(object));
+            var sizeData1 =
+                (bundleLoc1.Data = CreateLocationSizeData("cachedSizeTestBundle1", bundleSize1, 123,
+                    "0e38e35d2177c282d5d6a2e54a803aab")) as ILocationSizeData;
+            if (sizeData1 != null)
+                expectedSize += sizeData1.ComputeSize(bundleLoc1);
+
+            var assetLoc1 = new ResourceLocationBase("cachedSizeTestAsset1", "myAsset1.asset",
+                typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1);
+
+            var assetLoc2 = new ResourceLocationBase("cachedSizeTestAsset2", "myAsset2.asset",
+                typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1);
+
+            var dOp = m_Addressables.GetDownloadSizeAsync(new List<object>()
+                {
+                    assetLoc1,
+                    assetLoc2
+                }
+            );
+            yield return dOp;
+            Assert.IsTrue(bundleSize1 >= dOp.Result);
+            Assert.AreEqual(expectedSize, dOp.Result);
+#else
+            Assert.Ignore();
+            yield break;
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSize_WithList_CalculatesCorrectSize_WhenAssetsReferenceDifferentBundle()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+            long bundleSize1 = 1000;
+            long bundleSize2 = 250;
+            long expectedSize = 0;
+
+            var bundleLoc1 = new ResourceLocationBase("sizeTestBundle1", "http://nowhere.com/GetDownloadSize_WithList_CalculatesCachedBundlesBundle1.bundle",
+                typeof(AssetBundleProvider).FullName, typeof(object));
+            var sizeData1 =
+                (bundleLoc1.Data = CreateLocationSizeData("cachedSizeTestBundle1", bundleSize1, 123,
+                    "0e38e35d2177c282d5d6a2e54a803aab")) as ILocationSizeData;
+            if (sizeData1 != null)
+                expectedSize += sizeData1.ComputeSize(bundleLoc1);
+
+            var bundleLoc2 = new ResourceLocationBase("cachedSizeTestBundle2", "http://nowhere.com/GetDownloadSize_WithList_CalculatesCachedBundlesBundle2.bundle",
+                typeof(AssetBundleProvider).FullName, typeof(object));
+            var sizeData2 =
+                (bundleLoc2.Data = CreateLocationSizeData("cachedSizeTestBundle2", bundleSize2, 123,
+                    "09fe965a6b253fb9dbd3e1cb08b7d66f")) as ILocationSizeData;
+            if (sizeData2 != null)
+                expectedSize += sizeData2.ComputeSize(bundleLoc2);
+
+            var assetLoc1 = new ResourceLocationBase("cachedSizeTestAsset1", "myAsset1.asset",
+                typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1);
+
+            var assetLoc2 = new ResourceLocationBase("cachedSizeTestAsset2", "myAsset2.asset",
+                typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc2);
+
+            var dOp = m_Addressables.GetDownloadSizeAsync(new List<object>()
+                {
+                    assetLoc1,
+                    assetLoc2
+                }
+            );
+            yield return dOp;
+            Assert.IsTrue((bundleSize1 + bundleSize2) >= dOp.Result);
+            Assert.AreEqual(expectedSize, dOp.Result);
 #else
             Assert.Ignore();
             yield break;
@@ -598,6 +741,36 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator DownloadDependnecies_AutoReleaseHandle_ReleasesOnCompletion()
+        {
+            yield return Init();
+            string label = AddressablesTestUtility.GetPrefabLabel("BASE");
+            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(label, true);
+            yield return op;
+            Assert.IsFalse(op.IsValid());
+        }
+
+        [UnityTest]
+        public IEnumerator DownloadDependneciesWithAddress_AutoReleaseHandle_ReleasesOnCompletion()
+        {
+            yield return Init();
+            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(m_PrefabKeysList[0], true);
+            yield return op;
+            Assert.IsFalse(op.IsValid());
+        }
+
+        [UnityTest]
+        public IEnumerator DownloadDependnecies_DoesNotRetainLoadedBundles_WithAutoRelease()
+        {
+            yield return Init();
+            int bundleCountBefore = AssetBundle.GetAllLoadedAssetBundles().Count();
+            string label = AddressablesTestUtility.GetPrefabLabel("BASE");
+            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(label, true);
+            yield return op;
+            Assert.AreEqual(bundleCountBefore, AssetBundle.GetAllLoadedAssetBundles().Count());
+        }
+
+        [UnityTest]
         public IEnumerator StressInstantiation()
         {
             yield return Init();
@@ -648,6 +821,23 @@ namespace AddressableAssetsIntegrationTests
             yield return null;
             Assert.IsNull(GameObject.Find(name));
 
+            handle.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator CanloadAssetReferenceSubObject()
+        {
+            yield return Init();
+
+            var handle = m_Addressables.InstantiateAsync(AssetReferenceObjectKey);
+            yield return handle;
+            Assert.IsNotNull(handle.Result);
+            AssetReferenceTestBehavior behavior = handle.Result.GetComponent<AssetReferenceTestBehavior>();
+
+            AsyncOperationHandle<Object> assetRefHandle = m_Addressables.LoadAssetAsync<Object>(behavior.ReferenceWithSubObject);
+            yield return assetRefHandle;
+            Assert.IsNotNull(assetRefHandle.Result);
+            m_Addressables.Release(assetRefHandle);
             handle.Release();
         }
 

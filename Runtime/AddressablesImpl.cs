@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -532,53 +533,77 @@ namespace UnityEngine.AddressableAssets
         {
             return ResourceManager.CreateChainOperation(InitializationOperation, op => GetDownloadSizeAsync(key));
         }
+
+        AsyncOperationHandle<long> GetDownloadSizeWithChain(IList<object> keys)
+        {
+            return ResourceManager.CreateChainOperation(InitializationOperation, op => GetDownloadSizeAsync(keys));
+        }
+
         public AsyncOperationHandle<long> GetDownloadSizeAsync(object key)
         {
+            return GetDownloadSizeAsync(new List<object> {key});
+        }
+
+        public AsyncOperationHandle<long> GetDownloadSizeAsync(IList<object> keys)
+        {
             if (!InitializationOperation.IsDone)
-                return GetDownloadSizeWithChain(key);
+                return GetDownloadSizeWithChain(keys);
 
-            IList<IResourceLocation> locations;
-            if (typeof(IList<IResourceLocation>).IsAssignableFrom(key.GetType()))
-                locations = key as IList<IResourceLocation>;
-            else if (typeof(IResourceLocation).IsAssignableFrom(key.GetType()))
+            List<IResourceLocation> allLocations = new List<IResourceLocation>();
+            foreach (object key in keys)
             {
-                locations = new List<IResourceLocation>(1);
-                locations.Add(key as IResourceLocation);
-            }
-            else
-            {
-                if (!GetResourceLocations(key, typeof(object), out locations))
-                    return ResourceManager.CreateCompletedOperation<long>(0, new InvalidKeyException(key).Message);
-            }
-
-            var locHash = new HashSet<IResourceLocation>();
-            foreach (var loc in locations)
-            {
-                if (loc.HasDependencies)
+                IList<IResourceLocation> locations;
+                if (key is IList<IResourceLocation>)
+                    locations = key as IList<IResourceLocation>;
+                else if (key is IResourceLocation)
                 {
-                    foreach (var dep in loc.Dependencies)
-                        locHash.Add(dep);
+                    locations = new List<IResourceLocation>(1)
+                    {
+                        key as IResourceLocation
+                    };
+                }
+                else if (!GetResourceLocations(key, typeof(object), out locations))
+                    return ResourceManager.CreateCompletedOperation<long>(0, new InvalidKeyException(key).Message);
+
+                foreach (var loc in locations)
+                {
+                    if(loc.HasDependencies)
+                        allLocations.AddRange(loc.Dependencies);
                 }
             }
 
             long size = 0;
-            foreach (var d in locHash)
+            foreach (IResourceLocation location in allLocations.Distinct())
             {
-                var sizeData = d.Data as ILocationSizeData;
+                var sizeData = location.Data as ILocationSizeData;
                 if (sizeData != null)
-                    size += sizeData.ComputeSize(d);
+                    size += sizeData.ComputeSize(location);
             }
+
             return ResourceManager.CreateCompletedOperation<long>(size, string.Empty);
         }
 
-        public AsyncOperationHandle DownloadDependenciesAsync(object key)
+        public AsyncOperationHandle DownloadDependenciesAsync(object key, bool autoReleaseHandle = false)
         {
+            AsyncOperationHandle handle;
+
             if (!InitializationOperation.IsDone)
-                return ResourceManager.CreateChainOperation<IList<IAssetBundleResource>>(InitializationOperation, op => DownloadDependenciesAsync(key).Convert<IList<IAssetBundleResource>>());
+            { 
+                handle = ResourceManager.CreateChainOperation<IList<IAssetBundleResource>>(InitializationOperation, op => DownloadDependenciesAsync(key).Convert<IList<IAssetBundleResource>>());
+                if (autoReleaseHandle)
+                    handle.Completed += op => Release(op);
+                return handle;
+            }
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, typeof(object), out locations))
-                return ResourceManager.CreateCompletedOperation<IList<IAssetBundleResource>>(null, new InvalidKeyException(key).Message);
+            {
+                handle = ResourceManager.CreateCompletedOperation<IList<IAssetBundleResource>>(null,
+                    new InvalidKeyException(key).Message);
+                if (autoReleaseHandle)
+                    handle.Completed += op => Release(op);
+                return handle;
+            }
 
 
             var locHash = new HashSet<IResourceLocation>();
@@ -590,14 +615,25 @@ namespace UnityEngine.AddressableAssets
                         locHash.Add(dep);
                 }
             }
-            return LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null);
+            handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null);
+
+            if (autoReleaseHandle)
+                handle.Completed += op => Release(op);
+            return handle;
         }
         
 
-        public AsyncOperationHandle DownloadDependenciesAsync(IList<IResourceLocation> locations)
+        public AsyncOperationHandle DownloadDependenciesAsync(IList<IResourceLocation> locations, bool autoReleaseHandle = false)
         {
+            AsyncOperationHandle handle;
             if (!InitializationOperation.IsDone)
-                return ResourceManager.CreateChainOperation<IList<IAssetBundleResource>>(InitializationOperation, op => DownloadDependenciesAsync(locations).Convert<IList<IAssetBundleResource>>());
+            {
+                handle = ResourceManager.CreateChainOperation<IList<IAssetBundleResource>>(InitializationOperation,
+                    op => DownloadDependenciesAsync(locations).Convert<IList<IAssetBundleResource>>());
+                if (autoReleaseHandle)
+                    handle.Completed += op => Release(op);
+                return handle;
+            }
 
             var locHash = new HashSet<IResourceLocation>();
             foreach (var loc in locations)
@@ -608,18 +644,35 @@ namespace UnityEngine.AddressableAssets
                         locHash.Add(dep);
                 }
             }
-            return LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null);
+            handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null);
+            if (autoReleaseHandle)
+                handle.Completed += op => Release(op);
+            return handle;
         }
         
 
-        public AsyncOperationHandle DownloadDependenciesAsync(IList<object> keys, Addressables.MergeMode mode)
+        public AsyncOperationHandle DownloadDependenciesAsync(IList<object> keys, Addressables.MergeMode mode, bool autoReleaseHandle = false)
         {
+            AsyncOperationHandle handle;
+
             if (!InitializationOperation.IsDone)
-                return ResourceManager.CreateChainOperation<IList<IAssetBundleResource>>(InitializationOperation, op => DownloadDependenciesAsync(keys, mode).Convert<IList<IAssetBundleResource>>());
+            {
+                handle = ResourceManager.CreateChainOperation<IList<IAssetBundleResource>>(InitializationOperation,
+                    op => DownloadDependenciesAsync(keys, mode).Convert<IList<IAssetBundleResource>>());
+                if (autoReleaseHandle)
+                    handle.Completed += op => Release(op);
+                return handle;
+            }
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(keys, typeof(object), mode, out locations))
-                return ResourceManager.CreateCompletedOperation<IList<IAssetBundleResource>>(null, new InvalidKeyException(keys).Message);
+            {
+                handle = ResourceManager.CreateCompletedOperation<IList<IAssetBundleResource>>(null,
+                    new InvalidKeyException(keys).Message);
+                if (autoReleaseHandle)
+                    handle.Completed += op => Release(op);
+                return handle;
+            }
 
 
             var locHash = new HashSet<IResourceLocation>();
@@ -631,7 +684,10 @@ namespace UnityEngine.AddressableAssets
                         locHash.Add(dep);
                 }
             }
-            return LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null);
+            handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null);
+            if (autoReleaseHandle)
+                handle.Completed += op => Release(op);
+            return handle;
         }
 
         public  AsyncOperationHandle<GameObject> InstantiateAsync(IResourceLocation location, Transform parent = null, bool instantiateInWorldSpace = false, bool trackHandle = true)

@@ -55,9 +55,13 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 {
                     var assetPath = m_ProvideHandle.Location.InternalId;
                     if (m_ProvideHandle.Type.IsArray)
+                    {
                         m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetElementType());
+                    }
                     else if (m_ProvideHandle.Type.IsGenericType && typeof(IList<>) == m_ProvideHandle.Type.GetGenericTypeDefinition())
+                    {
                         m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetGenericArguments()[0]);
+                    }
                     else
                     {
                         var i = assetPath.LastIndexOf('[');

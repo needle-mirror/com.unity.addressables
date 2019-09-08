@@ -427,12 +427,13 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="results">The generated list of entries.  For simple entries, this will contain just the entry itself if specified.</param>
         /// <param name="includeSelf">Determines if the entry should be contained in the result list or just sub entries.</param>
         /// <param name="recurseAll">Determines if full recursion should be done when gathering entries.</param>
+        /// <param name="includeSubObjects">Determines if sub objects such as sprites should be included.</param>
         /// <param name="entryFilter">Optional predicate to run against each entry, only returning those that pass.  A null filter will return all entries</param>
-        public virtual void GatherAllAssets(List<AddressableAssetEntry> results, bool includeSelf, bool recurseAll, Func<AddressableAssetEntry, bool> entryFilter = null)
+        public virtual void GatherAllAssets(List<AddressableAssetEntry> results, bool includeSelf, bool recurseAll, bool includeSubObjects, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
             foreach (var e in entries)
                 if(entryFilter == null || entryFilter(e))
-                    e.GatherAllAssets(results, includeSelf, recurseAll, entryFilter);
+                    e.GatherAllAssets(results, includeSelf, recurseAll, includeSubObjects, entryFilter);
         }
 
         internal void AddAssetEntry(AddressableAssetEntry e, bool postEvent = true)

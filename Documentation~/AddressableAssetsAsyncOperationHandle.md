@@ -62,7 +62,7 @@ Addressables also supports asynchronous `await` through the `AsyncOperationHandl
 public async Start() {
     AsyncOperationHandle<Texture2D> handle = Addressables.LoadAssetAsync<Texture2D>("mytexture");
     await handle.Task;
-    // The task is complete. Be sure to check the Status is succeessful before storing the Result.
+    // The task is complete. Be sure to check the Status is successful before storing the Result.
 }
 ```
 

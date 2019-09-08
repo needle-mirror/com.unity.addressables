@@ -90,7 +90,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 settings = aaSettings,
                 runtimeData = new ResourceManagerRuntimeData(),
                 bundleToAssetGroup = new Dictionary<string, string>(),
-                locations = new List<ContentCatalogDataEntry>()
+                locations = new List<ContentCatalogDataEntry>(),
+                providerTypes = new HashSet<Type>()
             };
             m_AllBundleInputDefinitions = new List<AssetBundleBuild>();
             aaContext.runtimeData.BuildTarget = builderInput.Target.ToString();
@@ -231,6 +232,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             var contentCatalog = new ContentCatalogData(aaContext.locations);
             contentCatalog.ResourceProviderData.AddRange(m_ResourceProviderData);
+            foreach (var t in aaContext.providerTypes)
+                contentCatalog.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(t));
+
             contentCatalog.InstanceProviderData = ObjectInitializationData.CreateSerializedInitializationData(instanceProviderType.Value);
             contentCatalog.SceneProviderData = ObjectInitializationData.CreateSerializedInitializationData(sceneProviderType.Value);
             //save catalog
@@ -261,7 +265,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             PlayerDataGroupSchema playerSchema = assetGroup.GetSchema<PlayerDataGroupSchema>();
             if (playerSchema != null)
             {
-                if (CreateLocationsForPlayerData(playerSchema, assetGroup, aaContext.locations))
+                if (CreateLocationsForPlayerData(playerSchema, assetGroup, aaContext.locations, aaContext.providerTypes))
                 {
                     if (!m_CreatedProviderIds.ContainsKey(typeof(LegacyResourcesProvider).Name))
                     {
@@ -296,7 +300,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             
             
             var bundleInputDefs = new List<AssetBundleBuild>();
-            PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema.BundleMode);
+            BuildScriptPackedMode.PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema.BundleMode);
             for (int i = 0; i < bundleInputDefs.Count; i++)
             {
                 if (aaContext.bundleToAssetGroup.ContainsKey(bundleInputDefs[i].assetBundleName))
@@ -330,55 +334,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             if (!File.Exists(path))
                 return 1024;
             return new FileInfo(path).Length;
-        }
-
-        static void PrepGroupBundlePacking(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, BundledAssetGroupSchema.BundlePackingMode packingMode)
-        {
-            if (packingMode == BundledAssetGroupSchema.BundlePackingMode.PackTogether)
-            {
-                var allEntries = new List<AddressableAssetEntry>();
-                foreach (var a in assetGroup.entries)
-                    a.GatherAllAssets(allEntries, true, true);
-                GenerateBuildInputDefinitions(allEntries, bundleInputDefs, assetGroup.Name, "all");
-            }
-            else
-            {
-                if (packingMode == BundledAssetGroupSchema.BundlePackingMode.PackSeparately)
-                {
-                    foreach (var a in assetGroup.entries)
-                    {
-                        var allEntries = new List<AddressableAssetEntry>();
-                        a.GatherAllAssets(allEntries, true, true);
-                        GenerateBuildInputDefinitions(allEntries, bundleInputDefs, assetGroup.Name, a.address);
-                    }
-                }
-                else
-                {
-                    var labelTable = new Dictionary<string, List<AddressableAssetEntry>>();
-                    foreach (var a in assetGroup.entries)
-                    {
-                        var sb = new StringBuilder();
-                        foreach (var l in a.labels)
-                            sb.Append(l);
-                        var key = sb.ToString();
-                        List<AddressableAssetEntry> entries;
-                        if (!labelTable.TryGetValue(key, out entries))
-                            labelTable.Add(key, entries = new List<AddressableAssetEntry>());
-                        entries.Add(a);
-                    }
-
-                    foreach (var entryGroup in labelTable)
-                    {
-                        foreach (var a in entryGroup.Value)
-                        {
-                            var allEntries = new List<AddressableAssetEntry>();
-                            a.GatherAllAssets(allEntries, true, true);
-                            GenerateBuildInputDefinitions(allEntries, bundleInputDefs, assetGroup.Name, entryGroup.Key);
-                        }
-                    }
-
-                }
-            }
         }
 
         static void GenerateBuildInputDefinitions(List<AddressableAssetEntry> allEntries, List<AssetBundleBuild> buildInputDefs, string groupName, string address)

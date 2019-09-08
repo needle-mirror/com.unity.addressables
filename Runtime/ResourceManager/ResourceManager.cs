@@ -25,15 +25,69 @@ namespace UnityEngine.ResourceManagement
         /// </summary>
         public enum DiagnosticEventType
         {
-            EventCount,
-            FrameRate,
-            HeapSize,
             AsyncOperationFail,
             AsyncOperationCreate,
             AsyncOperationPercentComplete,
             AsyncOperationComplete,
             AsyncOperationReferenceCount,
             AsyncOperationDestroy,
+        }
+
+        /// <summary>
+        /// Container for information associated with a Diagnostics event.
+        /// </summary>
+        public struct DiagnosticEventContext
+        {
+            /// <summary>
+            /// Operation handle for the event.
+            /// </summary>
+            public AsyncOperationHandle OperationHandle { get; }
+
+            /// <summary>
+            /// The type of diagnostic event.
+            /// </summary>
+            public DiagnosticEventType Type { get; }
+
+            /// <summary>
+            /// The value for this event.
+            /// </summary>
+            public int EventValue { get; }
+
+            /// <summary>
+            /// The IResourceLocation being provided by the operation triggering this event.
+            /// This value is null if the event is not while providing a resource. 
+            /// </summary>
+            public IResourceLocation Location { get; }
+
+            /// <summary>
+            /// Addition data included with this event.
+            /// </summary>
+            public object Context { get; }
+
+            /// <summary>
+            /// Any error that occured.
+            /// </summary>
+            public string Error { get; }
+
+            /// <summary>
+            /// Construct a new DiagnosticEventContext.
+            /// </summary>
+            /// <param name="op">Operation handle for the event.</param>
+            /// <param name="type">The type of diagnostic event.</param>
+            /// <param name="eventValue">The value for this event.</param>
+            /// <param name="error">Any error that occured.</param>
+            /// <param name="context">Additional context data.</param>
+            public DiagnosticEventContext(AsyncOperationHandle op, DiagnosticEventType type, int eventValue = 0, string error = null, object context = null)
+            {
+                OperationHandle = op;
+                Type = type;
+                EventValue = eventValue;
+                Location = op.m_InternalOp != null && op.m_InternalOp is IGenericProviderOperation gen
+                    ? gen.Location
+                    : null;
+                Error = error;
+                Context = context;
+            }
         }
 
         /// <summary>
@@ -60,8 +114,8 @@ namespace UnityEngine.ResourceManagement
         DelegateList<float> m_UpdateCallbacks = DelegateList<float>.CreateWithGlobalCache();
         List<IAsyncOperation> m_DeferredCompleteCallbacks = new List<IAsyncOperation>();
 
-
-        Action<AsyncOperationHandle, DiagnosticEventType, int, object> m_diagnosticsHandler;
+        Action<AsyncOperationHandle, DiagnosticEventType, int, object> m_obsoleteDiagnosticsHandler; // For use in working with Obsolete RegisterDiagnosticCallback method.
+        Action<DiagnosticEventContext> m_diagnosticsHandler;
         Action<IAsyncOperation> m_ReleaseOpNonCached;
         Action<IAsyncOperation> m_ReleaseOpCached;
         Action<IAsyncOperation> m_ReleaseInstanceOp;
@@ -155,25 +209,60 @@ namespace UnityEngine.ResourceManagement
         /// <summary>
         /// Clears out the diagnostics callback handler.
         /// </summary>
+        [Obsolete("ClearDiagnosticsCallback is Obsolete, use ClearDiagnosticCallbacks instead.")]
         public void ClearDiagnosticsCallback()
         {
             m_diagnosticsHandler = null;
+            m_obsoleteDiagnosticsHandler = null;
+        }
+
+        /// <summary>
+        /// Clears out the diagnostics callbacks handler.
+        /// </summary>
+        public void ClearDiagnosticCallbacks()
+        {
+            m_diagnosticsHandler = null;
+            m_obsoleteDiagnosticsHandler = null;
+        }
+
+        /// <summary>
+        /// Unregister a handler for diagnostic events.
+        /// </summary>
+        /// <param name="func">The event handler function.</param>
+        public void UnregisterDiagnosticCallback(Action<DiagnosticEventContext> func)
+        {
+            if (m_diagnosticsHandler != null)
+                m_diagnosticsHandler -= func;
+            else
+                Debug.LogError("No Diagnostic callbacks registered, cannot remove callback.");
         }
 
         /// <summary>
         /// Register a handler for diagnostic events.
         /// </summary>
         /// <param name="func">The event handler function.</param>
+        [Obsolete]
         public void RegisterDiagnosticCallback(Action<AsyncOperationHandle, ResourceManager.DiagnosticEventType, int, object> func)
         {
-            m_diagnosticsHandler = func;
+            m_obsoleteDiagnosticsHandler = func;
         }
 
-        internal void PostDiagnosticEvent(AsyncOperationHandle op, ResourceManager.DiagnosticEventType type, int eventValue = 0, object context = null)
+        /// <summary>
+        /// Register a handler for diagnostic events.
+        /// </summary>
+        /// <param name="func">The event handler function.</param>
+        public void RegisterDiagnosticCallback(Action<DiagnosticEventContext> func)
         {
-            if (m_diagnosticsHandler == null)
+            m_diagnosticsHandler += func;
+        }
+
+        internal void PostDiagnosticEvent(DiagnosticEventContext context)
+        {
+            m_diagnosticsHandler?.Invoke(context);
+
+            if (m_obsoleteDiagnosticsHandler == null)
                 return;
-            m_diagnosticsHandler(op, type, eventValue, context);
+            m_obsoleteDiagnosticsHandler(context.OperationHandle, context.Type, context.EventValue, string.IsNullOrEmpty(context.Error) ? context.Context : context.Error);
         }
 
         /// <summary>
@@ -187,7 +276,7 @@ namespace UnityEngine.ResourceManagement
             if (location != null)
             {
                 IResourceProvider prov = null;
-                var hash = location.ProviderId.GetHashCode() * 31 + (t == null ? 0: t.GetHashCode());
+                var hash = location.ProviderId.GetHashCode() * 31 + (t == null ? 0 : t.GetHashCode());
                 if (!m_providerMap.TryGetValue(hash, out prov))
                 {
                     for (int i = 0; i < ResourceProviders.Count; i++)
@@ -214,7 +303,7 @@ namespace UnityEngine.ResourceManagement
             return t != null ? t : typeof(object);
         }
 
-        private int CalculateLocationsHash(IList<IResourceLocation> locations, Type t=null)
+        private int CalculateLocationsHash(IList<IResourceLocation> locations, Type t = null)
         {
             if (locations == null || locations.Count == 0)
                 return 0;
@@ -262,7 +351,7 @@ namespace UnityEngine.ResourceManagement
             // Calculate the hash of the dependencies
             int depHash = location.DependencyHashCode;
             var depOp = location.HasDependencies ? ProvideResourceGroupCached(location.Dependencies, depHash, null, null) : default(AsyncOperationHandle<IList<AsyncOperationHandle>>);
-            if(provider == null)
+            if (provider == null)
                 provider = GetResourceProvider(desiredType, location);
 
             ((IGenericProviderOperation)op).Init(this, provider, location, depOp);
@@ -469,27 +558,27 @@ namespace UnityEngine.ResourceManagement
         /// <param name="locations">locations to load.</param>
         /// <param name="callback">This callback will be invoked once for each object that is loaded.</param>
         /// <typeparam name="TObject">Object type to load.</typeparam>
-        public AsyncOperationHandle<IList<TObject>> ProvideResources<TObject>(IList<IResourceLocation> locations, Action<TObject> callback=null)
+        public AsyncOperationHandle<IList<TObject>> ProvideResources<TObject>(IList<IResourceLocation> locations, Action<TObject> callback = null)
         {
             if (locations == null)
                 return CreateCompletedOperation<IList<TObject>>(null, "Null Location");
 
             Action<AsyncOperationHandle> callbackGeneric = null;
-            if(callback != null)
+            if (callback != null)
             {
                 callbackGeneric = (x) => callback((TObject)(x.Result));
             }
             var typelessHandle = ProvideResourceGroupCached(locations, CalculateLocationsHash(locations, typeof(TObject)), typeof(TObject), callbackGeneric);
             var chainOp = CreateChainOperation(typelessHandle, (x) =>
-               {
-                   if(x.Status != AsyncOperationStatus.Succeeded)
-                       return CreateCompletedOperation<IList<TObject>>(null, x.OperationException != null ? x.OperationException.Message : "ProvidResources failed");
+            {
+                if (x.Status != AsyncOperationStatus.Succeeded)
+                    return CreateCompletedOperation<IList<TObject>>(null, x.OperationException != null ? x.OperationException.Message : "ProvidResources failed");
 
-                   var list = new List<TObject>();
-                   foreach(var r in x.Result)
-                       list.Add(r.Convert<TObject>().Result);
-                   return CreateCompletedOperation<IList<TObject>>(list, string.Empty);
-               });
+                var list = new List<TObject>();
+                foreach (var r in x.Result)
+                    list.Add(r.Convert<TObject>().Result);
+                return CreateCompletedOperation<IList<TObject>>(list, string.Empty);
+            });
             // chain operation holds the dependency
             typelessHandle.Release();
             return chainOp;
@@ -530,7 +619,7 @@ namespace UnityEngine.ResourceManagement
             GameObject m_instance;
             ResourceManager m_RM;
             Scene m_scene;
-            
+
             public void Init(ResourceManager rm, IInstanceProvider instanceProvider, InstantiationParameters instantiationParams, AsyncOperationHandle<GameObject> dependency)
             {
                 m_RM = rm;
@@ -566,7 +655,7 @@ namespace UnityEngine.ResourceManagement
                 if (m_dependency.Status == AsyncOperationStatus.Succeeded)
                 {
                     m_instance = m_instanceProvider.ProvideInstance(m_RM, m_dependency, m_instantiationParams);
-                    if(m_instance != null)
+                    if (m_instance != null)
                         m_scene = m_instance.scene;
                     Complete(m_instance, true, null);
                 }
@@ -606,8 +695,8 @@ namespace UnityEngine.ResourceManagement
         {
             if (sceneProvider == null)
                 throw new NullReferenceException("sceneProvider is null");
- //           if (sceneLoadHandle.ReferenceCount == 0)
- //               return CreateCompletedOperation<SceneInstance>(default(SceneInstance), "");
+            //           if (sceneLoadHandle.ReferenceCount == 0)
+            //               return CreateCompletedOperation<SceneInstance>(default(SceneInstance), "");
             return sceneProvider.ReleaseScene(this, sceneLoadHandle);
         }
 
@@ -632,11 +721,7 @@ namespace UnityEngine.ResourceManagement
             m_TrackedInstanceOperations.Add(baseOp);
             return StartOperation<GameObject>(baseOp, depOp);
         }
-		
-        /// <summary>
-        /// Cleans up ref counting on any instances that were in a newly closed scene.
-        /// </summary>
-        /// <param name="scene">The scene that was closed</param>
+
         public void CleanupSceneInstances(Scene scene)
         {
             List<InstanceOperation> handlesToRelease = null;
@@ -681,7 +766,7 @@ namespace UnityEngine.ResourceManagement
         {
             m_UpdateCallbacks.Invoke(unscaledDeltaTime);
             m_UpdatingReceivers = true;
-            for (int i = 0; i < m_UpdateReceivers.Count; i++ )
+            for (int i = 0; i < m_UpdateReceivers.Count; i++)
                 m_UpdateReceivers[i].Update(unscaledDeltaTime);
             m_UpdatingReceivers = false;
             if (m_UpdateReceiversToRemove != null)

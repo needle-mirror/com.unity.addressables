@@ -245,7 +245,7 @@ namespace UnityEditor.AddressableAssets.GUI
             var item = new AssetEntryTreeViewItem(entry, depth);
             parent.AddChild(item);
             var subAssets = new List<AddressableAssetEntry>();
-            entry.GatherAllAssets(subAssets, false, false);
+            entry.GatherAllAssets(subAssets, false, false, true);
             if (subAssets.Count > 0)
             {
                 foreach (var e in subAssets)
@@ -349,7 +349,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     {
                         var path = item.entry.AssetPath;
                         if (string.IsNullOrEmpty(path))
-                            path = "Missing File";
+                            path = item.entry.ReadOnly ? "" : "Missing File";
                         m_LabelStyle.Draw(cellRect, path, false, false, args.selected, args.focused);
                     }
                     break;
@@ -583,6 +583,7 @@ namespace UnityEditor.AddressableAssets.GUI
             bool hasReadOnly = false;
             int resourceCount = 0;
             bool isResourcesHeader = false;
+            bool isMissingPath = false;
             foreach (var item in selectedNodes)
             {
                 if (item.group != null)
@@ -605,6 +606,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     hasReadOnly |= item.entry.ReadOnly;
                     isEntry = true;
                     resourceCount += item.entry.IsInResources ? 1 : 0;
+                    isMissingPath |= string.IsNullOrEmpty(item.entry.AssetPath);
                 }
             }
             if (isEntry && isGroup)
@@ -660,14 +662,14 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             else
             {
-                if (isEntry)
+                if (isEntry && !isMissingPath)
                 {
                     if (resourceCount == selectedNodes.Count)
                     {
                         foreach (var g in m_Editor.settings.groups)
                         {
                             if (!g.ReadOnly)
-                                menu.AddItem(new GUIContent("Move entries to group/" + g.Name), false, MoveResourcesToGroup, g);
+                                menu.AddItem(new GUIContent("Move Resources to group/" + g.Name), false, MoveResourcesToGroup, g);
                         }
                     }
                     else if (resourceCount == 0)
@@ -973,6 +975,10 @@ namespace UnityEditor.AddressableAssets.GUI
                         //if we're dragging resources, we should _only_ drag resources.
                         if (item.entry.IsInResources)
                             resourcesCount++;
+
+                        //if it's missing a path, it can't be moved.  most likely this is a sub-asset.
+                        if (string.IsNullOrEmpty(item.entry.AssetPath))
+                            return false;
                     }
                 }
             }
@@ -1095,11 +1101,13 @@ namespace UnityEditor.AddressableAssets.GUI
             
             if (target == null)
                 return DragAndDropVisualMode.Rejected;
-            
-            if (!AddressableAssetUtility.IsPathValidForEntry(DragAndDrop.paths[0]))
-                visualMode = DragAndDropVisualMode.Rejected;
-            else
-                visualMode = DragAndDropVisualMode.Copy;
+
+            foreach (String path in DragAndDrop.paths)
+            {
+                if (!AddressableAssetUtility.IsPathValidForEntry(path))
+                    return DragAndDropVisualMode.Rejected;
+            }
+            visualMode = DragAndDropVisualMode.Copy;
 
             if (args.performDrop && visualMode != DragAndDropVisualMode.Rejected)
             {

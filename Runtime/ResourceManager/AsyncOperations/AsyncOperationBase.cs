@@ -118,20 +118,20 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 throw new Exception(string.Format("Cannot increment reference count on operation {0} because it has already been destroyed", this));
 
             m_referenceCount++;
-            m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount);
+            m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount));
         }
 
         internal void DecrementReferenceCount()
         {
             if (m_referenceCount <= 0)
                 throw new Exception(string.Format("Cannot decrement reference count for operation {0} because it is already 0", this));
-            
+
             m_referenceCount--;
-            m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount);
+            m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount));
 
             if (m_referenceCount == 0)
             {
-                m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationDestroy);
+                m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationDestroy));
 
                 Destroy();
                 if (m_DestroyedAction != null)
@@ -171,6 +171,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get
             {
+
                 if (Status == AsyncOperationStatus.Failed)
                 {
                     return System.Threading.Tasks.Task.FromResult(default(TObject));
@@ -347,14 +348,16 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_Result = result;
             m_Status = success ? AsyncOperationStatus.Succeeded : AsyncOperationStatus.Failed;
 
-            m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationPercentComplete, 1);
-            m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationComplete);
+            m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationPercentComplete, 1));
+            m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationComplete));
 
             if (m_Status == AsyncOperationStatus.Failed)
             {
                 if (string.IsNullOrEmpty(errorMsg))
                     errorMsg = "Unknown error in AsyncOperation";
-                m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationFail, 0, errorMsg);
+
+                m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationFail, 0, errorMsg));
+
 
                 OperationException = new Exception(errorMsg);
 
@@ -375,8 +378,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         internal void Start(ResourceManager rm, AsyncOperationHandle dependency, DelegateList<float> updateCallbacks)
         {
             m_RM = rm;
-            m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationCreate);
-            m_RM.PostDiagnosticEvent(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationPercentComplete, 0);
+            m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationCreate));
+            m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationPercentComplete, 0));
             IncrementReferenceCount(); // keep a reference until the operation completes
             m_UpdateCallbacks = updateCallbacks;
             if (dependency.IsValid() && !dependency.IsDone)
@@ -387,13 +390,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         private void InvokeExecute()
         {
-       //     m_IsExecuting = true;
+            //     m_IsExecuting = true;
             Execute();
             IUpdateReceiver upOp = this as IUpdateReceiver;
             if (upOp != null)
                 m_UpdateCallbacks.Add(m_UpdateCallback);
 
-         //   m_IsExecuting = false;
+            //   m_IsExecuting = false;
         }
 
         event Action<AsyncOperationHandle> IAsyncOperation.CompletedTypeless

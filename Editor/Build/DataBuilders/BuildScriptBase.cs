@@ -4,6 +4,7 @@ using System.IO;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
+using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
@@ -55,6 +56,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 Debug.LogError(message);
                 return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, message);
             }
+            
+            AddressablesRuntimeProperties.ClearCachedPropertyValues();
             
             // Append the file registry to the results
             var result = BuildDataImplementation<TResult>(builderInput);
@@ -127,21 +130,22 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// </summary>
         /// <param name="assetGroup">The group to extract the locations from.</param>
         /// <param name="locations">The list of created locations to fill in.</param>
+        /// <param name="providerTypes">Any unknown provider types are added to this set in order to ensure they are not stripped.</param>
         /// <returns>True if any legacy locations were created.  This is used by the build scripts to determine if a legacy provider is needed.</returns>
-        protected bool CreateLocationsForPlayerData(PlayerDataGroupSchema playerDataSchema, AddressableAssetGroup assetGroup, List<ContentCatalogDataEntry> locations)
+        protected bool CreateLocationsForPlayerData(PlayerDataGroupSchema playerDataSchema, AddressableAssetGroup assetGroup, List<ContentCatalogDataEntry> locations, HashSet<Type> providerTypes)
         {
             bool needsLegacyProvider = false;
             if (playerDataSchema != null && (playerDataSchema.IncludeBuildSettingsScenes || playerDataSchema.IncludeResourcesFolders))
             {
                 var entries = new List<AddressableAssetEntry>();
-                assetGroup.GatherAllAssets(entries, true, true);
+                assetGroup.GatherAllAssets(entries, true, true, false);
                 foreach (var a in entries)
                 {
                     if (!playerDataSchema.IncludeBuildSettingsScenes && a.IsInSceneList)
                         continue;
                     if (!playerDataSchema.IncludeResourcesFolders && a.IsInResources)
                         continue;
-                    a.CreateCatalogEntries(locations, false, a.IsScene ? "" : typeof(LegacyResourcesProvider).FullName, null, null);
+                    a.CreateCatalogEntries(locations, false, a.IsScene ? "" : typeof(LegacyResourcesProvider).FullName, null, null, providerTypes);
                     if (!a.IsScene)
                         needsLegacyProvider = true;
                 }

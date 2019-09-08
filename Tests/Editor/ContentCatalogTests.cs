@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -181,6 +181,40 @@ namespace UnityEditor.AddressableAssets.Tests
                     }
                 }
             }
+        }
+
+        [Test]
+        public void VerifyDependencyHashCalculation()
+        {
+            var catalog = new ContentCatalogData();
+            Dictionary<int, object> hashSources = new Dictionary<int, object>();
+
+            var dummyValues = new List<object>() {
+                "<WILL-BE-REPLACED>",
+                "startup-shared_assets_assets/fx_data/textures.bundle",
+                "shared_assets_assets/fx_data/materials.bundle",
+                "shaders_assets_all.bundle",
+                "music_assets_music/maptheme6final.bundle",
+                "fx_tex_assets_all.bundle",
+                "shared_assets_assets/textures/ui/campain_act02.bundle",
+                "shared_assets_assets/fx_data/meshes.bundle",
+                "startup-shared_assets_assets/textures/ui/campain_act02.bundle",
+                "startup-shared_assets_assets/textures/ui/campainart.bundle",
+                "startup-shared_assets_assets/fx_data/materials.bundle",
+                "shared_assets_assets/textures/ui/valleyoftreasures.bundle",
+                "startup-shared_assets_assets/fx_data/meshes.bundle",
+                "startup_UnityBuiltInShaders.bundle"
+            };
+
+            dummyValues[0] = "maps_assets_ref/valley1.bundle";
+            var hashPart1 = dummyValues[0].GetHashCode();
+            var hashSum1 = catalog.CalculateCollectedHash(dummyValues, hashSources);
+            dummyValues[0] = "maps_assets_ref/valley3.bundle";
+            var hashPart2 = dummyValues[0].GetHashCode();
+            var hashSum2 = catalog.CalculateCollectedHash(dummyValues, hashSources);
+
+            Assert.AreNotEqual(hashPart1, hashPart2);
+            Assert.AreNotEqual(hashSum1, hashSum2);
         }
     }
 }

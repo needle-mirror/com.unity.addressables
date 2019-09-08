@@ -12,6 +12,7 @@ using UnityEditor.IMGUI.Controls;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.U2D;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
@@ -23,7 +24,7 @@ namespace UnityEditor.AddressableAssets.GUI
         public string newGuid;
         public string newGuidPropertyPath;
         string m_AssetName;
-        internal Rect smallPos;
+        internal Rect assetDropDownRect;
         internal const string noAssetString = "None (AddressableAsset)";
         AssetReference m_AssetRefObject;
 
@@ -49,51 +50,55 @@ namespace UnityEditor.AddressableAssets.GUI
             return false;
         }
 
-        bool SetEditorAssetWithUndo(SerializedProperty property, Object target)
-        {
-            bool success = false;
-            if(m_AssetRefObject != null)
-            {
-                if (m_AssetRefObject.editorAsset == target)
-                {
-                    //In the event we are setting the reference to null (intentional if we want to set the reference to "None (Addressable Asset)")
-                    //we need to clear the reference cleanly to make sure we're not holding onto an old guid of a potentially deleted/missing file.
-                    if (target == null)
-                        m_AssetRefObject.SetEditorAsset(null);
-
-                    return true;
-                }
-
-                Undo.RecordObject(property.serializedObject.targetObject, "Assign Asset Reference");
-                success = m_AssetRefObject.SetEditorAsset(target);
-                if (success)
-                {
-                    EditorUtility.SetDirty(property.serializedObject.targetObject);
-
-                    var comp = property.serializedObject.targetObject as Component;
-                    if (comp != null && comp.gameObject != null && comp.gameObject.activeInHierarchy)
-                        EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
-                }
-            }
-
-            return success;
-        }
-
-        bool SetObject(SerializedProperty property, Object obj, out string guid)
+        bool SetObject(SerializedProperty property, Object target, out string guid)
         {
             guid = null;
             try
             {
                 if (m_AssetRefObject == null)
                     return false;
-                if (obj == null)
+                Undo.RecordObject(property.serializedObject.targetObject, "Assign Asset Reference");
+                if (target == null)
                 {
-                    return SetEditorAssetWithUndo(property, null);
+                    m_AssetRefObject.SetEditorAsset(null);
+                    return true;
                 }
-                    
-                long lfid;
-                if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out lfid))
-                    return SetEditorAssetWithUndo(property, obj);
+
+                Object subObject = null;
+                if (target.GetType() == typeof(Sprite))
+                {
+                    var atlasEntries = new List<AddressableAssetEntry>();
+                    AddressableAssetSettingsDefaultObject.Settings.GetAllAssets(atlasEntries, false, null, e => AssetDatabase.GetMainAssetTypeAtPath(e.AssetPath) == typeof(SpriteAtlas));
+                    var spriteName = target.name;
+                    if (spriteName.EndsWith("(Clone)"))
+                        spriteName = spriteName.Replace("(Clone)", "");
+
+                    foreach (var a in atlasEntries)
+                    {
+                        var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(a.AssetPath);
+                        if (atlas == null)
+                            continue;
+                        var s = atlas.GetSprite(spriteName);
+                        if (s == null)
+                            continue;
+                        subObject = target;
+                        target = atlas;
+                        break;
+                    }
+                }
+                var success = m_AssetRefObject.SetEditorAsset(target);
+                if (success)
+                {
+                    if (subObject != null)
+                        m_AssetRefObject.SetEditorSubObject(subObject);
+                    guid = m_AssetRefObject.AssetGUID;
+                    EditorUtility.SetDirty(property.serializedObject.targetObject);
+
+                    var comp = property.serializedObject.targetObject as Component;
+                    if (comp != null && comp.gameObject != null && comp.gameObject.activeInHierarchy)
+                        EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
+                }
+                return success;
             }
             catch (Exception e)
             {
@@ -121,7 +126,7 @@ namespace UnityEditor.AddressableAssets.GUI
             EditorGUI.BeginProperty(position, label, property);
 
             GatherFilters(property);
-            string guid = m_AssetRefObject.RuntimeKey.ToString();
+            string guid = m_AssetRefObject.AssetGUID;
             var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
 
             var checkToForceAddressable = string.Empty;
@@ -200,16 +205,62 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
             }
 
-            smallPos = EditorGUI.PrefixLabel(position, label);
+            assetDropDownRect = EditorGUI.PrefixLabel(position, label);
             var nameToUse = m_AssetName;
             if (isNotAddressable)
                 nameToUse = "Not Addressable - " + nameToUse;
+            if(m_AssetRefObject.editorAsset != null)
+            {
+                var subAssets = new List<Object>();
+                subAssets.Add(null);
+                var assetPath = AssetDatabase.GUIDToAssetPath(m_AssetRefObject.AssetGUID);
+                subAssets.AddRange(AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
+                var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
+                if (mainType == typeof(SpriteAtlas))
+                {
+                    var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(assetPath);
+                    var sprites = new Sprite[atlas.spriteCount];
+                    atlas.GetSprites(sprites);
+                    subAssets.AddRange(sprites);
+                }
 
-            if (EditorGUI.DropdownButton(smallPos, new GUIContent(nameToUse, icon, m_AssetName), FocusType.Keyboard))
+                if (subAssets.Count > 1)
+                {
+                    assetDropDownRect = new Rect(assetDropDownRect.position, new Vector2(assetDropDownRect.width / 2, assetDropDownRect.height));
+                    var objRect = new Rect(assetDropDownRect.xMax, assetDropDownRect.y, assetDropDownRect.width, assetDropDownRect.height);
+                    var objNames = new string[subAssets.Count];
+                    var selIndex = 0;
+                    for(int i = 0; i < subAssets.Count; i++)
+                    {
+                        var s = subAssets[i];
+                        var objName = s == null ? "<none>" : s.name;
+                        if (objName.EndsWith("(Clone)"))
+                            objName = objName.Replace("(Clone)", "");
+                        objNames[i] = objName;
+                        if (m_AssetRefObject.SubObjectName == objName)
+                            selIndex = i;
+                    }
+                    //TODO: handle large amounts of sprites with a custom popup
+                    var newIndex = EditorGUI.Popup(objRect, selIndex, objNames);
+                    if (newIndex != selIndex)
+                    {
+                        Undo.RecordObject(property.serializedObject.targetObject, "Assign Asset Reference Sub Object");
+                        var success = m_AssetRefObject.SetEditorSubObject(subAssets[newIndex]);
+                        if (success)
+                        {
+                            EditorUtility.SetDirty(property.serializedObject.targetObject);
+                            var comp = property.serializedObject.targetObject as Component;
+                            if (comp != null && comp.gameObject != null && comp.gameObject.activeInHierarchy)
+                                EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
+                        }
+                    }
+                }
+            }
+            if (EditorGUI.DropdownButton(assetDropDownRect, new GUIContent(nameToUse, icon, m_AssetName), FocusType.Keyboard))
             {
                 newGuidPropertyPath = property.propertyPath;
                 var nonAddressedOption = isNotAddressable ? m_AssetName : string.Empty;
-                PopupWindow.Show(smallPos, new AssetReferencePopup(this, guid, nonAddressedOption));
+                PopupWindow.Show(assetDropDownRect, new AssetReferencePopup(this, guid, nonAddressedOption));
             }
 
 
@@ -228,9 +279,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             rejectedDrag = true;
                         else
                         {
-                            if (aaEntries[0] != null &&
-                                aaEntries[0].entry != null &&
-                                aaEntries[0].entry.IsInResources)
+                            if (aaEntries[0] == null || aaEntries[0].entry == null || aaEntries[0].entry.IsInResources || !ValidateAsset(aaEntries[0].entry.AssetPath))
                                 rejectedDrag = true;
                         }
                     }
@@ -239,6 +288,11 @@ namespace UnityEditor.AddressableAssets.GUI
                         if (DragAndDrop.paths.Length != 1)
                         {
                             rejectedDrag = true;
+                        }
+                        else
+                        {
+                            if (!ValidateAsset(DragAndDrop.paths[0]))
+                                rejectedDrag = true;
                         }
                     }
                     
@@ -259,7 +313,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             if (item.entry.IsInResources)
                                 Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first.");
                             else
-                                SetObject(property, AssetDatabase.LoadAssetAtPath<Object>(item.entry.AssetPath), out guid);
+                                SetObject(property, item.entry.MainAsset, out guid);
                         }
                     }
                 }
@@ -365,7 +419,7 @@ namespace UnityEditor.AddressableAssets.GUI
         public override Vector2 GetWindowSize()
         {
             Vector2 result = base.GetWindowSize();
-            result.x = m_Drawer.smallPos.width;
+            result.x = m_Drawer.assetDropDownRect.width;
             return result;
         }
 
@@ -490,7 +544,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                     root.AddChild(new AssetRefTreeViewItem(AssetReferenceDrawer.noAssetString.GetHashCode(), 0, AssetReferenceDrawer.noAssetString, string.Empty, string.Empty));
                     var allAssets = new List<AddressableAssetEntry>();
-                    aaSettings.GetAllAssets(allAssets);
+                    aaSettings.GetAllAssets(allAssets, false);
                     foreach (var entry in allAssets)
                     {
                         if (!AddressableAssetUtility.IsInResources(entry.AssetPath) &&

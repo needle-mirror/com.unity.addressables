@@ -11,7 +11,7 @@ Giving an asset an address allows you to load it using that address, no matter w
 Schemas define a set of data. You can attach schemas to asset groups in the Inspector. The set of schemas attached to a group defines how the build processes its contents. For example, when building in packed mode, groups with the `BundledAssetGroupSchema` schema attached to them act as sources for asset bundles. You can combine sets of schemas into templates that you use to define new groups. You can add schema templates via the `AddressableAssetsSettings` Inspector.
 
 ## Build scripts
-Build scripts are represented as [`ScriptableObject`](https://docs.unity3d.com/Manual/class-ScriptableObject.html) assets in the Project that implement the [`IDataBuilder`](../api/UnityEditor.AddressableAssets.Build.IDataBuilder.html) interface. Users can create their own build scripts and add them to the `AddressableAssetSettings` object through its Inspector. To apply a build script in the **Addressables window** (**Window** > **Asset Management** > **Addressables**), select **Build Script**, and choose a dropdown option. Currently, there are three scripts implemented to support the full application build, and three Play mode scripts for iterating in the Editor.
+Build scripts are represented as [`ScriptableObject`](https://docs.unity3d.com/Manual/class-ScriptableObject.html) assets in the Project that implement the [`IDataBuilder`](../api/UnityEditor.AddressableAssets.Build.IDataBuilder.html) interface. Users can create their own build scripts and add them to the `AddressableAssetSettings` object through its Inspector. To apply a build script in the **Addressables window** (**Window** > **Asset Management** > **Addressables**), select **Play Mode Script**, and choose a dropdown option. Currently, there are three scripts implemented to support the full application build, and three Play mode scripts for iterating in the Editor.
 
 ### Play mode scripts
 The Addressable Assets package has three build scripts that create Play mode data to help you accelerate app development.
@@ -28,7 +28,7 @@ Virtual mode helps you simulate load strategies and tweak your content groups to
 Packed Play mode (`BuildScriptPackedPlayMode`) uses asset bundles that are already built. This mode most closely matches a deployed application build, but it requires you to build the data as a separate step. If you aren't modifying assets, this mode is the fastest since it does not process any data when entering Play mode. You must either build the content for this mode in the **Addressables window** (**Window** > **Asset Management** > **Addressables**) by selecting **Build** > **Build Player Content**, or using the `AddressableAssetSettings.BuildPlayerContent()` method in your game script.
 
 #### Choosing the right script
-To apply a Play mode script, from the **Addressables window** menu (**Window** > **Asset Management** > **Addressables**), select **Play Mode Script** and choose from the dropdown options. Each mode has its own time and place during development and deployment. The following table illustrates stages of the development cycle, in which a particular mode is useful.
+To apply a Play mode script, from the **Addressables window** menu (**Window** > **Asset Management** > **Addressables**), select **Play Mode Script** and choose from the dropdown options. Each mode has its own time and place during development and deployment. The following table illustrates stages of the development cycle in which a particular mode is useful.
 
 | | **Design** | **Develop** | **Build** | **Test / Play** | **Publish** |
 |:---|:---|:---|:---|:---|:---|
@@ -64,7 +64,7 @@ The _addressables_content_state.bin_ file contains hash and dependency informati
 ### Preparing for content updates
 If you have modified assets in any `StaticContent` groups, you'll need to run the **Prepare For Content Update** command. This will take any modified asset out of the static groups and move them to a new group. To generate the new asset groups:
 
-1. Open the **Addressables window** in the Unity Editor (**Window** > **Asset Management** > **Addressable Assets**).
+1. Open the **Addressables window** in the Unity Editor (**Window** > **Asset Management** > **Addressables**).
 2. In the **Addressables window**, select **Build** on the top menu bar, then **Prepare For Content Update**.
 3. In the **Build Data File** dialog that opens, select the _addressables_content_state.bin_ file (by default, this is located in the _Assets/AddressableAssetsData_ Project directory.
 
@@ -77,7 +77,7 @@ This data is used to determine which assets or dependencies have been modified s
 ### Building for content updates
 To build for a content update:
 
-1. Open the **Addressables window** in the Unity Editor (**Window** > **Asset Management** > **Addressable Assets**).
+1. Open the **Addressables window** in the Unity Editor (**Window** > **Asset Management** > **Addressables**).
 2. In the **Addressables window**, select **Build** on the top menu, then **Build For Content Update**.
 3. In the **Build Data File** dialog that opens, select the build folder of an existing application build. The build folder must contain an _addressables_content_state.bin_ file. 
 
@@ -149,7 +149,7 @@ The old `Remote_NonStatic` bundle is replaced with a new version, distinguished 
 
 The `content_update_group` bundle consists of the modified assets that will be referenced moving forward. 
 
-Here are the implications of this example:
+Note that the example above has the following implications:
 
 1. Any changed local assets remain unused on the user's device forever.  
 2. If the user already cached a non-static bundle, they will need to re-download the bundle, including the unchanged assets (in this instance, for example, `AssetY` and `AssetZ`). Ideally, the user has not cached the bundle, in which case they simply need to download the new `Remote_NonStatic` bundle.

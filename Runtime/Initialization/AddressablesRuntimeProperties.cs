@@ -35,6 +35,15 @@ namespace UnityEngine.AddressableAssets.Initialization
         }
 
         /// <summary>
+        /// This will clear all PropertyValues that have been cached.  This includes all values set by
+        /// <see cref="SetPropertyValue"/> as well as any reflection-evaluated properties.  
+        /// </summary>
+        public static void ClearCachedPropertyValues()
+        {
+            s_CachedValues.Clear();
+        }
+
+        /// <summary>
         /// Evaluates a named property using cached values and static public fields and properties.  Be aware that a field or property may be stripped if not referenced anywhere else.
         /// </summary>
         /// <param name="name">The property name.</param>

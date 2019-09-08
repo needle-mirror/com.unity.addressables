@@ -138,7 +138,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             string source = "x/y.bundle";
             string hash = "123abc";
-            string expected = "x/123abc.bundle";
+            string expected = "123abc.bundle";
 
             var actual = BuildUtility.GetNameWithHashNaming(BundledAssetGroupSchema.BundleNamingStyle.OnlyHash, hash, source);
 

@@ -19,15 +19,16 @@ namespace UnityEngine.AddressableAssets.Initialization
         string m_ProviderSuffix;
         IResourceLocator m_Result;
         AddressablesImpl m_Addressables;
+        ResourceManagerDiagnostics m_Diagnostics;
 
         public InitializationOperation(AddressablesImpl aa)
         {
             m_Addressables = aa;
+            m_Diagnostics = new ResourceManagerDiagnostics(aa.ResourceManager);
         }
 
         internal static AsyncOperationHandle<IResourceLocator> CreateInitializationOperation(AddressablesImpl aa, string playerSettingsLocation, string providerSuffix)
         {
-            new ResourceManagerDiagnostics(aa.ResourceManager);
             var jp = new JsonAssetProvider();
             jp.IgnoreFailures = true;
             aa.ResourceManager.ResourceProviders.Add(jp);
@@ -66,7 +67,10 @@ namespace UnityEngine.AddressableAssets.Initialization
                 ResourceManager.ExceptionHandler = null;
 
             if (!rtd.ProfileEvents)
-                m_Addressables.ResourceManager.ClearDiagnosticsCallback();
+            {
+                m_Diagnostics.Dispose();
+                m_Diagnostics = null;
+            }
 
             //   DiagnosticEventCollector.ResourceManagerProfilerEventsEnabled = rtd.ProfileEvents;
             Addressables.Log("Addressables - loading initialization objects.");

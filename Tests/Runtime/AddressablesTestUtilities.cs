@@ -57,7 +57,6 @@ static class AddressablesTestUtility
             if (group == null)
                 group = settings.CreateGroup("TestStuff" + suffix, true, false, false, null, typeof(BundledAssetGroupSchema));
             settings.DefaultGroup = group;
-            AssetDatabase.StartAssetEditing();
             for (int i = 0; i < kPrefabCount; i++)
             {
                 var guid = CreateAsset(RootFolder + "/test" + i + suffix + ".prefab", "testPrefab" + i);
@@ -79,36 +78,18 @@ static class AddressablesTestUtility
             entry.address = Path.GetFileNameWithoutExtension(entry.AssetPath);
         } 
 #endif
-            string assetRefGuid = CreateAsset(RootFolder + "/testIsReference.prefab", "IsReference");
-            GameObject go = new GameObject("AssetReferenceBehavior");
-            AssetReferenceTestBehavior aRefTestBehavior = go.AddComponent<AssetReferenceTestBehavior>();
-            aRefTestBehavior.Reference = settings.CreateAssetReference(assetRefGuid);
-            aRefTestBehavior.LabelReference = new AssetLabelReference()
-            {
-                labelString = settings.labelTable.labelNames[0]
-            };
 
-            string hasBehaviorPath = RootFolder + "/AssetReferenceBehavior.prefab";
-            PrefabUtility.SaveAsPrefabAsset(go, hasBehaviorPath);
-            settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(hasBehaviorPath), group, false, false);
-            AssetDatabase.StopAssetEditing();
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 
 
             var texture = new Texture2D(32, 32);
             var data = ImageConversion.EncodeToPNG(texture);
             UnityEngine.Object.DestroyImmediate(texture);
             AssetDatabase.GenerateUniqueAssetPath(RootFolder);
-            var origPath = "Assets/" + GUID.Generate() + ".png";
             var spritePath = RootFolder + "sprite.png";
             File.WriteAllBytes(spritePath, data);
-            AssetDatabase.ImportAsset(origPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
-            AssetDatabase.MoveAsset(origPath, spritePath);
-            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
             AssetDatabase.ImportAsset(spritePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 
+#if UNITY_2019_3_OR_NEWER
             var spriteGuid = AssetDatabase.AssetPathToGUID(spritePath);
             var importer = AssetImporter.GetAtPath(spritePath) as TextureImporter;
             importer.textureType = TextureImporterType.Sprite;
@@ -116,11 +97,34 @@ static class AddressablesTestUtility
             importer.spritesheet = new SpriteMetaData[] { new SpriteMetaData() { name = "topleft", pivot = Vector2.zero, rect = new Rect(0,0,16,16) },
                                                         new SpriteMetaData() { name = "botright", pivot = Vector2.zero, rect = new Rect(16,16,16,16) }};
             importer.SaveAndReimport();
-            AssetDatabase.ImportAsset(spritePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
 
             var spriteEntry = settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(spritePath), group, false, false);
             spriteEntry.address = "sprite";
+#endif
+
+            var so = ScriptableObject.CreateInstance<TestObject>();
+            var sub = ScriptableObject.CreateInstance<TestObject>();
+            sub.name = "sub";
+            AssetDatabase.CreateAsset(so, RootFolder + "sub.asset");
+            AssetDatabase.AddObjectToAsset(sub, RootFolder + "sub.asset");
+            AssetDatabase.ImportAsset(RootFolder + "sub.asset", ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            var subGuid = AssetDatabase.AssetPathToGUID(RootFolder + "sub.asset");
+            string assetRefGuid = CreateAsset(RootFolder + "/testIsReference.prefab", "IsReference");
+            GameObject go = new GameObject("AssetReferenceBehavior");
+            AssetReferenceTestBehavior aRefTestBehavior = go.AddComponent<AssetReferenceTestBehavior>();
+            aRefTestBehavior.Reference = settings.CreateAssetReference(assetRefGuid);
+            aRefTestBehavior.ReferenceWithSubObject = settings.CreateAssetReference(subGuid);
+            aRefTestBehavior.ReferenceWithSubObject.SubObjectName = "sub";
+            aRefTestBehavior.LabelReference = new AssetLabelReference()
+            {
+                labelString = settings.labelTable.labelNames[0]
+            };
+            
+            string hasBehaviorPath = RootFolder + "/AssetReferenceBehavior.prefab";
+            PrefabUtility.SaveAsPrefabAsset(go, hasBehaviorPath);
+            settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(hasBehaviorPath), group, false, false);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 
 
             RunBuilder(settings, testType, suffix);
@@ -144,12 +148,10 @@ static class AddressablesTestUtility
         go.name = objectName;
         //this is to ensure that bundles are different for every run.
         go.transform.localPosition = UnityEngine.Random.onUnitSphere;
-
         PrefabUtility.SaveAsPrefabAsset(go, assetPath);
         UnityEngine.Object.DestroyImmediate(go, false);
         return AssetDatabase.AssetPathToGUID(assetPath);
     }
-
 
     static void RunBuilder(AddressableAssetSettings settings, string testType, string suffix)
     {
