@@ -410,9 +410,7 @@ namespace UnityEditor.AddressableAssets.Build
         /// <param name="settings">Addressable asset settings.</param>
         /// <param name="cacheDataPath">The cache data path.</param>
         /// <returns>A list of all modified entries (list is empty if there are none); null if failed to load cache data.</returns>
-        //temporarily switched back to internal for 1.1.x releases.  Will be public in 1.2+ 
-        //public static List<AddressableAssetEntry> GatherModifiedEntries(AddressableAssetSettings settings, string cacheDataPath)
-        internal static List<AddressableAssetEntry> GatherModifiedEntries(AddressableAssetSettings settings, string cacheDataPath)
+        public static List<AddressableAssetEntry> GatherModifiedEntries(AddressableAssetSettings settings, string cacheDataPath)
         {
             var cacheData = LoadContentState(cacheDataPath);
             if (cacheData == null)
