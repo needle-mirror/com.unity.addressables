@@ -4,6 +4,10 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2019-09-13
+ - Further improvement to the % complete calculations.  
+   - Note that this is an average of dependency operations. Meaning a LoadAssetsAsync call will average the download, and the loading progress.  DownloadDependenciesAsync currently has one extra op, so the download will crawl to 50%, then jump to done (we will look into removing that). Similarly any op that is called before Addressables init's will jump to 50% once init is done.  
+
 ## [1.2.3] - 2019-09-10
  - Actually "Made ContentUpdateScript.GatherModifiedEntries public."
  

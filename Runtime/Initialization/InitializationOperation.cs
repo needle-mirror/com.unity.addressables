@@ -27,6 +27,16 @@ namespace UnityEngine.AddressableAssets.Initialization
             m_Diagnostics = new ResourceManagerDiagnostics(aa.ResourceManager);
         }
 
+        protected override float Progress
+        {
+            get
+            {
+                if (m_rtdOp.IsValid())
+                    return m_rtdOp.PercentComplete;
+                return 0f;
+            }
+        }
+
         internal static AsyncOperationHandle<IResourceLocator> CreateInitializationOperation(AddressablesImpl aa, string playerSettingsLocation, string providerSuffix)
         {
             var jp = new JsonAssetProvider();
