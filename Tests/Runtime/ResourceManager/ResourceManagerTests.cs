@@ -8,6 +8,7 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
 using System.Linq;
+using UnityEngine.Networking;
 using UnityEngine.TestTools.Constraints;
 
 namespace UnityEngine.ResourceManagement.Tests
@@ -258,7 +259,27 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.AreEqual(1, m_ResourceManager.OperationCacheCount);
             obj.Release();
         }
-        
 
+        [UnityTest]
+        public IEnumerator WebRequestQueue_CompletesAllOperations()
+        {
+            int numberOfCompletedOperations = 0;
+            int totalOperations = 5000;
+
+            for (int i = 0; i < totalOperations; i++)
+            {
+                UnityWebRequest uwr = new UnityWebRequest();
+                var requestOp = WebRequestQueue.QueueRequest(uwr);
+                if (requestOp.IsDone)
+                    numberOfCompletedOperations++;
+                else
+                    requestOp.OnComplete += op => { numberOfCompletedOperations++; };
+            }
+
+            while (WebRequestQueue.s_QueuedOperations.Count > 0)
+                yield return null;
+
+            Assert.AreEqual(totalOperations, numberOfCompletedOperations);
+        }
     }
 }

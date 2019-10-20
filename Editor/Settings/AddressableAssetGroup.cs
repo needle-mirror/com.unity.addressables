@@ -17,6 +17,17 @@ namespace UnityEditor.AddressableAssets.Settings
     [Serializable]
     public class AddressableAssetGroup : ScriptableObject, IComparer<AddressableAssetEntry>, ISerializationCallbackReceiver
     {
+
+
+
+        internal static GUIContent RemoveSchemaContent = new GUIContent("Remove Schema", "Remove this schema.");
+        internal static GUIContent MoveSchemaUpContent = new GUIContent("Move Up", "Move schema up one in list.");
+        internal static GUIContent MoveSchemaDownContent = new GUIContent("Move Down", "Move schema down one in list.");
+        internal static GUIContent ExpandSchemaContent = new GUIContent("Expand All", "Expand all settings within schema.");
+   
+        
+        
+        
         [FormerlySerializedAs("m_name")]
         [SerializeField]
         string m_GroupName;
@@ -512,6 +523,24 @@ namespace UnityEditor.AddressableAssets.Settings
         public bool CanBeSetAsDefault()
         {
             return !m_ReadOnly;
+        }
+
+        /// <summary>
+        /// Gets the index of a schema based on its specified type.
+        /// </summary>
+        /// <param name="type">The schema type.</param>
+        /// <returns>Valid index if found, otherwise returns -1.</returns>
+        public int FindSchema(Type type)
+        {
+            var schemas = m_SchemaSet.Schemas;
+            for (int i = 0; i < schemas.Count; i++)
+            {
+                if (schemas[i].GetType() == type)
+                {
+                    return i;
+                }
+            }
+            return -1;
         }
     }
 }

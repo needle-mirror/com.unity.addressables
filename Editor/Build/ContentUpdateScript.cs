@@ -467,7 +467,55 @@ namespace UnityEditor.AddressableAssets.Build
                 if (!entryToCacheInfo.TryGetValue(entry.guid, out cachedInfo) || HasAssetOrDependencyChanged(cachedInfo))
                     modifiedEntries.Add(entry);
             }
+
+            AddAllDependentScenesFromModifiedEnteries(modifiedEntries);
             return modifiedEntries;
+        }
+
+        internal static void AddAllDependentScenesFromModifiedEnteries(List<AddressableAssetEntry> modifiedEntries)
+        {
+            List<AddressableAssetEntry> entriesToAdd = new List<AddressableAssetEntry>();
+            //If a scene has changed, all scenes that end up in the same bundle need to be marked as modified due to bundle dependencies
+            foreach (AddressableAssetEntry entry in modifiedEntries)
+            {
+                if (entry.IsScene && !entriesToAdd.Contains(entry))
+                {
+                    switch (entry.parentGroup.GetSchema<BundledAssetGroupSchema>().BundleMode)
+                    {
+                        case BundledAssetGroupSchema.BundlePackingMode.PackTogether:
+                            //Add every scene in the group to modified entries
+                            foreach (AddressableAssetEntry sharedGroupEntry in entry.parentGroup.entries)
+                            {
+                                if (sharedGroupEntry.IsScene && !modifiedEntries.Contains(sharedGroupEntry))
+                                    entriesToAdd.Add(sharedGroupEntry);
+                            }
+                            break;
+
+                        case BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel:
+                            foreach (AddressableAssetEntry sharedGroupEntry in entry.parentGroup.entries)
+                            {
+                                //Check if one entry has 0 labels while the other contains labels.  The labels union check below will return true in this case.
+                                //That is not the behavior we want.  So to avoid that, we check here first.
+                                if (sharedGroupEntry.labels.Count == 0 ^ entry.labels.Count == 0)
+                                    continue;
+
+                                //Only add if labels are shared
+                                if (sharedGroupEntry.IsScene && !modifiedEntries.Contains(sharedGroupEntry) && sharedGroupEntry.labels.Union(entry.labels).Any())
+                                    entriesToAdd.Add(sharedGroupEntry);
+                            }
+                            break;
+
+                        case BundledAssetGroupSchema.BundlePackingMode.PackSeparately:
+                            //Do nothing.  The scene will be in a different bundle.
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            modifiedEntries.AddRange(entriesToAdd);
         }
 
         private static void AddInvalidGroupsToLogMessage(StringBuilder builder, List<string> invalidGroupList,

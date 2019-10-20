@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
-using UnityEditor.AddressableAssets;
+using System.Reflection;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Utilities;
 using UnityEngine;
@@ -197,5 +198,31 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             return false;
         }
+
+
+        static Dictionary<Type, string> s_CachedDisplayNames = new Dictionary<Type, string>();
+        internal static string GetCachedTypeDisplayName(Type type)
+        {
+            string result = "<none>"; 
+            if (type != null)
+            {
+                if (!s_CachedDisplayNames.TryGetValue(type, out result))
+                {
+                    var displayNameAtr = type.GetCustomAttribute<DisplayNameAttribute>();
+                    if (displayNameAtr != null)
+                    {
+                        result = (string)displayNameAtr.DisplayName;
+                    }
+                    else
+                        result = type.Name;
+
+                    s_CachedDisplayNames.Add(type, result);
+                }
+                
+            }
+
+            return result;
+        }
+        
     }
 }

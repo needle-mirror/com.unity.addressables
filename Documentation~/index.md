@@ -1,8 +1,8 @@
-# Unity Addressable Asset System
+# Unity Addressable Asset system
 
-The Addressable Asset System provides an easy way to load assets by “address”. It handles asset management overhead by simplifying content pack creation and deployment.
+The Addressable Asset system provides an easy way to load assets by “address”. It handles asset management overhead by simplifying content pack creation and deployment.
 
-The Addressable Asset System uses asynchronous loading to support loading from any location with any collection of dependencies. Whether you use direct references, traditional asset bundles, or _Resource_ folders for asset management, Addressable Assets provide a simpler way to make your game more dynamic.
+The Addressable Asset system uses asynchronous loading to support loading from any location with any collection of dependencies. Whether you use direct references, traditional asset bundles, or _Resource_ folders for asset management, Addressable Assets provide a simpler way to make your game more dynamic.
 
 ## What is an asset?
 An asset is content that you use to create your game or app. Common examples of assets include Prefabs, textures, materials, audio clips, and animations.

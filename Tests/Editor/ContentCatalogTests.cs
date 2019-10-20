@@ -112,7 +112,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var dataEntry = new ContentCatalogDataEntry(typeof(ContentCatalogData), "internalId", "provider", new object[] { 1 }, null, options);
             var entries = new List<ContentCatalogDataEntry>();
             entries.Add(dataEntry);
-            var ccData = new ContentCatalogData(entries);
+            var ccData = new ContentCatalogData(entries, "TestCatalog");
             var locator = ccData.CreateLocator();
             IList<IResourceLocation> locations;
             if (!locator.Locate(1, typeof(object), out locations))
@@ -209,12 +209,79 @@ namespace UnityEditor.AddressableAssets.Tests
             dummyValues[0] = "maps_assets_ref/valley1.bundle";
             var hashPart1 = dummyValues[0].GetHashCode();
             var hashSum1 = catalog.CalculateCollectedHash(dummyValues, hashSources);
+            
+            var dummyValues2 = new List<object>() {
+                "maps_assets_ref/valley1.bundle",
+                "startup-shared_assets_assets/fx_data/textures.bundle",
+                "shared_assets_assets/fx_data/materials.bundle",
+                "shaders_assets_all.bundle",
+                "music_assets_music/maptheme6final.bundle",
+                "fx_tex_assets_all.bundle",
+                "shared_assets_assets/textures/ui/campain_act02.bundle",
+                "shared_assets_assets/fx_data/meshes.bundle",
+                "startup-shared_assets_assets/textures/ui/campain_act02.bundle",
+                "startup-shared_assets_assets/textures/ui/campainart.bundle",
+                "startup-shared_assets_assets/fx_data/materials.bundle",
+                "shared_assets_assets/textures/ui/valleyoftreasures.bundle",
+                "startup-shared_assets_assets/fx_data/meshes.bundle",
+                "startup_UnityBuiltInShaders.bundle"
+            };
+            
+            var hashSum1DifferentList = catalog.CalculateCollectedHash(dummyValues2, hashSources);
+            
             dummyValues[0] = "maps_assets_ref/valley3.bundle";
             var hashPart2 = dummyValues[0].GetHashCode();
             var hashSum2 = catalog.CalculateCollectedHash(dummyValues, hashSources);
 
+            Assert.AreEqual( hashSum1, hashSum1DifferentList );
             Assert.AreNotEqual(hashPart1, hashPart2);
             Assert.AreNotEqual(hashSum1, hashSum2);
+        }
+
+        [Test]
+        public void VerifyEnumerableHashCalculation()
+        {
+            var dummyValues = new List<object>() {
+                "maps_assets_ref/valley1.bundle",
+                "startup-shared_assets_assets/fx_data/textures.bundle",
+                "shared_assets_assets/fx_data/materials.bundle",
+                "shaders_assets_all.bundle",
+                "music_assets_music/maptheme6final.bundle",
+                "fx_tex_assets_all.bundle",
+                "shared_assets_assets/textures/ui/campain_act02.bundle",
+                "shared_assets_assets/fx_data/meshes.bundle",
+                "startup-shared_assets_assets/textures/ui/campain_act02.bundle",
+                "startup-shared_assets_assets/textures/ui/campainart.bundle",
+                "startup-shared_assets_assets/fx_data/materials.bundle",
+                "shared_assets_assets/textures/ui/valleyoftreasures.bundle",
+                "startup-shared_assets_assets/fx_data/meshes.bundle",
+                "startup_UnityBuiltInShaders.bundle"
+            };
+            
+            var dummyValues2 = new List<object>() {
+                "maps_assets_ref/valley1.bundle",
+                "startup-shared_assets_assets/fx_data/textures.bundle",
+                "shared_assets_assets/fx_data/materials.bundle",
+                "shaders_assets_all.bundle",
+                "music_assets_music/maptheme6final.bundle",
+                "fx_tex_assets_all.bundle",
+                "shared_assets_assets/textures/ui/campain_act02.bundle",
+                "shared_assets_assets/fx_data/meshes.bundle",
+                "startup-shared_assets_assets/textures/ui/campain_act02.bundle",
+                "startup-shared_assets_assets/textures/ui/campainart.bundle",
+                "startup-shared_assets_assets/fx_data/materials.bundle",
+                "shared_assets_assets/textures/ui/valleyoftreasures.bundle",
+                "startup-shared_assets_assets/fx_data/meshes.bundle",
+                "startup_UnityBuiltInShaders.bundle"
+            };
+
+            var hash1 = ContentCatalogData.GetHashCodeForEnumerable( dummyValues );
+            var hash2 = ContentCatalogData.GetHashCodeForEnumerable( dummyValues2 );
+            Assert.AreEqual( hash1, hash2 );
+            
+            dummyValues[0] = "maps_assets_ref/valley3.bundle";
+            var hash3 = ContentCatalogData.GetHashCodeForEnumerable( dummyValues );
+            Assert.AreNotEqual( hash1, hash3 );
         }
     }
 }

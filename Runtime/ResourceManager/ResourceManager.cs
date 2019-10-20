@@ -399,19 +399,18 @@ namespace UnityEngine.ResourceManagement
 
         class CompletedOperation<TObject> : AsyncOperationBase<TObject>
         {
-            TObject m_Result;
             bool m_Success;
             string m_ErrorMsg;
             public CompletedOperation() { }
             public void Init(TObject result, bool success, string errorMsg)
             {
-                m_Result = result;
+                Result = result;
                 m_Success = success;
                 m_ErrorMsg = errorMsg;
             }
             protected override void Execute()
             {
-                Complete(m_Result, m_Success, m_ErrorMsg);
+                Complete(Result, m_Success, m_ErrorMsg);
             }
         }
 
@@ -519,6 +518,23 @@ namespace UnityEngine.ResourceManagement
             return null;
         }
 
+        /// <summary>
+        /// Create a group operation for a set of locations.
+        /// </summary>
+        /// <typeparam name="T">The expected object type for the operations.</typeparam>
+        /// <param name="locations">The list of locations to load.</param>
+        /// <returns>The operation for the entire group.</returns>
+        public AsyncOperationHandle<IList<AsyncOperationHandle>> CreateGroupOperation<T>(IList<IResourceLocation> locations)
+        {
+            var op = CreateOperation<GroupOperation>(typeof(GroupOperation), s_GroupOperationTypeHash, 0, m_ReleaseOpNonCached);
+            var ops = new List<AsyncOperationHandle>(locations.Count);
+            foreach (var loc in locations)
+                ops.Add(ProvideResource<T>(loc));
+
+            op.Init(ops);
+            return StartOperation(op, default);
+        }
+
         internal AsyncOperationHandle<IList<AsyncOperationHandle>> ProvideResourceGroupCached(IList<IResourceLocation> locations, int groupHash, Type desiredType, Action<AsyncOperationHandle> callback)
         {
             GroupOperation op = AcquireGroupOpFromCache(groupHash);
@@ -617,7 +633,6 @@ namespace UnityEngine.ResourceManagement
             InstantiationParameters m_instantiationParams;
             IInstanceProvider m_instanceProvider;
             GameObject m_instance;
-            ResourceManager m_RM;
             Scene m_scene;
 
             public void Init(ResourceManager rm, IInstanceProvider instanceProvider, InstantiationParameters instantiationParams, AsyncOperationHandle<GameObject> dependency)
@@ -647,6 +662,14 @@ namespace UnityEngine.ResourceManagement
             protected override void Destroy()
             {
                 m_instanceProvider.ReleaseInstance(m_RM, m_instance);
+            }
+
+            protected override float Progress
+            {
+                get
+                {
+                    return m_dependency.PercentComplete;
+                }
             }
 
             protected override void Execute()

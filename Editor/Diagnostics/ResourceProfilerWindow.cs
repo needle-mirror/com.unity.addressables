@@ -16,11 +16,11 @@ namespace UnityEditor.AddressableAssets.Diagnostics
      */
     class ResourceProfilerWindow : EventViewerWindow
     {
-        [MenuItem("Window/Asset Management/Addressable Profiler", priority = 2051)]
-        static void ShowWindow()
+        [MenuItem("Window/Asset Management/Addressables/Event Viewer", priority = 2051)]
+        internal static void ShowWindow()
         {
             var window = GetWindow<ResourceProfilerWindow>();
-            window.titleContent = new GUIContent("Addressable Profiler", "Addressable Profiler");
+            window.titleContent = new GUIContent("Addressables Event Viewer", "Addressables Event Viewer");
             window.Show();
         }
 

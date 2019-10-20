@@ -1,14 +1,14 @@
-# Addressables Analyze
+# The Addressables Analyze tool
 Analyze is a tool that gathers information on your Projects' Addressables layout. In some cases, Analyze may take appropriate actions to clean up the state of your Project. In others, Analyze is purely an informational tool that allows you to make more informed decisions about your Addressables layout.
 
 ## Using Analyze
-In the Editor, open the **Addressables window** (**Window** > **Asset Management** > **Addressables**), then click the **Analyze** button in the menu to open the **Analyze window**.
+In the Editor, open the **Addressables Analyze** window (**Window** > **Asset Management** > **Addressables** > **Analyze**), or open it via the **Addressables Groups** window by clicking  the **Tools** > **Analyze** button.
 
 The Analyze window displays a list of Analyze rules, along with the following operations: 
 
 * Analyze Selected Rules
-* Fix Selected Rules
 * Clear Selected Rules
+* Fix Selected Rules
 
 ### The analyze operation
 The analyze operation is the information-gathering step of the rule. Running this action on a rule or set of rules gathers data about the build, dependency maps, and more. Each rule is responsible for gathering the desired data and reporting it back as a list of `AnalyzeResult` objects.
@@ -23,11 +23,11 @@ This operation will remove any data gathered by the analysis and update the `Tre
 ### The fix operation
 For **Fixable Rules**, you may choose to run the fix operation. This uses data gathered during the analyze step to perform any necessary modifications and resolve the issues.
 
-[_Check Duplicate Group Dependencies_](#check-duplicate-group-dependencies) is an example of a fixable rule, because there is a reasonably appropriate action that can be taken to resolve the issues detected in the analysis.
+[_Check Duplicate Bundle Dependencies_](#check-duplicate-bundle-dependencies) is an example of a fixable rule, because there is a reasonably appropriate action that can be taken to resolve the issues detected in the analysis.
 
 ## Provided Analyze rules
 ### Fixable rules
-#### Check Duplicate Group Dependencies
+#### Check Duplicate Bundle Dependencies
 This rule checks for potentially duplicated assets, by scanning all groups with `BundledAssetGroupSchemas` and projecting the asset group layout. This essentially requires triggering a full build, so this check is time-consuming and performance-intensive.  
 
 **Issues**: Duplicated assets result from assets in different groups sharing dependencies, for example two Prefabs that share a material existing in different Addressable groups. That material (and any of its dependencies) would be pulled into both groups containing the Prefabs. To prevent this, the material must be marked as Addressable, either with one of the Prefabs, or in its own space, thereby putting the material and its dependencies in a separate Addressable group.  
@@ -40,7 +40,7 @@ Also note that duplicate assets may not always be an issue. If assets will never
 
 ### Unfixable rules
 #### Check Resources to Addressable Duplicate Dependencies
-This rule detects if any assets or asset dependencies are duplicated between built Addressable data and assets residing in a `Resources` folder. 
+This rule detects if any assets or asset dependencies are duplicated between built Addressable data and assets residing in a _Resources_ folder. 
 
 **Issues**: These duplications mean that data will be included in both the application build and the Addressables build.
 
@@ -53,17 +53,17 @@ This rule detects any assets or asset dependencies that are shared between the S
 
 **Resolution**: It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any. One example of a possible manual fix is to pull the built-in Scene(s) with duplicated references out of Build Settings and make it an Addressable Scene.
 
-#### Build Bundle Layout
-This rule will show how assets explicitly marked as Addressable will be laid out in the Addressable build.  Given these explicit assets, we also show what assets are implicitly referenced by, and therefore will be pulled into, the build.
-
-Data gathered by this rule does not indicate any particular issues.  It is purely informational. 
-
 #### Check Sprite Atlas to Addressable Duplicate Dependencies
 Given an Addressable sprite atlas this rule will detect if any sprites in the atlas have been marked Addressable anywhere else.
 
 **Issues**: These duplications means sprite data will be duplicated in multiple areas in the Addressable build.
 
 **Resolution** It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any.  One example of a possible manual fix would be to remove the duplicated sprite from Addressables and have your assets reference a sprite from your Addressable sprite atlas instead of the sprite directly.
+
+#### Build Bundle Layout
+This rule will show how assets explicitly marked as Addressable will be laid out in the Addressable build.  Given these explicit assets, we also show what assets are implicitly referenced by, and therefore will be pulled into, the build.
+
+Data gathered by this rule does not indicate any particular issues.  It is purely informational. 
 
 ## Extending Analyze
 Each unique Project may require additional Analyze rules beyond what comes pre-packaged. The Addressable Assets System allows you to create your own custom rule classes. 
@@ -78,7 +78,7 @@ You'll also need to override the following methods, which are detailed below:
 
 * `List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)`
 * `void FixIssues(AddressableAssetSettings settings)`
-* `void ClearAnalysis()`.
+* `void ClearAnalysis()`
 
 **Note**: If your rule is designated unfixable, you don't have to override the `FixIssues` method.
 
@@ -94,7 +94,7 @@ This is your fix operation. If there is an appropriate action to take in respons
 This is your clear operation. Any data you cached in the analyze step can be cleaned or removed in this function. The `TreeView` will update to reflect the lack of data.
 
 ### Adding custom rules to the GUI
-A custom rule must register itself with the GUI class using `AnalyzeWindow.RegisterNewRule<RuleType>()`, in order to show up in the **Analyze window**. For example:
+A custom rule must register itself with the GUI class using `AnalyzeWindow.RegisterNewRule<RuleType>()`, in order to show up in the **Analyze** window. For example:
 
 ```
 class MyRule : AnalyzeRule {}

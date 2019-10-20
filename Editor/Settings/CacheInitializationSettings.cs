@@ -9,7 +9,7 @@ namespace UnityEditor.AddressableAssets.Settings
     /// <summary>
     /// Asset container for CacheInitializationData.
     /// </summary>
-    [CreateAssetMenu(fileName = "CacheInitializationSettings.asset", menuName = "Addressable Assets/Initialization/Cache Initialization Settings")]
+    [CreateAssetMenu(fileName = "CacheInitializationSettings.asset", menuName = "Addressables/Initialization/Cache Initialization Settings")]
     public class CacheInitializationSettings : ScriptableObject, IObjectInitializationDataProvider
     {
         [FormerlySerializedAs("m_data")]

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.HostingServices;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
@@ -10,14 +9,21 @@ using UnityEngine.Serialization;
 namespace UnityEditor.AddressableAssets.GUI
 {
     using Object = UnityEngine.Object;
-    
+
     /// <summary>
     /// Configuration GUI for <see cref="T:UnityEditor.AddressableAssets.HostingServices.HostingServicesManager" />
     /// </summary>
     public class HostingServicesWindow : EditorWindow, ISerializationCallbackReceiver, ILogHandler
     {
-        const float k_DefaultSplitterRatio = 0.67f;
-        const int k_SplitterHeight = 15;
+        const float k_DefaultVerticalSplitterRatio = 0.67f;
+        const float k_DefaultHorizontalSplitterRatio = 0.33f;
+        const int k_SplitterThickness = 2;
+        const int k_ToolbarHeight = 20;
+        const int k_ItemRectPadding = 15;
+        const int k_LogRectPadding = 5;
+
+        GUIStyle m_ItemRectPadding;
+        GUIStyle m_LogRectPadding;
 
         [FormerlySerializedAs("m_logText")]
         [SerializeField]
@@ -28,28 +34,46 @@ namespace UnityEditor.AddressableAssets.GUI
         [FormerlySerializedAs("m_servicesScrollPos")]
         [SerializeField]
         Vector2 m_ServicesScrollPos;
-        [FormerlySerializedAs("m_profileVarsFoldout")]
-        [SerializeField]
-        bool m_ProfileVarsFoldout = true;
-        [FormerlySerializedAs("m_servicesFoldout")]
-        [SerializeField]
-        bool m_ServicesFoldout = true;
         [FormerlySerializedAs("m_splitterRatio")]
         [SerializeField]
-        float m_SplitterRatio = k_DefaultSplitterRatio;
+        float m_VerticalSplitterRatio = k_DefaultVerticalSplitterRatio;
+        float m_HorizontalSplitterRatio = k_DefaultHorizontalSplitterRatio;
         [FormerlySerializedAs("m_settings")]
         [SerializeField]
         AddressableAssetSettings m_Settings;
 
         ILogger m_Logger;
         bool m_NewLogContent;
-        bool m_IsResizingSplitter;
+        bool m_IsResizingVerticalSplitter;
+        bool m_IsResizingHorizontalSplitter;
+
+        bool m_Reload = false;
+
+        int m_serviceIndex = -1;
+        /// <summary>
+        /// Returns the index of the currently selected hosting service.
+        /// </summary>
+        public int ServiceIndex { get { return m_serviceIndex; } set { m_serviceIndex = value; } }
 
         readonly Dictionary<object, HostingServicesProfileVarsTreeView> m_ProfileVarTables =
             new Dictionary<object, HostingServicesProfileVarsTreeView>();
 
         readonly List<IHostingService> m_RemovalQueue = new List<IHostingService>();
         HostingServicesProfileVarsTreeView m_GlobalProfileVarTable;
+        HostingServicesListTreeView m_ServicesList;
+
+        Type[] m_ServiceTypes;
+
+        Type[] ServiceTypes
+        {
+            get
+            {
+                if (m_ServiceTypes == null || m_ServiceTypes.Length == 0)
+                    PopulateServiceTypes();
+                return m_ServiceTypes;
+            }
+        }
+        string[] m_ServiceTypeNames;
 
         /// <summary>
         /// Show the <see cref="HostingServicesWindow"/>, initialized with the given <see cref="AddressableAssetSettings"/>
@@ -69,7 +93,17 @@ namespace UnityEditor.AddressableAssets.GUI
             m_Settings.HostingServicesManager.Logger = m_Logger;
         }
 
-        [MenuItem("Window/Asset Management/Hosting Services", priority = 2052)]
+        void OnEnable()
+        {
+            PopulateServiceTypes();
+
+            m_ItemRectPadding = new GUIStyle();
+            m_ItemRectPadding.padding = new RectOffset(k_ItemRectPadding, k_ItemRectPadding, k_ItemRectPadding, k_ItemRectPadding);
+            m_LogRectPadding = new GUIStyle();
+            m_LogRectPadding.padding = new RectOffset(k_LogRectPadding, k_LogRectPadding, k_LogRectPadding, k_LogRectPadding);
+        }
+
+        [MenuItem("Window/Asset Management/Addressables/Hosting", priority = 2052)]
         static void InitializeWithDefaultSettings()
         {
             var defaultSettings = AddressableAssetSettingsDefaultObject.Settings;
@@ -82,77 +116,132 @@ namespace UnityEditor.AddressableAssets.GUI
             GetWindow<HostingServicesWindow>().Show(defaultSettings);
         }
 
+        void PopulateServiceTypes()
+        {
+            if (m_Settings == null) return;
+            m_ServiceTypes = m_Settings.HostingServicesManager.RegisteredServiceTypes;
+            m_ServiceTypeNames = new string[m_ServiceTypes.Length];
+            for (var i = 0; i < m_ServiceTypes.Length; i++)
+            {
+                m_ServiceTypeNames[i] = m_ServiceTypes[i].Name;
+            }
+        }
+
         void Awake()
         {
-            titleContent = new GUIContent("Hosting");
+            titleContent = new GUIContent("Addressables Hosting");
             m_Logger = new Logger(this);
+        }
+
+        internal static void DrawOutline(Rect rect, float size)
+        {
+            Color color = new Color(0.6f, 0.6f, 0.6f, 1.333f);
+            if (EditorGUIUtility.isProSkin)
+            {
+                color.r = 0.12f;
+                color.g = 0.12f;
+                color.b = 0.12f;
+            }
+
+            if (Event.current.type != EventType.Repaint)
+                return;
+
+            Color orgColor = UnityEngine.GUI.color;
+            UnityEngine.GUI.color = UnityEngine.GUI.color * color;
+            UnityEngine.GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, size), EditorGUIUtility.whiteTexture);
+            UnityEngine.GUI.DrawTexture(new Rect(rect.x, rect.yMax - size, rect.width, size), EditorGUIUtility.whiteTexture);
+            UnityEngine.GUI.DrawTexture(new Rect(rect.x, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
+            UnityEngine.GUI.DrawTexture(new Rect(rect.xMax - size, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
+
+            UnityEngine.GUI.color = orgColor;
         }
 
         void OnGUI()
         {
             if (m_Settings == null) return;
 
-            if (m_IsResizingSplitter)
-                m_SplitterRatio = Mathf.Clamp((Event.current.mousePosition.y - k_SplitterHeight / 2f) / position.height, 0.2f, 0.9f);
+            if (m_IsResizingVerticalSplitter)
+                m_VerticalSplitterRatio = Mathf.Clamp(Event.current.mousePosition.y / position.height, 0.2f, 0.9f);
 
-            var itemRect = new Rect(0, 0, position.width, position.height * m_SplitterRatio);
-            var splitterRect = new Rect(0, itemRect.height, position.width, k_SplitterHeight);
-            var logRect = new Rect(0, itemRect.height + k_SplitterHeight, position.width,
-                position.height - itemRect.height - k_SplitterHeight);
+            if(m_IsResizingHorizontalSplitter)
+                m_HorizontalSplitterRatio = Mathf.Clamp(Event.current.mousePosition.x / position.width, 0.15f, 0.6f);
 
-            EditorGUI.LabelField(splitterRect, string.Empty, UnityEngine.GUI.skin.horizontalSlider);
-            EditorGUIUtility.AddCursorRect(splitterRect, MouseCursor.ResizeVertical);
-            if (Event.current.type == EventType.MouseDown && splitterRect.Contains(Event.current.mousePosition))
-                m_IsResizingSplitter = true;
+            var toolbarRect = new Rect(0, 0, position.width, position.height);
+            var servicesRect = new Rect(0, k_ToolbarHeight, (position.width * m_HorizontalSplitterRatio), position.height);
+            var itemRect = new Rect(servicesRect.width + k_SplitterThickness, k_ToolbarHeight, position.width - servicesRect.width - k_SplitterThickness, (position.height * m_VerticalSplitterRatio) - k_ToolbarHeight);
+            var logRect = new Rect(servicesRect.width + k_SplitterThickness, k_ToolbarHeight + itemRect.height + k_SplitterThickness, position.width - servicesRect.width - k_SplitterThickness,
+                position.height - itemRect.height - k_SplitterThickness);
+            var verticalSplitterRect = new Rect(servicesRect.width + k_SplitterThickness, k_ToolbarHeight + itemRect.height, position.width, k_SplitterThickness);
+            var horizontalSplitterRect = new Rect(servicesRect.width, k_ToolbarHeight, k_SplitterThickness, position.height - k_ToolbarHeight);
+
+
+            //EditorGUI.LabelField(splitterRect, string.Empty, UnityEngine.GUI.skin.horizontalSlider);
+            EditorGUIUtility.AddCursorRect(verticalSplitterRect, MouseCursor.ResizeVertical);
+            EditorGUIUtility.AddCursorRect(horizontalSplitterRect, MouseCursor.ResizeHorizontal);
+            if (Event.current.type == EventType.MouseDown && verticalSplitterRect.Contains(Event.current.mousePosition))
+                m_IsResizingVerticalSplitter = true;
+            else if(Event.current.type == EventType.MouseDown && horizontalSplitterRect.Contains(Event.current.mousePosition))
+                m_IsResizingHorizontalSplitter = true;
             else if (Event.current.type == EventType.MouseUp)
-                m_IsResizingSplitter = false;
-
-            GUILayout.BeginArea(itemRect);
             {
-                EditorGUILayout.Space();
+                m_IsResizingVerticalSplitter = false;
+                m_IsResizingHorizontalSplitter = false;
+            }
 
-                m_ProfileVarsFoldout = EditorGUILayout.Foldout(m_ProfileVarsFoldout, "Global Profile Variables");
-                if (m_ProfileVarsFoldout)
-                    DrawGlobalProfileVarsArea();
+            GUILayout.BeginArea(toolbarRect);
+            GUILayout.BeginHorizontal(EditorStyles.toolbar);
+            {
+                var guiMode = new GUIContent("Create");
+                Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
+                if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
+                {
+                    var menu = new GenericMenu();
+                    menu.AddItem(new GUIContent("Local Hosting"), false, () => AddService(0, "Local Hosting"));
+                    menu.AddItem(new GUIContent("Custom Service"), false, () => GetWindow<HostingServicesAddServiceWindow>(true, "Custom Service").Initialize(m_Settings));
+                    menu.DropDown(rMode);
+                }
+                GUILayout.FlexibleSpace();
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
 
-                EditorGUILayout.Space();
 
-                m_ServicesFoldout = EditorGUILayout.Foldout(m_ServicesFoldout, "Hosting Services");
-                if (m_ServicesFoldout)
-                    DrawServicesArea();
+            DrawOutline(servicesRect, 1);
+           
+            GUILayout.BeginArea(servicesRect);
+            {
+                Rect r = new Rect(servicesRect);
+                r.y = 0;
+                DrawServicesList(r);
             }
             GUILayout.EndArea();
 
-            GUILayout.BeginArea(logRect);
+            DrawOutline(itemRect, 1);
+            GUILayout.BeginArea(itemRect, m_ItemRectPadding);
+            {
+                EditorGUILayout.Space();
+                DrawServicesArea();
+                EditorGUILayout.Space();
+            }
+            GUILayout.EndArea();
+
+            DrawOutline(logRect, 1);
+            GUILayout.BeginArea(logRect, m_LogRectPadding);
             {
                 DrawLogArea(logRect);
             }
             GUILayout.EndArea();
 
-            if (m_IsResizingSplitter)
+            if (m_IsResizingVerticalSplitter || m_IsResizingHorizontalSplitter)
                 Repaint();
         }
 
-        void DrawGlobalProfileVarsArea()
+        void DrawServicesList(Rect rect)
         {
             var manager = m_Settings.HostingServicesManager;
-            DrawProfileVarTable(this, manager.GlobalProfileVariables);
-
-            GUILayout.BeginHorizontal();
-            {
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Refresh", GUILayout.MaxWidth(125f)))
-                    manager.RefreshGlobalProfileVariables();
-            }
-            GUILayout.EndHorizontal();
-        }
-
-        void DrawServicesArea()
-        {
-            var manager = m_Settings.HostingServicesManager;
-            m_ServicesScrollPos = EditorGUILayout.BeginScrollView(m_ServicesScrollPos);
             var svcList = manager.HostingServices;
 
+            // Do removal queue
             if (m_RemovalQueue.Count > 0)
             {
                 foreach (var svc in m_RemovalQueue)
@@ -161,69 +250,105 @@ namespace UnityEditor.AddressableAssets.GUI
                 m_RemovalQueue.Clear();
             }
 
-            var i = 0;
-            foreach (var svc in svcList)
+            if (svcList.Count == 0)
             {
-                if (i > 0) EditorGUILayout.Space();
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                DrawServiceElement(svc);
-                EditorGUILayout.EndVertical();
-                i++;
+                m_Reload = true;
+                return;
             }
 
-            GUILayout.BeginHorizontal();
+            if(m_ServicesList == null || m_ServicesList.Names.Count != svcList.Count || m_Reload)
             {
-                if (svcList.Count == 0)
-                {
-                    EditorGUILayout.Space();
-                    EditorGUILayout.LabelField("No Hosting Services configured.");
-                }
+                m_ServicesList = new HostingServicesListTreeView(new TreeViewState(), manager, this, HostingServicesListTreeView.CreateHeader());
 
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Add Service...", GUILayout.MaxWidth(125f)))
-                {
-                    GetWindow<HostingServicesAddServiceWindow>(true, "Add Service").Initialize(m_Settings);
-                }
+                if(m_Reload)
+                    m_Reload = false;
             }
-            GUILayout.EndHorizontal();
+            m_ServicesList.OnGUI(rect);
+        }
+
+        void DrawServicesArea()
+        {
+            var manager = m_Settings.HostingServicesManager;
+            m_ServicesScrollPos = EditorGUILayout.BeginScrollView(m_ServicesScrollPos);
+            var svcList = manager.HostingServices;
+
+            List<IHostingService> lst = new List<IHostingService>(svcList);
+            if(lst.Count == 0)
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("No Hosting Services configured.");
+                GUILayout.EndScrollView();
+                return;
+            }
+            else if(m_serviceIndex >= lst.Count)
+            {
+                m_serviceIndex = lst.Count - 1;
+            }
+            DrawServiceElement(lst[m_serviceIndex], lst);
 
             GUILayout.EndScrollView();
         }
 
-        void DrawServiceElement(IHostingService svc)
+        /// <summary>
+        /// Add a hosting service of a given type.  The service at index <paramref name="typeIndex"/> in ServiceTypes must implement the
+        /// <see cref="IHostingService"/> interface, or an <see cref="ArgumentException"/> is thrown.
+        /// <param name="typeIndex">The index of the service stored in ServiceTypes. The service this this index must implement <see cref="IHostingService"/></param>
+        /// <param name="serviceName">A descriptive name for the new service instance.</param>
+        public void AddService(int typeIndex, string serviceName)
         {
-            EditorGUILayout.BeginHorizontal();
+            string hostingName = string.Format("{0} {1}", serviceName, m_Settings.HostingServicesManager.NextInstanceId);
+            m_Settings.HostingServicesManager.AddHostingService(ServiceTypes[typeIndex], hostingName);
+        }
+
+        /// <summary>
+        /// Add a hosting service to the removal queue.
+        /// <param name="svc">The service type to be removed.</param>
+        /// <param name="showDialog">Indicates whether or not a warning dialogue box is shown.</param>
+        public void RemoveService(IHostingService svc, bool showDialog = true)
+        {
+            if(!showDialog)
+                m_RemovalQueue.Add(svc);
+            else if (EditorUtility.DisplayDialog("Remove Service", "Are you sure you want to remove " + svc.DescriptiveName + "? This action cannot be undone.", "Ok", "Cancel"))
+                m_RemovalQueue.Add(svc);
+        }
+
+        void DrawServiceElement(IHostingService svc, List<IHostingService> svcList)
+        {
+            string newName =  EditorGUILayout.DelayedTextField("Service Name", svc.DescriptiveName);
+            if(svcList.Find(s => s.DescriptiveName == newName) == default(IHostingService))
             {
-                svc.DescriptiveName = EditorGUILayout.DelayedTextField("Service EventName", svc.DescriptiveName);
-
-                var newIsServiceEnabled = GUILayout.Toggle(svc.IsHostingServiceRunning, "Enable Service", "Button", GUILayout.MaxWidth(150f));
-
-                if (GUILayout.Button("Remove...", GUILayout.MaxWidth(75f)))
-                {
-                    if (EditorUtility.DisplayDialog("Remove Service", "Are you sure?", "Ok", "Cancel"))
-                        m_RemovalQueue.Add(svc);
-                }
-                else if (newIsServiceEnabled != svc.IsHostingServiceRunning)
-                {
-                    if (newIsServiceEnabled)
-                        svc.StartHostingService();
-                    else
-                        svc.StopHostingService();
-                }
+                svc.DescriptiveName = newName;
+                m_ServicesList.Reload();
             }
-            EditorGUILayout.EndHorizontal();
 
             var typeAndId = string.Format("{0} ({1})", svc.GetType().Name, svc.InstanceId.ToString());
             EditorGUILayout.LabelField("Service Type (ID)", typeAndId, GUILayout.MinWidth(225f));
 
-            EditorGUILayout.Space();
-            
-            using (new EditorGUI.DisabledGroupScope(!svc.IsHostingServiceRunning))
-            {
-                // Allow service to provide additional GUI configuration elements
-                svc.OnGUI();
+            // Allow service to provide additional GUI configuration elements
+            svc.OnGUI();
 
-                EditorGUILayout.Space();
+            var newIsServiceEnabled = EditorGUILayout.Toggle("Enable", svc.IsHostingServiceRunning);
+            if (newIsServiceEnabled != svc.IsHostingServiceRunning)
+            {
+                if (newIsServiceEnabled)
+                    svc.StartHostingService();
+                else
+                    svc.StopHostingService();
+            }
+
+            EditorGUILayout.Space();
+
+            using (new EditorGUI.DisabledScope(!svc.IsHostingServiceRunning))
+            {
+
+                GUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Hosting Service Variables");
+
+                var manager = m_Settings.HostingServicesManager;
+                if (GUILayout.Button("Refresh", GUILayout.ExpandWidth(false)))
+                    manager.RefreshGlobalProfileVariables();
+
+                GUILayout.EndHorizontal();
 
                 DrawProfileVarTable(svc, svc.ProfileVariables);
             }
@@ -257,6 +382,13 @@ namespace UnityEditor.AddressableAssets.GUI
             var tableHeight = table.multiColumnHeader.height + rowHeight; // header + 1 extra line
 
             table.ClearItems();
+
+            var manager = m_Settings.HostingServicesManager;
+            foreach (var globalVar in manager.GlobalProfileVariables)
+            {
+                table.AddOrUpdateItem(globalVar.Key, globalVar.Value);
+                tableHeight += rowHeight;
+            }
             foreach (var kvp in data)
             {
                 table.AddOrUpdateItem(kvp.Key, kvp.Value);

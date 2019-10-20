@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -14,6 +15,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
     /// <summary>
     /// Provider for content catalogs.  This provider makes use of a hash file to determine if a newer version of the catalog needs to be downloaded.
     /// </summary>
+    [DisplayName("Content Catalog Provider")]
     public class ContentCatalogProvider : ResourceProviderBase
     {
         /// <summary>
@@ -41,7 +43,8 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
         {
          //   int m_StartFrame;
             string m_LocalDataPath;
-            string m_HashValue;
+            string m_RemoteHashValue;
+            string m_LocalHashValue;
             ProvideHandle m_ProviderInterface;
             ResourceManager m_RM;
 
@@ -50,8 +53,8 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                 m_RM = rm;
                 m_ProviderInterface = providerInterface;
                 m_LocalDataPath = null;
-                m_HashValue = null;
-         //       m_StartFrame = Time.frameCount;
+                m_RemoteHashValue = null;
+         
                 List<object> deps = new List<object>(); // TODO: garbage. need to pass actual count and reuse the list
                 m_ProviderInterface.GetDependencies(deps);
                 string idToLoad = DetermineIdToLoad(m_ProviderInterface.Location, deps);
@@ -70,17 +73,17 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                     location.Dependencies.Count == (int)DependencyHashIndex.Count)
                 {
                     var remoteHash = dependencyObjects[(int)DependencyHashIndex.Remote] as string;
-                    var cachedHash = dependencyObjects[(int)DependencyHashIndex.Cache] as string;
-                    Addressables.LogFormat("Addressables - ContentCatalogProvider CachedHash = {0}, RemoteHash = {1}.", cachedHash, remoteHash);
+                    m_LocalHashValue = dependencyObjects[(int)DependencyHashIndex.Cache] as string;
+                    Addressables.LogFormat("Addressables - ContentCatalogProvider CachedHash = {0}, RemoteHash = {1}.", m_LocalHashValue, remoteHash);
 
                     if (string.IsNullOrEmpty(remoteHash)) //offline
                     {
-                        if (!string.IsNullOrEmpty(cachedHash)) //cache exists
+                        if (!string.IsNullOrEmpty(m_LocalHashValue)) //cache exists
                             idToLoad = location.Dependencies[(int)DependencyHashIndex.Cache].InternalId.Replace(".hash", ".json");
                     }
                     else //online
                     {
-                        if (remoteHash == cachedHash) //cache of remote is good
+                        if (remoteHash == m_LocalHashValue) //cache of remote is good
                         {
                             idToLoad = location.Dependencies[(int)DependencyHashIndex.Cache].InternalId.Replace(".hash", ".json");
                         }
@@ -88,7 +91,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                         {
                             idToLoad = location.Dependencies[(int)DependencyHashIndex.Remote].InternalId.Replace(".hash", ".json");
                             m_LocalDataPath = location.Dependencies[(int)DependencyHashIndex.Cache].InternalId.Replace(".hash", ".json");
-                            m_HashValue = remoteHash;
+                            m_RemoteHashValue = remoteHash;
                         }
                     }
                 }
@@ -101,19 +104,23 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                 var ccd = op.Result;
                 m_RM.Release(op);
                 Addressables.LogFormat("Addressables - Content catalog load result = {0}.", ccd);
-                
-       //         ResourceManagerEventCollector.PostEvent(ResourceManagerEventCollector.EventType.LoadAsyncCompletion, m_ProviderInterface.Location, Time.frameCount - m_StartFrame);
-                m_ProviderInterface.Complete(ccd, ccd != null, null);
-                if (ccd != null && !string.IsNullOrEmpty(m_HashValue) && !string.IsNullOrEmpty(m_LocalDataPath))
+                if (ccd != null)
                 {
-                    var dir = Path.GetDirectoryName(m_LocalDataPath);
-                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                        Directory.CreateDirectory(dir);
-                    var localCachePath = m_LocalDataPath;
-                    Addressables.LogFormat("Addressables - Saving cached content catalog to {0}.", localCachePath);
-                    File.WriteAllText(localCachePath, JsonUtility.ToJson(ccd));
-                    File.WriteAllText(localCachePath.Replace(".json", ".hash"), m_HashValue);
+                    ccd.location = m_ProviderInterface.Location;
+                    ccd.localHash = m_LocalHashValue;
+                    if (!string.IsNullOrEmpty(m_RemoteHashValue) && !string.IsNullOrEmpty(m_LocalDataPath))
+                    {
+                        var dir = Path.GetDirectoryName(m_LocalDataPath);
+                        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                            Directory.CreateDirectory(dir);
+                        var localCachePath = m_LocalDataPath;
+                        Addressables.LogFormat("Addressables - Saving cached content catalog to {0}.", localCachePath);
+                        File.WriteAllText(localCachePath, JsonUtility.ToJson(ccd));
+                        File.WriteAllText(localCachePath.Replace(".json", ".hash"), m_RemoteHashValue);
+                        ccd.localHash = m_RemoteHashValue;
+                    }
                 }
+                m_ProviderInterface.Complete(ccd, ccd != null, null);
             }
         }
 

@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -55,6 +56,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
     /// <summary>
     /// Provides assets from virtual asset bundles.  Actual loads are done through the AssetDatabase API.
     /// </summary>
+    [DisplayName("Assets from Virtual Bundles")]
     public class VirtualBundledAssetProvider : ResourceProviderBase
     {
         /// <summary>

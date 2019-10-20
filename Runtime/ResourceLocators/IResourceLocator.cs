@@ -10,6 +10,10 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
     public interface IResourceLocator
     {
         /// <summary>
+        /// The id for this locator.
+        /// </summary>
+        string LocatorId { get; }
+        /// <summary>
         /// The keys defined by this locator.
         /// </summary>
         IEnumerable<object> Keys { get; }

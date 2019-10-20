@@ -1,10 +1,12 @@
 ﻿using System;
+using System.ComponentModel;
 
 namespace UnityEngine.ResourceManagement.ResourceProviders
 {
     /// <summary>
     /// Converts JSON serialized text into the requested object.
     /// </summary>
+    [DisplayName("JSON Asset Provider")]
     public class JsonAssetProvider : TextDataProvider
     {
         /// <summary>

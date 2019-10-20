@@ -17,11 +17,18 @@ namespace UnityEditor.AddressableAssets.GUI
         [SerializeField]
         bool m_IgnoreLegacyBundles;
 
-        [MenuItem("Window/Asset Management/Addressables", priority = 2050)]
-        static void Init()
+        [MenuItem("Window/Asset Management/Addressables/Settings", priority = 2051)]
+        internal static void ShowSettingsInspector()
+        {
+            EditorGUIUtility.PingObject(AddressableAssetSettingsDefaultObject.Settings);
+            Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
+        }
+
+        [MenuItem("Window/Asset Management/Addressables/Groups", priority = 2050)]
+        internal static void Init()
         {
             var window = GetWindow<AddressableAssetsWindow>();
-            window.titleContent = new GUIContent("Addressables");
+            window.titleContent = new GUIContent("Addressables Groups");
             window.Show();
         }
         public static Vector2 GetWindowPosition()
@@ -69,33 +76,33 @@ namespace UnityEditor.AddressableAssets.GUI
                     m_GroupEditor = null;
                     AddressableAssetSettingsDefaultObject.Settings = AddressableAssetSettings.Create(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, AddressableAssetSettingsDefaultObject.kDefaultConfigAssetName, true, true);
                 }
-                if (GUILayout.Button("Import Addressables Settings"))
-                {
-                    m_GroupEditor = null;
-                    var path = EditorUtility.OpenFilePanel("Addressables Settings Object", AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, "asset");
-                    if (!string.IsNullOrEmpty(path))
-                    {
-                        var i = path.ToLower().IndexOf("/assets/");
-                        if (i > 0)
-                        {
-                            path = path.Substring(i + 1);
-                            Addressables.LogFormat("Loading Addressables Settings from {0}", path);
-                            var obj = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
-                            if (obj != null)
-                                AddressableAssetSettingsDefaultObject.Settings = obj;
-                            else
-                                Debug.LogWarning("Unable to load asset settings from: "
-                                                 + path
-                                                 + "\nPlease ensure the location included in the project directory."
-                                );
-                        }
-                    }
-                }
+                //if (GUILayout.Button("Import Addressables Settings"))
+                //{
+                //    m_GroupEditor = null;
+                //    var path = EditorUtility.OpenFilePanel("Addressables Settings Object", AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, "asset");
+                //    if (!string.IsNullOrEmpty(path))
+                //    {
+                //        var i = path.ToLower().IndexOf("/assets/");
+                //        if (i > 0)
+                //        {
+                //            path = path.Substring(i + 1);
+                //            Addressables.LogFormat("Loading Addressables Settings from {0}", path);
+                //            var obj = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
+                //            if (obj != null)
+                //                AddressableAssetSettingsDefaultObject.Settings = obj;
+                //            else
+                //                Debug.LogWarning("Unable to load asset settings from: "
+                //                                 + path
+                //                                 + "\nPlease ensure the location included in the project directory."
+                //                );
+                //        }
+                //    }
+                //}
                 GUILayout.Space(20);
                 GUILayout.BeginHorizontal();
                 GUILayout.Space(50);
                 UnityEngine.GUI.skin.label.wordWrap = true;
-                GUILayout.Label("Click the \"Create\" or \"Import\" button above or simply drag an asset into this window to start using Addressables.  Once you begin, the Addressables system will save some assets to your project to keep up with its data");
+                GUILayout.Label("Click the \"Create\" button above or simply drag an asset into this window to start using Addressables.  Once you begin, the Addressables system will save some assets to your project to keep up with its data");
                 GUILayout.Space(50);
                 GUILayout.EndHorizontal();
                 switch (Event.current.type)

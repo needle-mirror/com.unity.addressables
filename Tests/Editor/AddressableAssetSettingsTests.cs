@@ -7,6 +7,7 @@ using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.TestTools;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -37,6 +38,18 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsNotNull(group);
             Settings.RemoveGroup(group);
             Assert.IsNull(Settings.FindGroup(groupName));
+        }
+
+        [Test]
+        public void RemoveMissingGroupsReferences_CheckGroupCount()
+        {
+            var size = Settings.groups.Count;
+            var x = Settings.groups[size - 1];
+            Settings.groups[size - 1] = null;
+            bool b = Settings.RemoveMissingGroupReferences();
+            Assert.AreEqual(Settings.groups.Count + 1, size);
+            Settings.groups.Add(x);
+            LogAssert.Expect(LogType.Error, "Addressable settings contains 1 group reference(s) that are no longer there. Removing reference(s).");
         }
 
         [Test]

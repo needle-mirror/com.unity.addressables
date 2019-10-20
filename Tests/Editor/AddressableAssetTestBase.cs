@@ -2,7 +2,9 @@
 using System.IO;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 namespace UnityEditor.AddressableAssets.Tests
@@ -24,6 +26,8 @@ namespace UnityEditor.AddressableAssets.Tests
             }
         }
         protected string m_AssetGUID;
+        protected string[] m_SceneGuids;
+
         protected virtual bool PersistSettings { get { return true; } }
         [OneTimeSetUp]
         public void Init()
@@ -47,6 +51,30 @@ namespace UnityEditor.AddressableAssets.Tests
             PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
 #endif
             m_AssetGUID = AssetDatabase.AssetPathToGUID(k_TestConfigFolder + "/test.prefab");
+
+            string scene1Path = k_TestConfigFolder + "/contentUpdateScene1.unity";
+            string scene2Path = k_TestConfigFolder + "/contentUpdateScene2.unity";
+            string scene3Path = k_TestConfigFolder + "/contentUpdateScene3.unity";
+
+            Scene scene1 = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+            EditorSceneManager.SaveScene(scene1, scene1Path);
+
+            Scene scene2 = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+            EditorSceneManager.SaveScene(scene2, scene2Path);
+
+            Scene scene3 = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+            EditorSceneManager.SaveScene(scene3, scene3Path);
+
+            //Clear out the active scene so it doesn't affect tests
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+
+            m_SceneGuids = new string[]
+            {
+                AssetDatabase.AssetPathToGUID(scene1Path),
+                AssetDatabase.AssetPathToGUID(scene2Path),
+                AssetDatabase.AssetPathToGUID(scene3Path)
+            };
+
             OnInit();
 
             //TODO: Remove when NSImage warning issue on bokken is fixed

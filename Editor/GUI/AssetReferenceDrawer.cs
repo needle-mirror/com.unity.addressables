@@ -3,10 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Reflection;
-using System.Text;
-using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEditor.SceneManagement;
@@ -17,7 +14,7 @@ using UnityEngine.U2D;
 namespace UnityEditor.AddressableAssets.GUI
 {
     using Object = UnityEngine.Object;
-    
+
     [CustomPropertyDrawer(typeof(AssetReference), true)]
     class AssetReferenceDrawer : PropertyDrawer
     {
@@ -28,8 +25,8 @@ namespace UnityEditor.AddressableAssets.GUI
         internal const string noAssetString = "None (AddressableAsset)";
         AssetReference m_AssetRefObject;
 
-        List<AssetReferenceUIRestriction> m_Restrictions = null;
-        
+        List<AssetReferenceUIRestrictionSurrogate> m_Restrictions = null;
+
         /// <summary>
         /// Validates that the referenced asset allowable for this asset reference.
         /// </summary>
@@ -106,7 +103,6 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             return false;
         }
-        
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
@@ -201,7 +197,6 @@ namespace UnityEditor.AddressableAssets.GUI
                     {
                         m_AssetName = "Missing File!";
                     }
-                    
                 }
             }
 
@@ -209,7 +204,7 @@ namespace UnityEditor.AddressableAssets.GUI
             var nameToUse = m_AssetName;
             if (isNotAddressable)
                 nameToUse = "Not Addressable - " + nameToUse;
-            if(m_AssetRefObject.editorAsset != null)
+            if (m_AssetRefObject.editorAsset != null)
             {
                 var subAssets = new List<Object>();
                 subAssets.Add(null);
@@ -230,7 +225,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     var objRect = new Rect(assetDropDownRect.xMax, assetDropDownRect.y, assetDropDownRect.width, assetDropDownRect.height);
                     var objNames = new string[subAssets.Count];
                     var selIndex = 0;
-                    for(int i = 0; i < subAssets.Count; i++)
+                    for (int i = 0; i < subAssets.Count; i++)
                     {
                         var s = subAssets[i];
                         var objName = s == null ? "<none>" : s.name;
@@ -295,7 +290,6 @@ namespace UnityEditor.AddressableAssets.GUI
                                 rejectedDrag = true;
                         }
                     }
-                    
                 }
                 DragAndDrop.visualMode = rejectedDrag ? DragAndDropVisualMode.Rejected : DragAndDropVisualMode.Copy;
             }
@@ -324,7 +318,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         var path = DragAndDrop.paths[0];
                         if (AddressableAssetUtility.IsInResources(path))
                             Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first. ");
-                        else if(!AddressableAssetUtility.IsPathValidForEntry(path))
+                        else if (!AddressableAssetUtility.IsPathValidForEntry(path))
                             Addressables.LogWarning("Dragged asset is not valid as an Asset Reference. " + path);
                         else
                         {
@@ -351,13 +345,13 @@ namespace UnityEditor.AddressableAssets.GUI
 
             EditorGUI.EndProperty();
         }
-        
+
         void GatherFilters(SerializedProperty property)
         {
             if (m_Restrictions != null)
                 return;
 
-            m_Restrictions = new List<AssetReferenceUIRestriction>();
+            m_Restrictions = new List<AssetReferenceUIRestrictionSurrogate>();
             var o = property.serializedObject.targetObject;
             if (o != null)
             {
@@ -374,13 +368,30 @@ namespace UnityEditor.AddressableAssets.GUI
                     foreach (var attr in a)
                     {
                         var uiRestriction = attr as AssetReferenceUIRestriction;
-                        if(uiRestriction != null)
-                            m_Restrictions.Add(uiRestriction);
+                        if (uiRestriction != null)
+                        {
+                            var surrogate = AssetReferenceUtility.GetSurrogate(uiRestriction.GetType());
+
+                            if (surrogate != null)
+                            {
+                                var surrogateInstance = Activator.CreateInstance(surrogate) as AssetReferenceUIRestrictionSurrogate;
+                                if (surrogateInstance != null)
+                                {
+                                    surrogateInstance.Init(uiRestriction);
+                                    m_Restrictions.Add(surrogateInstance);
+                                }
+                            }
+                            else
+                            {
+                                AssetReferenceUIRestrictionSurrogate restriction = new AssetReferenceUIRestrictionSurrogate();
+                                restriction.Init(uiRestriction);
+                                m_Restrictions.Add(restriction);
+                            }
+                        }
                     }
                 }
             }
         }
-        
     }
 
     class AssetReferencePopup : PopupWindowContent
@@ -531,7 +542,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
                 if (aaSettings == null)
                 {
-                    var message = "Use 'Window->Addressable Assets' to initialize.";
+                    var message = "Use 'Window->Addressables' to initialize.";
                     root.AddChild(new AssetRefTreeViewItem(message.GetHashCode(), 0, message, string.Empty, string.Empty));
                 }
                 else
@@ -568,7 +579,7 @@ namespace UnityEditor.AddressableAssets.GUI
             try
             {
                 if (property == null || field == null)
-                    return default(T); 
+                    return default(T);
                 var serializedObject = property.serializedObject;
                 if (serializedObject == null)
                 {
@@ -608,7 +619,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     {
                         var slice = property.propertyPath.Split('[', ']');
                         if (slice.Length >= 2)
-                            label= "Element " + slice[slice.Length - 2];
+                            label = "Element " + slice[slice.Length - 2];
                     }
                     else
                     {
@@ -694,71 +705,67 @@ namespace UnityEditor.AddressableAssets.GUI
             return DescendHierarchy<T>(newObj, splitName, splitCounts, depth + 1);
         }
     }
-    
-    
-    
 
     /// <summary>
-    /// Used to restrict an AssetReference field or property to only allow items wil specific labels.  This is only enforced through the UI.
+    /// Used to restrict a class to only allow items with specific labels.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true)]
-    public class AssetReferenceUIRestriction : Attribute
-    {        
+    [AttributeUsage(AttributeTargets.Class)]
+    public class AssetReferenceSurrogateAttribute : Attribute
+    {
+        public Type TargetType;
         /// <summary>
-        /// Validates that the referenced asset allowable for this asset reference.
+        /// Construct a new AssetReferenceSurrogateAttribute.
+        /// </summary>
+        /// <param name="type">The Type of the class in question.</param>
+        public AssetReferenceSurrogateAttribute(Type type)
+        {
+            TargetType = type;
+        }
+    }
+
+    /// <summary>
+    /// Surrogate to AssetReferenceUIRestriction.
+    /// This surrogate class provides the editor-side implementation of AssetReferenceUIRestriction attribute
+    /// Used to restrict an AssetReference field or property to only allow items with specific labels. This is only enforced through the UI.
+    /// </summary>
+    [AssetReferenceSurrogate(typeof(AssetReferenceUIRestriction))]
+    public class AssetReferenceUIRestrictionSurrogate : AssetReferenceUIRestriction
+    {
+        AssetReferenceUIRestriction data;
+        /// <summary>
+        /// Sets the AssetReferenceUIRestriction for this surrogate
+        /// </summary>
+        /// <param name="initData">To initialize AssetReferenceUIRestriction for surrogate</param>
+        public virtual void Init(AssetReferenceUIRestriction initData)
+        {
+            data = initData;
+        }
+        /// <summary>
+        /// Validates the referenced asset allowable for this asset reference.
         /// </summary>
         /// <param name="obj">The Object to validate.</param>
         /// <returns>Whether the referenced asset is valid.</returns>
-        public virtual bool ValidateAsset(Object obj)
+        public override bool ValidateAsset(Object obj)
         {
-            return true;
-        }
-        
-        /// <summary>
-        /// Validates that the referenced asset allowable for this asset reference.
-        /// </summary>
-        /// <param name="path">The path to the asset in question.</param>
-        /// <returns>Whether the referenced asset is valid.</returns>
-        public virtual bool ValidateAsset(string path)
-        {
-            return true;
+            return data.ValidateAsset(obj);
         }
     }
-    
-     /// <summary>
-    /// Used to restrict an AssetReference field or property to only allow items wil specific labels.  This is only enforced through the UI.
+    /// <summary>
+    /// Surrogate to AssetReferenceUILabelRestriction 
+    /// This surrogate class provides the editor-side implementation of AssetReferenceUILabelRestriction attribute
+    /// Used to restrict an AssetReference field or property to only allow items wil specific labels. This is only enforced through the UI.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
-    public sealed class AssetReferenceUILabelRestriction : AssetReferenceUIRestriction
+    [AssetReferenceSurrogate(typeof(AssetReferenceUILabelRestriction))]
+    public class AssetReferenceUILabelRestrictionSurrogate : AssetReferenceUIRestrictionSurrogate
     {
-        string[] m_AllowedLabels;
-        string m_CachedToString;
-
+        AssetReferenceUILabelRestriction data;
         /// <summary>
-        /// Construct a new AssetReferenceLabelAttribute.
+        /// Sets the AssetReferenceUILabelRestriction for this surrogate
         /// </summary>
-        /// <param name="allowedLabels">The labels allowed for the attributed AssetReference.</param>
-        public AssetReferenceUILabelRestriction(params string[] allowedLabels)
+        /// <param name="initData">To initialize AssetReferenceUILabelRestriction field</param>
+        public override void Init(AssetReferenceUIRestriction initData)
         {
-            m_AllowedLabels = allowedLabels;
-        }
-        ///<inheritdoc/>
-        public override string ToString()
-        {
-            if (m_CachedToString == null)
-            {
-                StringBuilder sb = new StringBuilder();
-                bool first = true;
-                foreach (var t in m_AllowedLabels)
-                {
-                    if (!first)
-                        sb.Append(',');
-                    first = false;
-                    sb.Append(t);
-                }
-                m_CachedToString = sb.ToString();
-            }
-            return m_CachedToString;
+            data = initData as AssetReferenceUILabelRestriction;
         }
 
         /// <inheritdoc/>
@@ -767,24 +774,103 @@ namespace UnityEditor.AddressableAssets.GUI
             var path = AssetDatabase.GetAssetOrScenePath(obj);
             return ValidateAsset(path);
         }
-        
         /// <inheritdoc/>
         public override bool ValidateAsset(string path)
         {
             if (AddressableAssetSettingsDefaultObject.Settings == null)
                 return false;
-        
             var guid = AssetDatabase.AssetPathToGUID(path);
             var entry = AddressableAssetSettingsDefaultObject.Settings.FindAssetEntry(guid);
             if (entry != null)
             {
-                foreach (var label in m_AllowedLabels)
+                foreach (var label in data.m_AllowedLabels)
                 {
                     if (entry.labels.Contains(label))
                         return true;
                 }
             }
             return false;
+        }
+
+        ///<inheritdoc/>
+        public override string ToString()
+        {
+            return data.ToString();
+        }
+    }
+
+    /// <summary>
+    /// Utility Class
+    /// </summary>
+    public class AssetReferenceUtility
+    {
+        /// <summary>
+        /// Finds surrogate class for an Assembly with a particular TargetType
+        /// </summary>
+        /// <param name="assembly">Assembly for which the surrogate must be found</param>
+        /// <param name="targetType">Target Type to search</param>
+        /// <returns>Type of the surrogate found for the Assembly with a particular Target Type.</returns>
+        public static Type GetSurrogate(Type targetType)
+        {
+
+            if (targetType == null)
+            {
+                Debug.LogError("targetType cannot be null");
+                return null;
+            }
+
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            List<Type> typesList = new List<Type>();
+            foreach (Assembly assem in assemblies)
+            {
+                var assemblyTypeList = GatherTargetTypesFromAssembly(assem, targetType, out bool concreteTypeFound);
+                if (concreteTypeFound == true)
+                    return assemblyTypeList[0];
+                typesList.AddRange(assemblyTypeList);
+            }
+
+            if(typesList.Count==0)
+                return null;
+
+            typesList.Sort(AssetReferenceUtility.CompareTypes);
+            return typesList[0];
+        }
+
+        static int CompareTypes(object x, object y)
+        {
+            Type t1 = (Type)x;
+            Type t2 = (Type)y;
+            if (t1 == t2)
+                return 0;
+            else if (t1.IsAssignableFrom(t2))
+                return 1;
+            else
+                return -1;
+        }
+
+        private static List<Type> GatherTargetTypesFromAssembly(Assembly assembly, Type targetType, out bool concreteTypeFound)
+        {
+            List<Type> assignableTypesList = new List<Type>();
+            var typeList = assembly.GetTypes().Where(attrType => typeof(AssetReferenceUIRestrictionSurrogate).IsAssignableFrom(attrType)).ToList();
+            foreach (var type in typeList)
+            {
+                var customAttribute = type.GetCustomAttribute<AssetReferenceSurrogateAttribute>();
+                if (customAttribute == null)
+                    continue;
+                if (customAttribute.TargetType == targetType)
+                {
+                    assignableTypesList.Clear();
+                    assignableTypesList.Add(type);
+                    concreteTypeFound = true;
+                    return assignableTypesList;
+                }
+                if (customAttribute.TargetType.IsAssignableFrom(targetType))
+                {
+                    assignableTypesList.Add(type);
+                }
+            }
+            concreteTypeFound = false;
+            return assignableTypesList;
         }
     }
 }

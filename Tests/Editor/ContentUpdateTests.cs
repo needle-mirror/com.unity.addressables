@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
@@ -162,6 +163,93 @@ namespace UnityEditor.AddressableAssets.Tests
             var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
             ContentUpdateScript.BuildContentUpdate(Settings, tempPath);
             Assert.IsTrue(Directory.Exists(Addressables.BuildPath));
+        }
+
+        [Test]
+        public void ContentUpdateScenes_PackedTogether_MarksAllScenesModified()
+        {
+            AddressableAssetGroup group = Settings.CreateGroup("SceneGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+            group.GetSchema<BundledAssetGroupSchema>().BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
+
+            AddressableAssetEntry scene1 = new AddressableAssetEntry(m_SceneGuids[0], "scene1", group, false);
+            AddressableAssetEntry scene2 = new AddressableAssetEntry(m_SceneGuids[1], "scene2", group, false);
+            AddressableAssetEntry scene3 = new AddressableAssetEntry(m_SceneGuids[2], "scene3", group, false);
+
+            group.AddAssetEntry(scene1, false);
+            group.AddAssetEntry(scene2, false);
+            group.AddAssetEntry(scene3, false);
+
+            List<AddressableAssetEntry> modifedEnteries = new List<AddressableAssetEntry>()
+            {
+                scene1
+            };
+
+            ContentUpdateScript.AddAllDependentScenesFromModifiedEnteries(modifedEnteries);
+
+            Assert.AreEqual(3, modifedEnteries.Count);
+            Assert.AreEqual(scene1, modifedEnteries[0]);
+            Assert.AreEqual(scene2, modifedEnteries[1]);
+            Assert.AreEqual(scene3, modifedEnteries[2]);
+
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
+        public void ContentUpdateScenes_PackedTogetherByLabel_MarksAllScenesModifiedWithSharedLabel()
+        {
+            AddressableAssetGroup group = Settings.CreateGroup("SceneGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+            group.GetSchema<BundledAssetGroupSchema>().BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel;
+
+            AddressableAssetEntry scene1 = new AddressableAssetEntry(m_SceneGuids[0], "scene1", group, false);
+            AddressableAssetEntry scene2 = new AddressableAssetEntry(m_SceneGuids[1], "scene2", group, false);
+            AddressableAssetEntry scene3 = new AddressableAssetEntry(m_SceneGuids[2], "scene3", group, false);
+
+            group.AddAssetEntry(scene1, false);
+            group.AddAssetEntry(scene2, false);
+            group.AddAssetEntry(scene3, false);
+
+            scene1.SetLabel("label", true);
+            scene3.SetLabel("label", true);
+
+            List<AddressableAssetEntry> modifedEnteries = new List<AddressableAssetEntry>()
+            {
+                scene1
+            };
+
+            ContentUpdateScript.AddAllDependentScenesFromModifiedEnteries(modifedEnteries);
+
+            Assert.AreEqual(2, modifedEnteries.Count);
+            Assert.AreEqual(scene1, modifedEnteries[0]);
+            Assert.AreEqual(scene3, modifedEnteries[1]);
+
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
+        public void ContentUpdateScenes_PackedSeperately_MarksNoAdditionalScenes()
+        {
+            AddressableAssetGroup group = Settings.CreateGroup("SceneGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+            group.GetSchema<BundledAssetGroupSchema>().BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackSeparately;
+
+            AddressableAssetEntry scene1 = new AddressableAssetEntry(m_SceneGuids[0], "scene1", group, false);
+            AddressableAssetEntry scene2 = new AddressableAssetEntry(m_SceneGuids[1], "scene2", group, false);
+            AddressableAssetEntry scene3 = new AddressableAssetEntry(m_SceneGuids[2], "scene3", group, false);
+
+            group.AddAssetEntry(scene1, false);
+            group.AddAssetEntry(scene2, false);
+            group.AddAssetEntry(scene3, false);
+
+            List<AddressableAssetEntry> modifedEnteries = new List<AddressableAssetEntry>()
+            {
+                scene1
+            };
+
+            ContentUpdateScript.AddAllDependentScenesFromModifiedEnteries(modifedEnteries);
+
+            Assert.AreEqual(1, modifedEnteries.Count);
+            Assert.AreEqual(scene1, modifedEnteries[0]);
+
+            Settings.RemoveGroup(group);
         }
     }
 }

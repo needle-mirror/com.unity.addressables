@@ -20,7 +20,6 @@ namespace AddressableAssetsIntegrationTests
         internal protected AddressablesImpl m_Addressables;
         Dictionary<object, int> m_KeysHashSet = new Dictionary<object, int>();
         List<object> m_PrefabKeysList = new List<object>();
-        List<object> m_SceneKeysList = new List<object>();
 
         Action<AsyncOperationHandle, Exception> m_PrevHandler;
         
@@ -63,14 +62,12 @@ namespace AddressableAssetsIntegrationTests
         int m_StartingOpCount;
         int m_StartingTrackedHandleCount;
         int m_StartingInstanceCount;
-        int m_StartingSceneCount;
         [TearDown]
         public void TearDown()
         {
             Assert.AreEqual(m_StartingOpCount, m_Addressables.ResourceManager.OperationCacheCount);
             Assert.AreEqual(m_StartingTrackedHandleCount, m_Addressables.TrackedHandleCount);
             Assert.AreEqual(m_StartingInstanceCount, m_Addressables.ResourceManager.InstanceOperationCount);
-            Assert.AreEqual(m_StartingSceneCount, m_Addressables.SceneOperationCount);
         }
 
         //we must wait for Addressables initialization to complete since we are clearing out all of its data for the tests.
@@ -94,7 +91,7 @@ namespace AddressableAssetsIntegrationTests
 #endif
                     runtimeSettingsPath = m_Addressables.ResolveInternalId(runtimeSettingsPath);
                     Debug.LogFormat("Initializing from path {0}", runtimeSettingsPath);
-                    yield return m_Addressables.InitializeAsync(runtimeSettingsPath, "BASE");
+                    yield return m_Addressables.InitializeAsync(runtimeSettingsPath, "BASE", false);
 
                     foreach (var locator in m_Addressables.ResourceLocators)
                     {
@@ -117,11 +114,6 @@ namespace AddressableAssetsIntegrationTests
                                 {
                                     m_KeysHashSet[key] = m_KeysHashSet[key] + locs.Count;
                                 }
-
-                                var isScene = locs.All(s => s.ResourceType == typeof(SceneInstance));
-                                if (isScene)
-                                    m_SceneKeysList.Add(key);
-
                             }
                         }
                     }
@@ -135,7 +127,6 @@ namespace AddressableAssetsIntegrationTests
             m_StartingOpCount = m_Addressables.ResourceManager.OperationCacheCount;
             m_StartingTrackedHandleCount = m_Addressables.TrackedHandleCount;
             m_StartingInstanceCount = m_Addressables.ResourceManager.InstanceOperationCount;
-            m_StartingSceneCount = m_Addressables.SceneOperationCount;
         } 
     }
 #if UNITY_EDITOR

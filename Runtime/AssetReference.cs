@@ -7,6 +7,7 @@ using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.U2D;
 
@@ -185,6 +186,27 @@ namespace UnityEngine.AddressableAssets
         public virtual string AssetGUID { get { return m_AssetGUID; } }
         public virtual string SubObjectName { get { return m_SubObjectName; } set { m_SubObjectName = value; } }
 
+
+        /// <summary>
+        /// Returns the state of the internal operation.
+        /// </summary>
+        /// <returns>True if the operation is valid.</returns>
+        public bool IsValid()
+        {
+            return m_Operation.IsValid();
+        }
+
+        /// <summary>
+        /// Get the loading status of the internal operation.
+        /// </summary>
+        public bool IsDone
+        {
+            get
+            {
+                return m_Operation.IsDone;
+            }
+        }
+
         /// <summary>
         /// Construct a new AssetReference object.
         /// </summary>
@@ -296,12 +318,24 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads the reference as a scene.
         /// </summary>
-        /// <returns>The operation handle for the scene load.</returns>
-        public virtual AsyncOperationHandle<SceneInstance> LoadSceneAsync()
+        /// <param name="loadMode">Scene load mode.</param>
+        /// <param name="activateOnLoad">If false, the scene will load but not activate (for background loading).  The SceneInstance returned has an Activate() method that can be called to do this at a later point.</param>
+        /// <param name="priority">Async operation priority for scene loading.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public virtual AsyncOperationHandle<SceneInstance> LoadSceneAsync(LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
         {
-            var result = Addressables.LoadSceneAsync(RuntimeKey);
+
+            var result = Addressables.LoadSceneAsync(RuntimeKey, loadMode, activateOnLoad, priority);
             m_Operation = result;
             return result;
+        }
+        /// <summary>
+        /// Unloads the reference as a scene.
+        /// </summary>
+        /// <returns>The operation handle for the scene load.</returns>
+        public virtual AsyncOperationHandle<SceneInstance> UnLoadScene()
+        {
+            return Addressables.UnloadSceneAsync(m_Operation, true);
         }
         /// <summary>
         /// InstantiateAsync the referenced asset as type TObject.

@@ -408,14 +408,17 @@ namespace UnityEditor.AddressableAssets.HostingServices
             var contentRoots = new List<string>();
             foreach (var group in m_Settings.groups)
             {
-                foreach (var schema in group.Schemas)
+                if (group != null)
                 {
-                    var configProvider = schema as IHostingServiceConfigurationProvider;
-                    if (configProvider != null)
+                    foreach (var schema in group.Schemas)
                     {
-                        var groupRoot = configProvider.HostingServicesContentRoot;
-                        if (groupRoot != null && !contentRoots.Contains(groupRoot))
-                            contentRoots.Add(groupRoot);
+                        var configProvider = schema as IHostingServiceConfigurationProvider;
+                        if (configProvider != null)
+                        {
+                            var groupRoot = configProvider.HostingServicesContentRoot;
+                            if (groupRoot != null && !contentRoots.Contains(groupRoot))
+                                contentRoots.Add(groupRoot);
+                        }
                     }
                 }
             }

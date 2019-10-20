@@ -1,12 +1,14 @@
-﻿using UnityEngine.U2D;
+﻿using System.ComponentModel;
+using UnityEngine.U2D;
 
 namespace UnityEngine.ResourceManagement.ResourceProviders
 {
     /// <summary>
     /// Provides sprites from atlases
     /// </summary>
+    [DisplayName("Sprites from Atlases Provider")]
     public class AtlasSpriteProvider : ResourceProviderBase
-    {
+    {   
         /// <inheritdoc/>
         public override void Provide(ProvideHandle providerInterface)
         {

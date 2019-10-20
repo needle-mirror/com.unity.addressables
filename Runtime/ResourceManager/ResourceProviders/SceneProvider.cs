@@ -110,7 +110,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     Complete(m_Inst, true, null);
             }
         }
-        
+
         class UnloadSceneOp : AsyncOperationBase<SceneInstance>
         {
             SceneInstance m_Instance;

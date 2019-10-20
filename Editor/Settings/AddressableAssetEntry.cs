@@ -253,7 +253,12 @@ namespace UnityEditor.AddressableAssets.Settings
                 parentGroup.SetDirty(e, o, postEvent, true);
         }
 
-        internal string m_cachedAssetPath = null;
+        internal void SetCachedPath(string newCachedPath)
+        {
+            m_cachedAssetPath = newCachedPath;
+        }
+
+        private string m_cachedAssetPath = null;
         /// <summary>
         /// The path of the asset.
         /// </summary>
@@ -264,13 +269,13 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (string.IsNullOrEmpty(m_cachedAssetPath))
                 {
                     if (string.IsNullOrEmpty(guid))
-                        m_cachedAssetPath = string.Empty;
+                        SetCachedPath(string.Empty);
                     else if (guid == EditorSceneListName)
-                        m_cachedAssetPath = EditorSceneListPath;
+                        SetCachedPath(EditorSceneListPath);
                     else if (guid == ResourcesName)
-                        m_cachedAssetPath = ResourcesPath;
+                        SetCachedPath(ResourcesPath);
                     else
-                        m_cachedAssetPath = AssetDatabase.GUIDToAssetPath(guid);
+                        SetCachedPath(AssetDatabase.GUIDToAssetPath(guid));
                 }
                 return m_cachedAssetPath;
             }
@@ -585,7 +590,6 @@ namespace UnityEditor.AddressableAssets.Settings
 
             var assetPath = GetAssetLoadPath(isBundled);
             var keyList = CreateKeyList();
-
             var mainType = MainAssetType;
 
             if (mainType == typeof(SceneAsset))
@@ -636,7 +640,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        static bool CheckForEditorAssembly(ref Type t, string internalId, bool warnIfStripped)
+        internal static bool CheckForEditorAssembly(ref Type t, string internalId, bool warnIfStripped)
         {
             if (t == null)
                 return false;
@@ -650,6 +654,12 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (t.FullName == "UnityEditor.Audio.AudioMixerController")
                 {
                     t = typeof(UnityEngine.Audio.AudioMixer);
+                    return true;
+                }
+
+                if (t.FullName == "UnityEditor.Audio.AudioMixerGroupController")
+                {
+                    t = typeof(UnityEngine.Audio.AudioMixerGroup);
                     return true;
                 }
                 if(warnIfStripped)

@@ -27,18 +27,18 @@ To destroy an instantiated GameObject, use `Addressables.ReleaseInstance`, or cl
 
 `Addressables.InstantiateAsync` has some associated overhead, so if you need to instantiate the same objects hundreds of times per frame, consider loading via the `Addressables` API, then instantiating through other methods. In this case, you would call `Addressables.LoadAssetAsync`, then save the result and call `GameObject.Instantiate()` for that result. This allows flexibility to call `Instantiate` in a synchronous way. The downside is that the Addressables system has no knowledge of how many instances you created, which can lead to memory issues if not properly managed. For example, a Prefab referencing a texture would no longer have a valid loaded texture to reference, causing rendering issues (or worse). These sorts of problems can be hard to track down as you may not immediately trigger the memory unload (see section on [clearing memory](#when-is-memory-cleared-), below).
 
-### Data Loading
+### Data loading
 Interfaces that do not need their `AsyncOperationHandle.Result` released, will still need the operation itself to be released. Examples of these would be `Addressables.LoadResourceLocationsAsync` and `Addressables.GetDownloadSizeAsync`. They load data that you can access until the operation is released. This release should be done via `Addressables.Release`.
 
-### Background Interactions
+### Background interactions
 Operations that do not return anything in the `AsyncOperationHandle.Result` field have have an optional parameter to automatically release the operation handle on completion. If you have no further need for one of these operation handles after it has completed, set the `autoReleaseHandle` parameter to true to make sure the operation handle is cleaned up. The scenario where you would want `autoReleaseHandle` to be false would be if you needed to check the `Status` of the operation handle after it has completed.  Examples of these interfaces are `Addressables.DownloadDependenciesAsync` and `Addressables.UnloadScene`.
 
-## The Addressable Profiler
-Use the **Addressable Profiler window** to monitor the ref-counts of all Addressables system operations. To access the window in the Editor, select **Window** > **Asset Management** > **Addressable Profiler**. 
+## The Addressables Event Viewer
+Use the **Addressables Event Viewer** window to monitor the ref-counts of all Addressables system operations. To access the window in the Editor, select **Window** > **Asset Management** > **Addressables** > **Event Viewer**. 
 
-**Important**: In order to view data in the profiler, you must enable the **Send Profiler Events** setting in your `AddressableAssetSettings` object's Inspector.
+**Important**: In order to view data in the Event Viewer, you must enable the **Send Profiler Events** setting in your `AddressableAssetSettings` object's Inspector.
 
-The following information is available in the profiler:
+The following information is available in the Event Viewer:
 
 * A white vertical line indicates the frame in which a load request occurred.
 * A blue background indicates that an asset is currently loaded.  

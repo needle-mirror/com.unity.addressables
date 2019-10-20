@@ -4,7 +4,7 @@ The [`IResourceProvider`](../api/UnityEngine.ResourceManagement.ResourceProvider
 In some cases, you might want to create a custom operation. The `IResourceProvider` API is internally built on top of these custom operations.
 
 ### Creating custom operations
-Create custom operations by deriving from the [`AsyncOperationBase`](../api/UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationBase-1.html) class and overriding the desired virtual methods. You can pass the derived operation to the `ResourceManager.StartOperation` method to start the operation and receive an `AsyncOperationHandle` struct. Operations started this way are registered with the `ResourceManager` and appear in the [Addressables Profiler](MemoryManagement.md#the-addressable-profiler).
+Create custom operations by deriving from the [`AsyncOperationBase`](../api/UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationBase-1.html) class and overriding the desired virtual methods. You can pass the derived operation to the `ResourceManager.StartOperation` method to start the operation and receive an `AsyncOperationHandle` struct. Operations started this way are registered with the `ResourceManager` and appear in the [Addressables Event Viewer](MemoryManagement.md#the-addressables-event-viewer).
 
 #### Executing the operation
 The `ResourceManager` invokes the `AsyncOperationBase.Execute` method for your custom operation once the optional dependent operation completes.

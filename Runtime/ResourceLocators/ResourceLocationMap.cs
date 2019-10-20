@@ -14,17 +14,21 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// Construct a new ResourceLocationMap object.
         /// </summary>
         /// <param name="capacity">The expected number of items.</param>
-        public ResourceLocationMap(int capacity = 0)
+        public ResourceLocationMap(string id, int capacity = 0)
         {
+            LocatorId = id;
             Locations = new Dictionary<object, IList<IResourceLocation>>(capacity == 0 ? 100 : capacity);
         }
+
+        public string LocatorId {get; private set;}
 
         /// <summary>
         /// Construct a new ResourceLocationMap object with a list of locations.
         /// </summary>
         /// <param name="locations">The list of locations to initialize with.</param>
-        public ResourceLocationMap(IList<ResourceLocationData> locations)
+        public ResourceLocationMap(string id, IList<ResourceLocationData> locations)
         {
+            LocatorId = id;
             if (locations == null)
                 return;
             Locations = new Dictionary<object, IList<IResourceLocation>>(locations.Count * 2);

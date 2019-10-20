@@ -137,7 +137,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
                         LogError("Cannot listen on port {0}; port is in use", newPort);
                 }
 
-                if (GUILayout.Button("Reset", GUILayout.MaxWidth(150)))
+                if (GUILayout.Button("Reset", GUILayout.ExpandWidth(false)))
                     ResetListenPort();
 
                 //GUILayout.Space(rect.width / 2f);

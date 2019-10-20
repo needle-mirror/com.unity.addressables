@@ -43,7 +43,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 var content = new GUIContent(maxStr);
                 UnityEngine.GUI.skin.toggle.CalcMinMaxWidth(content, out minWidth, out maxWidth);
                 var height = UnityEngine.GUI.skin.toggle.CalcHeight(content, maxWidth) + 3.5f;
-                m_Rect = new Vector2(Mathf.Clamp(maxWidth + 40, 60, 600), Mathf.Clamp(labelTable.labelNames.Count * height, 30, 150));
+                m_Rect = new Vector2(Mathf.Clamp(maxWidth + 15, 125, 600), Mathf.Clamp(labelTable.labelNames.Count * height + 25, 30, 150));
                 m_LastItemCount = labelTable.labelNames.Count;
             }
             return m_Rect;
@@ -65,7 +65,7 @@ namespace UnityEditor.AddressableAssets.GUI
             var labelTable = m_Settings.labelTable;
 
             GUILayout.BeginArea(new Rect(rect.xMin + 3, rect.yMin + 3, rect.width - 6, rect.height - 6));
-            m_ScrollPosition = GUILayout.BeginScrollView(m_ScrollPosition);
+            m_ScrollPosition = GUILayout.BeginScrollView(m_ScrollPosition, false, false);
 
             //string toRemove = null;
             foreach (var labelName in labelTable.labelNames)
@@ -97,6 +97,14 @@ namespace UnityEditor.AddressableAssets.GUI
 
                 EditorGUILayout.EndHorizontal();
             }
+            
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Manage Labels", UnityEngine.GUI.skin.button, GUILayout.ExpandWidth(false)))
+            {
+                EditorWindow.GetWindow<LabelWindow>(true).Intialize(m_Settings);
+            }
+            EditorGUILayout.EndHorizontal();
+            
             GUILayout.EndScrollView();
             GUILayout.EndArea();
         }

@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.Exceptions;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -11,6 +12,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
     /// <summary>
     /// Simulates the loading behavior of an asset bundle.  Internally it uses the AssetDatabase API.  This provider will only work in the editor.
     /// </summary>
+    [DisplayName("Virtual AssetBundle Provider")]
     public class VirtualAssetBundleProvider : ResourceProviderBase, IUpdateReceiver
     {
         VirtualAssetBundleRuntimeData m_BundleData;

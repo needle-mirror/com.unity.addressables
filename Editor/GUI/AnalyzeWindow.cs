@@ -20,7 +20,7 @@ namespace UnityEditor.AddressableAssets.GUI
             get
             {
                 if (s_Instance == null)
-                    s_Instance = GetWindow<AnalyzeWindow>(false, "Analyze", false);
+                    s_Instance = GetWindow<AnalyzeWindow>(false, "Addressables Analyze", false);
                 return s_Instance;
             }
         }
@@ -38,7 +38,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        [MenuItem("Window/Asset Management/Addressables Analyze", priority = 2052)]
+        [MenuItem("Window/Asset Management/Addressables/Analyze", priority = 2052)]
         internal static void ShowWindow()
         {
             AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
@@ -48,7 +48,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 return;
             }
 
-            instance.titleContent = new GUIContent("Analyze");
+            instance.titleContent = new GUIContent("Addressables Analyze");
             instance.Show();
         }
 

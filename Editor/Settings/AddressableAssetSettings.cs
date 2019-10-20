@@ -435,19 +435,19 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Sets the initialization object at the specified index.
         /// </summary>
         /// <param name="index">The index to set the initialization object.</param>
-        /// <param name="initObject">The initialization object to set.  This must be a valid scriptable object that implements the IInitializationObject interface.</param>
+        /// <param name="templateObject">The rroup template object to set.  This must be a valid scriptable object that implements the IGroupTemplate interface.</param>
         /// <param name="postEvent">Indicates if an even should be posted to the Addressables event system for this change.</param>
         /// <returns>True if the initialization object was set, false otherwise.</returns>
-        public bool SetGroupTemplateObjectAtIndex(int index, IGroupTemplate initObject, bool postEvent = true)
+        public bool SetGroupTemplateObjectAtIndex(int index, IGroupTemplate templateObject, bool postEvent = true)
         {
             if (m_GroupTemplateObjects.Count <= index)
                 return false;
-            if (initObject == null)
+            if (templateObject == null)
             {
-                Debug.LogWarning("Cannot add null IGroupTemplate");
+                Debug.LogWarning("Cannot set null IGroupTemplate");
                 return false;
             }
-            var so = initObject as ScriptableObject;
+            var so = templateObject as ScriptableObject;
             if (so == null)
             {
                 Debug.LogWarning("AddressableAssetGroupTemplate objects must inherit from ScriptableObject.");
@@ -1160,6 +1160,26 @@ namespace UnityEditor.AddressableAssets.Settings
             m_CachedHash = default(Hash128);
         }
 
+        internal bool RemoveMissingGroupReferences()
+        {
+            List<int> missingGroupsIndices = new List<int>();
+            for (int i = 0; i < groups.Count; i++)
+            {
+                var g = groups[i];
+                if (g == null)
+                    missingGroupsIndices.Add(i);
+            }
+            if (missingGroupsIndices.Count > 0)
+            {
+                Debug.LogError("Addressable settings contains " + missingGroupsIndices.Count + " group reference(s) that are no longer there. Removing reference(s).");
+                for (int i = missingGroupsIndices.Count - 1; i >= 0; i--)
+                {
+                    groups.RemoveAt(missingGroupsIndices[i]);
+                }
+                return true;
+            }
+            return false;
+        }
         /// <summary>
         /// Find and asset entry by guid.
         /// </summary>
@@ -1169,9 +1189,12 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             foreach (var g in groups)
             {
-                var e = g.GetAssetEntry(guid);
-                if (e != null)
-                    return e;
+                if (g != null)
+                {
+                    var e = g.GetAssetEntry(guid);
+                    if (e != null)
+                        return e;
+                }
             }
             return null;
         }
@@ -1472,6 +1495,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     aa.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(str), aa.DefaultGroup);
                     modified = true;
                 }
+
                 var guid = AssetDatabase.AssetPathToGUID(str);
                 if (aa.FindAssetEntry(guid) != null)
                     modified = true;
@@ -1479,7 +1503,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (AddressableAssetUtility.IsInResources(str))
                     modified = true;
             }
-
+            
             if (deletedAssets.Length > 0)
             {
                 // if any directly referenced assets were deleted while Unity was closed, the path isn't useful, so Remove(null) is our only option
@@ -1530,10 +1554,15 @@ namespace UnityEditor.AddressableAssets.Settings
                 else
                 {
                     var guid = AssetDatabase.AssetPathToGUID(str);
-                    bool isAlreadyAddressable = aa.FindAssetEntry(guid) != null;
+                    AddressableAssetEntry entry = aa.FindAssetEntry(guid);
+
+                    bool isAlreadyAddressable =  entry != null;
                     bool startedInResources = AddressableAssetUtility.IsInResources(movedFromAssetPaths[i]);
                     bool endedInResources = AddressableAssetUtility.IsInResources(str);
                     bool inEditorSceneList = BuiltinSceneCache.Contains(new GUID(guid));
+
+                    //update entry cached path
+                    entry?.SetCachedPath(str);
 
                     //move to Resources
                     if (isAlreadyAddressable && endedInResources)
@@ -1549,7 +1578,10 @@ namespace UnityEditor.AddressableAssets.Settings
                     modified = isAlreadyAddressable || startedInResources || endedInResources || inEditorSceneList;
                 }
             }
-
+            if (RemoveMissingGroupReferences())
+            {
+                modified = true;
+            }
             if (modified)
                 aa.SetDirty(ModificationEvent.BatchModification, null, true, true);
         }
@@ -1561,15 +1593,18 @@ namespace UnityEditor.AddressableAssets.Settings
             bool deleteGroup = false;
             foreach (var group in groups)
             {
-                if (AssetDatabase.GUIDToAssetPath(group.Guid) == str)
+                if(group!=null)
                 {
-                    groupToDelete = group;
-                    deleteGroup = true;
-                    break;
-                }
+                    if (AssetDatabase.GUIDToAssetPath(group.Guid) == str)
+                    {
+                        groupToDelete = group;
+                        deleteGroup = true;
+                        break;
+                    }
 
-                if (group.Schemas.Remove(null))
-                    modified = true;
+                    if (group.Schemas.Remove(null))
+                        modified = true;
+                }
             }
 
             if (deleteGroup)
@@ -1589,7 +1624,12 @@ namespace UnityEditor.AddressableAssets.Settings
             var settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
             {
-                Debug.LogError("Addressable Asset Settings does not exist.");
+                if (EditorApplication.isUpdating)
+                    Debug.LogError("Addressable Asset Settings does not exist.  EditorApplication.isUpdating was true.");
+                else if (EditorApplication.isCompiling)
+                    Debug.LogError("Addressable Asset Settings does not exist.  EditorApplication.isCompiling was true.");
+                else
+                    Debug.LogError("Addressable Asset Settings does not exist.  Failed to create.");
                 return;
             }
 
@@ -1634,7 +1674,12 @@ namespace UnityEditor.AddressableAssets.Settings
             var settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
             {
-                Debug.LogError("Addressable Asset Settings does not exist.");
+                if (EditorApplication.isUpdating)
+                    Debug.LogError("Addressable Asset Settings does not exist.  EditorApplication.isUpdating was true.");
+                else if (EditorApplication.isCompiling)
+                    Debug.LogError("Addressable Asset Settings does not exist.  EditorApplication.isCompiling was true.");
+                else
+                    Debug.LogError("Addressable Asset Settings does not exist.  Failed to create.");
                 return;
             }
             settings.CleanPlayerContentImpl(builder);

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -7,9 +9,16 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
     /// <summary>
     /// Schema for content updates.
     /// </summary>
-    [CreateAssetMenu(fileName = "ContentUpdateGroupSchema.asset", menuName = "Addressable Assets/Group Schemas/Content Update")]
+    //  [CreateAssetMenu(fileName = "ContentUpdateGroupSchema.asset", menuName = "Addressables/Group Schemas/Content Update")]
+    [DisplayName("Content Update Restriction")]
     public class ContentUpdateGroupSchema : AddressableAssetGroupSchema
     {
+        enum ContentType
+        {
+            CanChangePostRelease,
+            CannotChangePostRelease
+        }
+
         [FormerlySerializedAs("m_staticContent")]
         [SerializeField]
         bool m_StaticContent;
@@ -25,5 +34,42 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 SetDirty(true);
             }
         }
+
+        /// <inheritdoc/>
+        public override void OnGUI()
+        {
+            ContentType current = m_StaticContent ? ContentType.CannotChangePostRelease : ContentType.CanChangePostRelease;
+            var newType = (ContentType)EditorGUILayout.EnumPopup("Update Restriction", current);
+            if (newType != current)
+                m_StaticContent = newType == ContentType.CannotChangePostRelease;
+        }
+//
+//        /// <inheritdoc/>
+//        public override void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
+//        {
+//            if (otherSchemas == null)
+//            {
+//                OnGUI();
+//                return;
+//            }
+//
+//            var so = new SerializedObject(this);
+//            var prop = so.FindProperty("m_StaticContent");
+//
+//            // Type/Static Content
+//            ShowMixedValue(prop, otherSchemas, typeof(bool), "m_StaticContent");
+//            EditorGUI.BeginChangeCheck();
+//            ContentType current = m_StaticContent ? ContentType.CannotChangePostRelease : ContentType.CanChangePostRelease;
+//            var newType = (ContentType)EditorGUILayout.EnumPopup("Update Restriction", current);
+//            if (EditorGUI.EndChangeCheck())
+//            {
+//                m_StaticContent = newType == ContentType.CannotChangePostRelease;
+//                foreach (var s in otherSchemas)
+//                    (s as ContentUpdateGroupSchema).StaticContent = (newType == ContentType.CannotChangePostRelease);
+//            }
+//            EditorGUI.showMixedValue = false;
+//
+//            so.ApplyModifiedProperties();
+//        }
     }
 }

@@ -163,7 +163,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             return new AsyncOperationHandle(obj.m_InternalOp);
         }
 
-        private AsyncOperationBase<TObject> m_InternalOp;
+        internal AsyncOperationBase<TObject> m_InternalOp;
         private int m_Version;
 
         internal AsyncOperationHandle(AsyncOperationBase<TObject> op)
@@ -214,8 +214,17 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         internal AsyncOperationHandle(IAsyncOperation op)
         {
+            
             m_InternalOp = op;
             m_Version = op != null ? op.Version : 0;
+        }
+        /// <summary>
+        /// Get hash code of this struct.
+        /// </summary>
+        /// <returns></returns>
+        public override int GetHashCode()
+        {
+            return m_InternalOp == null ? 0 : m_InternalOp.GetHashCode() * 17 + m_Version;
         }
 
         /// <summary>

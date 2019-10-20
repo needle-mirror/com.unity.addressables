@@ -15,7 +15,6 @@ namespace UnityEditor.AddressableAssets.GUI
         SerializedProperty m_Property;
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            label.text = ObjectNames.NicifyVariableName(property.propertyPath);
             m_Property = property;
             if (m_SerializedFieldInfo == null)
                 m_SerializedFieldInfo = GetFieldInfo(property);
@@ -25,14 +24,21 @@ namespace UnityEditor.AddressableAssets.GUI
             EditorGUI.BeginProperty(position, label, property);
             var smallPos = EditorGUI.PrefixLabel(position, label);
             var st = (SerializedType)m_SerializedFieldInfo.GetValue(property.serializedObject.targetObject);
-            if (EditorGUI.DropdownButton(smallPos, new GUIContent(st.ToString()), FocusType.Keyboard))
+
+            string display = AddressableAssetUtility.GetCachedTypeDisplayName(st.Value);
+//            if (st.ShowMixedValue)
+//            {
+//                display = "—";
+//            }
+
+            if (EditorGUI.DropdownButton(smallPos, new GUIContent(display), FocusType.Keyboard))
             {
                 var menu = new GenericMenu();
                 menu.AddItem(new GUIContent("<none>", "Clear the type."), false, OnSetType, null);
                 for (int i = 0; i < m_Types.Count; i++)
                 {
                     var type = m_Types[i];
-                    menu.AddItem(new GUIContent(type.Name, ""), false, OnSetType, type);
+                    menu.AddItem(new GUIContent(AddressableAssetUtility.GetCachedTypeDisplayName(type), ""), false, OnSetType, type);
                 }
                 menu.ShowAsContext();
             }
@@ -44,7 +50,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             Undo.RecordObject(m_Property.serializedObject.targetObject, "Set Serialized Type");
             var type = context as Type;
-            m_SerializedFieldInfo.SetValue(m_Property.serializedObject.targetObject, new SerializedType { Value = type });
+            m_SerializedFieldInfo.SetValue(m_Property.serializedObject.targetObject, new SerializedType { Value = type, ValueChanged = true });
             EditorUtility.SetDirty(m_Property.serializedObject.targetObject);
         }
 

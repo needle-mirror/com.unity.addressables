@@ -38,5 +38,9 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             }
         }
 
+        /// <summary>
+        /// Id of locator.
+        /// </summary>
+        public string LocatorId => nameof(LegacyResourcesLocator);
     }
 }

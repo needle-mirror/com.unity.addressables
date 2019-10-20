@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 
 // ReSharper disable DelegateSubtraction
@@ -75,12 +76,15 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// <param name="dependencies">The list that should be populated with dependent AsyncOperationHandles.</param>
         protected virtual void GetDependencies(List<AsyncOperationHandle> dependencies) { }
 
-        internal TObject Result { get { return m_Result; } }
+        /// <summary>
+        /// Accessor to Result of the operation.
+        /// </summary>
+        public TObject Result { get; set; }
+
         int m_referenceCount = 1;
         AsyncOperationStatus m_Status;
         Exception m_Error;
-        ResourceManager m_RM;
-        TObject m_Result;
+        internal ResourceManager m_RM;
         private int m_Version;
         internal int Version { get { return m_Version; } }
 
@@ -133,7 +137,6 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             {
                 m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationDestroy));
 
-                Destroy();
                 if (m_DestroyedAction != null)
                 {
                     m_DestroyedAction.Invoke(new AsyncOperationHandle<TObject>(this));
@@ -146,7 +149,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                     m_OnDestroyAction = null;
                 }
 
-                m_Result = default(TObject);
+                Destroy();
+                Result = default(TObject);
                 m_referenceCount = 1;
                 m_Status = AsyncOperationStatus.None;
                 m_Error = null;
@@ -171,7 +175,10 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get
             {
-
+#if UNITY_WEBGL
+                Debug.LogError("Multithreaded operation are not supported on WebGL.  Unable to aquire Task.");
+                return default;
+#else
                 if (Status == AsyncOperationStatus.Failed)
                 {
                     return System.Threading.Tasks.Task.FromResult(default(TObject));
@@ -182,14 +189,15 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 }
 
                 var handle = WaitHandle;
-                return System.Threading.Tasks.Task.Factory.StartNew(o =>
+                return System.Threading.Tasks.Task.Factory.StartNew((Func<object, TObject>)(o =>
                 {
                     var asyncOperation = o as AsyncOperationBase<TObject>;
                     if (asyncOperation == null) 
                         return default(TObject);
                     handle.WaitOne();
-                    return asyncOperation.Result;
-                }, this);
+                    return (TObject)asyncOperation.Result;
+                }), this);
+#endif
             }
         }
 
@@ -205,7 +213,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         public override string ToString()
         {
             var instId = "";
-            var or = m_Result as Object;
+            var or = Result as Object;
             if (or != null)
                 instId = "(" + or.GetInstanceID() + ")";
             return string.Format("{0}, result='{1}', status='{2}'", base.ToString(), (or + instId), m_Status);
@@ -345,7 +353,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             if (m_UpdateCallbacks != null && upOp != null)
                 m_UpdateCallbacks.Remove(m_UpdateCallback);
 
-            m_Result = result;
+            Result = result;
             m_Status = success ? AsyncOperationStatus.Succeeded : AsyncOperationStatus.Failed;
 
             m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationPercentComplete, 1));
@@ -373,7 +381,6 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 DecrementReferenceCount();
             }
         }
-
 
         internal void Start(ResourceManager rm, AsyncOperationHandle dependency, DelegateList<float> updateCallbacks)
         {
@@ -439,7 +446,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         object IAsyncOperation.GetResultAsObject()
         {
-            return m_Result;
+            return Result;
         }
 
         Type IAsyncOperation.ResultType { get { return typeof(TObject); } }

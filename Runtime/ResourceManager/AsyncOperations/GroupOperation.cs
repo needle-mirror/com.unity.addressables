@@ -9,25 +9,24 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
     class GroupOperation : AsyncOperationBase<IList<AsyncOperationHandle>>, ICachable
     {
-        List<AsyncOperationHandle> m_Result;
         Action<AsyncOperationHandle> m_InternalOnComplete;
         int m_LoadedCount;
         public GroupOperation()
         {
             m_InternalOnComplete = OnOperationCompleted;
-            m_Result = new List<AsyncOperationHandle>();
+            Result = new List<AsyncOperationHandle>();
         }
 
         int ICachable.Hash { get; set; }
 
         internal IList<AsyncOperationHandle> GetDependentOps()
         {
-            return m_Result;
+            return Result;
         }
 
         protected override void GetDependencies(List<AsyncOperationHandle> deps)
         {
-            deps.AddRange(m_Result);
+            deps.AddRange(Result);
         }
 
         protected override string DebugName { get { return "Dependencies"; } }
@@ -35,40 +34,40 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         protected override void Execute()
         {
             m_LoadedCount = 0;
-            for (int i = 0; i < m_Result.Count; i++)
+            for (int i = 0; i < Result.Count; i++)
             {
-                if (m_Result[i].IsDone)
+                if (Result[i].IsDone)
                     m_LoadedCount++;
                 else
-                    m_Result[i].Completed += m_InternalOnComplete;
+                    Result[i].Completed += m_InternalOnComplete;
             }
             CompleteIfDependenciesComplete();
         }
 
         private void CompleteIfDependenciesComplete()
         {
-            if (m_LoadedCount == m_Result.Count)
+            if (m_LoadedCount == Result.Count)
             {
                 bool success = true;
                 string errorMsg = string.Empty;
-                for (int i = 0; i < m_Result.Count; i++)
+                for (int i = 0; i < Result.Count; i++)
                 {
-                    if (m_Result[i].Status != AsyncOperationStatus.Succeeded)
+                    if (Result[i].Status != AsyncOperationStatus.Succeeded)
                     {
                         success = false;
-                        errorMsg = m_Result[i].OperationException != null ? m_Result[i].OperationException.Message : string.Empty;
+                        errorMsg = Result[i].OperationException != null ? Result[i].OperationException.Message : string.Empty;
                         break;
                     }
                 }
-                Complete(m_Result, success, errorMsg);
+                Complete(Result, success, errorMsg);
             }
         }
 
         protected override void Destroy()
         {
-            for (int i = 0; i < m_Result.Count; i++)
-                m_Result[i].Release();
-            m_Result.Clear();
+            for (int i = 0; i < Result.Count; i++)
+                Result[i].Release();
+            Result.Clear();
         }
 
         protected override float Progress
@@ -76,12 +75,12 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             get
             {
                 List<AsyncOperationHandle> allDependentOperations = new List<AsyncOperationHandle>();
-                allDependentOperations.AddRange(m_Result);
+                allDependentOperations.AddRange(Result);
 
-                foreach(var handle in m_Result)
+                foreach(var handle in Result)
                     handle.GetDependencies(allDependentOperations);
 
-                if (m_Result.Count < 1)
+                if (Result.Count < 1)
                     return 1f;
                 float total = 0;
                 for (int i = 0; i < allDependentOperations.Count; i++)
@@ -93,7 +92,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         public void Init(List<AsyncOperationHandle> operations)
         {
-            m_Result = new List<AsyncOperationHandle>(operations);
+            Result = new List<AsyncOperationHandle>(operations);
         }
 
         void OnOperationCompleted(AsyncOperationHandle op)

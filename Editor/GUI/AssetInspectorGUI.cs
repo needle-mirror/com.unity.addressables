@@ -78,28 +78,51 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 int addressableCount = 0;
                 bool foundValidAsset = false;
+                bool foundAssetGroup = false;
                 foreach (var t in editor.targets)
                 {
                     string path;
                     Type mainAssetType;
                     if (AddressableAssetUtility.GetPathAndGUIDFromTarget(t, out path, ref guid, out mainAssetType) &&
                         path.ToLower().Contains("assets") &&
-                        mainAssetType != null &&
-                        !BuildUtility.IsEditorAssembly(mainAssetType.Assembly))
+                        mainAssetType != null)
                     {
-                        foundValidAsset = true;
-
-                        if (aaSettings != null)
+                        // Is addressable group
+                        if (path.ToLower().Contains("addressableassetsdata/assetgroups"))
                         {
-                            entry = aaSettings.FindAssetEntry(guid);
-                            if (entry != null && !entry.IsSubAsset)
+                            foundAssetGroup = true;
+                        }
+                        // Is asset
+                        if (!BuildUtility.IsEditorAssembly(mainAssetType.Assembly))
+                        {
+                            foundValidAsset = true;
+
+                            if (aaSettings != null)
                             {
-                                addressableCount++;
+                                entry = aaSettings.FindAssetEntry(guid);
+                                if (entry != null && !entry.IsSubAsset)
+                                {
+                                    addressableCount++;
+                                }
                             }
                         }
                     }
                 }
 
+                if (foundAssetGroup)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("Profile: " + AddressableAssetSettingsDefaultObject.GetSettings(true).profileSettings.
+                                        GetProfileName(AddressableAssetSettingsDefaultObject.GetSettings(true).activeProfileId));
+                    
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("System Settings", "MiniButton"))
+                    {
+                        EditorGUIUtility.PingObject(AddressableAssetSettingsDefaultObject.Settings);
+                        Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
+                    }
+                    GUILayout.EndHorizontal();
+                }
 
                 if (!foundValidAsset)
                     return;

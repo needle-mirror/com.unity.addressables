@@ -13,7 +13,6 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Build;
-using UnityEditor.SceneManagement;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 #endif
 
@@ -22,7 +21,7 @@ static class AddressablesTestUtility
 
     static public void Reset(AddressablesImpl aa)
     {
-        aa.ResourceLocators.Clear();
+        aa.ClearResourceLocators();
         aa.ResourceManager.ResourceProviders.Clear();
         aa.InstanceProvider = null;
     }
@@ -40,105 +39,77 @@ static class AddressablesTestUtility
     static public string GetPrefabAlternatingLabel(string suffix, int index) { return string.Format("prefabs_{0}{1}", ((index % 2) == 0) ? "even" : "odd", suffix); }
     static public string GetPrefabUniqueLabel(string suffix, int index) { return string.Format("prefab_{0}{1}", index, suffix); }
     public const int kPrefabCount = 10;
-    public const int kSceneCount = 3;
 
     static public void Setup(string testType, string pathFormat, string suffix)
     {
-        try
-        {
 #if UNITY_EDITOR
-            var activeScenePath = EditorSceneManager.GetActiveScene().path;
-            var RootFolder = string.Format(pathFormat, testType, suffix);
+        var RootFolder = string.Format(pathFormat, testType, suffix);
 
-            Directory.CreateDirectory(RootFolder);
+        Directory.CreateDirectory(RootFolder);
 
-            var settings = AddressableAssetSettings.Create(RootFolder + "/Settings", "AddressableAssetSettings.Tests", false, true);
-            var group = settings.FindGroup("TestStuff" + suffix);
-            if (group == null)
-                group = settings.CreateGroup("TestStuff" + suffix, true, false, false, null, typeof(BundledAssetGroupSchema));
-            settings.DefaultGroup = group;
-            for (int i = 0; i < kPrefabCount; i++)
-            {
-                var guid = CreateAsset(RootFolder + "/test" + i + suffix + ".prefab", "testPrefab" + i);
-                var entry = settings.CreateOrMoveEntry(guid, group, false, false);
-                entry.address = Path.GetFileNameWithoutExtension(entry.AssetPath);
-
-                entry.SetLabel(GetPrefabLabel(suffix), true, false);
-                entry.SetLabel(GetPrefabAlternatingLabel(suffix, i), true, false);
-                entry.SetLabel(GetPrefabUniqueLabel(suffix, i), true, false);
-            }
-
-#if ENABLE_SCENE_TESTS
-        for (int i = 0; i < kSceneCount; i++)
+        var settings = AddressableAssetSettings.Create(RootFolder + "/Settings", "AddressableAssetSettings.Tests", false, true);
+        var group = settings.FindGroup("TestStuff" + suffix);
+        if (group == null)
+            group = settings.CreateGroup("TestStuff" + suffix, true, false, false, null, typeof(BundledAssetGroupSchema));
+        settings.DefaultGroup = group;
+        for (int i = 0; i < kPrefabCount; i++)
         {
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-            EditorSceneManager.SaveScene(scene, RootFolder + "/test_scene" + i + suffix + ".unity");
-            var guid = AssetDatabase.AssetPathToGUID(scene.path);
+            var guid = CreateAsset(RootFolder + "/test" + i + suffix + ".prefab", "testPrefab" + i);
             var entry = settings.CreateOrMoveEntry(guid, group, false, false);
             entry.address = Path.GetFileNameWithoutExtension(entry.AssetPath);
-        } 
-#endif
 
+            entry.SetLabel(GetPrefabLabel(suffix), true, false);
+            entry.SetLabel(GetPrefabAlternatingLabel(suffix, i), true, false);
+            entry.SetLabel(GetPrefabUniqueLabel(suffix, i), true, false);
+        }
 
-
-            var texture = new Texture2D(32, 32);
-            var data = ImageConversion.EncodeToPNG(texture);
-            UnityEngine.Object.DestroyImmediate(texture);
-            AssetDatabase.GenerateUniqueAssetPath(RootFolder);
-            var spritePath = RootFolder + "sprite.png";
-            File.WriteAllBytes(spritePath, data);
-            AssetDatabase.ImportAsset(spritePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-
-#if UNITY_2019_3_OR_NEWER
-            var spriteGuid = AssetDatabase.AssetPathToGUID(spritePath);
-            var importer = AssetImporter.GetAtPath(spritePath) as TextureImporter;
-            importer.textureType = TextureImporterType.Sprite;
-            importer.spriteImportMode = SpriteImportMode.Multiple;
-            importer.spritesheet = new SpriteMetaData[] { new SpriteMetaData() { name = "topleft", pivot = Vector2.zero, rect = new Rect(0,0,16,16) },
-                                                        new SpriteMetaData() { name = "botright", pivot = Vector2.zero, rect = new Rect(16,16,16,16) }};
-            importer.SaveAndReimport();
-
-            var spriteEntry = settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(spritePath), group, false, false);
-            spriteEntry.address = "sprite";
-#endif
-
-            var so = ScriptableObject.CreateInstance<TestObject>();
-            var sub = ScriptableObject.CreateInstance<TestObject>();
-            sub.name = "sub";
-            AssetDatabase.CreateAsset(so, RootFolder + "sub.asset");
-            AssetDatabase.AddObjectToAsset(sub, RootFolder + "sub.asset");
-            AssetDatabase.ImportAsset(RootFolder + "sub.asset", ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-            var subGuid = AssetDatabase.AssetPathToGUID(RootFolder + "sub.asset");
-            string assetRefGuid = CreateAsset(RootFolder + "/testIsReference.prefab", "IsReference");
-            GameObject go = new GameObject("AssetReferenceBehavior");
-            AssetReferenceTestBehavior aRefTestBehavior = go.AddComponent<AssetReferenceTestBehavior>();
-            aRefTestBehavior.Reference = settings.CreateAssetReference(assetRefGuid);
-            aRefTestBehavior.ReferenceWithSubObject = settings.CreateAssetReference(subGuid);
-            aRefTestBehavior.ReferenceWithSubObject.SubObjectName = "sub";
-            aRefTestBehavior.LabelReference = new AssetLabelReference()
-            {
-                labelString = settings.labelTable.labelNames[0]
-            };
+        var texture = new Texture2D(32, 32);
+        var data = ImageConversion.EncodeToPNG(texture);
+        UnityEngine.Object.DestroyImmediate(texture);
+        AssetDatabase.GenerateUniqueAssetPath(RootFolder);
+        var spritePath = RootFolder + "sprite.png";
+        File.WriteAllBytes(spritePath, data);
             
-            string hasBehaviorPath = RootFolder + "/AssetReferenceBehavior.prefab";
-            PrefabUtility.SaveAsPrefabAsset(go, hasBehaviorPath);
-            settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(hasBehaviorPath), group, false, false);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+        AssetDatabase.ImportAsset(spritePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 
+        var spriteGuid = AssetDatabase.AssetPathToGUID(spritePath);
+        var importer = (TextureImporter)AssetImporter.GetAtPath(spritePath);
+        importer.textureType = TextureImporterType.Sprite;
+        importer.spriteImportMode = SpriteImportMode.Multiple;
+        importer.spritesheet = new SpriteMetaData[] { new SpriteMetaData() { name = "topleft", pivot = Vector2.zero, rect = new Rect(0,0,16,16) },
+                                                    new SpriteMetaData() { name = "botright", pivot = Vector2.zero, rect = new Rect(16,16,16,16) }};
+        importer.SaveAndReimport(); 
 
-            RunBuilder(settings, testType, suffix);
+        var spriteEntry = settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(spritePath), group, false, false);
+        spriteEntry.address = "sprite";
 
-#if ENABLE_SCENE_TESTS
-        EditorSceneManager.OpenScene(activeScenePath, OpenSceneMode.Single);
-#endif
-
-#endif
-        }
-        catch (Exception e)
+        var so = ScriptableObject.CreateInstance<TestObject>();
+        var sub = ScriptableObject.CreateInstance<TestObject>();
+        sub.name = "sub";
+        AssetDatabase.CreateAsset(so, RootFolder + "sub.asset");
+        AssetDatabase.AddObjectToAsset(sub, RootFolder + "sub.asset");
+        AssetDatabase.ImportAsset(RootFolder + "sub.asset", ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+        var subGuid = AssetDatabase.AssetPathToGUID(RootFolder + "sub.asset");
+        string assetRefGuid = CreateAsset(RootFolder + "/testIsReference.prefab", "IsReference");
+        GameObject go = new GameObject("AssetReferenceBehavior");
+        AssetReferenceTestBehavior aRefTestBehavior = go.AddComponent<AssetReferenceTestBehavior>();
+        aRefTestBehavior.Reference = settings.CreateAssetReference(assetRefGuid);
+        aRefTestBehavior.ReferenceWithSubObject = settings.CreateAssetReference(subGuid);
+        aRefTestBehavior.ReferenceWithSubObject.SubObjectName = "sub";
+        aRefTestBehavior.LabelReference = new AssetLabelReference()
         {
-            Debug.LogException(e);
-        }
+            labelString = settings.labelTable.labelNames[0]
+        };
+            
+        string hasBehaviorPath = RootFolder + "/AssetReferenceBehavior.prefab";
+        PrefabUtility.SaveAsPrefabAsset(go, hasBehaviorPath);
+        settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(hasBehaviorPath), group, false, false);
+        //AssetDatabase.StopAssetEditing();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+        RunBuilder(settings, testType, suffix);
+#endif
     }
 
 #if UNITY_EDITOR

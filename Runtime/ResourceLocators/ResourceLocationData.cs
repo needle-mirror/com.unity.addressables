@@ -45,7 +45,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         [SerializeField]
         SerializedType m_ResourceType;
         /// <summary>
-        /// The type of the resource for th location.
+        /// The type of the resource for the location.
         /// </summary>
         public Type ResourceType { get { return m_ResourceType.Value; } }
 

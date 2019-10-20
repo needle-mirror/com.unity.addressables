@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
+using UnityEditor.AddressableAssets.Diagnostics;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Assertions;
 using UnityEngine.Serialization;
 
 // ReSharper disable DelegateSubtraction
@@ -107,12 +109,53 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 float spaceBetween = 4f;
 
-                CreateDropdown();
-                GUILayout.Space(8);
+                
+                {    
+                    var guiMode = new GUIContent("Create");
+                    Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
+                    if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
+                    {
+                        var menu = new GenericMenu();
+                        foreach( var templateObject in settings.GroupTemplateObjects )
+                        {
+                            if(templateObject != null)
+                                menu.AddItem( new GUIContent("Group/" + templateObject.name ), false, m_EntryTree.CreateNewGroup, templateObject);
+                        }
+                        menu.AddSeparator(string.Empty);
+                        menu.AddItem( new GUIContent("Group/Blank (no schema)"), false, m_EntryTree.CreateNewGroup, null);
+                        menu.DropDown(rMode);
+                    }
+                }
+                
+                CreateProfileDropdown();
+            
+                {    
+                    var guiMode = new GUIContent("Tools");
+                    Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
+                    if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
+                    {
+                        var menu = new GenericMenu();
+                        menu.AddItem( new GUIContent("Inspect System Settings"), false, () => { 
+                            EditorGUIUtility.PingObject(AddressableAssetSettingsDefaultObject.Settings);
+                            Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;});
+                        menu.AddItem( new GUIContent("Profiles"), false, () => EditorWindow.GetWindow<ProfileWindow>().Show(true));
+                        menu.AddItem( new GUIContent("Labels"), false, () => EditorWindow.GetWindow<LabelWindow>(true).Intialize(settings));
+                        menu.AddItem( new GUIContent("Analyze"), false, AnalyzeWindow.ShowWindow);
+                        menu.AddItem( new GUIContent("Hosting Services"), false, () => EditorWindow.GetWindow<HostingServicesWindow>().Show(settings));
+                        menu.AddItem( new GUIContent("Event Viewer"), false, ResourceProfilerWindow.ShowWindow);
+                        menu.AddItem( new GUIContent("Check for Content Update Restrictions"), false, OnPrepareUpdate);
+                        
+                        var bundleList = AssetDatabase.GetAllAssetBundleNames();
+                        if (bundleList != null && bundleList.Length > 0)
+                            menu.AddItem( new GUIContent("Convert Legacy AssetBundles"), false, window.OfferToConvert);
+                        
+                        menu.DropDown(rMode);
+                    }
+                }
 
-                if (GUILayout.Button("Hosting", m_ButtonStyle))
-                    EditorWindow.GetWindow<HostingServicesWindow>().Show(settings);
-
+                GUILayout.FlexibleSpace();
+                GUILayout.Space(spaceBetween * 2f);
+                
                 {
                     GUILayout.Space(8);
                     var guiMode = new GUIContent("Play Mode Script");
@@ -123,58 +166,41 @@ namespace UnityEditor.AddressableAssets.GUI
                         for (int i = 0; i < settings.DataBuilders.Count; i++)
                         {
                             var m = settings.GetDataBuilder(i);
-                            if (m.CanBuildData<AddressablesPlayModeBuildResult>())
+                            if(m.CanBuildData<AddressablesPlayModeBuildResult>())
                                 menu.AddItem(new GUIContent(m.Name), i == settings.ActivePlayModeDataBuilderIndex, OnSetActivePlayModeScript, i);
                         }
                         menu.DropDown(rMode);
                     }
                 }
-                {
-                    GUILayout.Space(8);
-                    var guiMode = new GUIContent("Build Script");
-                    Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
-                    if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
-                    {
-                        var menu = new GenericMenu();
-                        for (int i = 0; i < settings.DataBuilders.Count; i++)
-                        {
-                            var m = settings.GetDataBuilder(i);
-                            if(m.CanBuildData<AddressablesPlayerBuildResult>())
-                                menu.AddItem(new GUIContent(m.Name), i == settings.ActivePlayerDataBuilderIndex, OnSetActiveBuildScript, i);
-                        }
-                        menu.DropDown(rMode);
-                    }
-                }
-
                 
-                if (GUILayout.Button("Analyze", m_ButtonStyle))
-                    AnalyzeWindow.ShowWindow();
-
                 var guiBuild = new GUIContent("Build");
                 Rect rBuild = GUILayoutUtility.GetRect(guiBuild, EditorStyles.toolbarDropDown);
                 if (EditorGUI.DropdownButton(rBuild, guiBuild, FocusType.Passive, EditorStyles.toolbarDropDown))
                 {
                     //GUIUtility.hotControl = 0;
                     var menu = new GenericMenu();
-                    menu.AddItem(new GUIContent("Build Player Content"), false, OnBuildPlayerData);
-                    menu.AddItem(new GUIContent("Clean/All"), false, OnCleanAll);
-                    menu.AddItem(new GUIContent("Clean/Data Builders/All"), false, OnCleanAddressables, null);
                     for (int i = 0; i < settings.DataBuilders.Count; i++)
                     {
                         var m = settings.GetDataBuilder(i);
-                        menu.AddItem(new GUIContent("Clean/Data Builders/" + m.Name), false, OnCleanAddressables, m);
+                        if (m.CanBuildData<AddressablesPlayerBuildResult>())
+                        {
+                            menu.AddItem(new GUIContent("New Build/" + m.Name), false, OnBuildScript, i);
+                        }
                     }
-                    menu.AddItem(new GUIContent("Clean/Build Pipeline Cache"), false, OnCleanSBP);
-                    menu.AddItem(new GUIContent("Prepare For Content Update"), false, OnPrepareUpdate);
-                    menu.AddItem(new GUIContent("Build For Content Update"), false, OnUpdateBuild);
+                    
+                    menu.AddItem(new GUIContent("Update a Previous Build"), false, OnUpdateBuild);
+                    menu.AddItem(new GUIContent("Clean Build/All"), false, OnCleanAll);
+                    menu.AddItem(new GUIContent("Clean Build/Content Builders/All"), false, OnCleanAddressables, null);
+                    for (int i = 0; i < settings.DataBuilders.Count; i++)
+                    {
+                        var m = settings.GetDataBuilder(i);
+                        menu.AddItem(new GUIContent("Clean Build/Content Builders/" + m.Name), false, OnCleanAddressables, m);
+                    }
+                    menu.AddItem(new GUIContent("Clean Build/Build Pipeline Cache"), false, OnCleanSBP);
                     menu.DropDown(rBuild);
                 }
 
-
-                GUILayout.FlexibleSpace();
-
-                GUILayout.Space(spaceBetween * 2f);
-
+                GUILayout.Space(4);
                 Rect searchRect = GUILayoutUtility.GetRect(0, toolbarPos.width * 0.6f, 16f, 16f, m_SearchStyles[0], GUILayout.MinWidth(65), GUILayout.MaxWidth(300));
                 Rect popupPosition = searchRect;
                 popupPosition.width = 20;
@@ -234,6 +260,12 @@ namespace UnityEditor.AddressableAssets.GUI
                 ContentUpdatePreviewWindow.PrepareForContentUpdate(AddressableAssetSettingsDefaultObject.Settings, path);
         }
 
+        void OnBuildScript(object context)
+        {
+            OnSetActiveBuildScript(context);
+            OnBuildPlayerData();
+        }
+
         void OnBuildPlayerData()
         {
             AddressableAssetSettings.BuildPlayerContent();
@@ -260,7 +292,7 @@ namespace UnityEditor.AddressableAssets.GUI
             ProjectConfigData.hierarchicalSearch = !ProjectConfigData.hierarchicalSearch;
             m_EntryTree.ClearSearch();
         }
-        void CreateDropdown()
+        void CreateProfileDropdown()
         {
             var activeProfileName = settings.profileSettings.GetProfileName(settings.activeProfileId);
             if (string.IsNullOrEmpty(activeProfileName))
@@ -283,7 +315,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     menu.AddItem(new GUIContent(name), name == activeProfileName, SetActiveProfile, name);
                 }
                 menu.AddSeparator(string.Empty);
-                menu.AddItem(new GUIContent("Inspect Profile Settings"), false, GoToSettingsAsset);
+                menu.AddItem(new GUIContent("Manage Profiles"), false, () => EditorWindow.GetWindow<ProfileWindow>().Show(true));
                 menu.DropDown(r);
             }
         }
@@ -292,12 +324,6 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var n = context as string;
             AddressableAssetSettingsDefaultObject.Settings.activeProfileId = AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileId(n);
-        }
-
-        void GoToSettingsAsset()
-        {
-            EditorGUIUtility.PingObject(AddressableAssetSettingsDefaultObject.Settings);
-            Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
         }
 
         bool m_ModificationRegistered;

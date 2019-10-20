@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using UnityEditor;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -11,6 +12,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     /// <summary>
     /// Provides assets loaded via the AssetDatabase API.  This provider is only available in the editor and is used for fast iteration or to simulate asset bundles when in play mode.
     /// </summary>
+    [DisplayName("Assets from AssetDatabase Provider")]
     public class AssetDatabaseProvider : ResourceProviderBase
     {
         float m_LoadDelay = .1f;

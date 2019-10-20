@@ -24,13 +24,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
     /// <summary>
     /// Build script for creating virtual asset bundle dat for running in the editor.
     /// </summary>
-    [CreateAssetMenu(fileName = "BuildScriptVirtual.asset", menuName = "Addressable Assets/Data Builders/Virtual Mode")]
+    [CreateAssetMenu(fileName = "BuildScriptVirtual.asset", menuName = "Addressables/Content Builders/Simulate Groups (advanced)")]
     public class BuildScriptVirtualMode : BuildScriptBase
     {
         /// <inheritdoc />
         public override string Name
         {
-            get { return "Virtual Mode"; }
+            get { return "Simulate Groups (advanced)"; }
         }
 
         /// <inheritdoc />
@@ -180,8 +180,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     uint crc = (uint)UnityEngine.Random.Range(0, int.MaxValue);
                     var hash = Guid.NewGuid().ToString();
                     
-                    bundleLocData.InternalId = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, hash, bundleLocData.InternalId);
-                    
+                    string originalBundleName = bd.Key as string;
+                    string newBundleName = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, hash, originalBundleName);
+                    bundleLocData.InternalId = bundleLocData.InternalId.Remove(bundleLocData.InternalId.Length - originalBundleName.Length) + newBundleName;
 
                     var virtualBundleName = AddressablesRuntimeProperties.EvaluateString(bundleLocData.InternalId);
                     var bundleData = new VirtualAssetBundle(virtualBundleName, isLocalBundle, crc, hash);
@@ -230,7 +231,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 }
             }
 
-            var contentCatalog = new ContentCatalogData(aaContext.locations);
+            var contentCatalog = new ContentCatalogData(aaContext.locations, ResourceManagerRuntimeData.kCatalogAddress);
             contentCatalog.ResourceProviderData.AddRange(m_ResourceProviderData);
             foreach (var t in aaContext.providerTypes)
                 contentCatalog.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(t));

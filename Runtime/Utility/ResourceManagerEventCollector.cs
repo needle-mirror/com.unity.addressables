@@ -55,7 +55,11 @@ namespace UnityEngine.AddressableAssets.Utility
                     eventContext.OperationHandle.GetDependencies(m_dependencyBuffer);
                     var depIds = new int[m_dependencyBuffer.Count];
                     for (int i = 0; i < depIds.Length; i++)
+                    {
+                        if (eventContext.Location != null)
+                            depIds[i] = eventContext.Location.Dependencies[i].Hash(typeof(object));
                         depIds[i] = m_dependencyBuffer[i].GetHashCode();
+                    }
                     m_cachedDiagnosticInfo.Add(hashCode, diagInfo = new DiagnosticInfo() { ObjectId = hashCode, DisplayName = eventContext.OperationHandle.DebugName, Dependencies = depIds});
                 }
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -11,6 +12,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     /// <summary>
     /// Provides raw text from a local or remote URL.
     /// </summary>
+    [DisplayName("Text Data Provider")]
     public class TextDataProvider : ResourceProviderBase
     {
         /// <summary>
@@ -22,6 +24,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             TextDataProvider m_Provider;
             UnityWebRequestAsyncOperation m_RequestOperation;
+            WebRequestQueueOperation m_RequestQueueOperation;
             bool m_IgnoreFailures;
             ProvideHandle m_PI;
 
@@ -46,8 +49,21 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 }
                 else if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
                 {
-                    m_RequestOperation = new UnityWebRequest(path, UnityWebRequest.kHttpVerbGET, new DownloadHandlerBuffer(), null).SendWebRequest();
-                    m_RequestOperation.completed += RequestOperation_completed;
+                    UnityWebRequest request = new UnityWebRequest(path, UnityWebRequest.kHttpVerbGET, new DownloadHandlerBuffer(), null);
+                    m_RequestQueueOperation = WebRequestQueue.QueueRequest(request);
+                    if (m_RequestQueueOperation.IsDone)
+                    {
+                        m_RequestOperation = m_RequestQueueOperation.Result;
+                        m_RequestOperation.completed += RequestOperation_completed;
+                    }
+                    else
+                    {
+                        m_RequestQueueOperation.OnComplete += asyncOperation =>
+                        {
+                            m_RequestOperation = asyncOperation;
+                            m_RequestOperation.completed += RequestOperation_completed;
+                        };
+                    }
                 }
                 else
                 {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -116,6 +117,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         AssetBundle m_AssetBundle;
         DownloadHandlerAssetBundle m_downloadHandler;
         AsyncOperation m_RequestOperation;
+        WebRequestQueueOperation m_WebRequestQueueOperation;
         ProvideHandle m_ProvideHandle;
         AssetBundleRequestOptions m_Options;
         int m_Retries;
@@ -169,8 +171,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             m_ProvideHandle = provideHandle;
             m_Options = m_ProvideHandle.Location.Data as AssetBundleRequestOptions;
             m_RequestOperation = null;
-            BeginOperation();
             provideHandle.SetProgressCallback(PercentComplete);
+            BeginOperation();
         }
 
         private void BeginOperation()
@@ -185,8 +187,20 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             {
                 var req = CreateWebRequest(m_ProvideHandle.Location);
                 req.disposeDownloadHandlerOnDispose = false;
-                m_RequestOperation = req.SendWebRequest();
-                m_RequestOperation.completed += WebRequestOperationCompleted;
+                m_WebRequestQueueOperation = WebRequestQueue.QueueRequest(req);
+                if (m_WebRequestQueueOperation.IsDone)
+                {
+                    m_RequestOperation = m_WebRequestQueueOperation.Result;
+                    m_RequestOperation.completed += WebRequestOperationCompleted;
+                }
+                else
+                {
+                    m_WebRequestQueueOperation.OnComplete += asyncOp =>
+                    {
+                        m_RequestOperation = asyncOp;
+                        m_RequestOperation.completed += WebRequestOperationCompleted;
+                    };
+                }
             }
             else
             {
@@ -249,6 +263,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     /// <summary>
     /// IResourceProvider for asset bundles.  Loads bundles via UnityWebRequestAssetBundle API if the internalId starts with "http".  If not, it will load the bundle via AssetBundle.LoadFromFileAsync.
     /// </summary>
+    [DisplayName("AssetBundle Provider")]
     public class AssetBundleProvider : ResourceProviderBase
     {
         /// <inheritdoc/>
@@ -261,12 +276,12 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             return typeof(IAssetBundleResource);
         }
-
+        
         /// <summary>
         /// Releases the asset bundle via AssetBundle.Unload(true).
         /// </summary>
-        /// <param name="location"></param>
-        /// <param name="asset"></param>
+        /// <param name="location">The location of the asset to release</param>
+        /// <param name="asset">The asset in question</param>
         /// <returns></returns>
         public override void Release(IResourceLocation location, object asset)
         {

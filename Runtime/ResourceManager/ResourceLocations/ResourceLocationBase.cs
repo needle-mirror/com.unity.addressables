@@ -61,10 +61,9 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         /// </summary>
         /// <param name="t">The type to hash with.</param>
         /// <returns>The combined hash code of the location and type.</returns>
-                public int Hash(Type t)
+        public int Hash(Type t)
         {
-            var hash = m_HashCode * 31 + t.GetHashCode();
-            return hash;
+            return (m_HashCode * 31 + t.GetHashCode()) * 31 + DependencyHashCode;
         }
 
         /// <summary>
@@ -89,6 +88,7 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
                 throw new ArgumentNullException(id);
             if (string.IsNullOrEmpty(providerId))
                 throw new ArgumentNullException(providerId);
+            m_PrimaryKey = name;
             m_HashCode = (name.GetHashCode() * 31 + id.GetHashCode()) * 31 + providerId.GetHashCode();
             m_Name = name;
             m_Id = id;

@@ -88,6 +88,10 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             var dupeGroup = Settings.FindGroup("Duplicate Asset Isolation");
             Assert.IsNotNull(dupeGroup);
             Assert.IsNotNull(dupeGroup.GetAssetEntry(matGuid));
+
+            //Cleanup
+            Settings.RemoveGroup(group1);
+            Settings.RemoveGroup(group2);
         }
 
         [Test]
@@ -106,6 +110,10 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             rule.FixIssues(Settings);
 
             Assert.AreEqual(groupCount, Settings.groups.Count);
+
+            //Cleanup
+            Settings.RemoveGroup(group1);
+            Settings.RemoveGroup(group2);
         }
 
         [Test]
@@ -164,6 +172,38 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             //Assert
             Assert.AreEqual(1, rule.m_ImplicitAssets.Count);
             Assert.IsTrue(rule.m_ImplicitAssets.Contains(matGuid));
+
+            //Cleanup
+            Settings.RemoveGroup(group1);
+            Settings.RemoveGroup(group2);
+        }
+
+        [Test]
+        public void CalculateDuplicates_DoesNotIncludeSameBundleReferencedMultipleTimes()
+        {
+            //Setup
+            var group1 = Settings.CreateGroup("CheckDupeDepencency1", false, false, false, null, typeof(BundledAssetGroupSchema));
+
+            Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA), group1, false, false);
+
+            var rule = new CheckBundleDupeDependencies();
+            var buildContext = rule.GetBuildContext(Settings);
+
+            rule.CalculateInputDefinitions(Settings);
+            rule.RefreshBuild(buildContext);
+
+            var implicitGuids = rule.GetImplicitGuidToFilesMap();
+            var key = implicitGuids.Keys.First();
+            implicitGuids[key].Add(implicitGuids[key][0]);
+
+            //Test
+            var results = rule.CalculateDuplicates(implicitGuids, buildContext).ToList();
+
+            //Assert
+            Assert.AreEqual(0, results.Count);
+
+            //Cleanup
+            Settings.RemoveGroup(group1);
         }
 
         [Test]
@@ -187,6 +227,10 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
 
             //Assert
             Assert.AreEqual(2, rule.m_AllBundleInputDefs.Count);
+
+            //Cleanup
+            Settings.RemoveGroup(group1);
+            Settings.RemoveGroup(group2);
         }
 
         [Test]
@@ -223,6 +267,10 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             Assert.AreEqual(group2.Name, dupeResults[1].Group.Name);
             Assert.AreEqual(2, dupeResults[1].DuplicatedFiles.Count);
             Assert.AreEqual(k_CheckDupeMyMaterial, dupeResults[1].AssetPath);
+
+            //Cleanup
+            Settings.RemoveGroup(group1);
+            Settings.RemoveGroup(group2);
         }
         
         [Test]

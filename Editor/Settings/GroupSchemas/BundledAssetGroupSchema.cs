@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Reflection;
 using UnityEditor.AddressableAssets.HostingServices;
 using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -10,20 +13,21 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
     /// <summary>
     /// Schema used for bundled asset groups.
     /// </summary>
-    [CreateAssetMenu(fileName = "BundledAssetGroupSchema.asset", menuName = "Addressable Assets/Group Schemas/Bundled Assets")]
+//    [CreateAssetMenu(fileName = "BundledAssetGroupSchema.asset", menuName = "Addressables/Group Schemas/Bundled Assets")]
+    [DisplayName("Content Packing & Loading")]
     public class BundledAssetGroupSchema : AddressableAssetGroupSchema, IHostingServiceConfigurationProvider, ISerializationCallbackReceiver
-    {
+    {   
         /// <summary>
         /// Defines how bundles are created.
         /// </summary>
         public enum BundlePackingMode
         {
             /// <summary>
-            /// Pack all entries into as few bundles as possible (Scenes are put into separate bundles).
+            /// Creates a bundle for all non-scene entries and another for all scenes entries.
             /// </summary>
             PackTogether,
             /// <summary>
-            /// Create a bundle per entry.  This is useful if each entry is a folder as all sub entries will go to the same bundle.
+            /// Creates a bundle per entry.  This is useful if each entry is a folder as all sub entries will go to the same bundle.
             /// </summary>
             PackSeparately,
             /// <summary>
@@ -209,10 +213,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
         [FormerlySerializedAs("m_bundleMode")]
         [SerializeField]
-        [Tooltip("Controls how bundles are packed.  If set to PackTogether, a single asset bundle will be created for the entire group, with the exception of scenes, which are packed separately.  If set to PackSeparately, an asset bundle will be created for each top level entry in the group.")]
+        [Tooltip("Controls how bundles are packed.  If set to PackTogether, a single asset bundle will be created for the entire group, with the exception of scenes, which are packed in a second bundle.  If set to PackSeparately, an asset bundle will be created for each entry in the group; in the case that an entry is a folder, one bundle is created for the folder and all of its sub entries.")]
         BundlePackingMode m_BundleMode = BundlePackingMode.PackTogether;
         /// <summary>
-        /// Controls how bundles are packed.  If set to PackTogether, a single asset bundle will be created for the entire group, with the exception of scenes, which are packed separately.  If set to PackSeparately, an asset bundle will be created for each top level entry in the group.
+        /// Controls how bundles are packed.  If set to PackTogether, a single asset bundle will be created for the entire group, with the exception of scenes, which are packed in a second bundle.  If set to PackSeparately, an asset bundle will be created for each entry in the group; in the case that an entry is a folder, one bundle is created for the folder and all of its sub entries.
         /// </summary>
         public BundlePackingMode BundleMode
         {
@@ -276,7 +280,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// </summary>
         public void OnBeforeSerialize()
         {
-            
+
         }
 
         /// <summary>
@@ -332,7 +336,302 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             set { m_BundleNaming = value; }
         }
         
+        private bool m_ShowPaths = true;
+        private bool m_ShowAdvanced = false;
 
+        /// <summary>
+        /// Used for drawing properties in the inspector.
+        /// </summary>
+        public override void ShowAllProperties()
+        {
+            m_ShowPaths = true;
+            m_ShowAdvanced = true;
+        }
 
+        GUIContent m_AssetProviderContent = new GUIContent("Asset Provider", "The provider to use for loading assets out of AssetBundles");
+        GUIContent m_BundleProviderContent = new GUIContent("AssetBundle Provider", "The provider to use for loading AssetBundles (not the assets within bundles)");
+
+        /// <inheritdoc/>
+        public override void OnGUI()
+        {
+            var so = new SerializedObject(this);
+
+            m_ShowPaths = EditorGUILayout.Foldout(m_ShowPaths, "Build and Load Paths");
+            if (m_ShowPaths)
+            {
+                EditorGUILayout.PropertyField(so.FindProperty("m_BuildPath"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_LoadPath"), true);
+            }
+
+            m_ShowAdvanced = EditorGUILayout.Foldout(m_ShowAdvanced, "Advanced Options");
+            if (m_ShowAdvanced)
+            {
+                EditorGUILayout.PropertyField(so.FindProperty("m_Compression"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_IncludeInBuild"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_ForceUniqueProvider"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_UseAssetBundleCache"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_UseAssetBundleCrc"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_Timeout"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_ChunkedTransfer"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_RedirectLimit"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_RetryCount"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_BundleMode"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_BundleNaming"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_BundledAssetProviderType"), m_AssetProviderContent, true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_AssetBundleProviderType"), m_BundleProviderContent, true);
+            }
+
+            so.ApplyModifiedProperties();
+        }
+//
+//        /// <inheritdoc/>
+//        public override void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
+//        {
+//            var so = new SerializedObject(this);
+//            SerializedProperty prop;
+//
+//            List<BundledAssetGroupSchema> otherBundledSchemas = new List<BundledAssetGroupSchema>();
+//            foreach(var schema in otherSchemas)
+//            {
+//                otherBundledSchemas.Add(schema as BundledAssetGroupSchema);
+//            }
+//
+//            EditorGUI.BeginChangeCheck();
+//            m_ShowPaths = EditorGUILayout.Foldout(m_ShowPaths, "Build and Load Paths");
+//            if (EditorGUI.EndChangeCheck())
+//            {
+//                foreach (var schema in otherBundledSchemas)
+//                {
+//                    schema.m_ShowPaths = m_ShowPaths;
+//                }
+//            }
+//            if (m_ShowPaths)
+//            {
+//                // BuildPath
+//                foreach (var schema in otherBundledSchemas)
+//                {
+//                    if(schema.BuildPath.Id != BuildPath.Id)
+//                    {
+//                        m_BuildPath.ShowMixedValue = true;
+//                        break;
+//                    }
+//                }
+//                EditorGUILayout.PropertyField(so.FindProperty("m_BuildPath"), true);
+//                m_BuildPath.ShowMixedValue = false;
+//                if (BuildPath.ValueChanged)
+//                {
+//                    m_BuildPath.ValueChanged = false;
+//                    foreach (var schema in otherBundledSchemas)
+//                    {
+//                        schema.m_BuildPath.Id = BuildPath.Id;
+//                    }
+//                }
+//
+//                // LoadPath
+//                foreach (var schema in otherBundledSchemas)
+//                {
+//                    if (schema.LoadPath.Id != LoadPath.Id)
+//                    {
+//                        m_LoadPath.ShowMixedValue = true;
+//                        break;
+//                    }
+//                }
+//                EditorGUILayout.PropertyField(so.FindProperty("m_LoadPath"), true);
+//                m_LoadPath.ShowMixedValue = false;
+//                if (LoadPath.ValueChanged)
+//                {
+//                    m_LoadPath.ValueChanged = false;
+//                    foreach (var schema in otherBundledSchemas)
+//                    {
+//                        schema.m_LoadPath.Id = LoadPath.Id;
+//                    }
+//                }
+//            }
+//
+//            EditorGUI.BeginChangeCheck();
+//            m_ShowAdvanced = EditorGUILayout.Foldout(m_ShowAdvanced, "Advanced Options");
+//            if (EditorGUI.EndChangeCheck())
+//            {
+//                foreach (var schema in otherBundledSchemas)
+//                {
+//                    schema.m_ShowAdvanced = m_ShowAdvanced;
+//                }
+//            }
+//            if (m_ShowAdvanced)
+//            {
+//                // Compression
+//                prop = so.FindProperty("m_Compression");
+//                ShowMixedValue(prop, otherSchemas, typeof(Enum), "m_Compression");
+//                EditorGUI.BeginChangeCheck();
+//                BundleCompressionMode newCompression = (BundleCompressionMode)EditorGUILayout.EnumPopup(prop.displayName, Compression);
+//                if (EditorGUI.EndChangeCheck())
+//                {
+//                    Compression = newCompression;
+//                    foreach (var schema in otherBundledSchemas)
+//                        schema.Compression = Compression;
+//                }
+//                EditorGUI.showMixedValue = false;
+//
+//                // IncludeInBuild
+//                prop = so.FindProperty("m_IncludeInBuild");
+//                ShowMixedValue(prop, otherSchemas, typeof(bool), "m_IncludeInBuild");
+//                EditorGUI.BeginChangeCheck();
+//                bool newIncludeInBuild = (bool)EditorGUILayout.Toggle(prop.displayName, IncludeInBuild);
+//                if (EditorGUI.EndChangeCheck())
+//                {
+//                    IncludeInBuild = newIncludeInBuild;
+//                    foreach (var schema in otherBundledSchemas)
+//                        schema.IncludeInBuild = IncludeInBuild;
+//                }
+//                EditorGUI.showMixedValue = false;
+//
+//                // BundledAssetProviderType
+//                foreach (var schema in otherBundledSchemas)
+//                {
+//                    if (schema.BundledAssetProviderType.Value != BundledAssetProviderType.Value)
+//                    {
+//                        m_BundledAssetProviderType.ShowMixedValue = true;
+//                        break;
+//                    }
+//                }
+//
+//                // ForceUniqueProvider
+//                prop = so.FindProperty("m_ForceUniqueProvider");
+//                ShowMixedValue(prop, otherSchemas, typeof(bool), "m_ForceUniqueProvider");
+//                EditorGUI.BeginChangeCheck();
+//                bool newForceUniqueProvider = (bool)EditorGUILayout.Toggle(prop.displayName, ForceUniqueProvider);
+//                if (EditorGUI.EndChangeCheck())
+//                {
+//                    ForceUniqueProvider = newForceUniqueProvider;
+//                    foreach (var schema in otherBundledSchemas)
+//                        schema.ForceUniqueProvider = ForceUniqueProvider;
+//                }
+//                EditorGUI.showMixedValue = false;
+//
+//                // UseAssetBundleCache
+//                prop = so.FindProperty("m_UseAssetBundleCache");
+//                ShowMixedValue(prop, otherSchemas, typeof(bool), "m_UseAssetBundleCache");
+//                EditorGUI.BeginChangeCheck();
+//                bool newUseAssetBundleCache = (bool)EditorGUILayout.Toggle(prop.displayName, UseAssetBundleCache);
+//                if (EditorGUI.EndChangeCheck())
+//                {
+//                    UseAssetBundleCache = newUseAssetBundleCache;
+//                    foreach (var schema in otherBundledSchemas)
+//                        schema.UseAssetBundleCache = UseAssetBundleCache;
+//                }
+//                EditorGUI.showMixedValue = false;
+//
+//                // UseAssetBundleCrc
+//                prop = so.FindProperty("m_UseAssetBundleCrc");
+//                ShowMixedValue(prop, otherSchemas, typeof(bool), "m_UseAssetBundleCrc");
+//                EditorGUI.BeginChangeCheck();
+//                bool newUseAssetBundleCrc = (bool)EditorGUILayout.Toggle(prop.displayName, UseAssetBundleCrc);
+//                if (EditorGUI.EndChangeCheck())
+//                {
+//                    UseAssetBundleCrc = newUseAssetBundleCrc;
+//                    foreach (var schema in otherBundledSchemas)
+//                        schema.UseAssetBundleCrc = UseAssetBundleCrc;
+//                }
+//                EditorGUI.showMixedValue = false;
+//
+//                // Timeout
+//                prop = so.FindProperty("m_Timeout");
+//                ShowMixedValue(prop, otherSchemas, typeof(int), "m_Timeout");
+//                EditorGUI.BeginChangeCheck();
+//                int newTimeout = (int)EditorGUILayout.IntField(prop.displayName, Timeout);
+//                if (EditorGUI.EndChangeCheck())
+//                {
+//                    Timeout = newTimeout;
+//                    foreach (var schema in otherBundledSchemas)
+//                        schema.Timeout = Timeout;
+//                }
+//                EditorGUI.showMixedValue = false;
+//
+//                // ChunkedTransfer
+//                prop = so.FindProperty("m_ChunkedTransfer");
+//                ShowMixedValue(prop, otherSchemas, typeof(bool), "m_ChunkedTransfer");
+//                EditorGUI.BeginChangeCheck();
+//                bool newChunkedTransfer = (bool)EditorGUILayout.Toggle(prop.displayName, ChunkedTransfer);
+//                if (EditorGUI.EndChangeCheck())
+//                {
+//                    ChunkedTransfer = newChunkedTransfer;
+//                    foreach (var schema in otherBundledSchemas)
+//                        schema.ChunkedTransfer = ChunkedTransfer;
+//                }
+//                EditorGUI.showMixedValue = false;
+//
+//                // RedirectLimit
+//                prop = so.FindProperty("m_RedirectLimit");
+//                ShowMixedValue(prop, otherSchemas, typeof(int), "m_RedirectLimit");
+//                EditorGUI.BeginChangeCheck();
+//                int newRedirectLimit = (int)EditorGUILayout.IntField(prop.displayName, RedirectLimit);
+//                if (EditorGUI.EndChangeCheck())
+//                {
+//                    RedirectLimit = newRedirectLimit;
+//                    foreach (var schema in otherBundledSchemas)
+//                        schema.RedirectLimit = RedirectLimit;
+//                }
+//                EditorGUI.showMixedValue = false;
+//
+//                // RetryCount
+//                prop = so.FindProperty("m_RetryCount");
+//                ShowMixedValue(prop, otherSchemas, typeof(int), "m_RetryCount");
+//                EditorGUI.BeginChangeCheck();
+//                int newRetryCount = (int)EditorGUILayout.IntField(prop.displayName, RetryCount);
+//                if (EditorGUI.EndChangeCheck())
+//                {
+//                    RetryCount = newRetryCount;
+//                    foreach (var schema in otherBundledSchemas)
+//                        schema.RetryCount = RetryCount;
+//                }
+//                EditorGUI.showMixedValue = false;
+//
+//                // BundleMode
+//                prop = so.FindProperty("m_BundleMode");
+//                ShowMixedValue(prop, otherSchemas, typeof(Enum), "m_BundleMode");
+//                EditorGUI.BeginChangeCheck();
+//                BundlePackingMode newBundleMode = (BundlePackingMode)EditorGUILayout.EnumPopup(prop.displayName, BundleMode);
+//                if (EditorGUI.EndChangeCheck())
+//                {
+//                    BundleMode = newBundleMode;
+//                    foreach (var schema in otherBundledSchemas)
+//                        schema.BundleMode = BundleMode;
+//                }
+//                EditorGUI.showMixedValue = false;
+//
+//                // AssetBundleProviderType
+//                foreach (var schema in otherBundledSchemas)
+//                {
+//                    if (schema.AssetBundleProviderType.Value != AssetBundleProviderType.Value)
+//                    {
+//                        m_AssetBundleProviderType.ShowMixedValue = true;
+//                        break;
+//                    }
+//                }
+//                
+//                EditorGUILayout.PropertyField(so.FindProperty("m_BundledAssetProviderType"), m_AssetProviderContent, true);
+//                m_BundledAssetProviderType.ShowMixedValue = false;
+//                if (BundledAssetProviderType.ValueChanged)
+//                {
+//                    m_BundledAssetProviderType.ValueChanged = false;
+//                    foreach (var schema in otherBundledSchemas)
+//                    {
+//                        schema.m_BundledAssetProviderType = BundledAssetProviderType;
+//                    }
+//                }
+//                EditorGUILayout.PropertyField(so.FindProperty("m_AssetBundleProviderType"), m_BundleProviderContent, true);
+//                m_AssetBundleProviderType.ShowMixedValue = false;
+//                if (AssetBundleProviderType.ValueChanged)
+//                {
+//                    m_AssetBundleProviderType.ValueChanged = false;
+//                    foreach (var schema in otherBundledSchemas)
+//                    {
+//                        schema.m_AssetBundleProviderType = AssetBundleProviderType;
+//                    }
+//                }
+//            }
+//
+//            so.ApplyModifiedProperties();
+//        }
     }
 }

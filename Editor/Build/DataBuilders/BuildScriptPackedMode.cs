@@ -27,7 +27,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
     /// <summary>
     /// Build scripts used for player builds and running with bundles in the editor.
     /// </summary>
-    [CreateAssetMenu(fileName = "BuildScriptPacked.asset", menuName = "Addressable Assets/Data Builders/Packed Mode")]
+    [CreateAssetMenu(fileName = "BuildScriptPacked.asset", menuName = "Addressables/Content Builders/Default Build Script")]
     public class BuildScriptPackedMode : BuildScriptBase
     {
         /// <inheritdoc />
@@ -35,7 +35,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             get
             {
-                return "Packed Mode";
+                return "Default Build Script";
             }
         }
 
@@ -125,7 +125,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     buildTargetGroup, 
                     aaContext.settings.buildSettings.bundleBuildPath);
 
-                var builtinShaderBundleName = aaContext.settings.DefaultGroup.Name.ToLower().Replace(" ", "").Replace('\\', '/').Replace("//", "/") + "_unitybuiltinshaders.bundle";
+                var builtinShaderBundleName = aaContext.settings.DefaultGroup.Guid + "_unitybuiltinshaders.bundle";
                 var buildTasks = RuntimeDataBuildTasks(builtinShaderBundleName);
                 buildTasks.Add(extractData);
 
@@ -154,7 +154,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
 
             //save catalog
-            var contentCatalog = new ContentCatalogData(aaContext.locations);
+            var contentCatalog = new ContentCatalogData(aaContext.locations, ResourceManagerRuntimeData.kCatalogAddress);
             contentCatalog.ResourceProviderData.AddRange(m_ResourceProviderData);
             foreach (var t in aaContext.providerTypes)
                 contentCatalog.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(t));
@@ -360,6 +360,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     bundleInputDefs[i] = new AssetBundleBuild { assetBundleName = newName, addressableNames = bid.addressableNames, assetBundleVariant = bid.assetBundleVariant, assetNames = bid.assetNames };
                 }
 
+
+
                 aaContext.bundleToAssetGroup.Add(bundleInputDefs[i].assetBundleName, assetGroup.Guid);
             }
             m_AllBundleInputDefs.AddRange(bundleInputDefs);
@@ -401,7 +403,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 var allEntries = new List<AddressableAssetEntry>();
                 foreach (var a in assetGroup.entries)
                     a.GatherAllAssets(allEntries, true, true, false);
-                GenerateBuildInputDefinitions(allEntries, bundleInputDefs, assetGroup.Name, "all");
+                GenerateBuildInputDefinitions(allEntries, bundleInputDefs,
+                    HashingMethods.Calculate(new HashSet<string>(assetGroup.entries.Select(e => e.guid))).ToString(), "all");
             }
             else
             {
@@ -411,7 +414,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     {
                         var allEntries = new List<AddressableAssetEntry>();
                         a.GatherAllAssets(allEntries, true, true, false);
-                        GenerateBuildInputDefinitions(allEntries, bundleInputDefs, assetGroup.Name, a.address);
+                        GenerateBuildInputDefinitions(allEntries, bundleInputDefs,
+                            HashingMethods.Calculate(new HashSet<string>(assetGroup.entries.Select(e => e.guid))).ToString(), a.address);
                     }
                 }
                 else
@@ -434,13 +438,14 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         var allEntries = new List<AddressableAssetEntry>();
                         foreach (var a in entryGroup.Value)
                             a.GatherAllAssets(allEntries, true, true, false);
-                        GenerateBuildInputDefinitions(allEntries, bundleInputDefs, assetGroup.Name, entryGroup.Key);
+                        GenerateBuildInputDefinitions(allEntries, bundleInputDefs,
+                            HashingMethods.Calculate(new HashSet<string>(assetGroup.entries.Select(e => e.guid))).ToString(), entryGroup.Key);
                     }
                 }
             }
         }
 
-        static void GenerateBuildInputDefinitions(List<AddressableAssetEntry> allEntries, List<AssetBundleBuild> buildInputDefs, string groupName, string address)
+        static void GenerateBuildInputDefinitions(List<AddressableAssetEntry> allEntries, List<AssetBundleBuild> buildInputDefs, string groupGuid, string address)
         {
             var scenes = new List<AddressableAssetEntry>();
             var assets = new List<AddressableAssetEntry>();
@@ -454,9 +459,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     assets.Add(e);
             }
             if (assets.Count > 0)
-                buildInputDefs.Add(GenerateBuildInputDefinition(assets, groupName + "_assets_" + address + ".bundle"));
+                buildInputDefs.Add(GenerateBuildInputDefinition(assets, groupGuid + "_assets_" + address + ".bundle"));
             if (scenes.Count > 0)
-                buildInputDefs.Add(GenerateBuildInputDefinition(scenes, groupName + "_scenes_" + address + ".bundle"));
+                buildInputDefs.Add(GenerateBuildInputDefinition(scenes, groupGuid + "_scenes_" + address + ".bundle"));
         }
 
         static AssetBundleBuild GenerateBuildInputDefinition(List<AddressableAssetEntry> assets, string name)
@@ -547,6 +552,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             // Dependency
             buildTasks.Add(new CalculateSceneDependencyData());
             buildTasks.Add(new CalculateAssetDependencyData());
+            buildTasks.Add(new AddHashToBundleNameTask());
             buildTasks.Add(new StripUnusedSpriteSources());
             buildTasks.Add(new CreateBuiltInShadersBundle(builtinShaderBundleName));
 
@@ -561,7 +567,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             // Writing
             buildTasks.Add(new WriteSerializedFiles());
             buildTasks.Add(new ArchiveAndCompressBundles());
-            //   buildTasks.Add(new PostProcessBundlesTask());
 
             return buildTasks;
         }
@@ -601,8 +606,22 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     };
                     dataEntry.Data = requestOptions;
 
-                    dataEntry.InternalId = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), dataEntry.InternalId);
-                    newBundleName = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), newBundleName);
+                    int extensionLength = Path.GetExtension(originalBundleName).Length;
+                    string[] deconstructedBundleName = originalBundleName.Substring(0, originalBundleName.Length - extensionLength)
+                        .Split('_');
+                    deconstructedBundleName[0] = assetGroup.Name
+                        .Replace(" ", "")
+                        .Replace('\\', '/')
+                        .Replace("//", "/")
+                        .ToLower();
+
+                    string reconstructedBundleName = string.Join("_", deconstructedBundleName) + ".bundle";
+
+                    newBundleName = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), reconstructedBundleName);
+                    dataEntry.InternalId = dataEntry.InternalId.Remove(dataEntry.InternalId.Length - originalBundleName.Length) + newBundleName;
+                    
+                    if (dataEntry.InternalId.StartsWith("http:\\"))
+                        dataEntry.InternalId = dataEntry.InternalId.Replace("http:\\", "http://").Replace("\\", "/");
                 }
                 else
                 {

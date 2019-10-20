@@ -86,10 +86,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         /// not rerun RefreshAnalysis before fixing. 
         /// </summary>
         /// <param name="settings">The settings object to analyze</param>
-        public virtual void FixIssues(AddressableAssetSettings settings)
-        {
-            throw new NotImplementedException("FixIssues not implemented for class: '" + GetType() + "'."); 
-        }
+        public virtual void FixIssues(AddressableAssetSettings settings) { }
 
         /// <summary>
         /// Clears out the analysis results. When overriding, use to clear rule-specific data as well. 

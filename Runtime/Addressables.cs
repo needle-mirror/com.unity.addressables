@@ -115,10 +115,10 @@ namespace UnityEngine.AddressableAssets
 
 
         /// <summary>
-        /// Gets the list of configured <see cref="IResourceLocator"/> objects. Resource Locators are used to find <see cref="IResourceLocation"/> objects from user-defined typed keys.
+        /// Gets the collection of configured <see cref="IResourceLocator"/> objects. Resource Locators are used to find <see cref="IResourceLocation"/> objects from user-defined typed keys.
         /// </summary>
-        /// <value>The resource locators list.</value>
-        public static IList<IResourceLocator> ResourceLocators { get { return m_Addressables.ResourceLocators; } }
+        /// <value>The resource locators collection.</value>
+        public static IEnumerable<IResourceLocator> ResourceLocators { get { return m_Addressables.ResourceLocators; } }
 
         /// <summary>
         /// Debug.Log wrapper method that is contional on the ADDRESSABLES_LOG_ALL symbol definition.  This can be set in the Player preferences in the 'Scripting Define Symbols'.
@@ -197,7 +197,7 @@ namespace UnityEngine.AddressableAssets
         {
             return InitializeAsync();
         }
-        
+
         /// <summary>
         /// Initialize Addressables system.  Addressables will be initialized on the first API call if this is not called explicitly.
         /// </summary>
@@ -206,7 +206,7 @@ namespace UnityEngine.AddressableAssets
         {
             return m_Addressables.InitializeAsync();
         }
-        
+
         /// <summary>
         /// Additively load catalogs from runtime data.  The settings are not used.
         /// </summary>
@@ -219,7 +219,7 @@ namespace UnityEngine.AddressableAssets
         {
             return LoadContentCatalogAsync(catalogPath, providerSuffix);
         }
-        
+
         /// <summary>
         /// Additively load catalogs from runtime data.  The settings are not used.
         /// </summary>
@@ -234,13 +234,8 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Initialization operation.  You can register a callback with this if you need to run code after Addressables is ready.  Any requests made before this operaton completes will automatically cahin to its result.
         /// </summary>
-        public static AsyncOperationHandle<IResourceLocator> InitializationOperation
-        {
-            get
-            {
-                return m_Addressables.InitializationOperation;
-            }
-        }
+        [Obsolete]
+        public static AsyncOperationHandle<IResourceLocator> InitializationOperation => default;
 
         /// <summary>
         /// Load a single asset
@@ -263,8 +258,7 @@ namespace UnityEngine.AddressableAssets
         {
             return LoadAssetAsync<TObject>(key);
         }
-        
-        
+
         /// <summary>
         /// Load a single asset
         /// </summary>
@@ -289,6 +283,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="keys">The set of keys to use.</param>
         /// <param name="mode">The mode for merging the results of the found locations.</param>
+        /// <param name="type">A type restriction for the lookup.  Only locations of the provided type (or derived type) will be returned.</param>
         /// <returns>The operation handle for the request.</returns>
         //[Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadResourceLocationsAsync(*)", true)]
         [Obsolete]
@@ -303,6 +298,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="keys">The set of keys to use.</param>
         /// <param name="mode">The mode for merging the results of the found locations.</param>
+        /// <param name="type">A type restriction for the lookup.  Only locations of the provided type (or derived type) will be returned.</param>
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(IList<object> keys, MergeMode mode, Type type = null)
         {
@@ -314,6 +310,7 @@ namespace UnityEngine.AddressableAssets
         /// The method will always return success, with a valid IList of results. If nothing matches key, IList will be empty
         /// </summary>
         /// <param name="key">The key for the locations.</param>
+        /// <param name="type">A type restriction for the lookup.  Only locations of the provided type (or derived type) will be returned.</param>
         /// <returns>The operation handle for the request.</returns>
         //[Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadResourceLocationsAsync(*)", true)]
         [Obsolete]
@@ -327,6 +324,7 @@ namespace UnityEngine.AddressableAssets
         /// The method will always return success, with a valid IList of results. If nothing matches key, IList will be empty
         /// </summary>
         /// <param name="key">The key for the locations.</param>
+        /// <param name="type">A type restriction for the lookup.  Only locations of the provided type (or derived type) will be returned.</param>
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(object key, Type type = null)
         {
@@ -642,7 +640,7 @@ namespace UnityEngine.AddressableAssets
         {
             return InstantiateAsync(location, instantiateParameters, trackHandle);
         }
-        
+
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.  
         /// </summary>
@@ -817,7 +815,7 @@ namespace UnityEngine.AddressableAssets
         {
             return UnloadSceneAsync(handle, autoReleaseHandle);
         }
-        
+
         /// <summary>
         /// Release scene
         /// </summary>
@@ -850,7 +848,57 @@ namespace UnityEngine.AddressableAssets
         {
             return m_Addressables.UnloadSceneAsync(handle, autoReleaseHandle);
         }
-     }
+
+        /// <summary>
+        /// Checks all updatable content catalogs for a new version.
+        /// </summary>
+        /// <param name="autoReleaseHandle">If true, the handle will automatically be released when the operation completes.</param>
+        /// <returns>The operation containing the list of catalog ids that have an available update.  This can be used to filter which catalogs to update with the UpdateContent.</returns>
+        public static AsyncOperationHandle<List<string>> CheckForCatalogUpdates(bool autoReleaseHandle = true)
+        {
+            return m_Addressables.CheckForCatalogUpdates(autoReleaseHandle);
+        }
+
+        /// <summary>
+        /// Update the specified catalogs.
+        /// </summary>
+        /// <param name="catalogs">The set of catalogs to update.  If null, all catalogs that have an available update will be updated.</param>
+        /// <param name="autoReleaseHandle">If true, the handle will automatically be released when the operation completes.</param>
+        /// <returns>The operation with the list of updated content catalog data.</returns>
+        public static AsyncOperationHandle<List<IResourceLocator>> UpdateCatalogs(IEnumerable<string> catalogs = null, bool autoReleaseHandle = true)
+        {
+            return m_Addressables.UpdateCatalogs(catalogs, autoReleaseHandle);
+        }
+
+        /// <summary>
+        /// Add a resource locator.
+        /// </summary>
+        /// <param name="locator">The locator object.</param>
+        /// <param name="localCatalogHash">The hash of the local catalog. This can be null if the catalog cannot be updated.</param>
+        /// <param name="remoteCatalogLocation">The location of the remote catalog. This can be null if the catalog cannot be updated.</param>
+        public static void AddResourceLocator(IResourceLocator locator, string localCatalogHash = null, IResourceLocation remoteCatalogLocation = null)
+        {
+            m_Addressables.AddResourceLocator(locator, localCatalogHash, remoteCatalogLocation);
+        }
+
+        /// <summary>
+        /// Remove a locator;
+        /// </summary>
+        /// <param name="locator">The locator to remove.</param>
+        public static void RemoveResourceLocator(IResourceLocator locator)
+        {
+            m_Addressables.RemoveResourceLocator(locator);
+        }
+
+        /// <summary>
+        /// Remove all locators.
+        /// </summary>
+        public static void ClearResourceLocators()
+        {
+            m_Addressables.ClearResourceLocators();
+        }
+
+    }
 
 }
 

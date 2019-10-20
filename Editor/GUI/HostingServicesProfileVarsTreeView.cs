@@ -36,7 +36,7 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 new MultiColumnHeaderState.Column
                 {
-                    headerContent = new GUIContent("Profile Variable"),
+                    headerContent = new GUIContent("Variable Name"),
                     headerTextAlignment = TextAlignment.Left,
                     sortedAscending = true,
                     sortingArrowAlignment = TextAlignment.Right,

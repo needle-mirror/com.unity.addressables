@@ -87,7 +87,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             //Get all guids that have more than one bundle referencing them
             IEnumerable<KeyValuePair<GUID, List<string>>> validGuids =
                 from dupeGuid in implicitGuids
-                where dupeGuid.Value.Count > 1
+                where dupeGuid.Value.Distinct().Count() > 1
                 where IsValidPath(AssetDatabase.GUIDToAssetPath(dupeGuid.Key.ToString()))
                 select dupeGuid;
 

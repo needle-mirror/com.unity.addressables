@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -9,7 +10,7 @@ namespace UnityEditor.AddressableAssets.Settings
     /// Contains data for AddressableAssetGroups. 
     /// </summary>
     public class AddressableAssetGroupSchema : ScriptableObject
-    {
+    {   
         [FormerlySerializedAs("m_group")]
         [HideInInspector]
         [SerializeField]
@@ -59,6 +60,15 @@ namespace UnityEditor.AddressableAssets.Settings
             so.ApplyModifiedProperties();
         }
 
+//        /// <summary>
+//        /// Used to display the GUI of multiple selected groups.
+//        /// </summary>
+//        /// <param name="otherSchemas">Schema instances in the other selected groups</param>
+//        public virtual void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
+//        {
+//
+//        }
+
         /// <summary>
         /// Used to notify the addressables settings that data has been modified.  This must be called by subclasses to ensure proper cache invalidation.
         /// </summary>
@@ -73,5 +83,29 @@ namespace UnityEditor.AddressableAssets.Settings
                     m_Group.SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaModified, this, postEvent, false);
             }
         }
+        /// <summary>
+        /// Used for drawing properties in the inspector.
+        /// </summary>
+        public virtual void ShowAllProperties()
+        {
+
+        }
+
+//        protected void ShowMixedValue(SerializedProperty property, List<AddressableAssetGroupSchema> otherSchemas, Type type, string propertyName)
+//        {
+//            foreach (var schema in otherSchemas)
+//            {
+//                var s_prop = (new SerializedObject(schema)).FindProperty(propertyName);
+//                if ((type == typeof(Enum) && (property.enumValueIndex != s_prop.enumValueIndex)) ||
+//                    (type == typeof(string) && (property.stringValue != s_prop.stringValue)) ||
+//                    (type == typeof(int) && (property.intValue != s_prop.intValue)) ||
+//                    (type == typeof(bool) && (property.boolValue != s_prop.boolValue)) )
+//                {
+//                    EditorGUI.showMixedValue = true;
+//                    return;
+//                }
+//            }
+//        }
+        
     }
 }

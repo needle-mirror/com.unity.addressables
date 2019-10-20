@@ -28,7 +28,6 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         private AsyncOperationHandle<IList<AsyncOperationHandle>> m_DepOp;
         private IResourceLocation m_Location;
         private int m_ProvideHandleVersion;
-        private TObject m_Result;
         private bool m_NeedsRelease;
         int ICachable.Hash { get; set; }
         private ResourceManager m_ResourceManager;
@@ -101,24 +100,24 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             ProviderOperation<T> top = this as ProviderOperation<T>;
             if (top != null)
             {
-                top.m_Result = result;
+                top.Result = result;
             }
             else if (result == null && !typeof(TObject).IsValueType)
             {
-                m_Result = (TObject)(object)null;
+                Result = (TObject)(object)null;
             }
             else if(result != null && typeof(TObject).IsAssignableFrom(result.GetType()))
             {
-                m_Result = (TObject)(object)result;
+                Result = (TObject)(object)result;
             }
             else
             {
                 string errorMsg = string.Format("Provider of type {0} with id {1} has provided a result of type {2} which cannot be converted to requested type {3}. The operation will be marked as failed.", m_Provider.GetType().ToString(), m_Provider.ProviderId, typeof(T), typeof(TObject));
-                Complete(m_Result, false, errorMsg);
+                Complete(Result, false, errorMsg);
                 throw new Exception(errorMsg);
             }
 
-            Complete(m_Result, status, e != null ? e.Message : string.Empty);
+            Complete(Result, status, e != null ? e.Message : string.Empty);
         }
         protected override float Progress
         {
@@ -186,9 +185,10 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         protected override void Destroy()
         {
             if (m_NeedsRelease)
-                m_Provider.Release(m_Location, m_Result);
+                m_Provider.Release(m_Location, Result);
             if (m_DepOp.IsValid())
                 m_DepOp.Release();
+            Result = default(TObject); 
         }
     }
 }

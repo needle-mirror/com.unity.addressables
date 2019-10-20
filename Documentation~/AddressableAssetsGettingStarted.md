@@ -1,4 +1,4 @@
-# Getting Started
+# Getting started
 ## Installing the Addressable Assets package
 
 **Important**: The Addressable Asset System requires Unity version 2018.3 or later.
@@ -10,32 +10,34 @@ To install this package, follow the instructions in the [Package Manager documen
 There are two ways to mark an asset as Addressable in the Unity Editor: 
 
 * In the object's Inspector.
-* In the **Addressables window**. 
+* In the **Addressables Groups** window. 
 
 #### Using the Inspector
-In your **Project window**, select the desired asset to view its Inspector. In the Inspector, click the **Address** checkbox and enter a name by which to identify the asset.
+In your **Project** window, select the desired asset to view its Inspector. In the Inspector, click the **Addressable** checkbox and enter a name by which to identify the asset.
 
-![Marking an asset as Addressable in the Inspector window.](images/inspectorcheckbox.png)
+![Marking an asset as Addressable in the Inspector window.](images/inspectorcheckbox.png)</br>
+_Marking an asset as Addressable in the **Inspector** window._
 
 #### Using the Addressables window
-Select **Window** > **Asset Management** > **Addressables** to open the **Addressables window**. Next, drag the desired asset from your **Project window** into one of the asset groups in the **Addressables window**.
+Select **Window** > **Asset Management** > **Addressables** > **Groups** to open the **Addressables Groups** window. Next, drag the desired asset from your **Project** window into one of the asset groups in the **Addressables Groups** window.
 
-![Marking an asset as Addressable in the Addressables window.](images/addressableswindow.png)
+![Marking an asset as Addressable in the Addressables Groups window.](images/addressableswindow.png)</br>
+_Marking an asset as Addressable in the **Addressables Groups** window._
 
 ### Specifying an address
-The default address for your asset is the path to the asset in your Project (for example, _Assets/images/myImage.png_). To change the asset's address from the **Addressables window**, right-click the asset and select **Rename**.
+The default address for your asset is the path to the asset in your Project (for example, _Assets/images/myImage.png_). To change the asset's address from the **Addressables Groups** window, right-click the asset and select **Change Address**.
 
-When you first start using Addressable Assets, the system saves some edit-time and run-time data assets for your Project in the _Assets/AddressableAssetsData_ file, which should be added to your version control check-in.
+When you first start using Addressable Assets, the system saves some edit-time and runtime data assets for your Project in the _Assets/AddressableAssetsData_ file, which should be added to your version control check-in.
 
 ### Building your Addressable content
 The Addressables Asset System needs to build your content into files that can be consumed by the running game before you build the application. This step is not automatic. You can build this content via the Editor or API:
 
-* To build content in the Editor, open the **Addressables window**, then select **Build** > **Build Player Content**.
+* To build content in the Editor, open the **Addressables Groups** window, then select **Build** > **New Build** > **Default Build Script**.
 * To build content using the API, use [`AddressableAssetSettings.BuildPlayerContent()`](../api/UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.html#UnityEditor_AddressableAssets_Settings_AddressableAssetSettings_BuildPlayerContent).
 
 ## Using Addressable Assets
 ### Loading or instantiating by address
-You can load or instantiate an Addressable Asset at run-time. Loading an asset loads all dependencies into memory (including the asset's bundle data if applicable), allowing you to use the asset when you need to.  This does not actually put the desired asset into your scene. To add the asset to your scene you must instantiate.  Using Addressables instantiation interfaces will load the asset, then immediately adds it to your Scene. 
+You can load or instantiate an Addressable Asset at runtime. Loading an asset loads all dependencies into memory (including the asset's bundle data if applicable), allowing you to use the asset when you need to.  This does not actually put the desired asset into your scene. To add the asset to your scene you must instantiate.  Using Addressables instantiation interfaces will load the asset, then immediately adds it to your Scene. 
 
 To access an asset from your game script using a string address, declare the `UnityEngine.AddressableAssets` namespace, then call the following methods:
 
@@ -96,12 +98,13 @@ In addition, you can use an `AssetReference` to access the sub-object of an asse
 ### Using the AssetReference class
 The `AssetReference` class provides a way to access Addressable Assets without needing to know their addresses. To access an Addressable Asset using the `AssetReference` class:
 
-1. Select a GameObject from your Scene hierarchy or **Project window**.
+1. Select a GameObject from your Scene hierarchy or **Project** window.
 2. In the Inspector, click the **Add Component** button, then select the component type. Any serializable component can support an `AssetReference` variable (for example, a game script, ScriptableObject, or other serializable class).
 3. Add a public `AssetReference` variable in the component (for example, `public AssetReference explosion;`).
-4. In the Inspector, select which Addressable Asset to link to the object, by either dragging the asset from the **Project window** into the exposed `AssetReference` field, or choosing from the dropdown of previously defined Addressable Assets in your Project (shown below).
+4. In the Inspector, select which Addressable Asset to link to the object, by either dragging the asset from the **Project** window into the exposed `AssetReference` field, or choosing from the dropdown of previously defined Addressable Assets in your Project (shown below).
 
-![Referencing an Addressable Asset via script component.](images/Inspectorreferenceselection2.png)
+![Referencing an Addressable Asset via script component.](images/Inspectorreferenceselection2.png)</br>
+_Referencing an Addressable Asset via script component._
 
 To load or instantiate an `AssetReference` asset, call its corresponding method. For example:
 
@@ -127,7 +130,7 @@ The Addressable Asset System needs some files at runtime to know what to load an
 
 In addition to the Addressables-specific data, any groups that build their data for local use will also use the Library platform-specific staging location. To verify that this works, set your build path and load paths to profile variables starting with `[UnityEngine.AddressableAssets.Addressables.BuildPath]` and `{UnityEngine.AddressableAssets.Addressables.RuntimePath}` respectively. You can specify these settings in the `AddressableAssetSettings` Inspector (by default, this object is located in your Project's _Assets/AddressableAssetsData_ directory).
 
-### Downloading in Advance
+### Downloading in advance
 Calling the `Addressables.DownloadDependenciesAsync()` method loads the dependencies for the address or label that you pass in. Typically, this is the asset bundle.
 
 The [`AsyncOperationHandle`](AddressableAssetsAsyncOperationHandle.md) struct returned by this call includes a `PercentComplete` attribute that you can use to monitor and display download progress. You can also have the app wait until the content has loaded.

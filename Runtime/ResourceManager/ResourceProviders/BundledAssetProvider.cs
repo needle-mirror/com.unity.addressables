@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -10,6 +11,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     /// <summary>
     /// Provides assets stored in an asset bundle.
     /// </summary>
+    [DisplayName("Assets from Bundles Provider")]
     public class BundledAssetProvider : ResourceProviderBase
     {
         internal class InternalOp
@@ -41,6 +43,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             
             public void Start(ProvideHandle provideHandle)
             {
+                provideHandle.SetProgressCallback(ProgressCallback);
                 subObjectName = null;
                 m_ProvideHandle = provideHandle;
                 m_RequestOperation = null;
@@ -85,7 +88,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                         }
                     }
                     m_RequestOperation.completed += ActionComplete;
-                    provideHandle.SetProgressCallback(ProgressCallback);
                 }
             }
 

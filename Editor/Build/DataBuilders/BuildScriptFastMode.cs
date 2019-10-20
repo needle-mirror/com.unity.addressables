@@ -17,7 +17,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
     /// <summary>
     /// Build script used for fast iteration in the editor.
     /// </summary>
-    [CreateAssetMenu(fileName = "BuildScriptFast.asset", menuName = "Addressable Assets/Data Builders/Fast Mode")]
+    [CreateAssetMenu(fileName = "BuildScriptFast.asset", menuName = "Addressables/Content Builders/Use Asset Database (faster)")]
     public class BuildScriptFastMode : BuildScriptBase
     {
         /// <inheritdoc />
@@ -25,7 +25,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             get
             {
-                return "Fast Mode";
+                return "Use Asset Database (faster)";
             }
         }
 
@@ -104,7 +104,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 WriteFile(settingsPath, JsonUtility.ToJson(aaContext.runtimeData), context.Registry);
 
                 //save catalog
-                var catalogData = new ContentCatalogData(aaContext.locations);
+                var catalogData = new ContentCatalogData(aaContext.locations, ResourceManagerRuntimeData.kCatalogAddress);
                 if (m_NeedsLegacyProvider)
                     catalogData.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(typeof(LegacyResourcesProvider)));
                 foreach (var t in aaContext.providerTypes)

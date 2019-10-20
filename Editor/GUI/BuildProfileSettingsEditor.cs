@@ -62,13 +62,13 @@ namespace UnityEditor.AddressableAssets.GUI
             if (data != null)
             {
                 var val = data.Evaluate(settings.profileSettings, settings.activeProfileId);
-                var h = EditorStyles.helpBox.CalcHeight(new GUIContent(val), EditorGUIUtility.currentViewWidth - 20);
+                var h = EditorStyles.helpBox.CalcHeight(new GUIContent(val), EditorGUIUtility.currentViewWidth - EditorGUIUtility.labelWidth - 16);
                 return height + h;
             }
-            return height + EditorStyles.textField.CalcHeight(new GUIContent(currentId), EditorGUIUtility.currentViewWidth - 20);
+            return height + EditorStyles.textField.CalcHeight(new GUIContent(currentId), EditorGUIUtility.currentViewWidth - EditorGUIUtility.labelWidth - 16);
         }
 
-        public static string ValueGUI(Rect rect, AddressableAssetSettings settings, string label, string currentId)
+        public static string ValueGUI(Rect rect, AddressableAssetSettings settings, string label, string currentId, ref bool wasChanged)
         {
             string result = currentId;
             if (settings == null)
@@ -76,23 +76,37 @@ namespace UnityEditor.AddressableAssets.GUI
 
             var displayNames = settings.profileSettings.GetVariableNames();
             AddressableAssetProfileSettings.ProfileIdData data = settings.profileSettings.GetProfileDataById(currentId);
-            bool custom = data == null;
+            bool custom = data == null && currentId != "—";
 
             int currentIndex = displayNames.Count;
             string toolTip = string.Empty;
-            if (!custom)
+
+            if (currentId == "—")
             {
-                currentIndex = displayNames.IndexOf(data.ProfileName);
-                toolTip = data.Evaluate(settings.profileSettings, settings.activeProfileId);
+                currentIndex = -1;
+                toolTip = "—";
+                result = "—";
             }
+            else
+            {
+                if (!custom)
+                {
+                    currentIndex = displayNames.IndexOf(data.ProfileName);
+                    toolTip = data.Evaluate(settings.profileSettings, settings.activeProfileId);
+                }
+            }
+
             displayNames.Add(AddressableAssetProfileSettings.customEntryString);
 
             var labelContent = new GUIContent(label);
             var size = EditorStyles.popup.CalcSize(labelContent);
             var topRect = new Rect(rect.x, rect.y, rect.width, size.y);
 
+            EditorGUI.BeginChangeCheck();
             var newIndex = EditorGUI.Popup(topRect, label, currentIndex, displayNames.ToArray());
-            if (newIndex != currentIndex)
+            wasChanged = EditorGUI.EndChangeCheck();
+
+            if (newIndex != -1 && newIndex != currentIndex)
             {
                 if (displayNames[newIndex] == AddressableAssetProfileSettings.customEntryString)
                 {
@@ -106,11 +120,17 @@ namespace UnityEditor.AddressableAssets.GUI
                         result = data.Id;
                 }
             }
-            var bottomRect = new Rect(rect.x + 10, rect.y + size.y + EditorGUIUtility.standardVerticalSpacing, rect.width - 20, rect.height - (size.y + EditorGUIUtility.standardVerticalSpacing));
+            var bottomRect = new Rect(rect.x, rect.y + size.y + EditorGUIUtility.standardVerticalSpacing, rect.width, rect.height - (size.y + EditorGUIUtility.standardVerticalSpacing));
+
             if (custom)
-                result = EditorGUI.TextField(bottomRect, result);
+                result = EditorGUI.TextField(bottomRect, " ", result);
             else if (!string.IsNullOrEmpty(toolTip))
-                EditorGUI.HelpBox(bottomRect, toolTip, MessageType.None);
+            {
+                GUIStyle pathBox = new GUIStyle(EditorStyles.miniLabel);
+                pathBox.wordWrap = true;
+                EditorGUI.LabelField(bottomRect, " ", toolTip, pathBox);
+            }
+                
             return result;
         }
 

@@ -4,6 +4,38 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2019-10-21
+ - UI and naming changes
+   - "Static true or false" content is now content with an "Update Restriction" of "Cannot Change Post Release" or "Can Change Post Release"
+   - "Fast Mode" (play mode) has been renamed "Use Asset Database (faster)"
+   - "Virtual Mode" (play mode) has been renamed "Simulate Groups (advanced)"
+   - "Packed Mode" (play mode) has been renamed "Use Existing Build (requires built groups)"
+   - There is no longer a current "Build Script" (Build Script menu in Addressables window).  Instead the script is selected when triggering the build.    
+   - Schemas have been given display names to be more clear of their intent BundledAssetGroupSchema.
+     - BundledAssetGroupSchema displays as "Content Packing & Loading"
+	   - ContentUpdateGroupSchema displays as "Content Update Restriction"
+	 - Bundle and Asset providers within schema settings are named more descriptively
+   - Profile management is in its own window ("Profiles")
+   - Label management is in its own window
+   - "Prepare for Content Update" is now under the "Tools" menu (in Addressables window), and is called "Check for Content Update Restriction"
+   - "Build for Content Update" is "Update a Previous Build" (still in "Build" menu of Addressables window).
+   - "Profiler" window has been renamed "Event Viewer".  It's more accurate, and avoids confusion with "Profilers" window. 
+ - Added additional parameter to AssetReference.LoadSceneAsync method to match Addressables.LoadSceneAsync API
+ - Added AssetReference.UnloadScene API
+ - Fixed issue with WebGL builds where re-loading the page was causing an exception to get thrown.
+ - Fixed Analyze bug where bundle referenced multiple times was flagged as duplicate.
+ - Fixed issue with hashing dependencies that led to frequent "INCORRECT HASH: the same hash (hashCode) for different dependency lists:" errors.
+ - Update AddressableAssetEntry cached path to new modified asset entry paths.
+ - Storing the KeyData string from ContentCatalogData on disk instead of keeping it in memory as it can get quite large.
+ - Fixed Custom Hosting Service window so it won't close when focus is lost.
+ - Fixed issue with AudioMixerGroups not getting the proper runtime type conversion for the build.
+ - Fixed invalid location load path when using "only hash" bundle naming option in 'content packing and loading' schema.
+ - Removed content update hash from final AssetBundle filename.
+ - Removed exception in Analyze that was triggering when "Fix Selected Rules" was bundling in Un-fixable rules.
+ - (SBP) Fixed an edge case where Optimize Mesh would not apply to all meshes in the build.
+ - (SBP) Fixed an edge case where Global Usage was not being updated with latest values from Graphics Settings.
+ - (SBP) Fixed Scene Bundles not rebuilding when included prefab changes.
+
 ## [1.2.4] - 2019-09-13
  - Further improvement to the % complete calculations.  
    - Note that this is an average of dependency operations. Meaning a LoadAssetsAsync call will average the download, and the loading progress.  DownloadDependenciesAsync currently has one extra op, so the download will crawl to 50%, then jump to done (we will look into removing that). Similarly any op that is called before Addressables init's will jump to 50% once init is done.  
@@ -23,8 +55,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Changed OnlyHash naming option to remove folder structure.  This is a workaround to Windows long-file-path issues.
  - Made AssetReference interfaces virtual
  - Fixed hash calculations to avoid collisions
- - Fixed Addressables sprite tests
  - Added overload for GetDownloadSizeAsync.  The overload accepts a list of keys and calculates their total download size.
+ - Improved percent complete calculations for async opertions.
 
 ## [1.1.10] - 2019-08-28
  - Fix for all files showing "Missing File" in the addressables window.

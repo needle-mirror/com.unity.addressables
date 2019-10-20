@@ -78,8 +78,7 @@ namespace AddressableAssetsIntegrationTests
             //Cleanup
             handle.Release();
         }
-/*
-#if UNITY_2019_3_OR_NEWER
+
         [UnityTest]
         public IEnumerator CanLoadTextureAsSprite()
         {
@@ -155,8 +154,7 @@ namespace AddressableAssetsIntegrationTests
             Assert.AreEqual(typeof(Texture2D), op.Result.GetType());
             op.Release();
         }
-#endif
-*/
+
         [UnityTest]
         public IEnumerator LoadAsset_ValidKeyDoesNotThrow()
         {
@@ -207,7 +205,7 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
             long expectedSize = 0;
-            var locMap = new ResourceLocationMap();
+            var locMap = new ResourceLocationMap("TestLocator");
 
             var bundleLoc1 = new ResourceLocationBase("sizeTestBundle1", "http://nowhere.com/mybundle1.bundle", typeof(AssetBundleProvider).FullName, typeof(object));
             var sizeData1 = (bundleLoc1.Data = CreateLocationSizeData("sizeTestBundle1", 1000, 123, "hashstring1")) as ILocationSizeData;
@@ -224,7 +222,7 @@ namespace AddressableAssetsIntegrationTests
             locMap.Add("sizeTestBundle1", bundleLoc1);
             locMap.Add("sizeTestBundle2", bundleLoc2);
             locMap.Add("sizeTestAsset", assetLoc);
-            m_Addressables.ResourceLocators.Add(locMap);
+            m_Addressables.AddResourceLocator(locMap);
 
             var dOp = m_Addressables.GetDownloadSizeAsync("sizeTestAsset");
             yield return dOp;
@@ -240,7 +238,7 @@ namespace AddressableAssetsIntegrationTests
             long expectedSize = 0;
             long bundleSize1 = 1000;
             long bundleSize2 = 500;
-            var locMap = new ResourceLocationMap();
+            var locMap = new ResourceLocationMap("TestLocator");
 
             Caching.ClearCache();
             //Simulating a cached bundle
@@ -268,7 +266,7 @@ namespace AddressableAssetsIntegrationTests
             locMap.Add("cachedSizeTestBundle1", bundleLoc1);
             locMap.Add("cachedSizeTestBundle2", bundleLoc2);
             locMap.Add("cachedSizeTestAsset", assetLoc);
-            m_Addressables.ResourceLocators.Add(locMap);
+            m_Addressables.AddResourceLocator(locMap);
 
             var dOp = m_Addressables.GetDownloadSizeAsync("cachedSizeTestAsset");
             yield return dOp;
@@ -276,7 +274,7 @@ namespace AddressableAssetsIntegrationTests
             Assert.AreEqual(expectedSize, dOp.Result);
 
             dOp.Release();
-            m_Addressables.ResourceLocators.Remove(locMap);
+            m_Addressables.RemoveResourceLocator(locMap);
             Directory.Delete(fakeCachePath, true);
 #else
             Assert.Ignore();
@@ -292,7 +290,7 @@ namespace AddressableAssetsIntegrationTests
             long expectedSize = 0;
             long bundleSize1 = 1000;
             long bundleSize2 = 500;
-            var locMap = new ResourceLocationMap();
+            var locMap = new ResourceLocationMap("TestLocator");
 
             Assert.IsTrue(Caching.ClearCache(), "Was unable to clear the cache.  Test results are affected");
             //Simulating a cached bundle
@@ -320,7 +318,7 @@ namespace AddressableAssetsIntegrationTests
             locMap.Add("cachedSizeTestBundle1", bundleLoc1);
             locMap.Add("cachedSizeTestBundle2", bundleLoc2);
             locMap.Add("cachedSizeTestAsset", assetLoc);
-            m_Addressables.ResourceLocators.Add(locMap);
+            m_Addressables.AddResourceLocator(locMap);
 
             var dOp = m_Addressables.GetDownloadSizeAsync(new List<object>()
                 {
@@ -334,7 +332,7 @@ namespace AddressableAssetsIntegrationTests
             Assert.AreEqual(expectedSize, dOp.Result);
 
             dOp.Release();
-            m_Addressables.ResourceLocators.Remove(locMap);
+            m_Addressables.RemoveResourceLocator(locMap);
             Directory.Delete(fakeCachePath, true);
 #else
             Assert.Ignore();
@@ -859,6 +857,57 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator PercentComplete_CalculationIsCorrect_WhenInAGroupOperation()
+        {
+            yield return Init();
+            GroupOperation groupOp = new GroupOperation();
+
+            float handle1PercentComplete = 0.22f;
+            float handle2PercentComplete = 0.78f;
+            float handle3PercentComplete = 1.0f;
+            float handle4PercentComplete = 0.35f;
+
+            List<AsyncOperationHandle> handles = new List<AsyncOperationHandle>()
+            {
+                new ManualPercentCompleteOperation(handle1PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle2PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle3PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle4PercentComplete).Handle
+            };
+
+            groupOp.Init(handles);
+
+            Assert.AreEqual((handle1PercentComplete + handle2PercentComplete + handle3PercentComplete + handle4PercentComplete)/4, groupOp.PercentComplete);
+        }
+
+        [UnityTest]
+        public IEnumerator PercentComplete_CalculationIsCorrect_WhenInAChainOperation()
+        {
+            yield return Init();
+
+            float handle1PercentComplete = 0.6f;
+            float handle2PercentComplete = 0.98f;
+
+            AsyncOperationHandle<GameObject> slowHandle1 = new ManualPercentCompleteOperation(handle1PercentComplete).Handle;
+            AsyncOperationHandle<GameObject> slowHandle2 = new ManualPercentCompleteOperation(handle2PercentComplete).Handle;
+
+ //           while (!m_Addressables.InitializationOperation.IsDone)
+ //               yield return null;
+
+            slowHandle1.m_InternalOp.m_RM = m_Addressables.ResourceManager;
+            slowHandle2.m_InternalOp.m_RM = m_Addressables.ResourceManager;
+
+            var chainOperation = m_Addressables.ResourceManager.CreateChainOperation(slowHandle1, (op) =>
+            {
+                return slowHandle2;
+            });
+            
+            chainOperation.m_InternalOp.Start(m_Addressables.ResourceManager, default, null);
+
+            Assert.AreEqual((handle1PercentComplete + handle2PercentComplete) / 2, chainOperation.PercentComplete);
+        }
+
+        [UnityTest]
         public IEnumerator RuntimeKeyIsValid_ReturnsFalseForInValidKeys()
         {
             yield return Init();
@@ -894,82 +943,5 @@ __data");
 
             return fakeCachePath;
         }
-#if ENABLE_SCENE_TESTS
-        [UnityTest]
-        public IEnumerator CanLoadSceneAdditively()
-        {
-            yield return Init();
-            var op = m_Addressables.LoadSceneAsync(m_SceneKeysList[0], LoadSceneMode.Additive);
-            yield return op;
-            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
-            var unloadOp = m_Addressables.UnloadSceneAsync(op);
-            yield return unloadOp;
-        }
-
-        [UnityTest]
-        public IEnumerator WhenSceneUnloaded_InstanitatedObjectsAreCleanedUp()
-        {
-            yield return Init();
-            var op = m_Addressables.LoadSceneAsync(m_SceneKeysList[0], LoadSceneMode.Additive);
-            yield return op;
-
-            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
-            SceneManager.SetActiveScene(op.Result.Scene);
-            var instOp = m_Addressables.InstantiateAsync(m_PrefabKeysList[0]);
-            yield return instOp;
-
-            var unloadOp = m_Addressables.UnloadSceneAsync(op);
-            yield return unloadOp;
-        }
-
-        [UnityTest]
-        public IEnumerator WhenSceneUnloadedNotUsingAddressables_InstanitatedObjectsAreCleanedUp()
-        {
-            yield return Init();
-            var op = m_Addressables.LoadSceneAsync(m_SceneKeysList[0], LoadSceneMode.Additive);
-            yield return op;
-
-            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
-            SceneManager.SetActiveScene(op.Result.Scene);
-            var instOp = m_Addressables.InstantiateAsync(m_PrefabKeysList[0]);
-            yield return instOp;
-            var unloadOp = SceneManager.UnloadSceneAsync(op.Result.Scene);
-            while (!unloadOp.isDone)
-                yield return null;
-        }
-
-        [UnityTest]
-        public IEnumerator WhenSceneUnloaded_InstantiatedObjectsInOtherScenesAreNotCleanedUp()
-        {
-            //Setup
-            yield return Init();
-            
-            var op = m_Addressables.LoadSceneAsync(m_SceneKeysList[0], LoadSceneMode.Additive);
-            yield return op;
-            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
-            
-            var activeScene = m_Addressables.LoadSceneAsync(m_SceneKeysList[1], LoadSceneMode.Additive);
-            yield return activeScene;
-            SceneManager.SetActiveScene(activeScene.Result.Scene);
-            Assert.AreEqual(AsyncOperationStatus.Succeeded, activeScene.Status);
-            
-            //Test
-            AsyncOperationHandle<GameObject> inst = default(AsyncOperationHandle<GameObject>);
-            var unloadOp = m_Addressables.UnloadSceneAsync(op);
-            unloadOp.Completed += i =>
-            {
-                inst = m_Addressables.InstantiateAsync(m_PrefabKeysList[0]);
-            };
-            yield return unloadOp;
-            yield return inst;
-            Assert.AreEqual(AsyncOperationStatus.Succeeded, inst.Status);
-            
-            Assert.NotNull(GameObject.Find(inst.Result.name));
-            
-            //Cleanup
-            var unloadActiveScene = m_Addressables.UnloadSceneAsync(activeScene);
-            yield return unloadActiveScene;
-        }
-#endif
     }
 }

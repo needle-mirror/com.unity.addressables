@@ -5,7 +5,7 @@ When the operation completes, the `AsyncOperationHandle.Status` property is eith
 
 You can either check the operation status periodically, or register for a completed callback using the `AsyncOperationHandle.Complete` event. When you no longer need the asset provided by a returned `AsyncOperationHandle` struct, you should [release](MemoryManagement.md) it using the `Addressables.Release` method.
 
-### Type vs typeless handles
+### Type vs. typeless handles
 Most `Addressables` API methods return a generic `AsyncOperationHandle<T>`struct, allowing type safety for the `AsyncOperationHandle.Completed` event, and for the `AsyncOperationHandle.Result` object. There is also a non-generic `AsyncOperationHandle` struct, and you can convert between the two handles as desired. 
 
 Note that a runtime exception occurs if you attempt to cast a non-generic handle to a generic handle of an incorrect type. For example:
@@ -65,6 +65,6 @@ public async Start() {
     // The task is complete. Be sure to check the Status is successful before storing the Result.
 }
 ```
+The `AsyncOperationHandle.Task` property is not available on `WebGL` as multi-threaded operations are not supported on that platform.
 
-#### Please Note:
-Loading scenes with `SceneManager.LoadSceneAsync` with `allowSceneActivation` set to false or using `Addressables.LoadSceneAsync` and passing in false for the `activateOnLoad` parameter can lead to subsequent async operations being blocked and unable to complete.  Please checkout the `allowSceneActivation` documentation here: https://docs.unity3d.com/ScriptReference/AsyncOperation-allowSceneActivation.html
+Note that Loading scenes with `SceneManager.LoadSceneAsync` with `allowSceneActivation` set to false or using `Addressables.LoadSceneAsync` and setting false for the `activateOnLoad` parameter can lead to subsequent async operations being blocked and unable to complete.  See the [`allowSceneActivation` documentation](https://docs.unity3d.com/ScriptReference/AsyncOperation-allowSceneActivation.html).

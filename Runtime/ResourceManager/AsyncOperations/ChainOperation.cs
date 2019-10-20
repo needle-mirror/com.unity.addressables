@@ -43,14 +43,27 @@ namespace UnityEngine.ResourceManagement
                 errorMsg = string.Format("ChainOperation of Type: {0} failed because dependent operation failed\n{1}", typeof(TObject), x.OperationException != null ? x.OperationException.Message : string.Empty);
             Complete(m_WrappedOp.Result, x.Status == AsyncOperationStatus.Succeeded, errorMsg);
         }
-
+         
         protected override void Destroy()
         {
             m_WrappedOp.Release();
             m_DepOp.Release();
         }
-        
-        protected override float Progress => m_DepOp.PercentComplete;
+
+        protected override float Progress
+        {
+            get
+            {
+                float total = 0f;
+
+                if (m_DepOp.IsValid())
+                    total += m_DepOp.PercentComplete;
+                if (m_WrappedOp.IsValid())
+                    total += m_WrappedOp.PercentComplete;
+
+                return total / 2;
+            }
+        }
     }
 
     class ChainOperationTypelessDepedency<TObject> : AsyncOperationBase<TObject>
@@ -98,6 +111,19 @@ namespace UnityEngine.ResourceManagement
             m_DepOp.Release();
         }
 
-        protected override float Progress => m_DepOp.PercentComplete;
+        protected override float Progress
+        {
+            get
+            {
+                float total = 0f;
+
+                if (m_DepOp.IsValid())
+                    total += m_DepOp.PercentComplete;
+                if (m_WrappedOp.IsValid())
+                    total += m_WrappedOp.PercentComplete;
+
+                return total / 2;
+            }
+        }
     }
 }

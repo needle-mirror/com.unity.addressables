@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -7,7 +9,8 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
     /// <summary>
     /// Schema for the player data asset group
     /// </summary>
-    [CreateAssetMenu(fileName = "PlayerDataGroupSchema.asset", menuName = "Addressable Assets/Group Schemas/Player Data")]
+    //[CreateAssetMenu(fileName = "PlayerDataGroupSchema.asset", menuName = "Addressables/Group Schemas/Player Data")]
+    [DisplayName("Resources and Built In Scenes")]
     public class PlayerDataGroupSchema : AddressableAssetGroupSchema
     {
         [FormerlySerializedAs("m_includeResourcesFolders")]
@@ -46,5 +49,45 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 SetDirty(true);
             }
         }
+
+//        /// <inheritdoc/>
+//        public override void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
+//        {
+//            if (otherSchemas == null)
+//            {
+//                OnGUI();
+//                return;
+//            }
+//            var so = new SerializedObject(this);
+//            SerializedProperty prop;
+//
+//            // IncludeResourcesFolders
+//            prop = so.FindProperty("m_IncludeResourcesFolders");
+//            ShowMixedValue(prop, otherSchemas, typeof(bool), "m_IncludeResourcesFolders");
+//            EditorGUI.BeginChangeCheck();
+//            bool newIncludeResourcesFolders = (bool)EditorGUILayout.Toggle(prop.displayName, IncludeResourcesFolders);
+//            if (EditorGUI.EndChangeCheck())
+//            {
+//                IncludeResourcesFolders = newIncludeResourcesFolders;
+//                foreach (var s in otherSchemas)
+//                    (s as PlayerDataGroupSchema).IncludeResourcesFolders = IncludeResourcesFolders;
+//            }
+//            EditorGUI.showMixedValue = false;
+//
+//            // IncludeBuildSettingsScenes
+//            prop = so.FindProperty("m_IncludeBuildSettingsScenes");
+//            ShowMixedValue(prop, otherSchemas, typeof(bool), "m_IncludeBuildSettingsScenes");
+//            EditorGUI.BeginChangeCheck();
+//            bool newIncludeBuildSettingsScenes = (bool)EditorGUILayout.Toggle(prop.displayName, IncludeBuildSettingsScenes);
+//            if (EditorGUI.EndChangeCheck())
+//            {
+//                IncludeBuildSettingsScenes = newIncludeBuildSettingsScenes;
+//                foreach (var s in otherSchemas)
+//                    (s as PlayerDataGroupSchema).IncludeBuildSettingsScenes = IncludeBuildSettingsScenes;
+//            }
+//            EditorGUI.showMixedValue = false;
+//
+//            so.ApplyModifiedProperties();
+//        }
     }
 }

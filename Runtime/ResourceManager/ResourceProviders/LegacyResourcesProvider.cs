@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.Util;
@@ -9,6 +10,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     /// <summary>
     /// Provides assets loaded via Resources.LoadAsync API.
     /// </summary>
+    [DisplayName("Assets from Legacy Resources")]
     public class LegacyResourcesProvider : ResourceProviderBase
     {
         internal class InternalOp
@@ -19,10 +21,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             public void Start(ProvideHandle provideHandle)
             {
                 m_PI = provideHandle;
-                
-                m_RequestOperation = Resources.LoadAsync<Object>(m_PI.Location.InternalId);
-                m_RequestOperation.completed += AsyncOperationCompleted;
+
                 provideHandle.SetProgressCallback(PercentComplete);
+                m_RequestOperation = Resources.LoadAsync(m_PI.Location.InternalId, m_PI.Type);
+                m_RequestOperation.completed += AsyncOperationCompleted;
             }
 
             private void AsyncOperationCompleted(AsyncOperation op)

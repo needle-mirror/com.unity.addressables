@@ -6,7 +6,7 @@ using UnityEngine.Assertions;
 
 namespace UnityEditor.AddressableAssets.Settings
 {
-    [CreateAssetMenu(fileName = "AddressableAssetGroupTemplate.asset", menuName = "Addressable Assets/Groups/New Group Template")]
+    [CreateAssetMenu(fileName = "AddressableAssetGroupTemplate.asset", menuName = "Addressables/Group Templates/Blank Group Template")]
     public class AddressableAssetGroupTemplate : ScriptableObject, IGroupTemplate
     {
         [SerializeField]
@@ -122,7 +122,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 if (schemaObject.GetType() == type)
                 {
-                    Debug.LogError("Scheme already exists");
+                    Debug.LogError("Scheme of type " + type + " already exists");
                     return false;
                 }
             }
@@ -212,6 +212,50 @@ namespace UnityEditor.AddressableAssets.Settings
                     EditorUtility.SetDirty(this);
                 Settings.SetDirty(modificationEvent, eventData, postEvent, false);
             }
+        }
+
+        /// <summary>
+        /// Checks if the group contains a schema of a given type.
+        /// </summary>
+        /// <param name="type">The schema type.</param>
+        /// <returns>True if the schema type or subclass has been added to this group.</returns>
+        public bool HasSchema(Type type)
+        {
+            return GetSchemaByType(type) != null;
+        }
+
+        /// <summary>
+        /// Gets an added schema of the specified type.
+        /// </summary>
+        /// <param name="type">The schema type.</param>
+        /// <returns>The schema if found, otherwise null.</returns>
+        public AddressableAssetGroupSchema GetSchemaByType(Type type)
+        {
+            foreach(var schema in m_SchemaObjects)
+            {
+                if(schema.GetType() == type)
+                {
+                    return schema;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the index of a schema based on its specified type.
+        /// </summary>
+        /// <param name="type">The schema type.</param>
+        /// <returns>Valid index if found, otherwise returns -1.</returns>
+        public int FindSchema(Type type)
+        {
+            for(int i=0; i < m_SchemaObjects.Count; i++)
+            {
+                if (m_SchemaObjects[i].GetType() == type)
+                {
+                    return i;
+                }
+            }
+            return -1;
         }
     }
 }

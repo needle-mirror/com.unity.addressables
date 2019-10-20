@@ -1,4 +1,4 @@
-# Addressable Assets Overview
+# Addressable Assets overview
 The Addressable Assets System consists of two packages:
 
 * Addressable Assets package (primary package)

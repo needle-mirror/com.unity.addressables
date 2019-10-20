@@ -11,33 +11,33 @@ Giving an asset an address allows you to load it using that address, no matter w
 Schemas define a set of data. You can attach schemas to asset groups in the Inspector. The set of schemas attached to a group defines how the build processes its contents. For example, when building in packed mode, groups with the `BundledAssetGroupSchema` schema attached to them act as sources for asset bundles. You can combine sets of schemas into templates that you use to define new groups. You can add schema templates via the `AddressableAssetsSettings` Inspector.
 
 ## Build scripts
-Build scripts are represented as [`ScriptableObject`](https://docs.unity3d.com/Manual/class-ScriptableObject.html) assets in the Project that implement the [`IDataBuilder`](../api/UnityEditor.AddressableAssets.Build.IDataBuilder.html) interface. Users can create their own build scripts and add them to the `AddressableAssetSettings` object through its Inspector. To apply a build script in the **Addressables window** (**Window** > **Asset Management** > **Addressables**), select **Play Mode Script**, and choose a dropdown option. Currently, there are three scripts implemented to support the full application build, and three Play mode scripts for iterating in the Editor.
+Build scripts are represented as [`ScriptableObject`](https://docs.unity3d.com/Manual/class-ScriptableObject.html) assets in the Project that implement the [`IDataBuilder`](../api/UnityEditor.AddressableAssets.Build.IDataBuilder.html) interface. Users can create their own build scripts and add them to the `AddressableAssetSettings` object through its Inspector. To apply a build script in the **Addressables Groups** window (**Window** > **Asset Management** > **Addressables** > **Groups**), select **Play Mode Script**, and choose a dropdown option. Currently, there are three scripts implemented to support the full application build, and three Play mode scripts for iterating in the Editor.
 
 ### Play mode scripts
 The Addressable Assets package has three build scripts that create Play mode data to help you accelerate app development.
 
-#### Fast mode 
-Fast mode (`BuildScriptFastMode`) allows you to run the game quickly as you work through the flow of your game. Fast mode loads assets directly through the asset database for quick iteration with no analysis or asset bundle creation.
+#### Use Asset Database (faster)
+Use Asset Database mode (`BuildScriptFastMode`) allows you to run the game quickly as you work through the flow of your game. It loads assets directly through the asset database for quick iteration with no analysis or asset bundle creation.
 
-#### Virtual mode
-Virtual mode (`BuildScriptVirtualMode`) analyzes content for layout and dependencies without creating asset bundles. Assets load from the asset database though the `ResourceManager`, as if they were loaded through bundles. To see when bundles load or unload during game play, view the asset usage in the [**Addressable Profiler window**](MemoryManagement.md#the-addressable-profiler) (**Window** > **Asset Management** > **Addressable Profiler**).
+#### Simulate Groups (advanced)
+Simulate Groups mode (`BuildScriptVirtualMode`) analyzes content for layout and dependencies without creating asset bundles. Assets load from the asset database though the `ResourceManager`, as if they were loaded through bundles. To see when bundles load or unload during game play, view the asset usage in the [**Addressables Event Viewer** window](MemoryManagement.md#the-addressables-event-viewer) (**Window** > **Asset Management** > **Addressables** > **Event Viewer**).
 
-Virtual mode helps you simulate load strategies and tweak your content groups to find the right balance for a production release.
+Simulate Groups mode helps you simulate load strategies and tweak your content groups to find the right balance for a production release.
 
-#### Packed Play mode
-Packed Play mode (`BuildScriptPackedPlayMode`) uses asset bundles that are already built. This mode most closely matches a deployed application build, but it requires you to build the data as a separate step. If you aren't modifying assets, this mode is the fastest since it does not process any data when entering Play mode. You must either build the content for this mode in the **Addressables window** (**Window** > **Asset Management** > **Addressables**) by selecting **Build** > **Build Player Content**, or using the `AddressableAssetSettings.BuildPlayerContent()` method in your game script.
+#### Use Existing Build (requires built groups)
+Use Existing Build mode most closely matches a deployed application build, but it requires you to build the data as a separate step. If you aren't modifying assets, this mode is the fastest since it does not process any data when entering Play mode. You must either build the content for this mode in the **Addressables Groups** window (**Window** > **Asset Management** > **Addressables** > **Groups**) by selecting **Build** > **New Build** > **Default Build Script**, or using the `AddressableAssetSettings.BuildPlayerContent()` method in your game script.
 
 #### Choosing the right script
-To apply a Play mode script, from the **Addressables window** menu (**Window** > **Asset Management** > **Addressables**), select **Play Mode Script** and choose from the dropdown options. Each mode has its own time and place during development and deployment. The following table illustrates stages of the development cycle in which a particular mode is useful.
+To apply a Play mode script, from the **Addressables Groups** window menu (**Window** > **Asset Management** > **Addressables** > **Groups**), select **Play Mode Script** and choose from the dropdown options. Each mode has its own time and place during development and deployment. The following table illustrates stages of the development cycle in which a particular mode is useful.
 
 | | **Design** | **Develop** | **Build** | **Test / Play** | **Publish** |
 |:---|:---|:---|:---|:---|:---|
-| Fast | x | x |   | In-Editor only |   |
-| Virtual | x | x | Asset bundle layout | In-Editor only |  |
-| Packed |   |   | Asset bundles  | x | x |
+| Use Asset Database | x | x |   | In-Editor only |   |
+| Simulate Groups | x | x | Asset bundle layout | In-Editor only |  |
+| Use Existing Build |   |   | Asset bundles  | x | x |
 
 ## Analysis and debugging
-By default, Addressable Assets only logs warnings and errors. You can enable detailed logging by opening the **Player** settings window (**Edit** > **Project Settings** > **Player**), navigating to the **Other Settings** > **Configuration** section, and adding "`ADDRESSABLES_LOG_ALL`" to the **Scripting Define Symbols** field. 
+By default, Addressable Assets only logs warnings and errors. You can enable detailed logging by opening the **Player** settings window (**Edit** > **Project Settings...** > **Player**), navigating to the **Other Settings** > **Configuration** section, and adding "`ADDRESSABLES_LOG_ALL`" to the **Scripting Define Symbols** field. 
 
 You can also disable exceptions by unchecking the **Log Runtime Exceptions** option in the `AddressableAssetSettings` object Inspector. You can implement the [`ResourceManager.ExceptionHandler`](../api/UnityEngine.ResourceManagement.ResourceManager.html) property with your own exception handler if desired, but this should be done after Addressables finishes runtime initialization (see below).
 
@@ -54,6 +54,8 @@ In this structure, static content ships with the application (or downloads soon 
 
 However, the Addressable Assets System can also accommodate situations that require changes to the "static" content, when you don't want to publish a whole new application build.  
 
+Note that in cases that do not allow remote updates (such as many of the current video-game consoles, or games without a server), you should make a complete and fresh build every time.
+
 ### How it works
 Addressables uses a content catalog to map an address to each asset, specifying where and how to load it. In order to provide your app with the ability to modify that mapping, your original app must be aware of an online copy of this catalog. To set that up, enable the **Build Remote Catalog** setting on the `AddressableAssetSettings` Inspector. This ensures that a copy of the catalog gets built to and loaded from the specified paths. This load path cannot change once your app has shipped. The content update process creates a new version of the catalog (with the same file name) to overwrite the file at the previously specified load path.
 
@@ -62,10 +64,10 @@ Building an application generates a unique app content version string, which ide
 The _addressables_content_state.bin_ file contains hash and dependency information for every `StaticContent` asset group in the Addressables system. All groups building to the _StreamingAssets_ folder should be marked as `StaticContent`, though large remote groups may also benefit from this designation. During the next step (preparing for content update, described below), this hash information determines if any `StaticContent` groups contain changed assets, and thus need those assets moved elsewhere.
 
 ### Preparing for content updates
-If you have modified assets in any `StaticContent` groups, you'll need to run the **Prepare For Content Update** command. This will take any modified asset out of the static groups and move them to a new group. To generate the new asset groups:
+If you have modified assets in any `StaticContent` groups, you'll need to run the **Check for Content Update Restrictions** command. This will take any modified asset out of the static groups and move them to a new group. To generate the new asset groups:
 
-1. Open the **Addressables window** in the Unity Editor (**Window** > **Asset Management** > **Addressables**).
-2. In the **Addressables window**, select **Build** on the top menu bar, then **Prepare For Content Update**.
+1. Open the **Addressables Groups** window in the Unity Editor (**Window** > **Asset Management** > **Addressables** > **Groups**).
+2. In the **Addressables Groups** window, select **Tools** on the top menu bar, then **Check for Content Update Restrictions**.
 3. In the **Build Data File** dialog that opens, select the _addressables_content_state.bin_ file (by default, this is located in the _Assets/AddressableAssetsData_ Project directory.
 
 This data is used to determine which assets or dependencies have been modified since the application was last built. The system moves these assets to a new group in preparation for the content update build. 
@@ -77,8 +79,8 @@ This data is used to determine which assets or dependencies have been modified s
 ### Building for content updates
 To build for a content update:
 
-1. Open the **Addressables window** in the Unity Editor (**Window** > **Asset Management** > **Addressables**).
-2. In the **Addressables window**, select **Build** on the top menu, then **Build For Content Update**.
+1. Open the **Addressables Groups** window in the Unity Editor (**Window** > **Asset Management** > **Addressables** > **Groups**).
+2. In the **Addressables Groups** window, select **Build** on the top menu, then **Update a Previous Build**.
 3. In the **Build Data File** dialog that opens, select the build folder of an existing application build. The build folder must contain an _addressables_content_state.bin_ file. 
 
 The build generates a content catalog, a hash file, and the asset bundles.
@@ -100,7 +102,7 @@ In this example, a shipped application is aware of the following groups:
 
 As this version is live, there are players that have `Local_Static` on their devices, and potentially have either or both of the remote bundles cached locally. 
 
-If you modify one asset from each group (`AssetA`, `AssetL`, and `AssetX`), then run **Prepare For Content Update**, the results in your local Addressable settings are now:
+If you modify one asset from each group (`AssetA`, `AssetL`, and `AssetX`), then run **Check for Content Update Restrictions**, the results in your local Addressable settings are now:
 
 | **`Local_Static`** | **`Remote_Static`** | **`Remote_NonStatic`** | **`content_update_group (non-static)`** |
 |:---------|:---------|:---------|:---------|
