@@ -73,7 +73,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     {
                         exception = new Exception(string.Format("Invalid path in RawDataProvider: '{0}'.", path));
                     }
-                    m_PI.Complete<object>(null, false, exception);
+                    m_PI.Complete<object>(null, m_IgnoreFailures, exception);
                 }
             }
 

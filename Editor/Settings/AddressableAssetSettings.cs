@@ -194,6 +194,15 @@ namespace UnityEditor.AddressableAssets.Settings
         [SerializeField]
         bool m_BuildRemoteCatalog = false;
 
+        [SerializeField]
+        bool m_UniqueBundleIds = false;
+
+        public bool UniqueBundleIds
+        {
+            get { return m_UniqueBundleIds; }
+            set { m_UniqueBundleIds = value; }
+        }
+
         /// <summary>
         /// Determine if a remote catalog should be built-for and loaded-by the app.
         /// </summary>

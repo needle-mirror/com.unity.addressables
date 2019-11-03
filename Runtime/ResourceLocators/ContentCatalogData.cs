@@ -86,6 +86,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         public string ProviderId
         {
             get { return m_LocatorId; }
+            internal set { m_LocatorId = value; }
         }
 
         [SerializeField]

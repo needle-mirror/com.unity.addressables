@@ -63,6 +63,11 @@ Building an application generates a unique app content version string, which ide
 
 The _addressables_content_state.bin_ file contains hash and dependency information for every `StaticContent` asset group in the Addressables system. All groups building to the _StreamingAssets_ folder should be marked as `StaticContent`, though large remote groups may also benefit from this designation. During the next step (preparing for content update, described below), this hash information determines if any `StaticContent` groups contain changed assets, and thus need those assets moved elsewhere.
 
+### Unique Bundle IDs
+When loading AssetBundles into memory, Unity enforces that two bundles cannot be loaded with the same internal names.  This can put some limitations on updating bundles at runtime.  Now that Addressables supports updating the catalog outside of initialization, it's possible to update content that you have alreaedy loaded.
+
+To make this work, one of two things must happen.  One option is to unload all your addressables content prior to updating the catalog.  The second option is to ensure that your updated AssetBundles have unique internal identifiers.  This would allow you to load new bundles, while the old are still in memory.  We have an option to enable this second option.  Turn on "Unique Bundle IDs" within the `AddressableAssetSettings` Inspector.  The downside of this option is that it requires bundles to be rebuilt up the dependency chain.  Meaning if you changed a material in one group, by default only the material's bundle would be rebuilt.  With "Unique Bundle IDs" on, any asset that references that material would also need rebuilding.
+
 ### Preparing for content updates
 If you have modified assets in any `StaticContent` groups, you'll need to run the **Check for Content Update Restrictions** command. This will take any modified asset out of the static groups and move them to a new group. To generate the new asset groups:
 
@@ -90,6 +95,21 @@ The generated content catalog has the same name as the catalog in the selected a
 The system uses the content version string and location information from the _addressables_content_state.bin_ file to create the asset bundles. Asset bundles that do not contain updated content are written using the same file names as those in the build selected for the update. If an asset bundle contains updated content, a new asset bundle is generated that contains the updated content, with a new file name so that it can coexist with the original. Only asset bundles with new file names must be copied to the location that hosts your content.  
 
 The system also builds asset bundles for static content, but you do not need to upload them to the content hosting location, as no Addressables asset entries reference them.
+
+### Checking for content updates at runtime
+You can add a custom script to periodically check whether there are new Addressables content updates. Use the following function call to start the update:
+
+`public static AsyncOperationHandle<List<string>> CheckForCatalogUpdates(bool autoReleaseHandle = true)`
+
+where `List<string>` contains the list of modified locator IDs.  You can filter this list to only update specific IDs, or pass it entirely into the UpdateCatalogs API.
+
+If there is new content, you can either present the user with a button to perform the update, or do it automatically. Note that it is up to the developer to make sure that stale assets are released.
+
+The list of catalogs can be null and if so, the following script updates all catalogs that need an update:
+
+`public static AsyncOperationHandle<List<IResourceLocator>> UpdateCatalogs(IEnumerable<string> catalogs = null, bool autoReleaseHandle = true)`
+
+The return value is the list of updated locators.
 
 ### Content update examples
 In this example, a shipped application is aware of the following groups:

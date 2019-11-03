@@ -4,6 +4,16 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.3.8] - 2019-11-04
+ - Properly suppressing a harmless "Unknown error in AsyncOperation" that has been popping up during init. It had to do with not finding a cached catalog before a catalog had been cached (so error shouldn't happen).
+ - Fixed issue with asset hash calcluation for internal asset bundle name when building bundles.
+ - Adding option "Unique Bundle IDs" to the General section of the AddressableAssetSettings Inspector.  
+   - If set, every content build (original or update) will result in asset bundles with more complex internal names.  This may result in more bundles being rebuilt, but safer mid-run updates.  See docs for more info.
+   - This complex internal naming was added to 1.3.3 to support safter Content Catalog updating, but was forced on.  It is now optional as there are some drawbacks.
+
+## [1.3.5] - 2019-11-01
+ - Added documentation about updating Content Catalog at runtime (outside Init).  Uses CheckForCatalogUpdates() and UpdateCatalogs().
+
 ## [1.3.3] - 2019-10-21
  - UI and naming changes
    - "Static true or false" content is now content with an "Update Restriction" of "Cannot Change Post Release" or "Can Change Post Release"
@@ -35,6 +45,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - (SBP) Fixed an edge case where Optimize Mesh would not apply to all meshes in the build.
  - (SBP) Fixed an edge case where Global Usage was not being updated with latest values from Graphics Settings.
  - (SBP) Fixed Scene Bundles not rebuilding when included prefab changes.
+ - Added APIs to update content catalog at runtime: CheckForCatalogUpdates() and UpdateCatalogs().
 
 ## [1.2.4] - 2019-09-13
  - Further improvement to the % complete calculations.  

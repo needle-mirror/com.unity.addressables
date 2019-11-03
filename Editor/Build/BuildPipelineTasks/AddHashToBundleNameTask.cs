@@ -49,10 +49,13 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         public ReturnCode Run()
         {
             var aa = m_AaBuildContext as AddressableAssetsBuildContext;
+            if (!aa.settings.UniqueBundleIds)
+                return ReturnCode.Success;
+
             var newBundleLayout = new Dictionary<string, List<GUID>>();
             foreach (var bid in m_BuildContent.BundleLayout)
             {
-                var hash = GetAssetsHash(bid.Value);
+                var hash = GetAssetsHash(bid.Value, aa);
                 var newName = $"{bid.Key}_{hash}";
                 newBundleLayout.Add(newName, bid.Value);
                 string assetGroup;
@@ -69,14 +72,17 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             return ReturnCode.Success;
         }
 
-        private RawHash GetAssetsHash(List<GUID> assets)
+        private RawHash GetAssetsHash(List<GUID> assets, AddressableAssetsBuildContext context)
         {
             var hashes = new HashSet<Hash128>();
             foreach (var g in assets)
             {
                 AssetLoadInfo assetInfo;
                 if (m_DependencyData.AssetInfo.TryGetValue(g, out assetInfo))
-                    GetAssetHashes(hashes, g, assetInfo.referencedObjects, m_Cache != null && m_Parameters.UseCache);
+                {
+                    var diskOnlyReferencedObjects = assetInfo.referencedObjects.Where(ro => context.settings.FindAssetEntry(ro.guid.ToString()) == null).ToList();
+                    GetAssetHashes(hashes, g, diskOnlyReferencedObjects, m_Cache != null && m_Parameters.UseCache);
+                }
             }
             return HashingMethods.Calculate(hashes.ToArray());
         }
@@ -90,21 +96,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                     hashes.Add(m_Cache.GetCacheEntry(reference).Hash);
             }
             else
-            {
                 hashes.Add(AssetDatabase.GetAssetDependencyHash(AssetDatabase.GUIDToAssetPath(g.ToString())));
-                foreach (var reference in referencedObjects)
-                {
-                    if (!reference.guid.Empty())
-                    {
-                        hashes.Add(AssetDatabase.GetAssetDependencyHash(AssetDatabase.GUIDToAssetPath(reference.guid.ToString())));
-                    }
-                    else
-                    {
-                        if (reference.filePath.Equals(CommonStrings.UnityBuiltInExtraPath, StringComparison.OrdinalIgnoreCase) || reference.filePath.Equals(CommonStrings.UnityDefaultResourcePath, StringComparison.OrdinalIgnoreCase))
-                            hashes.Add(HashingMethods.Calculate(Application.unityVersion, reference.filePath).ToHash128());
-                    }
-                }
-            }
         }
     }
 }
