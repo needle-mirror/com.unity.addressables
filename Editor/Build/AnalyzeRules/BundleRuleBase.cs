@@ -137,6 +137,28 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             }
         }
 
+        internal void ConvertBundleNamesToGroupNames(AddressableAssetsBuildContext buildContext)
+        {
+            Dictionary<string, string> bundleNamesToUpdate = new Dictionary<string, string>();
+
+            foreach (var assetGroup in buildContext.settings.groups)
+            {
+                List<string> bundles;
+                if (buildContext.assetGroupToBundles.TryGetValue(assetGroup, out bundles))
+                {
+                    foreach (string bundle in bundles)
+                    {
+                        var keys = m_ExtractData.WriteData.FileToBundle.Keys.Where(key => m_ExtractData.WriteData.FileToBundle[key] == bundle);
+                        foreach (string key in keys)
+                            bundleNamesToUpdate.Add(key, assetGroup.Name);
+                    }
+                }
+            }
+
+            foreach (string key in bundleNamesToUpdate.Keys)
+                m_ExtractData.WriteData.FileToBundle[key] = bundleNamesToUpdate[key];
+        }
+
         internal void CalculateInputDefinitions(AddressableAssetSettings settings)
         {
             foreach (AddressableAssetGroup group in settings.groups)
@@ -231,22 +253,24 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
             IntersectResourcesDepedenciesWithBundleDependencies(GetAllBundleDependencies());
 
+            ConvertBundleNamesToGroupNames(context);
+
             results = (from resource in m_ResourcesToDependencies.Keys
                        from dependency in m_ResourcesToDependencies[resource]
-                       where m_ExtractData.WriteData.AssetToFiles.ContainsKey(dependency)
 
                        let assetPath = AssetDatabase.GUIDToAssetPath(dependency.ToString())
-                       let files = m_ExtractData.WriteData.AssetToFiles[dependency]
+                       let files = m_ExtractData.WriteData.FileToObjects.Keys
 
                        from file in files
+                       where m_ExtractData.WriteData.FileToObjects[file].Any(oid => oid.guid == dependency)
                        where m_ExtractData.WriteData.FileToBundle.ContainsKey(file)
                        let bundle = m_ExtractData.WriteData.FileToBundle[file]
-
-                       select new AnalyzeResult{resultName = 
+                       
+                       select new AnalyzeResult { resultName =
                            resource + kDelimiter +
                            bundle + kDelimiter +
                            assetPath,
-                           severity = MessageType.Warning}).ToList();
+                           severity = MessageType.Warning }).ToList();
 
             if (results.Count == 0)
                 results.Add(new AnalyzeResult{resultName = ruleName + " - No issues found."});

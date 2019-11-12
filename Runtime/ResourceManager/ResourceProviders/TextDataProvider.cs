@@ -36,7 +36,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 provideHandle.SetProgressCallback(GetPercentComplete);
                 m_Provider = rawProvider;
                 m_IgnoreFailures = ignoreFailures;
-                var path = m_PI.Location.InternalId;
+                var path = m_PI.ResourceManager.TransformInternalId(m_PI.Location);
                 if (File.Exists(path))
                 {
 #if NET_4_6
@@ -54,7 +54,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     if (m_RequestQueueOperation.IsDone)
                     {
                         m_RequestOperation = m_RequestQueueOperation.Result;
-                        m_RequestOperation.completed += RequestOperation_completed;
+                        if(m_RequestOperation.isDone)
+                            RequestOperation_completed(m_RequestOperation);
+                        else
+                            m_RequestOperation.completed += RequestOperation_completed;
                     }
                     else
                     {

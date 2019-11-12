@@ -91,6 +91,8 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Unique Bundle IDs", "If set, every content build (original or update) will result in asset bundles with more complex internal names.  This may result in more bundles being rebuilt, but safer mid-run updates.  See docs for more info.");
         GUIContent m_BuildRemoteCatalog =
             new GUIContent("Build Remote Catalog", "If set, this will create a copy of the content catalog for storage on a remote server.  This catalog can be overwritten later for content updates.");
+        GUIContent m_CheckForCatalogUpdateOnInit =
+            new GUIContent("Disable Catalog Update on Startup", "If set, this will forgo checking for content catalog updates on initialization.");
         GUIContent m_RemoteCatBuildPath =
             new GUIContent("Build Path", "The path for a remote content catalog.");
         GUIContent m_RemoteCatLoadPath =
@@ -145,7 +147,9 @@ namespace UnityEditor.AddressableAssets.GUI
             m_CatalogFoldout = EditorGUILayout.Foldout(m_CatalogFoldout, "Catalog");
             if (m_CatalogFoldout)
             {
+                m_AasTarget.DisableCatalogUpdateOnStartup = EditorGUILayout.Toggle(m_CheckForCatalogUpdateOnInit, m_AasTarget.DisableCatalogUpdateOnStartup);
                 m_AasTarget.BuildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
+
                 if ( (m_AasTarget.RemoteCatalogBuildPath != null && m_AasTarget.RemoteCatalogLoadPath != null) // these will never actually be null, as the accessor initializes them.
                      && (m_AasTarget.BuildRemoteCatalog))
                 {

@@ -57,9 +57,13 @@ namespace UnityEngine.AddressableAssets
     public static class Addressables
     {
         static AddressablesImpl m_Addressables = new AddressablesImpl(new LRUCacheAllocationStrategy(1000, 1000, 100, 10));
-        internal static IInstanceProvider InstanceProvider;
         public static ResourceManager ResourceManager { get { return m_Addressables.ResourceManager; } }
         internal static AddressablesImpl Instance { get { return m_Addressables; } }
+
+        /// <summary>
+        /// The Instance Provider used by the Addressables System.
+        /// </summary>
+        public static IInstanceProvider InstanceProvider { get { return m_Addressables.InstanceProvider; } }
 
         /// <summary>
         /// Used to resolve a string using addressables config values
@@ -67,6 +71,15 @@ namespace UnityEngine.AddressableAssets
         public static string ResolveInternalId(string id)
         {
             return m_Addressables.ResolveInternalId(id);
+        }
+
+         /// <summary>
+        /// Functor to transform internal ids before being used by the providers.
+        /// </summary>
+        static public Func<IResourceLocation, string> InternalIdTransformFunc
+        {
+            get { return m_Addressables.InternalIdTransformFunc; }
+            set { m_Addressables.InternalIdTransformFunc = value; }
         }
 
         /// <summary>

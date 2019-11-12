@@ -8,7 +8,7 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.AsyncOperations;
-
+using UnityEngine.TestTools;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
@@ -43,12 +43,16 @@ static class AddressablesTestUtility
     static public void Setup(string testType, string pathFormat, string suffix)
     {
 #if UNITY_EDITOR
+        bool currentIgnoreState = LogAssert.ignoreFailingMessages;
+        LogAssert.ignoreFailingMessages = true;
+
         var RootFolder = string.Format(pathFormat, testType, suffix);
 
         Directory.CreateDirectory(RootFolder);
 
         var settings = AddressableAssetSettings.Create(RootFolder + "/Settings", "AddressableAssetSettings.Tests", false, true);
         var group = settings.FindGroup("TestStuff" + suffix);
+        
         if (group == null)
             group = settings.CreateGroup("TestStuff" + suffix, true, false, false, null, typeof(BundledAssetGroupSchema));
         settings.DefaultGroup = group;
@@ -109,6 +113,8 @@ static class AddressablesTestUtility
         AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 
         RunBuilder(settings, testType, suffix);
+        LogAssert.ignoreFailingMessages = currentIgnoreState;
+
 #endif
     }
 

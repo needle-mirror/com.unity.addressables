@@ -56,7 +56,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 }
                 else
                 {
-                    var assetPath = m_ProvideHandle.Location.InternalId;
+                    var assetPath = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
                     if (m_ProvideHandle.Type.IsArray)
                     {
                         m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetElementType());

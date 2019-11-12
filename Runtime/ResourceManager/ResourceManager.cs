@@ -95,6 +95,21 @@ namespace UnityEngine.ResourceManagement
         /// </summary>
         public static Action<AsyncOperationHandle, Exception> ExceptionHandler { get; set; }
 
+        /// <summary>
+        /// Functor to transform internal ids before being used by the providers.
+        /// </summary>
+        public Func<IResourceLocation, string> InternalIdTransformFunc { get; set; }
+
+        /// <summary>
+        /// Checks for an internal id transform function and uses it to modify the internal id value.
+        /// </summary>
+        /// <param name="location">The location to transform the internal id of.</param>
+        /// <returns>If a transform func is set, use it to pull the local id. otheriwse the InternalId property of the location is used.</returns>
+        public string TransformInternalId(IResourceLocation location)
+        {
+            return InternalIdTransformFunc == null ? location.InternalId : InternalIdTransformFunc(location);
+        }
+
         internal bool CallbackHooksEnabled = true; // tests might need to disable the callback hooks to manually pump updating
         private MonoBehaviourCallbackHooks m_CallbackHooks;
 
@@ -158,11 +173,13 @@ namespace UnityEngine.ResourceManagement
         /// The allocation strategy object.
         /// </summary>
         public IAllocationStrategy Allocator { get { return m_allocator; } set { m_allocator = value; } }
+        
         /// <summary>
         /// Gets the list of configured <see cref="IResourceProvider"/> objects. Resource Providers handle load and release operations for <see cref="IResourceLocation"/> objects.
         /// </summary>
         /// <value>The resource providers list.</value>
         public IList<IResourceProvider> ResourceProviders { get { return m_ResourceProviders; } }
+        
         /// <summary>
         /// The CertificateHandler instance object.
         /// </summary>

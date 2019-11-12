@@ -411,18 +411,37 @@ namespace UnityEngine.ResourceManagement.Util
 #endif
     }
 
-    static class ResourceManagerConfig
+    /// <summary>
+    /// Resource Manager Config utility class.
+    /// </summary>
+    public static class ResourceManagerConfig
     {
-        internal static bool IsPathRemote(string path)
+        /// <summary>
+        /// Check to see if a path is remote or not.
+        /// </summary>
+        /// <param name="path">The path to check.</param>
+        /// <returns>Returns true if path is remote.</returns>
+        public static bool IsPathRemote(string path)
         {
             return path != null && path.StartsWith("http");
         }
 
-        internal static bool ShouldPathUseWebRequest(string path)
+        /// <summary>
+        /// Check if path should use WebRequest.  A path should use WebRequest for remote paths and platforms that require WebRequest to load locally.
+        /// </summary>
+        /// <param name="path">The path to check.</param>
+        /// <returns>Returns true if path should use WebRequest.</returns>
+        public static bool ShouldPathUseWebRequest(string path)
         {
             return path != null && path.Contains("://");
         }
 
+        /// <summary>
+        /// Used to create an operation result that has multiple items.
+        /// </summary>
+        /// <param name="type">The type of the result.</param>
+        /// <param name="allAssets">The result objects.</param>
+        /// <returns>Returns Array object with result items.</returns>
         public static Array CreateArrayResult(Type type, Object[] allAssets)
         {
             var elementType = type.GetElementType();
@@ -446,11 +465,23 @@ namespace UnityEngine.ResourceManagement.Util
             return array;
         }
 
+        /// <summary>
+        /// Used to create an operation result that has multiple items.
+        /// </summary>
+        /// <typeparam name="TObject">The type of the result.</typeparam>
+        /// <param name="allAssets">The result objects.</param>
+        /// <returns>Returns result Array as TObject.</returns>
         public static TObject CreateArrayResult<TObject>(Object[] allAssets) where TObject : class
         {
             return CreateArrayResult(typeof(TObject), allAssets) as TObject;
         }
 
+        /// <summary>
+        /// Used to create an operation result that has multiple items.
+        /// </summary>
+        /// <param name="type">The type of the result objects.</param>
+        /// <param name="allAssets">The result objects.</param>
+        /// <returns>An IList of the resulting objects.</returns>
         public static IList CreateListResult(Type type, Object[] allAssets)
         {
             var genArgs = type.GetGenericArguments();
@@ -467,11 +498,23 @@ namespace UnityEngine.ResourceManagement.Util
             return list;
         }
 
+        /// <summary>
+        /// Used to create an operation result that has multiple items.
+        /// </summary>
+        /// <typeparam name="TObject">The type of the result.</typeparam>
+        /// <param name="allAssets">The result objects.</param>
+        /// <returns>An IList of the resulting objects converted to TObject.</returns>
         public static TObject CreateListResult<TObject>(Object[] allAssets)
         {
             return (TObject)CreateListResult(typeof(TObject), allAssets);
         }
 
+        /// <summary>
+        /// Check if one type is an instance of another type.
+        /// </summary>
+        /// <typeparam name="T1">Expected base type.</typeparam>
+        /// <typeparam name="T2">Expected child type.</typeparam>
+        /// <returns>Returns true if T2 is a base type of T1.</returns>
         public static bool IsInstance<T1, T2>()
         {
             var tA = typeof(T1);

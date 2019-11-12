@@ -43,7 +43,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 if (m_DepOp.IsValid())
                     deps.Add(m_DepOp);
             }
-            protected override string DebugName { get { return string.Format("Scene({0})", m_Location == null ? "Invalid" : ShortenPath(m_Location.InternalId, false)); } }
+            protected override string DebugName { get { return string.Format("Scene({0})", m_Location == null ? "Invalid" : ShortenPath(m_ResourceManager.TransformInternalId(m_Location), false)); } }
 
             protected override void Execute()
             {
@@ -63,7 +63,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
             internal SceneInstance InternalLoadScene(IResourceLocation location, bool loadingFromBundle, LoadSceneMode loadMode, bool activateOnLoad, int priority)
             {
-                var op = InternalLoad(location.InternalId, loadingFromBundle, loadMode);
+                var internalId = m_ResourceManager.TransformInternalId(location);
+                var op = InternalLoad(internalId, loadingFromBundle, loadMode);
                 op.allowSceneActivation = activateOnLoad;
                 op.priority = priority;
                 return new SceneInstance() { m_Operation = op, Scene = SceneManager.GetSceneAt(SceneManager.sceneCount - 1) };

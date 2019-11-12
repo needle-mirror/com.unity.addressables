@@ -11,6 +11,7 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
+using UnityEngine.U2D;
 
 namespace UnityEditor.AddressableAssets.Build.DataBuilders
 {
@@ -131,23 +132,50 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// <inheritdoc />
         protected override string ProcessGroup(AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
         {
-            var errorString = string.Empty;
-            PlayerDataGroupSchema playerSchema = assetGroup.GetSchema<PlayerDataGroupSchema>();
-            if (playerSchema != null)
+            float index = 0.0f;
+            foreach (var entry in assetGroup.entries)
             {
-                m_NeedsLegacyProvider = CreateLocationsForPlayerData(playerSchema, assetGroup, aaContext.locations, aaContext.providerTypes);
-                return errorString;
+                EditorUtility.DisplayProgressBar($"Preparing Addressables Data ({assetGroup.Name})", entry.AssetPath, index / assetGroup.entries.Count);
+                if (entry.AssetPath == AddressableAssetEntry.ResourcesPath || entry.AssetPath == AddressableAssetEntry.EditorSceneListPath)
+                {
+                    GatherAssetsForFolder(entry, aaContext);   
+                }
+                else
+                {
+                    FileAttributes file = File.GetAttributes(entry.AssetPath);
+                    if (file.HasFlag(FileAttributes.Directory))
+                    {
+                        GatherAssetsForFolder(entry, aaContext);
+                    }
+                    else
+                        entry.CreateCatalogEntries(aaContext.locations, false, typeof(AssetDatabaseProvider).FullName,
+                            null, null, aaContext.providerTypes);
+                }
+
+                index++;
             }
 
+            EditorUtility.ClearProgressBar();
+            return string.Empty;
+        }
+
+        private void GatherAssetsForFolder(AddressableAssetEntry entry, AddressableAssetsBuildContext aaContext)
+        {
             var allEntries = new List<AddressableAssetEntry>();
-            foreach (var a in assetGroup.entries)
-                a.GatherAllAssets(allEntries, true, true, false);
+            entry.GatherAllAssets(allEntries, false, true, true);
+            foreach (var e in allEntries)
+            {                
+                var type = e.MainAssetType;
 
-            var providerType = typeof(AssetDatabaseProvider).FullName;
-            foreach (var a in allEntries)
-                a.CreateCatalogEntries(aaContext.locations, false, typeof(AssetDatabaseProvider).FullName, null, null, aaContext.providerTypes);
-
-            return errorString;
+                if(type == typeof(SpriteAtlas))
+                    e.CreateCatalogEntries(aaContext.locations, false, typeof(AssetDatabaseProvider).FullName, null, null, aaContext.providerTypes);
+                else
+                {
+                    if (e.IsScene)
+                        type = typeof(SceneInstance);
+                    aaContext.locations.Add(new ContentCatalogDataEntry(type, e.AssetPath, typeof(AssetDatabaseProvider).FullName, e.CreateKeyList()));
+                }
+            }
         }
     }
 }

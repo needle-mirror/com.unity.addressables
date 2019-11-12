@@ -19,7 +19,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 return;
             }
             
-            var sprite = atlas.GetSprite(providerInterface.Location.InternalId);
+            var sprite = atlas.GetSprite(providerInterface.ResourceManager.TransformInternalId(providerInterface.Location));
             if (sprite == null)
             {
                 providerInterface.Complete<Sprite>(null, false, new System.Exception(string.Format("Sprite failed to load for location {0}.", providerInterface.Location.PrimaryKey)));

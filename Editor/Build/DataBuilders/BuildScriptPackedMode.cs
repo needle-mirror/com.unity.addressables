@@ -41,6 +41,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
         List<ObjectInitializationData> m_ResourceProviderData; 
         List<AssetBundleBuild> m_AllBundleInputDefs;
+        List<string> m_OutputAssetBundleNames;
         HashSet<string> m_CreatedProviderIds;
         LinkXmlGenerator m_Linker;
         
@@ -61,6 +62,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             var locations = new List<ContentCatalogDataEntry>();
             m_AllBundleInputDefs = new List<AssetBundleBuild>();
+            m_OutputAssetBundleNames = new List<string>();
             var bundleToAssetGroup = new Dictionary<string, string>();
             var runtimeData = new ResourceManagerRuntimeData();
             runtimeData.CertificateHandlerType = aaSettings.CertificateHandlerType;
@@ -142,10 +144,16 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
                 foreach (var assetGroup in aaContext.settings.groups)
                 {
-                    List<string> bundles;
-                    if (aaContext.assetGroupToBundles.TryGetValue(assetGroup, out bundles))
+                    List<string> buildBundles;
+                    if (aaContext.assetGroupToBundles.TryGetValue(assetGroup, out buildBundles))
                     {
-                        PostProcessBundles(assetGroup, bundles, results, extractData.WriteData, aaContext.runtimeData, aaContext.locations, builderInput.Registry);
+                        List<string> outputBundles = new List<string>();
+                        for (int i = 0; i < buildBundles.Count; ++i)
+                        {
+                            var b = m_AllBundleInputDefs.FindIndex(inputDef => buildBundles[i].StartsWith(inputDef.assetBundleName));
+                            outputBundles.Add(b >= 0 ? m_OutputAssetBundleNames[b] : buildBundles[i]);
+                        }
+                        PostProcessBundles(assetGroup, buildBundles, outputBundles, results, extractData.WriteData, aaContext.runtimeData, aaContext.locations, builderInput.Registry);
                         PostProcessCatalogEnteries(assetGroup, extractData.WriteData, aaContext.locations, builderInput.Registry);
                     }
                 }
@@ -183,6 +191,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     m_Linker.AddTypes(id.GetRuntimeTypes());
                 }
             }
+
+            aaContext.runtimeData.DisableCatalogUpdateOnStartup = aaContext.settings.DisableCatalogUpdateOnStartup;
+
             m_Linker.AddTypes(typeof(Addressables));
             m_Linker.Save(Addressables.BuildPath + "/link.xml");
             var settingsPath = Addressables.BuildPath + "/" + builderInput.RuntimeSettingsFilename;
@@ -223,7 +234,11 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 {
                     if (entry.parentGroup.Guid == cachedAsset.groupGuid)
                     {
-                        string file = writeData.AssetToFiles[new GUID(entry.guid)][0];
+                        GUID guid = new GUID(entry.guid);
+                        if (!writeData.AssetToFiles.ContainsKey(guid))
+                            continue;
+
+                        string file = writeData.AssetToFiles[guid][0];
                         string fullBundleName = writeData.FileToBundle[file];
 
                         ContentCatalogDataEntry catalogBundleEntry = locations.FirstOrDefault((loc) => (loc.Keys[0] as string) == fullBundleName);
@@ -350,21 +365,27 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema.BundleMode);
             for (int i = 0; i < bundleInputDefs.Count; i++)
             {
-                if (aaContext.bundleToAssetGroup.ContainsKey(bundleInputDefs[i].assetBundleName))
+                string assetBundleName = bundleInputDefs[i].assetBundleName;
+                if (aaContext.bundleToAssetGroup.ContainsKey(assetBundleName))
                 {
-                    var bid = bundleInputDefs[i];
                     int count = 1;
-                    var newName = bid.assetBundleName;
+                    var newName = assetBundleName;
                     while (aaContext.bundleToAssetGroup.ContainsKey(newName) && count < 1000)
-                        newName = bid.assetBundleName.Replace(".bundle", string.Format("{0}.bundle", count++));
-                    bundleInputDefs[i] = new AssetBundleBuild { assetBundleName = newName, addressableNames = bid.addressableNames, assetBundleVariant = bid.assetBundleVariant, assetNames = bid.assetNames };
+                        newName = assetBundleName.Replace(".bundle", string.Format("{0}.bundle", count++));
+                    assetBundleName = newName;
                 }
 
-
-
-                aaContext.bundleToAssetGroup.Add(bundleInputDefs[i].assetBundleName, assetGroup.Guid);
+                string hashedAssetBundleName = HashingMethods.Calculate(assetBundleName) + ".bundle";
+                m_OutputAssetBundleNames.Add(assetBundleName);
+                m_AllBundleInputDefs.Add(new AssetBundleBuild
+                {
+                    addressableNames = bundleInputDefs[i].addressableNames,
+                    assetNames = bundleInputDefs[i].assetNames,
+                    assetBundleName = hashedAssetBundleName,
+                    assetBundleVariant = bundleInputDefs[i].assetBundleVariant
+                });
+                aaContext.bundleToAssetGroup.Add(hashedAssetBundleName, assetGroup.Guid);
             }
-            m_AllBundleInputDefs.AddRange(bundleInputDefs);
             return string.Empty;
         }
 
@@ -576,7 +597,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return path.StartsWith("{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
         }
 
-        static void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> bundles, IBundleBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry)
+        static void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> buildBundles, List<string> outputBundles, IBundleBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry)
         {
             var schema = assetGroup.GetSchema<BundledAssetGroupSchema>();
             if (schema == null)
@@ -586,11 +607,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             if (string.IsNullOrEmpty(path))
                 return;
 
-            foreach (var originalBundleName in bundles)
+            for (int i=0; i<buildBundles.Count; ++i)
             {
-                var newBundleName = originalBundleName;
-                var info = buildResult.BundleInfos[newBundleName];
-                ContentCatalogDataEntry dataEntry = locations.FirstOrDefault(s => newBundleName == (string)s.Keys[0]);
+                var info = buildResult.BundleInfos[buildBundles[i]];
+                ContentCatalogDataEntry dataEntry = locations.FirstOrDefault(s => buildBundles[i] == (string)s.Keys[0]);
                 if (dataEntry != null)
                 {
                     var requestOptions = new AssetBundleRequestOptions
@@ -606,8 +626,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     };
                     dataEntry.Data = requestOptions;
 
-                    int extensionLength = Path.GetExtension(originalBundleName).Length;
-                    string[] deconstructedBundleName = originalBundleName.Substring(0, originalBundleName.Length - extensionLength)
+                    int extensionLength = Path.GetExtension(outputBundles[i]).Length;
+                    string[] deconstructedBundleName = outputBundles[i].Substring(0, outputBundles[i].Length - extensionLength)
                         .Split('_');
                     deconstructedBundleName[0] = assetGroup.Name
                         .Replace(" ", "")
@@ -617,22 +637,41 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
                     string reconstructedBundleName = string.Join("_", deconstructedBundleName) + ".bundle";
 
-                    newBundleName = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), reconstructedBundleName);
-                    dataEntry.InternalId = dataEntry.InternalId.Remove(dataEntry.InternalId.Length - originalBundleName.Length) + newBundleName;
+                    outputBundles[i] = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), reconstructedBundleName);
+                    dataEntry.InternalId = dataEntry.InternalId.Remove(dataEntry.InternalId.Length - buildBundles[i].Length) + outputBundles[i];
+                    dataEntry.Keys[0] = outputBundles[i];
+                    ReplaceDependencyKeys(buildBundles[i], outputBundles[i], locations);
                     
                     if (dataEntry.InternalId.StartsWith("http:\\"))
                         dataEntry.InternalId = dataEntry.InternalId.Replace("http:\\", "http://").Replace("\\", "/");
+                    if (dataEntry.InternalId.StartsWith("https:\\"))
+                        dataEntry.InternalId = dataEntry.InternalId.Replace("https:\\", "https://").Replace("\\", "/");
                 }
                 else
                 {
-                    Debug.LogWarningFormat("Unable to find ContentCatalogDataEntry for bundle {0}.", newBundleName);
+                    Debug.LogWarningFormat("Unable to find ContentCatalogDataEntry for bundle {0}.", outputBundles[i]);
                 }
 
-                var targetPath = Path.Combine(path, newBundleName);
+                var targetPath = Path.Combine(path, outputBundles[i]);
                 if (!Directory.Exists(Path.GetDirectoryName(targetPath)))
                     Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
-                File.Copy(Path.Combine(assetGroup.Settings.buildSettings.bundleBuildPath, originalBundleName), targetPath, true);
+                File.Copy(Path.Combine(assetGroup.Settings.buildSettings.bundleBuildPath, buildBundles[i]), targetPath, true);
                 registry.AddFile(targetPath);
+            }
+        }
+        
+        static void ReplaceDependencyKeys(string from, string to, List<ContentCatalogDataEntry> locations)
+        {
+            foreach (ContentCatalogDataEntry location in locations)
+            {
+                for (int i = 0; i < location.Dependencies.Count; ++i)
+                {
+                    string s = location.Dependencies[i] as string;
+                    if (string.IsNullOrEmpty( s ))
+                        continue;
+                    if (s == from)
+                        location.Dependencies[i] = to;
+                }
             }
         }
 

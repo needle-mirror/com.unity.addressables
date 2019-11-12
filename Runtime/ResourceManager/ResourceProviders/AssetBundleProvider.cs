@@ -17,7 +17,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     public interface IAssetBundleResource
     {
         AssetBundle GetAssetBundle();
-        
+
     }
 
     /// <summary>
@@ -87,13 +87,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// </summary>
         /// <param name="loc">The location of the bundle.</param>
         /// <returns>The size in bytes of the bundle that is needed to be downloaded.  If the local cache contains the bundle or it is a local bundle, 0 will be returned.</returns>
-        public virtual long ComputeSize(IResourceLocation loc)
+        public virtual long ComputeSize(IResourceLocation location, ResourceManager resourceManager)
         {
-            if (!ResourceManagerConfig.IsPathRemote(loc.InternalId))
+            var id = resourceManager == null ? location.InternalId : resourceManager.TransformInternalId(location);
+            if (!ResourceManagerConfig.IsPathRemote(id))
                 return 0;
             var locHash = Hash128.Parse(Hash);
 #if !UNITY_SWITCH && !UNITY_PS4
-            var bundleName = Path.GetFileNameWithoutExtension(loc.InternalId);
+            var bundleName = Path.GetFileNameWithoutExtension(id);
             if (locHash.isValid) //If we have a hash, ensure that our desired version is cached.
             {
                 if (Caching.IsVersionCached(new CachedAssetBundle(bundleName, locHash)))
@@ -124,12 +125,13 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
         UnityWebRequest CreateWebRequest(IResourceLocation loc)
         {
+            var url = m_ProvideHandle.ResourceManager.TransformInternalId(loc);
             if (m_Options == null)
-                return UnityWebRequestAssetBundle.GetAssetBundle(loc.InternalId);
+                return UnityWebRequestAssetBundle.GetAssetBundle(url);
 
             var webRequest = !string.IsNullOrEmpty(m_Options.Hash) ?
-                UnityWebRequestAssetBundle.GetAssetBundle(loc.InternalId, Hash128.Parse(m_Options.Hash), m_Options.Crc) :
-                UnityWebRequestAssetBundle.GetAssetBundle(loc.InternalId, m_Options.Crc);
+                UnityWebRequestAssetBundle.GetAssetBundle(url, Hash128.Parse(m_Options.Hash), m_Options.Crc) :
+                UnityWebRequestAssetBundle.GetAssetBundle(url, m_Options.Crc);
 
             if (m_Options.Timeout > 0)
                 webRequest.timeout = m_Options.Timeout;
@@ -177,7 +179,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
         private void BeginOperation()
         {
-            string path = m_ProvideHandle.Location.InternalId;
+            string path = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
             if (File.Exists(path))
             {
                 m_RequestOperation = AssetBundle.LoadFromFileAsync(path, m_Options == null ? 0 : m_Options.Crc);
@@ -266,6 +268,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     [DisplayName("AssetBundle Provider")]
     public class AssetBundleProvider : ResourceProviderBase
     {
+
         /// <inheritdoc/>
         public override void Provide(ProvideHandle providerInterface)
         {

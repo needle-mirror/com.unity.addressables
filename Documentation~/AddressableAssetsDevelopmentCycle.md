@@ -44,6 +44,30 @@ You can also disable exceptions by unchecking the **Log Runtime Exceptions** opt
 ## Initialization objects
 You can attach objects to the Addressable Assets settings and pass them to the initialization process at runtime. The `CacheInitializationSettings` object controls Unity's caching API at runtime. To create your own initialization object, create a ScriptableObject that implements the [`IObjectInitializationDataProvider`](../api/UnityEngine.ResourceManagement.Util.IObjectInitializationDataProvider.html) interface. This is the Editor component of the system responsible for creating the `ObjectInitializationData` that is serialized with the runtime data.
 
+## Customizing URL Evaluation
+There are several scenarios where you will need to customize the path or URL of an asset (an AssetBundle generally) at runtime.  The most common example is creating signed URLs.  Another might be dynamic host determination.  
+
+The code below is an example of appending a query string to all urls:
+
+```
+//Implement a method to transform the internal ids of locations
+string MyCustomTransform(IResourceLocation location)
+{
+	if (location.ResourceType == typeof(IAssetBundleResource) && location.InternalId.StartsWith("http"))
+		return location.InternalId + "?customQueryTag=customQueryValue";
+	return location.InternalId;
+}
+
+//Override the Addressables transform method with your custom method.  This can be set to null to revert to default behavior.
+[RuntimeInitializeOnLoadMethod]
+static void SetInternalIdTransform()
+{
+	Addressables.InternalIdTransformFunc = MyCustomTransform;
+}
+```
+
+****Please Note****: When bundling video files into Addressables with the intent of loading them on the Android platform, you must create a `CacheInitializationSettings` object, disable `Compress Bundles` on that object, then add it to the list of Initialization Objects on the `AddressableAssetSettings` object if it has not been already.
+
 ## Content update workflow
 Unity recommends structuring your game content into two categories: 
 

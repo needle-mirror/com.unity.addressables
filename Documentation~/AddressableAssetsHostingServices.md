@@ -12,7 +12,7 @@ You can deploy Asset Hosting Services into a server environment by running in ba
 This article details the initial setup of Asset Hosting Services for your Project. While the setup guide focuses on Editor workflows, you can use the API to configure Hosting Services by setting the `HostingServicesManager` property of the [`AddressableAssetSettings`](../api/UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.html) class.
 
 ### Configuring a new Hosting Service
-Use the **Hosting window** to add, configure, and enable new Hosting Services. In the Editor, select **Window** > **Asset Management** > **Addressables** > **Hosting**, or click the **Tools** > **Hosting Services** button from the **Addressables Groups** window menu to access the **Hosting** window.
+Use the **Hosting window** to add, configure, and enable new Hosting Services. In the Editor, select **Window** > **Asset Management** > **Addressables** > **Hosting**, or click the **Tools** > **Hosting Services** button from the **Addressables Groups** window menu to access the **Addressables Hosting** window.
 
 ![The Addressables Hosting window.](images/HostingServicesWindow_1.png)</br>
 _The **Addressables Hosting** window._
@@ -26,7 +26,7 @@ _Adding a new Hosting Service._
 
 The newly added service appears in the **Hosting Services** section of the **Addressables Hosting** window. Use the **Service Name** field enter a name for the service.
 
-The new service defaults to the disabled state. To initiate the service, select the **Enable** button.
+The new service defaults to the disabled state. To initiate the service, select the **Enable** check box.
 
 ![The updated Addressables Hosting window after adding a service.](images/HostingServicesWindow_2.png)</br>
 _The updated **Addressables Hosting** window after adding a service._

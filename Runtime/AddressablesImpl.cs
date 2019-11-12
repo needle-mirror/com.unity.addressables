@@ -104,6 +104,13 @@ namespace UnityEngine.AddressableAssets
             SceneManager.sceneUnloaded += OnSceneUnloaded;
         }
 
+        public Func<IResourceLocation, string> InternalIdTransformFunc
+        {
+            get { return ResourceManager.InternalIdTransformFunc; }
+            set { ResourceManager.InternalIdTransformFunc = value; }
+        }
+
+
         public AsyncOperationHandle ChainOperation
         {
             get
@@ -676,7 +683,7 @@ namespace UnityEngine.AddressableAssets
             {
                 var sizeData = location.Data as ILocationSizeData;
                 if (sizeData != null)
-                    size += sizeData.ComputeSize(location);
+                    size += sizeData.ComputeSize(location, ResourceManager);
             }
 
             return ResourceManager.CreateCompletedOperation<long>(size, string.Empty);

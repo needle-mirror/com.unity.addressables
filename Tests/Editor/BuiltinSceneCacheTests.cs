@@ -61,7 +61,7 @@ namespace UnityEditor.AddressableAssets.Settings.Tests
         public void Setup()
         {
             SetupBuildScenes();
-            BuiltinSceneCache.ClearState();
+            BuiltinSceneCache.ClearState(true);
         }
 
         [Test]

@@ -13,7 +13,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     public class InstanceProvider : IInstanceProvider
     {
         Dictionary<GameObject, AsyncOperationHandle<GameObject>> m_InstanceObjectToPrefabHandle = new Dictionary<GameObject, AsyncOperationHandle<GameObject>>();
-  
+
         /// <inheritdoc/>
         public GameObject ProvideInstance(ResourceManager resourceManager, AsyncOperationHandle<GameObject> prefabHandle, InstantiationParameters instantiateParameters)
         {

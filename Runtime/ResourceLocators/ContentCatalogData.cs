@@ -126,7 +126,27 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// <summary>
         /// The list of resource provider data.  Each entry will add an IResourceProvider to the Addressables.ResourceManager.ResourceProviders list.
         /// </summary>
-        public List<ObjectInitializationData> ResourceProviderData { get { return m_ResourceProviderData; } }
+        public List<ObjectInitializationData> ResourceProviderData
+        {
+            get { return m_ResourceProviderData; }
+            set { m_ResourceProviderData = value; }
+        }
+
+        /// <summary>
+        /// The IDs for the Resource Providers.
+        /// </summary>
+        public string[] ProviderIds
+        {
+            get { return m_ProviderIds; }
+        }
+
+        /// <summary>
+        /// Internal Content Catalog Entry IDs for Addressable Assets.
+        /// </summary>
+        public string[] InternalIds
+        {
+            get { return m_InternalIds; }
+        }
 
         [FormerlySerializedAs("m_providerIds")]
         [SerializeField]

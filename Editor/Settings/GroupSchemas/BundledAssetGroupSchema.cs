@@ -316,9 +316,11 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         }
         
         
-        //the next several items are temporarily internal so as to not modify API.  
+        /// <summary>
+        /// Used to determine how the final bundle name should look.
+        /// </summary>
         
-        internal enum BundleNamingStyle
+        public enum BundleNamingStyle
         {
             AppendHash,
             NoHash,
@@ -328,9 +330,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         [SerializeField]
         BundleNamingStyle m_BundleNaming;
         /// <summary>
-        /// (to be made public in later releases) Naming style to use for generated AssetBundle(s).
+        /// Naming style to use for generated AssetBundle(s).
         /// </summary>
-        internal BundleNamingStyle BundleNaming
+        public BundleNamingStyle BundleNaming
         {
             get { return m_BundleNaming; }
             set { m_BundleNaming = value; }

@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.AddressableAssets.Utility;
 using UnityEngine.Networking;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
-using UnityEngine.ResourceManagement.Diagnostics;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
@@ -101,12 +102,18 @@ namespace UnityEngine.AddressableAssets.Initialization
                 }
             }
 
+            ContentCatalogProvider ccp = m_Addressables.ResourceManager.ResourceProviders
+                .FirstOrDefault(rp => rp.GetType() == typeof(ContentCatalogProvider)) as ContentCatalogProvider;
+            if(ccp != null)
+                ccp.DisableCatalogUpdateOnStart = rtd.DisableCatalogUpdateOnStartup;
+
             var locMap = new ResourceLocationMap("CatalogLocator", rtd.CatalogLocations);
             m_Addressables.AddResourceLocator(locMap);
             IList<IResourceLocation> catalogs;
             if (!locMap.Locate(ResourceManagerRuntimeData.kCatalogAddress, typeof(ContentCatalogData), out catalogs))
             {
-                Addressables.LogWarningFormat("Addressables - Unable to find any catalog locations in the runtime data.");
+                Addressables.LogWarningFormat(
+                    "Addressables - Unable to find any catalog locations in the runtime data.");
                 m_Addressables.RemoveResourceLocator(locMap);
                 Complete(Result, false, "Addressables - Unable to find any catalog locations in the runtime data.");
             }
@@ -116,7 +123,6 @@ namespace UnityEngine.AddressableAssets.Initialization
                 LoadContentCatalogInternal(catalogs, 0, locMap);
             }
         }
-
 
         static void LoadProvider(AddressablesImpl addressables, ObjectInitializationData providerData, string providerSuffix)
         {                
@@ -140,6 +146,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             var provider = providerData.CreateInstance<IResourceProvider>(newProviderId);
             if (provider != null)
             {
+                
                 if (indexOfExistingProvider < 0 || !string.IsNullOrEmpty(providerSuffix))
                 {
                     Addressables.LogFormat("Addressables - added provider {0} with id {1}.", provider, provider.ProviderId);
@@ -208,7 +215,7 @@ namespace UnityEngine.AddressableAssets.Initialization
         //Attempts to load each catalog in order, stopping at first success. 
         void LoadContentCatalogInternal(IList<IResourceLocation> catalogs, int index, ResourceLocationMap locMap)
         {
-            Addressables.LogFormat("Addressables - loading content catalog from {0}.", catalogs[index].InternalId);
+            Addressables.LogFormat("Addressables - loading content catalog from {0}.", m_Addressables.ResourceManager.TransformInternalId(catalogs[index]));
             LoadContentCatalog(catalogs[index], m_ProviderSuffix).Completed += op =>
             {
                 if (op.Result != null)

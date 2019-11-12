@@ -13,8 +13,24 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 		const string k_RemoteLocationId = "RemoteLocationID";
 		
 		ResourceLocationBase m_SimpleLocation = new ResourceLocationBase(k_LocationName, k_LocationId, typeof(ContentCatalogProvider).FullName, typeof(object));
-		
-		[Test]
+
+	    [Test]
+	    public void DetermineIdToLoad_IfLocalCatalogsOnly_ReturnsMainId()
+	    {
+	        var contentCatalogOp = new ContentCatalogProvider.InternalOp();
+
+	        IResourceLocation[] dependencies = new IResourceLocation[(int)ContentCatalogProvider.DependencyHashIndex.Count];
+
+	        dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote] = new ResourceLocationBase(string.Empty, k_RemoteLocationId, typeof(ContentCatalogProvider).FullName, typeof(object));
+	        dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Cache] = new ResourceLocationBase(string.Empty, k_CacheLocationId, typeof(ContentCatalogProvider).FullName, typeof(object));
+
+	        var location = new ResourceLocationBase(k_LocationName, k_LocationId, typeof(ContentCatalogProvider).FullName, typeof(object), dependencies);
+	        var loadedId = contentCatalogOp.DetermineIdToLoad(location, new List<object> { "hash" , string.Empty}, true);
+
+            Assert.AreEqual(k_LocationId, loadedId);
+        }
+
+        [Test]
 		public void DetermineIdToLoad_IfNoDependencies_ReturnsMainId()
 		{
 			var contentCatalogOp = new ContentCatalogProvider.InternalOp();

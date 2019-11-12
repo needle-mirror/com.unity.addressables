@@ -150,3 +150,13 @@ The Addressable Asset System generates asset bundles containing your Addressable
 By default, when building Addressables app data, data for your given platform is stored in platform-specific subdirectories of the Addressables build path(s). The runtime path accounts for these platform folders, and points to the applicable app data.  
 
 **Note**: If you use the Addressables `BuildScriptPackedPlayMode` script in the Editor Play mode, Addressables will attempt to load data for your current active build target. As such, issues may arise if your current build target data isn't compatible with your current Editor platform. For more information, see documentation on [Play mode scripts](AddressableAssetsDevelopmentCycle.md#play-mode-scripts).
+
+### Grouping assets
+It is a good practice to logically collect assets into multiple groups rather than put them all in one large group. The key benefit of this method is to avoid conflicts in version control systems (VCS) when multiple contributors make edits to the same file. Having one large asset group might result in the VCS's inability to cleanly merge these various changes.
+
+### Building scenes that are packed together
+After running a build where you have multiple Scenes in an Addressable Assets group, those Scenes will become interdependent if:
+* Under _Packed Assets_ in the Project window, the group's Bundle Mode is set to **Pack Together**.
+* The Scenes in that group all have the same asset label, and the Bundle Mode is set to **Pack Together By Label**.
+
+If you modify even one of these grouped Scenes then perform a [content update build](AddressableAssetsDevelopmentCycle.md#building-for-content-updates), all the interdependent Scenes will move together into a new Content Update group.

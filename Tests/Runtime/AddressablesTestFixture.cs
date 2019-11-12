@@ -52,6 +52,9 @@ public abstract class AddressablesTestFixture : IPrebuildSetup
     void IPrebuildSetup.Setup()
     {
 #if UNITY_EDITOR 
+        bool currentIgnoreState = LogAssert.ignoreFailingMessages;
+        LogAssert.ignoreFailingMessages = true;
+
         var activeScenePath = EditorSceneManager.GetActiveScene().path;
 
         string rootFolder = Path.Combine("Assets", "gen", m_UniqueTestName);
@@ -60,11 +63,13 @@ public abstract class AddressablesTestFixture : IPrebuildSetup
         Directory.CreateDirectory(rootFolder);
 
         AddressableAssetSettings settings = AddressableAssetSettings.Create(Path.Combine(rootFolder, "Settings"), "AddressableAssetSettings.Tests", false, true);
+        
         Setup(settings, rootFolder);
         RunBuilder(settings);
 
         if (activeScenePath != EditorSceneManager.GetActiveScene().path)
             EditorSceneManager.OpenScene(activeScenePath, OpenSceneMode.Single);
+        LogAssert.ignoreFailingMessages = currentIgnoreState;
 #endif
     }
 

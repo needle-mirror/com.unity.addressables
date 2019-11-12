@@ -29,6 +29,9 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
             Cache,
             Count
         }
+
+        public bool DisableCatalogUpdateOnStart = false;
+
         ResourceManager m_RM;
         /// <summary>
         /// Constructor for this provider.
@@ -46,27 +49,32 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
             string m_RemoteHashValue;
             string m_LocalHashValue;
             ProvideHandle m_ProviderInterface;
-            ResourceManager m_RM;
 
-            public void Start(ProvideHandle providerInterface, ResourceManager rm)
+            public void Start(ProvideHandle providerInterface, bool disableCatalogUpdateOnStart)
             {
-                m_RM = rm;
                 m_ProviderInterface = providerInterface;
                 m_LocalDataPath = null;
                 m_RemoteHashValue = null;
          
                 List<object> deps = new List<object>(); // TODO: garbage. need to pass actual count and reuse the list
                 m_ProviderInterface.GetDependencies(deps);
-                string idToLoad = DetermineIdToLoad(m_ProviderInterface.Location, deps);
+                string idToLoad = DetermineIdToLoad(m_ProviderInterface.Location, deps, disableCatalogUpdateOnStart);
 
                 Addressables.LogFormat("Addressables - Using content catalog from {0}.", idToLoad);
-                rm.ProvideResource<ContentCatalogData>(new ResourceLocationBase(idToLoad, idToLoad, typeof(JsonAssetProvider).FullName, typeof(ContentCatalogData))).Completed += OnCatalogLoaded;
+                providerInterface.ResourceManager.ProvideResource<ContentCatalogData>(new ResourceLocationBase(idToLoad, idToLoad, typeof(JsonAssetProvider).FullName, typeof(ContentCatalogData))).Completed += OnCatalogLoaded;
             }
 
-            internal string DetermineIdToLoad(IResourceLocation location, IList<object> dependencyObjects)
+            string GetTransformedInternalId(IResourceLocation loc)
+            {
+                if (m_ProviderInterface.ResourceManager == null)
+                    return loc.InternalId;
+                return m_ProviderInterface.ResourceManager.TransformInternalId(loc);
+            }
+
+            internal string DetermineIdToLoad(IResourceLocation location, IList<object> dependencyObjects, bool disableCatalogUpdateOnStart = false)
             {
                 //default to load actual local source catalog
-                string idToLoad = location.InternalId;
+                string idToLoad = GetTransformedInternalId(location);
                 if (dependencyObjects != null &&
                     location.Dependencies != null &&
                     dependencyObjects.Count == (int)DependencyHashIndex.Count &&
@@ -79,30 +87,35 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                     if (string.IsNullOrEmpty(remoteHash)) //offline
                     {
                         if (!string.IsNullOrEmpty(m_LocalHashValue)) //cache exists
-                            idToLoad = location.Dependencies[(int)DependencyHashIndex.Cache].InternalId.Replace(".hash", ".json");
+                            idToLoad = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Cache]).Replace(".hash", ".json");
                     }
                     else //online
                     {
                         if (remoteHash == m_LocalHashValue) //cache of remote is good
                         {
-                            idToLoad = location.Dependencies[(int)DependencyHashIndex.Cache].InternalId.Replace(".hash", ".json");
+                            idToLoad = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Cache]).Replace(".hash", ".json");
                         }
                         else //remote is different than cache, or no cache
                         {
-                            idToLoad = location.Dependencies[(int)DependencyHashIndex.Remote].InternalId.Replace(".hash", ".json");
-                            m_LocalDataPath = location.Dependencies[(int)DependencyHashIndex.Cache].InternalId.Replace(".hash", ".json");
+                            if (disableCatalogUpdateOnStart)
+                                m_LocalHashValue = Hash128.Compute(idToLoad).ToString();
+                            else
+                            {
+                                idToLoad = GetTransformedInternalId(location.Dependencies[(int) DependencyHashIndex.Remote]).Replace(".hash", ".json");
+                                m_LocalDataPath = GetTransformedInternalId(location.Dependencies[(int) DependencyHashIndex.Cache]).Replace(".hash", ".json");
+                            }
+
                             m_RemoteHashValue = remoteHash;
                         }
                     }
                 }
-
                 return idToLoad;
             }
 
             void OnCatalogLoaded(AsyncOperationHandle<ContentCatalogData> op)
             {
                 var ccd = op.Result;
-                m_RM.Release(op);
+                m_ProviderInterface.ResourceManager.Release(op);
                 Addressables.LogFormat("Addressables - Content catalog load result = {0}.", ccd);
                 if (ccd != null)
                 {
@@ -127,7 +140,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
         ///<inheritdoc/>
         public override void Provide(ProvideHandle providerInterface)
         {
-            new InternalOp().Start(providerInterface, m_RM);
+            new InternalOp().Start(providerInterface, DisableCatalogUpdateOnStart);
         }
     }
 }

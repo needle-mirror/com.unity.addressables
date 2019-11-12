@@ -23,7 +23,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_PI = provideHandle;
 
                 provideHandle.SetProgressCallback(PercentComplete);
-                m_RequestOperation = Resources.LoadAsync(m_PI.Location.InternalId, m_PI.Type);
+                m_RequestOperation = Resources.LoadAsync(m_PI.ResourceManager.TransformInternalId(m_PI.Location), m_PI.Type);
                 m_RequestOperation.completed += AsyncOperationCompleted;
             }
 
@@ -42,20 +42,20 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             Type t = pi.Type;
             bool isList = t.IsGenericType && typeof(IList<>) == t.GetGenericTypeDefinition();
-
+            var internalId = pi.ResourceManager.TransformInternalId(pi.Location);
             if (t.IsArray || isList)
             {
                 object result = null;
                 if (t.IsArray)
-                    result = ResourceManagerConfig.CreateArrayResult(t, Resources.LoadAll(pi.Location.InternalId, t.GetElementType()));
+                    result = ResourceManagerConfig.CreateArrayResult(t, Resources.LoadAll(internalId, t.GetElementType()));
                 else
-                    result = ResourceManagerConfig.CreateListResult(t, Resources.LoadAll(pi.Location.InternalId, t.GetGenericArguments()[0]));
+                    result = ResourceManagerConfig.CreateListResult(t, Resources.LoadAll(internalId, t.GetGenericArguments()[0]));
 
                 pi.Complete(result, result != null, null);
             }
             else
             {
-                string assetPath = pi.Location.InternalId;
+                string assetPath = internalId;
                 var i = assetPath.LastIndexOf('[');
                 if (i > 0)
                 {

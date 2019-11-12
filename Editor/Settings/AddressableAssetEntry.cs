@@ -53,7 +53,10 @@ namespace UnityEditor.AddressableAssets.Settings
             set { m_ParentGroup = value; }
         }
 
-        internal string BundleFileId
+        /// <summary>
+        /// The id for the bundle file.
+        /// </summary>
+        public string BundleFileId
         {
             get;
             set;

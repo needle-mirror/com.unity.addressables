@@ -45,7 +45,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             
             void LoadImmediate()
             { 
-                string assetPath = m_ProvideHandle.Location == null ? string.Empty : m_ProvideHandle.Location.InternalId;
+                string assetPath = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
                 
                 object result = null;
                 if (m_ProvideHandle.Type.IsArray)

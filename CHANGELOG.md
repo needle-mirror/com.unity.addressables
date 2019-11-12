@@ -4,6 +4,15 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2019-11-13
+- Added the ability to disable checking for content catalog updates during initialization.
+- Fixed issue where turning off Include in Build in the right circumstances would throw an exception.
+- Made internal classes and members public to support custom build scripts.
+- Exposed Addressables.InstanceProvider to allow for setting up runtime specific data on custom instance providers.
+- Fixed issue with filenames being too long to write to our Temp cache of AssetBundles.
+- Changed ProcessGroup in BuildScriptFastMode to directly create catalog entries from Addressable entries.
+- Added progress bar to Fast Mode when creating content catalog.
+
 ## [1.3.8] - 2019-11-04
  - Properly suppressing a harmless "Unknown error in AsyncOperation" that has been popping up during init. It had to do with not finding a cached catalog before a catalog had been cached (so error shouldn't happen).
  - Fixed issue with asset hash calcluation for internal asset bundle name when building bundles.

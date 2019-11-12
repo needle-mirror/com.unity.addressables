@@ -112,7 +112,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
         {
             if (location == null)
                 throw new ArgumentException("IResourceLocation location cannot be null.");
-
             VirtualAssetBundle bundle;
             if (!m_AllBundles.TryGetValue(location.InternalId, out bundle))
             {

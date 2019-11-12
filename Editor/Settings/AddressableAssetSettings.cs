@@ -195,6 +195,9 @@ namespace UnityEditor.AddressableAssets.Settings
         bool m_BuildRemoteCatalog = false;
 
         [SerializeField]
+        bool m_DisableCatalogUpdateOnStart = false;
+
+        [SerializeField]
         bool m_UniqueBundleIds = false;
 
         public bool UniqueBundleIds
@@ -210,6 +213,15 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get { return m_BuildRemoteCatalog; }
             set { m_BuildRemoteCatalog = value; }
+        }
+
+        /// <summary>
+        /// Tells Addressables if it should check for a Content Catalog Update during the initialization step. 
+        /// </summary>
+        public bool DisableCatalogUpdateOnStartup
+        {
+            get { return m_DisableCatalogUpdateOnStart; }
+            set { m_DisableCatalogUpdateOnStart = value; }
         }
 
         [SerializeField]

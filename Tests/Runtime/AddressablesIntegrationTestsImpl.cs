@@ -141,6 +141,25 @@ namespace AddressableAssetsIntegrationTests
             op.Release();
         }
 
+        string TransFunc(IResourceLocation loc)
+        {
+            return "transformed";
+        }
+
+        [UnityTest]
+        public IEnumerator InternalIdTranslationTest()
+        {
+            //Setup
+            yield return Init();
+            m_Addressables.InternalIdTransformFunc = TransFunc;
+            var loc = new ResourceLocationBase("none", "original", "none", typeof(object));
+            var transformedId = m_Addressables.ResourceManager.TransformInternalId(loc);
+            Assert.AreEqual("transformed", transformedId);
+            m_Addressables.InternalIdTransformFunc = null;
+            var originalId = m_Addressables.ResourceManager.TransformInternalId(loc);
+            Assert.AreEqual("original", originalId);
+        }
+
 
         [UnityTest]
         public IEnumerator CanLoadTextureAsTexture()
@@ -210,12 +229,12 @@ namespace AddressableAssetsIntegrationTests
             var bundleLoc1 = new ResourceLocationBase("sizeTestBundle1", "http://nowhere.com/mybundle1.bundle", typeof(AssetBundleProvider).FullName, typeof(object));
             var sizeData1 = (bundleLoc1.Data = CreateLocationSizeData("sizeTestBundle1", 1000, 123, "hashstring1")) as ILocationSizeData;
             if (sizeData1 != null)
-                expectedSize += sizeData1.ComputeSize(bundleLoc1);
+                expectedSize += sizeData1.ComputeSize(bundleLoc1, null);
 
             var bundleLoc2 = new ResourceLocationBase("sizeTestBundle2", "http://nowhere.com/mybundle2.bundle", typeof(AssetBundleProvider).FullName, typeof(object));
             var sizeData2 = (bundleLoc2.Data = CreateLocationSizeData("sizeTestBundle2", 500, 123, "hashstring2")) as ILocationSizeData;
             if (sizeData2 != null)
-                expectedSize += sizeData2.ComputeSize(bundleLoc2);
+                expectedSize += sizeData2.ComputeSize(bundleLoc2, null);
 
             var assetLoc = new ResourceLocationBase("sizeTestAsset", "myASset.asset", typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1, bundleLoc2);
 
@@ -250,7 +269,7 @@ namespace AddressableAssetsIntegrationTests
                 (bundleLoc1.Data = CreateLocationSizeData("cachedSizeTestBundle1", bundleSize1, 123,
                     "be38e35d2177c282d5d6a2e54a803aab")) as ILocationSizeData;
             if (sizeData1 != null)
-                expectedSize += sizeData1.ComputeSize(bundleLoc1);
+                expectedSize += sizeData1.ComputeSize(bundleLoc1, null);
 
             var bundleLoc2 = new ResourceLocationBase("cachedSizeTestBundle2", "http://nowhere.com/GetDownloadSize_CalculatesCachedBundlesBundle2.bundle",
                 typeof(AssetBundleProvider).FullName, typeof(object));
@@ -258,7 +277,7 @@ namespace AddressableAssetsIntegrationTests
                 (bundleLoc2.Data = CreateLocationSizeData("cachedSizeTestBundle2", bundleSize2, 123,
                     "d9fe965a6b253fb9dbd3e1cb08b7d66f")) as ILocationSizeData;
             if (sizeData2 != null)
-                expectedSize += sizeData2.ComputeSize(bundleLoc2);
+                expectedSize += sizeData2.ComputeSize(bundleLoc2, null);
 
             var assetLoc = new ResourceLocationBase("cachedSizeTestAsset", "myASset.asset",
                 typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1, bundleLoc2);
@@ -302,7 +321,7 @@ namespace AddressableAssetsIntegrationTests
                 (bundleLoc1.Data = CreateLocationSizeData("cachedSizeTestBundle1", bundleSize1, 123,
                     "0e38e35d2177c282d5d6a2e54a803aab")) as ILocationSizeData;
             if (sizeData1 != null)
-                expectedSize += sizeData1.ComputeSize(bundleLoc1);
+                expectedSize += sizeData1.ComputeSize(bundleLoc1, null);
 
             var bundleLoc2 = new ResourceLocationBase("cachedSizeTestBundle2", "http://nowhere.com/GetDownloadSize_WithList_CalculatesCachedBundlesBundle2.bundle",
                 typeof(AssetBundleProvider).FullName, typeof(object));
@@ -310,7 +329,7 @@ namespace AddressableAssetsIntegrationTests
                 (bundleLoc2.Data = CreateLocationSizeData("cachedSizeTestBundle2", bundleSize2, 123,
                     "09fe965a6b253fb9dbd3e1cb08b7d66f")) as ILocationSizeData;
             if (sizeData2 != null)
-                expectedSize += sizeData2.ComputeSize(bundleLoc2);
+                expectedSize += sizeData2.ComputeSize(bundleLoc2, null);
 
             var assetLoc = new ResourceLocationBase("cachedSizeTestAsset", "myASset.asset",
                 typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1, bundleLoc2);
@@ -354,7 +373,7 @@ namespace AddressableAssetsIntegrationTests
                 (bundleLoc1.Data = CreateLocationSizeData("cachedSizeTestBundle1", bundleSize1, 123,
                     "0e38e35d2177c282d5d6a2e54a803aab")) as ILocationSizeData;
             if (sizeData1 != null)
-                expectedSize += sizeData1.ComputeSize(bundleLoc1);
+                expectedSize += sizeData1.ComputeSize(bundleLoc1, null);
 
             var assetLoc1 = new ResourceLocationBase("cachedSizeTestAsset1", "myAsset1.asset",
                 typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1);
@@ -392,7 +411,7 @@ namespace AddressableAssetsIntegrationTests
                 (bundleLoc1.Data = CreateLocationSizeData("cachedSizeTestBundle1", bundleSize1, 123,
                     "0e38e35d2177c282d5d6a2e54a803aab")) as ILocationSizeData;
             if (sizeData1 != null)
-                expectedSize += sizeData1.ComputeSize(bundleLoc1);
+                expectedSize += sizeData1.ComputeSize(bundleLoc1, null);
 
             var bundleLoc2 = new ResourceLocationBase("cachedSizeTestBundle2", "http://nowhere.com/GetDownloadSize_WithList_CalculatesCachedBundlesBundle2.bundle",
                 typeof(AssetBundleProvider).FullName, typeof(object));
@@ -400,7 +419,7 @@ namespace AddressableAssetsIntegrationTests
                 (bundleLoc2.Data = CreateLocationSizeData("cachedSizeTestBundle2", bundleSize2, 123,
                     "09fe965a6b253fb9dbd3e1cb08b7d66f")) as ILocationSizeData;
             if (sizeData2 != null)
-                expectedSize += sizeData2.ComputeSize(bundleLoc2);
+                expectedSize += sizeData2.ComputeSize(bundleLoc2, null);
 
             var assetLoc1 = new ResourceLocationBase("cachedSizeTestAsset1", "myAsset1.asset",
                 typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1);

@@ -5,7 +5,10 @@ using UnityEditor.Compilation;
 
 namespace UnityEditor.AddressableAssets.Build
 {
-    internal class BuildUtility
+    /// <summary>
+    /// Utility class for the Addressables Build Content process.
+    /// </summary>
+    public class BuildUtility
     {
         static HashSet<string> s_EditorAssemblies = null;
         static HashSet<string> editorAssemblies

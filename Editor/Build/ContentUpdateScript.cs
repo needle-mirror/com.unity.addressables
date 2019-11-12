@@ -13,27 +13,69 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 
 namespace UnityEditor.AddressableAssets.Build
 {
+    /// <summary>
+    /// The given state of an Asset.  Represented by its guid and hash.
+    /// </summary>
     [Serializable]
-    struct AssetState : IEquatable<AssetState>
+    public struct AssetState : IEquatable<AssetState>
     {
+        /// <summary>
+        /// Asset states GUID.
+        /// </summary>
         public GUID guid;
+
+        /// <summary>
+        /// Asset State hash.
+        /// </summary>
         public Hash128 hash;
 
+        /// <summary>
+        /// Check if one asset state is equal to another.
+        /// </summary>
+        /// <param name="other">Right hand side of comparision.</param>
+        /// <returns>Returns true if the Asset States are equal to one another.</returns>
         public bool Equals(AssetState other)
         {
             return guid == other.guid && hash == other.hash;
         }
     }
 
+    /// <summary>
+    /// The Cached Asset State of an Addressable Asset.
+    /// </summary>
     [Serializable]
-    class CachedAssetState : IEquatable<CachedAssetState>
+    public class CachedAssetState : IEquatable<CachedAssetState>
     {
+        /// <summary>
+        /// The Asset State.
+        /// </summary>
         public AssetState asset;
+
+        /// <summary>
+        /// The Asset State of all dependencies.
+        /// </summary>
         public AssetState[] dependencies;
+
+        /// <summary>
+        /// The guid for the group the cached asset state belongs to.
+        /// </summary>
         public string groupGuid;
+
+        /// <summary>
+        /// The name of the cached asset states bundle file.
+        /// </summary>
         public string bundleFileId;
+
+        /// <summary>
+        /// The cached asset state data.
+        /// </summary>
         public object data;
 
+        /// <summary>
+        /// Checks if one cached asset state is equal to another given the asset state and dependency state.
+        /// </summary>
+        /// <param name="other">Right hand side of comparision.</param>
+        /// <returns>Returns true if the cached asset states are equal to one another.</returns>
         public bool Equals(CachedAssetState other)
         {
             bool result = other != null && asset.Equals(other.asset);
@@ -54,7 +96,7 @@ namespace UnityEditor.AddressableAssets.Build
     /// Data stored with each build that is used to generated content updates.
     /// </summary>
     [Serializable]
-    class AddressablesContentState
+    public class AddressablesContentState
     {
         /// <summary>
         /// The version that the player was built with.  This is usually set to AddressableAssetSettings.PlayerBuildVersion.
@@ -305,8 +347,8 @@ namespace UnityEditor.AddressableAssets.Build
         /// Loads cache data from a specific location
         /// </summary>
         /// <param name="contentStateDataPath"></param>
-        /// <returns></returns>
-        internal static AddressablesContentState LoadContentState(string contentStateDataPath)
+        /// <returns>The ContentState object.</returns>
+        public static AddressablesContentState LoadContentState(string contentStateDataPath)
         {
             if (string.IsNullOrEmpty(contentStateDataPath))
             {

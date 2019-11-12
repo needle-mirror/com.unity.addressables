@@ -13,7 +13,7 @@ namespace UnityEditor.AddressableAssets.Settings
         static bool s_IsListening;
         public static event Action sceneListChanged;
 
-        internal static void ClearState()
+        internal static void ClearState(bool clearCallbacks = false)
         {
             InvalidateCache();
             if(s_IsListening)
@@ -21,6 +21,8 @@ namespace UnityEditor.AddressableAssets.Settings
                 EditorBuildSettings.sceneListChanged -= EditorBuildSettings_sceneListChanged;
                 s_IsListening = false;
             }
+            if (clearCallbacks)
+                sceneListChanged = null;
         }
 
         public static EditorBuildSettingsScene[] scenes
