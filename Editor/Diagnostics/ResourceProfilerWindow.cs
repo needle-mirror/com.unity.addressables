@@ -19,6 +19,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         [MenuItem("Window/Asset Management/Addressables/Event Viewer", priority = 2051)]
         internal static void ShowWindow()
         {
+            var setting = AddressableAssetSettingsDefaultObject.Settings;
+            if (setting == null)
+            {
+                EditorUtility.DisplayDialog("Error", "Attempting to open Addressables Event Viewer window, but no Addressables Settings file exists.  \n\nOpen 'Window/Asset Management/Addressables/Groups' for more info.", "Ok");
+                return;
+            }
             var window = GetWindow<ResourceProfilerWindow>();
             window.titleContent = new GUIContent("Addressables Event Viewer", "Addressables Event Viewer");
             window.Show();

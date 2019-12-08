@@ -109,7 +109,7 @@ namespace UnityEditor.AddressableAssets.GUI
             var defaultSettings = AddressableAssetSettingsDefaultObject.Settings;
             if (defaultSettings == null)
             {
-                EditorUtility.DisplayDialog("Error", "Could not load default Addressable Asset settings.", "Ok");
+                EditorUtility.DisplayDialog("Error", "Attempting to open Addressables Hosting window, but no Addressables Settings file exists.  \n\nOpen 'Window/Asset Management/Addressables/Groups' for more info.", "Ok");
                 return;
             }
 

@@ -4,7 +4,7 @@ The Addressable Assets System consists of two packages:
 * Addressable Assets package (primary package)
 * Scriptable Build Pipeline package (dependency)
 
-When you install the Addressable Assets package, the Scriptable Build Pipeline package installs at the same time.
+When you install the Addressable Assets package, the Scriptable Build Pipeline package installs at the same time. See the latest version of the [Unity Scriptable Build Pipeline](https://docs.unity3d.com/Packages/com.unity.scriptablebuildpipeline@latest) documentation.
 
 ## Concepts
 The following concepts are referenced throughout this documentation:

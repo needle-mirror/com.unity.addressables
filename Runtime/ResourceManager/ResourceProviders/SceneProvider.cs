@@ -126,9 +126,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
             protected override void Execute()
             {
-                if (m_sceneLoadHandle.IsValid())
+                if (m_sceneLoadHandle.IsValid() && m_Instance.Scene.isLoaded)
                 {
-                    var unloadOp = SceneManager.UnloadSceneAsync(m_sceneLoadHandle.Result.Scene);
+                    var unloadOp = SceneManager.UnloadSceneAsync(m_Instance.Scene);
                     if (unloadOp == null)
                         UnloadSceneCompleted(null);
                     else

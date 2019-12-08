@@ -39,6 +39,8 @@ namespace UnityEditor.AddressableAssets.GUI
             if (wasChanged)
             {
                 st = (ProfileValueReference)m_SerializedFieldInfo.GetValue(property.serializedObject.targetObject);
+                if(st != null && st.OnValueChanged != null)
+                    st.OnValueChanged(st);
             }
 
             EditorGUI.EndProperty();

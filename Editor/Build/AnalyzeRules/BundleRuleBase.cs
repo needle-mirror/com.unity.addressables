@@ -143,6 +143,9 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
             foreach (var assetGroup in buildContext.settings.groups)
             {
+                if (assetGroup == null)
+                    continue;
+
                 List<string> bundles;
                 if (buildContext.assetGroupToBundles.TryGetValue(assetGroup, out bundles))
                 {
@@ -156,13 +159,26 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             }
 
             foreach (string key in bundleNamesToUpdate.Keys)
-                m_ExtractData.WriteData.FileToBundle[key] = bundleNamesToUpdate[key];
+            {
+                var bundle = m_ExtractData.WriteData.FileToBundle[key];
+                var inputDef = m_AllBundleInputDefs.FirstOrDefault(b => b.assetBundleName == bundle);
+                int index = m_AllBundleInputDefs.IndexOf(inputDef);
+                if (index >= 0)
+                {
+                    inputDef.assetBundleName = ConvertBundleName(inputDef.assetBundleName, bundleNamesToUpdate[key]);
+                    m_AllBundleInputDefs[index] = inputDef;
+                    m_ExtractData.WriteData.FileToBundle[key] = inputDef.assetBundleName;
+                }
+            }
         }
 
         internal void CalculateInputDefinitions(AddressableAssetSettings settings)
         {
             foreach (AddressableAssetGroup group in settings.groups)
             {
+                if (group == null)
+                    continue;
+
                 if (group.HasSchema<BundledAssetGroupSchema>())
                 {
                     var schema = group.GetSchema<BundledAssetGroupSchema>();
@@ -235,6 +251,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             }
 
             m_AddressableAssets = (from aaGroup in settings.groups
+                                   where aaGroup != null
                                    from entry in aaGroup.entries
                                    select new GUID(entry.guid)).ToList();
 
@@ -276,6 +293,13 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 results.Add(new AnalyzeResult{resultName = ruleName + " - No issues found."});
 
             return results;
+        }
+
+        protected string ConvertBundleName(string bundleName, string groupName)
+        {
+            string[] bundleNameSegments = bundleName.Split('_');
+            bundleNameSegments[0] = groupName.Replace(" ", "").ToLower();
+            return string.Join("_", bundleNameSegments);
         }
 
         public override void ClearAnalysis()

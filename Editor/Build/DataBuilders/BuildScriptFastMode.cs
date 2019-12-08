@@ -135,7 +135,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             float index = 0.0f;
             foreach (var entry in assetGroup.entries)
             {
-                EditorUtility.DisplayProgressBar($"Preparing Addressables Data ({assetGroup.Name})", entry.AssetPath, index / assetGroup.entries.Count);
                 if (entry.AssetPath == AddressableAssetEntry.ResourcesPath || entry.AssetPath == AddressableAssetEntry.EditorSceneListPath)
                 {
                     GatherAssetsForFolder(entry, aaContext);   
@@ -155,7 +154,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 index++;
             }
 
-            EditorUtility.ClearProgressBar();
             return string.Empty;
         }
 

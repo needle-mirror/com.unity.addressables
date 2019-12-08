@@ -35,6 +35,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
             var cacheData = ContentUpdateScript.LoadContentState(tempPath);
             Assert.NotNull(cacheData);
+            Settings.RemoveGroup(group);
         }
 
         [Test]
@@ -72,6 +73,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsNotNull(contentGroup);
             var movedEntry = contentGroup.GetAssetEntry(m_AssetGUID);
             Assert.AreSame(movedEntry, entry);
+            Settings.RemoveGroup(group);
         }
 
         [Test]
@@ -98,6 +100,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var buildOp = ContentUpdateScript.BuildContentUpdate(Settings, tempPath);
             Assert.IsNotNull(buildOp);
             Assert.IsTrue(string.IsNullOrEmpty(buildOp.Error));
+            Settings.RemoveGroup(group);
         }
 
         [Test]

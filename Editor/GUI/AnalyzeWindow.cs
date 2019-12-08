@@ -44,7 +44,7 @@ namespace UnityEditor.AddressableAssets.GUI
             AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
             {
-                Debug.LogError("Unable to load Addressable Asset Settings default object.");
+                EditorUtility.DisplayDialog("Error", "Attempting to open Addressables Analyze window, but no Addressables Settings file exists.  \n\nOpen 'Window/Asset Management/Addressables/Groups' for more info.", "Ok");
                 return;
             }
 

@@ -324,7 +324,43 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             AppendHash,
             NoHash,
-            OnlyHash
+            OnlyHash,
+            FileNameHash
+        }
+        
+        /// <summary>
+        /// Used to draw the Bundle Naming popup
+        /// </summary>
+        [CustomPropertyDrawer(typeof(BundleNamingStyle))]
+        class BundleNamingStylePropertyDrawer : PropertyDrawer
+        {
+            /// <summary>
+            /// Custom Drawer for the BundleNamingStyle in order to display easier to understand display names.
+            /// </summary>
+            public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+            {
+                EditorGUI.BeginProperty(position, label, property);
+                
+                GUIContent[] contents = new GUIContent[4];
+                contents[0] = new GUIContent("Filename", "Leave filename unchanged.");
+                contents[1] = new GUIContent("Append Hash to Filename", "Append filename with the AssetBundle content hash.");
+                contents[2] = new GUIContent("Use Hash of AssetBundle", "Replace filename with AssetBundle hash.");
+                contents[3] = new GUIContent("Use Hash of Filename", "Replace filename with hash of filename.");
+                
+                int enumValue = property.enumValueIndex;
+                enumValue = enumValue == 0 ? 1 : enumValue == 1 ? 0 : enumValue;
+                
+                EditorGUI.BeginChangeCheck();
+                int newValue = EditorGUI.Popup(position, new GUIContent(label.text, "Controls how the output AssetBundle's will be named."),
+                    enumValue, contents );
+                if(EditorGUI.EndChangeCheck())
+                {
+                    newValue = newValue == 0 ? 1 : newValue == 1 ? 0 : newValue;
+                    property.enumValueIndex = newValue;
+                }
+                
+                EditorGUI.EndProperty();
+            }
         }
 
         [SerializeField]

@@ -85,7 +85,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 AddressableAssetGroup assetGroup = aaSettings.DefaultGroup;
                 string groupGuid;
                 if (bundleToAssetGroup.TryGetValue(kvp.Key, out groupGuid))
-                    assetGroup = aaSettings.FindGroup(g => g.Guid == groupGuid);
+                    assetGroup = aaSettings.FindGroup(g => g != null && g.Guid == groupGuid);
 
                 List<string> bundles;
                 if (!assetGroupToBundle.TryGetValue(assetGroup, out bundles))

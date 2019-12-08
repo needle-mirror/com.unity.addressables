@@ -4,6 +4,19 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2019-12-09
+- Fixed temporary StreamingAssets files not being removed on a failed player build.
+- Added Bundle Naming option for naming as a hash of the full filename string.
+- Added a delay before unloaded things are removed from graph.  Ideally this would track with dependencies, but for now it's simply time based.
+- Fixed ProfileValueReferences not getting set dirty when changed.
+- Added ability for Addressables to handle null references in the Addressables groups list.  
+	-Null groups should not affect or influence content builds, updates, or Analyze rules.
+	-Right clicking on a [Missing Reference] will give you the option to remove all missing references.
+- Fixed issue with Analyze reporting multiple duplicate data for one group.
+- Fixed issue where unloading a scene was throwing an invalid handle error.
+- Added Addressables.ClearDependencyCacheAsync API to clear cached dependent AssetBundles for a given key or list of keys.
+- Added type conversion from AnimatorController to RuntimeAnimatorController.
+
 ## [1.4.0] - 2019-11-13
 - Added the ability to disable checking for content catalog updates during initialization.
 - Fixed issue where turning off Include in Build in the right circumstances would throw an exception.

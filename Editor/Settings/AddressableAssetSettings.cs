@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor.AddressableAssets.Build;
@@ -1055,7 +1056,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <returns>The group found or null.</returns>
         public AddressableAssetGroup FindGroup(Func<AddressableAssetGroup, bool> func)
         {
-            return groups.Find(g => func(g));
+            return groups.Find(g => g != null && func(g));
         }
 
 
@@ -1066,7 +1067,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <returns>The group found or null.</returns>
         public AddressableAssetGroup FindGroup(string groupName)
         {
-            return FindGroup(g => g.Name == groupName);
+            return FindGroup(g => g != null && g.Name == groupName);
         }
 
         /// <summary>
@@ -1192,7 +1193,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             if (missingGroupsIndices.Count > 0)
             {
-                Debug.LogError("Addressable settings contains " + missingGroupsIndices.Count + " group reference(s) that are no longer there. Removing reference(s).");
+                Debug.Log("Addressable settings contains " + missingGroupsIndices.Count + " group reference(s) that are no longer there. Removing reference(s).");
                 for (int i = missingGroupsIndices.Count - 1; i >= 0; i--)
                 {
                     groups.RemoveAt(missingGroupsIndices[i]);
@@ -1408,7 +1409,8 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (var t in types)
                 group.AddSchema(t);
 
-            groups.Add(group);
+            if(!m_GroupAssets.Contains(group))
+                groups.Add(group);
 
             if (setAsDefaultGroup)
                 DefaultGroup = group;
@@ -1448,7 +1450,7 @@ namespace UnityEditor.AddressableAssets.Settings
             bool foundExisting = false;
             foreach (var g in groups)
             {
-                if (g.Name == groupName)
+                if (g != null && g.Name == groupName)
                 {
                     foundExisting = true;
                     break;
@@ -1468,10 +1470,10 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal void RemoveGroupInternal(AddressableAssetGroup g, bool deleteAsset, bool postEvent)
         {
-            g.ClearSchemas(true);
+            g?.ClearSchemas(true);
             groups.Remove(g);
             SetDirty(ModificationEvent.GroupRemoved, g, postEvent, true);
-            if (deleteAsset)
+            if (g != null && deleteAsset)
             {
                 string guidOfGroup;
                 long localId;
@@ -1507,6 +1509,16 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (typeof(AddressableAssetGroup).IsAssignableFrom(assetType))
                 {
                     AddressableAssetGroup group = aa.FindGroup(Path.GetFileNameWithoutExtension(str));
+                    if (group == null)
+                    {
+                        var foundGroup = AssetDatabase.LoadAssetAtPath<AddressableAssetGroup>(str);
+                        if (!aa.groups.Contains(foundGroup))
+                        {
+                            aa.groups.Add(foundGroup);
+                            group = aa.FindGroup(Path.GetFileNameWithoutExtension(str));
+                            modified = true;
+                        }
+                    }
                     if (group != null)
                         group.DedupeEnteries();
                 }
@@ -1599,11 +1611,8 @@ namespace UnityEditor.AddressableAssets.Settings
                     modified = isAlreadyAddressable || startedInResources || endedInResources || inEditorSceneList;
                 }
             }
-            if (RemoveMissingGroupReferences())
-            {
-                modified = true;
-            }
-            if (modified)
+
+            if(modified)
                 aa.SetDirty(ModificationEvent.BatchModification, null, true, true);
         }
 
@@ -1656,6 +1665,8 @@ namespace UnityEditor.AddressableAssets.Settings
 
             foreach (AddressableAssetGroup group in settings.groups)
             {
+                if (group == null)
+                    continue;
                 foreach (AddressableAssetEntry entry in group.entries)
                     entry.BundleFileId = null;
             }

@@ -943,6 +943,201 @@ namespace AddressableAssetsIntegrationTests
             handle.Release();
         }
 
+        [UnityTest]
+        public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForKey()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+
+            string hash = "123456789";
+            string bundleName = $"test_{hash}";
+
+            CreateFakeCachedBundle(bundleName, hash);
+
+            List<Hash128> versions = new List<Hash128>();
+            Caching.GetCachedVersions(bundleName, versions);
+            Assert.AreEqual(1, versions.Count);
+            versions.Clear();
+
+            string key = "lockey";
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object), 
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)));
+
+            (m_Addressables.m_ResourceLocators[0].Locator as ResourceLocationMap).Add(location.PrimaryKey, new List<IResourceLocation>(){location});
+
+            yield return m_Addressables.ClearDependencyCacheAsync(key);
+            Caching.GetCachedVersions(bundleName, versions);
+            Assert.AreEqual(0, versions.Count);
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForKeyWithDependencies()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+
+            string hash = "123456789";
+            string bundleName = $"test_{hash}";
+
+            string depHash = "97564231";
+            string depBundleName = $"test_{depHash}";
+
+            CreateFakeCachedBundle(bundleName, hash);
+            CreateFakeCachedBundle(depBundleName, depHash);
+
+            string key = "lockey_withdeps";
+
+            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(object), 
+                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(object)));
+
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)),
+                depLocation);
+
+            (m_Addressables.m_ResourceLocators[0].Locator as ResourceLocationMap).Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+
+            yield return m_Addressables.ClearDependencyCacheAsync(key);
+
+            List<Hash128> versions = new List<Hash128>();
+            Caching.GetCachedVersions(bundleName, versions);
+            Assert.AreEqual(0, versions.Count);
+            versions.Clear();
+            Caching.GetCachedVersions(depBundleName, versions);
+            Assert.AreEqual(0, versions.Count);
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocation()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+
+            string hash = "123456789";
+            string bundleName = $"test_{hash}";
+
+            CreateFakeCachedBundle(bundleName, hash);
+
+            List<Hash128> versions = new List<Hash128>();
+            Caching.GetCachedVersions(bundleName, versions);
+            Assert.AreEqual(1, versions.Count);
+            versions.Clear();
+
+            string key = "lockey_forlocationtest";
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)));
+
+            (m_Addressables.m_ResourceLocators[0].Locator as ResourceLocationMap).Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+
+            yield return m_Addressables.ClearDependencyCacheAsync(location);
+            Caching.GetCachedVersions(bundleName, versions);
+            Assert.AreEqual(0, versions.Count);
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocationWithDependencies()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+
+            string hash = "123456789";
+            string bundleName = $"test_{hash}";
+
+            string depHash = "97564231";
+            string depBundleName = $"test_{depHash}";
+
+            CreateFakeCachedBundle(bundleName, hash);
+            CreateFakeCachedBundle(depBundleName, depHash);
+
+            string key = "lockey_withdeps_forlocationtest";
+
+            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(object),
+                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(object)));
+
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)),
+                depLocation);
+
+            (m_Addressables.m_ResourceLocators[0].Locator as ResourceLocationMap).Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+
+            yield return m_Addressables.ClearDependencyCacheAsync(location);
+
+            List<Hash128> versions = new List<Hash128>();
+            Caching.GetCachedVersions(bundleName, versions);
+            Assert.AreEqual(0, versions.Count);
+            versions.Clear();
+            Caching.GetCachedVersions(depBundleName, versions);
+            Assert.AreEqual(0, versions.Count);
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocationList()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+
+            string hash = "123456789";
+            string bundleName = $"test_{hash}";
+
+            CreateFakeCachedBundle(bundleName, hash);
+
+            List<Hash128> versions = new List<Hash128>();
+            Caching.GetCachedVersions(bundleName, versions);
+            Assert.AreEqual(1, versions.Count);
+            versions.Clear();
+
+            string key = "lockey_forlocationlisttest";
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)));
+
+            (m_Addressables.m_ResourceLocators[0].Locator as ResourceLocationMap).Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+
+            yield return m_Addressables.ClearDependencyCacheAsync(new List<IResourceLocation>(){location});
+            Caching.GetCachedVersions(bundleName, versions);
+            Assert.AreEqual(0, versions.Count);
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocationListWithDependencies()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+
+            string hash = "123456789";
+            string bundleName = $"test_{hash}";
+
+            string depHash = "97564231";
+            string depBundleName = $"test_{depHash}";
+
+            CreateFakeCachedBundle(bundleName, hash);
+            CreateFakeCachedBundle(depBundleName, depHash);
+
+            string key = "lockey_withdeps_forlocationlisttest";
+
+            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(object),
+                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(object)));
+
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)),
+                depLocation);
+
+            (m_Addressables.m_ResourceLocators[0].Locator as ResourceLocationMap).Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+
+            yield return m_Addressables.ClearDependencyCacheAsync(new List<IResourceLocation>() { location });
+
+            List<Hash128> versions = new List<Hash128>();
+            Caching.GetCachedVersions(bundleName, versions);
+            Assert.AreEqual(0, versions.Count);
+            versions.Clear();
+            Caching.GetCachedVersions(depBundleName, versions);
+            Assert.AreEqual(0, versions.Count);
+#endif
+        }
+
         string CreateFakeCachedBundle(string bundleName, string hash)
         {
             string fakeCachePath = string.Format("{0}/{1}/{2}", Caching.defaultCache.path, bundleName, hash);

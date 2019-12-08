@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEngine.AddressableAssets.Initialization;
@@ -83,7 +84,7 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
-        List<ResourceLocatorInfo> m_ResourceLocators = new List<ResourceLocatorInfo>();
+        internal List<ResourceLocatorInfo> m_ResourceLocators = new List<ResourceLocatorInfo>();
         AsyncOperationHandle<IResourceLocator> m_InitializationOperation;
         AsyncOperationHandle<List<string>> m_ActiveCheckUpdateOperation;
         AsyncOperationHandle<List<IResourceLocator>> m_ActiveUpdateOperation;
@@ -799,6 +800,65 @@ namespace UnityEngine.AddressableAssets
                     handle.Completed += op => Release(op);
                 return handle;
             }
+        }
+
+        internal void ClearDependencyCacheForKey(object key)
+        {
+            IList<IResourceLocation> locations;
+            if (key is IResourceLocation && (key as IResourceLocation).HasDependencies)
+            {
+                foreach (var dep in (key as IResourceLocation).Dependencies)
+                    Caching.ClearAllCachedVersions(Path.GetFileName(dep.InternalId));
+            }
+            else if (GetResourceLocations(key, typeof(object), out locations))
+            {
+                foreach (var loc in locations)
+                {
+                    if (loc.HasDependencies)
+                    {
+                        foreach (var dep in loc.Dependencies)
+                            Caching.ClearAllCachedVersions(Path.GetFileName(dep.InternalId));
+                    }
+                }
+            }
+        }
+
+        public AsyncOperationHandle<bool> ClearDependencyCacheAsync(object key)
+        {
+            if (ShouldChainRequest)
+                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(key));
+
+            ClearDependencyCacheForKey(key);
+
+            var completedOp = ResourceManager.CreateCompletedOperation(true, string.Empty);
+            Release(completedOp);
+            return completedOp;
+        }
+
+        public AsyncOperationHandle<bool> ClearDependencyCacheAsync(IList<IResourceLocation> locations)
+        {
+            if (ShouldChainRequest)
+                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(locations));
+
+            foreach (var location in locations)
+                    ClearDependencyCacheForKey(location);
+
+            var completedOp = ResourceManager.CreateCompletedOperation(true, string.Empty);
+            Release(completedOp);
+            return completedOp;
+        }
+
+        public AsyncOperationHandle<bool> ClearDependencyCacheAsync(IList<object> keys)
+        {
+            if (ShouldChainRequest)
+                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(keys));
+
+            foreach (var key in keys)
+                ClearDependencyCacheForKey(key);
+
+            var completedOp = ResourceManager.CreateCompletedOperation(true, string.Empty);
+            Release(completedOp);
+            return completedOp;
         }
 
         public  AsyncOperationHandle<GameObject> InstantiateAsync(IResourceLocation location, Transform parent = null, bool instantiateInWorldSpace = false, bool trackHandle = true)

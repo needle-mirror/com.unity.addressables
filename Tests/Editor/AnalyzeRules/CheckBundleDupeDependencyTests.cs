@@ -261,11 +261,9 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             Assert.AreEqual(2, dupeResults.Count);
 
             Assert.AreEqual(group1.Name, dupeResults[0].Group.Name);
-            Assert.AreEqual(2, dupeResults[0].DuplicatedFiles.Count);
             Assert.AreEqual(k_CheckDupeMyMaterial, dupeResults[0].AssetPath);
 
             Assert.AreEqual(group2.Name, dupeResults[1].Group.Name);
-            Assert.AreEqual(2, dupeResults[1].DuplicatedFiles.Count);
             Assert.AreEqual(k_CheckDupeMyMaterial, dupeResults[1].AssetPath);
 
             //Cleanup

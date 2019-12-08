@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
+using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -153,18 +154,19 @@ namespace UnityEditor.AddressableAssets.Settings
         /// </summary>
         public HashSet<string> labels { get { return m_Labels; } }
 
-        Type m_mainAssetType = null;
+        [SerializeField]
+        string m_mainAssetType = null;
         internal Type MainAssetType
         {
             get
             {
-                if (m_mainAssetType == null)
+                if (string.IsNullOrEmpty(m_mainAssetType))
                 {
-                    m_mainAssetType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath);
-                    if (m_mainAssetType == null)
+                    m_mainAssetType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath)?.AssemblyQualifiedName;
+                    if (string.IsNullOrEmpty(m_mainAssetType))
                         return typeof(object); // do not cache a bad type lookup.
                 }
-                return m_mainAssetType;
+                return Type.GetType(m_mainAssetType);
             }
         }
 
@@ -595,13 +597,11 @@ namespace UnityEditor.AddressableAssets.Settings
             var keyList = CreateKeyList();
             var mainType = MainAssetType;
 
-            if (mainType == typeof(SceneAsset))
-                mainType = typeof(SceneInstance);
-            var mainEntry = new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, dependencies, extraData);
-            entries.Add(mainEntry);
-
             if (!CheckForEditorAssembly(ref mainType, assetPath, !IsInResources))
                 return;
+
+            var mainEntry = new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, dependencies, extraData);
+            entries.Add(mainEntry);
 
             if (mainType == typeof(SpriteAtlas))
             {
@@ -652,6 +652,12 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (t == typeof(UnityEditor.Animations.AnimatorController))
                 {
                     t = typeof(RuntimeAnimatorController);
+                    return true;
+                }
+
+                if (t == typeof(UnityEditor.SceneAsset))
+                {
+                    t = typeof(SceneInstance);
                     return true;
                 }
                 if (t.FullName == "UnityEditor.Audio.AudioMixerController")

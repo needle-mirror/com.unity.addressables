@@ -49,7 +49,7 @@ namespace UnityEditor.AddressableAssets.Tests
             bool b = Settings.RemoveMissingGroupReferences();
             Assert.AreEqual(Settings.groups.Count + 1, size);
             Settings.groups.Add(x);
-            LogAssert.Expect(LogType.Error, "Addressable settings contains 1 group reference(s) that are no longer there. Removing reference(s).");
+            LogAssert.Expect(LogType.Log, "Addressable settings contains 1 group reference(s) that are no longer there. Removing reference(s).");
         }
 
         [Test]

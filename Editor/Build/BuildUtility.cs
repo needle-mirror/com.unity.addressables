@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.Compilation;
 
 namespace UnityEditor.AddressableAssets.Build
@@ -47,10 +48,12 @@ namespace UnityEditor.AddressableAssets.Build
                 case BundledAssetGroupSchema.BundleNamingStyle.OnlyHash:
                     result = hash + ".bundle";
                     break;
+                case BundledAssetGroupSchema.BundleNamingStyle.FileNameHash:
+                    result = HashingMethods.Calculate(result) + ".bundle";
+                    break;
             }
 
             return result;
-
         }
     }
 }

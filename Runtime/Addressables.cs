@@ -564,6 +564,36 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
+        /// Clear the cached AssetBundles for a given key.  Operation may be performed async if Addressables
+        /// is initializing or updating.
+        /// </summary>
+        /// <param name="key">The key to clear the cache for.</param>
+        public static void ClearDependencyCacheAsync(object key)
+        {
+            m_Addressables.ClearDependencyCacheAsync(key);
+        }
+
+        /// <summary>
+        /// Clear the cached AssetBundles for a list of Addressable locations.  Operation may be performed async if Addressables
+        /// is initializing or updating.
+        /// </summary>
+        /// <param name="locations">The locations to clear the cache for.</param>
+        public static void ClearDependencyCacheAsync(IList<IResourceLocation> locations)
+        {
+            m_Addressables.ClearDependencyCacheAsync(locations);
+        }
+
+        /// <summary>
+        /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
+        /// is initializing or updating.
+        /// </summary>
+        /// <param name="keys">The keys to clear the cache for.</param>
+        public static void ClearDependencyCacheAsync(IList<object> keys)
+        {
+            m_Addressables.ClearDependencyCacheAsync(keys);
+        }
+
+        /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.  
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>

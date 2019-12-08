@@ -71,6 +71,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         internal string[] GetAllAddressableSpriteAtlasPaths(AddressableAssetSettings settings)
         {
            return (from addrGroup in settings.groups
+                   where addrGroup != null
                    from asset in addrGroup.entries
                    where asset.MainAssetType == typeof(SpriteAtlas)
                    select asset.AssetPath).ToArray();

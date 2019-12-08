@@ -27,15 +27,6 @@ Simulate Groups mode helps you simulate load strategies and tweak your content g
 #### Use Existing Build (requires built groups)
 Use Existing Build mode most closely matches a deployed application build, but it requires you to build the data as a separate step. If you aren't modifying assets, this mode is the fastest since it does not process any data when entering Play mode. You must either build the content for this mode in the **Addressables Groups** window (**Window** > **Asset Management** > **Addressables** > **Groups**) by selecting **Build** > **New Build** > **Default Build Script**, or using the `AddressableAssetSettings.BuildPlayerContent()` method in your game script.
 
-#### Choosing the right script
-To apply a Play mode script, from the **Addressables Groups** window menu (**Window** > **Asset Management** > **Addressables** > **Groups**), select **Play Mode Script** and choose from the dropdown options. Each mode has its own time and place during development and deployment. The following table illustrates stages of the development cycle in which a particular mode is useful.
-
-| | **Design** | **Develop** | **Build** | **Test / Play** | **Publish** |
-|:---|:---|:---|:---|:---|:---|
-| Use Asset Database | x | x |   | In-Editor only |   |
-| Simulate Groups | x | x | Asset bundle layout | In-Editor only |  |
-| Use Existing Build |   |   | Asset bundles  | x | x |
-
 ## Analysis and debugging
 By default, Addressable Assets only logs warnings and errors. You can enable detailed logging by opening the **Player** settings window (**Edit** > **Project Settings...** > **Player**), navigating to the **Other Settings** > **Configuration** section, and adding "`ADDRESSABLES_LOG_ALL`" to the **Scripting Define Symbols** field. 
 
@@ -47,7 +38,7 @@ You can attach objects to the Addressable Assets settings and pass them to the i
 ## Customizing URL Evaluation
 There are several scenarios where you will need to customize the path or URL of an asset (an AssetBundle generally) at runtime.  The most common example is creating signed URLs.  Another might be dynamic host determination.  
 
-The code below is an example of appending a query string to all urls:
+The code below is an example of appending a query string to all URLs:
 
 ```
 //Implement a method to transform the internal ids of locations
@@ -83,7 +74,7 @@ Note that in cases that do not allow remote updates (such as many of the current
 ### How it works
 Addressables uses a content catalog to map an address to each asset, specifying where and how to load it. In order to provide your app with the ability to modify that mapping, your original app must be aware of an online copy of this catalog. To set that up, enable the **Build Remote Catalog** setting on the `AddressableAssetSettings` Inspector. This ensures that a copy of the catalog gets built to and loaded from the specified paths. This load path cannot change once your app has shipped. The content update process creates a new version of the catalog (with the same file name) to overwrite the file at the previously specified load path.
 
-Building an application generates a unique app content version string, which identifies what content catalog each app should load. A given server can contain catalogs of multiple versions of your app without conflict. We store the data we need in the _addressables_content_state.bin_ file. This includes the version string, along with hash information for any asset that is contained in a group marked as `StaticContent`.  By default, this file is located in the same folder as your _AddressableAssetSettings.asset_ file.  
+Building an application generates a unique app content version string, which identifies what content catalog each app should load. A given server can contain catalogs of multiple versions of your app without conflict. We store the data we need in the _addressables_content_state.bin_ file. This includes the version string, along with hash information for any asset that is contained in a group marked as `StaticContent`.  By default, this is located in the _Assets/AddressableAssetsData/\<platform\>_ Project directory, where _\<platform\>_ is your target platform.
 
 The _addressables_content_state.bin_ file contains hash and dependency information for every `StaticContent` asset group in the Addressables system. All groups building to the _StreamingAssets_ folder should be marked as `StaticContent`, though large remote groups may also benefit from this designation. During the next step (preparing for content update, described below), this hash information determines if any `StaticContent` groups contain changed assets, and thus need those assets moved elsewhere.
 
@@ -97,7 +88,7 @@ If you have modified assets in any `StaticContent` groups, you'll need to run th
 
 1. Open the **Addressables Groups** window in the Unity Editor (**Window** > **Asset Management** > **Addressables** > **Groups**).
 2. In the **Addressables Groups** window, select **Tools** on the top menu bar, then **Check for Content Update Restrictions**.
-3. In the **Build Data File** dialog that opens, select the _addressables_content_state.bin_ file (by default, this is located in the _Assets/AddressableAssetsData_ Project directory.
+3. In the **Build Data File** dialog that opens, select the _addressables_content_state.bin_ file (by default, this is located in the _Assets/AddressableAssetsData/\<platform\>_ Project directory, where _\<platform\>_ is your target platform).
 
 This data is used to determine which assets or dependencies have been modified since the application was last built. The system moves these assets to a new group in preparation for the content update build. 
 
@@ -110,7 +101,7 @@ To build for a content update:
 
 1. Open the **Addressables Groups** window in the Unity Editor (**Window** > **Asset Management** > **Addressables** > **Groups**).
 2. In the **Addressables Groups** window, select **Build** on the top menu, then **Update a Previous Build**.
-3. In the **Build Data File** dialog that opens, select the build folder of an existing application build. The build folder must contain an _addressables_content_state.bin_ file. 
+3. In the **Build Data File** dialog that opens, select the build folder of an existing application build. The build folder must contain an _addressables_content_state.bin_ file (by default, this is located in the _Assets/AddressableAssetsData/\<platform\>_ Project directory, where _\<platform\>_ is your target platform). 
 
 The build generates a content catalog, a hash file, and the asset bundles.
 
@@ -119,6 +110,8 @@ The generated content catalog has the same name as the catalog in the selected a
 The system uses the content version string and location information from the _addressables_content_state.bin_ file to create the asset bundles. Asset bundles that do not contain updated content are written using the same file names as those in the build selected for the update. If an asset bundle contains updated content, a new asset bundle is generated that contains the updated content, with a new file name so that it can coexist with the original. Only asset bundles with new file names must be copied to the location that hosts your content.  
 
 The system also builds asset bundles for static content, but you do not need to upload them to the content hosting location, as no Addressables asset entries reference them.
+
+Note that you should not change the build scripts between building a new player and making content updates (e.g., player code, addressables). This could cause unpredictable behavior in your application.
 
 ### Checking for content updates at runtime
 You can add a custom script to periodically check whether there are new Addressables content updates. Use the following function call to start the update:

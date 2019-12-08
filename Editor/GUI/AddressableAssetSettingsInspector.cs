@@ -99,6 +99,8 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Load Path", "The path to load a remote content catalog.");
         GUIContent m_CertificateHandlerType =
              new GUIContent("Custom certificate handler", "The class to use for custom certificate handling.  This type must inherit from UnityEngine.Networking.CertificateHandler.");
+        GUIContent m_ProfileInUse = 
+            new GUIContent("Profile In Use", "This is the active profile that will be used to evaluate all profile variables during a build and when entering play mode.");
 
         public override void OnInspectorGUI()
         {
@@ -126,7 +128,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         m_CurrentProfileIndex = profileNames.IndexOf(AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileName(AddressableAssetSettingsDefaultObject.Settings.activeProfileId));
                     }
                     
-                    m_CurrentProfileIndex = EditorGUILayout.Popup("Profile In Use", m_CurrentProfileIndex, profileNames.ToArray());
+                    m_CurrentProfileIndex = EditorGUILayout.Popup(m_ProfileInUse, m_CurrentProfileIndex, profileNames.ToArray());
                     AddressableAssetSettingsDefaultObject.Settings.activeProfileId = AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileId(profileNames[m_CurrentProfileIndex]);
                     
                     EditorGUILayout.BeginHorizontal();
@@ -148,6 +150,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (m_CatalogFoldout)
             {
                 m_AasTarget.DisableCatalogUpdateOnStartup = EditorGUILayout.Toggle(m_CheckForCatalogUpdateOnInit, m_AasTarget.DisableCatalogUpdateOnStartup);
+                m_AasTarget.OverridePlayerVersion = EditorGUILayout.TextField(m_OverridePlayerVersion, m_AasTarget.OverridePlayerVersion);
                 m_AasTarget.BuildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
 
                 if ( (m_AasTarget.RemoteCatalogBuildPath != null && m_AasTarget.RemoteCatalogLoadPath != null) // these will never actually be null, as the accessor initializes them.
@@ -164,7 +167,6 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 ProjectConfigData.postProfilerEvents = EditorGUILayout.Toggle(m_SendProfilerEvents, ProjectConfigData.postProfilerEvents);
                 m_AasTarget.buildSettings.LogResourceManagerExceptions = EditorGUILayout.Toggle(m_LogRuntimeExceptions, m_AasTarget.buildSettings.LogResourceManagerExceptions);
-                m_AasTarget.OverridePlayerVersion = EditorGUILayout.TextField(m_OverridePlayerVersion, m_AasTarget.OverridePlayerVersion);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("m_CertificateHandlerType"), m_CertificateHandlerType);
                 m_AasTarget.UniqueBundleIds = EditorGUILayout.Toggle(m_UniqueBundles, m_AasTarget.UniqueBundleIds);
             }

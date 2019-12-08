@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -13,16 +14,20 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
 
     public void OnPostprocessBuild(BuildReport report)
     {
-        string addressablesStreamingAssets =
-            Application.streamingAssetsPath + "/" + Addressables.StreamingAssetsSubFolder;
-        if (Directory.Exists(Addressables.PlayerBuildDataPath))
+        CleanTemporaryPlayerBuildData();
+    }
+    
+    [InitializeOnLoadMethod]
+    static void CleanTemporaryPlayerBuildData()
+    {
+        string addressablesStreamingAssets = Path.Combine(Application.streamingAssetsPath, Addressables.StreamingAssetsSubFolder);
+        if (Directory.Exists(addressablesStreamingAssets))
         {
-            Debug.Log(string.Format("Deleting Addressables data from {0}.", Addressables.PlayerBuildDataPath));
-            Directory.Delete(Addressables.PlayerBuildDataPath, true);
+            Debug.Log(string.Format("Deleting Addressables data from {0}.", addressablesStreamingAssets));
+            Directory.Delete(addressablesStreamingAssets, true);
+            //Will delete the directory only if it's empty
+            DirectoryUtility.DeleteDirectory(Application.streamingAssetsPath);
         }
-
-        //Will delete the directory only if it's empty
-        DirectoryUtility.DeleteDirectory(addressablesStreamingAssets);
     }
 
     public void OnPreprocessBuild(BuildReport report)

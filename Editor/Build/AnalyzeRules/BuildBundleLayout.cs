@@ -26,7 +26,9 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             }
 
             CalculateInputDefinitions(settings);
-            RefreshBuild(GetBuildContext(settings));
+            var context = GetBuildContext(settings);
+            RefreshBuild(context);
+            ConvertBundleNamesToGroupNames(context);
 
             m_Results = (from bundleBuild in m_AllBundleInputDefs
                          let bundleName = bundleBuild.assetBundleName

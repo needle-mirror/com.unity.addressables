@@ -70,9 +70,12 @@ namespace UnityEditor.AddressableAssets.GUI
             for(int i = 0; i < selectedIds.Count; i++)
             {
                 var item = FindItemInVisibleRows(selectedIds[i]);
-                if (item != null && item.group != null)
+                if (item != null)
                 {
-                    selectedObjects[i] = item.group;
+                    if(item.group != null)
+                        selectedObjects[i] = item.group;
+                    else if (item.entry != null)
+                        selectedObjects[i] = item.entry.MainAsset;
                 }
             }
 
@@ -94,7 +97,6 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var root = new TreeViewItem(-1, -1);
             foreach (var group in m_Editor.settings.groups)
-                if(group!=null)
                     AddGroupChildrenBuild(group, root);
 
             return root;
@@ -255,7 +257,8 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var groupItem = new AssetEntryTreeViewItem(group, 0);
             root.AddChild(groupItem);
-            if (group.entries.Count > 0)
+
+            if (group != null && group.entries.Count > 0)
             {
 
                 foreach (var entry in group.entries)
@@ -328,7 +331,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             var item = args.item as AssetEntryTreeViewItem;
-            if (item == null)
+            if (item == null || item.group == null && item.entry == null)
             {
                 base.RowGUI(args);
             }
@@ -663,11 +666,11 @@ namespace UnityEditor.AddressableAssets.GUI
                         menu.AddItem(new GUIContent("Inspect Group Settings"), false, GoToGroupAsset, selectedNodes);
                     }
                 }
-                if (isEntry)
+                else if (isEntry)
                 {
                     foreach (var g in m_Editor.settings.groups)
                     {
-                        if (!g.ReadOnly)
+                        if (g != null && !g.ReadOnly)
                             menu.AddItem(new GUIContent("Move Addressables to Group/" + g.Name), false, MoveEntriesToGroup, g);
                     }
 
@@ -686,6 +689,9 @@ namespace UnityEditor.AddressableAssets.GUI
                     menu.AddItem(new GUIContent("Export Addressables"), false, CreateExternalEntryCollection, selectedNodes);
 
                 }
+                else
+                    menu.AddItem(new GUIContent("Clear missing references."), false, RemoveMissingReferences);
+
             }
             else
             {
@@ -877,6 +883,12 @@ namespace UnityEditor.AddressableAssets.GUI
             Reload();
         }
 
+        protected void RemoveMissingReferences()
+        {
+            if(m_Editor.settings.RemoveMissingGroupReferences())
+                m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupRemoved, null, true, true);
+        }
+
         protected void RemoveGroup(object context)
         {
             if (EditorUtility.DisplayDialog("Delete selected groups?", "Are you sure you want to delete the selected groups?\n\nYou cannot undo this action.", "Yes", "No"))
@@ -887,7 +899,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 var groups = new List<AddressableAssetGroup>();
                 foreach (var item in selectedNodes)
                 {
-                    m_Editor.settings.RemoveGroupInternal(item.group, true, false);
+                    m_Editor.settings.RemoveGroupInternal(item == null ? null : item.group, true, false);
                     groups.Add(item.group);
                 }
                 m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupRemoved, groups, true, true);
@@ -1126,68 +1138,120 @@ namespace UnityEditor.AddressableAssets.GUI
         DragAndDropVisualMode HandleDragAndDropPaths(AssetEntryTreeViewItem target, DragAndDropArgs args)
         {
             DragAndDropVisualMode visualMode = DragAndDropVisualMode.None;
-            
-            if (target == null)
+
+            bool containsGroup = false;
+            foreach (var path in DragAndDrop.paths)
+            {
+                if (PathPointsToAssetGroup(path))
+                {
+                    containsGroup = true;
+                    break;
+                }
+            }
+
+            if (target == null && !containsGroup)
                 return DragAndDropVisualMode.Rejected;
 
             foreach (String path in DragAndDrop.paths)
             {
-                if (!AddressableAssetUtility.IsPathValidForEntry(path))
+                if (!AddressableAssetUtility.IsPathValidForEntry(path) && (!PathPointsToAssetGroup(path) && target != rootItem))
                     return DragAndDropVisualMode.Rejected;
             }
             visualMode = DragAndDropVisualMode.Copy;
 
             if (args.performDrop && visualMode != DragAndDropVisualMode.Rejected)
             {
-                AddressableAssetGroup parent = null;
-                bool targetIsGroup = false;
-                if (target.group != null)
+                if (!containsGroup)
                 {
-                    parent = target.group;
-                    targetIsGroup = true;
-                }
-                else if (target.entry != null)
-                    parent = target.entry.parentGroup;
+                    AddressableAssetGroup parent = null;
+                    bool targetIsGroup = false;
+                    if (target.group != null)
+                    {
+                        parent = target.group;
+                        targetIsGroup = true;
+                    }
+                    else if (target.entry != null)
+                        parent = target.entry.parentGroup;
 
-                if (parent != null)
+                    if (parent != null)
+                    {
+                        var resourcePaths = new List<string>();
+                        var nonResourcePaths = new List<string>();
+                        foreach (var p in DragAndDrop.paths)
+                        {
+                            if (AddressableAssetUtility.IsInResources(p))
+                                resourcePaths.Add(p);
+                            else
+                                nonResourcePaths.Add(p);
+                        }
+
+                        bool canMarkNonResources = true;
+                        if (resourcePaths.Count > 0)
+                        {
+                            canMarkNonResources =
+                                AddressableAssetUtility.SafeMoveResourcesToGroup(m_Editor.settings, parent,
+                                    resourcePaths);
+                        }
+
+                        if (canMarkNonResources)
+                        {
+                            var entries = new List<AddressableAssetEntry>();
+                            var modifiedGroups = new HashSet<AddressableAssetGroup>();
+                            foreach (var p in nonResourcePaths)
+                            {
+                                var e = m_Editor.settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(p), parent,
+                                    false,
+                                    false);
+                                entries.Add(e);
+                                modifiedGroups.Add(e.parentGroup);
+                            }
+
+                            foreach (var g in modifiedGroups)
+                                g.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, false, true);
+                            m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries,
+                                true,
+                                false);
+
+                            if (targetIsGroup)
+                            {
+                                SetExpanded(target.id, true);
+                            }
+                        }
+                    }
+                }
+                else
                 {
-                    var resourcePaths = new List<string>();
-                    var nonResourcePaths = new List<string>();
+                    bool modified = false;
                     foreach (var p in DragAndDrop.paths)
                     {
-                        if (AddressableAssetUtility.IsInResources(p))
-                            resourcePaths.Add(p);
-                        else
-                            nonResourcePaths.Add(p);
-                    }
-                    bool canMarkNonResources = true;
-                    if (resourcePaths.Count > 0)
-                    {
-                        canMarkNonResources = AddressableAssetUtility.SafeMoveResourcesToGroup(m_Editor.settings, parent, resourcePaths);
-                    }
-                    if (canMarkNonResources)
-                    {
-                        var entries = new List<AddressableAssetEntry>();
-                        var modifiedGroups = new HashSet<AddressableAssetGroup>();
-                        foreach (var p in nonResourcePaths)
+                        if (PathPointsToAssetGroup(p))
                         {
-                            var e = m_Editor.settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(p), parent, false, false);
-                            entries.Add(e);
-                            modifiedGroups.Add(e.parentGroup);
-                        }
-                        foreach (var g in modifiedGroups)
-                            g.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, false, true);
-                        m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, true, false);
+                            AddressableAssetGroup loadedGroup = AssetDatabase.LoadAssetAtPath<AddressableAssetGroup>(p);
+                            if (loadedGroup != null)
+                            {
+                                if (m_Editor.settings.FindGroup(g => g.Guid == loadedGroup.Guid) == null)
+                                {
+                                    m_Editor.settings.groups.Add(loadedGroup);
+                                    modified = true;
+                                }
+                            }
 
-                        if (targetIsGroup)
-                        {
-                            SetExpanded(target.id, true);
                         }
                     }
+
+                    if (modified)
+                        m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupAdded,
+                            m_Editor.settings, true, true);
+
                 }
-            }
 
+            }
             return visualMode;
+        }
+
+        private bool PathPointsToAssetGroup(string path)
+        {
+            return AssetDatabase.GetMainAssetTypeAtPath(path) == typeof(AddressableAssetGroup);
         }
     }
 
@@ -1198,15 +1262,15 @@ namespace UnityEditor.AddressableAssets.GUI
         public Texture2D assetIcon;
         public bool isRenaming;
 
-        public AssetEntryTreeViewItem(AddressableAssetEntry e, int d) : base((e.address + e.guid).GetHashCode(), d, e.address)
+        public AssetEntryTreeViewItem(AddressableAssetEntry e, int d) : base(e == null ? 0 : (e.address + e.guid).GetHashCode(), d, e == null ? "[Missing Reference]" : e.address)
         {
             entry = e;
             group = null;
-            assetIcon = AssetDatabase.GetCachedIcon(e.AssetPath) as Texture2D;
+            assetIcon = entry == null ? null : AssetDatabase.GetCachedIcon(e.AssetPath) as Texture2D;
             isRenaming = false;
         }
 
-        public AssetEntryTreeViewItem(AddressableAssetGroup g, int d) : base(g.Guid.GetHashCode(), d, g.Name)
+        public AssetEntryTreeViewItem(AddressableAssetGroup g, int d) : base(g == null ? 0 : g.Guid.GetHashCode(), d, g == null ? "[Missing Reference]" : g.Name)
         {
             entry = null;
             group = g;

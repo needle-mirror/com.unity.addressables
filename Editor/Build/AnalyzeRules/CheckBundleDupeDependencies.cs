@@ -16,7 +16,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         internal struct CheckDupeResult
         {
             public AddressableAssetGroup Group;
-            public List<string> DuplicatedFiles;
+            public string DuplicatedFile;
             public string AssetPath;
             public GUID DuplicatedGroupGuid;
         }
@@ -72,7 +72,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                             from item in bundle.Value
                             select new AnalyzeResult {resultName = ruleName + kDelimiter +
                                                      issueGroup.Key + kDelimiter +
-                                                     bundle.Key + kDelimiter +
+                                                     ConvertBundleName(bundle.Key, issueGroup.Key) + kDelimiter +
                                                      item, severity = MessageType.Warning}).ToList();
             }
 
@@ -102,12 +102,12 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 let bundleToGroup = aaContext.bundleToAssetGroup[fileToBundle]
 
                 //Get the asset groups that belong to those bundles
-                let selectedGroup = aaContext.settings.FindGroup(findGroup => findGroup.Guid == bundleToGroup)
+                let selectedGroup = aaContext.settings.FindGroup(findGroup => findGroup != null && findGroup.Guid == bundleToGroup)
 
                 select new CheckDupeResult
                 {
                     Group = selectedGroup,
-                    DuplicatedFiles = guidToFile.Value,
+                    DuplicatedFile = file,
                     AssetPath = AssetDatabase.GUIDToAssetPath(guidToFile.Key.ToString()),
                     DuplicatedGroupGuid = guidToFile.Key
                 };
@@ -116,6 +116,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         internal void BuildImplicitDuplicatedAssetsSet(IEnumerable<CheckDupeResult> checkDupeResults)
         {
             m_ImplicitAssets = new HashSet<GUID>();
+
             foreach (var checkDupeResult in checkDupeResults)
             {
                 Dictionary<string, List<string>> groupData;
@@ -125,17 +126,14 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                     m_AllIssues.Add(checkDupeResult.Group.Name, groupData);
                 }
 
-                foreach (string file in checkDupeResult.DuplicatedFiles)
+                List<string> assets;
+                if (!groupData.TryGetValue(m_ExtractData.WriteData.FileToBundle[checkDupeResult.DuplicatedFile], out assets))
                 {
-                    List<string> assets;
-                    if (!groupData.TryGetValue(m_ExtractData.WriteData.FileToBundle[file], out assets))
-                    {
-                        assets = new List<string>();
-                        groupData.Add(m_ExtractData.WriteData.FileToBundle[file], assets);
-                    }
-
-                    assets.Add(checkDupeResult.AssetPath);
+                    assets = new List<string>();
+                    groupData.Add(m_ExtractData.WriteData.FileToBundle[checkDupeResult.DuplicatedFile], assets);
                 }
+
+                assets.Add(checkDupeResult.AssetPath);
 
                 m_ImplicitAssets.Add(checkDupeResult.DuplicatedGroupGuid);
             }

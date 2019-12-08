@@ -466,6 +466,8 @@ namespace UnityEditor.AddressableAssets.Build
             var allEntries = new List<AddressableAssetEntry>();
             settings.GetAllAssets(allEntries, false, g =>
             {
+                if (g == null)
+                    return false;
 
                 if (!g.HasSchema<BundledAssetGroupSchema>())
                 {

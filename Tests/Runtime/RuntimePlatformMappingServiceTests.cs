@@ -13,6 +13,9 @@ public class RuntimePlatformMappingServiceTests
     [TestCase(RuntimePlatform.WindowsPlayer, AddressablesPlatform.Windows)]
     [TestCase(RuntimePlatform.OSXPlayer, AddressablesPlatform.OSX)]
     [TestCase(RuntimePlatform.LinuxPlayer, AddressablesPlatform.Linux)]
+    [TestCase(RuntimePlatform.WSAPlayerARM, AddressablesPlatform.WindowsUniversal)]
+    [TestCase(RuntimePlatform.WSAPlayerX64, AddressablesPlatform.WindowsUniversal)]
+    [TestCase(RuntimePlatform.WSAPlayerX86, AddressablesPlatform.WindowsUniversal)]
     public void RuntimePlatformMappingService_EqualsDesiredAddressablesPlatform(RuntimePlatform platform, AddressablesPlatform desiredPlatform)
     {
         Assert.AreEqual(PlatformMappingService.GetAddressablesPlatformInternal(platform), desiredPlatform);

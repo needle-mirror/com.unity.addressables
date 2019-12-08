@@ -9,7 +9,7 @@ This loads the asset into memory without instantiating it. Every time the load c
 
 To unload the asset, use the `Addressables.Release` method, which decrements the ref-count. When a given asset's ref-count is zero, that asset is ready to be unloaded, and decrements the ref-count of any dependencies. 
 
-**Note**: The asset may or may not be unloaded immediately, contingent on existing dependencies. For more information, read the section on [when memory is cleared](#when-is-memory-cleared-). 
+**Note**: The asset may or may not be unloaded immediately, contingent on existing dependencies. For more information, read the section on [when memory is cleared](#when-is-memory-cleared?). 
 
 ### Scene loading
 To load a Scene, use `Addressables.LoadSceneAsync`. You can use this method to load a Scene in `Single` mode, which closes all open Scenes, or in `Additive` mode (for more information, see documentation on [Scene mode loading](https://docs.unity3d.com/ScriptReference/SceneManagement.LoadSceneMode.html).  
@@ -25,7 +25,7 @@ To destroy an instantiated GameObject, use `Addressables.ReleaseInstance`, or cl
 
 **Note**: If you call `Addressables.ReleaseInstance` on an instance that was not created using the `Addressables` API, or was created with `trackHandle==false`, the system detects that and returns `false` to indicate that the method was unable to release the specified instance. The instance will not be destroyed in this case.
 
-`Addressables.InstantiateAsync` has some associated overhead, so if you need to instantiate the same objects hundreds of times per frame, consider loading via the `Addressables` API, then instantiating through other methods. In this case, you would call `Addressables.LoadAssetAsync`, then save the result and call `GameObject.Instantiate()` for that result. This allows flexibility to call `Instantiate` in a synchronous way. The downside is that the Addressables system has no knowledge of how many instances you created, which can lead to memory issues if not properly managed. For example, a Prefab referencing a texture would no longer have a valid loaded texture to reference, causing rendering issues (or worse). These sorts of problems can be hard to track down as you may not immediately trigger the memory unload (see section on [clearing memory](#when-is-memory-cleared-), below).
+`Addressables.InstantiateAsync` has some associated overhead, so if you need to instantiate the same objects hundreds of times per frame, consider loading via the `Addressables` API, then instantiating through other methods. In this case, you would call `Addressables.LoadAssetAsync`, then save the result and call `GameObject.Instantiate()` for that result. This allows flexibility to call `Instantiate` in a synchronous way. The downside is that the Addressables system has no knowledge of how many instances you created, which can lead to memory issues if not properly managed. For example, a Prefab referencing a texture would no longer have a valid loaded texture to reference, causing rendering issues (or worse). These sorts of problems can be hard to track down as you may not immediately trigger the memory unload (see section on [clearing memory](#when-is-memory-cleared?), below).
 
 ### Data loading
 Interfaces that do not need their `AsyncOperationHandle.Result` released, will still need the operation itself to be released. Examples of these would be `Addressables.LoadResourceLocationsAsync` and `Addressables.GetDownloadSizeAsync`. They load data that you can access until the operation is released. This release should be done via `Addressables.Release`.
@@ -43,6 +43,21 @@ The following information is available in the Event Viewer:
 * A white vertical line indicates the frame in which a load request occurred.
 * A blue background indicates that an asset is currently loaded.  
 * The green part of the graph indicates an asset's current ref-count.
+
+Note that the Event Viewer is only concerned with ref-counts, not memory consumption (see section on [clearing memory](#when-is-memory-cleared?), below, for more information).
+
+Listed under the Assets column, you will see a row for each of the following, per frame:
+
+* FPS: The frames per second count.
+* MonoHeap: The amount of RAM in use.
+* Event Counts: The total number of events in a frame.
+* Asset requests: Displays the reference count on an operation over time. If the asset request has any dependencies, a triangle appears that you can click on to view the children's request operations.
+
+You can click the left and right arrows in order to step through the frames one by one, or click **Current** to jump to the latest frame. Press the **+** button to expand a row for more details.
+
+The information displayed in the Event Viewer is related to the [build script](AddressableAssetsDevelopmentCycle.md#build-scripts) you use to create Play mode data.
+
+When using the Event Viewer, avoid the **Use Asset Database** built script because it does not account for any shared dependencies among the assets. Use the **Simulate Groups** script or the **Use Existing Build** script instead, but the latter is better suited for the Event Viewer because it gives a more accurate monitoring of the ref-counts.
 
 ## When is memory cleared?
 An asset no longer being referenced (indicated by the end of a blue section in the profiler) does not necessarily mean that asset was unloaded. A common applicable scenario involves multiple assets in an asset bundle. For example: 

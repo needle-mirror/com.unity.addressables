@@ -6,6 +6,7 @@ using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
 using UnityEngine.TestTools;
 
@@ -142,7 +143,19 @@ namespace UnityEditor.AddressableAssets.Tests
 
             var actual = BuildUtility.GetNameWithHashNaming(BundledAssetGroupSchema.BundleNamingStyle.OnlyHash, hash, source);
 
-            Assert.AreEqual(expected, actual);}
+            Assert.AreEqual(expected, actual);
+        }
         
+        [Test]
+        public void GetNameWithHashNaming_CanReplaceFileNameWithFileNameHash()
+        {
+            string source = "x/y.bundle";
+            string hash = HashingMethods.Calculate(source).ToString();
+            string expected = hash + ".bundle";
+            
+            var actual = BuildUtility.GetNameWithHashNaming(BundledAssetGroupSchema.BundleNamingStyle.FileNameHash, hash, source);
+
+            Assert.AreEqual(expected, actual);
+        }
     }
 }

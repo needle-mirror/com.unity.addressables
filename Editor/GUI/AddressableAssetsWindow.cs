@@ -20,8 +20,16 @@ namespace UnityEditor.AddressableAssets.GUI
         [MenuItem("Window/Asset Management/Addressables/Settings", priority = 2051)]
         internal static void ShowSettingsInspector()
         {
-            EditorGUIUtility.PingObject(AddressableAssetSettingsDefaultObject.Settings);
-            Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
+            var setting = AddressableAssetSettingsDefaultObject.Settings;
+            if (setting == null)
+            {
+                Debug.LogWarning("Attempting to inspect default Addressables Settings, but no settings file exists.  Open 'Window/Asset Management/Addressables/Groups' for more info.");   
+            }
+            else
+            {
+                EditorGUIUtility.PingObject(setting);
+                Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
+            }
         }
 
         [MenuItem("Window/Asset Management/Addressables/Groups", priority = 2050)]

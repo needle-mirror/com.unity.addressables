@@ -63,7 +63,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             string groupGuid;
             if (m_bundleToAssetGroup.TryGetValue(identifier, out groupGuid))
             {
-                var group = m_settings.FindGroup(g => g.Guid == groupGuid);
+                var group = m_settings.FindGroup(g => g != null && g.Guid == groupGuid);
                 if (group != null)
                 {
                     var abSchema = group.GetSchema<BundledAssetGroupSchema>();

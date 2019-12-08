@@ -63,5 +63,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         {
             m_PlayerSessions.Add(new EventDataPlayerSession(name, id));
         }
+
+        public void Update()
+        {
+            foreach (var s in m_PlayerSessions)
+            {
+                s.Update();
+            }
+        }
     }
 }

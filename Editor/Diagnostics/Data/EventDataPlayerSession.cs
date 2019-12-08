@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.Diagnostics;
-using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEditor.AddressableAssets.Diagnostics.Data
 {
@@ -64,6 +64,15 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         int lastFrameWithEvents = -1;
         EventDataSet m_eventCountDataSet;
         EventDataSet m_instantitationCountDataSet;
+
+        class EvtQueueData
+        {
+            public DiagnosticEvent Event;
+            public int frameDelay;
+        }
+
+        List<EvtQueueData> m_Queue = new List<EvtQueueData>();
+        
         internal void AddSample(DiagnosticEvent evt, bool recordEvent, ref bool entryCreated)
         {
             m_LatestFrame = evt.Frame;
@@ -148,38 +157,57 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             
             if (evt.Stream == (int)ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
             {
-                if (evt.Dependencies != null)
+                m_Queue.Add(new EvtQueueData { Event = evt, frameDelay = 50});
+            }
+        }
+
+        public void Update()
+        {
+            foreach (var q in m_Queue)
+            {
+                q.frameDelay--;
+                if (q.frameDelay < 1)
                 {
-                    foreach (var d in evt.Dependencies)
+                    HandleOperationDestroy(q.Event);
+                }
+            }
+
+            m_Queue.RemoveAll(q => q.frameDelay < 1);
+        }
+
+        void HandleOperationDestroy(DiagnosticEvent evt)
+        {
+            if (evt.Dependencies != null)
+            {
+                foreach (var d in evt.Dependencies)
+                {
+                    HashSet<int> depParents = null;
+                    if (m_objectToParents.TryGetValue(d, out depParents))
                     {
-                        HashSet<int> depParents = null;
-                        if (m_objectToParents.TryGetValue(d, out depParents))
+                        depParents.Remove(evt.ObjectId);
+                        if (depParents.Count == 0)
                         {
-                            depParents.Remove(evt.ObjectId);
-                            if (depParents.Count == 0)
-                            {
-                                m_objectToParents.Remove(d);
-                                RootStreamEntry.AddChild(m_dataSets[d]);
-                            }
+                            m_objectToParents.Remove(d);
+                            RootStreamEntry.AddChild(m_dataSets[d]);
                         }
                     }
                 }
-                m_dataSets.Remove(evt.ObjectId);
+            }
+            m_dataSets.Remove(evt.ObjectId);
 
-                HashSet<int> parents = null;
-                if (m_objectToParents.TryGetValue(evt.ObjectId, out parents))
+            HashSet<int> parents = null;
+            if (m_objectToParents.TryGetValue(evt.ObjectId, out parents))
+            {
+                foreach (var p in parents)
                 {
-                    foreach (var p in parents)
-                    {
-                        EventDataSet pp;
-                        if (m_dataSets.TryGetValue(p, out pp))
-                            pp.RemoveChild(evt.ObjectId);
-                    }
+                    EventDataSet pp;
+                    if (m_dataSets.TryGetValue(p, out pp))
+                        pp.RemoveChild(evt.ObjectId);
                 }
-                else
-                {
-                    RootStreamEntry.RemoveChild(evt.ObjectId);
-                }
+            }
+            else
+            {
+                RootStreamEntry.RemoveChild(evt.ObjectId);
             }
         }
     }

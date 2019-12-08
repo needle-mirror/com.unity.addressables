@@ -21,7 +21,8 @@ namespace UnityEngine.AddressableAssets
         XboxOne,
         WebGL,
         iOS,
-        Android
+        Android,
+        WindowsUniversal
     }
 
     public class PlatformMappingService
@@ -40,6 +41,7 @@ namespace UnityEngine.AddressableAssets
                 {BuildTarget.StandaloneWindows64, AddressablesPlatform.Windows},
                 {BuildTarget.StandaloneOSX, AddressablesPlatform.OSX},
                 {BuildTarget.StandaloneLinux64, AddressablesPlatform.Linux},
+                {BuildTarget.WSAPlayer, AddressablesPlatform.WindowsUniversal},
 #if !UNITY_2019_2_OR_NEWER
                 {BuildTarget.StandaloneLinux, AddressablesPlatform.Linux},
                 {BuildTarget.StandaloneLinuxUniversal, AddressablesPlatform.Linux}
@@ -61,6 +63,9 @@ namespace UnityEngine.AddressableAssets
                  {RuntimePlatform.WindowsEditor, AddressablesPlatform.Windows},
                  {RuntimePlatform.OSXEditor, AddressablesPlatform.OSX},
                  {RuntimePlatform.LinuxEditor, AddressablesPlatform.Linux},
+                 {RuntimePlatform.WSAPlayerARM, AddressablesPlatform.WindowsUniversal},
+                 {RuntimePlatform.WSAPlayerX64, AddressablesPlatform.WindowsUniversal},
+                 {RuntimePlatform.WSAPlayerX86, AddressablesPlatform.WindowsUniversal},
             };
 
 #if UNITY_EDITOR

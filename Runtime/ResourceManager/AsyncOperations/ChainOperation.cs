@@ -46,8 +46,11 @@ namespace UnityEngine.ResourceManagement
          
         protected override void Destroy()
         {
-            m_WrappedOp.Release();
-            m_DepOp.Release();
+            if(m_WrappedOp.IsValid())
+                m_WrappedOp.Release();
+
+            if(m_DepOp.IsValid())
+                m_DepOp.Release();
         }
 
         protected override float Progress
@@ -107,8 +110,11 @@ namespace UnityEngine.ResourceManagement
 
         protected override void Destroy()
         {
-            m_WrappedOp.Release();
-            m_DepOp.Release();
+            if(m_WrappedOp.IsValid())
+                m_WrappedOp.Release();
+
+            if(m_DepOp.IsValid())
+                m_DepOp.Release();
         }
 
         protected override float Progress

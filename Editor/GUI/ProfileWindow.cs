@@ -12,6 +12,12 @@ namespace UnityEditor.AddressableAssets.GUI
         [MenuItem("Window/Asset Management/Addressables/Profiles", priority = 2051)]
         internal static void ShowWindow()
         {
+            var setting = AddressableAssetSettingsDefaultObject.Settings;
+            if (setting == null)
+            {
+                EditorUtility.DisplayDialog("Error", "Attempting to open Addressables Profiles window, but no Addressables Settings file exists.  \n\nOpen 'Window/Asset Management/Addressables/Groups' for more info.", "Ok");
+                return;
+            }
             var window = GetWindow<ProfileWindow>();
             window.Show();
         }

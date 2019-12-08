@@ -17,6 +17,7 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
+using UnityEngine.Build.Pipeline;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 
@@ -144,6 +145,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
                 foreach (var assetGroup in aaContext.settings.groups)
                 {
+                    if (assetGroup == null)
+                        continue;
+
                     List<string> buildBundles;
                     if (aaContext.assetGroupToBundles.TryGetValue(assetGroup, out buildBundles))
                     {
@@ -202,14 +206,15 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             var opResult = AddressableAssetBuildResult.CreateResult<TResult>(settingsPath, aaContext.locations.Count);
             //save content update data if building for the player
             var allEntries = new List<AddressableAssetEntry>();
-            aaContext.settings.GetAllAssets(allEntries, false, g => g.HasSchema<ContentUpdateGroupSchema>() && g.GetSchema<ContentUpdateGroupSchema>().StaticContent);
+            aaContext.settings.GetAllAssets(allEntries, false, g => g != null && g.HasSchema<ContentUpdateGroupSchema>() && g.GetSchema<ContentUpdateGroupSchema>().StaticContent);
 
             var remoteCatalogLoadPath = aaContext.settings.BuildRemoteCatalog ? aaContext.settings.RemoteCatalogLoadPath.GetValue(aaContext.settings) : string.Empty;
             if (extractData.BuildCache != null && ContentUpdateScript.SaveContentState(aaContext.locations, tempPath, allEntries, extractData.DependencyData, playerBuildVersion, remoteCatalogLoadPath))
             {
-                try
-                {
-                    File.Copy(tempPath, ContentUpdateScript.GetContentStateDataPath(false), true);
+                try {
+                    var contentStatePath = ContentUpdateScript.GetContentStateDataPath(false);
+                    File.Copy(tempPath, contentStatePath, true);
+                    builderInput.Registry.AddFile(contentStatePath);
                 }
                 catch (Exception e)
                 {
@@ -275,6 +280,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// <inheritdoc />
         protected override string ProcessGroup(AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
         {
+            if (assetGroup == null)
+                return string.Empty;
+
             foreach (var schema in assetGroup.Schemas)
             {
                 var errorString = ProcessGroupSchema(schema, assetGroup, aaContext);
@@ -597,7 +605,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return path.StartsWith("{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
         }
 
-        static void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> buildBundles, List<string> outputBundles, IBundleBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry)
+        void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> buildBundles, List<string> outputBundles, IBundleBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry)
         {
             var schema = assetGroup.GetSchema<BundledAssetGroupSchema>();
             if (schema == null)
@@ -627,17 +635,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     dataEntry.Data = requestOptions;
 
                     int extensionLength = Path.GetExtension(outputBundles[i]).Length;
-                    string[] deconstructedBundleName = outputBundles[i].Substring(0, outputBundles[i].Length - extensionLength)
-                        .Split('_');
-                    deconstructedBundleName[0] = assetGroup.Name
-                        .Replace(" ", "")
-                        .Replace('\\', '/')
-                        .Replace("//", "/")
-                        .ToLower();
+                    string[] deconstructedBundleName = outputBundles[i].Substring(0, outputBundles[i].Length - extensionLength).Split('_');
+                    string reconstructedBundleName = string.Join("_", deconstructedBundleName, 1, deconstructedBundleName.Length-1) + ".bundle";
 
-                    string reconstructedBundleName = string.Join("_", deconstructedBundleName) + ".bundle";
-
-                    outputBundles[i] = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), reconstructedBundleName);
+                    outputBundles[i] = ConstructAssetBundleName(assetGroup, schema, info, reconstructedBundleName);
                     dataEntry.InternalId = dataEntry.InternalId.Remove(dataEntry.InternalId.Length - buildBundles[i].Length) + outputBundles[i];
                     dataEntry.Keys[0] = outputBundles[i];
                     ReplaceDependencyKeys(buildBundles[i], outputBundles[i], locations);
@@ -658,6 +659,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 File.Copy(Path.Combine(assetGroup.Settings.buildSettings.bundleBuildPath, buildBundles[i]), targetPath, true);
                 registry.AddFile(targetPath);
             }
+        }
+
+        protected virtual string ConstructAssetBundleName(AddressableAssetGroup assetGroup, BundledAssetGroupSchema schema, BundleDetails info, string assetBundleName)
+        {
+            string groupName = assetGroup.Name.Replace(" ", "").Replace('\\', '/').Replace("//", "/").ToLower();
+            assetBundleName = groupName + "_" + assetBundleName;
+            return BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), assetBundleName);
         }
         
         static void ReplaceDependencyKeys(string from, string to, List<ContentCatalogDataEntry> locations)

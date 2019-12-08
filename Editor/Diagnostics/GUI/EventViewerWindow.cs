@@ -264,6 +264,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
         void OnInspectorUpdate()
         {
+            m_EventData.Update();
             Repaint();
         }
 
