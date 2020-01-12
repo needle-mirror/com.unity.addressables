@@ -1,9 +1,18 @@
-﻿{
+{
     "name": "Unity.ResourceManager.Tests",
     "references": [
         "Unity.ResourceManager"
     ],
     "optionalUnityReferences": [
         "TestAssemblies"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
     ]
 }

@@ -4,6 +4,10 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2020-01-13
+- Fixed issue where groups and schemas were getting deleted on import.
+- Adding scripting define to remove Caching API calls when ENABLE_CACHING is false
+
 ## [1.5.0] - 2019-12-09
 - Fixed temporary StreamingAssets files not being removed on a failed player build.
 - Added Bundle Naming option for naming as a hash of the full filename string.

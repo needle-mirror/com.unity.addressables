@@ -946,8 +946,8 @@ namespace AddressableAssetsIntegrationTests
         [UnityTest]
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForKey()
         {
-#if ENABLE_CACHING
             yield return Init();
+#if ENABLE_CACHING
 
             string hash = "123456789";
             string bundleName = $"test_{hash}";
@@ -968,14 +968,17 @@ namespace AddressableAssetsIntegrationTests
             yield return m_Addressables.ClearDependencyCacheAsync(key);
             Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(0, versions.Count);
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 
         [UnityTest]
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForKeyWithDependencies()
         {
-#if ENABLE_CACHING
             yield return Init();
+#if ENABLE_CACHING
 
             string hash = "123456789";
             string bundleName = $"test_{hash}";
@@ -1005,14 +1008,17 @@ namespace AddressableAssetsIntegrationTests
             versions.Clear();
             Caching.GetCachedVersions(depBundleName, versions);
             Assert.AreEqual(0, versions.Count);
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 
         [UnityTest]
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocation()
         {
-#if ENABLE_CACHING
             yield return Init();
+#if ENABLE_CACHING
 
             string hash = "123456789";
             string bundleName = $"test_{hash}";
@@ -1033,15 +1039,17 @@ namespace AddressableAssetsIntegrationTests
             yield return m_Addressables.ClearDependencyCacheAsync(location);
             Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(0, versions.Count);
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 
         [UnityTest]
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocationWithDependencies()
         {
-#if ENABLE_CACHING
             yield return Init();
-
+#if ENABLE_CACHING
             string hash = "123456789";
             string bundleName = $"test_{hash}";
 
@@ -1070,15 +1078,17 @@ namespace AddressableAssetsIntegrationTests
             versions.Clear();
             Caching.GetCachedVersions(depBundleName, versions);
             Assert.AreEqual(0, versions.Count);
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 
         [UnityTest]
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocationList()
         {
-#if ENABLE_CACHING
             yield return Init();
-
+#if ENABLE_CACHING
             string hash = "123456789";
             string bundleName = $"test_{hash}";
 
@@ -1098,14 +1108,17 @@ namespace AddressableAssetsIntegrationTests
             yield return m_Addressables.ClearDependencyCacheAsync(new List<IResourceLocation>(){location});
             Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(0, versions.Count);
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 
         [UnityTest]
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocationListWithDependencies()
         {
-#if ENABLE_CACHING
             yield return Init();
+#if ENABLE_CACHING
 
             string hash = "123456789";
             string bundleName = $"test_{hash}";
@@ -1135,6 +1148,9 @@ namespace AddressableAssetsIntegrationTests
             versions.Clear();
             Caching.GetCachedVersions(depBundleName, versions);
             Assert.AreEqual(0, versions.Count);
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 

@@ -804,6 +804,7 @@ namespace UnityEngine.AddressableAssets
 
         internal void ClearDependencyCacheForKey(object key)
         {
+#if ENABLE_CACHING
             IList<IResourceLocation> locations;
             if (key is IResourceLocation && (key as IResourceLocation).HasDependencies)
             {
@@ -821,6 +822,7 @@ namespace UnityEngine.AddressableAssets
                     }
                 }
             }
+#endif
         }
 
         public AsyncOperationHandle<bool> ClearDependencyCacheAsync(object key)

@@ -1618,6 +1618,9 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal bool CheckForGroupDataDeletion(string str)
         {
+            if (string.IsNullOrEmpty(str))
+                return false;
+
             bool modified = false;
             AddressableAssetGroup groupToDelete = null;
             bool deleteGroup = false;

@@ -4,7 +4,7 @@
         "Unity.Addressables.Editor",
         "Unity.Addressables",
         "Unity.ResourceManager",
-		"Unity.ScriptableBuildPipeline.Editor"
+        "Unity.ScriptableBuildPipeline.Editor"
     ],
     "optionalUnityReferences": [
         "TestAssemblies"
@@ -13,5 +13,11 @@
         "Editor"
     ],
     "excludePlatforms": [],
-    "allowUnsafeCode": false
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ]
 }

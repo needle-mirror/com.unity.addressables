@@ -96,6 +96,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             for(int index = 0; index < aaContext.settings.groups.Count; index++)  
             {
                 AddressableAssetGroup assetGroup = aaContext.settings.groups[index];
+                if (assetGroup == null)
+                    continue;
+
                 EditorUtility.DisplayProgressBar($"Processing Addressable Group", assetGroup.Name, (float)index/aaContext.settings.groups.Count);
                 var errorString = ProcessGroup(assetGroup, aaContext);
                 if (!string.IsNullOrEmpty(errorString))
