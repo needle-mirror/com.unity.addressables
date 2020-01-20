@@ -72,7 +72,7 @@ namespace AddressableAssetsIntegrationTests
             //Test
             AsyncOperationHandle handle = default(AsyncOperationHandle);
             handle = m_Addressables.LoadAssetAsync<GameObject>("noSuchLabel");
-            Assert.AreEqual("Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown., Key=noSuchLabel", handle.OperationException.Message);
+            Assert.AreEqual("Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown., Key=noSuchLabel, Type=UnityEngine.GameObject", handle.OperationException.Message);
             yield return handle;
             
             //Cleanup

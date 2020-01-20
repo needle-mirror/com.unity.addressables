@@ -15,43 +15,60 @@ namespace UnityEditor.AddressableAssets.GUI
         SerializedProperty m_Property;
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
+            OnGUIMultiple(position, property, label, EditorGUI.showMixedValue);
+        }
+
+        public void OnGUIMultiple(Rect position, SerializedProperty property, GUIContent label, bool showMixed)
+        {
             m_Property = property;
             if (m_SerializedFieldInfo == null)
                 m_SerializedFieldInfo = GetFieldInfo(property);
             if (m_Types == null)
                 m_Types = GetTypes(m_SerializedFieldInfo);
 
+            List<GUIContent> typeContent = new List<GUIContent>();
+            typeContent.Add(new GUIContent("<none>", "Clear the type."));
+            foreach(var type in m_Types)
+                typeContent.Add(new GUIContent(AddressableAssetUtility.GetCachedTypeDisplayName(type), ""));
+
+            bool resetShowMixed = EditorGUI.showMixedValue;
             EditorGUI.BeginProperty(position, label, property);
-            var smallPos = EditorGUI.PrefixLabel(position, label);
+            EditorGUI.showMixedValue = showMixed;
+
             var st = (SerializedType)m_SerializedFieldInfo.GetValue(property.serializedObject.targetObject);
 
-            string display = AddressableAssetUtility.GetCachedTypeDisplayName(st.Value);
-//            if (st.ShowMixedValue)
-//            {
-//                display = "—";
-//            }
+            int index = GetIndexForType(st.Value);
+            int selectedValue = EditorGUI.Popup(position, label, index, typeContent.ToArray());
 
-            if (EditorGUI.DropdownButton(smallPos, new GUIContent(display), FocusType.Keyboard))
+            if (selectedValue != index)
             {
-                var menu = new GenericMenu();
-                menu.AddItem(new GUIContent("<none>", "Clear the type."), false, OnSetType, null);
-                for (int i = 0; i < m_Types.Count; i++)
-                {
-                    var type = m_Types[i];
-                    menu.AddItem(new GUIContent(AddressableAssetUtility.GetCachedTypeDisplayName(type), ""), false, OnSetType, type);
-                }
-                menu.ShowAsContext();
+                Undo.RecordObject(m_Property.serializedObject.targetObject, "Set Serialized Type");
+                m_SerializedFieldInfo.SetValue(m_Property.serializedObject.targetObject, 
+                    new SerializedType
+                    {
+                        Value = selectedValue == 0 ? null : m_Types[selectedValue - 1],
+                        ValueChanged = true
+                    } );
+                EditorUtility.SetDirty(m_Property.serializedObject.targetObject);
             }
 
             EditorGUI.EndProperty();
+            EditorGUI.showMixedValue = resetShowMixed;
         }
 
-        void OnSetType(object context)
+        int GetIndexForType(Type type)
         {
-            Undo.RecordObject(m_Property.serializedObject.targetObject, "Set Serialized Type");
-            var type = context as Type;
-            m_SerializedFieldInfo.SetValue(m_Property.serializedObject.targetObject, new SerializedType { Value = type, ValueChanged = true });
-            EditorUtility.SetDirty(m_Property.serializedObject.targetObject);
+            if (type == null)
+                return 0;
+            int index = 1;
+            foreach (var checkedType in m_Types)
+            {
+                if (checkedType == type)
+                    break;
+                index++;
+            }
+
+            return index;
         }
 
         static FieldInfo GetFieldInfo(SerializedProperty property)

@@ -53,7 +53,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         {
             static RegisterBuildBundleLayout()
             {
-                AnalyzeWindow.RegisterNewRule<BuildBundleLayout>();
+                AnalyzeSystem.RegisterNewRule<BuildBundleLayout>();
             }
         }
     }

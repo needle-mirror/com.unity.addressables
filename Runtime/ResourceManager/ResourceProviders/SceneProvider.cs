@@ -79,7 +79,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     return SceneManager.LoadSceneAsync(path, new LoadSceneParameters() { loadSceneMode = mode });
                 else
                 {
-                    if (path.ToLower().LastIndexOf("assets/") == -1)
+                    if (!path.ToLower().StartsWith("assets/"))
                         path = "Assets/" + path;
                     if (path.LastIndexOf(".unity") == -1)
                         path += ".unity";

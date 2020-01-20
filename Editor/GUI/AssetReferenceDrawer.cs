@@ -307,7 +307,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             if (item.entry.IsInResources)
                                 Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first.");
                             else
-                                SetObject(property, item.entry.MainAsset, out guid);
+                                SetObject(property, item.entry.TargetAsset, out guid);
                         }
                     }
                 }

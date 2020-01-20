@@ -1,10 +1,8 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
+using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
-using UnityEditor.AddressableAssets.GUI;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
@@ -12,21 +10,17 @@ namespace UnityEditor.AddressableAssets.GUI
 {
     class AssetSettingsAnalyzeTreeView : TreeView
     {
-        AnalyzeRuleGUI m_AnalyzeSetting;
-        private AnalyzeResultData resultData;
         private int m_CurrentDepth;
 
-        internal AssetSettingsAnalyzeTreeView(TreeViewState state, AnalyzeRuleGUI analyzeSetting)
+        internal AssetSettingsAnalyzeTreeView(TreeViewState state)
             : base(state)
         {
-            m_AnalyzeSetting = analyzeSetting;
-            resultData = m_AnalyzeSetting.AnalyzeData;
             showAlternatingRowBackgrounds = true;
             showBorder = true;
 
             Reload();
         }
-
+        
         private List<AnalyzeRuleContainerTreeViewItem> GatherAllInheritRuleContainers(TreeViewItem baseContainer)
         {
             List<AnalyzeRuleContainerTreeViewItem> retValue = new List<AnalyzeRuleContainerTreeViewItem>();
@@ -71,13 +65,9 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             PerformActionForEntireRuleSelection((ruleContainer) =>
             {
-                if (!resultData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
-                    resultData.Data.Add(ruleContainer.analyzeRule.ruleName, new List<AnalyzeRule.AnalyzeResult>());
+                var results = AnalyzeSystem.RefreshAnalysis(ruleContainer.analyzeRule);
 
-                var results = ruleContainer.analyzeRule.RefreshAnalysis(m_AnalyzeSetting.Settings);
-                resultData.Data[ruleContainer.analyzeRule.ruleName] = results;
-
-                BuildResults(ruleContainer, resultData.Data[ruleContainer.analyzeRule.ruleName]);
+                BuildResults(ruleContainer, results);
                 Reload();
                 UpdateSelections(GetSelection());
             });
@@ -87,15 +77,10 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             PerformActionForEntireRuleSelection((ruleContainer) =>
             {
-                if (!resultData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
-                    resultData.Data.Add(ruleContainer.analyzeRule.ruleName, new List<AnalyzeRule.AnalyzeResult>());
+                AnalyzeSystem.FixIssues(ruleContainer.analyzeRule);
+                var results = AnalyzeSystem.RefreshAnalysis(ruleContainer.analyzeRule);
 
-                ruleContainer.analyzeRule.FixIssues(m_AnalyzeSetting.Settings);
-
-                var results = ruleContainer.analyzeRule.RefreshAnalysis(m_AnalyzeSetting.Settings);
-                resultData.Data[ruleContainer.analyzeRule.ruleName] = results;
-
-                BuildResults(ruleContainer, resultData.Data[ruleContainer.analyzeRule.ruleName]);
+                BuildResults(ruleContainer, results);
                 Reload();
                 UpdateSelections(GetSelection());
             });
@@ -105,12 +90,9 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             PerformActionForEntireRuleSelection((ruleContainer) =>
             {
-                if (!resultData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
-                    resultData.Data.Add(ruleContainer.analyzeRule.ruleName, new List<AnalyzeRule.AnalyzeResult>());
+                AnalyzeSystem.ClearAnalysis(ruleContainer.analyzeRule);
 
-                ruleContainer.analyzeRule.ClearAnalysis();
-                resultData.Data[ruleContainer.analyzeRule.ruleName].Clear();
-                BuildResults(ruleContainer, resultData.Data[ruleContainer.analyzeRule.ruleName]);
+                BuildResults(ruleContainer, new List<AnalyzeRule.AnalyzeResult>());
                 Reload();
                 UpdateSelections(GetSelection());
             });
@@ -209,10 +191,10 @@ namespace UnityEditor.AddressableAssets.GUI
 
             m_CurrentDepth++;
 
-            for (int i = 0; i < AnalyzeRuleGUI.Rules.Count; i++)
+            for (int i = 0; i < AnalyzeSystem.Rules.Count; i++)
             {
                 AnalyzeRuleContainerTreeViewItem ruleContainer = new AnalyzeRuleContainerTreeViewItem(
-                    AnalyzeRuleGUI.Rules[i].ruleName.GetHashCode(), m_CurrentDepth, AnalyzeRuleGUI.Rules[i]);
+                    AnalyzeSystem.Rules[i].ruleName.GetHashCode(), m_CurrentDepth, AnalyzeSystem.Rules[i]);
 
                 if(ruleContainer.analyzeRule.CanFix)
                     fixable.AddChild(ruleContainer);
@@ -228,10 +210,10 @@ namespace UnityEditor.AddressableAssets.GUI
             foreach (var ruleContainer in ruleContainers)
             {
 
-                if (ruleContainer != null && resultData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
+                if (ruleContainer != null && AnalyzeSystem.AnalyzeData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
                 {
                     EditorUtility.DisplayProgressBar("Calculating Results for " + ruleContainer.displayName, "", (index / ruleContainers.Count) % 100);
-                    BuildResults(ruleContainer, resultData.Data[ruleContainer.analyzeRule.ruleName]);
+                    BuildResults(ruleContainer, AnalyzeSystem.AnalyzeData.Data[ruleContainer.analyzeRule.ruleName]);
                 }
 
                 index++;
@@ -318,7 +300,7 @@ namespace UnityEditor.AddressableAssets.GUI
             foreach (var node in allTreeViewItems)
                 (node as AnalyzeTreeViewItemBase)?.AddIssueCountToName();
 
-            EditorUtility.SetDirty(m_AnalyzeSetting.AnalyzeData);
+            EditorUtility.SetDirty(AnalyzeSystem.AnalyzeData);
         }
 
         protected override void RowGUI(RowGUIArgs args)

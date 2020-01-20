@@ -41,7 +41,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
     {
         static RegisterCheckSceneDupeDependencies()
         {
-            AnalyzeWindow.RegisterNewRule<CheckSceneDupeDependencies>();
+            AnalyzeSystem.RegisterNewRule<CheckSceneDupeDependencies>();
         }
     }
 }

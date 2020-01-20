@@ -22,9 +22,20 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <summary>
         /// Activate the scene via the AsyncOperation.
         /// </summary>
+        [Obsolete("Activate() has been deprecated.  Please use ActivateAsync().")]
         public void Activate()
         {
             m_Operation.allowSceneActivation = true;
+        }
+        /// <summary>
+        /// Activate the scene via the AsyncOperation.  This is the scene loading AsyncOperation provided by the engine.
+        /// The documentation for AsyncOperation can be found here: https://docs.unity3d.com/ScriptReference/AsyncOperation.html
+        /// </summary>
+        /// <returns>The scene load operation.</returns>
+        public AsyncOperation ActivateAsync()
+        {
+            m_Operation.allowSceneActivation = true;
+            return m_Operation;
         }
 
         /// <inheritdoc/>

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using UnityEditor.AddressableAssets.GUI;
 using UnityEngine;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets.Settings
@@ -60,14 +62,14 @@ namespace UnityEditor.AddressableAssets.Settings
             so.ApplyModifiedProperties();
         }
 
-//        /// <summary>
-//        /// Used to display the GUI of multiple selected groups.
-//        /// </summary>
-//        /// <param name="otherSchemas">Schema instances in the other selected groups</param>
-//        public virtual void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
-//        {
-//
-//        }
+        /// <summary>
+        /// Used to display the GUI of multiple selected groups.
+        /// </summary>
+        /// <param name="otherSchemas">Schema instances in the other selected groups</param>
+        public virtual void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
+        {
+
+        }
 
         /// <summary>
         /// Used to notify the addressables settings that data has been modified.  This must be called by subclasses to ensure proper cache invalidation.
@@ -91,21 +93,49 @@ namespace UnityEditor.AddressableAssets.Settings
 
         }
 
-//        protected void ShowMixedValue(SerializedProperty property, List<AddressableAssetGroupSchema> otherSchemas, Type type, string propertyName)
-//        {
-//            foreach (var schema in otherSchemas)
-//            {
-//                var s_prop = (new SerializedObject(schema)).FindProperty(propertyName);
-//                if ((type == typeof(Enum) && (property.enumValueIndex != s_prop.enumValueIndex)) ||
-//                    (type == typeof(string) && (property.stringValue != s_prop.stringValue)) ||
-//                    (type == typeof(int) && (property.intValue != s_prop.intValue)) ||
-//                    (type == typeof(bool) && (property.boolValue != s_prop.boolValue)) )
-//                {
-//                    EditorGUI.showMixedValue = true;
-//                    return;
-//                }
-//            }
-//        }
-        
+        protected void ShowMixedValue(SerializedProperty property, List<AddressableAssetGroupSchema> otherSchemas, Type type, string propertyName)
+        {
+            foreach (var schema in otherSchemas)
+            {
+                var s_prop = (new SerializedObject(schema)).FindProperty(propertyName);
+                if ((type == typeof(Enum) && (property.enumValueIndex != s_prop.enumValueIndex)) ||
+                    (type == typeof(string) && (property.stringValue != s_prop.stringValue)) ||
+                    (type == typeof(int) && (property.intValue != s_prop.intValue)) ||
+                    (type == typeof(bool) && (property.boolValue != s_prop.boolValue)))
+                {
+                    EditorGUI.showMixedValue = true;
+                    return;
+                }
+
+                if (type == typeof(ProfileValueReference))
+                {
+                    var field = property.serializedObject.targetObject.GetType().GetField(property.name, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+
+                    string lhsId = (field?.GetValue(property.serializedObject.targetObject) as ProfileValueReference)?.Id;
+                    string rhsId = (field?.GetValue(s_prop.serializedObject.targetObject) as ProfileValueReference)?.Id;
+
+                    if (lhsId != null && rhsId != null && lhsId != rhsId)
+                    {
+                        EditorGUI.showMixedValue = true;
+                        return;
+                    }
+                }
+
+                if (type == typeof(SerializedType))
+                {
+                    var field = property.serializedObject.targetObject.GetType().GetField(property.name, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+
+                    Type lhs = ((SerializedType)field?.GetValue(property.serializedObject.targetObject)).Value;
+                    Type rhs = ((SerializedType)field?.GetValue(s_prop.serializedObject.targetObject)).Value;
+
+                    if (lhs != null && rhs != null && lhs != rhs)
+                    {
+                        EditorGUI.showMixedValue = true;
+                        return;
+                    }
+                }
+            }
+        }
+
     }
 }

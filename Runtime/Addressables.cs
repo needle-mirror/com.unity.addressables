@@ -24,13 +24,27 @@ namespace UnityEngine.AddressableAssets
         /// The key used to generate the exception.
         /// </summary>
         public object Key { get; private set; }
+
+        /// <summary>
+        /// The type of the key used to generate the exception.
+        /// </summary>
+        public Type Type { get; private set; }
+
         /// <summary>
         /// Construct a new InvalidKeyException.
         /// </summary>
         /// <param name="key">The key that caused the exception.</param>
-        public InvalidKeyException(object key)
+        public InvalidKeyException(object key) : this(key, typeof(object)) { }
+
+        /// <summary>
+        /// Construct a new InvalidKeyException.
+        /// </summary>
+        /// <param name="key">The key that caused the exception.</param>
+        /// <param name="type">The type of the key that caused the exception.</param>
+        public InvalidKeyException(object key, Type type)
         {
             Key = key;
+            Type = type;
         }
 
         ///<inheritdoc/>
@@ -46,7 +60,7 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
-                return base.Message + ", Key=" + Key;
+                return base.Message + $", Key={Key}, Type={Type}";
             }
         }
     }

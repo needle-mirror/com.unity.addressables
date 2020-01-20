@@ -17,6 +17,7 @@ Traditional means of structuring game assets make it challenging to efficiently 
 * **Dependency management**: The system returns all dependencies of the requested content, so that all meshes, shaders, animations, and so forth load before returning the content to you.
 * **Memory management**: The system unloads assets as well as loading them, counting references automatically and providing a robust profiler to help you spot potential memory problems.
 * **Content packing**: Because the system maps and understands complex dependency chains, it allows for efficient packing of bundles, even when moving or renaming assets. You can easily prepare assets for both local and remote deployment, to support downloadable content and reduced application size.
+* **Profiles**: The system allows you to create a set of string variables that more easily enables you to change how your content is built into bundles without modifying settings in multiple places.
 
 ## What about my existing game?
 The Addressable Asset System provides a [migration path](AddressableAssetsMigrationGuide.md) for upgrading, whether you use direct references, _Resource_ folders, or asset bundles.

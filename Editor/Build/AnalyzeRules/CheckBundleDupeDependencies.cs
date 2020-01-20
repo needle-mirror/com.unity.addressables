@@ -152,6 +152,8 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             
             foreach (var asset in m_ImplicitAssets)
                 settings.CreateOrMoveEntry(asset.ToString(), group, false, false);
+
+            settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true, true);
         }
 
         public override void ClearAnalysis()
@@ -168,7 +170,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
     {
         static RegisterCheckBundleDupeDependencies()
         {
-            AnalyzeWindow.RegisterNewRule<CheckBundleDupeDependencies>();
+            AnalyzeSystem.RegisterNewRule<CheckBundleDupeDependencies>();
         }
     }
 }

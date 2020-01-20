@@ -49,7 +49,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
     {
         static RegisterCheckResourcesDupeDependencies()
         {
-            AnalyzeWindow.RegisterNewRule<CheckResourcesDupeDependencies>();
+            AnalyzeSystem.RegisterNewRule<CheckResourcesDupeDependencies>();
         }
     }
 }

@@ -291,11 +291,6 @@ namespace UnityEngine.ResourceManagement.Util
             }
         }
 
-//        /// <summary>
-//        /// Used for multi-object editing. Indicates whether or not property drawer should display mixed value;
-//        /// </summary>
-//        public bool ShowMixedValue { get; set; }
-
         /// <summary>
         /// Used for multi-object editing. Indicates whether or not property value was changed.
         /// </summary>

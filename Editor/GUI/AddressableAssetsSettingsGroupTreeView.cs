@@ -75,7 +75,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     if(item.group != null)
                         selectedObjects[i] = item.group;
                     else if (item.entry != null)
-                        selectedObjects[i] = item.entry.MainAsset;
+                        selectedObjects[i] = item.entry.TargetAsset;
                 }
             }
 
@@ -674,15 +674,12 @@ namespace UnityEditor.AddressableAssets.GUI
                             menu.AddItem(new GUIContent("Move Addressables to Group/" + g.Name), false, MoveEntriesToGroup, g);
                     }
 
-                    var commonPrefix = FindCommonPrefix(selectedNodes);
-                    if (!string.IsNullOrEmpty(commonPrefix))
-                    {
-                        var groups = new HashSet<AddressableAssetGroup>();
-                        foreach (var n in selectedNodes)
-                            groups.Add(n.entry.parentGroup);
-                        foreach(var g in groups)
-                            menu.AddItem(new GUIContent("Move Addressables to New Group/" + commonPrefix + " (use " + g.Name + " settings)"), false, MoveEntriesToNewGroup, new KeyValuePair<string, AddressableAssetGroup>(commonPrefix, g));
-                    }
+                    var groups = new HashSet<AddressableAssetGroup>();
+                    foreach (var n in selectedNodes)
+                        groups.Add(n.entry.parentGroup);
+                    foreach(var g in groups)
+                        menu.AddItem(new GUIContent("Move Addressables to New Group/With settings from: " + g.Name), false, MoveEntriesToNewGroup, new KeyValuePair<string, AddressableAssetGroup>(AddressableAssetSettings.kNewGroupName, g));
+                    
 
                     menu.AddItem(new GUIContent("Remove Addressables"), false, RemoveEntry, selectedNodes);
                     menu.AddItem(new GUIContent("Simplify Addressable Names"), false, SimplifyAddresses, selectedNodes);
@@ -726,36 +723,6 @@ namespace UnityEditor.AddressableAssets.GUI
             PopulateGeneralContextMenu(ref menu);
             
             menu.ShowAsContext();
-        }
-
-        string FindCommonPrefix(List<AssetEntryTreeViewItem> selectedNodes)
-        {
-            var names = new List<string>();
-            foreach (var n in selectedNodes)
-                names.Add(n.displayName.Replace('/', '-'));
-            bool same = true;
-            int index = 0;
-            while (same)
-            {
-                if (index >= names[0].Length)
-                {
-                    break;
-                }
-                char c = names[0][index];
-                foreach (var n in names)
-                {
-                    if (index >= n.Length || n[index] != c)
-                    {
-                        same = false;
-                        break;
-                    }
-                }
-                index++;
-            }
-            if (index < 1)
-                return null;
-            var prefix = names[0].Substring(0, index);
-            return prefix.Trim(' ', '-');
         }
 
         void GoToGroupAsset(object context)

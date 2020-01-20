@@ -2,6 +2,7 @@
     * [Addressable Assets overview](AddressableAssetsOverview)
     * [Getting started](AddressableAssetsGettingStarted)
     * [Addressable Assets development cycle](AddressableAssetsDevelopmentCycle)
+    * [Addressable Assets profiles](AddressableAssetsProfiles)
     * [Asset Hosting Services](AddressableAssetsHostingServices)
     * [Memory management](MemoryManagement)
     * [Async operation handling](AddressableAssetsAsyncOperationHandle)

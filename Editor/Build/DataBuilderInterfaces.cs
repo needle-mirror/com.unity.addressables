@@ -14,6 +14,10 @@ namespace UnityEditor.AddressableAssets.Build
         /// </summary>
         double Duration { get; set; }
         /// <summary>
+        /// The number of addressable assets contained in the build.
+        /// </summary>
+        int LocationCount { get; set; }
+        /// <summary>
         /// Error string, if any.  If Succeeded is true, this may be null.
         /// </summary>
         string Error { get; set; }

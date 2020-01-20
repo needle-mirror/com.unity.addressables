@@ -4,18 +4,28 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [1.5.1] - 2020-01-13
+## [1.6.0] - 2020-01-21
+- Fixed bug where unsubscribing to AsyncOperations events could throw if no subscription happened beforehand.   
+- Fixed NullReferenceException when displaying Groups window displaying entries with Missing Script References on SubAssets.
+- Moved AnalyzeWindow.RegisterNewRule to AnalyzeSystem.RegisterNewRule so that the API/logic wouldn't live in GUI code.
+- Fixed bug where scenes in a folder containing "Assets" in the folder name not loadable in "Use Asset Database" mode.
+- InvalidKeyException's message now include the type of the key that caused it, if applicable.
+- Added the ability to select and edit multiple Addressable Groups at the same time.
+- Assigning LocationCount during AddressableAssetBuildResult.CreateResult<T>
 - Fixed issue where groups and schemas were getting deleted on import.
+- Adding dependencies to built in modules to prevent them from being disabled if Addressables is active.
 - Adding scripting define to remove Caching API calls when ENABLE_CACHING is false
+- Added API to get the scene AsyncOperation from ActivateAsync().  Made the previous API, Activate(), obsolete.
+- Fixed bug where the group window wasn't properly refreshed on Analyse fix
 
 ## [1.5.0] - 2019-12-09
 - Fixed temporary StreamingAssets files not being removed on a failed player build.
 - Added Bundle Naming option for naming as a hash of the full filename string.
-- Added a delay before unloaded things are removed from graph.  Ideally this would track with dependencies, but for now it's simply time based.
+- Added a delay before unloaded things are removed from Event Viewer graph.  Ideally this would track with dependencies, but for now it's simply time based.
 - Fixed ProfileValueReferences not getting set dirty when changed.
 - Added ability for Addressables to handle null references in the Addressables groups list.  
-	-Null groups should not affect or influence content builds, updates, or Analyze rules.
-	-Right clicking on a [Missing Reference] will give you the option to remove all missing references.
+  -Null groups should not affect or influence content builds, updates, or Analyze rules.
+  -Right clicking on a [Missing Reference] will give you the option to remove all missing references.
 - Fixed issue with Analyze reporting multiple duplicate data for one group.
 - Fixed issue where unloading a scene was throwing an invalid handle error.
 - Added Addressables.ClearDependencyCacheAsync API to clear cached dependent AssetBundles for a given key or list of keys.

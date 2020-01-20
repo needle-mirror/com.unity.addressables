@@ -47,6 +47,7 @@ namespace UnityEditor.AddressableAssets.Build
             opResult.OutputPath = settingsPath;
             opResult.Duration = 0;
             opResult.Error = err;
+            opResult.LocationCount = locCount;
             return opResult;
         }
     }

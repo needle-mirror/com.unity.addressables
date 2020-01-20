@@ -13,7 +13,13 @@ namespace UnityEditor.AddressableAssets.GUI
     {
         FieldInfo m_SerializedFieldInfo;
         SerializedProperty m_Property;
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            OnGUIMultiple(position, property, label, EditorGUI.showMixedValue);
+        }
+
+        public void OnGUIMultiple(Rect position, SerializedProperty property, GUIContent label, bool showMixed)
         {
             var settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
@@ -24,13 +30,12 @@ namespace UnityEditor.AddressableAssets.GUI
                 m_SerializedFieldInfo = GetFieldInfo(property);
 
             EditorGUI.BeginProperty(position, label, property);
-            var smallPos = EditorGUI.PrefixLabel(position, label);
             var st = (ProfileValueReference)m_SerializedFieldInfo.GetValue(property.serializedObject.targetObject);
 
             bool wasChanged = false;
             string currentPathDisplay = st.Id;
-//            if (st.ShowMixedValue)
-//                currentPathDisplay = "—";
+            if (showMixed)
+                currentPathDisplay = "—";
 
             var newId = ProfilesEditor.ValueGUI(position, settings, label.text, currentPathDisplay, ref wasChanged);
             if (newId != "—")
@@ -39,7 +44,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (wasChanged)
             {
                 st = (ProfileValueReference)m_SerializedFieldInfo.GetValue(property.serializedObject.targetObject);
-                if(st != null && st.OnValueChanged != null)
+                if (st != null && st.OnValueChanged != null)
                     st.OnValueChanged(st);
             }
 

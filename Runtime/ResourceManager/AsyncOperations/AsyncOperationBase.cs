@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 
 // ReSharper disable DelegateSubtraction
+
+[assembly: InternalsVisibleTo("Unity.ResourceManager.Tests")]
 
 namespace UnityEngine.ResourceManagement.AsyncOperations
 {
@@ -91,6 +94,11 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         DelegateList<AsyncOperationHandle> m_CompletedAction;
         DelegateList<AsyncOperationHandle> m_DestroyedAction;
         DelegateList<AsyncOperationHandle<TObject>> m_CompletedActionT;
+
+        internal bool CompletedEventHasListeners => m_CompletedActionT != null && m_CompletedActionT.Count > 0;
+        internal bool DestroyedEventHasListeners => m_DestroyedAction != null && m_DestroyedAction.Count > 0;
+        internal bool CompletedTypelessEventHasListeners => m_CompletedAction != null && m_CompletedAction.Count > 0;
+
         Action<IAsyncOperation> m_OnDestroyAction;
         internal Action<IAsyncOperation> OnDestroy { set { m_OnDestroyAction = value; } }
         internal int ReferenceCount { get { return m_referenceCount; } }
@@ -240,7 +248,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             }
             remove
             {
-                m_CompletedActionT.Remove(value);
+                m_CompletedActionT?.Remove(value);
             }
         }
 
@@ -254,7 +262,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             }
             remove
             {
-                m_DestroyedAction.Remove(value);
+                m_DestroyedAction?.Remove(value);
             }
         }
 
@@ -269,7 +277,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             }
             remove
             {
-                m_CompletedAction.Remove(value);
+                m_CompletedAction?.Remove(value);
             }
         }
 

@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
+using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
 using UnityEditor.AddressableAssets.Settings;
-using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.GUI
@@ -66,26 +63,12 @@ namespace UnityEditor.AddressableAssets.GUI
             GUILayout.EndArea();
         }
         /// <summary>
-        /// Method used to register any custom AnalyzeRules with the window.  The recommended pattern is to create
-        /// your rules like so:
-        ///   class MyRule : AnalyzeRule {}
-        ///   [InitializeOnLoad]
-        ///   class RegisterMyRule
-        ///   {
-        ///       static RegisterMyRule()
-        ///       {
-        ///           AnalyzeWindow.RegisterNewRule<MyRule>();
-        ///       }
-        ///   }
+        /// Obsolete - please use AnalyzeSystem.RegisterNewRule<TRule>()
         /// </summary>
+        [Obsolete("Please use AnalyzeSystem.RegisterNewRule<TRule>()")]
         public static void RegisterNewRule<TRule>() where TRule : AnalyzeRule, new()
         {
-            foreach (var rule in AnalyzeRuleGUI.Rules)
-            {
-                if (rule.GetType().IsAssignableFrom(typeof(TRule)))
-                    return;
-            }
-            AnalyzeRuleGUI.Rules.Add(new TRule());
+            AnalyzeSystem.RegisterNewRule<TRule>();
         }
 
     }

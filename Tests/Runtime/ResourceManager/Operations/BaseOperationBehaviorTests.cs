@@ -128,6 +128,33 @@ namespace UnityEngine.ResourceManagement.Tests
         // public void AsyncOperationHandle_WhenReleaseOnInvalidHandle_Throws
         // public void AsyncOperationHandle_WhenConvertToIncompatibleHandleType_Throws
         //
+      
+        [Test]
+        public void AsyncOperationHandle_EventSubscriptions_UnsubscribingToNonSubbedEventsShouldHaveNoEffect()
+        {
+            var op = new MockOperation<int>();
+            var handle = m_RM.StartOperation(op, default(AsyncOperationHandle));
+
+            Assert.False(op.CompletedEventHasListeners);
+            handle.Completed -= oph => { };
+            Assert.False(op.CompletedEventHasListeners);
+
+            Assert.False(op.DestroyedEventHasListeners);
+            handle.Destroyed -= oph => { };
+            Assert.False(op.DestroyedEventHasListeners);
+
+            Action<AsyncOperationHandle> dummy = oph => { };
+            Assert.False(op.CompletedTypelessEventHasListeners);
+
+            handle.CompletedTypeless += dummy;
+            Assert.True(op.CompletedTypelessEventHasListeners);
+
+            handle.CompletedTypeless -= dummy;
+            handle.CompletedTypeless -= dummy;
+            Assert.False(op.CompletedTypelessEventHasListeners);
+
+            handle.Release();
+        }
         
     }
 }

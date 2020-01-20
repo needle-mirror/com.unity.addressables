@@ -50,5 +50,19 @@ namespace UnityEditor.AddressableAssets.Tests
             
             ProjectConfigData.postProfilerEvents = oldState;
         }
+
+        [Test]
+        public void CreateResult_AssignsAllCorrectData()
+        {
+            string settingsPath = "Settings/Path";
+            int locCount = 2;
+            string error = "Test Error";
+
+            var result = AddressableAssetBuildResult.CreateResult<AddressableAssetBuildResult>(settingsPath, locCount, error);
+
+            Assert.AreEqual(result.OutputPath, settingsPath);
+            Assert.AreEqual(result.LocationCount, locCount);
+            Assert.AreEqual(result.Error, error);
+        }
     }
 }

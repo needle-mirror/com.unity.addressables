@@ -172,6 +172,20 @@ namespace SceneTests
             yield return UnloadSceneFromHandler(activeScene);
             Assert.IsFalse(instOp.IsValid());
         }
+
+        [UnityTest]
+        public IEnumerator ActivateSceneAsync_ReturnsOperation()
+        {
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            yield return op;
+
+            var activateScene = op.Result.ActivateAsync();
+            yield return activateScene;
+
+            Assert.AreEqual(op.Result.m_Operation, activateScene);
+
+            yield return UnloadSceneFromHandler(op);
+        }
     }
 
 #if UNITY_EDITOR

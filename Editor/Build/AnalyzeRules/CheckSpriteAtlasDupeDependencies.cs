@@ -93,7 +93,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
     {
         static RegisterCheckSpriteAtlasDupeDependencies()
         {
-            AnalyzeWindow.RegisterNewRule<CheckSpriteAtlasDupeDependencies>();
+            AnalyzeSystem.RegisterNewRule<CheckSpriteAtlasDupeDependencies>();
         }
     }
 }

@@ -50,44 +50,39 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             }
         }
 
-//        /// <inheritdoc/>
-//        public override void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
-//        {
-//            if (otherSchemas == null)
-//            {
-//                OnGUI();
-//                return;
-//            }
-//            var so = new SerializedObject(this);
-//            SerializedProperty prop;
-//
-//            // IncludeResourcesFolders
-//            prop = so.FindProperty("m_IncludeResourcesFolders");
-//            ShowMixedValue(prop, otherSchemas, typeof(bool), "m_IncludeResourcesFolders");
-//            EditorGUI.BeginChangeCheck();
-//            bool newIncludeResourcesFolders = (bool)EditorGUILayout.Toggle(prop.displayName, IncludeResourcesFolders);
-//            if (EditorGUI.EndChangeCheck())
-//            {
-//                IncludeResourcesFolders = newIncludeResourcesFolders;
-//                foreach (var s in otherSchemas)
-//                    (s as PlayerDataGroupSchema).IncludeResourcesFolders = IncludeResourcesFolders;
-//            }
-//            EditorGUI.showMixedValue = false;
-//
-//            // IncludeBuildSettingsScenes
-//            prop = so.FindProperty("m_IncludeBuildSettingsScenes");
-//            ShowMixedValue(prop, otherSchemas, typeof(bool), "m_IncludeBuildSettingsScenes");
-//            EditorGUI.BeginChangeCheck();
-//            bool newIncludeBuildSettingsScenes = (bool)EditorGUILayout.Toggle(prop.displayName, IncludeBuildSettingsScenes);
-//            if (EditorGUI.EndChangeCheck())
-//            {
-//                IncludeBuildSettingsScenes = newIncludeBuildSettingsScenes;
-//                foreach (var s in otherSchemas)
-//                    (s as PlayerDataGroupSchema).IncludeBuildSettingsScenes = IncludeBuildSettingsScenes;
-//            }
-//            EditorGUI.showMixedValue = false;
-//
-//            so.ApplyModifiedProperties();
-//        }
+        /// <inheritdoc/>
+        public override void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
+        {
+            var so = new SerializedObject(this);
+            SerializedProperty prop;
+
+            // IncludeResourcesFolders
+            prop = so.FindProperty("m_IncludeResourcesFolders");
+            ShowMixedValue(prop, otherSchemas, typeof(bool), "m_IncludeResourcesFolders");
+            EditorGUI.BeginChangeCheck();
+            bool newIncludeResourcesFolders = (bool)EditorGUILayout.Toggle(prop.displayName, IncludeResourcesFolders);
+            if (EditorGUI.EndChangeCheck())
+            {
+                IncludeResourcesFolders = newIncludeResourcesFolders;
+                foreach (var s in otherSchemas)
+                    (s as PlayerDataGroupSchema).IncludeResourcesFolders = IncludeResourcesFolders;
+            }
+            EditorGUI.showMixedValue = false;
+
+            // IncludeBuildSettingsScenes
+            prop = so.FindProperty("m_IncludeBuildSettingsScenes");
+            ShowMixedValue(prop, otherSchemas, typeof(bool), "m_IncludeBuildSettingsScenes");
+            EditorGUI.BeginChangeCheck();
+            bool newIncludeBuildSettingsScenes = (bool)EditorGUILayout.Toggle(prop.displayName, IncludeBuildSettingsScenes);
+            if (EditorGUI.EndChangeCheck())
+            {
+                IncludeBuildSettingsScenes = newIncludeBuildSettingsScenes;
+                foreach (var s in otherSchemas)
+                    (s as PlayerDataGroupSchema).IncludeBuildSettingsScenes = IncludeBuildSettingsScenes;
+            }
+            EditorGUI.showMixedValue = false;
+
+            so.ApplyModifiedProperties();
+        }
     }
 }
