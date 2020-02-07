@@ -87,7 +87,8 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
         void RegisterEventHandler(bool reg)
         {
-            DiagnosticEventCollector.RegisterEventHandler(OnEditorPlayModeEvent, reg, false);
+            if(ProjectConfigData.postProfilerEvents)
+                DiagnosticEventCollector.RegisterEventHandler(OnEditorPlayModeEvent, reg, false);
         }
 
         void OnEditorPlayModeEvent(DiagnosticEvent evt)

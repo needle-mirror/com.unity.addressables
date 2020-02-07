@@ -45,7 +45,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         List<string> m_OutputAssetBundleNames;
         HashSet<string> m_CreatedProviderIds;
         LinkXmlGenerator m_Linker;
-        
+        internal Dictionary<string, string> m_BundleToInternalId = new Dictionary<string, string>();
+
         /// <inheritdoc />
         public override bool CanBuildData<T>()
         {
@@ -220,57 +221,73 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 {
                     Debug.LogException(e);
                 }
-            } 
+            }
 
             return opResult;
         }
 
         private void PostProcessCatalogEnteries(AddressableAssetGroup group, IBundleWriteData writeData, List<ContentCatalogDataEntry> locations, FileRegistry fileRegistry)
         {
-            if (!group.HasSchema<BundledAssetGroupSchema>() || !File.Exists(ContentUpdateScript.GetContentStateDataPath(false)))
+            if (!group.HasSchema<BundledAssetGroupSchema>() ||
+                !File.Exists(ContentUpdateScript.GetContentStateDataPath(false)))
                 return;
 
-            AddressablesContentState contentState = ContentUpdateScript.LoadContentState(ContentUpdateScript.GetContentStateDataPath(false));
+            AddressablesContentState contentState =
+                ContentUpdateScript.LoadContentState(ContentUpdateScript.GetContentStateDataPath(false));
 
             foreach (AddressableAssetEntry entry in group.entries)
             {
-                CachedAssetState cachedAsset = contentState.cachedInfos.FirstOrDefault(i => i.asset.guid.ToString() == entry.guid);
+                CachedAssetState cachedAsset =
+                    contentState.cachedInfos.FirstOrDefault(i => i.asset.guid.ToString() == entry.guid);
                 if (cachedAsset != null)
                 {
-                    if (entry.parentGroup.Guid == cachedAsset.groupGuid)
+                    GUID guid = new GUID(entry.guid);
+                    if (!writeData.AssetToFiles.ContainsKey(guid))
+                        continue;
+
+                    string file = writeData.AssetToFiles[guid][0];
+                    string fullBundleName = writeData.FileToBundle[file];
+                    string convertedLocation = m_BundleToInternalId[fullBundleName];
+
+                    ContentCatalogDataEntry catalogBundleEntry = locations.FirstOrDefault((loc) => loc.InternalId == (convertedLocation));
+
+                    if (catalogBundleEntry != null)
                     {
-                        GUID guid = new GUID(entry.guid);
-                        if (!writeData.AssetToFiles.ContainsKey(guid))
-                            continue;
-
-                        string file = writeData.AssetToFiles[guid][0];
-                        string fullBundleName = writeData.FileToBundle[file];
-
-                        ContentCatalogDataEntry catalogBundleEntry = locations.FirstOrDefault((loc) => (loc.Keys[0] as string) == fullBundleName);
-
-                        if (catalogBundleEntry != null)
+                        if (entry.parentGroup.Guid == cachedAsset.groupGuid)
                         {
-                            if (String.IsNullOrEmpty(entry.BundleFileId))
-                                entry.BundleFileId = catalogBundleEntry.InternalId;
-                            else
+
+                            //Asset hash hasn't changed
+                            if (AssetDatabase.GetAssetDependencyHash(entry.AssetPath) == cachedAsset.asset.hash)
                             {
                                 if (catalogBundleEntry.InternalId != cachedAsset.bundleFileId)
                                 {
-                                    string unusedBundlePath =
-                                        fileRegistry.GetFilePathForBundle(
-                                            Path.GetFileNameWithoutExtension(fullBundleName));
+                                    string builtBundlePath = m_BundleToInternalId[fullBundleName].Replace(
+                                        group.GetSchema<BundledAssetGroupSchema>().LoadPath.GetValue(group.Settings),
+                                        group.GetSchema<BundledAssetGroupSchema>().BuildPath.GetValue(group.Settings));
 
-                                    if (File.Exists(unusedBundlePath)
-                                        && fileRegistry.ReplaceBundleEntry(
-                                            Path.GetFileNameWithoutExtension(fullBundleName),
-                                            cachedAsset.bundleFileId))
+                                    string cachedBundlePath = cachedAsset.bundleFileId?.Replace(
+                                        group.GetSchema<BundledAssetGroupSchema>().LoadPath.GetValue(group.Settings),
+                                        group.GetSchema<BundledAssetGroupSchema>().BuildPath.GetValue(group.Settings));
+
+                                    //Need to check and make sure our cached version exists
+                                    if (!string.IsNullOrEmpty(cachedBundlePath) && File.Exists(cachedBundlePath))
                                     {
-                                        File.Delete(unusedBundlePath);
-                                        catalogBundleEntry.InternalId = entry.BundleFileId;
-                                        catalogBundleEntry.Data = cachedAsset.data;
+                                        //Try and replace the new bundle entry with the cached one and delete the new bundle
+                                        if (File.Exists(builtBundlePath)
+                                            && fileRegistry.ReplaceBundleEntry(
+                                                Path.GetFileNameWithoutExtension(convertedLocation),
+                                                cachedAsset.bundleFileId))
+                                        {
+                                            File.Delete(builtBundlePath);
+                                            catalogBundleEntry.InternalId = cachedAsset.bundleFileId;
+                                            catalogBundleEntry.Data = cachedAsset.data;
+                                            entry.BundleFileId = cachedAsset.bundleFileId;
+                                        }
                                     }
                                 }
                             }
+                            entry.BundleFileId = catalogBundleEntry.InternalId;
+                            cachedAsset.bundleFileId = catalogBundleEntry.InternalId;
                         }
                     }
                 }
@@ -615,6 +632,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             if (string.IsNullOrEmpty(path))
                 return;
 
+            m_BundleToInternalId.Clear();
             for (int i=0; i<buildBundles.Count; ++i)
             {
                 var info = buildResult.BundleInfos[buildBundles[i]];
@@ -643,6 +661,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     dataEntry.Keys[0] = outputBundles[i];
                     ReplaceDependencyKeys(buildBundles[i], outputBundles[i], locations);
                     
+                    if(!m_BundleToInternalId.ContainsKey(buildBundles[i]))
+                        m_BundleToInternalId.Add(buildBundles[i], dataEntry.InternalId);
+
                     if (dataEntry.InternalId.StartsWith("http:\\"))
                         dataEntry.InternalId = dataEntry.InternalId.Replace("http:\\", "http://").Replace("\\", "/");
                     if (dataEntry.InternalId.StartsWith("https:\\"))

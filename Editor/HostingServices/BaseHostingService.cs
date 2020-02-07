@@ -13,7 +13,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         const string k_HostingServiceContentRootKey = "ContentRoot";
         const string k_IsHostingServiceRunningKey = "IsEnabled";
         const string k_DescriptiveNameKey = "DescriptiveName";
-        const string k_InstanceIdKey = "InstanceId";
+        internal const string k_InstanceIdKey = "InstanceId";
 
         /// <summary>
         /// List of content roots for hosting service.

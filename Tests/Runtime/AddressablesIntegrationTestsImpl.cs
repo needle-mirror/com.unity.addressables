@@ -859,6 +859,21 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator RuntimeKeyIsValid_ReturnsTrueForSubObjects()
+        {
+            yield return Init();
+
+            var handle = m_Addressables.InstantiateAsync(AssetReferenceObjectKey);
+            yield return handle;
+            Assert.IsNotNull(handle.Result);
+            AssetReferenceTestBehavior behavior = handle.Result.GetComponent<AssetReferenceTestBehavior>();
+
+            Assert.IsTrue(behavior.ReferenceWithSubObject.RuntimeKeyIsValid());
+
+            handle.Release();
+        }
+
+        [UnityTest]
         public IEnumerator RuntimeKeyIsValid_ReturnsTrueForValidKeys()
         {
             yield return Init();

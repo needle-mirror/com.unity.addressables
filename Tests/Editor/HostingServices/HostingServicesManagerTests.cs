@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Serialization;
 using System.Threading;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.HostingServices;
@@ -410,6 +413,43 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             Assert.IsFalse(ProfileStringEvalDelegateIsRegistered(m_Settings, svc));
         }
 
+        // OnAfterDeserialize
+
+        [Test]
+        public void OnAfterDeserializeShould_RestoreHostingServicesInstancesIfStillAlive()
+        {
+            m_Manager.Initialize(m_Settings);
+            var svc = m_Manager.AddHostingService(typeof(TestHostingService), "test");
+            Assert.IsTrue(m_Manager.HostingServices.Contains(svc));
+
+            var generator = new ObjectIDGenerator();
+            var id = generator.GetId(svc, out bool firstTime);
+            Assert.IsTrue(firstTime);
+
+            m_Manager.OnBeforeSerialize();
+            var serializedData = Serialize(m_Manager);
+
+            svc = null;
+            m_Manager = null;
+            m_Settings.HostingServicesManager = null;
+
+            var newManager = new HostingServicesManager();
+            m_Settings.HostingServicesManager = newManager;
+            newManager.Initialize(m_Settings);
+
+            Deserialize(newManager, serializedData);
+            newManager.OnAfterDeserialize();
+
+            Assert.IsNotEmpty(newManager.HostingServices);
+            svc = newManager.HostingServices.FirstOrDefault();
+            Assert.NotNull(svc);
+            var id2 = generator.GetId(svc, out firstTime);
+            Assert.IsFalse(firstTime);
+            Assert.AreEqual(id, id2);
+
+            m_Manager = newManager;
+        }
+
         // RegisterLogger
 
         [Test]
@@ -495,6 +535,37 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             var del = new AddressableAssetProfileSettings.ProfileStringEvaluationDelegate(m.EvaluateGlobalProfileVariableKey);
             var list = s.profileSettings.onProfileStringEvaluation.GetInvocationList();
             return list.Contains(del);
+        }
+
+        static SerializedData Serialize(HostingServicesManager m)
+        {
+            FieldInfo infosField = typeof(HostingServicesManager).GetField("m_HostingServiceInfos", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(infosField);
+            FieldInfo typeRefField = typeof(HostingServicesManager).GetField("m_RegisteredServiceTypeRefs", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(typeRefField);
+
+            return new SerializedData()
+            {
+                Infos = (List<HostingServicesManager.HostingServiceInfo>)infosField.GetValue(m),
+                TypeRefs = (List<string>)typeRefField.GetValue(m)
+            };
+        }
+
+        static void Deserialize(HostingServicesManager m, SerializedData data)
+        {
+            FieldInfo infosField = typeof(HostingServicesManager).GetField("m_HostingServiceInfos", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(infosField);
+            FieldInfo typeRefField = typeof(HostingServicesManager).GetField("m_RegisteredServiceTypeRefs", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(typeRefField);
+
+            infosField.SetValue(m, data.Infos);
+            typeRefField.SetValue(m, data.TypeRefs);
+        }
+
+        class SerializedData
+        {
+            public List<HostingServicesManager.HostingServiceInfo> Infos;
+            public List<string> TypeRefs;
         }
     }
 }

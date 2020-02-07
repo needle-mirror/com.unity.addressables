@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEditor.AddressableAssets.HostingServices;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Tests.HostingServices
@@ -20,6 +22,16 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
         public override void StopHostingService()
         {
             IsHostingServiceRunning = false;
+        }
+
+        public override void OnBeforeSerialize(KeyDataStore dataStore)
+        {
+            dataStore.SetData(BaseHostingService.k_InstanceIdKey, InstanceId);
+        }
+
+        public override void OnAfterDeserialize(KeyDataStore dataStore)
+        {
+            InstanceId = dataStore.GetData(BaseHostingService.k_InstanceIdKey, -1);
         }
     }
 }

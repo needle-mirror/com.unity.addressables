@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEditor.AddressableAssets.Diagnostics.GUI;
 using UnityEditor.AddressableAssets.Diagnostics.GUI.Graph;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine.AddressableAssets;
 using UnityEngine;
 using UnityEngine.ResourceManagement.Diagnostics;
@@ -72,12 +73,14 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             m_cacheTree = new CacheDataTree(this, m_EventListTreeViewState);
             m_cacheTree.Reload();
             EditorApplication.playModeStateChanged += OnEditorPlayModeChanged;
-            DiagnosticEventCollector.RegisterEventHandler(OnEvent, true, false);
+            if (ProjectConfigData.postProfilerEvents)
+                DiagnosticEventCollector.RegisterEventHandler(OnEvent, true, false);
         }
 
         private void OnDisable()
         {
-            DiagnosticEventCollector.RegisterEventHandler(OnEvent, false, false);
+            if (ProjectConfigData.postProfilerEvents)
+                DiagnosticEventCollector.RegisterEventHandler(OnEvent, false, false);
             EditorApplication.playModeStateChanged -= OnEditorPlayModeChanged;
         }
 
@@ -127,10 +130,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         void OnEditorPlayModeChanged(PlayModeStateChange state)
         {
-            if (state == PlayModeStateChange.EnteredPlayMode)
-                DiagnosticEventCollector.RegisterEventHandler(OnEvent, true, false);
-            else if (state == PlayModeStateChange.EnteredEditMode)
-                DiagnosticEventCollector.RegisterEventHandler(OnEvent, false, false);
+            if (ProjectConfigData.postProfilerEvents)
+            {
+                if (state == PlayModeStateChange.EnteredPlayMode)
+                    DiagnosticEventCollector.RegisterEventHandler(OnEvent, true, false);
+                else if (state == PlayModeStateChange.EnteredEditMode)
+                    DiagnosticEventCollector.RegisterEventHandler(OnEvent, false, false);
+            }
         }
 
         TreeViewState m_EventListTreeViewState;

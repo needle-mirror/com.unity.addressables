@@ -365,7 +365,11 @@ namespace UnityEngine.AddressableAssets
         public virtual bool RuntimeKeyIsValid()
         {
             Guid result;
-            return Guid.TryParse(RuntimeKey.ToString(), out result);
+            string guid = RuntimeKey.ToString();
+            int subObjectIndex = guid.IndexOf("[");
+            if (subObjectIndex != -1) //This means we're dealing with a sub-object and need to convert the runtime key.
+                guid = guid.Substring(0, subObjectIndex);
+            return Guid.TryParse(guid, out result);
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.NetworkInformation;
@@ -21,12 +21,21 @@ namespace UnityEditor.AddressableAssets.HostingServices
         internal const string KPrivateIpAddressKey = "PrivateIpAddress";
 
         [Serializable]
-        class HostingServiceInfo
+        internal class HostingServiceInfo : ISerializationCallbackReceiver
         {
             [SerializeField]
             internal string classRef;
             [SerializeField]
             internal KeyDataStore dataStore;
+
+            public void OnBeforeSerialize() { }
+
+            public void OnAfterDeserialize()
+            {
+                //handle change to namespace that happened just before Addressables 1.0.0.  Can remove once upgrades from 0.5.x are no longer expected
+                if (classRef.Contains("UnityEditor.AddressableAssets.HttpHostingService"))
+                    classRef = classRef.Replace("UnityEditor.AddressableAssets.HttpHostingService", "UnityEditor.AddressableAssets.HostingServices.HttpHostingService");
+            }
         }
 
         [FormerlySerializedAs("m_hostingServiceInfos")]
@@ -47,6 +56,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             typeof(HttpHostingService)
         };
 
+        private static Dictionary<int, WeakReference<IHostingService>> s_HostingServicesCache = new Dictionary<int, WeakReference<IHostingService>>();
         Dictionary<IHostingService, HostingServiceInfo> m_HostingServiceInfoMap;
         ILogger m_Logger;
         List<Type> m_RegisteredServiceTypes;
@@ -233,6 +243,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             m_Settings.profileSettings.RegisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
             
             m_HostingServiceInfoMap.Add(svc, info);
+            s_HostingServicesCache[svc.InstanceId] = new WeakReference<IHostingService>(svc);
             m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true, true);
 
             m_NextInstanceId++;
@@ -252,6 +263,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             svc.StopHostingService();
             m_Settings.profileSettings.UnregisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
             m_HostingServiceInfoMap.Remove(svc);
+            s_HostingServicesCache.Remove(svc.InstanceId);
             m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true, true);
         }
 
@@ -319,15 +331,17 @@ namespace UnityEditor.AddressableAssets.HostingServices
             m_HostingServiceInfoMap = new Dictionary<IHostingService, HostingServiceInfo>();
             foreach (var svcInfo in m_HostingServiceInfos)
             {
-                var classRef = svcInfo.classRef;
-                //handle change to namespace that happened just before Addressables 1.0.0.  Can remove once upgrades from 0.5.x are no longer expected
-                if (classRef.Contains("UnityEditor.AddressableAssets.HttpHostingService"))
-                    classRef = classRef.Replace("UnityEditor.AddressableAssets.HttpHostingService", "UnityEditor.AddressableAssets.HostingServices.HttpHostingService");
-                
-                var svc = CreateHostingServiceInstance(classRef);
+                IHostingService svc = null;
+                var id = svcInfo.dataStore.GetData(BaseHostingService.k_InstanceIdKey, -1);
+                if (id == -1 || !s_HostingServicesCache.ContainsKey(id) || !s_HostingServicesCache[id].TryGetTarget(out svc))
+                {
+                    svc = CreateHostingServiceInstance(svcInfo.classRef);
+                }
+
                 if (svc == null) continue;
                 svc.OnAfterDeserialize(svcInfo.dataStore);
                 m_HostingServiceInfoMap.Add(svc, svcInfo);
+                s_HostingServicesCache[svc.InstanceId] = new WeakReference<IHostingService>(svc);
             }
 
             m_RegisteredServiceTypes = new List<Type>();

@@ -4,6 +4,17 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2020-02-08
+- Checking if Profile Events is enabled on the engine side before running the DiagnosticEventCollector Update.
+- Fixed issue where RuntimeKeyIsValid was give a false negative when checking sub-objects.
+- Fixed Update Previous Build workflow that wasn't re-using previously built Asset Bundle paths when necessary.
+- Updated Scriptable Build Pipeline dependency to bring in these changes:
+  - Fixed an issue where texture sources for sprites were not being stripped from the build.
+  - Fixed an issue where scene changes weren't getting picked up in a content re-build.
+  - Fixed an issue where texture sources for non-packed sprites were being stripped incorrectly.
+- Fixed issue where hosting service ports were changing on assets re-import.
+- Fixed issues with Content Update, including groups that are Packed Separately not updating properly.
+
 ## [1.6.0] - 2020-01-21
 - Fixed bug where unsubscribing to AsyncOperations events could throw if no subscription happened beforehand.   
 - Fixed NullReferenceException when displaying Groups window displaying entries with Missing Script References on SubAssets.
@@ -18,14 +29,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added API to get the scene AsyncOperation from ActivateAsync().  Made the previous API, Activate(), obsolete.
 - Fixed bug where the group window wasn't properly refreshed on Analyse fix
 
+## [1.5.1] - 2020-01-13
+- Fixed issue where groups and schemas were getting deleted on import.
+- Adding scripting define to remove Caching API calls when ENABLE_CACHING is false
+
 ## [1.5.0] - 2019-12-09
 - Fixed temporary StreamingAssets files not being removed on a failed player build.
 - Added Bundle Naming option for naming as a hash of the full filename string.
 - Added a delay before unloaded things are removed from Event Viewer graph.  Ideally this would track with dependencies, but for now it's simply time based.
 - Fixed ProfileValueReferences not getting set dirty when changed.
 - Added ability for Addressables to handle null references in the Addressables groups list.  
-  -Null groups should not affect or influence content builds, updates, or Analyze rules.
-  -Right clicking on a [Missing Reference] will give you the option to remove all missing references.
+  - Null groups should not affect or influence content builds, updates, or Analyze rules.
+  - Right clicking on a [Missing Reference] will give you the option to remove all missing references.
 - Fixed issue with Analyze reporting multiple duplicate data for one group.
 - Fixed issue where unloading a scene was throwing an invalid handle error.
 - Added Addressables.ClearDependencyCacheAsync API to clear cached dependent AssetBundles for a given key or list of keys.
