@@ -322,11 +322,13 @@ namespace UnityEditor.AddressableAssets.Settings
         /// </summary>
         public void OnBeforeSerialize()
         {
-            m_SerializeEntries.Clear();
-            foreach (var e in entries)
-                m_SerializeEntries.Add(e);
-
-            m_SerializeEntries.Sort(this);
+            if (m_SerializeEntries == null)
+            {
+                m_SerializeEntries = new List<AddressableAssetEntry>(entries.Count);
+                foreach (var e in entries)
+                    m_SerializeEntries.Add(e);
+                m_SerializeEntries.Sort(this);
+            }
         }
 
         /// <summary>
@@ -335,7 +337,6 @@ namespace UnityEditor.AddressableAssets.Settings
         public void OnAfterDeserialize()
         {
             ResetEntryMap();
-            m_SerializeEntries.Clear();
         }
 
         internal void ResetEntryMap()
@@ -452,6 +453,7 @@ namespace UnityEditor.AddressableAssets.Settings
             e.IsSubAsset = false;
             e.parentGroup = this;
             m_EntryMap[e.guid] = e;
+            m_SerializeEntries = null;
             SetDirty(AddressableAssetSettings.ModificationEvent.EntryAdded, e, postEvent, true);
         }
 
@@ -462,9 +464,9 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <returns></returns>
         public virtual AddressableAssetEntry GetAssetEntry(string guid)
         {
-            if (m_EntryMap.ContainsKey(guid))
-                return m_EntryMap[guid];
-            return null;
+            AddressableAssetEntry entry;
+            m_EntryMap.TryGetValue(guid, out entry);
+            return entry;
         }
 
         /// <summary>
@@ -493,6 +495,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             m_EntryMap.Remove(entry.guid);
             entry.parentGroup = null;
+            m_SerializeEntries = null;
             SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, entry, postEvent, true);
         }
 
@@ -503,8 +506,11 @@ namespace UnityEditor.AddressableAssets.Settings
                 m_EntryMap.Remove(entry.guid);
                 entry.parentGroup = null;
             }
-            if(removeEntries.Count() > 0)
+            if (removeEntries.Count() > 0)
+            {
+                m_SerializeEntries = null;
                 SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, removeEntries.ToArray(), postEvent, true);
+            }
         }
 
         /// <summary>

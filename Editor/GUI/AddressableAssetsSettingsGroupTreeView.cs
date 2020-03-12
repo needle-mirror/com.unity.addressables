@@ -17,6 +17,7 @@ namespace UnityEditor.AddressableAssets.GUI
         AddressableAssetsSettingsGroupEditor m_Editor;
         internal string customSearchString = string.Empty;
         string m_FirstSelectedGroup;
+        private readonly Dictionary<AssetEntryTreeViewItem, bool> m_SearchedEntries = new Dictionary<AssetEntryTreeViewItem, bool>();
 
         enum ColumnId
         {
@@ -106,18 +107,66 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             SortChildren(root);
             var rows = base.BuildRows(root);
-            if (!string.IsNullOrEmpty(customSearchString))
+            if (string.IsNullOrEmpty(searchString))
+                return rows;
+
+            return Search(rows);
+        }
+
+        protected IList<TreeViewItem> Search(IList<TreeViewItem> rows)
+        {
+            if(rows == null) 
+                return new List<TreeViewItem>();
+
+            m_SearchedEntries.Clear();
+            return rows.OfType<AssetEntryTreeViewItem>()
+                .Where(row => ProjectConfigData.hierarchicalSearch
+                    ? SearchHierarchical(row, customSearchString)
+                    : DoesItemMatchSearch(row, searchString))
+                .Cast<TreeViewItem>()
+                .ToList();
+        }
+
+        protected bool SearchHierarchical(TreeViewItem item, string search)
+        {
+            var aeItem = item as AssetEntryTreeViewItem;
+            if (aeItem == null || search == null)
+                return false;
+
+            if (m_SearchedEntries.ContainsKey(aeItem))
+                return m_SearchedEntries[aeItem];
+
+            bool isMatching = DoesItemMatchSearch(aeItem, search) || IsInMatchingGroup(aeItem);
+            m_SearchedEntries.Add(aeItem, isMatching);
+            
+            if ((!isMatching || aeItem.IsGroup) && aeItem.children != null)
             {
-                var z = rows.Where(s => DoesItemMatchSearch(s, customSearchString)).ToList();
-                return z;
+                foreach (var c in aeItem.children)
+                {
+                    if (SearchHierarchical(c, search))
+                        return true;
+                }
             }
-            return rows;
+
+            return isMatching;
+        }
+
+        private bool IsInMatchingGroup(AssetEntryTreeViewItem aeItem)
+        {
+            AssetEntryTreeViewItem current = aeItem;
+            while (current != null && !current.IsGroup)
+            {
+                current = current.parent as AssetEntryTreeViewItem;
+            }
+
+            return current != null && current.IsGroup && m_SearchedEntries.ContainsKey(current) && m_SearchedEntries[current];
         }
 
         internal void ClearSearch()
         {
             customSearchString = string.Empty;
             searchString = string.Empty;
+            m_SearchedEntries.Clear();
         }
 
         void SortChildren(TreeViewItem root)
@@ -207,47 +256,23 @@ namespace UnityEditor.AddressableAssets.GUI
 
             return result;
         }
+
         protected override bool DoesItemMatchSearch(TreeViewItem item, string search)
         {
-            if (item == null)
-                return false;
+            if (string.IsNullOrEmpty(search))
+                return true;
+
             var aeItem = item as AssetEntryTreeViewItem;
-            if (ProjectConfigData.hierarchicalSearch)
-            {
-                //does this item match?
-                if (DoesAeItemMatchSearch(aeItem, search))
-                    return true;
-
-                //else check if children match.
-                if (item.children != null)
-                {
-                    foreach (var c in item.children)
-                    {
-                        if (DoesItemMatchSearch(c, search))
-                            return true;
-                    }
-                }
-
-                //nope.
-                return false;
-            }
-
-            return DoesAeItemMatchSearch(aeItem, search);
-            //SortSearchResult(result);
-        }
-
-        protected bool DoesAeItemMatchSearch(AssetEntryTreeViewItem aeItem, string search)
-        {
-            if (aeItem == null || aeItem.entry == null)
+            if (aeItem == null)
                 return false;
 
             //check if item matches.
             if (aeItem.displayName.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
                 return true;
 
-            if (aeItem.entry.AssetPath.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
+            if (aeItem.entry != null && aeItem.entry.AssetPath.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
                 return true;
-            if (m_Editor.settings.labelTable.GetString(aeItem.entry.labels, 200).IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
+            if (aeItem.entry != null && m_Editor.settings.labelTable.GetString(aeItem.entry.labels, 200).IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
                 return true;
 
             return false;
@@ -260,25 +285,49 @@ namespace UnityEditor.AddressableAssets.GUI
 
             if (group != null && group.entries.Count > 0)
             {
-
                 foreach (var entry in group.entries)
                 {
-                    AddAndRecurseEntriesBuild(entry, groupItem, 1);
+                    AddAndRecurseEntriesBuild(entry, groupItem, 1, IsExpanded(groupItem.id));
                 }
             }
         }
 
-        void AddAndRecurseEntriesBuild(AddressableAssetEntry entry, AssetEntryTreeViewItem parent, int depth)
+        void AddAndRecurseEntriesBuild(AddressableAssetEntry entry, AssetEntryTreeViewItem parent, int depth, bool expanded)
         {
             var item = new AssetEntryTreeViewItem(entry, depth);
             parent.AddChild(item);
+            if (!expanded)
+            {
+                item.checkedForChildren = false;
+                return;
+            }
+            RecurseEntryChildren(entry, item, depth);
+        }
+
+        private void RecurseEntryChildren(AddressableAssetEntry entry, AssetEntryTreeViewItem item, int depth)
+        {
+            item.checkedForChildren = true;
             var subAssets = new List<AddressableAssetEntry>();
             entry.GatherAllAssets(subAssets, false, false, true);
             if (subAssets.Count > 0)
             {
                 foreach (var e in subAssets)
                 {
-                    AddAndRecurseEntriesBuild(e, item, depth + 1);
+                    AddAndRecurseEntriesBuild(e, item, depth + 1, IsExpanded(item.id));
+                }
+            }
+        }
+
+        protected override void ExpandedStateChanged()
+        {
+            foreach (var id in state.expandedIDs)
+            {
+                var item = FindItem(id, rootItem);
+                if (item != null && item.hasChildren)
+                {
+                    foreach (AssetEntryTreeViewItem c in item.children)
+                        if (!c.checkedForChildren)
+                            RecurseEntryChildren(c.entry, c, c.depth + 1);
                 }
             }
         }
@@ -1043,8 +1092,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 visualMode = DragAndDropVisualMode.Copy;
                 bool isDraggingGroup = draggedNodes.First().parent == rootItem;
                 bool dropParentIsRoot = args.parentItem == rootItem || args.parentItem == null;
+                bool parentGroupIsReadOnly = target?.@group != null && target.@group.ReadOnly;
 
-                if (isDraggingGroup && !dropParentIsRoot || !isDraggingGroup && dropParentIsRoot)
+                if (isDraggingGroup && !dropParentIsRoot || !isDraggingGroup && dropParentIsRoot || parentGroupIsReadOnly)
                         visualMode = DragAndDropVisualMode.Rejected;
 
                 if (args.performDrop)
@@ -1116,7 +1166,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
             }
 
-            if (target == null && !containsGroup)
+            bool parentGroupIsReadOnly = target?.@group != null && target.@group.ReadOnly;
+            if (target == null && !containsGroup || parentGroupIsReadOnly)
                 return DragAndDropVisualMode.Rejected;
 
             foreach (String path in DragAndDrop.paths)
@@ -1228,6 +1279,7 @@ namespace UnityEditor.AddressableAssets.GUI
         public AddressableAssetGroup group;
         public Texture2D assetIcon;
         public bool isRenaming;
+        public bool checkedForChildren = true;
 
         public AssetEntryTreeViewItem(AddressableAssetEntry e, int d) : base(e == null ? 0 : (e.address + e.guid).GetHashCode(), d, e == null ? "[Missing Reference]" : e.address)
         {
@@ -1244,6 +1296,8 @@ namespace UnityEditor.AddressableAssets.GUI
             assetIcon = null;
             isRenaming = false;
         }
+
+        public bool IsGroup => group != null && entry == null;
 
         public override string displayName
         {

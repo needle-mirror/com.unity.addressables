@@ -146,10 +146,14 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 if (aaSettings == null && !string.IsNullOrEmpty(aaPath))
                     aaContext.settings = aaSettings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(aaPath);
 
-                GenerateLocationListsTask.Run(aaContext, extractData.WriteData);
+                using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+                {
+                    progressTracker.UpdateTask("Generating Addressables Locations");
+                    GenerateLocationListsTask.Run(aaContext, extractData.WriteData);
+                }
             }
 
-            var bundledAssets = new Dictionary<object, List<string>>();
+            var bundledAssets = new Dictionary<object, HashSet<string>>();
             foreach (var loc in aaContext.locations)
             {
                 if (loc.Dependencies != null && loc.Dependencies.Count > 0)
@@ -157,14 +161,15 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     for (int i = 0; i < loc.Dependencies.Count; i++)
                     {
                         var dep = loc.Dependencies[i];
-                        List<string> assetsInBundle;
+                        HashSet<string> assetsInBundle;
                         if (!bundledAssets.TryGetValue(dep, out assetsInBundle))
-                            bundledAssets.Add(dep, assetsInBundle = new List<string>());
+                            bundledAssets.Add(dep, assetsInBundle = new HashSet<string>());
                         if (i == 0 && !assetsInBundle.Contains(loc.InternalId)) //only add the asset to the first bundle...
                             assetsInBundle.Add(loc.InternalId);
                     }
                 }
             }
+
             foreach (var bd in bundledAssets)
             {
                 AddressableAssetGroup group = aaSettings.DefaultGroup;

@@ -20,6 +20,7 @@ namespace UnityEngine.AddressableAssets.Initialization
         string m_ProviderSuffix;
         AddressablesImpl m_Addressables;
         ResourceManagerDiagnostics m_Diagnostics;
+        InitalizationObjectsOperation m_InitGroupOps;
 
         public InitializationOperation(AddressablesImpl aa)
         {
@@ -52,7 +53,12 @@ namespace UnityEngine.AddressableAssets.Initialization
             var initOp = new InitializationOperation(aa);
             initOp.m_rtdOp = aa.ResourceManager.ProvideResource<ResourceManagerRuntimeData>(runtimeDataLocation);
             initOp.m_ProviderSuffix = providerSuffix;
-            return aa.ResourceManager.StartOperation<IResourceLocator>(initOp, initOp.m_rtdOp);
+            initOp.m_InitGroupOps = new InitalizationObjectsOperation();
+            initOp.m_InitGroupOps.Init(initOp.m_rtdOp, aa);
+
+            var groupOpHandle = aa.ResourceManager.StartOperation(initOp.m_InitGroupOps, initOp.m_rtdOp);
+
+            return aa.ResourceManager.StartOperation<IResourceLocator>(initOp, groupOpHandle);
         }
 
         protected override void Execute()
@@ -84,27 +90,10 @@ namespace UnityEngine.AddressableAssets.Initialization
 
             //   DiagnosticEventCollector.ResourceManagerProfilerEventsEnabled = rtd.ProfileEvents;
             Addressables.Log("Addressables - loading initialization objects.");
-            foreach (var i in rtd.InitializationObjects)
-            {
-                if (i.ObjectType.Value == null)
-                {
-                    Addressables.LogFormat("Invalid initialization object type {0}.", i.ObjectType);
-                    continue;
-                }
-                try
-                {
-                    var o = i.CreateInstance<object>();
-                    Addressables.LogFormat("Initialization object {0} created instance {1}.", i, o);
-                }
-                catch (Exception ex)
-                {
-                    Addressables.LogErrorFormat("Exception thrown during initialization of object {0}: {1}", i, ex.ToString());
-                }
-            }
-
+           
             ContentCatalogProvider ccp = m_Addressables.ResourceManager.ResourceProviders
                 .FirstOrDefault(rp => rp.GetType() == typeof(ContentCatalogProvider)) as ContentCatalogProvider;
-            if(ccp != null)
+            if (ccp != null)
                 ccp.DisableCatalogUpdateOnStart = rtd.DisableCatalogUpdateOnStartup;
 
             var locMap = new ResourceLocationMap("CatalogLocator", rtd.CatalogLocations);

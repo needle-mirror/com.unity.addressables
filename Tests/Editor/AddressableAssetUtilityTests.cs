@@ -1,7 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Build.Utilities;
+using UnityEngine;
+using UnityEngine.Audio;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -60,6 +65,38 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.jpg"));
             Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.avi"));
             Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.controller"));
+        }
+
+
+        [Test]
+        public void IsEditorTypeRemappedToNull()
+        {
+            Assert.IsNull(AddressableAssetUtility.RemapToRuntimeType(typeof(UnityEditor.AssetImporter)));
+        }
+
+        [Test]
+        public void IsRuntimeTypeNotRemapped()
+        {
+            Assert.AreEqual(AddressableAssetUtility.RemapToRuntimeType(typeof(UnityEngine.Vector3)), typeof(UnityEngine.Vector3));
+        }
+
+        [Test]
+        public void AreConvertableEditorAssemblyTypesConverted()
+        {
+            Assembly asm = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.FullName == "UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+            var conversionMapping = new Dictionary<Type, Type>()
+            {
+                { asm.GetType("UnityEditor.Audio.AudioMixerGroupController"), typeof(AudioMixerGroup) },
+                { asm.GetType("UnityEditor.Audio.AudioMixerController"), typeof(AudioMixer) },
+                { typeof(UnityEditor.SceneAsset),  typeof(UnityEngine.ResourceManagement.ResourceProviders.SceneInstance) },
+                { typeof(UnityEditor.Animations.AnimatorController), typeof(RuntimeAnimatorController) }
+            };
+
+            foreach (Type key in conversionMapping.Keys)
+            {
+                var type = AddressableAssetUtility.RemapToRuntimeType(key);
+                Assert.AreEqual(type, conversionMapping[key]);
+            }
         }
     }
 }

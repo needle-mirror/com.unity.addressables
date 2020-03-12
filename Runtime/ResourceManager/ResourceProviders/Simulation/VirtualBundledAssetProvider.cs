@@ -26,7 +26,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             if (!locHash.isValid)
                 return BundleSize;
 
-#if !UNITY_SWITCH && !UNITY_PS4
+#if ENABLE_CACHING
             var bundleName = Path.GetFileNameWithoutExtension(id);
             if (locHash.isValid) //If we have a hash, ensure that our desired version is cached.
             {
@@ -41,7 +41,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
                 if (versions.Count > 0)
                     return 0;
             }
-#endif //!UNITY_SWITCH && !UNITY_PS4
+#endif //ENABLE_CACHING
             return BundleSize;
         }
     }

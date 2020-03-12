@@ -4,6 +4,26 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.7.4] - 2020-03-13
+- Improved building catalog data speed.
+- Various minor optimizations related to handling sub objects.
+- Added progress bar to the catalog generation part of the build process.
+- Gave initialization objects an asynchronous initialization API.
+- Made it so a CacheInitializationObject waits for engine side Caching.ready to be true before completing.
+- Fixed a bug when accessing AssetReferenceT.editorAsset where the Type does not match the Editor Asset type, Such as a subAsset type.
+- Fixed bug where Use Asset Database and Use Existing Build could return a different number of results in LoadAssetAsync<IList<>>
+- Fixed bug where SceneUnload Operations weren't getting properly released in certain circumstances.
+- Fixed UI performance regression when opening the Addressables Group Editor window.
+- Updating scripting defines to check if caching is enabled.
+- Prevent assets from being added to read only Addressable groups through the group editor window.
+- Group names can now be searched through the group editor window. 
+- Added ability to set variables in AddressablesRuntimeProperties more than once.
+- Fixed missed null check on drag and drop in Group Editor window.
+- Updated Scriptable Build Pipeline dependency to bring in these changes:
+  - Updated CompatibilityAssetBundleManifest so hash version is properly serializable.
+  - Renamed "Build Cache" options in the Preferences menu to "Scriptable Build Pipeline"
+  - Improved performance of the Scriptable Build Pipeline's archiving task.
+
 ## [1.6.2] - 2020-02-08
 - Checking if Profile Events is enabled on the engine side before running the DiagnosticEventCollector Update.
 - Fixed issue where RuntimeKeyIsValid was give a false negative when checking sub-objects.
@@ -15,7 +35,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed issue where hosting service ports were changing on assets re-import.
 - Fixed issues with Content Update, including groups that are Packed Separately not updating properly.
 
-## [1.6.0] - 2020-01-21
+## [1.6.0] - 2020-01-11
 - Fixed bug where unsubscribing to AsyncOperations events could throw if no subscription happened beforehand.   
 - Fixed NullReferenceException when displaying Groups window displaying entries with Missing Script References on SubAssets.
 - Moved AnalyzeWindow.RegisterNewRule to AnalyzeSystem.RegisterNewRule so that the API/logic wouldn't live in GUI code.

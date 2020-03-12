@@ -16,6 +16,7 @@ using System;
 public abstract class AddressablesTestFixture : IPrebuildSetup
 {
     internal AddressablesImpl m_Addressables;
+    internal string m_RuntimeSettingsPath;
     readonly string m_UniqueTestName;
  
     protected AddressablesTestFixture()
@@ -36,8 +37,8 @@ public abstract class AddressablesTestFixture : IPrebuildSetup
     {
         Assert.IsNull(m_Addressables);
         m_Addressables = new AddressablesImpl(new LRUCacheAllocationStrategy(1000, 1000, 100, 10));
-        var runtimeSettingsPath = m_Addressables.ResolveInternalId(GetRuntimeAddressablesSettingsPath());
-        var op = m_Addressables.InitializeAsync(runtimeSettingsPath, null, false);
+        m_RuntimeSettingsPath = m_Addressables.ResolveInternalId(GetRuntimeAddressablesSettingsPath());
+        var op = m_Addressables.InitializeAsync(m_RuntimeSettingsPath, null, false);
         yield return op;
         Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
     }

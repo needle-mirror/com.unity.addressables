@@ -70,7 +70,18 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Type-specific override of parent editorAsset.  Used by the editor to represent the asset referenced.
         /// </summary>
-        public new TObject editorAsset => (TObject)base.editorAsset;
+        /// <returns>Editor Asset as type TObject, else null</returns>
+        public new TObject editorAsset
+        {
+            get
+            {
+                Object baseAsset = base.editorAsset;
+                TObject asset = baseAsset as TObject;
+                if( asset == null && baseAsset != null )
+                    Debug.Log( "editorAsset cannot cast to " + typeof(TObject) );
+                return asset;
+            }
+        }
 #endif
 
         
@@ -134,7 +145,25 @@ namespace UnityEngine.AddressableAssets
 #endif
             return false;
         }
+        
+#if UNITY_EDITOR
+        /// <summary>
+        /// Typeless override of parent editorAsset. Used by the editor to represent the asset referenced.
+        /// </summary>
+        public new Object editorAsset
+        {
+            get
+            {
+                if (CachedAsset != null || string.IsNullOrEmpty(AssetGUID))
+                    return CachedAsset;
+                
+                var prop = typeof(AssetReference).GetProperty("editorAsset");
+                return prop.GetValue(this, null) as Object;
+            }
+        }
+#endif
     }
+    
     /// <summary>
     /// Assetreference that only allows atlassed sprites.
     /// </summary>
@@ -152,6 +181,26 @@ namespace UnityEngine.AddressableAssets
             return false;
 #endif
         }
+        
+#if UNITY_EDITOR
+        /// <summary>
+        /// SpriteAtlas Type-specific override of parent editorAsset. Used by the editor to represent the asset referenced.
+        /// </summary>
+        public new SpriteAtlas editorAsset
+        {
+            get
+            {
+                if (CachedAsset != null || string.IsNullOrEmpty(AssetGUID))
+                    return CachedAsset as SpriteAtlas;
+                
+                var assetPath = AssetDatabase.GUIDToAssetPath(AssetGUID);
+                var main = AssetDatabase.LoadMainAssetAtPath(assetPath) as SpriteAtlas;
+                if (main != null)
+                    CachedAsset = main;
+                return main;
+            }
+        }
+#endif
     }
 
     /// <summary>
@@ -239,6 +288,15 @@ namespace UnityEngine.AddressableAssets
 
 #if UNITY_EDITOR
         Object m_CachedAsset;
+        
+        /// <summary>
+        /// Cached Editor Asset.
+        /// </summary>
+        protected Object CachedAsset
+        {
+            get { return m_CachedAsset; }
+            set { m_CachedAsset = value; }
+        }
 #endif
         /// <summary>
         /// String representation of asset reference.

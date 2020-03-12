@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Net.Mail;
 using UnityEditor;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -46,12 +47,15 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             void LoadImmediate()
             { 
                 string assetPath = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
-                
                 object result = null;
                 if (m_ProvideHandle.Type.IsArray)
-                    result = ResourceManagerConfig.CreateArrayResult(m_ProvideHandle.Type, AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
+                {
+                    result = ResourceManagerConfig.CreateArrayResult(m_ProvideHandle.Type, AssetDatabase.LoadAllAssetsAtPath(assetPath));
+                }
                 else if (m_ProvideHandle.Type.IsGenericType && typeof(IList<>) == m_ProvideHandle.Type.GetGenericTypeDefinition())
-                    result = ResourceManagerConfig.CreateListResult(m_ProvideHandle.Type, AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
+                {
+                    result = ResourceManagerConfig.CreateListResult(m_ProvideHandle.Type, AssetDatabase.LoadAllAssetsAtPath(assetPath));
+                }
                 else
                 {
                     var i = assetPath.LastIndexOf('[');

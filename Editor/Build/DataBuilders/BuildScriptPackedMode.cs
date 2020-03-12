@@ -142,7 +142,11 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 if (aaContext.settings == null && !string.IsNullOrEmpty(aaPath))
                     aaContext.settings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(aaPath);
 
-                GenerateLocationListsTask.Run(aaContext, extractData.WriteData);
+                using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+                {
+                    progressTracker.UpdateTask("Generating Addressables Locations");
+                    GenerateLocationListsTask.Run(aaContext, extractData.WriteData);
+                }
 
                 foreach (var assetGroup in aaContext.settings.groups)
                 {

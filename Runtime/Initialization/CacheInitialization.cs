@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.IO;
 using UnityEngine.ResourceManagement;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 
@@ -20,7 +23,7 @@ namespace UnityEngine.AddressableAssets.Initialization
         /// <returns>True if the initialization succeeded.</returns>
         public bool Initialize(string id, string dataStr)
         {
-#if !UNITY_SWITCH && !UNITY_PS4
+#if ENABLE_CACHING
             var data = JsonUtility.FromJson<CacheInitializationData>(dataStr);
             if (data != null)
             {
@@ -45,16 +48,60 @@ namespace UnityEngine.AddressableAssets.Initialization
 
                 activeCache.expirationDelay = data.ExpirationDelay;
             }
-#endif //!UNITY_SWITCH && !UNITY_PS4
+#endif //ENABLE_CACHING
             return true;
         }
 
-#if !UNITY_SWITCH && !UNITY_PS4
+        /// <inheritdoc/>
+        public virtual AsyncOperationHandle<bool> InitializeAsync(ResourceManager rm, string id, string data)
+        {
+            CacheInitOp op = new CacheInitOp();
+            op.Init(() => { return Initialize(id, data); });
+            return rm.StartOperation(op, default);
+        }
+
+#if ENABLE_CACHING
         /// <summary>
         /// The root path of the cache.
         /// </summary>
         public static string RootPath { get { return Path.GetDirectoryName(Caching.defaultCache.path); } }
-#endif //!UNITY_SWITCH && !UNITY_PS4
+#endif //ENABLE_CACHING
+
+        class CacheInitOp : AsyncOperationBase<bool>, IUpdateReceiver
+        {
+            private Func<bool> m_Callback;
+            private bool m_UpdateRequired = true;
+
+            public void Init(Func<bool> callback)
+            {
+                m_Callback = callback;
+            }
+
+            public void Update(float unscaledDeltaTime)
+            {
+#if ENABLE_CACHING
+                if (Caching.ready && m_UpdateRequired)
+                {
+                    m_UpdateRequired = false;
+
+                    if (m_Callback != null)
+                        Complete(m_Callback(), true, "");
+                    else
+                        Complete(true, true, "");
+
+                    Addressables.Log("CacheInitialization Complete");
+                }
+#else
+                Complete(true, true, "");
+                Addressables.Log("UnityEngine.Caching not supported on this platform but a CacheInitialization object has been found in AddressableAssetSettings. No action has been taken.");
+#endif
+            }
+
+            protected override void Execute()
+            {
+                ((IUpdateReceiver)this).Update(0.0f);
+            }
+        }
     }
 
     /// <summary>

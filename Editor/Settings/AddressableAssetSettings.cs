@@ -1146,11 +1146,15 @@ namespace UnityEditor.AddressableAssets.Settings
             return aa.AddGroupTemplateObject(AssetDatabase.LoadAssetAtPath(assetPath, typeof(ScriptableObject)) as IGroupTemplate);
         }
 
-        AddressableAssetEntry CreateEntry(string guid, string address, AddressableAssetGroup parent, bool readOnly, bool postEvent = true)
+        internal AddressableAssetEntry CreateEntry(string guid, string address, AddressableAssetGroup parent, bool readOnly, bool postEvent = true)
         {
-            var entry = new AddressableAssetEntry(guid, address, parent, readOnly);
+            AddressableAssetEntry entry = parent.GetAssetEntry(guid);
+            if (entry == null)
+                entry = new AddressableAssetEntry(guid, address, parent, readOnly);
+
             if (!readOnly)
                 SetDirty(ModificationEvent.EntryCreated, entry, postEvent, true);
+
             return entry;
         }
 
@@ -1356,12 +1360,14 @@ namespace UnityEditor.AddressableAssets.Settings
             if (string.IsNullOrEmpty(guid))
                 return null;
 
-            var entry = FindAssetEntry(guid);
+            AddressableAssetEntry entry = FindAssetEntry(guid);
+
             if (entry == null)
             {
-                entry = CreateEntry(guid, address, parentEntry.parentGroup, true);
+                entry = new AddressableAssetEntry(guid, address, parentEntry.parentGroup, true);
                 entry.IsSubAsset = true;
                 entry.ParentEntry = parentEntry;
+                //parentEntry.parentGroup.AddAssetEntry(entry);
                 return entry;
             }
 

@@ -42,13 +42,58 @@ namespace UnityEditor.AddressableAssets.Settings
                 path == CommonStrings.UnityBuiltInExtraPath)
                 return false;
             var ext = Path.GetExtension(path);
-            if (ext == ".cs" || ext == ".js" || ext == ".boo" || ext == ".exe" || ext == ".dll")
-                return false;
-            var t = AssetDatabase.GetMainAssetTypeAtPath(path);
-            if (t != null && Build.BuildUtility.IsEditorAssembly(t.Assembly))
+            if (ext == ".cs" || ext == ".js" || ext == ".boo" || ext == ".exe" || ext == ".dll" || ext == ".meta")
                 return false;
             return true;
         }
+
+        internal static bool IsTypeValidForEntry(Type type)
+        {
+            return RemapToRuntimeType(type) != null;
+        }
+
+        internal static bool IsPathAndTypeValidForEntry(string path)
+        {
+            if (!IsPathValidForEntry(path))
+                return false;
+            return IsTypeValidForEntry(AssetDatabase.GetMainAssetTypeAtPath(path));
+        }
+
+        static HashSet<Type> validTypes = new HashSet<Type>();
+        internal static Type RemapToRuntimeType(Type t)
+        {
+            //type is valid and already seen (most common)
+            if (validTypes.Contains(t))
+                return t;
+
+            //removes the need to check this outside of this call
+            if (t == null)
+                return t;
+
+            //check for editor type, this will get hit once for each new type encountered
+            if (!t.Assembly.IsDefined(typeof(AssemblyIsEditorAssembly), true) && !Build.BuildUtility.IsEditorAssembly(t.Assembly))
+            {
+                validTypes.Add(t);
+                return t;
+            }
+
+            //try to remap the editor type to a runtime type
+            return RemapEditorType(t);
+        }
+
+        static Type RemapEditorType(Type t)
+        {
+            if (t == typeof(UnityEditor.Animations.AnimatorController))
+                return typeof(RuntimeAnimatorController);
+            if (t == typeof(UnityEditor.SceneAsset))
+                return typeof(UnityEngine.ResourceManagement.ResourceProviders.SceneInstance);
+            if (t.FullName == "UnityEditor.Audio.AudioMixerController")
+                return typeof(UnityEngine.Audio.AudioMixer);
+            if (t.FullName == "UnityEditor.Audio.AudioMixerGroupController")
+                return typeof(UnityEngine.Audio.AudioMixerGroup);
+            return null;
+        }
+
 
         internal static void ConvertAssetBundlesToAddressables()
         {

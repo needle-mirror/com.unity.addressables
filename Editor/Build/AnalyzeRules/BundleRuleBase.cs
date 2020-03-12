@@ -99,7 +99,13 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             IBundleBuildResults buildResults;
             var exitCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(m_AllBundleInputDefs),
                 out buildResults, buildTasks, buildContext);
-            GenerateLocationListsTask.Run(buildContext, m_ExtractData.WriteData);
+
+            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+            {
+                progressTracker.UpdateTask("Generating Addressables Locations");
+                GenerateLocationListsTask.Run(buildContext, m_ExtractData.WriteData);
+            }
+
             return exitCode;
         }
 

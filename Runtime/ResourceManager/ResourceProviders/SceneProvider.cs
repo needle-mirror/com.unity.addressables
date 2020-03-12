@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine.Assertions.Must;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -135,7 +136,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                         unloadOp.completed += UnloadSceneCompleted;
                 }
                 else
-                    Complete(m_Instance, true, "");
+                    UnloadSceneCompleted(null);
             }
 
             private void UnloadSceneCompleted(AsyncOperation obj)

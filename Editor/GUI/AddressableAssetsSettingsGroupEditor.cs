@@ -291,7 +291,10 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             ProjectConfigData.hierarchicalSearch = !ProjectConfigData.hierarchicalSearch;
             m_EntryTree.ClearSearch();
+            m_EntryTree.Reload();
+            m_EntryTree.Repaint();
         }
+
         void CreateProfileDropdown()
         {
             var activeProfileName = settings.profileSettings.GetProfileName(settings.activeProfileId);

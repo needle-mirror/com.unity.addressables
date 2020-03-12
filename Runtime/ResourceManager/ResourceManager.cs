@@ -552,6 +552,19 @@ namespace UnityEngine.ResourceManagement
             return StartOperation(op, default);
         }
 
+        /// <summary>
+        /// Create a group operation for a set of AsyncOperationHandles
+        /// </summary>
+        /// <param name="operations">The list of operations that need to complete.</param>
+        /// <param name="releasedCachedOpOnComplete">Determine if the cached operation should be released or not.</param>
+        /// <returns>The operation for the entire group</returns>
+        public AsyncOperationHandle<IList<AsyncOperationHandle>> CreateGenericGroupOperation(List<AsyncOperationHandle> operations, bool releasedCachedOpOnComplete = false)
+        {
+            var op = CreateOperation<GroupOperation>(typeof(GroupOperation), s_GroupOperationTypeHash, operations.GetHashCode(), releasedCachedOpOnComplete ? m_ReleaseOpCached : m_ReleaseOpNonCached);
+            op.Init(operations);
+            return StartOperation(op, default);
+        }
+
         internal AsyncOperationHandle<IList<AsyncOperationHandle>> ProvideResourceGroupCached(IList<IResourceLocation> locations, int groupHash, Type desiredType, Action<AsyncOperationHandle> callback)
         {
             GroupOperation op = AcquireGroupOpFromCache(groupHash);

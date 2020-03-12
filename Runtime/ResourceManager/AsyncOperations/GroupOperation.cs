@@ -66,7 +66,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         protected override void Destroy()
         {
             for (int i = 0; i < Result.Count; i++)
-                Result[i].Release();
+                if(Result[i].IsValid())
+                    Result[i].Release();
             Result.Clear();
         }
 

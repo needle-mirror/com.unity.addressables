@@ -154,7 +154,8 @@ namespace UnityEngine.AddressableAssets
                 {
                     m_SceneInstances.Remove(s);
                     m_resultToHandle.Remove(s.Result);
-                    m_ResourceManager.ReleaseScene(SceneProvider, s);
+                    var op = m_ResourceManager.ReleaseScene(SceneProvider, s);
+                    op.Completed += handle => { Release(op); };
                     break;
                 }
             }

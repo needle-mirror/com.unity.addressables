@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.Util;
@@ -71,6 +73,32 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <param name="provideHandle">Contains all data needed to provide the requested object.</param>
         public abstract void Provide(ProvideHandle provideHandle);
 
+        /// <inheritdoc/>
+        public virtual AsyncOperationHandle<bool> InitializeAsync(ResourceManager rm, string id, string data)
+        {
+            BaseInitAsyncOp baseInitOp = new BaseInitAsyncOp();
+            baseInitOp.Init(() => Initialize(id, data));
+            return rm.StartOperation(baseInitOp, default);
+        }
+
         ProviderBehaviourFlags IResourceProvider.BehaviourFlags { get { return m_BehaviourFlags; } }
+
+        class BaseInitAsyncOp : AsyncOperationBase<bool>
+        {
+            private Func<bool> m_CallBack;
+
+            public void Init(Func<bool> callback)
+            {
+                m_CallBack = callback;
+            }
+
+            protected override void Execute()
+            {
+                if(m_CallBack != null)
+                    Complete(m_CallBack(), true, "");
+                else
+                    Complete(true, true, "");
+            }
+        }
     }
 }

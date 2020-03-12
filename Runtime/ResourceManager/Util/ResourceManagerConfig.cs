@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Reflection;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.Serialization;
 
 namespace UnityEngine.ResourceManagement.Util
@@ -20,6 +21,16 @@ namespace UnityEngine.ResourceManagement.Util
         /// <param name="data">Serialized data for the object.</param>
         /// <returns>The result of the initialization.</returns>
         bool Initialize(string id, string data);
+
+        /// <summary>
+        /// Async operation for initializing a constructed object.
+        /// </summary>
+        /// <param name="rm">The current instance of Resource Manager.</param>
+        /// <param name="id">The id of the object.</param>
+        /// <param name="data">Serialized data for the object.</param>
+        /// <returns>Async operation</returns>
+        AsyncOperationHandle<bool> InitializeAsync(ResourceManager rm, string id, string data);
+        
     }
 
 
@@ -360,6 +371,32 @@ namespace UnityEngine.ResourceManagement.Util
             {
                 Debug.LogException(ex);
                 return default(TObject);
+            }
+        }
+
+        /// <summary>
+        /// Create an instance of the defined object.  This will get the AsyncOperationHandle for the async Initialization operation if the object implements the IInitializableObject interface.
+        /// </summary>
+        /// <param name="rm">The current instance of Resource Manager</param>
+        /// <param name="idOverride">Optional id to assign to the created object.  This only applies to objects that inherit from IInitializableObject.</param>
+        /// <returns>AsyncOperationHandle for the async initialization operation if the defined type implements IInitializableObject, otherwise returns a default AsyncOperationHandle.</returns>
+        public AsyncOperationHandle GetAsyncInitHandle(ResourceManager rm, string idOverride = null)
+        {
+            try
+            {
+                var objType = m_ObjectType.Value;
+                if (objType == null)
+                    return default(AsyncOperationHandle);
+                var obj = Activator.CreateInstance(objType, true);
+                var serObj = obj as IInitializableObject;
+                if (serObj != null)
+                    return serObj.InitializeAsync(rm, idOverride == null ? m_Id : idOverride, m_Data);
+                return default(AsyncOperationHandle);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+                return default(AsyncOperationHandle);
             }
         }
 
