@@ -661,8 +661,9 @@ namespace UnityEditor.AddressableAssets.Settings
                 return;
             }
 
-            var mainEntry = new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, dependencies, extraData);
-            entries.Add(mainEntry);
+            if (mainType != null)
+                entries.Add(new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, dependencies, extraData));
+
             if (mainType == typeof(SpriteAtlas))
             {
                 var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(AssetPath);
@@ -676,7 +677,7 @@ namespace UnityEditor.AddressableAssets.Settings
                         spriteName = spriteName.Replace("(Clone)", "");
                     var namedAddress = string.Format("{0}[{1}]", address, spriteName);
                     var guidAddress = string.Format("{0}[{1}]", guid, spriteName);
-                    entries.Add(new ContentCatalogDataEntry(typeof(Sprite), spriteName, typeof(AtlasSpriteProvider).FullName, new object[] { namedAddress, guidAddress }, new object[] { mainEntry.Keys[0] }, extraData));
+                    entries.Add(new ContentCatalogDataEntry(typeof(Sprite), spriteName, typeof(AtlasSpriteProvider).FullName, new object[] { namedAddress, guidAddress }, new object[] { keyList[0] }, extraData));
                 }
                 providerTypes.Add(typeof(AtlasSpriteProvider));
             }

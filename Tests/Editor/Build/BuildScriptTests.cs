@@ -157,5 +157,19 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Assert.AreEqual(expected, actual);
         }
+
+        [Test]
+        public void Build_WithInvalidAssetInResourcesFolder_Succeeds()
+        {
+            var path = k_TestConfigFolder + "/Resources/unknownAsset.plist";
+            if (!System.IO.Directory.Exists(System.IO.Path.GetDirectoryName(path)))
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
+            System.IO.File.WriteAllText(path, "nothing");
+            AssetDatabase.ImportAsset(path);
+            var context = new AddressablesDataBuilderInput(Settings);
+            foreach (IDataBuilder db in Settings.DataBuilders)
+                if (db.CanBuildData<AddressablesPlayerBuildResult>())
+                    db.BuildData<AddressablesPlayerBuildResult>(context);
+        }
     }
 }
