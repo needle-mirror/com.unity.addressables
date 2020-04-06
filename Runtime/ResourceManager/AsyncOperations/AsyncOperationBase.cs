@@ -88,7 +88,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         AsyncOperationStatus m_Status;
         Exception m_Error;
         internal ResourceManager m_RM;
-        private int m_Version;
+        int m_Version;
         internal int Version { get { return m_Version; } }
 
         DelegateList<AsyncOperationHandle> m_CompletedAction;
@@ -104,6 +104,9 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         internal int ReferenceCount { get { return m_referenceCount; } }
         Action<AsyncOperationHandle> m_dependencyCompleteAction;
 
+        /// <summary>
+        /// Basic constructor for AsyncOperationBase. 
+        /// </summary>
         protected AsyncOperationBase()
         {
             m_UpdateCallback = UpdateCallback;
@@ -130,7 +133,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 throw new Exception(string.Format("Cannot increment reference count on operation {0} because it has already been destroyed", this));
 
             m_referenceCount++;
-            m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount));
+            m_RM?.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount));
         }
 
         internal void DecrementReferenceCount()
@@ -139,11 +142,11 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 throw new Exception(string.Format("Cannot decrement reference count for operation {0} because it is already 0", this));
 
             m_referenceCount--;
-            m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount));
+            m_RM?.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount));
 
             if (m_referenceCount == 0)
             {
-                m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationDestroy));
+                m_RM?.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationDestroy));
 
                 if (m_DestroyedAction != null)
                 {
@@ -350,10 +353,14 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         }
 
         /// <summary>
-        /// Complete the operation and invoke events.
+        /// Complete the operation and invoke events. 
         /// </summary>
+        /// <remarks>
+        /// An operation is considered to have failed silently if success is true and if errorMsg isn't null or empty.
+        /// The exception handler will be called in cases of silent failures.
+        /// </remarks>
         /// <param name="result">The result object for the operation.</param>
-        /// <param name="success">True if successful.</param>
+        /// <param name="success">True if successful or if the operation failed silently.</param>
         /// <param name="errorMsg">The error message if the operation has failed.</param>
         public void Complete(TObject result, bool success, string errorMsg)
         {
@@ -367,15 +374,12 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationPercentComplete, 1));
             m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationComplete));
 
+            if (m_Status == AsyncOperationStatus.Failed || !string.IsNullOrEmpty(errorMsg))
+                OperationException = new Exception(errorMsg ?? "Unknown error in AsyncOperation");
+
             if (m_Status == AsyncOperationStatus.Failed)
             {
-                if (string.IsNullOrEmpty(errorMsg))
-                    errorMsg = "Unknown error in AsyncOperation";
-
                 m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationFail, 0, errorMsg));
-
-
-                OperationException = new Exception(errorMsg);
 
                 ICachable cachedOperation = this as ICachable;
                 if (cachedOperation != null)

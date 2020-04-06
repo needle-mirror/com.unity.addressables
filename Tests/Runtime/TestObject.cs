@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class TestObject : ScriptableObject
+namespace UnityEngine.AddressableAssets.Tests
 {
-    static public TestObject Create(string name)
+    public class TestObject : ScriptableObject
     {
-        var so = CreateInstance<TestObject>();
-        so.name = name;
-        return so;
+        static public TestObject Create(string name)
+        {
+            var so = CreateInstance<TestObject>();
+            so.name = name;
+            return so;
+        }
     }
 }

@@ -190,5 +190,31 @@ namespace UnityEngine.ResourceManagement.Tests
         {
             InvokeAllocTest<int>(0);
         }
+
+        static object[] KeyResultData =
+        {
+            new object[] { null, false, null, null },
+            new object[] { "", false, null, null },
+            new object[] { 5, false, null, null },
+            new object[] { "k", false, null, null },
+            new object[] { "[k]", false, null, null },
+            new object[] { "k]s[", false, null, null },
+            new object[] { "k[s", false, null, null },
+            new object[] { "[s]k", false, null, null },
+            new object[] { "k]s", false, null, null },
+            new object[] { "k[s]", true, "k", "s" },
+            new object[] { "k[[s]", true, "k", "[s" },
+            new object[] { "k[s[]", true, "k", "s[" },
+            new object[] { "k[s]]", true, "k", "s]" },
+            new object[] { "k[]s]", true, "k", "]s" },
+        };
+
+        [TestCaseSource(nameof(KeyResultData))]
+        public void ResourceManagerConfigExtractKeyAndSubKey_WhenPassedKey_ReturnsExpectedValue(object key, bool expectedReturn, string expectedMainKey, string expectedSubKey)
+        {
+            Assert.AreEqual(expectedReturn, ResourceManagerConfig.ExtractKeyAndSubKey(key, out string mainKey, out string subKey));
+            Assert.AreEqual(expectedMainKey, mainKey);
+            Assert.AreEqual(expectedSubKey, subKey);
+        }
     }
 }

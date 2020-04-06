@@ -17,6 +17,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             return path.Replace('\\', '/').ToLower().Contains("/resources/");
         }
+
         internal static bool GetPathAndGUIDFromTarget(Object t, out string path, ref string guid, out Type mainAssetType)
         {
             mainAssetType = null;
@@ -31,7 +32,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             return true;
         }
-
+        
         internal static bool IsPathValidForEntry(string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -47,20 +48,22 @@ namespace UnityEditor.AddressableAssets.Settings
             return true;
         }
 
-        internal static bool IsTypeValidForEntry(Type type)
-        {
-            return RemapToRuntimeType(type) != null;
-        }
-
-        internal static bool IsPathAndTypeValidForEntry(string path)
+        internal static bool IsPathAndTypeValidForCatalogEntry(string path)
         {
             if (!IsPathValidForEntry(path))
                 return false;
-            return IsTypeValidForEntry(AssetDatabase.GetMainAssetTypeAtPath(path));
+            return MapEditorTypeToRuntimeType(AssetDatabase.GetMainAssetTypeAtPath(path), false) != null;
+        }
+
+        internal static bool IsPathAndTypeValidForAddressableEntry(string path)
+        {
+            if (!IsPathValidForEntry(path))
+                return false;
+            return MapEditorTypeToRuntimeType(AssetDatabase.GetMainAssetTypeAtPath(path), true) != null;
         }
 
         static HashSet<Type> validTypes = new HashSet<Type>();
-        internal static Type RemapToRuntimeType(Type t)
+        internal static Type MapEditorTypeToRuntimeType(Type t, bool allowFolders)
         {
             //type is valid and already seen (most common)
             if (validTypes.Contains(t))
@@ -77,11 +80,14 @@ namespace UnityEditor.AddressableAssets.Settings
                 return t;
             }
 
+            if (t == typeof(DefaultAsset) && allowFolders)
+                return typeof(DefaultAsset);
+
             //try to remap the editor type to a runtime type
-            return RemapEditorType(t);
+            return MapEditorTypeToRuntimeTypeInternal(t);
         }
 
-        static Type RemapEditorType(Type t)
+        static Type MapEditorTypeToRuntimeTypeInternal(Type t)
         {
             if (t == typeof(UnityEditor.Animations.AnimatorController))
                 return typeof(RuntimeAnimatorController);

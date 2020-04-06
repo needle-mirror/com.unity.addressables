@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;

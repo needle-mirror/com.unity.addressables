@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -23,6 +24,8 @@ namespace UnityEngine.AddressableAssets
     {
         ResourceManager m_ResourceManager;
         IInstanceProvider m_InstanceProvider;
+        internal const string kCacheDataFolder = "{UnityEngine.Application.persistentDataPath}/com.unity.addressables/";
+
         public IInstanceProvider InstanceProvider
         {
             get
@@ -223,7 +226,10 @@ namespace UnityEngine.AddressableAssets
 
         public void LogException(AsyncOperationHandle op, Exception ex)
         {
-            Debug.LogErrorFormat("{0} encountered in operation {1}: {2}", ex.GetType().Name, op.DebugName, ex.Message);
+            if (op.Status == AsyncOperationStatus.Failed)
+                Debug.LogErrorFormat("{0} encountered in operation {1}: {2}", ex.GetType().Name, op.DebugName, ex.Message);
+            else
+                Addressables.LogFormat("{0} encountered in operation {1}: {2}", ex.GetType().Name, op.DebugName, ex.Message);
         }
 
         public void LogErrorFormat(string format, params object[] args)
@@ -270,10 +276,11 @@ namespace UnityEngine.AddressableAssets
 
             locations = null;
             HashSet<IResourceLocation> current = null;
-            foreach (var locInfo in m_ResourceLocators)
+            foreach (var locatorInfo in m_ResourceLocators)
             {
+                var locator = locatorInfo.Locator;
                 IList<IResourceLocation> locs;
-                if (locInfo.Locator.Locate(key, type, out locs))
+                if (locator.Locate(key, type, out locs))
                 {
                     if (locations == null)
                     {
@@ -360,7 +367,7 @@ namespace UnityEngine.AddressableAssets
             {
                 if (m_InitializationOperation.IsValid())
                     return m_InitializationOperation;
-                return ResourceManager.CreateCompletedOperation<IResourceLocator>(ResourceLocators.First(), null);
+                return ResourceManager.CreateCompletedOperation(m_ResourceLocators[0].Locator, null);
             }
 
             ResourceManager.ExceptionHandler = LogException;
@@ -392,12 +399,36 @@ namespace UnityEngine.AddressableAssets
             return InitializeAsync(ResolveInternalId(PlayerPrefs.GetString(Addressables.kAddressablesRuntimeDataPath, RuntimePath + "/settings.json")));
         }
 
-        public AsyncOperationHandle<IResourceLocator> LoadContentCatalogAsync(string catalogPath, string providerSuffix = null)
+        internal ResourceLocationBase CreateCatalogLocationWithHashDependencies(string catalogPath, string hashFilePath)
         {
-            var catalogLoc = new ResourceLocationBase(catalogPath, catalogPath, typeof(JsonAssetProvider).FullName, typeof(IResourceLocator));
+            var catalogLoc = new ResourceLocationBase(catalogPath, catalogPath, typeof(ContentCatalogProvider).FullName, typeof(IResourceLocator));
+
+            if (!string.IsNullOrEmpty(hashFilePath))
+            {
+                string cacheHashFilePath = ResolveInternalId(kCacheDataFolder + Path.GetFileName(hashFilePath));
+
+                catalogLoc.Dependencies.Add(new ResourceLocationBase(hashFilePath, hashFilePath, typeof(TextDataProvider).FullName, typeof(string)));
+                catalogLoc.Dependencies.Add(new ResourceLocationBase(cacheHashFilePath, cacheHashFilePath, typeof(TextDataProvider).FullName, typeof(string)));
+            }
+
+            return catalogLoc;
+        }
+
+        public AsyncOperationHandle<IResourceLocator> LoadContentCatalogAsync(string catalogPath, bool autoReleaseHandle = true, string providerSuffix = null)
+        {
+            string catalogHashPath = catalogPath.Replace(".json", ".hash");
+            var catalogLoc = CreateCatalogLocationWithHashDependencies(catalogPath, catalogHashPath);
             if (ShouldChainRequest)
-                return ResourceManager.CreateChainOperation(ChainOperation, op => LoadContentCatalogAsync(catalogPath, providerSuffix));
-            return Initialization.InitializationOperation.LoadContentCatalog(this, catalogLoc, providerSuffix);
+                return ResourceManager.CreateChainOperation(ChainOperation, op => LoadContentCatalogAsync(catalogPath, autoReleaseHandle, providerSuffix));
+            var handle = Initialization.InitializationOperation.LoadContentCatalog(this, catalogLoc, providerSuffix);
+            if (autoReleaseHandle)
+            {
+                handle.Completed += (obj =>
+                {
+                    Release(handle);
+                });
+            }
+            return handle;
         }
 
         AsyncOperationHandle<SceneInstance> TrackHandle(AsyncOperationHandle<SceneInstance> handle)
@@ -445,9 +476,10 @@ namespace UnityEngine.AddressableAssets
                 t = t.GetElementType();
             else if (t.IsGenericType && typeof(IList<>) == t.GetGenericTypeDefinition())
                 t = t.GetGenericArguments()[0];
-            foreach(var rl in m_ResourceLocators)
+            foreach (var locatorInfo in m_ResourceLocators)
             {
-                if (rl.Locator.Locate(key, t, out locs))
+                var locator = locatorInfo.Locator;
+                if (locator.Locate(key, t, out locs))
                 {
                     foreach (var loc in locs)
                     {
@@ -897,9 +929,10 @@ namespace UnityEngine.AddressableAssets
 
             key = EvaluateKey(key);
             IList<IResourceLocation> locs;
-            foreach (var rl in ResourceLocators)
+            foreach (var locatorInfo in m_ResourceLocators)
             {
-                if (rl.Locate(key, typeof(GameObject), out locs))
+                var locator = locatorInfo.Locator;
+                if (locator.Locate(key, typeof(GameObject), out locs))
                     return InstantiateAsync(locs[0], instantiateParameters, trackHandle);
             }
             return ResourceManager.CreateCompletedOperation<GameObject>(null, new InvalidKeyException(key, typeof(GameObject)).Message);

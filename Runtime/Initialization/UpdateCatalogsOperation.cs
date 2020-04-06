@@ -60,7 +60,7 @@ namespace UnityEngine.AddressableAssets
                 if (locator == null)
                 {
                     var catData = m_DepOp.Result[i].Result as ContentCatalogData;
-                    locator = catData.CreateLocator();
+                    locator = catData.CreateCustomLocator(catData.location.PrimaryKey);
                     localHash = catData.localHash;
                     remoteLocation = catData.location;
                 }

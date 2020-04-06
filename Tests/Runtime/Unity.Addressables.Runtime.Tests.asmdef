@@ -3,7 +3,8 @@
     "references": [
         "Unity.Addressables",
         "Unity.ResourceManager",
-        "Unity.Addressables.Editor"
+        "Unity.Addressables.Editor",
+        "Unity.ScriptableBuildPipeline.Editor"
     ],
     "optionalUnityReferences": [
         "TestAssemblies"

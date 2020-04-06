@@ -27,6 +27,10 @@ namespace UnityEditor.AddressableAssets.GUI
 
         List<AssetReferenceUIRestrictionSurrogate> m_Restrictions = null;
 
+#if UNITY_2019_1_OR_NEWER
+        private Texture2D m_CaretTexture = null;
+#endif
+
         /// <summary>
         /// Validates that the referenced asset allowable for this asset reference.
         /// </summary>
@@ -111,6 +115,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 Debug.LogError("Error rendering drawer for AssetReference property.");
                 return;
             }
+
             string labelText = label.text;
             m_AssetRefObject = property.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
             label.text = labelText;
@@ -145,14 +150,12 @@ namespace UnityEditor.AddressableAssets.GUI
 
             bool isNotAddressable = false;
             m_AssetName = noAssetString;
-            Texture2D icon = null;
             if (aaSettings != null && !string.IsNullOrEmpty(guid))
             {
                 var entry = aaSettings.FindAssetEntry(guid);
                 if (entry != null)
                 {
                     m_AssetName = entry.address;
-                    icon = AssetDatabase.GetCachedIcon(entry.AssetPath) as Texture2D;
                 }
                 else
                 {
@@ -191,7 +194,6 @@ namespace UnityEditor.AddressableAssets.GUI
                                     isNotAddressable = true;
                             }
                         }
-                        icon = AssetDatabase.GetCachedIcon(path) as Texture2D;
                     }
                     else
                     {
@@ -221,47 +223,83 @@ namespace UnityEditor.AddressableAssets.GUI
 
                 if (subAssets.Count > 1)
                 {
-                    assetDropDownRect = new Rect(assetDropDownRect.position, new Vector2(assetDropDownRect.width / 2, assetDropDownRect.height));
-                    var objRect = new Rect(assetDropDownRect.xMax, assetDropDownRect.y, assetDropDownRect.width, assetDropDownRect.height);
-                    var objNames = new string[subAssets.Count];
-                    var selIndex = 0;
-                    for (int i = 0; i < subAssets.Count; i++)
-                    {
-                        var s = subAssets[i];
-                        var objName = s == null ? "<none>" : s.name;
-                        if (objName.EndsWith("(Clone)"))
-                            objName = objName.Replace("(Clone)", "");
-                        objNames[i] = objName;
-                        if (m_AssetRefObject.SubObjectName == objName)
-                            selIndex = i;
-                    }
-                    //TODO: handle large amounts of sprites with a custom popup
-                    var newIndex = EditorGUI.Popup(objRect, selIndex, objNames);
-                    if (newIndex != selIndex)
-                    {
-                        Undo.RecordObject(property.serializedObject.targetObject, "Assign Asset Reference Sub Object");
-                        var success = m_AssetRefObject.SetEditorSubObject(subAssets[newIndex]);
-                        if (success)
-                        {
-                            EditorUtility.SetDirty(property.serializedObject.targetObject);
-                            var comp = property.serializedObject.targetObject as Component;
-                            if (comp != null && comp.gameObject != null && comp.gameObject.activeInHierarchy)
-                                EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
-                        }
-                    }
+                    assetDropDownRect = DrawSubAssetsControl(property, subAssets);
                 }
             }
-            if (EditorGUI.DropdownButton(assetDropDownRect, new GUIContent(nameToUse, icon, m_AssetName), FocusType.Keyboard))
+
+            bool isDragging = Event.current.type == EventType.DragUpdated && position.Contains(Event.current.mousePosition);
+            bool isDropping = Event.current.type == EventType.DragPerform && position.Contains(Event.current.mousePosition);
+
+            DrawControl(property, isDragging, isDropping, nameToUse, isNotAddressable, guid);
+
+            HandleDragAndDrop(property, isDragging, isDropping, guid);
+
+            EditorGUI.EndProperty();
+        }
+
+        private void DrawControl(SerializedProperty property, bool isDragging, bool isDropping, string nameToUse, bool isNotAddressable, string guid)
+        {
+            float pickerWidth = 20f;
+            Rect pickerRect = assetDropDownRect;
+            pickerRect.width = pickerWidth;
+            pickerRect.x = assetDropDownRect.xMax - pickerWidth;
+
+            bool isPickerPressed = Event.current.type == EventType.MouseDown && Event.current.button == 0 && pickerRect.Contains(Event.current.mousePosition);
+            bool isEnterKeyPressed = Event.current.type == EventType.KeyDown && Event.current.isKey && (Event.current.keyCode == KeyCode.KeypadEnter || Event.current.keyCode == KeyCode.Return);
+            if (isPickerPressed || isDragging || isDropping || isEnterKeyPressed)
+            {
+                // To override ObjectField's default behavior
+                Event.current.Use();
+            }
+
+            var asset = m_AssetRefObject?.editorAsset;
+            if (asset != null)
+            {
+                var assetName = asset.name;
+                asset.name = nameToUse;
+
+                EditorGUI.ObjectField(assetDropDownRect, asset, asset.GetType(), false);
+
+                asset.name = assetName;
+            }
+            else
+            {
+                EditorGUI.ObjectField(assetDropDownRect, null, typeof(AddressableAsset), false);
+            }
+
+#if UNITY_2019_1_OR_NEWER
+            if (m_CaretTexture == null)
+            {
+                string caretIconPath = EditorGUIUtility.isProSkin
+                    ? @"Packages\com.unity.addressables\Editor\Icons\PickerDropArrow-Pro.png"
+                    : @"Packages\com.unity.addressables\Editor\Icons\PickerDropArrow-Personal.png";
+
+                if (File.Exists(caretIconPath))
+                {
+                    m_CaretTexture = (Texture2D)AssetDatabase.LoadAssetAtPath(caretIconPath, typeof(Texture2D));
+                }
+            }
+
+            if (m_CaretTexture != null)
+            {
+                UnityEngine.GUI.DrawTexture(pickerRect, m_CaretTexture, ScaleMode.ScaleToFit);
+            }
+#endif
+
+            if (isPickerPressed || isEnterKeyPressed)
             {
                 newGuidPropertyPath = property.propertyPath;
                 var nonAddressedOption = isNotAddressable ? m_AssetName : string.Empty;
                 PopupWindow.Show(assetDropDownRect, new AssetReferencePopup(this, guid, nonAddressedOption));
             }
+        }
 
-
+        private void HandleDragAndDrop(SerializedProperty property, bool isDragging, bool isDropping, string guid)
+        {
+            var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
             //During the drag, doing a light check on asset validity.  The in-depth check happens during a drop, and should include a log if it fails.
             var rejectedDrag = false;
-            if (Event.current.type == EventType.DragUpdated && position.Contains(Event.current.mousePosition))
+            if (isDragging)
             {
                 if (aaSettings == null)
                     rejectedDrag = true;
@@ -294,7 +332,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 DragAndDrop.visualMode = rejectedDrag ? DragAndDropVisualMode.Rejected : DragAndDropVisualMode.Copy;
             }
 
-            if (!rejectedDrag && Event.current.type == EventType.DragPerform && position.Contains(Event.current.mousePosition))
+            if (!rejectedDrag && isDropping)
             {
                 var aaEntries = DragAndDrop.GetGenericData("AssetEntryTreeViewItem") as List<AssetEntryTreeViewItem>;
                 if (aaEntries != null)
@@ -342,8 +380,41 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                 }
             }
+        }
 
-            EditorGUI.EndProperty();
+        private Rect DrawSubAssetsControl(SerializedProperty property, List<Object> subAssets)
+        {
+            assetDropDownRect = new Rect(assetDropDownRect.position, new Vector2(assetDropDownRect.width / 2, assetDropDownRect.height));
+            var objRect = new Rect(assetDropDownRect.xMax, assetDropDownRect.y, assetDropDownRect.width, assetDropDownRect.height);
+            var objNames = new string[subAssets.Count];
+            var selIndex = 0;
+            for (int i = 0; i < subAssets.Count; i++)
+            {
+                var s = subAssets[i];
+                var objName = s == null ? "<none>" : s.name;
+                if (objName.EndsWith("(Clone)"))
+                    objName = objName.Replace("(Clone)", "");
+                objNames[i] = objName;
+                if (m_AssetRefObject.SubObjectName == objName)
+                    selIndex = i;
+            }
+
+            //TODO: handle large amounts of sprites with a custom popup
+            var newIndex = EditorGUI.Popup(objRect, selIndex, objNames);
+            if (newIndex != selIndex)
+            {
+                Undo.RecordObject(property.serializedObject.targetObject, "Assign Asset Reference Sub Object");
+                var success = m_AssetRefObject.SetEditorSubObject(subAssets[newIndex]);
+                if (success)
+                {
+                    EditorUtility.SetDirty(property.serializedObject.targetObject);
+                    var comp = property.serializedObject.targetObject as Component;
+                    if (comp != null && comp.gameObject != null && comp.gameObject.activeInHierarchy)
+                        EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
+                }
+            }
+
+            return assetDropDownRect;
         }
 
         void GatherFilters(SerializedProperty property)
@@ -393,6 +464,8 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
     }
+
+    class AddressableAsset { };
 
     class AssetReferencePopup : PopupWindowContent
     {

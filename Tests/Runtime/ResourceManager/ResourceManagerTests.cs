@@ -103,10 +103,9 @@ namespace UnityEngine.ResourceManagement.Tests
 
         class IntOperation : AsyncOperationBase<int>
         {
-            string msg = "msg";
             protected override void Execute()
             {
-                Complete(0, true, msg);
+                Complete(0, true, null);
             }
         }
 

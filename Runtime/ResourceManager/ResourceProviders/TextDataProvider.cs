@@ -45,7 +45,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 #endif
                     var text = File.ReadAllText(path);
                     object result = m_Provider.Convert(m_PI.Type, text);
-                    m_PI.Complete(result, result != null, null);
+                    m_PI.Complete(result, result != null, result == null ? new Exception($"Unable to load asset of type {m_PI.Type} from location {m_PI.Location}.") : null);
                 }
                 else if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
                 {
@@ -74,7 +74,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     //Don't log errors when loading from the persistentDataPath since these files are expected to not exist until created
                     if (!m_IgnoreFailures)
                     {
-                        exception = new Exception(string.Format("Invalid path in RawDataProvider: '{0}'.", path));
+                        exception = new Exception(string.Format("Invalid path in " + nameof(TextDataProvider) + " : '{0}'.", path));
                     }
                     m_PI.Complete<object>(null, m_IgnoreFailures, exception);
                 }
@@ -91,15 +91,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     if (string.IsNullOrEmpty(webReq.error))
                         result = m_Provider.Convert(m_PI.Type, webReq.downloadHandler.text);
                     else
-                        exception = new Exception(string.Format("RawDataProvider unable to load from url {0}, result='{1}'.", webReq.url, webReq.error));
+                        exception = new Exception(string.Format(nameof(TextDataProvider) + " unable to load from url {0}, result='{1}'.", webReq.url, webReq.error));
                 }
                 else
                 {
-                    exception = new Exception("RawDataProvider unable to load from unknown url.");
+                    exception = new Exception(nameof(TextDataProvider) + " unable to load from unknown url.");
                 }
-                if (m_IgnoreFailures)
-                    exception = null;
-                m_PI.Complete(result, result != null, exception);
+
+                m_PI.Complete(result, result != null || m_IgnoreFailures, exception);
             }
         }
 

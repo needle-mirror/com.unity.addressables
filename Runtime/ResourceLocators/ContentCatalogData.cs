@@ -81,7 +81,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         [NonSerialized]
         internal IResourceLocation location;
         [SerializeField]
-        string m_LocatorId;
+        internal string m_LocatorId;
 
         public string ProviderId
         {
@@ -122,7 +122,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             }
         }
         [SerializeField]
-        List<ObjectInitializationData> m_ResourceProviderData = new List<ObjectInitializationData>();
+        internal List<ObjectInitializationData> m_ResourceProviderData = new List<ObjectInitializationData>();
         /// <summary>
         /// The list of resource provider data.  Each entry will add an IResourceProvider to the Addressables.ResourceManager.ResourceProviders list.
         /// </summary>
@@ -150,32 +150,32 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
 
         [FormerlySerializedAs("m_providerIds")]
         [SerializeField]
-        string[] m_ProviderIds = null;
+        internal string[] m_ProviderIds = null;
         [FormerlySerializedAs("m_internalIds")]
         [SerializeField]
-        string[] m_InternalIds = null;
+        internal string[] m_InternalIds = null;
         [FormerlySerializedAs("m_keyDataString")]
         [SerializeField]
-        string m_KeyDataString = null;
+        internal string m_KeyDataString = null;
         [FormerlySerializedAs("m_bucketDataString")]
         [SerializeField]
-        string m_BucketDataString = null;
+        internal string m_BucketDataString = null;
         [FormerlySerializedAs("m_entryDataString")]
         [SerializeField]
-        string m_EntryDataString = null;
+        internal string m_EntryDataString = null;
         
         const int k_ByteSize = 4;
         const int k_EntryDataItemPerEntry = 7;
         
         [FormerlySerializedAs("m_extraDataString")]
         [SerializeField]
-        string m_ExtraDataString = null;
+        internal string m_ExtraDataString = null;
 
         [SerializeField]
-        string[] m_Keys = null;
+        internal string[] m_Keys = null;
 
         [SerializeField]
-        SerializedType[] m_resourceTypes = null;
+        internal SerializedType[] m_resourceTypes = null;
 
         struct Bucket
         {
@@ -247,7 +247,22 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
 
         internal void CleanData()
         {
-            m_KeyDataString = String.Empty;
+            m_KeyDataString = "";
+            m_BucketDataString = "";
+            m_EntryDataString = "";
+            m_ExtraDataString = "";
+            m_InternalIds = null;
+            m_Keys = null;
+            m_LocatorId = "";
+            m_ProviderIds = null;
+            m_ResourceProviderData = null;
+            m_resourceTypes = null;
+        }
+
+        internal ResourceLocationMap CreateCustomLocator(string overrideId, string providerSuffix = null)
+        {
+            m_LocatorId = overrideId;
+            return CreateLocator(providerSuffix);
         }
 
         /// <summary>

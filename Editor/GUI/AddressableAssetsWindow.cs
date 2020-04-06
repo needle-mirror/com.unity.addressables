@@ -1,14 +1,16 @@
-using System;
-using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.PackageManager;
+using UnityEditor.PackageManager.Requests;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
-    class AddressableAssetsWindow : EditorWindow
+    class AddressableAssetsWindow : EditorWindow, IHasCustomMenu
     {
+        private SearchRequest m_Request;
+        private string m_HelpUrl;
+
         [FormerlySerializedAs("m_groupEditor")]
         [SerializeField]
         AddressableAssetsSettingsGroupEditor m_GroupEditor;
@@ -55,6 +57,11 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             if (m_GroupEditor != null)
                 m_GroupEditor.OnEnable();
+            
+            if (m_Request == null || m_Request.Status == StatusCode.Failure)
+            {
+                m_Request = PackageManager.Client.Search("com.unity.addressables");
+            }
         }
 
         public void OnDisable()
@@ -149,6 +156,29 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
                 if (m_GroupEditor.OnGUI(contentRect))
                     Repaint();
+            }
+        }
+
+        public void AddItemsToMenu(GenericMenu menu)
+        {
+            if (m_Request != null && m_Request.Status == StatusCode.Success && m_Request.Result != null && m_Request.Result.Length == 1)
+            {
+                string[] parts = m_Request.Result[0].version.Split('.');
+                if (parts.Length >= 2)
+                {
+                    // Major & minor
+                    string vUrl = $"{parts[0]}.{parts[1]}";
+                    m_HelpUrl = $"https://docs.unity3d.com/Packages/com.unity.addressables@{vUrl}";
+                    menu.AddItem(new GUIContent("Help"), false, OnHelp);
+                }
+            }
+        }
+
+        void OnHelp()
+        {
+            if (!string.IsNullOrEmpty(m_HelpUrl))
+            {
+                Application.OpenURL(m_HelpUrl);
             }
         }
     }

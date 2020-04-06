@@ -17,7 +17,6 @@ using UnityEngine.ResourceManagement.ResourceProviders.Simulation;
 using UnityEngine.ResourceManagement.Util;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace UnityEditor.AddressableAssets.Build.DataBuilders
 {

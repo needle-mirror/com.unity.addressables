@@ -31,6 +31,7 @@ public class InitializationObjectsAsyncTests : AddressablesTestFixture
         yield return handle;
     }
 
+#if UNITY_EDITOR
     [UnityTest]
     [Timeout(5000)]
     public IEnumerator InitializationObjects_CompletesWhenObjectsPresent()
@@ -55,6 +56,7 @@ public class InitializationObjectsAsyncTests : AddressablesTestFixture
         var handle = m_Addressables.ResourceManager.StartOperation(op, rtdOp);
         yield return handle;
     }
+#endif
 
     [UnityTest]
     [Timeout(3000)]

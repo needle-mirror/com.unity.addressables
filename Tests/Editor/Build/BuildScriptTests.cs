@@ -159,6 +159,14 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void Building_CreatesPerformanceReport()
+        {
+            Settings.BuildPlayerContentImpl();
+            FileAssert.Exists("Library/com.unity.addressables/AddressablesBuildLog.txt");
+            FileAssert.Exists("Library/com.unity.addressables/AddressablesBuildTEP.json");
+        }
+
+        [Test]
         public void Build_WithInvalidAssetInResourcesFolder_Succeeds()
         {
             var path = k_TestConfigFolder + "/Resources/unknownAsset.plist";

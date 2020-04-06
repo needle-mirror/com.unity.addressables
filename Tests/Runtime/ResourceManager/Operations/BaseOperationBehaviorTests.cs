@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
@@ -111,6 +111,25 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.AreEqual(true, handle2.IsDone);
             handle1.Release();
             handle2.Release();
+        }
+
+        [Test]
+        public void WhenOperationIsSuccessfulButHasErrorMsg_FailsSilently_CompletesButExceptionHandlerIsCalled()
+        {
+            bool exceptionHandlerCalled = false;
+            ResourceManager.ExceptionHandler += (h, ex) => exceptionHandlerCalled = true; 
+
+            var op = m_RM.CreateCompletedOperation<int>(1, true, "An exception occured.");
+
+            var status = AsyncOperationStatus.None;
+            op.Completed += (x) => status = x.Status;
+
+            // callbacks are deferred to next update
+            m_RM.Update(0.0f);
+
+            Assert.AreEqual(true, exceptionHandlerCalled);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, status);
+            op.Release();
         }
 
         // TODO:

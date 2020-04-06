@@ -2,12 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
-using UnityEditor.AddressableAssets.Build;
-using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
-using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
-using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 using UnityEngine.U2D;
 
@@ -154,19 +151,18 @@ namespace UnityEditor.AddressableAssets.Settings
         /// </summary>
         public HashSet<string> labels { get { return m_Labels; } }
 
-        [SerializeField]
-        string m_mainAssetType = null;
+        internal Type m_cachedMainAssetType = null;
         internal Type MainAssetType
         {
             get
             {
-                if (string.IsNullOrEmpty(m_mainAssetType))
+                if (m_cachedMainAssetType == null)
                 {
-                    m_mainAssetType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath)?.AssemblyQualifiedName;
-                    if (string.IsNullOrEmpty(m_mainAssetType))
+                    m_cachedMainAssetType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath);
+                    if (m_cachedMainAssetType == null)
                         return typeof(object); // do not cache a bad type lookup.
                 }
-                return Type.GetType(m_mainAssetType);
+                return m_cachedMainAssetType;
             }
         }
 
@@ -340,26 +336,24 @@ namespace UnityEditor.AddressableAssets.Settings
                         return null;
                     
                     var mainAsset = ParentEntry.MainAsset;
-                    var subObjectName = address;
-                    var i1 = address.LastIndexOf( ']' );
-                    var i0 = address.LastIndexOf( '[' );
-                    if (i0 > 0 && i1 > i0)
-                        subObjectName = address.Substring( i0 + 1, (i1 - i0) - 1 );
-
-                    if (mainAsset != null && mainAsset.GetType() == typeof(SpriteAtlas))
+                    if (ResourceManagerConfig.ExtractKeyAndSubKey(address, out string mainKey, out string subObjectName))
                     {
-                        m_TargetAsset = (mainAsset as SpriteAtlas).GetSprite(subObjectName);
-                        return m_TargetAsset;
-                    }
-
-                    var subObjects = AssetDatabase.LoadAllAssetRepresentationsAtPath(ParentEntry.AssetPath);
-                    foreach (var s in subObjects)
-                    {
-                        if (s != null && s.name == subObjectName)
+                        if (mainAsset != null && mainAsset.GetType() == typeof(SpriteAtlas))
                         {
-                            m_TargetAsset = s;
-                            break;
+                            m_TargetAsset = (mainAsset as SpriteAtlas).GetSprite(subObjectName);
+                            return m_TargetAsset;
                         }
+
+                        var subObjects = AssetDatabase.LoadAllAssetRepresentationsAtPath(ParentEntry.AssetPath);
+                        foreach (var s in subObjects)
+                        {
+                            if (s != null && s.name == subObjectName)
+                            {
+                                m_TargetAsset = s;
+                                break;
+                            }
+                        }
+
                     }
                 }
                 return m_TargetAsset;
@@ -635,6 +629,7 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (var s in m_SerializedLabels)
                 m_Labels.Add(s);
             m_SerializedLabels = null;
+            m_cachedMainAssetType = null;
         }
 
         /// <summary>
@@ -653,7 +648,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             var assetPath = GetAssetLoadPath(isBundled);
             var keyList = CreateKeyList();
-            var mainType = AddressableAssetUtility.RemapToRuntimeType(MainAssetType);
+            var mainType = AddressableAssetUtility.MapEditorTypeToRuntimeType(MainAssetType, false);
             if (mainType == null && !IsInResources)
             {
                 var t = MainAssetType;
@@ -663,43 +658,26 @@ namespace UnityEditor.AddressableAssets.Settings
 
             if (mainType != null)
                 entries.Add(new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, dependencies, extraData));
-
-            if (mainType == typeof(SpriteAtlas))
+                
+            if (!IsScene)
             {
-                var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(AssetPath);
-                var sprites = new Sprite[atlas.spriteCount];
-                atlas.GetSprites(sprites);
-
-                for (int i = 0; i < atlas.spriteCount; i++)
+                var ids = UnityEditor.Build.Content.ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(guid), EditorUserBuildSettings.activeBuildTarget);
+                if (ids.Length > 1)
                 {
-                    var spriteName = sprites[i].name;
-                    if (spriteName.EndsWith("(Clone)"))
-                        spriteName = spriteName.Replace("(Clone)", "");
-                    var namedAddress = string.Format("{0}[{1}]", address, spriteName);
-                    var guidAddress = string.Format("{0}[{1}]", guid, spriteName);
-                    entries.Add(new ContentCatalogDataEntry(typeof(Sprite), spriteName, typeof(AtlasSpriteProvider).FullName, new object[] { namedAddress, guidAddress }, new object[] { keyList[0] }, extraData));
-                }
-                providerTypes.Add(typeof(AtlasSpriteProvider));
-            }
-
-            HashSet<Type> typesSeen = new HashSet<Type>();
-            typesSeen.Add(mainType);
-            var objs = AssetDatabase.LoadAllAssetRepresentationsAtPath(AssetPath);
-            for (int i = 0; i < objs.Length; i++)
-            {
-                var o = objs[i];
-                var t = AddressableAssetUtility.RemapToRuntimeType(o.GetType());
-                if (t == null)
-                    continue;
-                var internalId = string.Format("{0}[{1}]", assetPath, o.name);
-                var namedAddress = string.Format("{0}[{1}]", address, o.name);
-                var guidAddress = string.Format("{0}[{1}]", guid, o.name);
-                entries.Add(new ContentCatalogDataEntry(t, internalId, providerType, new object[] { namedAddress, guidAddress }, dependencies, extraData));
-
-                if (!typesSeen.Contains(t))
-                {
-                    entries.Add(new ContentCatalogDataEntry(t, assetPath, providerType, keyList, dependencies, extraData));
-                    typesSeen.Add(t);
+                    var typesForObjs = UnityEditor.Build.Content.ContentBuildInterface.GetTypeForObjects(ids);
+                    HashSet<Type> typesSeen = new HashSet<Type>();
+                    typesSeen.Add(mainType);
+                    foreach (var objType in typesForObjs)
+                    {
+                        if (typeof(Component).IsAssignableFrom(objType))
+                            continue;
+                        var rtType = AddressableAssetUtility.MapEditorTypeToRuntimeType(objType, false);
+                        if (rtType != null && !typesSeen.Contains(rtType))
+                        {
+                            entries.Add(new ContentCatalogDataEntry(rtType, assetPath, providerType, keyList, dependencies, extraData));
+                            typesSeen.Add(rtType);
+                        }
+                    }
                 }
             }
         }

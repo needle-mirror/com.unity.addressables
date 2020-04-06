@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using UnityEditor.AddressableAssets.Settings;
-using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.Initialization;
@@ -11,7 +10,6 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
-using UnityEngine.U2D;
 
 namespace UnityEditor.AddressableAssets.Build.DataBuilders
 {
@@ -160,20 +158,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         private void GatherAssetsForFolder(AddressableAssetEntry entry, AddressableAssetsBuildContext aaContext)
         {
             var allEntries = new List<AddressableAssetEntry>();
-            entry.GatherAllAssets(allEntries, false, true, true);
+            entry.GatherAllAssets(allEntries, false, true, false);
             foreach (var e in allEntries)
-            {                
-                var type = e.MainAssetType;
-
-                if(type == typeof(SpriteAtlas))
-                    e.CreateCatalogEntries(aaContext.locations, false, typeof(AssetDatabaseProvider).FullName, null, null, aaContext.providerTypes);
-                else
-                {
-                    if (e.IsScene)
-                        type = typeof(SceneInstance);
-                    aaContext.locations.Add(new ContentCatalogDataEntry(type, e.AssetPath, typeof(AssetDatabaseProvider).FullName, e.CreateKeyList()));
-                }
-            }
-        }
+                e.CreateCatalogEntries(aaContext.locations, false, typeof(AssetDatabaseProvider).FullName, null, null, aaContext.providerTypes);
+         }
     }
 }

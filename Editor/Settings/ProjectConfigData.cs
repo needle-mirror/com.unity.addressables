@@ -26,9 +26,26 @@ namespace UnityEditor.AddressableAssets.Settings
             internal bool hierarchicalSearchInternal;
             [SerializeField]
             internal int activePlayModeIndex = 0;
+            [SerializeField]
+            internal bool hideSubObjectsInGroupView = false;
         }
 
         static ConfigSaveData s_Data;
+
+        public static bool showSubObjectsInGroupView
+        {
+            get
+            {
+                ValidateData();
+                return !s_Data.hideSubObjectsInGroupView;
+            }
+            set
+            {
+                ValidateData();
+                s_Data.hideSubObjectsInGroupView = !value;
+                SaveData();
+            }
+        }
 
         public static int activePlayModeIndex
         {

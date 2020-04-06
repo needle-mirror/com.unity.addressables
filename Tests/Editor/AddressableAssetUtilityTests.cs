@@ -71,13 +71,13 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void IsEditorTypeRemappedToNull()
         {
-            Assert.IsNull(AddressableAssetUtility.RemapToRuntimeType(typeof(UnityEditor.AssetImporter)));
+            Assert.IsNull(AddressableAssetUtility.MapEditorTypeToRuntimeType(typeof(UnityEditor.AssetImporter), false));
         }
 
         [Test]
         public void IsRuntimeTypeNotRemapped()
         {
-            Assert.AreEqual(AddressableAssetUtility.RemapToRuntimeType(typeof(UnityEngine.Vector3)), typeof(UnityEngine.Vector3));
+            Assert.AreEqual(AddressableAssetUtility.MapEditorTypeToRuntimeType(typeof(UnityEngine.Vector3), false), typeof(UnityEngine.Vector3));
         }
 
         [Test]
@@ -94,7 +94,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             foreach (Type key in conversionMapping.Keys)
             {
-                var type = AddressableAssetUtility.RemapToRuntimeType(key);
+                var type = AddressableAssetUtility.MapEditorTypeToRuntimeType(key, false);
                 Assert.AreEqual(type, conversionMapping[key]);
             }
         }

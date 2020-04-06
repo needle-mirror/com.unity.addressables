@@ -374,8 +374,12 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             if (!m_BundleLoadOperation.IsDone)
                 return new VBAsyncOperation<object>().StartCompleted(location, location, null, new ResourceManagerException("LoadAssetAsync called on loading bundle " + m_Name));
             VirtualAssetBundleEntry assetInfo;
+            var assetPath = location.InternalId;
+            if (ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
+                assetPath = mainPath;
+
             //this needs to use the non translated internal id since that was how the table was built.
-            if (!m_AssetMap.TryGetValue(location.InternalId, out assetInfo))
+            if (!m_AssetMap.TryGetValue(assetPath, out assetInfo))
                 return new VBAsyncOperation<object>().StartCompleted(location, location, null, new ResourceManagerException(string.Format("Unable to load asset {0} from simulated bundle {1}.", location.InternalId, Name)));
 
             var op = new LoadAssetOp(location, assetInfo, provideHandle);
@@ -440,29 +444,17 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
                     result = ResourceManagerConfig.CreateListResult(pt, AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
                 else
                 {
-                    var i = assetPath.LastIndexOf('[');
-                    if (i > 0)
+                    if (ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
                     {
-                        var i2 = assetPath.LastIndexOf(']');
-                        if (i2 < i)
+                        var objs = AssetDatabase.LoadAllAssetRepresentationsAtPath(mainPath);
+                        foreach (var o in objs)
                         {
-                            Debug.LogErrorFormat("Invalid index format in internal id {0}", assetPath);
-                        }
-                        else
-                        {
-
-                            var subObjectName = assetPath.Substring(i + 1, i2 - (i + 1));
-                            assetPath = assetPath.Substring(0, i);
-                            var objs = AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
-                            foreach (var o in objs)
+                            if (o.name == subKey)
                             {
-                                if (o.name == subObjectName)
+                                if (pt.IsAssignableFrom(o.GetType()))
                                 {
-                                    if (pt.IsAssignableFrom(o.GetType()))
-                                    {
-                                        result = o;
-                                        break;
-                                    }
+                                    result = o;
+                                    break;
                                 }
                             }
                         }

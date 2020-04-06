@@ -160,3 +160,16 @@ After running a build where you have multiple Scenes in an Addressable Assets gr
 * The Scenes in that group all have the same asset label, and the Bundle Mode is set to **Pack Together By Label**.
 
 If you modify even one of these grouped Scenes then perform a [content update build](AddressableAssetsDevelopmentCycle.md#building-for-content-updates), all the interdependent Scenes will move together into a new Content Update group.
+
+### Loading Content Catalogs
+Content Catalogs are the data stores Addressables uses to look up an asset's physical location based on the key(s) provided to the system.  By default, Addressables builds the local content catalog for local Addressable Groups.  If the Build Remote Catalogs option is turned on under the AddressableAssetSettings, then one additional catalog is built to store locations for remote Addressable Groups.  Ultimately Addressables only uses one of these catalogs.  If a remote catalog is built and it has a different hash than the local catalog, it is downloaded, cached, and used in place of the built-in local catalog.
+
+It is possible, however, to specify additional Content Catalogs to be loaded.  There are different reasons you might decide loading additional catalogs is right for your project, such as building an art-only project that you want to use across different projects.
+
+Should you find that loading additional catalogs is right for you, there is a method that can assist in this regard, `LoadContentCatalogAsync`.  
+
+For `LoadContentCatalogAsync`, all that is required is for you to supply the location of the catalog you wish to load.  However, this alone does not use catalog caching, so be careful if you're loading a catalog from a remote location.  You will incur that WebRequest every time you need to load that catalog.
+
+To help prevent you from needing to download a remote catalog every time, if you provide a `.hash` file with the hash of the catalog alongside the catalog you're loading, we can use this to properly cache your Content Catalog.  **Please Note:** The hash file does need to be in the same location and have the same name as your catalog.  The only difference to the path should be the extension.
+
+One additional note: You'll notice this method comes with a parameter `autoReleaseHandle`.  In order for the system to download a new remote catalog, any prior calls to `LoadContentCatalogAsync` that point to the catalog you're attempting to load need to be released.  Otherwise, the system picks up the Content Catalog load operation from our operation cache.  If the cached operation is picked up, the new remote catalog is not downloaded.  If set to true, the parameter `autoReleaseHandle` can ensure that the operation doesn't stick around in our operation cache after completing.

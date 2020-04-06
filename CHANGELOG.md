@@ -3,6 +3,34 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+
+## [1.8.3] - 2020-04-07
+- Option to disable sprites and subobjects has been added to the Groups window Tools menu. This option is persisted per user, not with the project. 
+- Catalog entries for subobjects and sprites are no longer serialized into the catalog.  These are generated at runtime with a custom resource locator.
+- Added missing error logs to various failure cases.
+- Fixed subobject parsing to treat anything between the first '[' character and the last ']' as the subobject name instead of the last '[' and the last ']'.
+- Changed the display of AssetReference types in the inspector from a dropdown to look like an object reference.
+- Added the option to compress the local content catalog by packing it in an asset bundle.
+- Added method in settings to retrieve all defined labels.
+- Fixed PercentComplete in ChainOperation
+- Fixed main settings asset getting marked dirty when making builds.
+- Fixed issues with Content Update when entry with dependant entries was modified.
+- Fixed "Unknown Exception" issue caused by releasing certain operation handles too many times.
+- Added link to online documentation in the addressable windows menu.
+- Fixed bug where two assets with the same address packed separately was causing an error. 
+- Fixed issue where loading a content catalog multiple times was throwing exceptions.
+- Made it so using the LoadContentCatalogAsync API creates a ResourceLocation that allows those catalogs to be updated properly.
+- Fixed bug where the scene in a recycled InstanceOperation wasn't being cleaned.
+- Fixed bug where an invalid location would be created for assets that weren't in a Resources folder, but were part of a group with the PlayerDataGroupShema.
+- Schema asset file name uses group name instead of GUID. For example: GroupName_SchemaName.asset
+- Fixed text that was being cutoff in the CacheIntializationSettings inspector view.
+- During init, if a remote catalog is expected but not present, this will fail silently. Fixed a bug where that silent failure showed up later as an "unknown error in async operation".
+  - if you wish to see a log for the failed catalog retrieval, enable ADDRESSABLES_LOG_ALL as a scripting define symbol.
+- Fixed bug where renaming a class referenced by an AddressableAssetEntry causes an InvalidKeyException.
+- Fixed performance regression in ContentUpdateScript.SaveContentState
+- Fixed performance regression in BuildScriptPackedMode.PostProcessCatalogEntries
+- Updated to scriptable build pipeline 1.7.2 which includes many build optimizations - see SBP changelog for details
+
 ## [1.7.5] - 2020-03-23
 - Fixed null key exception when building that happened when an invalid asset type is in a resources folder.
 
@@ -16,7 +44,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed bug where Use Asset Database and Use Existing Build could return a different number of results in LoadAssetAsync<IList<>>
 - Fixed bug where SceneUnload Operations weren't getting properly released in certain circumstances.
 - Fixed UI performance regression when opening the Addressables Group Editor window.
+- Fixed issue where RuntimeKeyIsValid was give a false negative when checking sub-objects.
 - Updating scripting defines to check if caching is enabled.
+- Changed the display of AssetReference types in the inspector from a dropdown to look like an object reference.
 - Prevent assets from being added to read only Addressable groups through the group editor window.
 - Group names can now be searched through the group editor window. 
 - Added ability to set variables in AddressablesRuntimeProperties more than once.

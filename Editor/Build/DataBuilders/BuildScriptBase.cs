@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -30,6 +33,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         [SerializedTypeRestrictionAttribute(type = typeof(ISceneProvider))]
         public SerializedType sceneProviderType = new SerializedType() { Value = typeof(SceneProvider) };
 
+        [NonSerialized]
+        internal IBuildLogger m_Log;
+
         /// <summary>
         /// The descriptive name used in the UI.
         /// </summary>
@@ -56,13 +62,23 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 Debug.LogError(message);
                 return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, message);
             }
-            
+
+            BuildLog log = new BuildLog();
+            m_Log = log;
             AddressablesRuntimeProperties.ClearCachedPropertyValues();
-            
+
+            TResult result;
             // Append the file registry to the results
-            var result = BuildDataImplementation<TResult>(builderInput);
-            if (result != null)
-                result.FileRegistry = builderInput.Registry;
+            using (log.ScopedStep(LogLevel.Info, $"Building {this.Name}"))
+            {
+                result = BuildDataImplementation<TResult>(builderInput);
+                if (result != null)
+                    result.FileRegistry = builderInput.Registry;
+            }
+
+            var perfOutputDirectory = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables";
+            File.WriteAllText(Path.Combine(perfOutputDirectory, "AddressablesBuildTEP.json"), log.FormatAsTraceEventProfiler());
+            File.WriteAllText(Path.Combine(perfOutputDirectory, "AddressablesBuildLog.txt"), log.FormatAsText());
 
             return result;
         }
@@ -147,7 +163,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             {
                 var entries = new List<AddressableAssetEntry>();
                 assetGroup.GatherAllAssets(entries, true, true, false);
-                foreach (var a in entries)
+                foreach (var a in entries.Where(e => e.IsInSceneList || e.IsInResources))
                 {
                     if (!playerDataSchema.IncludeBuildSettingsScenes && a.IsInSceneList)
                         continue;

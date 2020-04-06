@@ -31,6 +31,21 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void GetLabels_ShouldReturnCopy()
+        {
+            const string labelName = "Newlabel";
+            Settings.AddLabel("label_1");
+            Settings.AddLabel("label_2");
+
+            var labels = Settings.GetLabels();
+            labels.Add(labelName);
+
+            Assert.AreEqual(3, labels.Count);
+            Assert.AreEqual(2, Settings.labelTable.labelNames.Count);
+            Assert.IsFalse(Settings.labelTable.labelNames.Contains(labelName));
+        }
+
+        [Test]
         public void AddRemoveGroup()
         {
             const string groupName = "NewGroup";
@@ -153,5 +168,24 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.RemoveGroup(group);
             Assert.IsNull(Settings.FindGroup(groupName));
         }
+#if UNITY_2019_2_OR_NEWER
+        [Test]
+        public void Settings_WhenActivePlayerDataBuilderIndexSetWithSameValue_DoesNotDirtyAsset()
+        {
+            var prevDC = EditorUtility.GetDirtyCount(Settings);
+            Settings.ActivePlayerDataBuilderIndex = Settings.ActivePlayerDataBuilderIndex;
+            var dc = EditorUtility.GetDirtyCount(Settings);
+            Assert.AreEqual(prevDC, dc);
+        }
+
+        [Test]
+        public void Settings_WhenActivePlayerDataBuilderIndexSetWithDifferentValue_DoesDirtyAsset()
+        {
+            var prevDC = EditorUtility.GetDirtyCount(Settings);
+            Settings.ActivePlayerDataBuilderIndex = Settings.ActivePlayerDataBuilderIndex + 1;
+            var dc = EditorUtility.GetDirtyCount(Settings);
+            Assert.AreEqual(prevDC + 1, dc);
+        }
+#endif
     }
 }

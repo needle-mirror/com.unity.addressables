@@ -67,20 +67,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     }
                     else
                     {
-                        var i = assetPath.LastIndexOf('[');
-                        if (i > 0)
+                        if(ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
                         {
-                            var i2 = assetPath.LastIndexOf(']');
-                            if (i2 < i)
-                            {
-                                m_ProvideHandle.Complete<AssetBundle>(null, false, new Exception(string.Format("Invalid index format in internal id {0}", assetPath)));
-                            }
-                            else
-                            {
-                                subObjectName = assetPath.Substring(i + 1, i2 - (i + 1));
-                                assetPath = assetPath.Substring(0, i);
-                                m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type);
-                            }
+                            subObjectName = subKey;
+                            m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(mainPath, m_ProvideHandle.Type);
                         }
                         else
                         {
@@ -129,7 +119,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                         }
                     }
                 }
-                m_ProvideHandle.Complete(result, result != null, null);
+                m_ProvideHandle.Complete(result, result != null, result == null ? new Exception($"Unable to load asset of type {m_ProvideHandle.Type} from location {m_ProvideHandle.Location}.") : null);
             }
 
             public float ProgressCallback() { return m_RequestOperation != null ? m_RequestOperation.progress : 0.0f; }

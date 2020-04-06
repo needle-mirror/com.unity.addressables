@@ -308,7 +308,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             item.checkedForChildren = true;
             var subAssets = new List<AddressableAssetEntry>();
-            entry.GatherAllAssets(subAssets, false, false, true);
+            entry.GatherAllAssets(subAssets, false, false, ProjectConfigData.showSubObjectsInGroupView);
             if (subAssets.Count > 0)
             {
                 foreach (var e in subAssets)

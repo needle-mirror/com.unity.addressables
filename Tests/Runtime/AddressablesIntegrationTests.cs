@@ -62,12 +62,18 @@ namespace AddressableAssetsIntegrationTests
         int m_StartingOpCount;
         int m_StartingTrackedHandleCount;
         int m_StartingInstanceCount;
+
+        private Action PostTearDownEvent = null;
+
         [TearDown]
         public void TearDown()
         {
             Assert.AreEqual(m_StartingOpCount, m_Addressables.ResourceManager.OperationCacheCount);
             Assert.AreEqual(m_StartingTrackedHandleCount, m_Addressables.TrackedHandleCount);
             Assert.AreEqual(m_StartingInstanceCount, m_Addressables.ResourceManager.InstanceOperationCount);
+
+            PostTearDownEvent?.Invoke();
+            PostTearDownEvent = null;
         }
 
         //we must wait for Addressables initialization to complete since we are clearing out all of its data for the tests.
@@ -127,8 +133,15 @@ namespace AddressableAssetsIntegrationTests
             m_StartingOpCount = m_Addressables.ResourceManager.OperationCacheCount;
             m_StartingTrackedHandleCount = m_Addressables.TrackedHandleCount;
             m_StartingInstanceCount = m_Addressables.ResourceManager.InstanceOperationCount;
-        } 
+        }
+        private void ResetAddressables()
+        {
+            m_Addressables = null;
+            currentInitType = null;
+            initializationComplete = false;
+        }
     }
+
 #if UNITY_EDITOR
     class AddressablesIntegrationTestsFastMode : AddressablesIntegrationTests
     {

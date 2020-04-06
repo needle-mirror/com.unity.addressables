@@ -4,12 +4,15 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.ResourceProviders;
 
 namespace UnityEditor.AddressableAssets.Build
 {
@@ -128,6 +131,17 @@ namespace UnityEditor.AddressableAssets.Build
     /// </summary>
     public static class ContentUpdateScript
     {
+        internal struct ContentUpdateContext
+        {
+            public Dictionary<string, CachedAssetState> GuidToPreviousAssetStateMap;
+            public Dictionary<string, ContentCatalogDataEntry> IdToCatalogDataEntryMap;
+            public Dictionary<string, string> BundleToInternalBundleIdMap;
+            public IBundleWriteData WriteData;
+            public AddressablesContentState ContentState;
+            public FileRegistry Registry;
+            public List<CachedAssetState> PreviousAssetStateCarryOver;
+        }
+
         static bool GetAssetState(GUID asset, out AssetState assetState)
         {
             assetState = new AssetState();
@@ -254,36 +268,57 @@ namespace UnityEditor.AddressableAssets.Build
         /// <returns>True if the file is saved, false otherwise.</returns>
         public static bool SaveContentState(List<ContentCatalogDataEntry> locations, string path, List<AddressableAssetEntry> entries, IDependencyData dependencyData, string playerVersion, string remoteCatalogPath)
         {
+            return SaveContentState(locations, path, entries, dependencyData, playerVersion, remoteCatalogPath, null);
+        }
+
+        /// <summary>
+        /// Save the content update information for a set of AddressableAssetEntry objects.
+        /// </summary>
+        /// <param name="locations">The ContentCatalogDataEntry locations that were built into the Content Catalog.</param>
+        /// <param name="path">File to write content stat info to.  If file already exists, it will be deleted before the new file is created.</param>
+        /// <param name="entries">The entries to save.</param>
+        /// <param name="dependencyData">The raw dependency information generated from the build.</param>
+        /// <param name="playerVersion">The player version to save. This is usually set to AddressableAssetSettings.PlayerBuildVersion.</param>
+        /// <param name="remoteCatalogPath">The server path (if any) that contains an updateable content catalog.  If this is empty, updates cannot occur.</param>
+        /// <param name="carryOverCacheState">Cached state that needs to carry over from the previous build.  This mainly affects Content Update.</param>
+        /// <returns>True if the file is saved, false otherwise.</returns>
+        public static bool SaveContentState(List<ContentCatalogDataEntry> locations, string path, List<AddressableAssetEntry> entries, IDependencyData dependencyData, string playerVersion, string remoteCatalogPath, List<CachedAssetState> carryOverCacheState)
+        {
             try
             {
+                Dictionary<string, AddressableAssetEntry> guidToEntries = new Dictionary<string, AddressableAssetEntry>();
+                Dictionary<string, ContentCatalogDataEntry> key1ToCCEntries = new Dictionary<string, ContentCatalogDataEntry>();
+
+                foreach(AddressableAssetEntry entry in entries)
+                    if (!guidToEntries.ContainsKey(entry.guid))
+                        guidToEntries[entry.guid] = entry;
+                foreach(ContentCatalogDataEntry ccEntry in locations)
+                    if (ccEntry != null && ccEntry.Keys != null && ccEntry.Keys.Count > 1 && (ccEntry.Keys[1] as string) != null && !key1ToCCEntries.ContainsKey(ccEntry.Keys[1] as string))
+                        key1ToCCEntries[ccEntry.Keys[1] as string] = ccEntry;
+
                 IList<CachedAssetState> cachedInfos = new List<CachedAssetState>();
                 foreach (var assetData in dependencyData.AssetInfo)
                 {
-                    AddressableAssetEntry addressableAssetEntry = entries.FirstOrDefault((e) => e.guid == assetData.Key.ToString());
-                    ContentCatalogDataEntry catalogAssetEntry = locations.FirstOrDefault((e) =>
-                    {
-                        if (e.Keys.Count <= 1)
-                            return false;
-                        return (e.Keys[1] as string) == assetData.Key.ToString();
-                    });
-                    CachedAssetState cachedAssetState;
+                    guidToEntries.TryGetValue(assetData.Key.ToString(), out AddressableAssetEntry addressableAssetEntry);
+                    key1ToCCEntries.TryGetValue(assetData.Key.ToString(), out ContentCatalogDataEntry catalogAssetEntry);
                     if (addressableAssetEntry != null && catalogAssetEntry != null &&
-                        GetCachedAssetStateForData(assetData.Key, addressableAssetEntry.BundleFileId, addressableAssetEntry.parentGroup.Guid, catalogAssetEntry.Data, assetData.Value.referencedObjects.Select(x => x.guid), out cachedAssetState))
+                        GetCachedAssetStateForData(assetData.Key, addressableAssetEntry.BundleFileId, addressableAssetEntry.parentGroup.Guid, catalogAssetEntry.Data, assetData.Value.referencedObjects.Select(x => x.guid), out CachedAssetState cachedAssetState))
                         cachedInfos.Add(cachedAssetState);
                 }
+
                 foreach (var sceneData in dependencyData.SceneInfo)
                 {
-                    AddressableAssetEntry addressableSceneEntry = entries.FirstOrDefault((e) => e.guid == sceneData.Key.ToString());
-                    ContentCatalogDataEntry catalogSceneEntry = locations.FirstOrDefault((e) =>
-                    {
-                        if (e.Keys.Count <= 1)
-                            return false;
-                        return (e.Keys[1] as string) == sceneData.Key.ToString();
-                    });
-                    CachedAssetState cachedAssetState;
+                    guidToEntries.TryGetValue(sceneData.Key.ToString(), out AddressableAssetEntry addressableSceneEntry);
+                    key1ToCCEntries.TryGetValue(sceneData.Key.ToString(), out ContentCatalogDataEntry catalogSceneEntry);
                     if (addressableSceneEntry != null && catalogSceneEntry != null && 
-                        GetCachedAssetStateForData(sceneData.Key, addressableSceneEntry.BundleFileId, addressableSceneEntry.parentGroup.Guid, catalogSceneEntry.Data, sceneData.Value.referencedObjects.Select(x => x.guid), out cachedAssetState))
+                        GetCachedAssetStateForData(sceneData.Key, addressableSceneEntry.BundleFileId, addressableSceneEntry.parentGroup.Guid, catalogSceneEntry.Data, sceneData.Value.referencedObjects.Select(x => x.guid), out CachedAssetState cachedAssetState))
                         cachedInfos.Add(cachedAssetState);
+                }
+
+                if (carryOverCacheState != null)
+                {
+                    foreach(var cs in carryOverCacheState)
+                        cachedInfos.Add(cs);
                 }
 
                 var cacheData = new AddressablesContentState
@@ -408,6 +443,7 @@ namespace UnityEditor.AddressableAssets.Build
 
             s_StreamingAssetsExists = Directory.Exists("Assets/StreamingAssets");
             var context = new AddressablesDataBuilderInput(settings, cacheData.playerVersion);
+            context.PreviousContentState = cacheData;
 
             Cleanup(!s_StreamingAssetsExists, false);
 
@@ -448,16 +484,35 @@ namespace UnityEditor.AddressableAssets.Build
         }
         /// <summary>
         /// Get all modified addressable asset entries in groups that have BundledAssetGroupSchema and ContentUpdateGroupSchema with static content enabled.
+        /// This includes any Addressable dependencies that are affected by the modified entries.
         /// </summary>
         /// <param name="settings">Addressable asset settings.</param>
         /// <param name="cacheDataPath">The cache data path.</param>
-        /// <returns>A list of all modified entries (list is empty if there are none); null if failed to load cache data.</returns>
+        /// <returns>A list of all modified entries and dependencies (list is empty if there are none); null if failed to load cache data.</returns>
         public static List<AddressableAssetEntry> GatherModifiedEntries(AddressableAssetSettings settings, string cacheDataPath)
+        {
+            HashSet<AddressableAssetEntry> retVal = new HashSet<AddressableAssetEntry>();
+            var entriesMap = GatherModifiedEntriesWithDependencies(settings, cacheDataPath);
+            foreach (var entry in entriesMap.Keys)
+            {
+                if(!retVal.Contains(entry))
+                    retVal.Add(entry);
+
+                foreach(var dependency in entriesMap[entry])
+                    if (!retVal.Contains(dependency))
+                        retVal.Add(dependency);
+            }
+
+            return retVal.ToList();
+        }
+
+        internal static void GatherExplicitModifedEnteries(AddressableAssetSettings settings, string cacheDataPath, ref Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap)
         {
             var cacheData = LoadContentState(cacheDataPath);
             if (cacheData == null)
             {
-                return null;
+                dependencyMap = null;
+                return;
             }
 
             List<string> noBundledAssetGroupSchema = new List<string>();
@@ -494,7 +549,7 @@ namespace UnityEditor.AddressableAssets.Build
             builder.AppendFormat("Skipping Prepare for Content Update on {0} group(s):\n\n",
                 noBundledAssetGroupSchema.Count + noStaticContent.Count);
 
-            
+
             AddInvalidGroupsToLogMessage(builder, noBundledAssetGroupSchema, "Group Did Not Contain BundledAssetGroupSchema");
             AddInvalidGroupsToLogMessage(builder, noStaticContent, "Static Content Not Enabled In Schemas");
 
@@ -513,7 +568,66 @@ namespace UnityEditor.AddressableAssets.Build
             }
 
             AddAllDependentScenesFromModifiedEnteries(modifiedEntries);
-            return modifiedEntries;
+            foreach (var entry in modifiedEntries)
+            {
+                if(!dependencyMap.ContainsKey(entry))
+                    dependencyMap.Add(entry, new List<AddressableAssetEntry>());
+            }
+        }
+
+        /// <summary>
+        /// Get a Dictionary of all modified values and their dependencies.  Dependencies will be Addressable and part of a group
+        /// with static content enabled.
+        /// </summary>
+        /// <param name="settings">Addressable asset settings.</param>
+        /// <param name="cachePath">The cache data path.</param>
+        /// <returns>A dictionary mapping explicit changed entries to their dependencies.</returns>
+        public static Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> GatherModifiedEntriesWithDependencies(AddressableAssetSettings settings, string cachePath)
+        {
+            Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> modifiedData = new Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>>();
+            GatherExplicitModifedEnteries(settings, cachePath, ref modifiedData);
+            GetStaticContentDependenciesForEntries(settings, ref modifiedData);
+            return modifiedData;
+        }
+
+        internal static void GetStaticContentDependenciesForEntries(AddressableAssetSettings settings, ref Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap)
+        {
+            Dictionary<AddressableAssetGroup, bool> groupHasStaticContentMap = new Dictionary<AddressableAssetGroup, bool>();
+
+            if (dependencyMap == null)
+                return;
+
+            foreach (AddressableAssetEntry entry in dependencyMap.Keys)
+            {
+                //since the entry here is from our list of modified enteries we know that it must be a part of a static content group.
+                //Since it's part of a static content update group we can go ahead and set the value to true in the dictionary without explicitly checking it.
+                if (!groupHasStaticContentMap.ContainsKey(entry.parentGroup))
+                    groupHasStaticContentMap.Add(entry.parentGroup, true);
+
+                string[] dependencies = AssetDatabase.GetDependencies(entry.AssetPath);
+                foreach (string dependency in dependencies)
+                {
+                    string guid = AssetDatabase.AssetPathToGUID(dependency);
+                    var depEntry = settings.FindAssetEntry(guid);
+                    if (depEntry != null)
+                    {
+                        if (!groupHasStaticContentMap.TryGetValue(depEntry.parentGroup, out bool groupHasStaticContentEnabled))
+                        {
+                            groupHasStaticContentEnabled = depEntry.parentGroup.HasSchema<ContentUpdateGroupSchema>() &&
+                                                           depEntry.parentGroup.GetSchema<ContentUpdateGroupSchema>().StaticContent;
+
+                            groupHasStaticContentMap.Add(depEntry.parentGroup, groupHasStaticContentEnabled);
+                        }
+
+                        if (!dependencyMap.ContainsKey(depEntry) && groupHasStaticContentEnabled)
+                        {
+                            if(!dependencyMap.ContainsKey(entry))
+                                dependencyMap.Add(entry, new List<AddressableAssetEntry>());
+                            dependencyMap[entry].Add(depEntry);
+                        }
+                    }
+                }
+            }
         }
 
         internal static void AddAllDependentScenesFromModifiedEnteries(List<AddressableAssetEntry> modifiedEntries)
@@ -600,8 +714,5 @@ namespace UnityEditor.AddressableAssets.Build
             contentGroup.AddSchema<ContentUpdateGroupSchema>().StaticContent = false;
             settings.MoveEntries(items, contentGroup);
         }
-
     }
-
-
 }

@@ -16,14 +16,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         internal class InternalOp
         {
             AsyncOperation m_RequestOperation;
-            ProvideHandle m_PI;
+            ProvideHandle m_ProvideHandle;
             
             public void Start(ProvideHandle provideHandle)
             {
-                m_PI = provideHandle;
+                m_ProvideHandle = provideHandle;
 
                 provideHandle.SetProgressCallback(PercentComplete);
-                m_RequestOperation = Resources.LoadAsync(m_PI.ResourceManager.TransformInternalId(m_PI.Location), m_PI.Type);
+                m_RequestOperation = Resources.LoadAsync(m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location), m_ProvideHandle.Type);
                 m_RequestOperation.completed += AsyncOperationCompleted;
             }
 
@@ -31,8 +31,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             {
                 var request = op as ResourceRequest;
                 object result = request != null ? request.asset : null;
-                result = result != null && m_PI.Type.IsAssignableFrom(result.GetType()) ? result : null;
-                m_PI.Complete(result, result != null, null);
+                result = result != null && m_ProvideHandle.Type.IsAssignableFrom(result.GetType()) ? result : null;
+                m_ProvideHandle.Complete(result, result != null, result == null ? new Exception($"Unable to load asset of type {m_ProvideHandle.Type} from location {m_ProvideHandle.Location}.") : null);
             }
 
             public float PercentComplete() { return m_RequestOperation != null ? m_RequestOperation.progress : 0.0f; }
@@ -51,38 +51,26 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 else
                     result = ResourceManagerConfig.CreateListResult(t, Resources.LoadAll(internalId, t.GetGenericArguments()[0]));
 
-                pi.Complete(result, result != null, null);
+                pi.Complete(result, result != null, result == null ? new Exception($"Unable to load asset of type {pi.Type} from location {pi.Location}.") : null);
             }
             else
             {
-                string assetPath = internalId;
-                var i = assetPath.LastIndexOf('[');
-                if (i > 0)
+                if (ResourceManagerConfig.ExtractKeyAndSubKey(internalId, out string mainPath, out string subKey))
                 {
-                    var i2 = assetPath.LastIndexOf(']');
-                    if (i2 < i)
+                    var objs = Resources.LoadAll(mainPath, pi.Type);
+                    object result = null;
+                    foreach (var o in objs)
                     {
-                        pi.Complete<AssetBundle>(null, false, new Exception(string.Format("Invalid index format in internal id {0}", assetPath)));
-                    }
-                    else
-                    {
-                        var subObjectName = assetPath.Substring(i + 1, i2 - (i + 1));
-                        assetPath = assetPath.Substring(0, i);
-                        var objs = Resources.LoadAll(assetPath, pi.Type);
-                        object result = null;
-                        foreach (var o in objs)
+                        if (o.name == subKey)
                         {
-                            if (o.name == subObjectName)
+                            if (pi.Type.IsAssignableFrom(o.GetType()))
                             {
-                                if (pi.Type.IsAssignableFrom(o.GetType()))
-                                {
-                                    result = o;
-                                    break;
-                                }
+                                result = o;
+                                break;
                             }
                         }
-                        pi.Complete(result, result != null, null);
                     }
+                    pi.Complete(result, result != null, result == null ? new Exception($"Unable to load asset of type {pi.Type} from location {pi.Location}.") : null);
                 }
                 else
                 {

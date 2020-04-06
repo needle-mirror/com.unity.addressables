@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets.Build
 {
@@ -54,6 +52,12 @@ namespace UnityEditor.AddressableAssets.Build
         /// The name of the default Runtime Catalog file.
         /// </summary>
         public string RuntimeCatalogFilename = "catalog.json";
+
+        /// <summary>
+        /// The asset content state of a previous build.  This allows detection of deltas with the current build content state.  This will be
+        /// null in standard builds.  This is only set during content update builds.
+        /// </summary>
+        public AddressablesContentState PreviousContentState { get; internal set; }
         
 
         /// <summary>
@@ -92,7 +96,7 @@ namespace UnityEditor.AddressableAssets.Build
                 EditorUserBuildSettings.activeBuildTarget, 
                 playerBuildVersion);
         }
-        
+
         void SetAllValues(AddressableAssetSettings settings, BuildTargetGroup buildTargetGroup, BuildTarget buildTarget, string playerBuildVersion)
         {
             AddressableSettings = settings;
@@ -102,6 +106,7 @@ namespace UnityEditor.AddressableAssets.Build
             PlayerVersion = playerBuildVersion;
             ProfilerEventsEnabled = ProjectConfigData.postProfilerEvents;
             Registry = new FileRegistry();
+            PreviousContentState = null;
         }
     }
 }

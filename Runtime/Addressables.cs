@@ -12,6 +12,9 @@ using UnityEngine.ResourceManagement.Util;
 using UnityEngine.SceneManagement;
 
 [assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
+#if UNITY_EDITOR
+[assembly: InternalsVisibleTo("Unity.Addressables.Editor")]
+#endif
 
 namespace UnityEngine.AddressableAssets
 {
@@ -248,14 +251,30 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Additively load catalogs from runtime data.  The settings are not used.
+        /// Additively load catalogs from runtime data.  In order for content catalog caching to work properly the catalog json file
+        /// should have a .hash file associated with the catalog.  This hash file will be used to determine if the catalog
+        /// needs to be updated or not.  If no .hash file is provided, the catalog will be loaded from the specified path every time.
         /// </summary>
         /// <param name="catalogPath">The path to the runtime data.</param>
         /// <param name="providerSuffix">This value, if not null or empty, will be appended to all provider ids loaded from this data.</param>
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<IResourceLocator> LoadContentCatalogAsync(string catalogPath, string providerSuffix = null)
         {
-            return m_Addressables.LoadContentCatalogAsync(catalogPath, providerSuffix);
+            return m_Addressables.LoadContentCatalogAsync(catalogPath, false, providerSuffix);
+        }
+
+        /// <summary>
+        /// Additively load catalogs from runtime data.  In order for content catalog caching to work properly the catalog json file
+        /// should have a .hash file associated with the catalog.  This hash file will be used to determine if the catalog
+        /// needs to be updated or not.  If no .hash file is provided, the catalog will be loaded from the specified path every time.
+        /// </summary>
+        /// <param name="catalogPath">The path to the runtime data.</param>
+        /// <param name="autoReleaseHandle">If true, the async operation handle will be automatically released on completion.</param>
+        /// <param name="providerSuffix">This value, if not null or empty, will be appended to all provider ids loaded from this data.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IResourceLocator> LoadContentCatalogAsync(string catalogPath, bool autoReleaseHandle, string providerSuffix = null)
+        {
+            return m_Addressables.LoadContentCatalogAsync(catalogPath, autoReleaseHandle, providerSuffix);
         }
 
         /// <summary>

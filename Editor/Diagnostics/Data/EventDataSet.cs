@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.ResourceManagement.Diagnostics;
-using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets.Diagnostics.Data
 {

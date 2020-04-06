@@ -12,6 +12,10 @@ using UnityEngine.SceneManagement;
 
 [assembly: InternalsVisibleTo("Unity.ResourceManager.Tests")]
 [assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
+[assembly: InternalsVisibleTo("Unity.Addressables")]
+#if UNITY_EDITOR
+[assembly: InternalsVisibleTo("Unity.Addressables.Editor")]
+#endif
 
 namespace UnityEngine.ResourceManagement
 {
@@ -507,6 +511,13 @@ namespace UnityEngine.ResourceManagement
             return StartOperation(cop, default(AsyncOperationHandle));
         }
 
+        internal AsyncOperationHandle<TObject> CreateCompletedOperation<TObject>(TObject result, bool success, string errorMsg)
+        {
+            var cop = CreateOperation<CompletedOperation<TObject>>(typeof(CompletedOperation<TObject>), typeof(CompletedOperation<TObject>).GetHashCode(), 0, null);
+            cop.Init(result, success, errorMsg);
+            return StartOperation(cop, default(AsyncOperationHandle));
+        }
+
         /// <summary>
         /// Release the operation associated with the specified handle
         /// </summary>
@@ -657,7 +668,7 @@ namespace UnityEngine.ResourceManagement
             cOp.Init(dependentOp, callback);
             return StartOperation(cOp, dependentOp);
         }
-        class InstanceOperation : AsyncOperationBase<GameObject>
+        internal class InstanceOperation : AsyncOperationBase<GameObject>
         {
             AsyncOperationHandle<GameObject> m_dependency;
             InstantiationParameters m_instantiationParams;
@@ -671,6 +682,7 @@ namespace UnityEngine.ResourceManagement
                 m_dependency = dependency;
                 m_instanceProvider = instanceProvider;
                 m_instantiationParams = instantiationParams;
+                m_scene = default(Scene);
             }
 
             protected override void GetDependencies(List<AsyncOperationHandle> deps)

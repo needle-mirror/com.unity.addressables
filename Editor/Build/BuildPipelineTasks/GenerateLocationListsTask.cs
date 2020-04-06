@@ -7,9 +7,7 @@ using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Injector;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
-using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.ResourceProviders;
 
 namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
@@ -99,12 +97,12 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             return ReturnCode.Success;
         }
 
-        static string GetBundleProviderName(AddressableAssetGroup group)
+        internal static string GetBundleProviderName(AddressableAssetGroup group)
         {
             return group.GetSchema<BundledAssetGroupSchema>().GetBundleCachedProviderId();
         }
 
-        static string GetAssetProviderName(AddressableAssetGroup group)
+        internal static string GetAssetProviderName(AddressableAssetGroup group)
         {
             return group.GetSchema<BundledAssetGroupSchema>().GetAssetCachedProviderId();
         }

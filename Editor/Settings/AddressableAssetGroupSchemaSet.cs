@@ -205,5 +205,29 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             m_Schemas.Clear();
         }
+
+        internal bool RenameSchemaAssets(Func<Type, string> pathFunc)
+        {
+            bool result = true;
+            foreach (var schema in m_Schemas)
+            {
+                string guid;
+                if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(schema, out guid, out long lfid))
+                    continue;
+
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (string.IsNullOrEmpty(path))
+                    continue;
+
+                string newPath = pathFunc(schema.GetType());
+                if (path == newPath)
+                    continue;
+
+                string setPath = AssetDatabase.MoveAsset(path, newPath);
+                if (!string.IsNullOrEmpty(setPath))
+                    result = false;
+            }
+            return result;
+        }
     }
 }

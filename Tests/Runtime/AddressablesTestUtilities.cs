@@ -87,8 +87,8 @@ static class AddressablesTestUtility
         var spriteEntry = settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(spritePath), group, false, false);
         spriteEntry.address = "sprite";
 
-        var so = ScriptableObject.CreateInstance<TestObject>();
-        var sub = ScriptableObject.CreateInstance<TestObject>();
+        var so = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
+        var sub = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
         sub.name = "sub";
         AssetDatabase.CreateAsset(so, RootFolder + "sub.asset");
         AssetDatabase.AddObjectToAsset(sub, RootFolder + "sub.asset");

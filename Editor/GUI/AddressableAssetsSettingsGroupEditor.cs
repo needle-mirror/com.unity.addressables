@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Diagnostics;
 using UnityEditor.AddressableAssets.Settings;
@@ -9,7 +8,6 @@ using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using UnityEngine.Assertions;
 using UnityEngine.Serialization;
 
 // ReSharper disable DelegateSubtraction
@@ -143,8 +141,9 @@ namespace UnityEditor.AddressableAssets.GUI
                         menu.AddItem( new GUIContent("Analyze"), false, AnalyzeWindow.ShowWindow);
                         menu.AddItem( new GUIContent("Hosting Services"), false, () => EditorWindow.GetWindow<HostingServicesWindow>().Show(settings));
                         menu.AddItem( new GUIContent("Event Viewer"), false, ResourceProfilerWindow.ShowWindow);
-                        menu.AddItem( new GUIContent("Check for Content Update Restrictions"), false, OnPrepareUpdate);
-                        
+                        menu.AddItem(new GUIContent("Check for Content Update Restrictions"), false, OnPrepareUpdate);
+                        menu.AddItem(new GUIContent("Show Sprite and Subobject Addresses"), ProjectConfigData.showSubObjectsInGroupView, () => { ProjectConfigData.showSubObjectsInGroupView = !ProjectConfigData.showSubObjectsInGroupView; m_EntryTree.Reload(); });
+
                         var bundleList = AssetDatabase.GetAllAssetBundleNames();
                         if (bundleList != null && bundleList.Length > 0)
                             menu.AddItem( new GUIContent("Convert Legacy AssetBundles"), false, window.OfferToConvert);

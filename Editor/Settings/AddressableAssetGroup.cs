@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
-using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -84,7 +83,7 @@ namespace UnityEditor.AddressableAssets.Settings
                             if (path != newPath)
                             {
                                 var setPath = AssetDatabase.MoveAsset(path, newPath);
-                                if (!string.IsNullOrEmpty(setPath))
+                                if (!string.IsNullOrEmpty(setPath) || !RenameSchemaAssets())
                                 {
                                     //unable to rename group due to invalid file name
                                     Debug.LogError("Rename of Group failed. " + setPath);
@@ -128,7 +127,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         string GetSchemaAssetPath(Type type)
         {
-            return Settings.IsPersisted ? (Settings.GroupSchemaFolder + "/" + m_GUID + "_" + type.Name + ".asset") : string.Empty;
+            return Settings.IsPersisted ? (Settings.GroupSchemaFolder + "/" + Name + "_" + type.Name + ".asset") : string.Empty;
         }
 
         /// <summary>
@@ -547,6 +546,11 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
             }
             return -1;
+        }
+
+        private bool RenameSchemaAssets()
+        {
+            return m_SchemaSet.RenameSchemaAssets(GetSchemaAssetPath);
         }
     }
 }

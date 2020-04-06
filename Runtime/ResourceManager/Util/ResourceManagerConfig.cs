@@ -449,6 +449,35 @@ namespace UnityEngine.ResourceManagement.Util
     public static class ResourceManagerConfig
     {
         /// <summary>
+        /// Extracts main and subobject keys if properly formatted
+        /// </summary>
+        /// <param name="keyObj">The key as an object.</param>
+        /// <param name="mainKey">The key of the main asset.  This will be set to null if a sub key is not found.</param>
+        /// <param name="subKey">The key of the sub object.  This will be set to null if not found.</param>
+        /// <returns></returns>
+        internal static bool ExtractKeyAndSubKey(object keyObj, out string mainKey, out string subKey)
+        {
+            var key = keyObj as string;
+            if (key != null)
+            {
+                var i = key.IndexOf('[');
+                if (i > 0)
+                {
+                    var j = key.LastIndexOf(']');
+                    if (j > i)
+                    {
+                        mainKey = key.Substring(0, i);
+                        subKey = key.Substring(i + 1, j - (i + 1));
+                        return true;
+                    }
+                }
+            }
+            mainKey = null;
+            subKey = null;
+            return false;
+        }
+
+        /// <summary>
         /// Check to see if a path is remote or not.
         /// </summary>
         /// <param name="path">The path to check.</param>

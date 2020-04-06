@@ -85,9 +85,9 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         public ResourceLocationBase(string name, string id, string providerId, Type t, params IResourceLocation[] dependencies)
         {
             if (string.IsNullOrEmpty(id))
-                throw new ArgumentNullException(id);
+                throw new ArgumentNullException(nameof(id));
             if (string.IsNullOrEmpty(providerId))
-                throw new ArgumentNullException(providerId);
+                throw new ArgumentNullException(nameof(providerId));
             m_PrimaryKey = name;
             m_HashCode = (name.GetHashCode() * 31 + id.GetHashCode()) * 31 + providerId.GetHashCode();
             m_Name = name;

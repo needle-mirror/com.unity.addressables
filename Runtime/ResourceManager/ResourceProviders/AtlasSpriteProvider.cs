@@ -15,17 +15,12 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             var atlas = providerInterface.GetDependency<SpriteAtlas>(0);
             if (atlas == null)
             {
-                providerInterface.Complete<Sprite>(null, false, new System.Exception(string.Format("Sprite atlas failed to load for location {0}.", providerInterface.Location.PrimaryKey)));
+                providerInterface.Complete<Sprite>(null, false, new System.Exception($"Sprite atlas failed to load for location {providerInterface.Location.PrimaryKey}."));
                 return;
             }
             
             var sprite = atlas.GetSprite(providerInterface.ResourceManager.TransformInternalId(providerInterface.Location));
-            if (sprite == null)
-            {
-                providerInterface.Complete<Sprite>(null, false, new System.Exception(string.Format("Sprite failed to load for location {0}.", providerInterface.Location.PrimaryKey)));
-                return;
-            }
-            providerInterface.Complete(sprite, sprite != null, null);
+            providerInterface.Complete(sprite, sprite != null, sprite != null ? null : new System.Exception($"Sprite failed to load for location {providerInterface.Location.PrimaryKey}."));
         }
     }
 }

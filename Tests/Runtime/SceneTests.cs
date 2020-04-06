@@ -11,6 +11,7 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.SceneManagement;
 #endif
 using UnityEngine;
+using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
@@ -171,6 +172,37 @@ namespace SceneTests
 
             yield return UnloadSceneFromHandler(activeScene);
             Assert.IsFalse(instOp.IsValid());
+        }
+
+        /* Regression test for https://jira.unity3d.com/browse/ADDR-1032
+         * 
+         * Bug occurs when an instantiation happens after a previously completed instantiation.
+         * The InstanceOperation is recycled from the previous instantiation, but its m_scene field is not cleaned.
+         *
+         * Test ensures that when instantiating a prefab and the InstanceOperation is recycled from a previous instantiation,
+         * the m_Scene (field in InstanceOperation) should be null until the InstanceOperation is completed.  
+         */
+        [UnityTest]
+        public IEnumerator WhenInstantiatingPrefab_AndOperationIsRecycled_SceneIsNullUntilCompletion()
+        {
+            // Previous instantiation
+            var instOp = m_Addressables.InstantiateAsync(prefabKey);
+            var internalInstanceOp1 = instOp.m_InternalOp;
+            yield return instOp;
+            instOp.Release();
+
+            // InstanceOperation we want to test
+            var instOp2 = m_Addressables.InstantiateAsync(prefabKey);
+            var internalInstanceOp2 = (ResourceManager.InstanceOperation)instOp2.m_InternalOp;
+
+            // Test
+            Assert.False(internalInstanceOp2.IsDone, "InstanceOperation2 is not yet completed.");
+            Assert.AreEqual(internalInstanceOp1, internalInstanceOp2, "The operation was not recycled");
+            Assert.True(string.IsNullOrEmpty(internalInstanceOp2.InstanceScene().name), "Scene was not cleared from InstanceOperation");
+
+            // Cleanup
+            yield return internalInstanceOp2;
+            instOp2.Release();
         }
 
         [UnityTest]

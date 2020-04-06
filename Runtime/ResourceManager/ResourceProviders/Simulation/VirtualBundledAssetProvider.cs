@@ -88,7 +88,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             VirtualAssetBundle bundle = deps[0] as VirtualAssetBundle;
             if (bundle == null)
             {
-                provideHandle.Complete<object>(null, false, null);
+                provideHandle.Complete<object>(null, false, new Exception($"Unable to load asset of type {provideHandle.Type} from location {provideHandle.Location}."));
             }
             else
             {

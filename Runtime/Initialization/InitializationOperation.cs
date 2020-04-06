@@ -94,7 +94,10 @@ namespace UnityEngine.AddressableAssets.Initialization
             ContentCatalogProvider ccp = m_Addressables.ResourceManager.ResourceProviders
                 .FirstOrDefault(rp => rp.GetType() == typeof(ContentCatalogProvider)) as ContentCatalogProvider;
             if (ccp != null)
+            { 
                 ccp.DisableCatalogUpdateOnStart = rtd.DisableCatalogUpdateOnStartup;
+                ccp.IsLocalCatalogInBundle = rtd.IsLocalCatalogInBundle;
+            }
 
             var locMap = new ResourceLocationMap("CatalogLocator", rtd.CatalogLocations);
             m_Addressables.AddResourceLocator(locMap);
@@ -180,10 +183,9 @@ namespace UnityEngine.AddressableAssets.Initialization
                         addressables.SceneProvider = prov;
                 }
 
-                ResourceLocationMap locMap = data.CreateLocator(providerSuffix);
+                ResourceLocationMap locMap = data.CreateCustomLocator(data.location.PrimaryKey, providerSuffix);
                 addressables.AddResourceLocator(locMap, data.localHash, data.location);
-
-                data.CleanData();
+                addressables.AddResourceLocator(new DynamicResourceLocator(addressables));
                 return addressables.ResourceManager.CreateCompletedOperation<IResourceLocator>(locMap, string.Empty);
             }
         }
@@ -196,9 +198,7 @@ namespace UnityEngine.AddressableAssets.Initialization
 
         public AsyncOperationHandle<IResourceLocator> LoadContentCatalog(IResourceLocation loc, string providerSuffix)
         {
-            var loadOp = m_Addressables.LoadAssetAsync<ContentCatalogData>(loc);
-            var chainOp = m_Addressables.ResourceManager.CreateChainOperation(loadOp, res => OnCatalogDataLoaded(m_Addressables, res, providerSuffix));
-            return chainOp;
+            return LoadContentCatalog(m_Addressables, loc, providerSuffix);
         }
 
         //Attempts to load each catalog in order, stopping at first success. 

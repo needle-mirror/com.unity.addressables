@@ -17,7 +17,7 @@ public abstract class AddressablesTestFixture : IPrebuildSetup
 {
     internal AddressablesImpl m_Addressables;
     internal string m_RuntimeSettingsPath;
-    readonly string m_UniqueTestName;
+    internal readonly string m_UniqueTestName;
  
     protected AddressablesTestFixture()
     {
@@ -41,6 +41,11 @@ public abstract class AddressablesTestFixture : IPrebuildSetup
         var op = m_Addressables.InitializeAsync(m_RuntimeSettingsPath, null, false);
         yield return op;
         Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
+        OnRuntimeSetup();
+    }
+
+    protected virtual void OnRuntimeSetup()
+    {
     }
 
     [TearDown]
@@ -52,7 +57,7 @@ public abstract class AddressablesTestFixture : IPrebuildSetup
 
     void IPrebuildSetup.Setup()
     {
-#if UNITY_EDITOR 
+#if UNITY_EDITOR
         bool currentIgnoreState = LogAssert.ignoreFailingMessages;
         LogAssert.ignoreFailingMessages = true;
 

@@ -1,14 +1,9 @@
 using System;
-using System.Collections.Generic;
-using UnityEditor.AddressableAssets.Build;
-using UnityEditor.AddressableAssets.Build.AnalyzeRules;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
-    using TreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem;
-    
     [Serializable]
     class AnalyzeRuleGUI
     {

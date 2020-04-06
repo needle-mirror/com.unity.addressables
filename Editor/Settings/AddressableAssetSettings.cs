@@ -196,6 +196,9 @@ namespace UnityEditor.AddressableAssets.Settings
         bool m_BuildRemoteCatalog = false;
 
         [SerializeField]
+        bool m_BundleLocalCatalog = false;
+
+        [SerializeField]
         bool m_DisableCatalogUpdateOnStart = false;
 
         [SerializeField]
@@ -214,6 +217,15 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get { return m_BuildRemoteCatalog; }
             set { m_BuildRemoteCatalog = value; }
+        }
+
+        /// <summary>
+        /// Whether the local catalog should be serialized in an asset bundle or as json.
+        /// </summary>
+        public bool BundleLocalCatalog
+        {
+            get { return m_BundleLocalCatalog; }
+            set { m_BundleLocalCatalog = value; }
         }
 
         /// <summary>
@@ -729,8 +741,11 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             set
             {
-                m_ActivePlayerDataBuilderIndex = value;
-                SetDirty(ModificationEvent.ActiveBuildScriptChanged, ActivePlayerDataBuilder, true, true);
+                if (m_ActivePlayerDataBuilderIndex != value)
+                { 
+                    m_ActivePlayerDataBuilderIndex = value;
+                    SetDirty(ModificationEvent.ActiveBuildScriptChanged, ActivePlayerDataBuilder, true, true);
+                }
             }
         }
 
@@ -750,6 +765,13 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
+        /// <summary>
+        /// Gets the list of all defined labels. 
+        /// </summary>
+        public List<string> GetLabels()
+        {
+            return m_LabelTable.labelNames.ToList();
+        }
 
         /// <summary>
         /// Add a new label.

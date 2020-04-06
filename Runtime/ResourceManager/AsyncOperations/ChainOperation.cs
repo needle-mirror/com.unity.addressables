@@ -58,13 +58,21 @@ namespace UnityEngine.ResourceManagement
             get
             {
                 float total = 0f;
+                int numberOfOps = 0;
 
                 if (m_DepOp.IsValid())
+                {
                     total += m_DepOp.PercentComplete;
-                if (m_WrappedOp.IsValid())
-                    total += m_WrappedOp.PercentComplete;
+                    numberOfOps++;
+                }
 
-                return total / 2;
+                if (m_WrappedOp.IsValid())
+                {
+                    total += m_WrappedOp.PercentComplete;
+                    numberOfOps++;
+                }
+
+                return total / numberOfOps;
             }
         }
     }
@@ -122,13 +130,21 @@ namespace UnityEngine.ResourceManagement
             get
             {
                 float total = 0f;
+                int numberOfOps = 0;
 
                 if (m_DepOp.IsValid())
+                {
                     total += m_DepOp.PercentComplete;
-                if (m_WrappedOp.IsValid())
-                    total += m_WrappedOp.PercentComplete;
+                    numberOfOps++;
+                }
 
-                return total / 2;
+                if (m_WrappedOp.IsValid())
+                {
+                    total += m_WrappedOp.PercentComplete;
+                    numberOfOps++;
+                }
+
+                return total / numberOfOps;
             }
         }
     }

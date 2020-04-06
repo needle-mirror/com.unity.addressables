@@ -74,6 +74,17 @@ namespace UnityEngine.AddressableAssets.Initialization
             set { m_DisableCatalogUpdateOnStart = value; }
         }
 
+        [SerializeField] private bool m_IsLocalCatalogInBundle = false;
+
+        /// <summary>
+        /// Whether the local catalog has been serialized in an asset bundle or as json
+        /// </summary>
+        public bool IsLocalCatalogInBundle
+        {
+            get { return m_IsLocalCatalogInBundle; }
+            set { m_IsLocalCatalogInBundle = value; }
+        }
+
         [SerializeField]
         SerializedType m_CertificateHandlerType;
 

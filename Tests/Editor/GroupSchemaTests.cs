@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -15,6 +16,19 @@ namespace UnityEditor.AddressableAssets.Tests
             AssetDatabase.CreateAsset(m_TestSchemaObject, k_TestConfigFolder + "/testSchemaObject.asset");
             m_TestSchemaObjectSubClass = ScriptableObject.CreateInstance<CustomTestSchemaSubClass>();
             AssetDatabase.CreateAsset(m_TestSchemaObjectSubClass, k_TestConfigFolder + "/testSchemaObjectSubClass.asset");
+        }
+
+       private static string ObjectToFilename(UnityEngine.Object obj)
+        {
+            string guid;
+            if(!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out long lfid))
+                return null;
+            
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if(path == null)
+                return null;
+
+            return Path.GetFileName(path);
         }
 
         [Test]
@@ -121,6 +135,47 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(added, group.AddSchema<CustomTestSchemaSubClass>());
             Assert.IsNotNull(group.AddSchema<CustomTestSchema>());
             Assert.IsTrue(group.RemoveSchema<CustomTestSchemaSubClass>());
+            Assert.IsTrue(group.RemoveSchema<CustomTestSchema>());
+        }
+
+        [Test]
+        public void WhenCreatingNewGroup_SchemaAndSchemaSubclassUseGroupName()
+        {
+            // Set up
+            var group = Settings.CreateGroup("TestGroup", false, false, false, null);
+            var testSchema = group.AddSchema<CustomTestSchema>();
+            var testSchemaSubClass = group.AddSchema<CustomTestSchemaSubClass>();
+
+            string testSchemaFilename = ObjectToFilename(testSchema);
+            string testSchemaSubClassFilename = ObjectToFilename(testSchemaSubClass);
+
+            // Test
+            Assert.IsTrue(testSchemaFilename.Contains("TestGroup"));
+            Assert.IsTrue(testSchemaSubClassFilename.Contains("TestGroup"));
+
+            // Cleanup
+            Assert.IsTrue(group.RemoveSchema<CustomTestSchema>());
+            Assert.IsTrue(group.RemoveSchema<CustomTestSchemaSubClass>());
+        }
+
+        [Test]
+        public void ModifyingGroupName_ChangesSchemaAssetPath()
+        {
+            // Set up
+            var group = Settings.CreateGroup("OldTestGroup", false, false, false, null);
+            var testSchema = group.AddSchema<CustomTestSchema>();
+
+            string testSchemaFilename = ObjectToFilename(testSchema);
+            Assert.IsTrue(testSchemaFilename.Contains("OldTestGroup"));
+
+            // Test
+            group.Name = "NewTestGroup";
+            Assert.AreEqual("NewTestGroup", group.name);
+
+            testSchemaFilename = ObjectToFilename(testSchema);
+            Assert.IsTrue(testSchemaFilename.Contains("NewTestGroup"));
+
+            // Cleanup
             Assert.IsTrue(group.RemoveSchema<CustomTestSchema>());
         }
     }
