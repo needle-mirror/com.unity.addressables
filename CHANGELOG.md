@@ -4,6 +4,9 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.8.4] - 2020-05-20
+- Taking an updated scriptable build pipeline that reverts a recent hashing change. 
+
 ## [1.8.3] - 2020-04-07
 - Option to disable sprites and subobjects has been added to the Groups window Tools menu. This option is persisted per user, not with the project. 
 - Catalog entries for subobjects and sprites are no longer serialized into the catalog.  These are generated at runtime with a custom resource locator.
