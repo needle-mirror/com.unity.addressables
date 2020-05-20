@@ -158,6 +158,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
         }
 
 		[UnityTest]
+        [Ignore("https://jira.unity3d.com/browse/ADDR-1451")]
 		public IEnumerator BundledCatalog_LoadCatalogFromBundle_InvalidBundleFileFormat_ShouldFail()
 		{
 			var bundleFilePath = Path.Combine(k_TempBuildFolder, "catalog.bundle");
@@ -171,7 +172,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 
             yield return new WaitWhile(() => bundledCatalog.OpInProgress);
 
-#if UNITY_2020_1_OR_NEWER
+#if UNITY_2019_4_OR_NEWER
 			LogAssert.Expect(LogType.Error, new Regex("Failed to read data for", RegexOptions.IgnoreCase));
 #endif
             LogAssert.Expect(LogType.Error, new Regex("Unable to load", RegexOptions.IgnoreCase));
