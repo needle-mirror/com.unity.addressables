@@ -10,6 +10,9 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.SceneManagement;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
 #if UNITY_EDITOR
@@ -73,9 +76,39 @@ namespace UnityEngine.AddressableAssets
     /// </summary>
     public static class Addressables
     {
-        static AddressablesImpl m_Addressables = new AddressablesImpl(new LRUCacheAllocationStrategy(1000, 1000, 100, 10));
+        internal static bool reinitializeAddressables = true;
+        internal static AddressablesImpl m_AddressablesInstance = new AddressablesImpl(new LRUCacheAllocationStrategy(1000, 1000, 100, 10));
+        static AddressablesImpl m_Addressables
+        {
+            get
+            {
+#if UNITY_EDITOR && UNITY_2019_3_OR_NEWER
+                if (EditorSettings.enterPlayModeOptionsEnabled && reinitializeAddressables)
+                {
+                    reinitializeAddressables = false;
+                    m_AddressablesInstance.ReleaseSceneManagerOperation();
+                    m_AddressablesInstance = new AddressablesImpl(new LRUCacheAllocationStrategy(1000, 1000, 100, 10));
+                }
+#endif
+                return m_AddressablesInstance;
+            }
+        }
         public static ResourceManager ResourceManager { get { return m_Addressables.ResourceManager; } }
         internal static AddressablesImpl Instance { get { return m_Addressables; } }
+
+#if UNITY_EDITOR && UNITY_2019_3_OR_NEWER
+        [InitializeOnLoadMethod]
+        static void RegisterPlayModeStateChange()
+        {
+            EditorApplication.playModeStateChanged += SetAddressablesReInitFlagOnExitPlayMode;
+        }
+
+        static void SetAddressablesReInitFlagOnExitPlayMode(PlayModeStateChange change)
+        {
+            if (change == PlayModeStateChange.ExitingPlayMode)
+                reinitializeAddressables = true;
+        }
+#endif
 
         /// <summary>
         /// The Instance Provider used by the Addressables System.

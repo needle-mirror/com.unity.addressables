@@ -81,27 +81,27 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsTrue(buildScript.CanBuildData<AddressableAssetBuildResult>());
             Assert.IsTrue(buildScript.CanBuildData<AddressablesPlayerBuildResult>());
         }
+#if !UNITY_2020_2_OR_NEWER //https://jira.unity3d.com/browse/ADDR-1180
+        [Test]
+        public void ProcessPlayerDataSchema_Scenes_IncludeBuildSettingsScenesIsFalse_ShouldNotGenerateLocationsOrProviders()
+        {
+            CreateBuiltInTestScene(k_SchemaTestFolder + "/TestScenes/testScene.unity");
 
-        // [Test]
-        // public void ProcessPlayerDataSchema_Scenes_IncludeBuildSettingsScenesIsFalse_ShouldNotGenerateLocationsOrProviders()
-        // {
-            // CreateBuiltInTestScene(k_SchemaTestFolder + "/TestScenes/testScene.unity");
+            var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+            schema.IncludeBuildSettingsScenes = false;
 
-            // var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-            // var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
-            // schema.IncludeBuildSettingsScenes = false;
+            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+            Assert.True(string.IsNullOrEmpty(errorStr));
 
-            // var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
-            // Assert.True(string.IsNullOrEmpty(errorStr));
+            var actualLocations = m_BuildContext.locations;
+            Assert.AreEqual(0, actualLocations.Count);
 
-            // var actualLocations = m_BuildContext.locations;
-            // Assert.AreEqual(0, actualLocations.Count);
-
-            // var expectedProviderCount = 0;
-            // var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
-            // Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
-        // }
-
+            var expectedProviderCount = 0;
+            var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
+            Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
+        }
+#endif
         private static IEnumerable<object[]> PlayerDataGroupSchema_SceneCases()
         {
             string sc1 = k_SchemaTestFolder + "/TestScenes/testScene.unity";
@@ -112,30 +112,30 @@ namespace UnityEditor.AddressableAssets.Tests
             yield return new object[] { new string[] { sc1, sc2}};
             //yield return new object[] { new string[] { sc1, sc1 }};
         }
+#if !UNITY_2020_2_OR_NEWER //https://jira.unity3d.com/browse/ADDR-1180
+        [Test, TestCaseSource(nameof(PlayerDataGroupSchema_SceneCases))]
+        public void ProcessPlayerDataSchema_Scenes_ShouldGenerateCorrectLocationsAndProviders(string[] scenePaths)
+        {
+            foreach (string path in scenePaths)
+                CreateBuiltInTestScene(path);
 
-        // [Test, TestCaseSource(nameof(PlayerDataGroupSchema_SceneCases))]
-        // public void ProcessPlayerDataSchema_Scenes_ShouldGenerateCorrectLocationsAndProviders(string[] scenePaths)
-        // {
-            // foreach (string path in scenePaths)
-                // CreateBuiltInTestScene(path);
+            var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+            schema.IncludeBuildSettingsScenes = true;
 
-            // var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-            // var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
-            // schema.IncludeBuildSettingsScenes = true;
+            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+            Assert.True(string.IsNullOrEmpty(errorStr));
 
-            // var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
-            // Assert.True(string.IsNullOrEmpty(errorStr));
+            var actualLocations = m_BuildContext.locations;
+            var expectedLocationIds = scenePaths.Distinct().Select(s => s.Replace(".unity", "").Replace("Assets/", ""));
+            Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
+            Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
 
-            // var actualLocations = m_BuildContext.locations;
-            // var expectedLocationIds = scenePaths.Distinct().Select(s => s.Replace(".unity", "").Replace("Assets/", ""));
-            // Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
-            // Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
-
-            // var expectedProviderCount = 0;
-            // var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
-            // Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
-        // }
-
+            var expectedProviderCount = 0;
+            var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
+            Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
+        }
+#endif
         [Test]
         public void SetAssetEntriesBundleFileIdToCatalogEntryBundleFileId_ModifiedOnlyAssetEntries_ThatAreIncludedInBuildWriteData()
         {
@@ -210,38 +210,38 @@ namespace UnityEditor.AddressableAssets.Tests
             //yield return new object[] { new string[] { res1, res2, res3 }};
             //yield return new object[] { new string[] { res1, res2, res3, res4 } };
         }
+#if !UNITY_2020_2_OR_NEWER //https://jira.unity3d.com/browse/ADDR-1180
+        [Test, TestCaseSource(nameof(PlayerDataGroupSchema_ResourcesCases))]
+        public void ProcessPlayerDataSchema_Resources_ShouldGenerateCorrectLocationsAndProviders(string[] resourcesPaths)
+        {
+            foreach (string path in resourcesPaths)
+                CreateTestResourceAsset(path);
 
-        // [Test, TestCaseSource(nameof(PlayerDataGroupSchema_ResourcesCases))]
-        // public void ProcessPlayerDataSchema_Resources_ShouldGenerateCorrectLocationsAndProviders(string[] resourcesPaths)
-        // {
-            // foreach (string path in resourcesPaths)
-                // CreateTestResourceAsset(path);
+            var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+            schema.IncludeResourcesFolders = true;
 
-            // var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-            // var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
-            // schema.IncludeResourcesFolders = true;
+            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+            Assert.True(string.IsNullOrEmpty(errorStr));
 
-            // var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
-            // Assert.True(string.IsNullOrEmpty(errorStr));
-
-            // var actualLocations = m_BuildContext.locations;
-            // var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
+            var actualLocations = m_BuildContext.locations;
+            var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
             
-            // var expectedLocationIds = resourcesPaths.Distinct().Select(s => Path.GetFileName(s).Replace(".prefab", ""));
-            // Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
-            // Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
+            var expectedLocationIds = resourcesPaths.Distinct().Select(s => Path.GetFileName(s).Replace(".prefab", ""));
+            Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
+            Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
 
-            // if (resourcesPaths.Any())
-            // {
-                // Assert.AreEqual(1, actualProviderIds.Length);
-                // Assert.True(actualProviderIds.Contains(typeof(LegacyResourcesProvider).FullName));
-            // }
-            // else
-            // {
-                // Assert.AreEqual(0, actualProviderIds.Length);
-            // }
-        // }
-
+            if (resourcesPaths.Any())
+            {
+                Assert.AreEqual(1, actualProviderIds.Length);
+                Assert.True(actualProviderIds.Contains(typeof(LegacyResourcesProvider).FullName));
+            }
+            else
+            {
+                Assert.AreEqual(0, actualProviderIds.Length);
+            }
+        }
+#endif
         [Test]
         public void ErrorCheckBundleSettings_FindsNoProblemsInDefaultScema()
         {

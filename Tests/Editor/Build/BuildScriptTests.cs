@@ -179,5 +179,43 @@ namespace UnityEditor.AddressableAssets.Tests
                 if (db.CanBuildData<AddressablesPlayerBuildResult>())
                     db.BuildData<AddressablesPlayerBuildResult>(context);
         }
+
+        [Test]
+        public void Build_GroupWithPlayerDataGroupSchemaAndBundledAssetGroupSchema_LogsError()
+        {
+            const string groupName = "NewGroup";
+            var schemas = new List<AddressableAssetGroupSchema> { ScriptableObject.CreateInstance<PlayerDataGroupSchema>(), ScriptableObject.CreateInstance<BundledAssetGroupSchema>() };
+            AddressableAssetGroup group = Settings.CreateGroup(groupName, false, false, false, schemas);
+
+            var context = new AddressablesDataBuilderInput(Settings);
+            foreach (IDataBuilder db in Settings.DataBuilders)
+            {
+                if (db.CanBuildData<AddressablesPlayerBuildResult>())
+                {
+                    AddressablesPlayerBuildResult result = db.BuildData<AddressablesPlayerBuildResult>(context);
+                    Assert.AreEqual(result.Error, $"Addressable group {groupName} cannot have both a {typeof(PlayerDataGroupSchema).Name} and a {typeof(BundledAssetGroupSchema).Name}");
+                }
+            }
+
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
+        public void Build_WithDeletedAsset_Succeeds()
+        {
+            var context = new AddressablesDataBuilderInput(Settings);
+
+            //make an entry with no actual AssetPath
+            Settings.CreateOrMoveEntry("abcde", Settings.DefaultGroup);
+            foreach (IDataBuilder db in Settings.DataBuilders)
+            {
+                if (db.CanBuildData<AddressablesPlayerBuildResult>())
+                    db.BuildData<AddressablesPlayerBuildResult>(context);
+                else if (db.CanBuildData<AddressablesPlayModeBuildResult>())
+                    db.BuildData<AddressablesPlayModeBuildResult>(context);
+            }
+
+            Settings.RemoveAssetEntry("abcde", false);
+        }
     }
 }

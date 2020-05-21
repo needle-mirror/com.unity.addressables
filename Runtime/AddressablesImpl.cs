@@ -108,6 +108,11 @@ namespace UnityEngine.AddressableAssets
             SceneManager.sceneUnloaded += OnSceneUnloaded;
         }
 
+        internal void ReleaseSceneManagerOperation()
+        {
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        }
+
         public Func<IResourceLocation, string> InternalIdTransformFunc
         {
             get { return ResourceManager.InternalIdTransformFunc; }
@@ -144,7 +149,7 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
-        private void OnSceneUnloaded(Scene scene)
+        internal void OnSceneUnloaded(Scene scene)
         {
             foreach (var s in m_SceneInstances)
             {
@@ -175,15 +180,14 @@ namespace UnityEngine.AddressableAssets
 
         public string BuildPath
         {
-            get { return "Library/com.unity.addressables/StreamingAssetsCopy/" + StreamingAssetsSubFolder + "/" + PlatformMappingService.GetPlatform(); }
+            get { return "Library/com.unity.addressables/" + StreamingAssetsSubFolder + "/" + PlatformMappingService.GetPlatform(); }
         }
 
         public string PlayerBuildDataPath
         {
             get
             {
-                return Application.streamingAssetsPath + "/" + StreamingAssetsSubFolder + "/" +
-                       PlatformMappingService.GetPlatform();
+                return Application.streamingAssetsPath + "/" + StreamingAssetsSubFolder;
             }
         }
 

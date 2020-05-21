@@ -1,15 +1,19 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Assertions;
 using UnityEngine.U2D;
+using Debug = UnityEngine.Debug;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
@@ -30,6 +34,8 @@ namespace UnityEditor.AddressableAssets.GUI
 #if UNITY_2019_1_OR_NEWER
         private Texture2D m_CaretTexture = null;
 #endif
+
+        internal List<AssetReferenceUIRestrictionSurrogate> Restrictions => m_Restrictions;
 
         /// <summary>
         /// Validates that the referenced asset allowable for this asset reference.
@@ -118,14 +124,17 @@ namespace UnityEditor.AddressableAssets.GUI
 
             string labelText = label.text;
             m_AssetRefObject = property.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
-            label.text = labelText;
+            if (labelText != label.text || string.IsNullOrEmpty(label.text))
+            {
+                label = new GUIContent(labelText, label.tooltip);
+            }
+
             if (m_AssetRefObject == null)
             {
                 return;
             }
 
             EditorGUI.BeginProperty(position, label, property);
-
             GatherFilters(property);
             string guid = m_AssetRefObject.AssetGUID;
             var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
@@ -201,7 +210,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                 }
             }
-
+            
             assetDropDownRect = EditorGUI.PrefixLabel(position, label);
             var nameToUse = m_AssetName;
             if (isNotAddressable)
@@ -417,7 +426,7 @@ namespace UnityEditor.AddressableAssets.GUI
             return assetDropDownRect;
         }
 
-        void GatherFilters(SerializedProperty property)
+        internal void GatherFilters(SerializedProperty property)
         {
             if (m_Restrictions != null)
                 return;
@@ -432,7 +441,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 int i = property.propertyPath.IndexOf('.');
                 if (i > 0)
                     propertyName = property.propertyPath.Substring(0, i);
-                var f = t.GetField(propertyName);
+                var f = t.GetField(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 if (f != null)
                 {
                     var a = f.GetCustomAttributes(false);
@@ -537,12 +546,23 @@ namespace UnityEditor.AddressableAssets.GUI
 
         sealed class AssetRefTreeViewItem : TreeViewItem
         {
-            public string guid;
+            public string AssetPath;
 
-            public AssetRefTreeViewItem(int id, int depth, string displayName, string g, string path)
+            private string m_Guid;
+            public string Guid
+            {
+                get
+                {
+                    if (string.IsNullOrEmpty(m_Guid))
+                        m_Guid = AssetDatabase.AssetPathToGUID(AssetPath);
+                    return m_Guid;
+                }
+            }
+
+            public AssetRefTreeViewItem(int id, int depth, string displayName, string path)
                 : base(id, depth, displayName)
             {
-                guid = g;
+                AssetPath = path;
                 icon = AssetDatabase.GetCachedIcon(path) as Texture2D;
             }
         }
@@ -577,9 +597,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (selectedIds != null && selectedIds.Count == 1)
                 {
                     var assetRefItem = FindItem(selectedIds[0], rootItem) as AssetRefTreeViewItem;
-                    if (assetRefItem != null && !string.IsNullOrEmpty(assetRefItem.guid))
+                    if (assetRefItem != null && !string.IsNullOrEmpty(assetRefItem.AssetPath))
                     {
-                        m_Drawer.newGuid = assetRefItem.guid;
+                        m_Drawer.newGuid = assetRefItem.Guid;
                     }
                     else
                     {
@@ -616,25 +636,27 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (aaSettings == null)
                 {
                     var message = "Use 'Window->Addressables' to initialize.";
-                    root.AddChild(new AssetRefTreeViewItem(message.GetHashCode(), 0, message, string.Empty, string.Empty));
+                    root.AddChild(new AssetRefTreeViewItem(message.GetHashCode(), 0, message, string.Empty));
                 }
                 else
                 {
                     if (!string.IsNullOrEmpty(m_NonAddressedAsset))
                     {
-                        var item = new AssetRefTreeViewItem(m_NonAddressedAsset.GetHashCode(), 0, "Make Addressable - " + m_NonAddressedAsset, m_GUID, string.Empty);
+                        var item = new AssetRefTreeViewItem(m_NonAddressedAsset.GetHashCode(), 0,
+                            "Make Addressable - " + m_NonAddressedAsset, string.Empty);
                         item.icon = m_WarningIcon;
                         root.AddChild(item);
                     }
-                    root.AddChild(new AssetRefTreeViewItem(AssetReferenceDrawer.noAssetString.GetHashCode(), 0, AssetReferenceDrawer.noAssetString, string.Empty, string.Empty));
-                    var allAssets = new List<AddressableAssetEntry>();
-                    aaSettings.GetAllAssets(allAssets, false);
+
+                    root.AddChild(new AssetRefTreeViewItem(AssetReferenceDrawer.noAssetString.GetHashCode(), 0, AssetReferenceDrawer.noAssetString, string.Empty));
+                    var allAssets = new List<IReferenceEntryData>();
+                    aaSettings.GatherAllAssetReferenceDrawableEntries(allAssets);
                     foreach (var entry in allAssets)
                     {
-                        if (!AddressableAssetUtility.IsInResources(entry.AssetPath) &&
+                        if (!entry.IsInResources &&
                             m_Drawer.ValidateAsset(entry.AssetPath))
                         {
-                            var child = new AssetRefTreeViewItem(entry.address.GetHashCode(), 0, entry.address, entry.guid, entry.AssetPath);
+                            var child = new AssetRefTreeViewItem(entry.address.GetHashCode(), 0, entry.address, entry.AssetPath);
                             root.AddChild(child);
                         }
                     }

@@ -33,7 +33,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
         internal IList<IBuildTask> RuntimeDataBuildTasks(string builtinShaderBundleName)
         {
-            var buildTasks = new List<IBuildTask>();
+            IList<IBuildTask> buildTasks = new List<IBuildTask>();
 
             // Setup
             buildTasks.Add(new SwitchToBuildPlatform());
@@ -56,6 +56,8 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             buildTasks.Add(new GenerateSubAssetPathMaps());
             buildTasks.Add(new GenerateBundleMaps());
 
+            buildTasks.Add(new GenerateLocationListsTask());
+
             return buildTasks;
         }
 
@@ -66,7 +68,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
             var aaContext = new AddressableAssetsBuildContext
             {
-                settings = settings,
+                Settings = settings,
                 runtimeData = runtimeData,
                 bundleToAssetGroup = m_BundleToAssetGroup,
                 locations = m_Locations,
@@ -83,7 +85,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
         internal ReturnCode RefreshBuild(AddressableAssetsBuildContext buildContext)
         {
-            var settings = buildContext.settings;
+            var settings = buildContext.Settings;
             var context = new AddressablesDataBuilderInput(settings);
 
             var buildTarget = context.Target;
@@ -99,12 +101,6 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             IBundleBuildResults buildResults;
             var exitCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(m_AllBundleInputDefs),
                 out buildResults, buildTasks, buildContext);
-
-            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
-            {
-                progressTracker.UpdateTask("Generating Addressables Locations");
-                GenerateLocationListsTask.Run(buildContext, m_ExtractData.WriteData);
-            }
 
             return exitCode;
         }
@@ -147,7 +143,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         {
             Dictionary<string, string> bundleNamesToUpdate = new Dictionary<string, string>();
 
-            foreach (var assetGroup in buildContext.settings.groups)
+            foreach (var assetGroup in buildContext.Settings.groups)
             {
                 if (assetGroup == null)
                     continue;

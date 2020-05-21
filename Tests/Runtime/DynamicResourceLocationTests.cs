@@ -4,10 +4,11 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.U2D;
 using System;
+using UnityEngine.TestTools;
 
 namespace UnityEngine.AddressableAssets.DynamicResourceLocators
 {
-    public class DynamicLocatorTests : AddressablesTestFixture
+    public abstract class DynamicLocatorTests : AddressablesTestFixture
     {
         const string kGoKey = "go";
         const string kSpriteKey = "sprite";
@@ -125,4 +126,14 @@ namespace UnityEngine.AddressableAssets.DynamicResourceLocators
         }
     }
 
+#if UNITY_EDITOR
+    class DynamicLocatorTests_FastMode : DynamicLocatorTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Fast; } } }
+
+    class DynamicLocatorTests_VirtualMode : DynamicLocatorTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Virtual; } } }
+
+    class DynamicLocatorTests_PackedPlaymodeMode : DynamicLocatorTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.PackedPlaymode; } } }
+#endif
+
+    [UnityPlatform(exclude = new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor })]
+    class DynamicLocatorTests_PackedMode : DynamicLocatorTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Packed; } } }
 }

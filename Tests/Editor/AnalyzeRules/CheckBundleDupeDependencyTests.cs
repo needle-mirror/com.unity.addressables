@@ -53,7 +53,7 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             runtimeData.LogResourceManagerExceptions = Settings.buildSettings.LogResourceManagerExceptions;
             var aaContext = new AddressableAssetsBuildContext
             {
-                settings = Settings,
+                Settings = Settings,
                 runtimeData = runtimeData,
                 bundleToAssetGroup = rule.m_BundleToAssetGroup,
                 locations = rule.m_Locations

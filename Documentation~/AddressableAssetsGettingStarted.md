@@ -135,6 +135,11 @@ Calling the [`Addressables.DownloadDependenciesAsync()`](../api/UnityEngine.Addr
 
 The [`AsyncOperationHandle`](AddressableAssetsAsyncOperationHandle.md) struct returned by this call includes a `PercentComplete` attribute that you can use to monitor and display download progress. You can also have the app wait until the content has loaded.
 
+##### Regarding `PercentComplete`
+`PercentComplete` takes into account several aspects of the underlying operations being handled by a single `AsyncOperationHandle`.  There may be instances where the progression isn't linear, or some semblance of linear.  This can be due to quick operations being weighted the same as operations that will take longer.
+
+For example, given an asset you wish to load from a remote location that takes a non-trival amount of time to download and is reliant on a local bundle as a dependcy you'll see your `PercentComplete` jump to 50% before contuning.  This is because the local bundle is able to be loaded much quicker than the remote bundle.  However, all the system is aware of is the need for 2 operations to be complete. 
+
 If you wish to ask the user for consent prior to download, use [`Addressables.GetDownloadSize()`](../api/UnityEngine.AddressableAssets.Addressables.html#UnityEngine_AddressableAssets_Addressables_GetDownloadSize_System_Object_) to return how much space is needed to download the content from a given address or label. Note that this takes into account any previously downloaded bundles that are still in Unity's asset bundle cache.
 
 While it can be advantageous to download assets for your app in advance, there are instances where you might choose not to do so. For example:

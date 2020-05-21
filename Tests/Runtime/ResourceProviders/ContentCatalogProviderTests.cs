@@ -6,6 +6,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 #if UNITY_EDITOR
 using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 #endif
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -37,12 +38,13 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 		internal override void Setup(AddressableAssetSettings settings, string tempAssetFolder)
         {
             settings.BundleLocalCatalog = true;
+            settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.AppendHash;
         }
 #endif
 
 		[Test]
 	    public void DetermineIdToLoad_IfLocalCatalogsOnly_ReturnsMainId()
-	    {
+	    { 
 	        var contentCatalogOp = new ContentCatalogProvider.InternalOp();
 
 	        IResourceLocation[] dependencies = new IResourceLocation[(int)ContentCatalogProvider.DependencyHashIndex.Count];

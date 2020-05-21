@@ -25,8 +25,10 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
         {
             Debug.Log(string.Format("Deleting Addressables data from {0}.", addressablesStreamingAssets));
             Directory.Delete(addressablesStreamingAssets, true);
+            AssetDatabase.Refresh();
             //Will delete the directory only if it's empty
             DirectoryUtility.DeleteDirectory(Application.streamingAssetsPath);
+            AssetDatabase.Refresh();
         }
     }
 

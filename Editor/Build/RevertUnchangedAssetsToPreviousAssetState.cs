@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -33,7 +33,7 @@ internal class RevertUnchangedAssetsToPreviousAssetState
     internal static ReturnCode Run(IAddressableAssetsBuildContext aaBuildContext, ContentUpdateContext updateContext)
     {
         var aaContext = aaBuildContext as AddressableAssetsBuildContext;
-        var groups = aaContext.settings.groups.Where(group => group != null && group.HasSchema<BundledAssetGroupSchema>());
+        var groups = aaContext.Settings.groups.Where(group => group != null && group.HasSchema<BundledAssetGroupSchema>());
 
         foreach (var assetGroup in groups)
         {
@@ -149,8 +149,7 @@ internal class RevertUnchangedAssetsToPreviousAssetState
                     operation.BundleCatalogEntry.Dependencies.Clear();
                     foreach (AssetState state in operation.PreviousAssetState.dependencies)
                     {
-                        var cachedDependencyState = contentUpdateContext.GuidToPreviousAssetStateMap[state.guid.ToString()];
-                        if (cachedDependencyState != null &&
+                        if (contentUpdateContext.GuidToPreviousAssetStateMap.TryGetValue(state.guid.ToString(), out var cachedDependencyState) &&
                             !string.IsNullOrEmpty(cachedDependencyState.bundleFileId))
                         {
                             string modifiedKey = cachedDependencyState.bundleFileId + operation.AssetEntry.GetHashCode();

@@ -47,7 +47,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         public ReturnCode Run()
         {
             var aa = m_AaBuildContext as AddressableAssetsBuildContext;
-            if (!aa.settings.UniqueBundleIds)
+            if (!aa.Settings.UniqueBundleIds)
                 return ReturnCode.Success;
 
             var newBundleLayout = new Dictionary<string, List<GUID>>();
@@ -78,7 +78,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 AssetLoadInfo assetInfo;
                 if (m_DependencyData.AssetInfo.TryGetValue(g, out assetInfo))
                 {
-                    var diskOnlyReferencedObjects = assetInfo.referencedObjects.Where(ro => context.settings.FindAssetEntry(ro.guid.ToString()) == null).ToList();
+                    var diskOnlyReferencedObjects = assetInfo.referencedObjects.Where(ro => context.Settings.FindAssetEntry(ro.guid.ToString()) == null).ToList();
                     GetAssetHashes(hashes, g, diskOnlyReferencedObjects, m_Cache != null && m_Parameters.UseCache);
                 }
             }

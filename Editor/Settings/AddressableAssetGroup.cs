@@ -405,6 +405,9 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal void DedupeEnteries()
         {
+            if (m_Settings == null)
+                return;
+
             List<AddressableAssetEntry> removeEntries = new List<AddressableAssetEntry>();
             foreach (AddressableAssetEntry e in m_EntryMap.Values)
             {
@@ -445,6 +448,12 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (var e in entries)
                 if(entryFilter == null || entryFilter(e))
                     e.GatherAllAssets(results, includeSelf, recurseAll, includeSubObjects, entryFilter);
+        }
+
+        internal virtual void GatherAllAssetReferenceDrawableEntries(List<IReferenceEntryData> results)
+        {
+            foreach (var e in entries)
+                e.GatherAllAssetReferenceDrawableEntries(results);
         }
 
         internal void AddAssetEntry(AddressableAssetEntry e, bool postEvent = true)

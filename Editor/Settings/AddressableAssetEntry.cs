@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using UnityEditor.Build.Content;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.Util;
@@ -10,11 +12,25 @@ using UnityEngine.U2D;
 
 namespace UnityEditor.AddressableAssets.Settings
 {
+    interface IReferenceEntryData
+    {
+        string AssetPath { get; }
+        string address { get; set; }
+        bool IsInResources { get; set; }
+    }
+
+    internal struct ImplicitAssetEntry : IReferenceEntryData
+    {
+        public string AssetPath { get; set; }
+        public string address { get; set ; }
+        public bool IsInResources { get; set; }
+    }
+
     /// <summary>
     /// Contains data for an addressable asset entry.
     /// </summary>
     [Serializable]
-    public class AddressableAssetEntry : ISerializationCallbackReceiver
+    public class AddressableAssetEntry : ISerializationCallbackReceiver, IReferenceEntryData
     {
         internal const string EditorSceneListName = "EditorSceneList";
         internal const string EditorSceneListPath = "Scenes In Build";
@@ -265,7 +281,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        private string m_cachedAssetPath = null;
+        internal string m_cachedAssetPath = null;
         /// <summary>
         /// The path of the asset.
         /// </summary>
@@ -478,28 +494,23 @@ namespace UnityEditor.AddressableAssets.Settings
 
                 if (AssetDatabase.IsValidFolder(path))
                 {
-                    foreach (var fi in Directory.GetFiles(path, "*.*", recurseAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
+                    foreach (var file in GetAllValidAssetPathsFromDirectory(path, recurseAll))
                     {
-                        var file = fi.Replace('\\', '/');
-                        if (AddressableAssetUtility.IsPathValidForEntry(file))
+                        var subGuid = AssetDatabase.AssetPathToGUID(file);
+                        var entry = settings.CreateSubEntryIfUnique(subGuid, address + GetRelativePath(file, path), this);
+
+                        if (entry != null)
                         {
-                            var subGuid = AssetDatabase.AssetPathToGUID(file);
-                            if (!BuiltinSceneCache.Contains(new GUID(subGuid)))
-                            {
-                                var entry = settings.CreateSubEntryIfUnique(subGuid, address + GetRelativePath(file, path), this);
-                                if (entry != null)
-                                {
-                                    entry.IsInResources = IsInResources; //if this is a sub-folder of Resources, copy it on down
-                                    entry.m_Labels = m_Labels;
-                                    if (entryFilter == null || entryFilter(entry))
-                                        assets.Add(entry);
-                                }
-                            }
+                            entry.IsInResources =
+                                IsInResources; //if this is a sub-folder of Resources, copy it on down
+                            entry.m_Labels = m_Labels;
+                            if (entryFilter == null || entryFilter(entry))
+                                assets.Add(entry);
                         }
                     }
                     if (!recurseAll)
                     {
-                        foreach (var fo in Directory.GetDirectories(path, "*.*", SearchOption.TopDirectoryOnly))
+                        foreach (var fo in Directory.EnumerateDirectories(path, "*.*", SearchOption.TopDirectoryOnly))
                         {
                             var folder = fo.Replace('\\', '/');
                             if (AssetDatabase.IsValidFolder(folder))
@@ -605,11 +616,67 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
+        IEnumerable<string> GetAllValidAssetPathsFromDirectory(string path, bool recurseAll)
+        {
+            var files = from file in Directory.EnumerateFiles(path, "*.*", recurseAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
+                        where AddressableAssetUtility.IsPathValidForEntry(file)
+                        let convertedPath = file.Replace('\\', '/')
+                        where !BuiltinSceneCache.Contains(convertedPath)
+                        select convertedPath;
+            return files;
+        }
+
+        internal void GatherAllAssetReferenceDrawableEntries(List<IReferenceEntryData> refEntries)
+        {
+            var path = AssetPath;
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            if (guid == EditorSceneListName)
+            {
+                //We don't add Built in scenes to the list of assignable AssetReferences so no need to check this.
+                return;
+            }
+            if (guid == ResourcesName)
+            {
+                //We don't add Resources assets to the list of assignable AssetReferences so no need to check this.
+                return;
+            }
+            if (AssetDatabase.IsValidFolder(path))
+            {
+                foreach (var fi in GetAllValidAssetPathsFromDirectory(path, true))
+                {
+                    string relativeAddress = address + GetRelativePath(fi, path);
+                    var reference = new ImplicitAssetEntry()
+                    {
+                        address = relativeAddress,
+                        AssetPath = fi,
+                        IsInResources = IsInResources
+                    };
+
+                    refEntries.Add(reference);
+                }
+            }
+            else if (MainAssetType == typeof(AddressableAssetEntryCollection))
+            {
+                var col = AssetDatabase.LoadAssetAtPath<AddressableAssetEntryCollection>(AssetPath);
+                if (col != null)
+                {
+                    foreach (var e in col.Entries)
+                        refEntries.Add(e);
+                }
+            }
+            else
+            {
+                refEntries.Add(this);
+            }
+        }
+
         string GetRelativePath(string file, string path)
         {
             return file.Substring(path.Length);
         }
-        
+
         /// <summary>
         /// Implementation of ISerializationCallbackReceiver.  Converts data to serializable form before serialization.
         /// </summary>
@@ -643,12 +710,17 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="providerTypes">Any unknown provider types are added to this set in order to ensure they are not stripped.</param>
         public void CreateCatalogEntries(List<ContentCatalogDataEntry> entries, bool isBundled, string providerType, IEnumerable<object> dependencies, object extraData, HashSet<Type> providerTypes)
         {
+            CreateCatalogEntriesInternal(entries, isBundled, providerType, dependencies, extraData, null);
+        }
+
+        internal void CreateCatalogEntriesInternal(List<ContentCatalogDataEntry> entries, bool isBundled, string providerType, IEnumerable<object> dependencies, object extraData, Dictionary<GUID, AssetLoadInfo> depInfo)
+        {
             if (string.IsNullOrEmpty(AssetPath))
                 return;
 
-            var assetPath = GetAssetLoadPath(isBundled);
-            var keyList = CreateKeyList();
-            var mainType = AddressableAssetUtility.MapEditorTypeToRuntimeType(MainAssetType, false);
+            string assetPath = GetAssetLoadPath(isBundled);
+            List<object> keyList = CreateKeyList();
+            Type mainType = AddressableAssetUtility.MapEditorTypeToRuntimeType(MainAssetType, false);
             if (mainType == null && !IsInResources)
             {
                 var t = MainAssetType;
@@ -658,20 +730,22 @@ namespace UnityEditor.AddressableAssets.Settings
 
             if (mainType != null)
                 entries.Add(new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, dependencies, extraData));
-                
+
             if (!IsScene)
             {
-                var ids = UnityEditor.Build.Content.ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(guid), EditorUserBuildSettings.activeBuildTarget);
+                ObjectIdentifier[] ids = depInfo != null ? depInfo[new GUID(guid)].includedObjects.ToArray() : 
+                    ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(guid), EditorUserBuildSettings.activeBuildTarget);
+                
                 if (ids.Length > 1)
                 {
-                    var typesForObjs = UnityEditor.Build.Content.ContentBuildInterface.GetTypeForObjects(ids);
+                    Type [] typesForObjs = ContentBuildInterface.GetTypeForObjects(ids);
                     HashSet<Type> typesSeen = new HashSet<Type>();
                     typesSeen.Add(mainType);
                     foreach (var objType in typesForObjs)
                     {
                         if (typeof(Component).IsAssignableFrom(objType))
                             continue;
-                        var rtType = AddressableAssetUtility.MapEditorTypeToRuntimeType(objType, false);
+                        Type rtType = AddressableAssetUtility.MapEditorTypeToRuntimeType(objType, false);
                         if (rtType != null && !typesSeen.Contains(rtType))
                         {
                             entries.Add(new ContentCatalogDataEntry(rtType, assetPath, providerType, keyList, dependencies, extraData));

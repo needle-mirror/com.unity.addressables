@@ -18,6 +18,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             m_RtdOp = rtdOp;
             m_Addressables = addressables;
+            m_Addressables.ResourceManager.RegisterForCallbacks();
         }
 
         protected override void Execute()

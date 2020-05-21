@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -63,22 +63,26 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, message);
             }
 
-            BuildLog log = new BuildLog();
-            m_Log = log;
+            m_Log = (builderInput.Logger != null) ? builderInput.Logger : new BuildLog();
+
             AddressablesRuntimeProperties.ClearCachedPropertyValues();
 
             TResult result;
             // Append the file registry to the results
-            using (log.ScopedStep(LogLevel.Info, $"Building {this.Name}"))
+            using (m_Log.ScopedStep(LogLevel.Info, $"Building {this.Name}"))
             {
                 result = BuildDataImplementation<TResult>(builderInput);
                 if (result != null)
                     result.FileRegistry = builderInput.Registry;
             }
 
-            var perfOutputDirectory = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables";
-            File.WriteAllText(Path.Combine(perfOutputDirectory, "AddressablesBuildTEP.json"), log.FormatAsTraceEventProfiler());
-            File.WriteAllText(Path.Combine(perfOutputDirectory, "AddressablesBuildLog.txt"), log.FormatAsText());
+            if (builderInput.Logger == null)
+            {
+                BuildLog log = (BuildLog)m_Log;
+                var perfOutputDirectory = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables";
+                File.WriteAllText(Path.Combine(perfOutputDirectory, "AddressablesBuildTEP.json"), log.FormatAsTraceEventProfiler());
+                File.WriteAllText(Path.Combine(perfOutputDirectory, "AddressablesBuildLog.txt"), log.FormatAsText());
+            }
 
             return result;
         }
@@ -103,19 +107,26 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         protected virtual string ProcessAllGroups(AddressableAssetsBuildContext aaContext) 
         {
             if (aaContext == null ||
-                aaContext.settings == null ||
-                aaContext.settings.groups == null)
+                aaContext.Settings == null ||
+                aaContext.Settings.groups == null)
             {
                 return "No groups found to process in build script " + Name;
             }
             //intentionally for not foreach so groups can be added mid-loop.
-            for(int index = 0; index < aaContext.settings.groups.Count; index++)  
+            for(int index = 0; index < aaContext.Settings.groups.Count; index++)  
             {
-                AddressableAssetGroup assetGroup = aaContext.settings.groups[index];
+                AddressableAssetGroup assetGroup = aaContext.Settings.groups[index];
                 if (assetGroup == null)
                     continue;
 
-                EditorUtility.DisplayProgressBar($"Processing Addressable Group", assetGroup.Name, (float)index/aaContext.settings.groups.Count);
+                if (assetGroup.Schemas.Find((x) => x.GetType() == typeof(PlayerDataGroupSchema)) &&
+                   assetGroup.Schemas.Find((x) => x.GetType() == typeof(BundledAssetGroupSchema)))
+                {
+                    EditorUtility.ClearProgressBar();
+                    return $"Addressable group {assetGroup.Name} cannot have both a {typeof(PlayerDataGroupSchema).Name} and a {typeof(BundledAssetGroupSchema).Name}";
+                }
+
+                EditorUtility.DisplayProgressBar($"Processing Addressable Group", assetGroup.Name, (float)index/aaContext.Settings.groups.Count);
                 var errorString = ProcessGroup(assetGroup, aaContext);
                 if (!string.IsNullOrEmpty(errorString))
                 {

@@ -75,18 +75,17 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get
             {
-                List<AsyncOperationHandle> allDependentOperations = new List<AsyncOperationHandle>();
-                allDependentOperations.AddRange(Result);
+                float total = 0f;
+                for (int i = 0; i < Result.Count; i++)
+                {
+                    var handle = Result[i];
+                    if (!handle.IsDone)
+                        total += handle.PercentComplete;
+                    else
+                        total++;
+                }
 
-                foreach(var handle in Result)
-                    handle.GetDependencies(allDependentOperations);
-
-                if (Result.Count < 1)
-                    return 1f;
-                float total = 0;
-                for (int i = 0; i < allDependentOperations.Count; i++)
-                    total += allDependentOperations[i].PercentComplete;
-                return total / allDependentOperations.Count;
+                return total / Result.Count;
             }
         }
 

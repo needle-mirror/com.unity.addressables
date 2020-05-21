@@ -10,7 +10,7 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
 
-public class InitializationObjectsAsyncTests : AddressablesTestFixture
+public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
 {
     [UnityTest]
     [Timeout(3000)]
@@ -29,6 +29,26 @@ public class InitializationObjectsAsyncTests : AddressablesTestFixture
 
         var handle = m_Addressables.ResourceManager.StartOperation(op, rtdOp);
         yield return handle;
+    }
+
+    [Test]
+    public void InitializationObjects_OperationRegistersForCallbacks()
+    {
+        //We're checking to make sure we've created a new ResourceManagerCallbacks object.  If this isn't null
+        //then we won't create a new one.  This would never be needed in a legitimate scenario.
+        m_Addressables.ResourceManager.m_CallbackHooks = null; 
+        int startCount = Resources.FindObjectsOfTypeAll<MonoBehaviourCallbackHooks>().Length;
+
+        InitalizationObjectsOperation op = new InitalizationObjectsOperation();
+        var runtimeDataLocation = new ResourceLocationBase("RuntimeData", m_RuntimeSettingsPath, typeof(JsonAssetProvider).FullName, typeof(ResourceManagerRuntimeData));
+        var rtdOp = m_Addressables.ResourceManager.ProvideResource<ResourceManagerRuntimeData>(runtimeDataLocation);
+
+        //Test
+        op.Init(rtdOp, m_Addressables);
+        int endCount = Resources.FindObjectsOfTypeAll<MonoBehaviourCallbackHooks>().Length;
+
+        //Assert
+        Assert.AreEqual(startCount + 1, endCount);
     }
 
 #if UNITY_EDITOR
@@ -112,7 +132,8 @@ public class InitializationObjectsAsyncTests : AddressablesTestFixture
         string json = JsonUtility.ToJson(cacheData);
 
         CacheInitialization ci = new CacheInitialization();
-        yield return ci.InitializeAsync(m_Addressables.ResourceManager, "TestCacheInit", json);
+        var handle = ci.InitializeAsync(m_Addressables.ResourceManager, "TestCacheInit", json);
+        yield return handle;
 
         Assert.AreEqual(cacheDirectoryOverride, Caching.currentCacheForWriting.path);
         Assert.AreEqual(expirationDelay, Caching.currentCacheForWriting.expirationDelay);
@@ -126,6 +147,7 @@ public class InitializationObjectsAsyncTests : AddressablesTestFixture
         cache.expirationDelay = preTestCacheData.ExpirationDelay;
         Caching.currentCacheForWriting = cache;
 
+        handle.Release();
 #else
         yield return null;
         Assert.Ignore();
@@ -159,4 +181,15 @@ public class InitializationObjectsAsyncTests : AddressablesTestFixture
             Complete(true, true, "");
         }
     }
+
+#if UNITY_EDITOR
+    class InitializationObjects_FastMode : InitializationObjectsAsyncTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Fast; } } }
+
+    class InitializationObjects_VirtualMode : InitializationObjectsAsyncTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Virtual; } } }
+
+    class InitializationObjects_PackedPlaymodeMode : InitializationObjectsAsyncTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.PackedPlaymode; } } }
+#endif
+
+    [UnityPlatform(exclude = new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor })]
+    class InitializationObjects_PackedMode : InitializationObjectsAsyncTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Packed; } } }
 }

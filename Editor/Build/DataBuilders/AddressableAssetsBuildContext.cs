@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Build.Pipeline.Interfaces;
@@ -18,10 +18,34 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
     /// </summary>
     public class AddressableAssetsBuildContext : IAddressableAssetsBuildContext
     {
+        private AddressableAssetSettings m_Settings;
         /// <summary>
         /// The settings object to use.
         /// </summary>
+        [Obsolete("Use Settings property instead.")]
         public AddressableAssetSettings settings;
+        /// <summary>
+        /// The settings object to use.
+        /// </summary>
+        public AddressableAssetSettings Settings 
+        {    
+            get
+            {
+                if (m_Settings == null && !string.IsNullOrEmpty(m_SettingsAssetPath))
+                    m_Settings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(m_SettingsAssetPath);
+                return m_Settings;
+            }
+            set 
+            {
+                m_Settings = value;
+                string guid;
+                if (m_Settings != null && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(m_Settings, out guid, out long localId))
+                    m_SettingsAssetPath = AssetDatabase.GUIDToAssetPath(guid);
+                else
+                    m_SettingsAssetPath = null;
+            }
+        }
+        private string m_SettingsAssetPath;
         /// <summary>
         /// The current runtime data being built.
         /// </summary>

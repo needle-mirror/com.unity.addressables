@@ -12,8 +12,9 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
 using System;
+using UnityEngine;
 
-public abstract class AddressablesTestFixture : IPrebuildSetup
+public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanup
 {
     internal AddressablesImpl m_Addressables;
     internal string m_RuntimeSettingsPath;
@@ -42,6 +43,8 @@ public abstract class AddressablesTestFixture : IPrebuildSetup
         yield return op;
         Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
         OnRuntimeSetup();
+        if(op.IsValid())
+            op.Release();
     }
 
     protected virtual void OnRuntimeSetup()
@@ -79,11 +82,20 @@ public abstract class AddressablesTestFixture : IPrebuildSetup
 #endif
     }
 
+    void IPostBuildCleanup.Cleanup()
+    {
+#if UNITY_EDITOR
+        string path = Path.Combine("Assets", "gen");
+        if(Directory.Exists(path))
+            Directory.Delete(path, true);
+#endif
+    }
+
 #if UNITY_EDITOR
 
     internal virtual void Setup(AddressableAssetSettings settings, string tempAssetFolder) { }
 
-    void RunBuilder(AddressableAssetSettings settings)
+    protected virtual void RunBuilder(AddressableAssetSettings settings)
     {
         var buildContext = new AddressablesDataBuilderInput(settings);
         buildContext.RuntimeSettingsFilename = "settings" + m_UniqueTestName + ".json";

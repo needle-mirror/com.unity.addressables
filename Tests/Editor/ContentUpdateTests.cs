@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build;
@@ -37,7 +38,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var op = Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
 
             Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
-            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
             var cacheData = ContentUpdateScript.LoadContentState(tempPath);
             Assert.NotNull(cacheData);
             Settings.RemoveGroup(group);
@@ -78,7 +79,7 @@ namespace UnityEditor.AddressableAssets.Tests
             EditorUtility.SetDirty(obj);
 #endif
             AssetDatabase.SaveAssets();
-            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
             var modifiedEntries = ContentUpdateScript.GatherModifiedEntries(Settings, tempPath);
             Assert.IsNotNull(modifiedEntries);
             Assert.GreaterOrEqual(modifiedEntries.Count, 1);
@@ -211,7 +212,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var op = Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
 
             Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
-            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
             var buildOp = ContentUpdateScript.BuildContentUpdate(Settings, tempPath);
             Assert.IsNotNull(buildOp);
             Assert.IsTrue(string.IsNullOrEmpty(buildOp.Error));
@@ -278,7 +279,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var op = Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
 
             Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
-            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
             ContentUpdateScript.BuildContentUpdate(Settings, tempPath);
             Assert.IsTrue(Directory.Exists(Addressables.BuildPath));
         }
@@ -432,65 +433,58 @@ namespace UnityEditor.AddressableAssets.Tests
             return new AddressableAssetEntry(guid, guid, group, false);
         }
 
+        readonly string m_ContentUpdateTestAssetGUID = GUID.Generate().ToString();
+        const string k_ContentUpdateTestCachedAssetHash = "8888888888888888888";
+        const string k_ContentUpdateTestNewInternalBundleName = "bundle";
+        const string k_ContentUpdateTestNewBundleName = "fullbundlepath";
+        const string k_ContentUpdateTestCachedBundlePath = "cachedBundle";
+        const string k_ContentUpdateTestFileName = "testfile";
+
         [Test]
         public void DetermineRequiredAssetEntryUpdates_AssetWithoutDependenciesAndChangedHashInStaticGroup_ReturnsOnlyRevertToCachedState()
         {
-            string contentUpdateTestAssetGUID = GUID.Generate().ToString();
-            string contentUpdateTestCachedAssetHash = "8888";
-            string contentUpdateTestNewInternalBundleName = "bundle";
-            string contentUpdateTestNewBundleName = "fullbundlepath";
-            string contentUpdateTestCachedBundlePath = "cachedBundle";
-            string contentUpdateTestFileName = "testfile";
-
-            File.WriteAllText(contentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
-            File.WriteAllText(contentUpdateTestNewBundleName, "TestNewBundle");
+            File.WriteAllText(k_ContentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
+            File.WriteAllText(k_ContentUpdateTestNewBundleName, "TestNewBundle");
 
             var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
             string contentUpdateTestGroupGuid = group.Guid;
 
             group.GetSchema<ContentUpdateGroupSchema>().StaticContent = true;
-            var assetEntry = CreateAssetEntry(contentUpdateTestAssetGUID, group);
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
             group.AddAssetEntry(assetEntry);
 
-            var context = GetContentUpdateContext(contentUpdateTestAssetGUID, contentUpdateTestCachedAssetHash,
-                contentUpdateTestNewInternalBundleName, contentUpdateTestNewBundleName,
-                contentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, contentUpdateTestFileName);
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
 
             var ops = RevertUnchangedAssetsToPreviousAssetState.DetermineRequiredAssetEntryUpdates(group, context);
 
             Assert.AreEqual(assetEntry, ops[0].AssetEntry);
-            Assert.AreEqual(contentUpdateTestNewBundleName, ops[0].CurrentBuildPath);
-            Assert.AreEqual(contentUpdateTestCachedBundlePath, ops[0].PreviousBuildPath);
+            Assert.AreEqual(k_ContentUpdateTestNewBundleName, ops[0].CurrentBuildPath);
+            Assert.AreEqual(k_ContentUpdateTestCachedBundlePath, ops[0].PreviousBuildPath);
 
-            File.Delete(contentUpdateTestCachedBundlePath);
-            File.Delete(contentUpdateTestNewBundleName);
+            File.Delete(k_ContentUpdateTestCachedBundlePath);
+            File.Delete(k_ContentUpdateTestNewBundleName);
             Settings.RemoveGroup(group);
         }
 
         [Test]
         public void DetermineRequiredAssetEntryUpdates_AssetWithDependenciesAndChangedHashInStaticGroup_ReturnsRevertToCachedStateAndDependencies()
         {
-            string contentUpdateTestAssetGUID = GUID.Generate().ToString();
-            string contentUpdateTestCachedAssetHash = "8888";
-            string contentUpdateTestNewInternalBundleName = "bundle";
-            string contentUpdateTestNewBundleName = "fullbundlepath";
-            string contentUpdateTestCachedBundlePath = "cachedBundle";
-            string contentUpdateTestFileName = "testfile";
-
-            File.WriteAllText(contentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
-            File.WriteAllText(contentUpdateTestNewBundleName, "TestNewBundle");
+            File.WriteAllText(k_ContentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
+            File.WriteAllText(k_ContentUpdateTestNewBundleName, "TestNewBundle");
 
             var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
             string contentUpdateTestGroupGuid = group.Guid;
 
             group.GetSchema<ContentUpdateGroupSchema>().StaticContent = true;
-            var assetEntry = CreateAssetEntry(contentUpdateTestAssetGUID, group);
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
             group.AddAssetEntry(assetEntry);
 
-            var context = GetContentUpdateContext(contentUpdateTestAssetGUID, contentUpdateTestCachedAssetHash,
-                contentUpdateTestNewInternalBundleName, contentUpdateTestNewBundleName,
-                contentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, contentUpdateTestFileName);
-            context.GuidToPreviousAssetStateMap[contentUpdateTestAssetGUID].dependencies = new AssetState[]
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
+            context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID].dependencies = new AssetState[]
             {
                 new AssetState()
                 {
@@ -502,164 +496,129 @@ namespace UnityEditor.AddressableAssets.Tests
             var ops = RevertUnchangedAssetsToPreviousAssetState.DetermineRequiredAssetEntryUpdates(group, context);
 
             Assert.AreEqual(assetEntry, ops[0].AssetEntry);
-            Assert.AreEqual(contentUpdateTestNewBundleName, ops[0].CurrentBuildPath);
-            Assert.AreEqual(contentUpdateTestCachedBundlePath, ops[0].PreviousBuildPath);
+            Assert.AreEqual(k_ContentUpdateTestNewBundleName, ops[0].CurrentBuildPath);
+            Assert.AreEqual(k_ContentUpdateTestCachedBundlePath, ops[0].PreviousBuildPath);
 
-            File.Delete(contentUpdateTestCachedBundlePath);
-            File.Delete(contentUpdateTestNewBundleName);
+            File.Delete(k_ContentUpdateTestCachedBundlePath);
+            File.Delete(k_ContentUpdateTestNewBundleName);
             Settings.RemoveGroup(group);
         }
 
         [Test]
         public void DetermineRequiredAssetEntryUpdates_AssetWithChangedGroup_TakesNoAction()
         {
-            string contentUpdateTestAssetGUID = GUID.Generate().ToString();
-            string contentUpdateTestCachedAssetHash = "8888";
-            string contentUpdateTestNewInternalBundleName = "bundle";
-            string contentUpdateTestNewBundleName = "fullbundlepath";
-            string contentUpdateTestCachedBundlePath = "cachedBundle";
-            string contentUpdateTestFileName = "testfile";
-
-            File.WriteAllText(contentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
+            File.WriteAllText(k_ContentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
 
             var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
             string contentUpdateTestGroupGuid = GUID.Generate().ToString();
 
             group.GetSchema<ContentUpdateGroupSchema>().StaticContent = true;
-            var assetEntry = CreateAssetEntry(contentUpdateTestAssetGUID, group);
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
             group.AddAssetEntry(assetEntry);
 
-            var context = GetContentUpdateContext(contentUpdateTestAssetGUID, contentUpdateTestCachedAssetHash,
-                contentUpdateTestNewInternalBundleName, contentUpdateTestNewBundleName,
-                contentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, contentUpdateTestFileName);
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
 
             var ops = RevertUnchangedAssetsToPreviousAssetState.DetermineRequiredAssetEntryUpdates(group, context);
 
             Assert.IsTrue(ops.Count == 0);
 
-            File.Delete(contentUpdateTestCachedBundlePath);
+            File.Delete(k_ContentUpdateTestCachedBundlePath);
             Settings.RemoveGroup(group);
         }
 
         [Test]
         public void DetermineRequiredAssetEntryUpdates_AssetWithChangedHashInNonStaticGroup_TakesNoAction()
         {
-            string contentUpdateTestAssetGUID = GUID.Generate().ToString();
-            string contentUpdateTestCachedAssetHash = "8888";
-            string contentUpdateTestNewInternalBundleName = "bundle";
-            string contentUpdateTestNewBundleName = "fullbundlepath";
-            string contentUpdateTestCachedBundlePath = "cachedBundle";
-            string contentUpdateTestFileName = "testfile";
-
-            File.WriteAllText(contentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
+            File.WriteAllText(k_ContentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
 
             var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
             string contentUpdateTestGroupGuid = GUID.Generate().ToString();
 
             group.GetSchema<ContentUpdateGroupSchema>().StaticContent = false;
-            var assetEntry = CreateAssetEntry(contentUpdateTestAssetGUID, group);
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
             group.AddAssetEntry(assetEntry);
 
-            var context = GetContentUpdateContext(contentUpdateTestAssetGUID, contentUpdateTestCachedAssetHash,
-                contentUpdateTestNewInternalBundleName, contentUpdateTestNewBundleName,
-                contentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, contentUpdateTestFileName);
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
 
             var ops = RevertUnchangedAssetsToPreviousAssetState.DetermineRequiredAssetEntryUpdates(group, context);
 
             Assert.IsTrue(ops.Count == 0);
 
-            File.Delete(contentUpdateTestCachedBundlePath);
+            File.Delete(k_ContentUpdateTestCachedBundlePath);
             Settings.RemoveGroup(group);
         }
 
         [Test]
         public void DetermineRequiredAssetEntryUpdates_EntriesThatTakeNoAction_StillSetBundleFileId()
         {
-            string contentUpdateTestAssetGUID = GUID.Generate().ToString();
-            string contentUpdateTestCachedAssetHash = "8888";
-            string contentUpdateTestNewInternalBundleName = "bundle";
-            string contentUpdateTestNewBundleName = "fullbundlepath";
-            string contentUpdateTestCachedBundlePath = "cachedBundle";
-            string contentUpdateTestFileName = "testfile";
-
-            File.WriteAllText(contentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
+            File.WriteAllText(k_ContentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
 
             var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
             string contentUpdateTestGroupGuid = GUID.Generate().ToString();
 
             group.GetSchema<ContentUpdateGroupSchema>().StaticContent = false;
-            var assetEntry = CreateAssetEntry(contentUpdateTestAssetGUID, group);
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
             group.AddAssetEntry(assetEntry);
 
-            var context = GetContentUpdateContext(contentUpdateTestAssetGUID, contentUpdateTestCachedAssetHash,
-                contentUpdateTestNewInternalBundleName, contentUpdateTestNewBundleName,
-                contentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, contentUpdateTestFileName);
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
 
             var ops = RevertUnchangedAssetsToPreviousAssetState.DetermineRequiredAssetEntryUpdates(group, context);
 
             Assert.IsTrue(ops.Count == 0);
-            Assert.AreEqual(contentUpdateTestNewBundleName, assetEntry.BundleFileId);
+            Assert.AreEqual(k_ContentUpdateTestNewBundleName, assetEntry.BundleFileId);
 
-            File.Delete(contentUpdateTestCachedBundlePath);
+            File.Delete(k_ContentUpdateTestCachedBundlePath);
             Settings.RemoveGroup(group);
         }
 
         [Test]
         public void DetermineRequiredAssetEntryUpdates_WithMissingBundleFileId_LogsErrorAndTakesNoAction()
         {
-            string contentUpdateTestAssetGUID = GUID.Generate().ToString();
-            string contentUpdateTestCachedAssetHash = "8888";
-            string contentUpdateTestNewInternalBundleName = "bundle";
-            string contentUpdateTestNewBundleName = "fullbundlepath";
-            string contentUpdateTestCachedBundlePath = "cachedBundle";
-            string contentUpdateTestFileName = "testfile";
-
-            File.WriteAllText(contentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
+            File.WriteAllText(k_ContentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
 
             var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
             string contentUpdateTestGroupGuid = group.Guid;
 
             group.GetSchema<ContentUpdateGroupSchema>().StaticContent = true;
-            var assetEntry = CreateAssetEntry(contentUpdateTestAssetGUID, group);
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
             group.AddAssetEntry(assetEntry);
 
-            var context = GetContentUpdateContext(contentUpdateTestAssetGUID, contentUpdateTestCachedAssetHash,
-                contentUpdateTestNewInternalBundleName, contentUpdateTestNewBundleName,
-                "", contentUpdateTestGroupGuid, contentUpdateTestFileName);
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                "", contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
 
             var ops = RevertUnchangedAssetsToPreviousAssetState.DetermineRequiredAssetEntryUpdates(group, context);
 
             LogAssert.Expect(LogType.Error, $"CachedAssetState found for {assetEntry.AssetPath} but the bundleFileId was never set on the previous build.");
             Assert.IsTrue(ops.Count == 0);
 
-            File.Delete(contentUpdateTestCachedBundlePath);
+            File.Delete(k_ContentUpdateTestCachedBundlePath);
             Settings.RemoveGroup(group);
         }
 
         [Test]
         public void DetermineRequiredAssetEntryUpdates_WithMissingPreviousBundle_LogsWarningAndTakesNoAction()
         {
-            string contentUpdateTestAssetGUID = GUID.Generate().ToString();
-            string contentUpdateTestCachedAssetHash = "8888";
-            string contentUpdateTestNewInternalBundleName = "bundle";
-            string contentUpdateTestNewBundleName = "fullbundlepath";
-            string contentUpdateTestCachedBundlePath = "cachedBundle";
-            string contentUpdateTestFileName = "testfile";
-
             var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
             string contentUpdateTestGroupGuid = group.Guid;
 
             group.GetSchema<ContentUpdateGroupSchema>().StaticContent = true;
-            var assetEntry = CreateAssetEntry(contentUpdateTestAssetGUID, group);
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
             group.AddAssetEntry(assetEntry);
 
-            var context = GetContentUpdateContext(contentUpdateTestAssetGUID, contentUpdateTestCachedAssetHash,
-                contentUpdateTestNewInternalBundleName, contentUpdateTestNewBundleName,
-                contentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, contentUpdateTestFileName);
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
 
             var ops = RevertUnchangedAssetsToPreviousAssetState.DetermineRequiredAssetEntryUpdates(group, context);
 
-            LogAssert.Expect(LogType.Warning, $"CachedAssetState found for {assetEntry.AssetPath} but the previous bundle at {contentUpdateTestCachedBundlePath} cannot be found. " +
+            LogAssert.Expect(LogType.Warning, $"CachedAssetState found for {assetEntry.AssetPath} but the previous bundle at {k_ContentUpdateTestCachedBundlePath} cannot be found. " +
                                               $"The modified assets will not be able to use the previously built bundle which will result in new bundles being created " +
                                               $"for these static content groups.  This will point the Content Catalog to local bundles that do not exist on currently " +
                                               $"deployed versions of an application.");
@@ -671,31 +630,223 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void DetermineRequiredAssetEntryUpdates_AssetWithMatchingCachedInternalBundleId_TakesNoAction()
         {
-            string contentUpdateTestAssetGUID = GUID.Generate().ToString();
-            string contentUpdateTestCachedAssetHash = "8888";
-            string contentUpdateTestNewInternalBundleName = "bundle";
-            string contentUpdateTestNewBundleName = "fullbundlepath";
-            string contentUpdateTestCachedBundlePath = contentUpdateTestNewBundleName;
-            string contentUpdateTestFileName = "testfile";
-
-            File.WriteAllText(contentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
+            File.WriteAllText(k_ContentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
 
             var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
             string contentUpdateTestGroupGuid = group.Guid;
 
             group.GetSchema<ContentUpdateGroupSchema>().StaticContent = true;
-            var assetEntry = CreateAssetEntry(contentUpdateTestAssetGUID, group);
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
             group.AddAssetEntry(assetEntry);
 
-            var context = GetContentUpdateContext(contentUpdateTestAssetGUID, contentUpdateTestCachedAssetHash,
-                contentUpdateTestNewInternalBundleName, contentUpdateTestNewBundleName,
-                contentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, contentUpdateTestFileName);
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                k_ContentUpdateTestNewBundleName, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
 
             var ops = RevertUnchangedAssetsToPreviousAssetState.DetermineRequiredAssetEntryUpdates(group, context);
 
             Assert.IsTrue(ops.Count == 0);
 
-            File.Delete(contentUpdateTestCachedBundlePath);
+            File.Delete(k_ContentUpdateTestCachedBundlePath);
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
+        public void ApplyAssetEntryUpdates_InvalidKeyForGuidToPreviousAssetStateMap_DoesNotThrow()
+        {
+            File.WriteAllText(k_ContentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
+
+            var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
+            string contentUpdateTestGroupGuid = GUID.Generate().ToString();
+
+            group.GetSchema<ContentUpdateGroupSchema>().StaticContent = false;
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
+            group.AddAssetEntry(assetEntry);
+
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
+            context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID].dependencies = new AssetState[]
+            {
+                new AssetState()
+                {
+                    guid = GUID.Generate(),
+                    hash = Hash128.Parse("9823749283742")
+                }
+            };
+
+            var ops = new List<RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation>()
+            {
+                new RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation()
+                {
+                    PreviousBuildPath = k_ContentUpdateTestCachedBundlePath,
+                    AssetEntry = assetEntry,
+                    BundleCatalogEntry = context.IdToCatalogDataEntryMap[m_ContentUpdateTestAssetGUID],
+                    CurrentBuildPath = k_ContentUpdateTestNewBundleName,
+                    PreviousAssetState = context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID]
+                }
+            };
+
+            Assert.DoesNotThrow(() =>
+                RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, "BundleProvider",
+                    new List<ContentCatalogDataEntry>(), context));
+
+            File.Delete(k_ContentUpdateTestCachedBundlePath);
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
+        public void ApplyAssetEntryUpdates_DeletesCorrectBundle()
+        {
+            File.WriteAllText(k_ContentUpdateTestCachedBundlePath, "TestCachedAssetBundle");
+            File.WriteAllText(k_ContentUpdateTestNewBundleName, "TestAssetBundle");
+
+            var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
+            string contentUpdateTestGroupGuid = GUID.Generate().ToString();
+
+            group.GetSchema<ContentUpdateGroupSchema>().StaticContent = false;
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
+            group.AddAssetEntry(assetEntry);
+
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
+
+            var ops = new List<RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation>()
+            {
+                new RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation()
+                {
+                    PreviousBuildPath = k_ContentUpdateTestCachedBundlePath,
+                    AssetEntry = assetEntry,
+                    BundleCatalogEntry = context.IdToCatalogDataEntryMap[m_ContentUpdateTestAssetGUID],
+                    CurrentBuildPath = k_ContentUpdateTestNewBundleName,
+                    PreviousAssetState = context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID]
+                },
+                new RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation()
+                {
+                    PreviousBuildPath = k_ContentUpdateTestCachedBundlePath,
+                    AssetEntry = assetEntry,
+                    BundleCatalogEntry = context.IdToCatalogDataEntryMap[m_ContentUpdateTestAssetGUID],
+                    CurrentBuildPath = k_ContentUpdateTestNewBundleName,
+                    PreviousAssetState = context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID]
+                }
+            };
+
+            RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, "BundleProvider", new List<ContentCatalogDataEntry>(), context);
+
+            Assert.IsTrue(File.Exists(k_ContentUpdateTestCachedBundlePath));
+            Assert.IsFalse(File.Exists(k_ContentUpdateTestNewBundleName));
+
+            File.Delete(k_ContentUpdateTestCachedBundlePath);
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
+        public void ApplyAssetEntryUpdates_RegistryOnlyContainsCachedBundleEntry()
+        {
+            var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
+            string contentUpdateTestGroupGuid = GUID.Generate().ToString();
+
+            group.GetSchema<ContentUpdateGroupSchema>().StaticContent = false;
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
+            group.AddAssetEntry(assetEntry);
+
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
+
+            var ops = new List<RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation>()
+            {
+                new RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation()
+                {
+                    PreviousBuildPath = k_ContentUpdateTestCachedBundlePath,
+                    AssetEntry = assetEntry,
+                    BundleCatalogEntry = context.IdToCatalogDataEntryMap[m_ContentUpdateTestAssetGUID],
+                    CurrentBuildPath = k_ContentUpdateTestNewBundleName,
+                    PreviousAssetState = context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID]
+                },
+                new RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation()
+                {
+                    PreviousBuildPath = k_ContentUpdateTestCachedBundlePath,
+                    AssetEntry = assetEntry,
+                    BundleCatalogEntry = context.IdToCatalogDataEntryMap[m_ContentUpdateTestAssetGUID],
+                    CurrentBuildPath = k_ContentUpdateTestNewBundleName,
+                    PreviousAssetState = context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID]
+                }
+            };
+
+            RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, "BundleProvider", new List<ContentCatalogDataEntry>(), context);
+
+            var registryPaths = context.Registry.GetFilePaths();
+
+            Assert.AreEqual(1, registryPaths.Count());
+            Assert.AreEqual(k_ContentUpdateTestCachedBundlePath, registryPaths.ElementAt(0));
+
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
+        public void ApplyAssetEntryUpdates_PreviousStateDependencies_SetInCatalogEntry()
+        {
+            var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
+            string contentUpdateTestGroupGuid = GUID.Generate().ToString();
+
+            group.GetSchema<ContentUpdateGroupSchema>().StaticContent = false;
+            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
+            group.AddAssetEntry(assetEntry);
+
+            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
+                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
+                k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
+
+            var previousDep = new AssetState()
+            {
+                guid = GUID.Generate(),
+                hash = Hash128.Parse("9823749283742")
+            };
+
+            var currentDep = new AssetState()
+            {
+                guid = GUID.Generate(),
+                hash = Hash128.Parse("128747239872")
+            };
+
+            context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID].dependencies = new AssetState[]
+            {
+                previousDep
+            };
+
+            context.IdToCatalogDataEntryMap[m_ContentUpdateTestAssetGUID].Dependencies.Add(currentDep);
+
+            var ops = new List<RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation>()
+            {
+                new RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation()
+                {
+                    PreviousBuildPath = k_ContentUpdateTestCachedBundlePath,
+                    AssetEntry = assetEntry,
+                    BundleCatalogEntry = context.IdToCatalogDataEntryMap[m_ContentUpdateTestAssetGUID],
+                    CurrentBuildPath = k_ContentUpdateTestNewBundleName,
+                    PreviousAssetState = context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID]
+                }
+            };
+
+            string depBundleFileId = "depBundleFileId";
+            context.GuidToPreviousAssetStateMap.Add(previousDep.guid.ToString(), new CachedAssetState()
+            {
+                asset = previousDep,
+                bundleFileId = depBundleFileId,
+                data = previousDep,
+                dependencies = new AssetState[0],
+                groupGuid = contentUpdateTestGroupGuid
+            });
+
+            var locations = new List<ContentCatalogDataEntry>();
+            RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, "BundleProvider", locations, context);
+
+            Assert.AreEqual(1, locations.Count);
+            Assert.AreEqual(1, ops[0].BundleCatalogEntry.Dependencies.Count);
+            Assert.AreEqual(depBundleFileId + ops[0].AssetEntry.GetHashCode(), ops[0].BundleCatalogEntry.Dependencies[0]);
+
             Settings.RemoveGroup(group);
         }
     }

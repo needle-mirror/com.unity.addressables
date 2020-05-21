@@ -1,5 +1,5 @@
-﻿using System;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Build
@@ -108,5 +108,7 @@ namespace UnityEditor.AddressableAssets.Build
             Registry = new FileRegistry();
             PreviousContentState = null;
         }
+
+        internal IBuildLogger Logger { get; set; }
     }
 }

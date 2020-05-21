@@ -10,6 +10,23 @@ using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEngine.ResourceManagement.Tests
 {
+    internal class ManualPercentCompleteOperation : AsyncOperationBase<GameObject>
+    {
+        public ManualPercentCompleteOperation(float percentComplete)
+        {
+            m_PercentComplete = percentComplete;
+        }
+
+        public float m_PercentComplete;
+
+        protected override void Execute()
+        {
+            Complete(new GameObject(), true, "");
+        }
+
+        protected override float Progress => m_PercentComplete;
+    }
+
     public class ProviderOperationTests
     {
         MockProvider m_Provider;
@@ -201,6 +218,23 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.AreEqual(deps[0], "dep1");
             Assert.AreEqual(deps[1], "dep2");
             op.Release();
+        }
+
+        [Test]
+        public void ProviderOperation_PercentComplete_DoesNotDecreaseAfterPercentCallbackIsSet()
+        {
+            var providerOp = new ProviderOperation<GameObject>();
+            providerOp.m_DepOp = new AsyncOperationHandle<IList<AsyncOperationHandle>>();
+            providerOp.m_DepOp.m_InternalOp = new ProviderOperation<IList<AsyncOperationHandle>>();
+            providerOp.m_DepOp.m_InternalOp.Result = new List<AsyncOperationHandle>();
+            providerOp.m_DepOp.m_InternalOp.Result.Add(new ManualPercentCompleteOperation(1.0f).Handle);
+
+            Assert.AreEqual(0.5f, providerOp.PercentComplete);
+
+            providerOp.SetProgressCallback(() => 0.5f);
+
+            Assert.AreEqual(0.75f, providerOp.PercentComplete);
+
         }
 
         class Type1 { }

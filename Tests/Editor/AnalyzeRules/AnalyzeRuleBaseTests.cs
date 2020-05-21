@@ -27,7 +27,7 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             var group = Settings.CreateGroup("group1", false, false, false, null, typeof(BundledAssetGroupSchema));
 
             AddressableAssetsBuildContext context = new AddressableAssetsBuildContext();
-            context.settings = Settings;
+            context.Settings = Settings;
             context.assetGroupToBundles = new Dictionary<AddressableAssetGroup, List<string>>()
             {
                 {group, new List<string>() {bundleName}}

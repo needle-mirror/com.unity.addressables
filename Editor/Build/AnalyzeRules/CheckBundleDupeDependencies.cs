@@ -101,7 +101,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 let bundleToGroup = aaContext.bundleToAssetGroup[fileToBundle]
 
                 //Get the asset groups that belong to those bundles
-                let selectedGroup = aaContext.settings.FindGroup(findGroup => findGroup != null && findGroup.Guid == bundleToGroup)
+                let selectedGroup = aaContext.Settings.FindGroup(findGroup => findGroup != null && findGroup.Guid == bundleToGroup)
 
                 select new CheckDupeResult
                 {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
 using UnityEditor.AddressableAssets.Settings;
@@ -86,7 +86,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             //gather entries
             var aaContext = new AddressableAssetsBuildContext
             {
-                settings = aaSettings,
+                Settings = aaSettings,
                 runtimeData = new ResourceManagerRuntimeData(),
                 bundleToAssetGroup = new Dictionary<string, string>(),
                 locations = new List<ContentCatalogDataEntry>(),
@@ -142,14 +142,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
                 if (exitCode < ReturnCode.Success)
                     return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, "SBP Error" + exitCode);
-                if (aaSettings == null && !string.IsNullOrEmpty(aaPath))
-                    aaContext.settings = aaSettings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(aaPath);
 
-                using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
-                {
-                    progressTracker.UpdateTask("Generating Addressables Locations");
-                    GenerateLocationListsTask.Run(aaContext, extractData.WriteData);
-                }
+                if (aaSettings == null && !string.IsNullOrEmpty(aaPath))
+                    aaSettings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(aaPath);
             }
 
             var bundledAssets = new Dictionary<object, HashSet<string>>();
@@ -395,6 +390,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             // Packing
             buildTasks.Add(new GenerateBundlePacking());
             buildTasks.Add(new UpdateBundleObjectLayout());
+            buildTasks.Add(new GenerateLocationListsTask());
             return buildTasks;
         }
     }

@@ -68,3 +68,13 @@ public async Start() {
 The `AsyncOperationHandle.Task` property is not available on `WebGL` as multi-threaded operations are not supported on that platform.
 
 Note that Loading scenes with [`SceneManager.LoadSceneAsync`](https://docs.unity3d.com/ScriptReference/SceneManagement.SceneManager.LoadSceneAsync.html) with `allowSceneActivation` set to false or using [`Addressables.LoadSceneAsync`](../api/UnityEngine.AddressableAssets.Addressables.html#UnityEngine_AddressableAssets_Addressables_LoadSceneAsync_System_Object_LoadSceneMode_System_Boolean_System_Int32_) and setting false for the `activateOnLoad` parameter can lead to subsequent async operations being blocked and unable to complete.  See the [`allowSceneActivation` documentation](https://docs.unity3d.com/ScriptReference/AsyncOperation-allowSceneActivation.html).
+
+##### Loading Addressable Scenes
+When loading an Addressable Scene, all the dependencies for your GameObjects in the scene are accessed through AssetBundles loaded during the Scene load operation.  Assuming no other objects reference the associated AssetBundles, when the Scene is unloaded, all the AssetBundles, both for the Scene and any that were needed for dependencies, are unloaded.
+
+Note: If you mark a GameObject in an Addressable loaded scene as `DontDestroyOnLoad` or move it to another loaded Scene and then unload your original Scene, all dependencies for your GameObject are still unloaded.
+
+If you find yourself in that scenario there are a couple options at your disposal.
+- Make the GameObject you want to be `DontDestroyOnLoad` a single Addressable prefab.  Instantiate the prefab when you need it and then mark it as `DontDestroyOnLoad`.
+- Before unloading the Scene that contained the GameObject you mark as `DontDestroyOnLoad`, call `AsyncOperationHandle.Acquire()` on the Scene load handle.  This increases the reference count on the Scene, and keeps it and its dependencies loaded until `Release` is called on the acquired handle.
+

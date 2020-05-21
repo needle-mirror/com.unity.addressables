@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
@@ -30,6 +30,9 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
         [InjectContext]
         IBundleWriteData m_WriteData;
+
+        [InjectContext]
+        IDependencyData m_DependencyData;
 #pragma warning restore 649
 
         /// <summary>
@@ -38,7 +41,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         /// <returns>The success or failure ReturnCode</returns>
         public ReturnCode Run()
         {
-            return Run(m_AaBuildContext, m_WriteData);
+            return RunInternal(m_AaBuildContext, m_WriteData, m_DependencyData);
         }
 
         /// <summary>
@@ -47,20 +50,26 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         /// <param name="aaBuildContext">The addressables build context.</param>
         /// <param name="writeData">The write data used to generate the location lists.</param>
         /// <returns>The success or failure ReturnCode</returns>
+        [Obsolete("This method uses nonoptimized code. Use nonstatic version Run() instead.")]
         public static ReturnCode Run(IAddressableAssetsBuildContext aaBuildContext, IBundleWriteData writeData)
+        {
+            return RunInternal(aaBuildContext, writeData, null);
+        }
+
+        internal static ReturnCode RunInternal(IAddressableAssetsBuildContext aaBuildContext, IBundleWriteData writeData, IDependencyData dependencyData)
         {
             var aaContext = aaBuildContext as AddressableAssetsBuildContext;
             if (aaContext == null)
                 return ReturnCode.Error;
-            var aaSettings = aaContext.settings;
-            var locations = aaContext.locations;
-            var bundleToAssetGroup = aaContext.bundleToAssetGroup;
+            AddressableAssetSettings aaSettings = aaContext.Settings;
+            List<ContentCatalogDataEntry> locations = aaContext.locations;
+            Dictionary<string, string> bundleToAssetGroup = aaContext.bundleToAssetGroup;
             var bundleToAssets = new Dictionary<string, List<GUID>>();
             var dependencySetForBundle = new Dictionary<string, HashSet<string>>();
-            foreach (var k in writeData.AssetToFiles)
+            foreach (KeyValuePair<GUID, List<string>> k in writeData.AssetToFiles)
             {
                 List<GUID> assetList;
-                var bundle = writeData.FileToBundle[k.Value[0]];
+                string bundle = writeData.FileToBundle[k.Value[0]];
                 if (!bundleToAssets.TryGetValue(bundle, out assetList))
                     bundleToAssets.Add(bundle, assetList = new List<GUID>());
                 HashSet<string> bundleDeps;
@@ -68,9 +77,9 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                     dependencySetForBundle.Add(bundle, bundleDeps = new HashSet<string>());
                 for (int i = 0; i < k.Value.Count; i++)
                     bundleDeps.Add(writeData.FileToBundle[k.Value[i]]);
-                foreach (var file in k.Value)
+                foreach (string file in k.Value)
                 {
-                    var fileBundle = writeData.FileToBundle[file];
+                    string fileBundle = writeData.FileToBundle[file];
                     if (!bundleToAssets.ContainsKey(fileBundle))
                         bundleToAssets.Add(fileBundle, new List<GUID>());
                 }
@@ -78,7 +87,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 assetList.Add(k.Key);
             }
             var assetGroupToBundle = (aaContext.assetGroupToBundles = new Dictionary<AddressableAssetGroup, List<string>>());
-            foreach (var kvp in bundleToAssets)
+            foreach (KeyValuePair<string, List<GUID>> kvp in bundleToAssets)
             {
                 AddressableAssetGroup assetGroup = aaSettings.DefaultGroup;
                 string groupGuid;
@@ -91,7 +100,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 bundles.Add(kvp.Key);
                 HashSet<string> bundleDeps = null;
                 dependencySetForBundle.TryGetValue(kvp.Key, out bundleDeps);
-                CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetBundleProviderName(assetGroup), GetAssetProviderName(assetGroup), kvp.Value, bundleDeps, locations, aaContext.providerTypes);
+                CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetBundleProviderName(assetGroup), GetAssetProviderName(assetGroup), kvp.Value, bundleDeps, locations, aaContext.providerTypes, dependencyData);
             }
 
             return ReturnCode.Success;
@@ -130,7 +139,8 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         List<GUID> assetsInBundle,
         HashSet<string> bundleDependencies,
         List<ContentCatalogDataEntry> locations,
-        HashSet<Type> providerTypes)
+        HashSet<Type> providerTypes,
+        IDependencyData dependencyData)
         {
             locations.Add(new ContentCatalogDataEntry(typeof(IAssetBundleResource), bundleInternalId, bundleProvider, new object[] { bundleName }));
 
@@ -144,7 +154,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 AddressableAssetEntry entry;
                 if (!guidToEntry.TryGetValue(a.ToString(), out entry))
                     continue;
-                entry.CreateCatalogEntries(locations, true, assetProvider, bundleDependencies, null, providerTypes);
+                entry.CreateCatalogEntriesInternal(locations, true, assetProvider, bundleDependencies, null, dependencyData.AssetInfo);
             }
         }
     }

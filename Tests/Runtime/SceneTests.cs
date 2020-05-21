@@ -1,4 +1,4 @@
-﻿#if UNITY_2019_3_OR_NEWER
+#if UNITY_2019_3_OR_NEWER
 using NUnit.Framework;
 using System;
 using System.Collections;
@@ -37,8 +37,8 @@ namespace SceneTests
 #if UNITY_EDITOR
         internal override void Setup(AddressableAssetSettings settings, string tempAssetFolder)
         { 
-            var group = settings.CreateGroup("TestGroup", true, false, false, null, typeof(BundledAssetGroupSchema));
-
+            var group = settings.CreateGroup("SceneGroup", true, false, false, null, typeof(BundledAssetGroupSchema));
+            group.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.OnlyHash;
             // Create prefab
             var prefabGuid = CreatePrefab(Path.Combine(tempAssetFolder, String.Concat(prefabKey, ".prefab")));
             var prefabEntry = settings.CreateOrMoveEntry(prefabGuid, group, false, false);
@@ -104,6 +104,27 @@ namespace SceneTests
         }
 
         [UnityTest]
+        public IEnumerator PercentComplete_NeverHasDecreasedValue_WhenLoadingScene()
+        {
+            //Setup
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+
+            //Test            
+            float lastPercentComplete = 0f;
+            while (!op.IsDone)
+            {
+                Assert.IsFalse(lastPercentComplete > op.PercentComplete);
+                lastPercentComplete = op.PercentComplete;
+                yield return null;
+            }
+            Assert.True(op.PercentComplete == 1 && op.IsDone);
+            yield return op;
+
+            //Cleanup
+            yield return UnloadSceneFromHandler(op);
+        }
+
+        [UnityTest]
         public IEnumerator WhenSceneUnloaded_InstanitatedObjectsInThatSceneAreReleased()
         {
             var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
@@ -115,7 +136,7 @@ namespace SceneTests
 
             var instOp = m_Addressables.InstantiateAsync(prefabKey);
             yield return instOp;
-            Assert.AreEqual(AsyncOperationStatus.Succeeded,instOp.Status);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, instOp.Status);
             Assert.AreEqual(sceneKeys[0], instOp.Result.scene.name);
 
             yield return UnloadSceneFromHandler(op);
@@ -227,8 +248,8 @@ namespace SceneTests
 
     class SceneTests_PackedPlaymodeMode : SceneTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.PackedPlaymode; } } }
 #endif
-
-    [UnityPlatform(exclude = new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor })]
-    class SceneTests_PackedMode : SceneTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Packed; } } }
+    //[Bug: https://jira.unity3d.com/browse/ADDR-1215]
+    //[UnityPlatform(exclude = new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor })]
+    //class SceneTests_PackedMode : SceneTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Packed; } } }
 }
 #endif

@@ -76,7 +76,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             //create runtime data
             var aaContext = new AddressableAssetsBuildContext
             {
-                settings = aaSettings,
+                Settings = aaSettings,
                 runtimeData = new ResourceManagerRuntimeData(),
                 bundleToAssetGroup = null,
                 locations = new List<ContentCatalogDataEntry>(),
@@ -130,26 +130,26 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// <inheritdoc />
         protected override string ProcessGroup(AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
         {
-            float index = 0.0f;
             foreach (var entry in assetGroup.entries)
             {
-                if (entry.AssetPath == AddressableAssetEntry.ResourcesPath || entry.AssetPath == AddressableAssetEntry.EditorSceneListPath)
+                if (entry != null && !string.IsNullOrEmpty(entry.AssetPath))
                 {
-                    GatherAssetsForFolder(entry, aaContext);   
-                }
-                else
-                {
-                    FileAttributes file = File.GetAttributes(entry.AssetPath);
-                    if (file.HasFlag(FileAttributes.Directory))
+                    if (entry.AssetPath == AddressableAssetEntry.ResourcesPath || entry.AssetPath == AddressableAssetEntry.EditorSceneListPath)
                     {
                         GatherAssetsForFolder(entry, aaContext);
                     }
                     else
-                        entry.CreateCatalogEntries(aaContext.locations, false, typeof(AssetDatabaseProvider).FullName,
-                            null, null, aaContext.providerTypes);
+                    {
+                        FileAttributes file = File.GetAttributes(entry.AssetPath);
+                        if (file.HasFlag(FileAttributes.Directory))
+                        {
+                            GatherAssetsForFolder(entry, aaContext);
+                        }
+                        else
+                            entry.CreateCatalogEntries(aaContext.locations, false, typeof(AssetDatabaseProvider).FullName,
+                                null, null, aaContext.providerTypes);
+                    }
                 }
-
-                index++;
             }
 
             return string.Empty;

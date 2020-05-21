@@ -4,6 +4,20 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.9.2] - 2020-05-21
+- Improved the performance of GenerateLocationLists.
+- Fixed AssetReferenceLabelUIRestriction not working for private fields
+- Fixed AssetReferenceDrawer OnGui changing text of static variable GUIContent.none
+- Updated documentation to explain what's happening when DontDestroyOnLoad GameObjects are having their dependencies removed when the scene they originate in is unloaded.
+- Using a more efficient method of gathering the Addressable entries for the AssetReferenceDropdown UI.
+- Fixed bug surrounding how "Use AssetDatabase" build script handles deleted assets.
+- Fixed issue where ContentUpdate was throwing an exception if a dependency wasn't in the previous build.
+- PercentComplete calcluation updates to correctly take progress callbacks on ProviderOperations into account.
+- Added support for Enable Play Mode Options in 2019.3+
+- Fixed issue where diagnostic events are still being sent to the player regardless of the value of "Send Profiler Events".
+- Added error checking to make sure that a group doesn't have both a PlayerDataGroupSchema and a BundledAssetGroupSchema.
+- Fixed issue where InitializationObjects were causing the InitializationOperation to hang.
+
 ## [1.8.4] - 2020-05-20
 - Taking an updated scriptable build pipeline that reverts a recent hashing change. 
 

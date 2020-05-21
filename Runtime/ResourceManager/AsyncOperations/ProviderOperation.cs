@@ -25,13 +25,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         private Action<int, IList<object>> m_GetDepCallback;
         private Func<float> m_GetProgressCallback;
         private IResourceProvider m_Provider;
-        private AsyncOperationHandle<IList<AsyncOperationHandle>> m_DepOp;
+        internal AsyncOperationHandle<IList<AsyncOperationHandle>> m_DepOp;
         private IResourceLocation m_Location;
         private int m_ProvideHandleVersion;
         private bool m_NeedsRelease;
         int ICachable.Hash { get; set; }
         private ResourceManager m_ResourceManager;
-
+        private const float k_OperationWaitingToCompletePercentComplete = 0.99f;
         public int ProvideHandleVersion { get { return m_ProvideHandleVersion; } }
         public IResourceLocation Location { get { return m_Location; } }
 
@@ -123,26 +123,32 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get
             {
-                if (m_GetProgressCallback == null)
-                    return 0.0f;
                 try
                 {
-                    List<AsyncOperationHandle> allDependantOperations = new List<AsyncOperationHandle>() { m_DepOp };
+                    float numberOfOps = 1f;
+                    float total = 0f;
+                    if (m_GetProgressCallback != null)
+                        total += m_GetProgressCallback();
 
-                    float total = m_GetProgressCallback();
-
-                    if (m_DepOp.IsValid())
+                    if (!m_DepOp.IsValid() || m_DepOp.Result == null || m_DepOp.Result.Count == 0)
+                    {
+                        total++;
+                        numberOfOps++;
+                    }
+                    else
                     {
                         foreach (var handle in m_DepOp.Result)
-                            if (handle.IsValid())
-                                handle.GetDependencies(allDependantOperations);
+                        {
+                            total += handle.PercentComplete;
+                            numberOfOps++;
+                        }
                     }
 
-                    foreach (var handle in allDependantOperations)
-                        if(handle.IsValid())
-                            total += handle.PercentComplete;
-
-                    return total / (DependencyCount + 1);
+                    float result = total / numberOfOps;
+                    //This is done because all AssetBundle operations (m_DepOp.Result) can complete as well as the 
+                    //BundledAssetRequest operation (m_GetProgressCallBack) but this overall operation hasn't completed yet.
+                    //Once the operation has a chance to complete we short circut calling into Progress here and just return 1.0f
+                    return Mathf.Min(result, k_OperationWaitingToCompletePercentComplete);
                 }
                 catch
                 {

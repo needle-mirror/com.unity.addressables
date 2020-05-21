@@ -22,6 +22,7 @@ namespace AssetReferenceDrawerTests
         internal override void Setup(AddressableAssetSettings settings, string tempAssetFolder)
         {
             var group = settings.CreateGroup("TestStuff", true, false, false, null, typeof(BundledAssetGroupSchema));
+            group.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.OnlyHash;
             Directory.CreateDirectory(tempAssetFolder);
             var texturePath = Path.Combine(tempAssetFolder, string.Concat(GetBuildScriptTypeFromMode(BuildScriptMode), textureName, ".png"));
             CreateTextureOnPath(texturePath);

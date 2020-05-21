@@ -16,6 +16,7 @@ using UnityEngine.Serialization;
 
 [assembly: InternalsVisibleTo("Unity.Addressables.Editor.Tests")]
 [assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
+[assembly: InternalsVisibleTo("PerformanceTests.Editor")]
 
 namespace UnityEditor.AddressableAssets.Settings
 {
@@ -856,6 +857,12 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (var g in groups)
                 if (groupFilter == null || groupFilter(g))
                     g.GatherAllAssets(assets, true, true, includeSubObjects, entryFilter);
+        }
+
+        internal void GatherAllAssetReferenceDrawableEntries(List<IReferenceEntryData> assets)
+        {
+            foreach (var g in groups)
+                g.GatherAllAssetReferenceDrawableEntries(assets);
         }
 
         /// <summary>

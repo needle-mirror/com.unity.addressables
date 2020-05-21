@@ -107,7 +107,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             m_ResourceProviderData = new List<ObjectInitializationData>();
             aaContext = new AddressableAssetsBuildContext
             {
-                settings = aaSettings,
+                Settings = aaSettings,
                 runtimeData = runtimeData,
                 bundleToAssetGroup = bundleToAssetGroup,
                 locations = new List<ContentCatalogDataEntry>(),
@@ -128,7 +128,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             ExtractDataTask extractData = new ExtractDataTask();
             List<CachedAssetState> carryOverCachedState = new List<CachedAssetState>();
-            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/StreamingAssetsCopy/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
 
             var playerBuildVersion = builderInput.PlayerVersion;
             if (m_AllBundleInputDefs.Count > 0)
@@ -140,17 +140,16 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 var buildTargetGroup = builderInput.TargetGroup;
 
                 var buildParams = new AddressableAssetsBundleBuildParameters(
-                    aaContext.settings, 
+                    aaContext.Settings, 
                     aaContext.bundleToAssetGroup, 
                     buildTarget, 
                     buildTargetGroup, 
-                    aaContext.settings.buildSettings.bundleBuildPath);
+                    aaContext.Settings.buildSettings.bundleBuildPath);
 
-                var builtinShaderBundleName = aaContext.settings.DefaultGroup.Guid + "_unitybuiltinshaders.bundle";
+                var builtinShaderBundleName = aaContext.Settings.DefaultGroup.Guid + "_unitybuiltinshaders.bundle";
                 var buildTasks = RuntimeDataBuildTasks(builtinShaderBundleName);
                 buildTasks.Add(extractData);
 
-                string aaPath = aaContext.settings.AssetPath;
                 IBundleBuildResults results;
                 using (m_Log.ScopedStep(LogLevel.Info, "ContentPipeline.BuildAssetBundles"))
                 {
@@ -159,17 +158,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     if (exitCode < ReturnCode.Success)
                         return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, "SBP Error" + exitCode);
                 }
-                if (aaContext.settings == null && !string.IsNullOrEmpty(aaPath))
-                    aaContext.settings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(aaPath);
 
-                using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
-                using (m_Log.ScopedStep(LogLevel.Info, "GenerateLocationListsTask.Run"))
-                {
-                    progressTracker.UpdateTask("Generating Addressables Locations");
-                    GenerateLocationListsTask.Run(aaContext, extractData.WriteData);
-                }
-
-                var groups = aaContext.settings.groups.Where(g => g != null);
+                var groups = aaContext.Settings.groups.Where(g => g != null);
 
                 using (m_Log.ScopedStep(LogLevel.Info, "PostProcessBundles"))
                 using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
@@ -226,7 +216,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             m_Linker.AddTypes(contentCatalog.SceneProviderData.ObjectType.Value);
             m_Linker.AddTypes(contentCatalog.SceneProviderData.GetRuntimeTypes());
 
-            foreach (var io in aaContext.settings.InitializationObjects)
+            foreach (var io in aaContext.Settings.InitializationObjects)
             {
                 var provider = io as IObjectInitializationDataProvider;
                 if (provider != null)
@@ -246,9 +236,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             var opResult = AddressableAssetBuildResult.CreateResult<TResult>(settingsPath, aaContext.locations.Count);
             //save content update data if building for the player
             var allEntries = new List<AddressableAssetEntry>();
-            aaContext.settings.GetAllAssets(allEntries, false, g => g != null && g.HasSchema<ContentUpdateGroupSchema>() && g.GetSchema<ContentUpdateGroupSchema>().StaticContent);
+            aaContext.Settings.GetAllAssets(allEntries, false, g => g != null && g.HasSchema<ContentUpdateGroupSchema>() && g.GetSchema<ContentUpdateGroupSchema>().StaticContent);
 
-            var remoteCatalogLoadPath = aaContext.settings.BuildRemoteCatalog ? aaContext.settings.RemoteCatalogLoadPath.GetValue(aaContext.settings) : string.Empty;
+            var remoteCatalogLoadPath = aaContext.Settings.BuildRemoteCatalog ? aaContext.Settings.RemoteCatalogLoadPath.GetValue(aaContext.Settings) : string.Empty;
             if (extractData.BuildCache != null && ContentUpdateScript.SaveContentState(aaContext.locations, tempPath, allEntries, extractData.DependencyData, playerBuildVersion, remoteCatalogLoadPath, carryOverCachedState))
             {
                 try {
@@ -279,7 +269,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     ContentUpdateContext contentUpdateContext = new ContentUpdateContext()
                     {
                         BundleToInternalBundleIdMap = bundleToInternalId,
-                        GuidToPreviousAssetStateMap = BuildGuidToCachedAssetStateMap(builderInput.PreviousContentState, aaContext.settings),
+                        GuidToPreviousAssetStateMap = BuildGuidToCachedAssetStateMap(builderInput.PreviousContentState, aaContext.Settings),
                         IdToCatalogDataEntryMap = locationIdToCatalogEntryMap,
                         WriteData = writeData,
                         ContentState = builderInput.PreviousContentState,
@@ -329,7 +319,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             string localLoadPath = "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/" + builderInput.RuntimeCatalogFilename;
             m_CatalogBuildPath = Path.Combine(Addressables.BuildPath, builderInput.RuntimeCatalogFilename);
 
-            if (aaContext.settings.BundleLocalCatalog)
+            if (aaContext.Settings.BundleLocalCatalog)
             {
                 localLoadPath = localLoadPath.Replace(".json", ".bundle");
                 m_CatalogBuildPath = m_CatalogBuildPath.Replace(".json", ".bundle");
@@ -346,9 +336,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
 
             string[] dependencyHashes = null;
-            if (aaContext.settings.BuildRemoteCatalog)
+            if (aaContext.Settings.BuildRemoteCatalog)
             {
-                dependencyHashes = CreateRemoteCatalog(jsonText, aaContext.runtimeData.CatalogLocations, aaContext.settings, builderInput);
+                dependencyHashes = CreateRemoteCatalog(jsonText, aaContext.runtimeData.CatalogLocations, aaContext.Settings, builderInput);
             }
 
             aaContext.runtimeData.CatalogLocations.Add(new ResourceLocationData(
@@ -502,7 +492,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             if (schema == null || !schema.IncludeInBuild || !assetGroup.entries.Any())
                 return string.Empty;
 
-            var errorStr = ErrorCheckBundleSettings(schema,assetGroup, aaContext.settings);
+            var errorStr = ErrorCheckBundleSettings(schema,assetGroup, aaContext.Settings);
             if (!string.IsNullOrEmpty(errorStr))
                 return errorStr;
 
@@ -747,6 +737,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             // Writing
             buildTasks.Add(new WriteSerializedFiles());
             buildTasks.Add(new ArchiveAndCompressBundles());
+            buildTasks.Add(new GenerateLocationListsTask());
 
             return buildTasks;
         }
@@ -755,6 +746,27 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             return path.StartsWith("{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
         }
+
+        static void CopyFileWithTimestampIfDifferent(string srcPath, string destPath, IBuildLogger log)
+        {
+            if (srcPath == destPath)
+                return;
+
+            DateTime time = File.GetLastWriteTime(srcPath);
+            DateTime destTime = File.Exists(destPath) ? File.GetLastWriteTime(destPath) : new DateTime();
+
+            if (destTime == time)
+                return;
+
+            using (log.ScopedStep(LogLevel.Verbose, $"Copying File {srcPath} -> {destPath}"))
+            {
+                var directory = Path.GetDirectoryName(destPath);
+                if (!string.IsNullOrEmpty(directory))
+                    Directory.CreateDirectory(directory);
+                File.Copy(srcPath, destPath, true);
+            }
+        }
+
 
         void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> buildBundles, List<string> outputBundles, IBundleBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry, Dictionary<string, ContentCatalogDataEntry> primaryKeyToCatalogEntry)
         {
@@ -807,9 +819,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 }
 
                 var targetPath = Path.Combine(path, outputBundles[i]);
-                if (!Directory.Exists(Path.GetDirectoryName(targetPath)))
-                    Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
-                File.Copy(Path.Combine(assetGroup.Settings.buildSettings.bundleBuildPath, buildBundles[i]), targetPath, true);
+                var srcPath = Path.Combine(assetGroup.Settings.buildSettings.bundleBuildPath, buildBundles[i]);
+
+                CopyFileWithTimestampIfDifferent(srcPath, targetPath, m_Log);
+
                 registry.AddFile(targetPath);
             }
         }

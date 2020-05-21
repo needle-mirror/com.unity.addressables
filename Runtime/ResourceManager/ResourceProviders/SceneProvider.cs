@@ -102,7 +102,20 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             {
                 get
                 {
-                    return (m_Inst.m_Operation.progress + m_DepOp.PercentComplete) / 2;
+                    float depOpWeight = 0.9f;
+                    float loadOpWeight = 0.1f;
+                    float progress = 0f;
+
+                    //We will always have an instance operation but this will be null until the dependant operation is completed.
+                    if (m_Inst.m_Operation != null)
+                        progress += m_Inst.m_Operation.progress * loadOpWeight;
+
+                    if (!m_DepOp.IsDone)
+                        progress += m_DepOp.PercentComplete * depOpWeight;
+                    else
+                        progress += depOpWeight;
+
+                    return progress;
                 }
             }
 

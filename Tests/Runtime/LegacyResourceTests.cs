@@ -18,7 +18,8 @@ namespace LegacyResourcesTests
 #if UNITY_EDITOR
         internal override void Setup(AddressableAssetSettings settings, string tempAssetFolder)
         {
-            var group = settings.CreateGroup("TestStuff", true, false, false, null, typeof(BundledAssetGroupSchema));
+            var group = settings.CreateGroup("Legacy", true, false, false, null, typeof(BundledAssetGroupSchema));
+            group.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.OnlyHash;
             string resourceDirectory = Path.Combine(tempAssetFolder, "Resources");
             Directory.CreateDirectory(resourceDirectory);
             var spritePath = Path.Combine(resourceDirectory, string.Concat(GetBuildScriptTypeFromMode(BuildScriptMode), spriteName, ".png"));

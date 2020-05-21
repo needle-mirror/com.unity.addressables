@@ -55,6 +55,7 @@ static class AddressablesTestUtility
         
         if (group == null)
             group = settings.CreateGroup("TestStuff" + suffix, true, false, false, null, typeof(BundledAssetGroupSchema));
+        group.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.OnlyHash;
         settings.DefaultGroup = group;
         for (int i = 0; i < kPrefabCount; i++)
         {

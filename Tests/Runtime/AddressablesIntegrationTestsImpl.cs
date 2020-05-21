@@ -208,6 +208,30 @@ namespace AddressableAssetsIntegrationTests
                 Assert.False(op.IsDone);
                 yield return null;
             }
+
+            yield return null;
+            Assert.True(op.PercentComplete == 1 && op.IsDone);
+            yield return op;
+
+            //Cleanup
+            op.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator PercentComplete_NeverHasDecreasedValue_WhenLoadingAsset()
+        {
+            //Setup
+            yield return Init();
+            AsyncOperationHandle<GameObject> op = m_Addressables.LoadAssetAsync<GameObject>(AddressablesTestUtility.GetPrefabLabel("BASE"));
+
+            //Test            
+            float lastPercentComplete = 0f;
+            while (!op.IsDone)
+            {
+                Assert.IsFalse(lastPercentComplete > op.PercentComplete);
+                lastPercentComplete = op.PercentComplete;
+                yield return null;
+            }
             Assert.True(op.PercentComplete == 1 && op.IsDone);
             yield return op;
 

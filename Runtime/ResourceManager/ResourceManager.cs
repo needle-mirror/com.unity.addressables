@@ -115,7 +115,7 @@ namespace UnityEngine.ResourceManagement
         }
 
         internal bool CallbackHooksEnabled = true; // tests might need to disable the callback hooks to manually pump updating
-        private MonoBehaviourCallbackHooks m_CallbackHooks;
+        internal MonoBehaviourCallbackHooks m_CallbackHooks;
 
         ListWithEvents<IResourceProvider> m_ResourceProviders = new ListWithEvents<IResourceProvider>();
         IAllocationStrategy m_allocator;
@@ -218,7 +218,7 @@ namespace UnityEngine.ResourceManagement
                 RemoveUpdateReciever(updateReceiver);
         }
 
-        private void RegisterForCallbacks()
+        internal void RegisterForCallbacks()
         {
             if (CallbackHooksEnabled && m_CallbackHooks == null)
             {
