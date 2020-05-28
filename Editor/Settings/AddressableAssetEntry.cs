@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor.Build.Content;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 using UnityEngine.U2D;
@@ -710,10 +712,10 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="providerTypes">Any unknown provider types are added to this set in order to ensure they are not stripped.</param>
         public void CreateCatalogEntries(List<ContentCatalogDataEntry> entries, bool isBundled, string providerType, IEnumerable<object> dependencies, object extraData, HashSet<Type> providerTypes)
         {
-            CreateCatalogEntriesInternal(entries, isBundled, providerType, dependencies, extraData, null);
+            CreateCatalogEntriesInternal(entries, isBundled, providerType, dependencies, extraData, null, providerTypes);
         }
 
-        internal void CreateCatalogEntriesInternal(List<ContentCatalogDataEntry> entries, bool isBundled, string providerType, IEnumerable<object> dependencies, object extraData, Dictionary<GUID, AssetLoadInfo> depInfo)
+        internal void CreateCatalogEntriesInternal(List<ContentCatalogDataEntry> entries, bool isBundled, string providerType, IEnumerable<object> dependencies, object extraData, Dictionary<GUID, AssetLoadInfo> depInfo, HashSet<Type> providerTypes)
         {
             if (string.IsNullOrEmpty(AssetPath))
                 return;
@@ -729,7 +731,13 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             if (mainType != null)
+            {
+                Type runtimeProvider = GetRuntimeProviderType(providerType, mainType);
+                if (runtimeProvider != null)
+                    providerTypes.Add(runtimeProvider);
+
                 entries.Add(new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, dependencies, extraData));
+            }
 
             if (!IsScene)
             {
@@ -754,6 +762,16 @@ namespace UnityEditor.AddressableAssets.Settings
                     }
                 }
             }
+        }
+
+        internal Type GetRuntimeProviderType(string providerType, Type mainEntryType)
+        {
+            if (string.IsNullOrEmpty(providerType))
+                return null;
+
+            if (mainEntryType == typeof(SpriteAtlas))
+                return typeof(AtlasSpriteProvider);
+            return Assembly.GetAssembly(typeof(ResourceProviderBase)).GetType(providerType);
         }
     }
 }

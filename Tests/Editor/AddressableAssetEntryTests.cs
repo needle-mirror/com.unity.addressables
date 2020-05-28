@@ -6,7 +6,9 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
+using UnityEngine.U2D;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -223,6 +225,54 @@ namespace UnityEditor.AddressableAssets.Tests
 
             //Cleanup
             Directory.Delete(testAssetFolder, true);
+        }
+
+        [Test]
+        public void GetRuntimeProviderType_HandlesEmptyProviderString()
+        {
+            AddressableAssetEntry entry = new AddressableAssetEntry("12345698655", "Entry", null, false);
+            Type providerType = entry.GetRuntimeProviderType(null, typeof(GameObject));
+            Assert.IsNull(providerType);
+        }
+
+        [Test]
+        public void GetRuntimeProviderType_ReturnsAtlasProviderForSpriteAtlas()
+        {
+            AddressableAssetEntry entry = new AddressableAssetEntry("12345698655", "Entry", null, false);
+            Type providerType = entry.GetRuntimeProviderType(typeof(AssetDatabaseProvider).FullName, typeof(SpriteAtlas));
+            Assert.AreEqual(typeof(AtlasSpriteProvider),providerType);
+        }
+
+        [TestCase(typeof(AssetDatabaseProvider))]
+        [TestCase(typeof(JsonAssetProvider))]
+        [TestCase(typeof(BundledAssetProvider))]
+        [TestCase(typeof(AssetBundleProvider))]
+        [TestCase(typeof(TextDataProvider))]
+        public void GetRuntimeProviderType_ReturnsProviderTypeForNonAtlas(Type testProviderType)
+        {
+            AddressableAssetEntry entry = new AddressableAssetEntry("12345698655", "Entry", null, false);
+            Type providerType = entry.GetRuntimeProviderType(testProviderType.FullName, typeof(GameObject));
+            Assert.AreEqual(testProviderType, providerType);
+        }
+
+        [Test]
+        public void GetRuntimeProviderType_HandlesInvalidProviderString()
+        {
+            AddressableAssetEntry entry = new AddressableAssetEntry("12345698655", "Entry", null, false);
+            Type providerType = entry.GetRuntimeProviderType("NotARealProvider", typeof(GameObject));
+            Assert.IsNull(providerType);
+        }
+
+        [TestCase(typeof(AssetDatabaseProvider))]
+        [TestCase(typeof(JsonAssetProvider))]
+        [TestCase(typeof(BundledAssetProvider))]
+        [TestCase(typeof(AssetBundleProvider))]
+        [TestCase(typeof(TextDataProvider))]
+        public void GetRuntimeProviderType_HandlesNullAssetType(Type testProviderType)
+        {
+            AddressableAssetEntry entry = new AddressableAssetEntry("12345698655", "Entry", null, false);
+            Type providerType = entry.GetRuntimeProviderType(testProviderType.FullName, null);
+            Assert.AreEqual(testProviderType, providerType);
         }
     }
 } 

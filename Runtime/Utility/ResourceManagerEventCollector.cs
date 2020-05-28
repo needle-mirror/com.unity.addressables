@@ -22,7 +22,6 @@ namespace UnityEngine.AddressableAssets.Utility
     internal class ResourceManagerDiagnostics : IDisposable
     {
         ResourceManager m_ResourceManager;
-        DiagnosticEventCollector m_eventCollector;
 
         /// <summary>
         /// This class is responsible for passing events from the resource manager to the event collector, 
@@ -31,7 +30,6 @@ namespace UnityEngine.AddressableAssets.Utility
         public ResourceManagerDiagnostics(ResourceManager resourceManager)
         {
             resourceManager.RegisterDiagnosticCallback(OnResourceManagerDiagnosticEvent);
-            m_eventCollector = DiagnosticEventCollector.FindOrCreateGlobalInstance();
             m_ResourceManager = resourceManager;
         }
         Dictionary<int, DiagnosticInfo> m_cachedDiagnosticInfo = new Dictionary<int, DiagnosticInfo>();
@@ -65,13 +63,13 @@ namespace UnityEngine.AddressableAssets.Utility
             }
 
             if( diagInfo != null )
-                m_eventCollector.PostEvent( diagInfo.CreateEvent( "ResourceManager", eventContext.Type, Time.frameCount, eventContext.EventValue ) );
+                DiagnosticEventCollectorSingleton.Instance.PostEvent( diagInfo.CreateEvent( "ResourceManager", eventContext.Type, Time.frameCount, eventContext.EventValue ) );
         }
 
         public void Dispose()
         {
             m_ResourceManager?.UnregisterDiagnosticCallback(OnResourceManagerDiagnosticEvent);
-            GameObject.DestroyImmediate(m_eventCollector);
+            GameObject.DestroyImmediate(DiagnosticEventCollectorSingleton.Instance);
         }
     }
 }

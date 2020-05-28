@@ -115,7 +115,6 @@ namespace UnityEngine.ResourceManagement
         }
 
         internal bool CallbackHooksEnabled = true; // tests might need to disable the callback hooks to manually pump updating
-        internal MonoBehaviourCallbackHooks m_CallbackHooks;
 
         ListWithEvents<IResourceProvider> m_ResourceProviders = new ListWithEvents<IResourceProvider>();
         IAllocationStrategy m_allocator;
@@ -220,10 +219,9 @@ namespace UnityEngine.ResourceManagement
 
         internal void RegisterForCallbacks()
         {
-            if (CallbackHooksEnabled && m_CallbackHooks == null)
+            if (CallbackHooksEnabled)
             {
-                m_CallbackHooks = new GameObject("ResourceManagerCallbacks", typeof(MonoBehaviourCallbackHooks)).GetComponent<MonoBehaviourCallbackHooks>();
-                m_CallbackHooks.OnUpdateDelegate += Update;
+                MonoBehaviourCallbackHooks.Instance.OnUpdateDelegate += Update;
             }
         }
 
@@ -848,9 +846,8 @@ namespace UnityEngine.ResourceManagement
         /// </summary>
         public void Dispose()
         {
-            if (m_CallbackHooks != null)
-                GameObject.Destroy(m_CallbackHooks.gameObject);
-            m_CallbackHooks = null;
+            if (MonoBehaviourCallbackHooks.Exists)
+                MonoBehaviourCallbackHooks.Instance.OnUpdateDelegate -= Update;
         }
     }
 }

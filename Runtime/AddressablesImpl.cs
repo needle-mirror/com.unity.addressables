@@ -94,10 +94,10 @@ namespace UnityEngine.AddressableAssets
 
 
         Action<AsyncOperationHandle> m_OnHandleCompleteAction;
-        Action<AsyncOperationHandle<SceneInstance>> m_OnSceneHandleCompleteAction;
+        Action<AsyncOperationHandle> m_OnSceneHandleCompleteAction;
         Action<AsyncOperationHandle> m_OnHandleDestroyedAction;
         Dictionary<object, AsyncOperationHandle> m_resultToHandle = new Dictionary<object, AsyncOperationHandle>();
-        HashSet<AsyncOperationHandle<SceneInstance>> m_SceneInstances = new HashSet<AsyncOperationHandle<SceneInstance>>();
+        internal HashSet<AsyncOperationHandle> m_SceneInstances = new HashSet<AsyncOperationHandle>();
 
         internal int SceneOperationCount { get { return m_SceneInstances.Count; } }
         internal int TrackedHandleCount { get { return m_resultToHandle.Count; } }
@@ -158,11 +158,13 @@ namespace UnityEngine.AddressableAssets
                     m_SceneInstances.Remove(s);
                     break;
                 }
-                if (s.Result.Scene == scene)
+
+                var sceneHandle = s.Convert<SceneInstance>();
+                if (sceneHandle.Result.Scene == scene)
                 {
                     m_SceneInstances.Remove(s);
                     m_resultToHandle.Remove(s.Result);
-                    var op = m_ResourceManager.ReleaseScene(SceneProvider, s);
+                    var op = m_ResourceManager.ReleaseScene(SceneProvider, sceneHandle);
                     op.Completed += handle => { Release(op); };
                     break;
                 }
@@ -437,7 +439,10 @@ namespace UnityEngine.AddressableAssets
 
         AsyncOperationHandle<SceneInstance> TrackHandle(AsyncOperationHandle<SceneInstance> handle)
         {
-            handle.Completed += m_OnSceneHandleCompleteAction;
+            handle.Completed += (sceneHandle) =>
+            {
+                m_OnSceneHandleCompleteAction(sceneHandle);
+            };
             return handle;
         }
 
@@ -621,7 +626,7 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
-        void OnSceneHandleCompleted(AsyncOperationHandle<SceneInstance> handle)
+        void OnSceneHandleCompleted(AsyncOperationHandle handle)
         {
             if (handle.Status == AsyncOperationStatus.Succeeded)
             {
@@ -980,12 +985,12 @@ namespace UnityEngine.AddressableAssets
         }
 
 
-        AsyncOperationHandle<SceneInstance> LoadSceneWithChain(AsyncOperationHandle dep, object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
+        internal AsyncOperationHandle<SceneInstance> LoadSceneWithChain(AsyncOperationHandle dep, object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
         {
-            return ResourceManager.CreateChainOperation(dep, op => LoadSceneAsync(key, loadMode, activateOnLoad, priority));
+            return TrackHandle(ResourceManager.CreateChainOperation(dep, op => LoadSceneAsync(key, loadMode, activateOnLoad, priority, false)));
         }
 
-        public AsyncOperationHandle<SceneInstance> LoadSceneAsync(object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
+        public AsyncOperationHandle<SceneInstance> LoadSceneAsync(object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100, bool trackHandle = true)
         {
             if (ShouldChainRequest)
                 return LoadSceneWithChain(ChainOperation, key, loadMode, activateOnLoad, priority);
@@ -994,12 +999,16 @@ namespace UnityEngine.AddressableAssets
             if (!GetResourceLocations(key, typeof(SceneInstance), out locations))
                 return ResourceManager.CreateCompletedOperation<SceneInstance>(default(SceneInstance), new InvalidKeyException(key, typeof(SceneInstance)).Message);
 
-            return LoadSceneAsync(locations[0], loadMode, activateOnLoad, priority);
+            return LoadSceneAsync(locations[0], loadMode, activateOnLoad, priority, trackHandle);
         }
 
-        public  AsyncOperationHandle<SceneInstance> LoadSceneAsync(IResourceLocation location, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
+        public  AsyncOperationHandle<SceneInstance> LoadSceneAsync(IResourceLocation location, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100, bool trackHandle = true)
         {
-            return TrackHandle(ResourceManager.ProvideScene(SceneProvider, location, loadMode, activateOnLoad, priority));
+            var handle = ResourceManager.ProvideScene(SceneProvider, location, loadMode, activateOnLoad, priority);
+            if (trackHandle)
+                return TrackHandle(handle);
+
+            return handle;
         }
 
         public AsyncOperationHandle<SceneInstance> UnloadSceneAsync(SceneInstance scene, bool autoReleaseHandle = true)

@@ -373,6 +373,95 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void PrepGroupBundlePacking_PackSeperate_GroupChangeDoesntAffectOtherAssetsBuildInput()
+        {
+            //Setup
+            var group = Settings.CreateGroup("PrepGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+            AddressableAssetEntry e1 = new AddressableAssetEntry("123", "addr1", group, false);
+            AddressableAssetEntry e2 = new AddressableAssetEntry("456", "addr2", group, false);
+            e1.m_cachedAssetPath = "DummyPath1";
+            e2.m_cachedAssetPath = "DummyPath2";
+            group.AddAssetEntry(e1);
+            group.AddAssetEntry(e2);
+
+            List<AssetBundleBuild> buildInputDefs = new List<AssetBundleBuild>();
+            BuildScriptPackedMode.PrepGroupBundlePacking(group, buildInputDefs, BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
+
+            AssetBundleBuild b1 = buildInputDefs[0];
+            buildInputDefs.Clear();
+            group.RemoveAssetEntry(e2);
+
+            //Test
+            BuildScriptPackedMode.PrepGroupBundlePacking(group, buildInputDefs, BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
+            AssetBundleBuild b2 = buildInputDefs[0];
+            Assert.AreEqual(b1.assetBundleName, b2.assetBundleName);
+
+            //Cleanup
+            Settings.RemoveGroup(group);
+
+        }
+
+        [Test]
+        public void PrepGroupBundlePacking_PackTogether_GroupChangeDoesAffectBuildInput()
+        {
+            //Setup
+            var group = Settings.CreateGroup("PrepGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+            AddressableAssetEntry e1 = new AddressableAssetEntry("123", "addr1", group, false);
+            AddressableAssetEntry e2 = new AddressableAssetEntry("456", "addr2", group, false);
+            e1.m_cachedAssetPath = "DummyPath1";
+            e2.m_cachedAssetPath = "DummyPath2";
+            group.AddAssetEntry(e1);
+            group.AddAssetEntry(e2);
+
+            List<AssetBundleBuild> buildInputDefs = new List<AssetBundleBuild>();
+            BuildScriptPackedMode.PrepGroupBundlePacking(group, buildInputDefs, BundledAssetGroupSchema.BundlePackingMode.PackTogether);
+
+            AssetBundleBuild b1 = buildInputDefs[0];
+            buildInputDefs.Clear();
+            group.RemoveAssetEntry(e2);
+
+            //Test
+            BuildScriptPackedMode.PrepGroupBundlePacking(group, buildInputDefs, BundledAssetGroupSchema.BundlePackingMode.PackTogether);
+            AssetBundleBuild b2 = buildInputDefs[0];
+            Assert.AreNotEqual(b1.assetBundleName, b2.assetBundleName);
+
+            //Cleanup
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
+        public void PrepGroupBundlePacking_PackTogetherByLabel_GroupChangeDoesAffectBuildInput()
+        {
+            //Setup
+            var group = Settings.CreateGroup("PrepGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+            AddressableAssetEntry e1 = new AddressableAssetEntry("123", "addr1", group, false);
+            AddressableAssetEntry e2 = new AddressableAssetEntry("456", "addr2", group, false);
+            e1.m_cachedAssetPath = "DummyPath1";
+            e2.m_cachedAssetPath = "DummyPath2";
+            string label = "testlabel";
+            e1.SetLabel(label, true, true, false);
+            e2.SetLabel(label, true, true, false);
+            group.AddAssetEntry(e1);
+            group.AddAssetEntry(e2);
+
+            List<AssetBundleBuild> buildInputDefs = new List<AssetBundleBuild>();
+            BuildScriptPackedMode.PrepGroupBundlePacking(group, buildInputDefs, BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel);
+
+            AssetBundleBuild b1 = buildInputDefs[0];
+            buildInputDefs.Clear();
+            e2.SetLabel(label, false, true, false);
+
+            //Test
+            BuildScriptPackedMode.PrepGroupBundlePacking(group, buildInputDefs, BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel);
+            AssetBundleBuild b2 = buildInputDefs[0];
+            Assert.AreNotEqual(b1.assetBundleName, b2.assetBundleName);
+
+            //Cleanup
+            Settings.RemoveGroup(group);
+            Settings.RemoveLabel(label, false);
+        }
+
+        [Test]
         public void CreateCatalogFiles_BundleLocalCatalog_BuildRemoteCatalog_ShouldCreateCatalogBundleAndRemoteJsonCatalog()
         {
             // Creating a bundle causes a domain reload and settings need to be persisted to be able to access profile variables.

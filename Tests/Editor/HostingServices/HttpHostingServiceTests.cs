@@ -59,15 +59,16 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             if (!string.IsNullOrEmpty(m_ContentRoot) && Directory.Exists(m_ContentRoot))
                 Directory.Delete(m_ContentRoot, true);
         }
-
-        [Test]
-        public void ShouldServeRequestedFiles()
+        
+        [TestCase("subdir","subdir1","subdir3")]
+        [TestCase("subdír☠","subdirãúñ","subdirü", TestName = "ShouldServeFilesWSpecialCharacters")]
+        public void ShouldServeRequestedFiles(string subdir1, string subdir2, string subdir3)
         {
             var fileNames = new[]
             {
                 Path.GetRandomFileName(),
-                Path.Combine("subdir", Path.GetRandomFileName()),
-                Path.Combine("subdir1", Path.Combine("subdir2", Path.GetRandomFileName()))
+                Path.Combine(subdir1, Path.GetRandomFileName()),
+                Path.Combine(subdir2, Path.Combine(subdir3, Path.GetRandomFileName()))
             };
 
             foreach (var fileName in fileNames)
@@ -93,7 +94,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
                 }
             }
         }
-
+        
         [Test]
         public void ShouldRespondWithStatus404IfFileDoesNotExist()
         {

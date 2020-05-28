@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.U2D;
 
 namespace UnityEngine.ResourceManagement.ResourceProviders
@@ -18,8 +19,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 providerInterface.Complete<Sprite>(null, false, new System.Exception($"Sprite atlas failed to load for location {providerInterface.Location.PrimaryKey}."));
                 return;
             }
-            
-            var sprite = atlas.GetSprite(providerInterface.ResourceManager.TransformInternalId(providerInterface.Location));
+
+            var key = providerInterface.ResourceManager.TransformInternalId(providerInterface.Location);
+            ResourceManagerConfig.ExtractKeyAndSubKey(key, out string mainKey, out string subKey);
+            string spriteKey = string.IsNullOrEmpty(subKey) ? mainKey : subKey;
+            var sprite = atlas.GetSprite(spriteKey);
             providerInterface.Complete(sprite, sprite != null, sprite != null ? null : new System.Exception($"Sprite failed to load for location {providerInterface.Location.PrimaryKey}."));
         }
     }

@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2020-05-28
+- Fixed hosting service not working for special characters in addressable asset address
+- Fixed bug where tracked scene instance operation handles weren't matching the handles returned to the user.
+- Fixed bug where Sprite Atlas ResourceProvider wasn't getting added to list of ResourceProviders.
+- Fixed bug where pack separately groups were rebuilding all bundles when an asset was added or removed from the group.
+
 ## [1.9.2] - 2020-05-21
 - Improved the performance of GenerateLocationLists.
 - Fixed AssetReferenceLabelUIRestriction not working for private fields

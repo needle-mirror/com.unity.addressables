@@ -25,9 +25,11 @@ namespace UnityEditor.AddressableAssets.Tests
         public void CleanupEventCollector()
         {
             EditorApplication.isPlaying = true;
-            DiagnosticEventCollector.FindOrCreateGlobalInstance();
+            Assert.NotNull(DiagnosticEventCollectorSingleton.Instance);
+            Assert.True(DiagnosticEventCollectorSingleton.Exists);
             EditorApplication.isPlaying = false;
 
+            Assert.False(DiagnosticEventCollectorSingleton.Exists);
             Assert.AreEqual(0, CountResourcesByName("EventCollector"));
         }
 
@@ -36,8 +38,11 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             EditorApplication.isPlaying = true;
             DelayedActionManager.AddAction(new Action(() => {}));
+            Assert.True(DelayedActionManager.Exists);
+            Assert.NotNull(DelayedActionManager.Instance);
             EditorApplication.isPlaying = false;
-            
+            Assert.False(DelayedActionManager.Exists);
+
             Assert.AreEqual(0, CountResourcesByName("DelayedActionManager"));
             
         }

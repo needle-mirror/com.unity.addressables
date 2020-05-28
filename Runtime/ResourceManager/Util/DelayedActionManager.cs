@@ -8,25 +8,23 @@ using UnityEditor;
 
 namespace UnityEngine.ResourceManagement.Util
 {
-    internal class DelayedActionManager : MonoBehaviour
+    internal class DelayedActionManager : ComponentSingleton<DelayedActionManager>
     {
-
         struct DelegateInfo
         {
             static int s_Id;
             int m_Id;
             Delegate m_Delegate;
-            float m_InvocationTime;
             object[] m_Target;
             public DelegateInfo(Delegate d, float invocationTime, params object[] p)
             {
                 m_Delegate = d;
                 m_Id = s_Id++;
                 m_Target = p;
-                m_InvocationTime = invocationTime;
+                InvocationTime = invocationTime;
             }
 
-            public float InvocationTime { get { return m_InvocationTime; } }
+            public float InvocationTime { get; private set; }
             public override string ToString()
             {
                 if (m_Delegate == null || m_Delegate.Method.DeclaringType == null)
@@ -38,7 +36,7 @@ namespace UnityEngine.ResourceManagement.Util
                     n += sep + o;
                     sep = ", ";
                 }
-                return n + ") @" + m_InvocationTime;
+                return n + ") @" + InvocationTime;
             }
 
             public void Invoke()
@@ -57,7 +55,6 @@ namespace UnityEngine.ResourceManagement.Util
         LinkedList<DelegateInfo> m_DelayedActions = new LinkedList<DelegateInfo>();
         Stack<LinkedListNode<DelegateInfo>> m_NodeCache = new Stack<LinkedListNode<DelegateInfo>>(10);
         int m_CollectionIndex;
-        static DelayedActionManager s_Instance;
         bool m_DestroyOnCompletion;
         LinkedListNode<DelegateInfo> GetNode(ref DelegateInfo del)
         {
@@ -69,11 +66,11 @@ namespace UnityEngine.ResourceManagement.Util
             }
             return new LinkedListNode<DelegateInfo>(del);
         }
+
         public static void Clear()
         {
-            if (s_Instance != null)
-                s_Instance.DestroyWhenComplete();
-            s_Instance = null;
+            if (Exists)
+                Instance.DestroyWhenComplete();
         }
 
         void DestroyWhenComplete()
@@ -83,19 +80,7 @@ namespace UnityEngine.ResourceManagement.Util
 
         public static void AddAction(Delegate action, float delay = 0, params object[] parameters)
         {
-            if (s_Instance == null)
-            { 
-                s_Instance = new GameObject("DelayedActionManager", typeof(DelayedActionManager)).GetComponent<DelayedActionManager>();
-                s_Instance.gameObject.hideFlags = HideFlags.HideAndDontSave;
-#if UNITY_EDITOR
-                if (!Application.isPlaying)
-                {
-//                    Debug.Log("DelayedActionManager called outside of play mode, registering with EditorApplication.update.");
-                    EditorApplication.update += s_Instance.LateUpdate;
-                }
-#endif
-            }
-            s_Instance.AddActionInternal(action, delay, parameters);
+            Instance.AddActionInternal(action, delay, parameters);
         }
 
         void AddActionInternal(Delegate action, float delay, params object[] parameters)
@@ -123,22 +108,27 @@ namespace UnityEngine.ResourceManagement.Util
                 m_Actions[m_CollectionIndex].Add(del);
         }
 
+        #if UNITY_EDITOR
         void Awake()
         {
-            gameObject.hideFlags = HideFlags.HideAndDontSave;
-            DontDestroyOnLoad(gameObject);
+            if (!Application.isPlaying)
+            {
+                //                    Debug.Log("DelayedActionManager called outside of play mode, registering with EditorApplication.update.");
+                EditorApplication.update += LateUpdate;
+            }
         }
+        #endif
 
         public static bool IsActive
         {
             get
             {
-                if (s_Instance == null)
+                if (!Exists)
                     return false;
-                if (s_Instance.m_DelayedActions.Count > 0)
+                if (Instance.m_DelayedActions.Count > 0)
                     return true;
-                for (int i = 0; i < s_Instance.m_Actions.Length; i++)
-                    if (s_Instance.m_Actions[i].Count > 0)
+                for (int i = 0; i < Instance.m_Actions.Length; i++)
+                    if (Instance.m_Actions[i].Count > 0)
                         return true;
                 return false;
             }
@@ -154,7 +144,7 @@ namespace UnityEngine.ResourceManagement.Util
             var t = Time.unscaledTime;
             do
             {
-                s_Instance.InternalLateUpdate(t);
+                Instance.InternalLateUpdate(t);
                 if(timeAdvanceAmount >= 0)
                     t += timeAdvanceAmount;
                 else
@@ -200,29 +190,8 @@ namespace UnityEngine.ResourceManagement.Util
         
         private void OnApplicationQuit()
         {
-            if(s_Instance != null)
-                Destroy(s_Instance.gameObject);
+            if(Exists)
+                Destroy(Instance.gameObject);
         }
-        
-#if UNITY_EDITOR
-        [InitializeOnLoad]
-        public static class PlayStateNotifier
-        {
-            static PlayStateNotifier()
-            {
-                EditorApplication.playModeStateChanged += ModeChanged;
-            }
-
-            static void ModeChanged(PlayModeStateChange state)
-            {
-                if (state == PlayModeStateChange.ExitingPlayMode)
-                {
-                    if(s_Instance != null)
-                        DestroyImmediate(s_Instance.gameObject);
-                }
-            }
-        }
-#endif
     }
-
 }

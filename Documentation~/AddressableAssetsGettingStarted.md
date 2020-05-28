@@ -95,6 +95,8 @@ To load a single sub-object in an asset, you could do this:
 The names available within an asset are visible in the main Addressables group editor window. 
 In addition, you can use an [`AssetReference`](../api/UnityEngine.AddressableAssets.AssetReference.html) to access the sub-object of an asset.  See notes in the below section. 
 
+For `SpriteAtlas` objects specifically, be sure that the **Include In Build** is enabled on the `SpriteAtlas` object.  If **Include in Build** is disabled, then the `SpriteAtlas` cannot be built in any form, including the content build done by Addressables.
+
 ### Using the AssetReference class
 The [`AssetReference`](../api/UnityEngine.AddressableAssets.AssetReference.html) class provides a way to access Addressable Assets without needing to know their addresses. To access an Addressable Asset using the `AssetReference` class:
 

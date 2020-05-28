@@ -33,7 +33,7 @@ namespace DiagnosticEventCollectorIntegrationTests
         [Test]
         public void WhenPostProfilerEventsIsTrue_DiagnosticEventsCollectorIsCreated()
         {
-            Assert.AreEqual(1, Resources.FindObjectsOfTypeAll(typeof(DiagnosticEventCollector)).Length);
+            Assert.AreEqual(1, Resources.FindObjectsOfTypeAll(typeof(DiagnosticEventCollectorSingleton)).Length);
         }
     }
 
@@ -44,7 +44,7 @@ namespace DiagnosticEventCollectorIntegrationTests
         [Test]
         public void WhenPostProfilerEventsIsFalse_DiagnosticEventsCollectorIsNotCreated()
         {
-            Assert.AreEqual(0, Resources.FindObjectsOfTypeAll(typeof(DiagnosticEventCollector)).Length);
+            Assert.AreEqual(0, Resources.FindObjectsOfTypeAll(typeof(DiagnosticEventCollectorSingleton)).Length);
         }
     }
 }

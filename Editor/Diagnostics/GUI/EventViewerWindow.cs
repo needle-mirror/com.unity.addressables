@@ -42,7 +42,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         void OnEnable()
         {
             EditorConnection.instance.Initialize();
-            EditorConnection.instance.Register(DiagnosticEventCollector.PlayerConnectionGuid, OnPlayerConnectionMessage);
+            EditorConnection.instance.Register(DiagnosticEventCollectorSingleton.PlayerConnectionGuid, OnPlayerConnectionMessage);
             EditorConnection.instance.RegisterConnection(OnPlayerConnection);
             EditorConnection.instance.RegisterDisconnection(OnPlayerDisconnection);
 
@@ -58,7 +58,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
         void OnDisable()
         {
-            EditorConnection.instance.Unregister(DiagnosticEventCollector.PlayerConnectionGuid, OnPlayerConnectionMessage);
+            EditorConnection.instance.Unregister(DiagnosticEventCollectorSingleton.PlayerConnectionGuid, OnPlayerConnectionMessage);
             RegisterEventHandler(false);
             EditorApplication.playModeStateChanged -= OnEditorPlayModeChanged;
         }
@@ -88,7 +88,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         void RegisterEventHandler(bool reg)
         {
             if(ProjectConfigData.postProfilerEvents)
-                DiagnosticEventCollector.RegisterEventHandler(OnEditorPlayModeEvent, reg, false);
+                DiagnosticEventCollectorSingleton.RegisterEventHandler(OnEditorPlayModeEvent, reg, false);
         }
 
         void OnEditorPlayModeEvent(DiagnosticEvent evt)

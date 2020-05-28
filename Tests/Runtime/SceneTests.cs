@@ -11,9 +11,11 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.SceneManagement;
 #endif
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
@@ -238,6 +240,44 @@ namespace SceneTests
             Assert.AreEqual(op.Result.m_Operation, activateScene);
 
             yield return UnloadSceneFromHandler(op);
+        }
+
+        [UnityTest]
+        public IEnumerator SceneTests_LoadSceneHandle_MatchesTrackedHandle()
+        {
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            yield return op;
+
+            Assert.AreEqual(1, m_Addressables.m_SceneInstances.Count);
+            Assert.IsTrue(m_Addressables.m_SceneInstances.Contains(op));
+
+            yield return UnloadSceneFromHandler(op);
+        }
+
+        [UnityTest]
+        public IEnumerator SceneTests_LoadSceneWithChainHandle_MatchesTrackedHandle()
+        {
+            AddressablesImpl impl = new AddressablesImpl(new DefaultAllocationStrategy());
+            var op = m_Addressables.LoadSceneWithChain(impl.InitializeAsync(), sceneKeys[0], LoadSceneMode.Additive);
+            yield return op;
+
+            Assert.AreEqual(1, m_Addressables.m_SceneInstances.Count);
+            Assert.IsTrue(m_Addressables.m_SceneInstances.Contains(op));
+
+            yield return UnloadSceneFromHandler(op);
+        }
+
+        [UnityTest]
+        public IEnumerator SceneTests_UnloadScene_RemovesTrackedInstanceOp()
+        {
+            AddressablesImpl impl = new AddressablesImpl(new DefaultAllocationStrategy());
+            var op = m_Addressables.LoadSceneWithChain(impl.InitializeAsync(), sceneKeys[0], LoadSceneMode.Additive);
+            yield return op;
+
+            Assert.AreEqual(1, m_Addressables.m_SceneInstances.Count);
+            yield return UnloadSceneFromHandler(op);
+
+            Assert.AreEqual(0, m_Addressables.m_SceneInstances.Count);
         }
     }
 

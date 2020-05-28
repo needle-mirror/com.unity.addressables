@@ -13,10 +13,10 @@ using UnityEngine.ResourceManagement.Util;
 namespace UnityEngine.ResourceManagement.Diagnostics
 {
     /// <summary>
-    /// Collects ResourceManager events and passed them on the registered event handlers.  In editor play mode, events are passed directly to the ResourceManager profiler window.  
+    /// Collects ResourceManager events and passed them on the registered event handlers.  In editor play mode, events are passed directly to the ResourceManager profiler window.
     /// In player builds, events are sent to the editor via the EditorConnection API.
     /// </summary>
-    public class DiagnosticEventCollector : MonoBehaviour
+    public class DiagnosticEventCollectorSingleton : ComponentSingleton<DiagnosticEventCollectorSingleton>
     {
         static Guid s_editorConnectionGuid;
 
@@ -24,21 +24,6 @@ namespace UnityEngine.ResourceManagement.Diagnostics
         List<DiagnosticEvent> k_UnhandledEvents = new List<DiagnosticEvent>();
 
         DelegateList<DiagnosticEvent> s_EventHandlers = DelegateList<DiagnosticEvent>.CreateWithGlobalCache();
-        static DiagnosticEventCollector s_Collector;
-        /// <summary>
-        /// Retrieves the global event collector.  A new one is created if needed.
-        /// </summary>
-        /// <returns>The event collector global instance.</returns>
-        public static DiagnosticEventCollector FindOrCreateGlobalInstance()
-        {
-            if (s_Collector == null)
-            {
-                var go = new GameObject("EventCollector", typeof(DiagnosticEventCollector));
-                s_Collector = go.GetComponent<DiagnosticEventCollector>();
-                go.hideFlags = HideFlags.DontSave;// HideFlags.HideAndDontSave;
-            }
-            return s_Collector;
-        }
 
         /// <summary>
         /// The guid used for the PlayerConnect messaging system.
@@ -53,6 +38,8 @@ namespace UnityEngine.ResourceManagement.Diagnostics
             }
         }
 
+        protected override string GetGameObjectName() => "EventCollector";
+
         /// <summary>
         /// Register for diagnostic events.  If there is no collector, this will fail and return false.
         /// </summary>
@@ -62,9 +49,9 @@ namespace UnityEngine.ResourceManagement.Diagnostics
         /// <returns>True if registered, false if not.</returns>
         public static bool RegisterEventHandler(Action<DiagnosticEvent> handler, bool register, bool create)
         {
-            var ec = s_Collector;
-            if (ec == null && create && register)
-                ec = FindOrCreateGlobalInstance();
+            DiagnosticEventCollectorSingleton ec = null;
+            if (!Exists && create && register)
+                ec = Instance;
             if (ec == null)
                 return false;
             if (register)
@@ -76,7 +63,7 @@ namespace UnityEngine.ResourceManagement.Diagnostics
 
         void RegisterEventHandler(Action<DiagnosticEvent> handler)
         {
-            Debug.Assert(k_UnhandledEvents != null, "DiagnosticEventCollector.RegisterEventHandler - s_unhandledEvents == null.");
+            Debug.Assert(k_UnhandledEvents != null, "DiagnosticEventCollectorSingleton.RegisterEventHandler - s_unhandledEvents == null.");
             if (handler == null)
                 throw new ArgumentNullException("handler");
             s_EventHandlers.Add(handler);
@@ -109,7 +96,7 @@ namespace UnityEngine.ResourceManagement.Diagnostics
             else if (diagnosticEvent.Stream == (int)ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
                 m_CreatedEvents.Remove(diagnosticEvent.ObjectId);
 
-            Debug.Assert(k_UnhandledEvents != null, "DiagnosticEventCollector.PostEvent - s_unhandledEvents == null.");
+            Debug.Assert(k_UnhandledEvents != null, "DiagnosticEventCollectorSingleton.PostEvent - s_unhandledEvents == null.");
 
             if (s_EventHandlers.Count > 0)
                 s_EventHandlers.Invoke(diagnosticEvent);
@@ -119,9 +106,8 @@ namespace UnityEngine.ResourceManagement.Diagnostics
 
         void Awake()
         {
-            DontDestroyOnLoad(gameObject);
 #if !UNITY_EDITOR
-            RegisterEventHandler((DiagnosticEvent diagnosticEvent) => {PlayerConnection.instance.Send(DiagnosticEventCollector.PlayerConnectionGuid, diagnosticEvent.Serialize()); });
+            RegisterEventHandler((DiagnosticEvent diagnosticEvent) => {PlayerConnection.instance.Send(DiagnosticEventCollectorSingleton.PlayerConnectionGuid, diagnosticEvent.Serialize()); });
 #endif
         }
 
@@ -145,33 +131,61 @@ namespace UnityEngine.ResourceManagement.Diagnostics
                 }
             }
         }
-        
-        private void OnApplicationQuit()
+    }
+
+    /// <summary>
+    /// Collects ResourceManager events and passed them on the registered event handlers.  In editor play mode, events are passed directly to the ResourceManager profiler window.  
+    /// In player builds, events are sent to the editor via the EditorConnection API.
+    /// </summary>
+    public class DiagnosticEventCollector : MonoBehaviour
+    {
+        static DiagnosticEventCollector s_Collector;
+
+        /// <summary>
+        /// The guid used for the PlayerConnect messaging system.
+        /// </summary>
+        public static Guid PlayerConnectionGuid => DiagnosticEventCollectorSingleton.PlayerConnectionGuid;
+
+        /// <summary>
+        /// Retrieves the global event collector.  A new one is created if needed.
+        /// </summary>
+        /// <returns>The event collector global instance.</returns>
+        public static DiagnosticEventCollector FindOrCreateGlobalInstance()
         {
-            if(s_Collector != null)
-                Destroy(s_Collector.gameObject);
+            if (s_Collector == null)
+            {
+                var go = new GameObject("EventCollector", typeof(DiagnosticEventCollector));
+                s_Collector = go.GetComponent<DiagnosticEventCollector>();
+                go.hideFlags = HideFlags.DontSave;// HideFlags.HideAndDontSave;
+            }
+            return s_Collector;
         }
-        
+
+        /// <summary>
+        /// Register for diagnostic events.  If there is no collector, this will fail and return false.
+        /// </summary>
+        /// <param name="handler">The handler method action.</param>
+        /// <param name="register">Register or unregister.</param>
+        /// <param name="create">If true, the event collector will be created if needed.</param>
+        /// <returns>True if registered, false if not.</returns>
+        public static bool RegisterEventHandler(Action<DiagnosticEvent> handler, bool register, bool create) => DiagnosticEventCollectorSingleton.RegisterEventHandler(handler, register, create);
+
+        /// <summary>
+        /// Unregister event hander
+        /// </summary>
+        /// <param name="handler">Method or delegate that will handle the events</param>
+        public void UnregisterEventHandler(Action<DiagnosticEvent> handler) => DiagnosticEventCollectorSingleton.Instance.UnregisterEventHandler(handler);
+
+        /// <summary>
+        /// Send a <see cref="DiagnosticEvent"/> event to all registered handlers
+        /// </summary>
+        /// <param name="diagnosticEvent">The event to send</param>
+        public void PostEvent(DiagnosticEvent diagnosticEvent) => DiagnosticEventCollectorSingleton.Instance.PostEvent(diagnosticEvent);
+
 #if UNITY_EDITOR
-        [InitializeOnLoad]
         public static class PlayStateNotifier
         {
-            static PlayStateNotifier()
-            {
-                EditorApplication.playModeStateChanged += ModeChanged;
-            }
-
-            static void ModeChanged(PlayModeStateChange state)
-            {
-
-                if (state == PlayModeStateChange.ExitingPlayMode)
-                {
-                    if(s_Collector != null)
-                        DestroyImmediate(s_Collector.gameObject);
-                }
-            }
         }
 #endif
-        
     }
 }

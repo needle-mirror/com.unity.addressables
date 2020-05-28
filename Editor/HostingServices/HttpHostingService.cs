@@ -206,7 +206,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             var c = MyHttpListener.EndGetContext(ar);
             MyHttpListener.BeginGetContext(HandleRequest, null);
 
-            var relativePath = c.Request.RawUrl.Substring(1);
+            var relativePath = c.Request.Url.LocalPath.Substring(1);
 
             var fullPath = FindFileInContentRoots(relativePath);
             var result = fullPath != null ? ResultCode.Ok : ResultCode.NotFound;

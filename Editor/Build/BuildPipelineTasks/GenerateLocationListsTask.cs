@@ -154,7 +154,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 AddressableAssetEntry entry;
                 if (!guidToEntry.TryGetValue(a.ToString(), out entry))
                     continue;
-                entry.CreateCatalogEntriesInternal(locations, true, assetProvider, bundleDependencies, null, dependencyData.AssetInfo);
+                entry.CreateCatalogEntriesInternal(locations, true, assetProvider, bundleDependencies, null, dependencyData.AssetInfo, providerTypes);
             }
         }
     }

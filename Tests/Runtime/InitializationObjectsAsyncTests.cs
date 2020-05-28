@@ -36,7 +36,7 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
     {
         //We're checking to make sure we've created a new ResourceManagerCallbacks object.  If this isn't null
         //then we won't create a new one.  This would never be needed in a legitimate scenario.
-        m_Addressables.ResourceManager.m_CallbackHooks = null; 
+        MonoBehaviourCallbackHooks.DestroySingleton();
         int startCount = Resources.FindObjectsOfTypeAll<MonoBehaviourCallbackHooks>().Length;
 
         InitalizationObjectsOperation op = new InitalizationObjectsOperation();

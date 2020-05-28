@@ -134,22 +134,6 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.AreEqual(1, provider.UpdateCount);
         }
 
-        [UnityTest]
-        public IEnumerator WhenResourceManagerCallbackHooksAreEnabled_ResourceManagerUpdatesProvidersAndCleansUp()
-        {
-            int beforeGOCount = GameObject.FindObjectsOfType<MonoBehaviourCallbackHooks>().Length;
-            MockProvider provider = new MockProvider();
-            m_ResourceManager.CallbackHooksEnabled = true;
-            m_ResourceManager.ResourceProviders.Add(provider);
-            yield return null;
-            Assert.AreEqual(1, provider.UpdateCount);
-            Assert.AreEqual(beforeGOCount+1, GameObject.FindObjectsOfType<MonoBehaviourCallbackHooks>().Length);
-            m_ResourceManager.Dispose();
-            yield return null;
-            Assert.AreEqual(beforeGOCount, GameObject.FindObjectsOfType<MonoBehaviourCallbackHooks>().Length);
-        }
-
-
         class MockInstanceProvider : IInstanceProvider
         {
             public Func<ResourceManager, AsyncOperationHandle<GameObject>, InstantiationParameters, GameObject> ProvideInstanceCallback;

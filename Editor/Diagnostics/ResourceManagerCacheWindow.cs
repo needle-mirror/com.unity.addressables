@@ -69,13 +69,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             m_cacheTree.Reload();
             EditorApplication.playModeStateChanged += OnEditorPlayModeChanged;
             if (ProjectConfigData.postProfilerEvents)
-                DiagnosticEventCollector.RegisterEventHandler(OnEvent, true, false);
+                DiagnosticEventCollectorSingleton.RegisterEventHandler(OnEvent, true, false);
         }
 
         private void OnDisable()
         {
             if (ProjectConfigData.postProfilerEvents)
-                DiagnosticEventCollector.RegisterEventHandler(OnEvent, false, false);
+                DiagnosticEventCollectorSingleton.RegisterEventHandler(OnEvent, false, false);
             EditorApplication.playModeStateChanged -= OnEditorPlayModeChanged;
         }
 
@@ -128,9 +128,9 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             if (ProjectConfigData.postProfilerEvents)
             {
                 if (state == PlayModeStateChange.EnteredPlayMode)
-                    DiagnosticEventCollector.RegisterEventHandler(OnEvent, true, false);
+                    DiagnosticEventCollectorSingleton.RegisterEventHandler(OnEvent, true, false);
                 else if (state == PlayModeStateChange.EnteredEditMode)
-                    DiagnosticEventCollector.RegisterEventHandler(OnEvent, false, false);
+                    DiagnosticEventCollectorSingleton.RegisterEventHandler(OnEvent, false, false);
             }
         }
 

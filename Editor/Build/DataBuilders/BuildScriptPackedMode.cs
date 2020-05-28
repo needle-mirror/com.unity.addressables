@@ -589,7 +589,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 foreach (var a in assetGroup.entries)
                     a.GatherAllAssets(allEntries, true, true, false);
                 GenerateBuildInputDefinitions(allEntries, bundleInputDefs,
-                    HashingMethods.Calculate(new HashSet<string>(assetGroup.entries.Select(e => e.guid))).ToString(), "all");
+                    HashingMethods.Calculate(new HashSet<string>(allEntries.Select(e => e.guid))).ToString(), "all");
             }
             else
             {
@@ -600,7 +600,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         var allEntries = new List<AddressableAssetEntry>();
                         a.GatherAllAssets(allEntries, true, true, false);
                         GenerateBuildInputDefinitions(allEntries, bundleInputDefs,
-                            HashingMethods.Calculate(new HashSet<string>(assetGroup.entries.Select(e => e.guid))).ToString(), a.address);
+                            HashingMethods.Calculate(new HashSet<string>(allEntries.Select(e => e.guid))).ToString(), a.address);
                     }
                 }
                 else
@@ -624,7 +624,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         foreach (var a in entryGroup.Value)
                             a.GatherAllAssets(allEntries, true, true, false);
                         GenerateBuildInputDefinitions(allEntries, bundleInputDefs,
-                            HashingMethods.Calculate(new HashSet<string>(assetGroup.entries.Select(e => e.guid))).ToString(), entryGroup.Key);
+                            HashingMethods.Calculate(new HashSet<string>(allEntries.Select(e => e.guid))).ToString(), entryGroup.Key);
                     }
                 }
             }

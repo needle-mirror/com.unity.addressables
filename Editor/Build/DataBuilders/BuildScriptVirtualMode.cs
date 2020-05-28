@@ -237,10 +237,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             contentCatalog.InstanceProviderData = ObjectInitializationData.CreateSerializedInitializationData(instanceProviderType.Value);
             contentCatalog.SceneProviderData = ObjectInitializationData.CreateSerializedInitializationData(sceneProviderType.Value);
+
             //save catalog
             WriteFile(string.Format(m_PathFormat, "", "catalog"), JsonUtility.ToJson(contentCatalog), builderInput.Registry);
 
-   
             foreach (var io in aaSettings.InitializationObjects)
             {
                 if (io is IObjectInitializationDataProvider)
