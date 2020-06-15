@@ -82,6 +82,13 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// The size of the bundle, in bytes.
         /// </summary>
         public long BundleSize { get { return m_BundleSize; } set { m_BundleSize = value; } }
+
+        [SerializeField]
+        bool m_UseCrcForCachedBundles;
+        /// <summary>
+        /// If false, the CRC will not be used when loading bundles from the cache.
+        /// </summary>
+        public bool UseCrcForCachedBundle {get {return m_UseCrcForCachedBundles;} set {m_UseCrcForCachedBundles = value;}}
         /// <summary>
         /// Computes the amount of data needed to be downloaded for this bundle.
         /// </summary>
@@ -119,20 +126,31 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         DownloadHandlerAssetBundle m_downloadHandler;
         AsyncOperation m_RequestOperation;
         WebRequestQueueOperation m_WebRequestQueueOperation;
-        ProvideHandle m_ProvideHandle;
-        AssetBundleRequestOptions m_Options;
+        internal ProvideHandle m_ProvideHandle;
+        internal AssetBundleRequestOptions m_Options;
         int m_Retries;
 
-        UnityWebRequest CreateWebRequest(IResourceLocation loc)
+        internal UnityWebRequest CreateWebRequest(IResourceLocation loc)
         {
             var url = m_ProvideHandle.ResourceManager.TransformInternalId(loc);
             if (m_Options == null)
                 return UnityWebRequestAssetBundle.GetAssetBundle(url);
-
-            var webRequest = !string.IsNullOrEmpty(m_Options.Hash) ?
-                UnityWebRequestAssetBundle.GetAssetBundle(url, Hash128.Parse(m_Options.Hash), m_Options.Crc) :
-                UnityWebRequestAssetBundle.GetAssetBundle(url, m_Options.Crc);
-
+            UnityWebRequest webRequest;
+            if (!string.IsNullOrEmpty(m_Options.Hash))
+            {
+                CachedAssetBundle cachedBundle = new CachedAssetBundle(m_Options.BundleName, Hash128.Parse(m_Options.Hash));
+#if ENABLE_CACHING
+                if(m_Options.UseCrcForCachedBundle || !Caching.IsVersionCached(cachedBundle))
+                    webRequest = UnityWebRequestAssetBundle.GetAssetBundle(url, cachedBundle, m_Options.Crc);
+                else
+                    webRequest = UnityWebRequestAssetBundle.GetAssetBundle(url, cachedBundle);
+#else
+                webRequest = UnityWebRequestAssetBundle.GetAssetBundle(url, cachedBundle, m_Options.Crc);
+#endif
+            }
+            else
+                webRequest = UnityWebRequestAssetBundle.GetAssetBundle(url, m_Options.Crc);
+            
             if (m_Options.Timeout > 0)
                 webRequest.timeout = m_Options.Timeout;
             if (m_Options.RedirectLimit > 0)
@@ -231,15 +249,41 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_downloadHandler = webReq.downloadHandler as DownloadHandlerAssetBundle;
                 m_downloadHandler.Dispose();
                 m_downloadHandler = null;
-                if (m_Retries++ < m_Options.RetryCount)
+                bool forcedRetry = false;
+                string message = string.Format("Web request {0} failed with error '{1}', retrying ({2}/{3})...", webReq.url, webReq.error, m_Retries, m_Options.RetryCount);
+#if ENABLE_CACHING
+                if (!string.IsNullOrEmpty(m_Options.Hash))
                 {
-                    Debug.LogFormat("Web request {0} failed with error '{1}', retrying ({2}/{3})...", webReq.url, webReq.error, m_Retries, m_Options.RetryCount);
-                    BeginOperation();
+                    CachedAssetBundle cab = new CachedAssetBundle(m_Options.BundleName, Hash128.Compute(m_Options.Hash));
+                    if (Caching.IsVersionCached(cab))
+                    {
+                        message = string.Format("Web request {0} failed to load from cache with error '{1}'. The cached AssetBundle will be cleared from the cache and re-downloaded. Retrying...", webReq.url, webReq.error);
+                        Caching.ClearCachedVersion(cab.name, cab.hash);
+                        if (m_Options.RetryCount == 0 && m_Retries == 0)
+                        {
+                            Debug.LogFormat(message);
+                            BeginOperation();
+                            m_Retries++; //Will prevent us from entering an infinite loop of retrying if retry count is 0
+                            forcedRetry = true;
+                        }
+                    }
                 }
-                else
+#endif
+                if (!forcedRetry)
                 {
-                    var exception = new Exception(string.Format("RemoteAssetBundleProvider unable to load from url {0}, result='{1}'.", webReq.url, webReq.error));
-                    m_ProvideHandle.Complete<AssetBundleResource>(null, false, exception);
+                    if (m_Retries < m_Options.RetryCount)
+                    {
+                        Debug.LogFormat(message);
+                        BeginOperation();
+                        m_Retries++;
+                    }
+                    else
+                    {
+                        var exception = new Exception(string.Format(
+                            "RemoteAssetBundleProvider unable to load from url {0}, result='{1}'.", webReq.url,
+                            webReq.error));
+                        m_ProvideHandle.Complete<AssetBundleResource>(null, false, exception);
+                    }
                 }
             }
             webReq.Dispose();
@@ -262,6 +306,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             m_RequestOperation = null;
         }
     }
+
     /// <summary>
     /// IResourceProvider for asset bundles.  Loads bundles via UnityWebRequestAssetBundle API if the internalId starts with "http".  If not, it will load the bundle via AssetBundle.LoadFromFileAsync.
     /// </summary>

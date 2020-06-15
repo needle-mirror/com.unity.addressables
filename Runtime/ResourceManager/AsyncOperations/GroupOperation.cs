@@ -11,6 +11,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
     {
         Action<AsyncOperationHandle> m_InternalOnComplete;
         int m_LoadedCount;
+        bool m_ReleaseDependenciesOnFailure = true;
+
         public GroupOperation()
         {
             m_InternalOnComplete = OnOperationCompleted;
@@ -59,7 +61,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                         break;
                     }
                 }
-                Complete(Result, success, errorMsg);
+                Complete(Result, success, errorMsg, m_ReleaseDependenciesOnFailure);
             }
         }
 
@@ -90,9 +92,10 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         }
 
 
-        public void Init(List<AsyncOperationHandle> operations)
+        public void Init(List<AsyncOperationHandle> operations, bool releaseDependenciesOnFailure = true)
         {
             Result = new List<AsyncOperationHandle>(operations);
+            m_ReleaseDependenciesOnFailure = releaseDependenciesOnFailure;
         }
 
         void OnOperationCompleted(AsyncOperationHandle op)

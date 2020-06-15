@@ -216,7 +216,28 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get
             {
-                return Task as System.Threading.Tasks.Task<object>;
+#if UNITY_WEBGL
+                Debug.LogError("Multithreaded operation are not supported on WebGL.  Unable to aquire Task.");
+                return default;
+#else
+                if (Status == AsyncOperationStatus.Failed)
+                {
+                    return System.Threading.Tasks.Task.FromResult<object>(null);
+                }
+                if (Status == AsyncOperationStatus.Succeeded)
+                {
+                    return System.Threading.Tasks.Task.FromResult<object>(Result);
+                }
+                var handle = WaitHandle;
+                return System.Threading.Tasks.Task.Factory.StartNew<object>((Func<object, object>)(o =>
+                {
+                    var asyncOperation = o as AsyncOperationBase<TObject>;
+                    if (asyncOperation == null)
+                        return default(object);
+                    handle.WaitOne();
+                    return (object)asyncOperation.Result;
+                }), this);
+#endif
             }
         }
 
@@ -358,11 +379,27 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// <remarks>
         /// An operation is considered to have failed silently if success is true and if errorMsg isn't null or empty.
         /// The exception handler will be called in cases of silent failures.
+        /// Any failed operations will call Release on any dependencies that succeeded.
         /// </remarks>
         /// <param name="result">The result object for the operation.</param>
         /// <param name="success">True if successful or if the operation failed silently.</param>
         /// <param name="errorMsg">The error message if the operation has failed.</param>
         public void Complete(TObject result, bool success, string errorMsg)
+        {
+            Complete(result, success, errorMsg, true);
+        }
+        /// <summary>
+        /// Complete the operation and invoke events. 
+        /// </summary>
+        /// <remarks>
+        /// An operation is considered to have failed silently if success is true and if errorMsg isn't null or empty.
+        /// The exception handler will be called in cases of silent failures.
+        /// </remarks>
+        /// <param name="result">The result object for the operation.</param>
+        /// <param name="success">True if successful or if the operation failed silently.</param>
+        /// <param name="errorMsg">The error message if the operation has failed.</param>
+        /// <param name="releaseDependenciesOnFailure">When true, failed operations will release any dependencies that succeeded.</param>
+        public void Complete(TObject result, bool success, string errorMsg, bool releaseDependenciesOnFailure)
         {
             IUpdateReceiver upOp = this as IUpdateReceiver;
             if (m_UpdateCallbacks != null && upOp != null)
@@ -379,6 +416,17 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
             if (m_Status == AsyncOperationStatus.Failed)
             {
+                if (releaseDependenciesOnFailure)
+                {
+                    List<AsyncOperationHandle> deps = new List<AsyncOperationHandle>();
+                    GetDependencies(deps);
+                    foreach (var depOp in deps)
+                    {
+                        if (depOp.Status == AsyncOperationStatus.Succeeded)
+                            depOp.Release();
+                    }
+                }
+
                 m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationFail, 0, errorMsg));
 
                 ICachable cachedOperation = this as ICachable;

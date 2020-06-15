@@ -146,7 +146,21 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 SetDirty(true);
             }
         }
-
+        [SerializeField]
+        [Tooltip("If true, the CRC (Cyclic Redundancy Check) of the asset bundle is used to check the integrity.")]
+        bool m_UseAssetBundleCrcForCachedBundles = true;
+        /// <summary>
+        /// If true, the CRC and Hash values of the asset bundle are used to determine if a bundle can be loaded from the local cache instead of downloaded.
+        /// </summary>
+        public bool UseAssetBundleCrcForCachedBundles
+        {
+            get { return m_UseAssetBundleCrcForCachedBundles; }
+            set
+            {
+                m_UseAssetBundleCrcForCachedBundles = value;
+                SetDirty(true);
+            }
+        }
         [FormerlySerializedAs("m_timeout")]
         [SerializeField]
         [Tooltip("Sets UnityWebRequest to attempt to abort after the number of seconds in timeout have passed. (Only applies to remote asset bundles)")]
@@ -413,6 +427,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 EditorGUILayout.PropertyField(so.FindProperty("m_ForceUniqueProvider"), true);
                 EditorGUILayout.PropertyField(so.FindProperty("m_UseAssetBundleCache"), true);
                 EditorGUILayout.PropertyField(so.FindProperty("m_UseAssetBundleCrc"), true);
+                EditorGUILayout.PropertyField(so.FindProperty("m_UseAssetBundleCrcForCachedBundles"), true);
                 EditorGUILayout.PropertyField(so.FindProperty("m_Timeout"), true);
                 EditorGUILayout.PropertyField(so.FindProperty("m_ChunkedTransfer"), true);
                 EditorGUILayout.PropertyField(so.FindProperty("m_RedirectLimit"), true);
@@ -549,6 +564,19 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                     UseAssetBundleCrc = newUseAssetBundleCrc;
                     foreach (var schema in otherBundledSchemas)
                         schema.UseAssetBundleCrc = UseAssetBundleCrc;
+                }
+                EditorGUI.showMixedValue = false;
+
+                //UseAssetBundleCrcForCachedBundles
+                prop = so.FindProperty("m_UseAssetBundleCrcForCachedBundles");
+                ShowMixedValue(prop, otherSchemas, typeof(bool), "m_UseAssetBundleCrcForCachedBundles");
+                EditorGUI.BeginChangeCheck();
+                bool newUseAssetBundleCrcForCache = (bool)EditorGUILayout.Toggle(prop.displayName, UseAssetBundleCrcForCachedBundles);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    UseAssetBundleCrcForCachedBundles = newUseAssetBundleCrcForCache;
+                    foreach (var schema in otherBundledSchemas)
+                        schema.UseAssetBundleCrcForCachedBundles = UseAssetBundleCrcForCachedBundles;
                 }
                 EditorGUI.showMixedValue = false;
 

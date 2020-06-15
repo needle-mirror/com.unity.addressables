@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -151,6 +151,27 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             Assert.AreEqual(1, op.Result.Count);
             var updateOp = aa.UpdateCatalogs(op.Result, false);
             aa.Release(op);
+
+            yield return updateOp;
+            Assert.IsNotNull(updateOp.Result);
+            Assert.AreEqual(1, updateOp.Result.Count);
+            Assert.AreEqual(kNewLocatorId, updateOp.Result[0].LocatorId);
+            aa.Release(updateOp);
+        }
+
+        [UnityTest]
+        public IEnumerator UpdateContent_UpdatesCatalogs_Returns_ListOfLocators_WhenCheckForUpdateIsNotCalled()
+        {
+            var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
+            var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
+            var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
+            var aa = new AddressablesImpl(null);
+            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
+            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
+            aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
+            aa.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
+
+            var updateOp = aa.UpdateCatalogs(null, false);
 
             yield return updateOp;
             Assert.IsNotNull(updateOp.Result);

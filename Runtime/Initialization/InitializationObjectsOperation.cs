@@ -24,6 +24,12 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         protected override void Execute()
         {
             var rtd = m_RtdOp.Result;
+            if (rtd == null)
+            {
+                Addressables.LogError("RuntimeData is null.  Please ensure you have built the correct Player Content.");
+                Complete(true, true, "");
+                return;
+            }
 
             List<AsyncOperationHandle> initOperations = new List<AsyncOperationHandle>();
             foreach (var i in rtd.InitializationObjects)

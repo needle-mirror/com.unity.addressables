@@ -10,7 +10,9 @@ namespace UnityEditor.AddressableAssets.GUI
     public class LabelWindow : EditorWindow
     {
         ReorderableList m_LabelNamesRl;
-        AddressableAssetSettings m_Settings;
+        private AddressableAssetSettings m_Settings;
+        private Vector2 m_ScrollPosition;
+        private int m_BorderSpacing = 7;
 
         public void Intialize(AddressableAssetSettings settings)
         {
@@ -27,9 +29,11 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void OnGUI()
         {
-            GUILayout.Space(7);
             GUILayout.BeginVertical(EditorStyles.label);
+            GUILayout.Space(m_BorderSpacing);
+            m_ScrollPosition = GUILayout.BeginScrollView(m_ScrollPosition);
             m_LabelNamesRl.DoLayoutList(); 
+            GUILayout.EndScrollView();
             GUILayout.EndVertical();
         }
         

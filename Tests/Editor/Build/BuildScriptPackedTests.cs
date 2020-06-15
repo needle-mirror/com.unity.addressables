@@ -38,7 +38,8 @@ namespace UnityEditor.AddressableAssets.Tests
         private AddressableAssetSettings m_PersistedSettings = null;
         protected new AddressableAssetSettings Settings => m_PersistedSettings != null ? m_PersistedSettings : base.Settings;
 
-        private const string k_SchemaTestFolder = k_TestConfigFolder + "/SchemaTests";
+        //hard coded since this valu is used in static attribute properties
+        private const string k_SchemaTestFolder = "Assets/BuildScriptPackedTests_Tests/SchemaTests";
 
         [SetUp]
         protected void Setup()
@@ -465,7 +466,7 @@ namespace UnityEditor.AddressableAssets.Tests
         public void CreateCatalogFiles_BundleLocalCatalog_BuildRemoteCatalog_ShouldCreateCatalogBundleAndRemoteJsonCatalog()
         {
             // Creating a bundle causes a domain reload and settings need to be persisted to be able to access profile variables.
-            m_PersistedSettings = AddressableAssetSettings.Create(k_TestConfigFolder, k_TestConfigName, true, true);
+            m_PersistedSettings = AddressableAssetSettings.Create(ConfigFolder, k_TestConfigName, true, true);
             Setup();
 
             Settings.BundleLocalCatalog = true;

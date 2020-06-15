@@ -11,8 +11,13 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.AddressableAssets.ResourceProviders;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
+using static UnityEditor.AddressableAssets.Settings.AddressablesFileEnumeration;
 
 [assembly: InternalsVisibleTo("Unity.Addressables.Editor.Tests")]
 [assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
@@ -104,10 +109,10 @@ namespace UnityEditor.AddressableAssets.Settings
                 string guid;
                 long localId;
                 if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(this, out guid, out localId))
-                    return AddressableAssetSettingsDefaultObject.DefaultAssetPath;
+                    throw new Exception($"{nameof(AddressableAssetSettings)} is not persisted.  Unable to determine AssetPath.");
                 var assetPath = AssetDatabase.GUIDToAssetPath(guid);
                 if (string.IsNullOrEmpty(assetPath))
-                    return AddressableAssetSettingsDefaultObject.DefaultAssetPath;
+                    throw new Exception($"{nameof(AddressableAssetSettings)} - Unable to determine AssetPath from guid {guid}.");
                 return assetPath;
             }
         }
@@ -854,15 +859,24 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="entryFilter">A method to filter entries.  Entries will be processed if filter is null, or it returns TRUE</param>
         public void GetAllAssets(List<AddressableAssetEntry> assets, bool includeSubObjects, Func<AddressableAssetGroup, bool> groupFilter = null, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
-            foreach (var g in groups)
-                if (groupFilter == null || groupFilter(g))
-                    g.GatherAllAssets(assets, true, true, includeSubObjects, entryFilter);
+            using(var cache = new AddressablesFileEnumerationCache(this, false, null))
+            {
+                foreach (var g in groups)
+                    if (g != null && (groupFilter == null || groupFilter(g)))
+                        g.GatherAllAssets(assets, true, true, includeSubObjects, entryFilter);
+            }
         }
 
         internal void GatherAllAssetReferenceDrawableEntries(List<IReferenceEntryData> assets)
         {
-            foreach (var g in groups)
-                g.GatherAllAssetReferenceDrawableEntries(assets);
+            using (var cache = new AddressablesFileEnumerationCache(this, false, null))
+            {
+                foreach (var g in groups)
+                {
+                    if (g != null)
+                        g.GatherAllAssetReferenceDrawableEntries(assets);
+                }
+            }
         }
 
         /// <summary>
@@ -888,7 +902,6 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             profileSettings.OnAfterDeserialize(this);
             buildSettings.OnAfterDeserialize(this);
-            Validate();
             HostingServicesManager.OnEnable();
         }
 
@@ -988,6 +1001,8 @@ namespace UnityEditor.AddressableAssets.Settings
                 {
                     Directory.CreateDirectory(configFolder);
                     AssetDatabase.CreateAsset(aa, path);
+                    aa = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
+                    aa.Validate();
                 }
 
                 if (createDefaultGroups)
@@ -1540,7 +1555,12 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (string str in importedAssets)
             {
                 var assetType = AssetDatabase.GetMainAssetTypeAtPath(str);
-
+                if (typeof(AddressableAssetSettings).IsAssignableFrom(assetType))
+                {
+                    var settings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(str);
+                    if (settings != null)
+                        settings.Validate();
+                }
                 if (typeof(AddressableAssetGroup).IsAssignableFrom(assetType))
                 {
                     AddressableAssetGroup group = aa.FindGroup(Path.GetFileNameWithoutExtension(str));
@@ -1770,6 +1790,11 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
             }
             AssetDatabase.Refresh();
+        }
+
+        internal AsyncOperationHandle<IResourceLocator> CreatePlayModeInitializationOperation(AddressablesImpl addressables)
+        {
+            return addressables.ResourceManager.StartOperation(new FastModeInitializationOperation(addressables, this), default );
         }
     }
 }

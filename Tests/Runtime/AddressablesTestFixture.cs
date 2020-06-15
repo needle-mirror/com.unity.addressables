@@ -108,6 +108,7 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
         }
         IDataBuilder b = GetBuilderOfType(settings, GetBuildScriptTypeFromMode(BuildScriptMode));
         b.BuildData<AddressableAssetBuildResult>(buildContext);
+        PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath + m_UniqueTestName, PlayerPrefs.GetString(Addressables.kAddressablesRuntimeDataPath, ""));
     }
 
     static IDataBuilder GetBuilderOfType(AddressableAssetSettings settings, Type modeType)
@@ -139,6 +140,10 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
     {
         if (BuildScriptMode == TestBuildScriptMode.Packed || BuildScriptMode == TestBuildScriptMode.PackedPlaymode)
             return "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/settings" + m_UniqueTestName + ".json";
+        else if (BuildScriptMode == TestBuildScriptMode.Fast)
+        {
+            return PlayerPrefs.GetString(Addressables.kAddressablesRuntimeDataPath + m_UniqueTestName, "");
+        }
         else
         {
             return string.Format("{0}Library/com.unity.addressables/settings_{1}.json", "file://{UnityEngine.Application.dataPath}/../", m_UniqueTestName);

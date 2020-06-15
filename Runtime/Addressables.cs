@@ -422,16 +422,35 @@ namespace UnityEngine.AddressableAssets
         {
             return LoadAssetsAsync(locations, callback);
         }
-
+        
         /// <summary>
-        /// Load multiple assets
+        /// Load multiple assets, based on list of locations provided.
+        /// If any fail, all successful loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.  
         /// </summary>
         /// <param name="locations">The locations of the assets.</param>
-        /// <param name="callback">Callback Action that is called per load operation.</param>        
+        /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<IResourceLocation> locations, Action<TObject> callback)
         {
-            return m_Addressables.LoadAssetsAsync(locations, callback);
+            return m_Addressables.LoadAssetsAsync(locations, callback, true);
+        }
+        
+        /// <summary>
+        /// Load multiple assets, based on list of locations provided.
+        /// </summary>
+        /// <param name="locations">The locations of the assets.</param>
+        /// <param name="callback">Callback Action that is called per load operation.</param>
+        /// <param name="releaseDependenciesOnFailure">
+        /// If all matching locations succeed, this parameter is ignored.
+        /// When true, if any matching location fails, all loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.  
+        /// When false, if any matching location fails, the returned .Result will be an IList of size equal to the number of locations attempted.  Any failed location will
+        /// correlate to a null in the IList, while successful loads will correlate to a TObject in the list. The .Status will still be Failed.
+        /// When true, op does not need to be released if anything fails, when false, it must always be released. 
+        /// </param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<IResourceLocation> locations, Action<TObject> callback, bool releaseDependenciesOnFailure)
+        {
+            return m_Addressables.LoadAssetsAsync(locations, callback, releaseDependenciesOnFailure);
         }
 
         /// <summary>
@@ -447,9 +466,13 @@ namespace UnityEngine.AddressableAssets
         {
             return LoadAssetsAsync(keys, callback, mode);
         }
-
+        
         /// <summary>
-        /// Load mutliple assets
+        /// Load multiple assets.
+        /// Each key in the provided list will be translated into a list of locations.  Those many lists will be combined
+        /// down to one based on the provided MergeMode.
+        /// If any locations from the final list fail, all successful loads and dependencies will be released.  The returned
+        /// .Result will be null, and .Status will be Failed.   
         /// </summary>
         /// <param name="keys">List of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
@@ -457,7 +480,28 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<object> keys, Action<TObject> callback, MergeMode mode)
         {
-            return m_Addressables.LoadAssetsAsync(keys, callback, mode);
+            return m_Addressables.LoadAssetsAsync(keys, callback, mode, true);
+        }
+        
+        /// <summary>
+        /// Load multiple assets.
+        /// Each key in the provided list will be translated into a list of locations.  Those many lists will be combined
+        /// down to one based on the provided MergeMode.
+        /// </summary>
+        /// <param name="keys">List of keys for the locations.</param>
+        /// <param name="callback">Callback Action that is called per load operation.</param>
+        /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
+        /// <param name="releaseDependenciesOnFailure">
+        /// If all matching locations succeed, this parameter is ignored.
+        /// When true, if any matching location fails, all loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.  
+        /// When false, if any matching location fails, the returned .Result will be an IList of size equal to the number of locations attempted.  Any failed location will
+        /// correlate to a null in the IList, while successful loads will correlate to a TObject in the list. The .Status will still be Failed.
+        /// When true, op does not need to be released if anything fails, when false, it must always be released. 
+        /// </param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<object> keys, Action<TObject> callback, MergeMode mode, bool releaseDependenciesOnFailure)
+        {
+            return m_Addressables.LoadAssetsAsync(keys, callback, mode, releaseDependenciesOnFailure);
         }
 
         /// <summary>
@@ -472,16 +516,35 @@ namespace UnityEngine.AddressableAssets
         {
             return LoadAssetsAsync(key, callback);
         }
-
+        
         /// <summary>
-        /// Load mutliple assets
+        /// Load all assets that match the provided key.
+        /// If any fail, all successful loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.  
         /// </summary>
         /// <param name="key">Key for the locations.</param>
-        /// <param name="callback">Callback Action that is called per load operation.</param>
+        /// <param name="callback">Callback Action that is called per load operation (per loaded asset).</param>
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(object key, Action<TObject> callback)
         {
-            return m_Addressables.LoadAssetsAsync(key, callback);
+            return m_Addressables.LoadAssetsAsync(key, callback, true);
+        }
+        
+        /// <summary>
+        /// Load all assets that match the provided key.
+        /// </summary>
+        /// <param name="key">Key for the locations.</param>
+        /// <param name="callback">Callback Action that is called per load operation (per loaded asset).</param>
+        /// <param name="releaseDependenciesOnFailure">
+        /// If all matching locations succeed, this parameter is ignored.
+        /// When true, if any matching location fails, all loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.  
+        /// When false, if any matching location fails, the returned .Result will be an IList of size equal to the number of locations attempted.  Any failed location will
+        /// correlate to a null in the IList, while successful loads will correlate to a TObject in the list. The .Status will still be Failed.
+        /// When true, op does not need to be released if anything fails, when false, it must always be released. 
+        /// </param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(object key, Action<TObject> callback,  bool releaseDependenciesOnFailure)
+        {
+            return m_Addressables.LoadAssetsAsync(key, callback, releaseDependenciesOnFailure);
         }
 
         /// <summary>

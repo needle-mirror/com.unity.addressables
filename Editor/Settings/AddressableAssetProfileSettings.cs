@@ -230,6 +230,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
                 foreach (var p in ps.profiles)
                     p.ReplaceVariableValueSubString(currRefStr, newRefStr);
+                ps.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, null, false);
             }
 
             [FormerlySerializedAs("m_inlineUsage")]
@@ -665,6 +666,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 pro.values.RemoveAll(x => x.id == variableId);
             }
             m_ProfileEntryNames.RemoveAll(x => x.Id == variableId);
+            SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, null, false);
         }
 
         /// <summary>

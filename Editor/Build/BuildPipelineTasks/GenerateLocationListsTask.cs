@@ -9,6 +9,7 @@ using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using static UnityEditor.AddressableAssets.Settings.AddressablesFileEnumeration;
 
 namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 {
@@ -33,6 +34,9 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
         [InjectContext]
         IDependencyData m_DependencyData;
+
+        [InjectContext(ContextUsage.In, true)]
+        IBuildLogger m_Log;
 #pragma warning restore 649
 
         /// <summary>
@@ -41,7 +45,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         /// <returns>The success or failure ReturnCode</returns>
         public ReturnCode Run()
         {
-            return RunInternal(m_AaBuildContext, m_WriteData, m_DependencyData);
+            return RunInternal(m_AaBuildContext, m_WriteData, m_DependencyData, m_Log);
         }
 
         /// <summary>
@@ -53,10 +57,10 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         [Obsolete("This method uses nonoptimized code. Use nonstatic version Run() instead.")]
         public static ReturnCode Run(IAddressableAssetsBuildContext aaBuildContext, IBundleWriteData writeData)
         {
-            return RunInternal(aaBuildContext, writeData, null);
+            return RunInternal(aaBuildContext, writeData, null, null);
         }
 
-        internal static ReturnCode RunInternal(IAddressableAssetsBuildContext aaBuildContext, IBundleWriteData writeData, IDependencyData dependencyData)
+        internal static ReturnCode RunInternal(IAddressableAssetsBuildContext aaBuildContext, IBundleWriteData writeData, IDependencyData dependencyData, IBuildLogger logger)
         {
             var aaContext = aaBuildContext as AddressableAssetsBuildContext;
             if (aaContext == null)
@@ -86,21 +90,26 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
                 assetList.Add(k.Key);
             }
-            var assetGroupToBundle = (aaContext.assetGroupToBundles = new Dictionary<AddressableAssetGroup, List<string>>());
-            foreach (KeyValuePair<string, List<GUID>> kvp in bundleToAssets)
-            {
-                AddressableAssetGroup assetGroup = aaSettings.DefaultGroup;
-                string groupGuid;
-                if (bundleToAssetGroup.TryGetValue(kvp.Key, out groupGuid))
-                    assetGroup = aaSettings.FindGroup(g => g != null && g.Guid == groupGuid);
 
-                List<string> bundles;
-                if (!assetGroupToBundle.TryGetValue(assetGroup, out bundles))
-                    assetGroupToBundle.Add(assetGroup, bundles = new List<string>());
-                bundles.Add(kvp.Key);
-                HashSet<string> bundleDeps = null;
-                dependencySetForBundle.TryGetValue(kvp.Key, out bundleDeps);
-                CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetBundleProviderName(assetGroup), GetAssetProviderName(assetGroup), kvp.Value, bundleDeps, locations, aaContext.providerTypes, dependencyData);
+            var assetGroupToBundle = (aaContext.assetGroupToBundles = new Dictionary<AddressableAssetGroup, List<string>>());
+
+            using (var cache = new AddressablesFileEnumerationCache(aaSettings, true, logger))
+            {
+                foreach (KeyValuePair<string, List<GUID>> kvp in bundleToAssets)
+                {
+                    AddressableAssetGroup assetGroup = aaSettings.DefaultGroup;
+                    string groupGuid;
+                    if (bundleToAssetGroup.TryGetValue(kvp.Key, out groupGuid))
+                        assetGroup = aaSettings.FindGroup(g => g != null && g.Guid == groupGuid);
+
+                    List<string> bundles;
+                    if (!assetGroupToBundle.TryGetValue(assetGroup, out bundles))
+                        assetGroupToBundle.Add(assetGroup, bundles = new List<string>());
+                    bundles.Add(kvp.Key);
+                    HashSet<string> bundleDeps = null;
+                    dependencySetForBundle.TryGetValue(kvp.Key, out bundleDeps);
+                    CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetBundleProviderName(assetGroup), GetAssetProviderName(assetGroup), kvp.Value, bundleDeps, locations, aaContext.providerTypes, dependencyData);
+                }
             }
 
             return ReturnCode.Success;

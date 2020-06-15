@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement;
-using UnityEditor;
 using UnityEngine.TestTools;
 using NUnit.Framework;
 using System.Collections;
@@ -24,21 +23,8 @@ namespace AddressableAssetsIntegrationTests
         Action<AsyncOperationHandle, Exception> m_PrevHandler;
         
         protected const string k_TestConfigName = "AddressableAssetSettings.Tests";
-        protected const string k_TestConfigFolder = "Assets/AddressableAssetsData_AddressableAssetSettingsTests";
+        protected const string k_TestConfigFolder = "Assets/AddressableAssetsData_AddressableAssetSettingsIntegrationTests";
 
-#if UNITY_EDITOR
-        private UnityEditor.AddressableAssets.Settings.AddressableAssetSettings m_Settings;
-        protected UnityEditor.AddressableAssets.Settings.AddressableAssetSettings Settings
-        {
-            get
-            {
-                if (m_Settings == null)
-                    m_Settings =
-                        UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.Create(k_TestConfigFolder, k_TestConfigName, true, true);
-                return m_Settings;
-            }
-        }
-#endif
         protected abstract string TypeName { get; }
         protected virtual string PathFormat { get { return "Assets/{0}_AssetsToDelete_{1}"; } }
 
@@ -96,7 +82,6 @@ namespace AddressableAssetsIntegrationTests
                     runtimeSettingsPath = GetRuntimePath(currentInitType, "BASE");
 #endif
                     runtimeSettingsPath = m_Addressables.ResolveInternalId(runtimeSettingsPath);
-                    Debug.LogFormat("Initializing from path {0}", runtimeSettingsPath);
                     yield return m_Addressables.InitializeAsync(runtimeSettingsPath, "BASE", false);
 
                     foreach (var locator in m_Addressables.ResourceLocators)
@@ -146,6 +131,10 @@ namespace AddressableAssetsIntegrationTests
     class AddressablesIntegrationTestsFastMode : AddressablesIntegrationTests
     {
         protected override string TypeName { get { return "BuildScriptFastMode"; } }
+        protected override string GetRuntimePath(string testType, string suffix)
+        {
+            return PlayerPrefs.GetString(Addressables.kAddressablesRuntimeDataPath + TypeName, "");
+        }
     }
 
     class AddressablesIntegrationTestsVirtualMode : AddressablesIntegrationTests
@@ -161,7 +150,6 @@ namespace AddressableAssetsIntegrationTests
                 Hash = hash
             };
         }
-
     }
 
 

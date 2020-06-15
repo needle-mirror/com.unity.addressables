@@ -13,9 +13,9 @@ namespace UnityEditor.AddressableAssets.Tests
         protected override void OnInit()
         {
             m_TestSchemaObject = ScriptableObject.CreateInstance<CustomTestSchema>();
-            AssetDatabase.CreateAsset(m_TestSchemaObject, k_TestConfigFolder + "/testSchemaObject.asset");
+            AssetDatabase.CreateAsset(m_TestSchemaObject, GetAssetPath("testSchemaObject.asset"));
             m_TestSchemaObjectSubClass = ScriptableObject.CreateInstance<CustomTestSchemaSubClass>();
-            AssetDatabase.CreateAsset(m_TestSchemaObjectSubClass, k_TestConfigFolder + "/testSchemaObjectSubClass.asset");
+            AssetDatabase.CreateAsset(m_TestSchemaObjectSubClass, GetAssetPath("testSchemaObjectSubClass.asset"));
         }
 
        private static string ObjectToFilename(UnityEngine.Object obj)

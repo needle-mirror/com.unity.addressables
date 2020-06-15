@@ -105,12 +105,20 @@ namespace UnityEditor.AddressableAssets.GUI
 
         protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
         {
-            SortChildren(root);
-            var rows = base.BuildRows(root);
-            if (string.IsNullOrEmpty(searchString))
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                var rows = base.BuildRows(root);
+                SortHierarchical(rows);
                 return rows;
-
-            return Search(rows);
+            }
+            if (!string.IsNullOrEmpty(customSearchString))
+            {
+                SortChildren(root);
+                return Search(base.BuildRows(root));
+            }
+            
+            SortChildren(root);
+            return base.BuildRows(root);
         }
 
         protected IList<TreeViewItem> Search(IList<TreeViewItem> rows)
@@ -168,6 +176,14 @@ namespace UnityEditor.AddressableAssets.GUI
             searchString = string.Empty;
             m_SearchedEntries.Clear();
         }
+        
+        internal void SwapSearchType()
+        {
+            string temp = customSearchString;
+            customSearchString = searchString;
+            searchString = temp;
+            m_SearchedEntries.Clear();
+        }
 
         void SortChildren(TreeViewItem root)
         {
@@ -180,7 +196,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        void SortHierarchical(List<TreeViewItem> children)
+        void SortHierarchical(IList<TreeViewItem> children)
         {
             if (children == null)
                 return;

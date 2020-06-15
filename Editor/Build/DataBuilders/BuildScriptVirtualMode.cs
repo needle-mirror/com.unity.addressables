@@ -125,7 +125,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             if (m_AllBundleInputDefinitions.Count > 0)
             {
-                if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                if (!BuildUtility.CheckModifiedScenesAndAskToSave())
                     return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, "Unsaved scenes");
 
                 var buildTarget = builderInput.Target;

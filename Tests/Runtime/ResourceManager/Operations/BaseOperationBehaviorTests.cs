@@ -174,6 +174,6 @@ namespace UnityEngine.ResourceManagement.Tests
 
             handle.Release();
         }
-        
+
     }
 }

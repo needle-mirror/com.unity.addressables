@@ -12,7 +12,11 @@ namespace UnityEditor.AddressableAssets.Tests
     public abstract class AddressableAssetTestBase
     {
         protected const string k_TestConfigName = "AddressableAssetSettings.Tests";
-        protected const string k_TestConfigFolder = "Assets/AddressableAssetsData_AddressableAssetSettingsTests";
+        protected string ConfigFolder => $"Assets/{GetType()}_Tests";
+        protected string GetAssetPath(string assetName)
+        {
+            return $"{ConfigFolder}/{assetName}";
+        }
 
         private AddressableAssetSettings m_Settings;
 
@@ -21,7 +25,7 @@ namespace UnityEditor.AddressableAssets.Tests
             get
             {
                 if (m_Settings == null)
-                    m_Settings = AddressableAssetSettings.Create(k_TestConfigFolder, k_TestConfigName, true, PersistSettings);
+                    m_Settings = AddressableAssetSettings.Create(ConfigFolder, k_TestConfigName, true, PersistSettings);
                 return m_Settings;
             }
         }
@@ -35,26 +39,30 @@ namespace UnityEditor.AddressableAssets.Tests
             //TODO: Remove when NSImage warning issue on bokken is fixed
             Application.logMessageReceived += CheckLogForWarning;
 
-            if (Directory.Exists(k_TestConfigFolder))
-                AssetDatabase.DeleteAsset(k_TestConfigFolder);
-            if (!Directory.Exists(k_TestConfigFolder))
+            if (Directory.Exists(ConfigFolder))
             {
-                Directory.CreateDirectory(k_TestConfigFolder);
+                Debug.Log($"{GetType()} (init) - deleting {ConfigFolder}");
+                AssetDatabase.DeleteAsset(ConfigFolder);
+            }
+            if (!Directory.Exists(ConfigFolder))
+            {
+                Debug.Log($"{GetType()} (init) - creating {ConfigFolder}");
+                Directory.CreateDirectory(ConfigFolder);
                 AssetDatabase.Refresh();
             }
 
             Settings.labelTable.labelNames.Clear();
             GameObject testObject = new GameObject("TestObject");
 #if UNITY_2018_3_OR_NEWER
-            PrefabUtility.SaveAsPrefabAsset(testObject, k_TestConfigFolder + "/test.prefab");
+            PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/test.prefab");
 #else
             PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
 #endif
-            m_AssetGUID = AssetDatabase.AssetPathToGUID(k_TestConfigFolder + "/test.prefab");
+            m_AssetGUID = AssetDatabase.AssetPathToGUID(ConfigFolder + "/test.prefab");
 
-            string scene1Path = k_TestConfigFolder + "/contentUpdateScene1.unity";
-            string scene2Path = k_TestConfigFolder + "/contentUpdateScene2.unity";
-            string scene3Path = k_TestConfigFolder + "/contentUpdateScene3.unity";
+            string scene1Path = ConfigFolder + "/contentUpdateScene1.unity";
+            string scene2Path = ConfigFolder + "/contentUpdateScene2.unity";
+            string scene3Path = ConfigFolder + "/contentUpdateScene3.unity";
 
             Scene scene1 = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
             EditorSceneManager.SaveScene(scene1, scene1Path);
@@ -99,8 +107,11 @@ namespace UnityEditor.AddressableAssets.Tests
         public void Cleanup()
         {
             OnCleanup();
-            if (Directory.Exists(k_TestConfigFolder))
-                AssetDatabase.DeleteAsset(k_TestConfigFolder);
+            if (Directory.Exists(ConfigFolder))
+            {
+                Debug.Log($"{GetType()} - (cleanup) deleting {ConfigFolder}");
+                AssetDatabase.DeleteAsset(ConfigFolder);
+            }
             EditorBuildSettings.RemoveConfigObject(k_TestConfigName);
         }
 

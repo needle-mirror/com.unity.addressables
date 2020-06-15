@@ -453,7 +453,7 @@ namespace UnityEditor.AddressableAssets.Settings
         internal virtual void GatherAllAssetReferenceDrawableEntries(List<IReferenceEntryData> results)
         {
             foreach (var e in entries)
-                e.GatherAllAssetReferenceDrawableEntries(results);
+                e.GatherAllAssetReferenceDrawableEntries(results, Settings);
         }
 
         internal void AddAssetEntry(AddressableAssetEntry e, bool postEvent = true)

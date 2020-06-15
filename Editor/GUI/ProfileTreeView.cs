@@ -1,190 +1,149 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using UnityEditor.AddressableAssets.HostingServices;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
-    internal class ProfileTreeViewItem : TreeViewItem
-    {
-        private AddressableAssetProfileSettings.BuildProfile m_buildProfile;
-
-        public AddressableAssetProfileSettings.BuildProfile BuildProfile
-        {
-            get { return m_buildProfile; }
-        }
-
-        public ProfileTreeViewItem(AddressableAssetProfileSettings.BuildProfile buildProfile) : base(buildProfile.GetHashCode(), 0, buildProfile.profileName)
-        {
-            m_buildProfile = buildProfile;
-        }
-    }
-
     internal class ProfileTreeView : TreeView
     {
-        const float kRowHeights = 20f;
+        private List<string> m_Names;
+        private Dictionary<int, AddressableAssetProfileSettings.BuildProfile> m_TreeIndexToBuildProfileMap;
+        public List<string> Names => m_Names;
+        
 
-        MultiColumnHeaderState m_Mchs;
         private ProfileWindow m_Window;
+        
+        private List<AddressableAssetProfileSettings.BuildProfile> m_ProfileList;
 
-        public ProfileTreeView(TreeViewState state, MultiColumnHeaderState multiColumnHeaderState, ProfileColumnHeader profileColumnHeader, ProfileWindow window) :
-            base(state, profileColumnHeader)
+        static Texture2D k_checkMark;
+
+        public static MultiColumnHeader CreateHeader()
         {
-            m_Mchs = multiColumnHeaderState;
+            k_checkMark = EditorGUIUtility.isProSkin
+                ? EditorGUIUtility.FindTexture("d_FilterSelectedOnly")
+                : EditorGUIUtility.FindTexture("FilterSelectedOnly");
+
+            var columns = new[]
+            {
+                new MultiColumnHeaderState.Column
+                {
+                    headerContent = new GUIContent(""),
+                    headerTextAlignment = TextAlignment.Left,
+                    sortedAscending = true,
+                    sortingArrowAlignment = TextAlignment.Right,
+                    width = 30,
+                    minWidth = 30,
+                    autoResize = true
+                },
+                new MultiColumnHeaderState.Column
+                {
+                    headerContent = new GUIContent(""),
+                    headerTextAlignment = TextAlignment.Left,
+                    sortedAscending = true,
+                    sortingArrowAlignment = TextAlignment.Right,
+                    width = 10000,
+                    minWidth = 60,
+                    autoResize = true
+                }
+            };
+            var header = new MultiColumnHeader(new MultiColumnHeaderState(columns))
+            {
+                height = 0
+            };
+
+            return header;
+        }
+
+        internal ProfileTreeView(TreeViewState treeViewState, List<AddressableAssetProfileSettings.BuildProfile> profiles, ProfileWindow window,
+            MultiColumnHeader header) : base(treeViewState, header)
+        {
             m_Window = window;
-            rowHeight = kRowHeights;
-            showAlternatingRowBackgrounds = true;
-            showBorder = true;
-            profileColumnHeader.sortingChanged += OnSortingChanged;
+            m_ProfileList = profiles;
+            m_Names = new List<string>();
+            m_TreeIndexToBuildProfileMap = new Dictionary<int, AddressableAssetProfileSettings.BuildProfile>();
+            if (m_Window.ProfileIndex == -1)
+            {
+                m_Window.ProfileIndex = 0;
+            }
 
             Reload();
+
+            if (m_Window.ProfileIndex >= 0)
+                SetSelection(new List<int> {m_Window.ProfileIndex});
         }
 
         protected override TreeViewItem BuildRoot()
         {
-            var root = new TreeViewItem(-1, -1); // dummy root node
-
-            for (int i = 0; i < m_Window.settings.profileSettings.profiles.Count; i++)
+            var root = new TreeViewItem {id = -1, depth = -1, displayName = "Root"};
+            m_Names.Clear();
+            m_TreeIndexToBuildProfileMap.Clear();
+            
+            for (int i = 0; i < m_ProfileList.Count; i++)
             {
-                root.AddChild(new ProfileTreeViewItem(m_Window.settings.profileSettings.profiles[i]));
+                var profile = m_ProfileList[i];
+                m_Names.Add(profile.profileName);
+                m_TreeIndexToBuildProfileMap.Add(i, profile);
+                root.AddChild(new TreeViewItem {id = i, displayName = profile.profileName});
             }
+
             return root;
         }
-        
-        public override void OnGUI(Rect rect)
-        {
-            base.OnGUI(rect);
 
-            //TODO - this occasionally causes a "hot control" issue.
-            if (Event.current.type == EventType.MouseDown &&
-                Event.current.button == 0 &&
-                rect.Contains(Event.current.mousePosition))
-            {
-                SetSelection(new int[0], TreeViewSelectionOptions.FireSelectionChanged);
-            }
-        }
 
-        // Build row content
         protected override void RowGUI(RowGUIArgs args)
         {
-            var item = args.item as ProfileTreeViewItem;
-            if (item == null)
+            //Don't draw the background if the current item is being renamed
+            if (args.isRenaming) return;
+            
+            for (var i = 0; i < args.GetNumVisibleColumns(); ++i)
             {
-                base.RowGUI(args);
-                return;
-            }
-
-            // Write content for each row
-            for (int i = 0; i < args.GetNumVisibleColumns() && !args.isRenaming; i++)
-            {
-                CellGUI(args.GetCellRect(i), item, m_Mchs.visibleColumns[i], ref args);
+                CellGUI(ref args, i);
             }
         }
 
-        // Write content for each cell
-        GUIStyle m_LabelStyle;
-        void CellGUI(Rect cellRect, ProfileTreeViewItem viewItem, int columnIndex, ref RowGUIArgs args)
+        void CellGUI(ref RowGUIArgs args, int i)
         {
-            if (m_LabelStyle == null)
-            {
-                m_LabelStyle = UnityEngine.GUI.skin.GetStyle("Label");
-            }
+            var cellRect = args.GetCellRect(i);
+            CenterRectUsingSingleLineHeight(ref cellRect);
+            var item = args.item;
+            if (item == null) return;
 
-            if (columnIndex == 0)
+            switch (args.GetColumn(i))
             {
-                if (Event.current.type == EventType.Repaint)
-                    m_LabelStyle.Draw(cellRect, viewItem.BuildProfile.profileName, false, false, args.selected, args.focused);
-            }
-            else
-            {
-                viewItem.BuildProfile.values[(int)columnIndex - 1].value = 
-                    EditorGUI.TextField(cellRect, viewItem.BuildProfile.values[(int)columnIndex - 1].value);
+                case 0:
+                    //Display checkmark next to the active profile
+                    if (GetProfile(item.id).id.Equals(m_Window.settings.activeProfileId))
+                        UnityEngine.GUI.DrawTexture(cellRect, k_checkMark, ScaleMode.ScaleToFit);
+                    break;
+                case 1:
+                    EditorGUI.LabelField(cellRect, item.displayName);
+                    break;
             }
         }
-
-        void OnSortingChanged(MultiColumnHeader multiColumnHeader)
-        {
-            SortChildren(rootItem, multiColumnHeader.IsSortedAscending(0));
-            BuildRows(rootItem);
-        }
-
-        void SortChildren(TreeViewItem root, bool ascending)
-        {
-            if (!root.hasChildren)
-                return;
-
-            List<ProfileTreeViewItem> kids = new List<ProfileTreeViewItem>();
-            foreach (var c in root.children)
-            {
-                var child = c as ProfileTreeViewItem;
-                if (child != null && child.BuildProfile != null)
-                    kids.Add(child);
-            }
-
-            IEnumerable<ProfileTreeViewItem> orderedKids = kids;
-            orderedKids = ascending
-                ? kids.OrderBy(l => l.BuildProfile.profileName)
-                : kids.OrderByDescending(l => l.BuildProfile.profileName);
-
-            root.children.Clear();
-            foreach (var o in orderedKids)
-                root.children.Add(o);
-        }
-
-        public static MultiColumnHeaderState CreateDefaultMultiColumnHeaderState(AddressableAssetSettings settings)
-        {
-            return new MultiColumnHeaderState(GetColumns(settings));
-        }
-
-        static MultiColumnHeaderState.Column[] GetColumns(AddressableAssetSettings settings)
-        {
-            var retVal = new MultiColumnHeaderState.Column[settings.profileSettings.profileEntryNames.Count+1]; // account for profile name columns
-            for (int i = 0; i < retVal.Length; i++)
-            {
-                retVal[i] = new MultiColumnHeaderState.Column();
-
-                if (i == 0)
-                {
-                    retVal[i].headerContent = new GUIContent("Profile Name", "Profile Name");
-                    retVal[i].allowToggleVisibility = false;
-                    retVal[i].canSort = true;
-                }
-                else
-                {
-                    retVal[i].headerContent = new GUIContent(settings.profileSettings.profileEntryNames[i-1].ProfileName, settings.profileSettings.profileEntryNames[i-1].ProfileName);
-                    retVal[i].allowToggleVisibility = false;
-                    retVal[i].canSort = false;
-                }
-
-                retVal[i].minWidth = 50;
-                retVal[i].width = 150;
-                retVal[i].maxWidth = 1000;
-                retVal[i].headerTextAlignment = TextAlignment.Left;
-                retVal[i].autoResize = true;
-            }
-
-            return retVal;
-        }
-
-        ProfileTreeViewItem FindItemInVisibleRows(int id)
+        
+        TreeViewItem FindItemInVisibleRows(int id)
         {
             var rows = GetRows();
             foreach (var r in rows)
             {
-                if (r.id == id)
-                {
-                    return r as ProfileTreeViewItem;
-                }
+                if (r.id == id) return r as TreeViewItem;
             }
             return null;
         }
-
-        protected override void ContextClickedItem(int id)
+        
+        //uses the profile name right now, looks thru every profile and returns the one with same profile name
+        //goes from (i -> BuildProfile, returns the BuildProfile)
+        AddressableAssetProfileSettings.BuildProfile GetProfile(int id)
         {
-            List<ProfileTreeViewItem> selectedNodes = new List<ProfileTreeViewItem>();
-            GenericMenu menu = new GenericMenu();
-
+            return m_TreeIndexToBuildProfileMap.ContainsKey(id) ? m_TreeIndexToBuildProfileMap[id] : default(AddressableAssetProfileSettings.BuildProfile);
+        }
+        
+        List<TreeViewItem> GetSelectedNodes()
+        {
+            List<TreeViewItem> selectedNodes = new List<TreeViewItem>();
             foreach (var nodeId in GetSelection())
             {
                 var item = FindItemInVisibleRows(nodeId); //TODO - this probably makes off-screen but selected items not get added to list.
@@ -193,23 +152,34 @@ namespace UnityEditor.AddressableAssets.GUI
                     selectedNodes.Add(item);
                 }
             }
+            return selectedNodes;
+        }
+        
+        protected override void SingleClickedItem(int id)
+        {
+            List<TreeViewItem> selectedNodes = GetSelectedNodes();
+            m_Window.ProfileIndex = selectedNodes[0].id;
+        }
+        
+        protected override void ContextClickedItem(int id)
+        {
+            base.ContextClickedItem(id);
+
+            List<TreeViewItem> selectedNodes = GetSelectedNodes();
+            GenericMenu menu = new GenericMenu();
 
             if (selectedNodes.Count > 1)
             {
-                bool hasDefault = false;
-                foreach(var node in selectedNodes)
+                menu.AddItem(new GUIContent("Remove Profiles"), false, () =>
                 {
-                    if (node.displayName == "Default")
+                    for (int i = 0; i < selectedNodes.Count; i++)
                     {
-                        hasDefault = true;
-                        menu.AddDisabledItem(new GUIContent("Delete Profiles"));
-                        break;
+                        // Show dialog for first entry only
+                        m_Window.settings.profileSettings.RemoveProfile(GetProfile(selectedNodes[i].id).id);
                     }
-                }
-                if(!hasDefault)
-                    menu.AddItem(new GUIContent("Delete Profiles"), false, DeleteProfile, selectedNodes);
+                });
             }
-            else if (selectedNodes.Count == 1)
+            else
             {
                 menu.AddItem(new GUIContent("Set Active"), false, UseProfile, selectedNodes);
 
@@ -224,25 +194,25 @@ namespace UnityEditor.AddressableAssets.GUI
                     menu.AddItem(new GUIContent("Delete Profile"), false, DeleteProfile, selectedNodes);
                 }
             }
-
+            
             menu.ShowAsContext();
         }
-
-        // Built-in TreeView renaming
+        
         protected override bool CanRename(TreeViewItem item)
         {
             return true;
         }
-
+        
         protected void RenameProfile(object context)
         {
-            List<ProfileTreeViewItem> selectedNodes = context as List<ProfileTreeViewItem>;
+            List<TreeViewItem> selectedNodes = context as List<TreeViewItem>;
             if (selectedNodes != null && selectedNodes.Count >= 1)
             {
                 var item = selectedNodes.First();
                 BeginRename(item);
             }
         }
+        
         protected override void RenameEnded(RenameEndedArgs args)
         {
             var item = FindItemInVisibleRows(args.itemID);
@@ -272,7 +242,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
                 // Rename the profile
                 m_Window.settings.profileSettings.profiles[changeIndex].profileName = args.newName;
-
+                m_Window.settings.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, null, false, true);
                 Reload();
             }
         }
@@ -284,40 +254,43 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void UseProfile(object context)
         {
-            List<ProfileTreeViewItem> selectedNodes = context as List<ProfileTreeViewItem>;
+            List<TreeViewItem> selectedNodes = context as List<TreeViewItem>;
             if (selectedNodes != null && selectedNodes.Count >= 1)
             {
                 var item = selectedNodes.First();
-                m_Window.settings.activeProfileId = m_Window.settings.profileSettings.profiles.Find((s) => s.id.Equals(item.BuildProfile.id)).id;
+                string activeProfileId = m_TreeIndexToBuildProfileMap[item.id].id;
+                m_Window.settings.activeProfileId = activeProfileId;
             }
         }
 
         void DeleteProfile(object context)
         {
-            List<ProfileTreeViewItem> selectedNodes = context as List<ProfileTreeViewItem>;
+            List<TreeViewItem> selectedNodes = context as List<TreeViewItem>;
             foreach (var item in selectedNodes)
             {
-                var prof = m_Window.settings.profileSettings.profiles.Find((s) => s.id.Equals(item.BuildProfile.id));
-                if (prof != null)
+                var prof = m_TreeIndexToBuildProfileMap[item.id];
+                if (prof != default)
                 {
                     m_Window.settings.profileSettings.RemoveProfile(prof.id);
                     AssetDatabase.SaveAssets();
                 }
             }
+            m_Window.ProfileIndex = -1;
             Reload();
         }
-
-        internal string GetSelectedProfileId()
+        
+        internal AddressableAssetProfileSettings.BuildProfile GetSelectedProfile()
         {
             foreach (var nodeId in GetSelection())
             {
                 var item = FindItemInVisibleRows(nodeId); //TODO - this probably makes off-screen but selected items not get added to list.
                 if (item != null)
                 {
-                    return item.BuildProfile.id;
+                    return m_ProfileList[item.id];
                 }
             }
-            return string.Empty;
+            return default(AddressableAssetProfileSettings.BuildProfile);
         }
+        
     }
 }

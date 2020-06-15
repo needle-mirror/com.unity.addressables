@@ -1,12 +1,10 @@
 ﻿using NUnit.Framework;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
-using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEngine.ResourceManagement.Tests
 {
@@ -548,6 +546,90 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.AreSame(i2, loadOrder[1]);
             Assert.AreSame(i1, loadOrder[2]);
             op.Release();
+        }
+
+        [Test]
+        public void ProvideResource_WhenSomeDependenciesFail_SuccessfulDependenciesRelease()
+        {
+            ResourceLocationBase depLoc1 = new ResourceLocationBase("dep1", "dep1", "unknown provider", typeof(object));
+            ResourceLocationBase depLoc2 = new ResourceLocationBase("dep2", "dep2", m_Provider.ProviderId, typeof(object));
+            ResourceLocationBase loc = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object), depLoc1, depLoc2);
+            
+            var op = m_RM.ProvideResource<object>(loc);
+            m_RM.Update(0.0f);
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
+            Assert.AreEqual(1, m_Provider.ProvideLog.Count);
+            Assert.AreEqual(1, m_Provider.ReleaseLog.Count);
+            Assert.IsNull(op.Result);
+        }
+
+        [Test]
+        public void ProvideResources_WhenSomeDependenciesFail_SuccessfulDependenciesRelease()
+        {
+            ResourceLocationBase depLoc1a = new ResourceLocationBase("dep1a", "dep1a", "unknown provider", typeof(object));
+            ResourceLocationBase depLoc2a = new ResourceLocationBase("dep2a", "dep2a", m_Provider.ProviderId, typeof(object));
+            ResourceLocationBase loc_a = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object), depLoc1a, depLoc2a);
+            ResourceLocationBase depLoc1b = new ResourceLocationBase("dep1b", "dep1b", "unknown provider", typeof(object));
+            ResourceLocationBase depLoc2b = new ResourceLocationBase("dep2b", "dep2b", m_Provider.ProviderId, typeof(object));
+            ResourceLocationBase loc_b = new ResourceLocationBase("2", "2", m_Provider.ProviderId, typeof(object), depLoc1b, depLoc2b);
+            
+            var op = m_RM.ProvideResources<object>(new List<IResourceLocation>{loc_a, loc_b});
+            m_RM.Update(0.0f);
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
+            Assert.AreEqual(2, m_Provider.ProvideLog.Count);
+            Assert.AreEqual(2, m_Provider.ReleaseLog.Count);
+            Assert.IsNull(op.Result);
+        }
+        
+        [Test]
+        public void ProvideResources_WhenSomeOpsFail_SuccessfulOpsRelease()
+        {
+            ResourceLocationBase loc_a = new ResourceLocationBase("dep1", "dep1", "unknown provider", typeof(object));
+            ResourceLocationBase loc_b = new ResourceLocationBase("dep2", "dep2", m_Provider.ProviderId, typeof(object));
+            
+            var op = m_RM.ProvideResources<object>(new List<IResourceLocation>{loc_a, loc_b});
+            m_RM.Update(0.0f);
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
+            Assert.AreEqual(1, m_Provider.ProvideLog.Count);
+            Assert.AreEqual(1, m_Provider.ReleaseLog.Count);
+            Assert.IsNull(op.Result);
+        }
+        [Test]
+        public void ProvideResources_PartialSuccess_AllowsForSomeFailures()
+        {
+            ResourceLocationBase loc_a = new ResourceLocationBase("dep1", "dep1", "unknown provider", typeof(object));
+            ResourceLocationBase loc_b = new ResourceLocationBase("dep2", "dep2", m_Provider.ProviderId, typeof(object));
+            
+            var op = m_RM.ProvideResources<object>(
+                new List<IResourceLocation>{loc_a, loc_b},
+                false,
+                null);
+            m_RM.Update(0.0f);
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
+            Assert.AreEqual(1, m_Provider.ProvideLog.Count);
+            Assert.AreEqual(0, m_Provider.ReleaseLog.Count);
+            Assert.IsNotNull(op.Result);
+            Assert.AreEqual(2, op.Result.Count);
+            Assert.IsNull(op.Result[0]);
+            Assert.AreEqual("dep2", op.Result[1]);
+            op.Release();
+        }
+        [Test]
+        public void ProvideResources_PartialSuccess_DoesNotApplyToLocationDependencies()
+        {
+            ResourceLocationBase depLoc1a = new ResourceLocationBase("dep1a", "dep1a", "unknown provider", typeof(object));
+            ResourceLocationBase depLoc2a = new ResourceLocationBase("dep2a", "dep2a", m_Provider.ProviderId, typeof(object));
+            ResourceLocationBase loc_a = new ResourceLocationBase("1", "1", m_Provider.ProviderId, typeof(object), depLoc1a, depLoc2a);
+            ResourceLocationBase depLoc1b = new ResourceLocationBase("dep1b", "dep1b", "unknown provider", typeof(object));
+            ResourceLocationBase depLoc2b = new ResourceLocationBase("dep2b", "dep2b", m_Provider.ProviderId, typeof(object));
+            ResourceLocationBase loc_b = new ResourceLocationBase("2", "2", m_Provider.ProviderId, typeof(object), depLoc1b, depLoc2b);
+            
+            var op = m_RM.ProvideResources<object>(new List<IResourceLocation>{loc_a, loc_b}, false, null);
+            m_RM.Update(0.0f);
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
+            Assert.AreEqual(2, m_Provider.ProvideLog.Count);
+            Assert.AreEqual(2, m_Provider.ReleaseLog.Count);
+            Assert.IsNull(op.Result);
         }
     }
 }

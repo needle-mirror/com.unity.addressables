@@ -149,8 +149,9 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             //Setup
             const string groupName = "NewAsset";
-            const string assetPath = k_TestConfigFolder + "/" + groupName;
-            
+            string assetPath = GetAssetPath(groupName);
+
+
             var mat = new Material(Shader.Find("Unlit/Color"));
             AssetDatabase.CreateAsset(mat, assetPath);
 

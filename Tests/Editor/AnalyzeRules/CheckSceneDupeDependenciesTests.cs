@@ -13,11 +13,11 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
 {
     public class CheckSceneDupeDependenciesTests : AddressableAssetTestBase
     {
-        const string k_CheckDupePrefabA = k_TestConfigFolder + "/checkDupe_prefabA.prefab";
-        const string k_CheckDupePrefabB = k_TestConfigFolder + "/checkDupe_prefabB.prefab";
-        const string k_CheckDupeMyMaterial = k_TestConfigFolder + "/checkDupe_myMaterial.mat";
-        const string k_ScenePath = k_TestConfigFolder + "/dupeSceneTest.unity";
-        const string k_PrefabWithMaterialPath = k_TestConfigFolder + "/checkDupe_prefabWithMaterial.prefab";
+       string k_CheckDupePrefabA => GetAssetPath("checkDupe_prefabA.prefab");
+       string k_CheckDupePrefabB => GetAssetPath("checkDupe_prefabB.prefab");
+       string k_CheckDupeMyMaterial => GetAssetPath("checkDupe_myMaterial.mat");
+       string k_ScenePath => GetAssetPath("dupeSceneTest.unity");
+       string k_PrefabWithMaterialPath => GetAssetPath("checkDupe_prefabWithMaterial.prefab");
 
         protected override void OnInit()
         {

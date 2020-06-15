@@ -431,57 +431,65 @@ namespace UnityEditor.AddressableAssets.Settings
         public void GatherAllAssets(List<AddressableAssetEntry> assets, bool includeSelf, bool recurseAll, bool includeSubObjects, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
             var settings = parentGroup.Settings;
-
+            
             if (guid == EditorSceneListName)
             {
-                foreach (var s in BuiltinSceneCache.scenes)
+                var pd = parentGroup.GetSchema<GroupSchemas.PlayerDataGroupSchema>();
+                if (pd.IncludeBuildSettingsScenes)
                 {
-                    if (s.enabled)
+                    foreach (var s in BuiltinSceneCache.scenes)
                     {
-                        var entry = settings.CreateSubEntryIfUnique(s.guid.ToString(), Path.GetFileNameWithoutExtension(s.path), this);
-                        if (entry != null) //TODO - it's probably really bad if this is ever null. need some error detection
+                        if (s.enabled)
                         {
-                            entry.IsInSceneList = true;
-                            entry.m_Labels = m_Labels;
-                            if (entryFilter == null || entryFilter(entry))
-                                assets.Add(entry);
-                        }
-                    }
-                }
-            }
-            else if (guid == ResourcesName)
-            {
-                foreach (var resourcesDir in Directory.GetDirectories("Assets", "Resources", SearchOption.AllDirectories))
-                {
-                    foreach (var file in Directory.GetFiles(resourcesDir, "*.*", recurseAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
-                    {
-                        if (AddressableAssetUtility.IsPathValidForEntry(file))
-                        {
-                            var g = AssetDatabase.AssetPathToGUID(file);
-                            var addr = GetResourcesPath(file);
-                            var entry = settings.CreateSubEntryIfUnique(g, addr, this);
+                            var entry = settings.CreateSubEntryIfUnique(s.guid.ToString(), Path.GetFileNameWithoutExtension(s.path), this);
                             if (entry != null) //TODO - it's probably really bad if this is ever null. need some error detection
                             {
-                                entry.IsInResources = true;
+                                entry.IsInSceneList = true;
                                 entry.m_Labels = m_Labels;
                                 if (entryFilter == null || entryFilter(entry))
                                     assets.Add(entry);
                             }
                         }
                     }
-                    if (!recurseAll)
+                }
+            }
+            else if (guid == ResourcesName)
+            {
+                var pd = parentGroup.GetSchema<GroupSchemas.PlayerDataGroupSchema>();
+                if (pd.IncludeResourcesFolders)
+                {
+                    foreach (var resourcesDir in Directory.GetDirectories("Assets", "Resources", SearchOption.AllDirectories))
                     {
-                        foreach (var folder in Directory.GetDirectories(resourcesDir))
+                        foreach (var file in Directory.GetFiles(resourcesDir, "*.*", recurseAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
                         {
-                            if (AssetDatabase.IsValidFolder(folder))
+                            if (AddressableAssetUtility.IsPathValidForEntry(file))
                             {
-                                var entry = settings.CreateSubEntryIfUnique(AssetDatabase.AssetPathToGUID(folder), GetResourcesPath(folder), this);
+                                var g = AssetDatabase.AssetPathToGUID(file);
+                                var addr = GetResourcesPath(file);
+                                var entry = settings.CreateSubEntryIfUnique(g, addr, this);
                                 if (entry != null) //TODO - it's probably really bad if this is ever null. need some error detection
                                 {
                                     entry.IsInResources = true;
                                     entry.m_Labels = m_Labels;
                                     if (entryFilter == null || entryFilter(entry))
                                         assets.Add(entry);
+                                }
+                            }
+                        }
+                        if (!recurseAll)
+                        {
+                            foreach (var folder in Directory.GetDirectories(resourcesDir))
+                            {
+                                if (AssetDatabase.IsValidFolder(folder))
+                                {
+                                    var entry = settings.CreateSubEntryIfUnique(AssetDatabase.AssetPathToGUID(folder), GetResourcesPath(folder), this);
+                                    if (entry != null) //TODO - it's probably really bad if this is ever null. need some error detection
+                                    {
+                                        entry.IsInResources = true;
+                                        entry.m_Labels = m_Labels;
+                                        if (entryFilter == null || entryFilter(entry))
+                                            assets.Add(entry);
+                                    }
                                 }
                             }
                         }
@@ -496,7 +504,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
                 if (AssetDatabase.IsValidFolder(path))
                 {
-                    foreach (var file in GetAllValidAssetPathsFromDirectory(path, recurseAll))
+                    foreach (var file in AddressablesFileEnumeration.EnumerateAddressableFolder(path, settings, recurseAll))
                     {
                         var subGuid = AssetDatabase.AssetPathToGUID(file);
                         var entry = settings.CreateSubEntryIfUnique(subGuid, address + GetRelativePath(file, path), this);
@@ -618,17 +626,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        IEnumerable<string> GetAllValidAssetPathsFromDirectory(string path, bool recurseAll)
-        {
-            var files = from file in Directory.EnumerateFiles(path, "*.*", recurseAll ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
-                        where AddressableAssetUtility.IsPathValidForEntry(file)
-                        let convertedPath = file.Replace('\\', '/')
-                        where !BuiltinSceneCache.Contains(convertedPath)
-                        select convertedPath;
-            return files;
-        }
-
-        internal void GatherAllAssetReferenceDrawableEntries(List<IReferenceEntryData> refEntries)
+        internal void GatherAllAssetReferenceDrawableEntries(List<IReferenceEntryData> refEntries, AddressableAssetSettings settings)
         {
             var path = AssetPath;
             if (string.IsNullOrEmpty(path))
@@ -646,7 +644,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             if (AssetDatabase.IsValidFolder(path))
             {
-                foreach (var fi in GetAllValidAssetPathsFromDirectory(path, true))
+                foreach (var fi in AddressablesFileEnumeration.EnumerateAddressableFolder(path, settings, true))
                 {
                     string relativeAddress = address + GetRelativePath(fi, path);
                     var reference = new ImplicitAssetEntry()

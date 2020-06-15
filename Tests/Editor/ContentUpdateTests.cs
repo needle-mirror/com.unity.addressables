@@ -107,8 +107,8 @@ namespace UnityEditor.AddressableAssets.Tests
             Material mat = new Material(Shader.Find("Transparent/Diffuse"));
             mainObject.AddComponent<MeshRenderer>().material = mat;
 
-            string mainAssetPath = Path.Combine(k_TestConfigFolder, "mainObject.prefab");
-            string staticAssetPath = Path.Combine(k_TestConfigFolder, "staticObject.mat");
+            string mainAssetPath = GetAssetPath("mainObject.prefab");
+            string staticAssetPath = GetAssetPath("staticObject.mat");
 
             AssetDatabase.CreateAsset(mat, staticAssetPath);
             PrefabUtility.SaveAsPrefabAsset(mainObject, mainAssetPath);
@@ -158,8 +158,8 @@ namespace UnityEditor.AddressableAssets.Tests
             Material mat = new Material(Shader.Find("Transparent/Diffuse"));
             mainObject.AddComponent<MeshRenderer>().material = mat;
 
-            string mainAssetPath = Path.Combine(k_TestConfigFolder, "mainObject.prefab");
-            string dynamicAssetPath = Path.Combine(k_TestConfigFolder, "dynamicObject.mat");
+            string mainAssetPath = GetAssetPath("mainObject.prefab");
+            string dynamicAssetPath = GetAssetPath("dynamicObject.mat");
 
             AssetDatabase.CreateAsset(mat, dynamicAssetPath);
             PrefabUtility.SaveAsPrefabAsset(mainObject, mainAssetPath);

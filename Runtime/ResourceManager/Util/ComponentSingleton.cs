@@ -78,7 +78,6 @@ namespace UnityEngine.ResourceManagement.Util
             {
                 if (Exists)
                 {
-                    Debug.Log("Destroying");
                     DestroyImmediate(Instance.gameObject);
                     s_Instance = null;
                 }

@@ -295,7 +295,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 #endif
 
-            if (isPickerPressed || isEnterKeyPressed)
+            if (isPickerPressed)
             {
                 newGuidPropertyPath = property.propertyPath;
                 var nonAddressedOption = isNotAddressable ? m_AssetName : string.Empty;

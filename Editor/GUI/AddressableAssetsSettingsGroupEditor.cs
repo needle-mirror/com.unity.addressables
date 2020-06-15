@@ -289,7 +289,7 @@ namespace UnityEditor.AddressableAssets.GUI
         void OnHierSearchClick()
         {
             ProjectConfigData.hierarchicalSearch = !ProjectConfigData.hierarchicalSearch;
-            m_EntryTree.ClearSearch();
+            m_EntryTree.SwapSearchType();
             m_EntryTree.Reload();
             m_EntryTree.Repaint();
         }

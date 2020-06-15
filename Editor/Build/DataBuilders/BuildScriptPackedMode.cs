@@ -11,7 +11,6 @@ using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
 using UnityEditor.Build.Pipeline.Utilities;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.Initialization;
@@ -41,12 +40,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
         }
 
-        List<ObjectInitializationData> m_ResourceProviderData; 
+        internal List<ObjectInitializationData> m_ResourceProviderData; 
         List<AssetBundleBuild> m_AllBundleInputDefs;
         List<string> m_OutputAssetBundleNames;
         HashSet<string> m_CreatedProviderIds;
         LinkXmlGenerator m_Linker;
-        internal Dictionary<string, string> m_BundleToInternalId = new Dictionary<string, string>();
+        Dictionary<string, string> m_BundleToInternalId = new Dictionary<string, string>();
         private string m_CatalogBuildPath;
 
         internal List<ObjectInitializationData> ResourceProviderData => m_ResourceProviderData.ToList();
@@ -133,7 +132,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             var playerBuildVersion = builderInput.PlayerVersion;
             if (m_AllBundleInputDefs.Count > 0)
             {
-                if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                if (!BuildUtility.CheckModifiedScenesAndAskToSave())
                     return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, "Unsaved scenes");
 
                 var buildTarget = builderInput.Target;
@@ -501,7 +500,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             if (!m_CreatedProviderIds.Contains(bundledProviderId))
             {
                 m_CreatedProviderIds.Add(bundledProviderId);
-
                 var bundleProviderType = schema.AssetBundleProviderType.Value;
                 var bundleProviderData = ObjectInitializationData.CreateSerializedInitializationData(bundleProviderType, bundledProviderId);
                 m_ResourceProviderData.Add(bundleProviderData);
@@ -758,7 +756,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             if (destTime == time)
                 return;
 
-            using (log.ScopedStep(LogLevel.Verbose, $"Copying File {srcPath} -> {destPath}"))
+            using (log.ScopedStep(LogLevel.Verbose, "Copy File", $"{srcPath} -> {destPath}"))
             {
                 var directory = Path.GetDirectoryName(destPath);
                 if (!string.IsNullOrEmpty(directory))
@@ -786,6 +784,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     var requestOptions = new AssetBundleRequestOptions
                     {
                         Crc =  schema.UseAssetBundleCrc ? info.Crc : 0,
+                        UseCrcForCachedBundle = schema.UseAssetBundleCrcForCachedBundles,
                         Hash = schema.UseAssetBundleCache ? info.Hash.ToString() : "",
                         ChunkedTransfer = schema.ChunkedTransfer,
                         RedirectLimit = schema.RedirectLimit,

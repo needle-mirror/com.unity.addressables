@@ -259,6 +259,12 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator LoadingContentCatalogTwice_DoesNotThrowException_WhenHandleIsntReleased()
         {
             yield return Init();
+            if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
+            {
+                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalogTwice_DoesNotThrowException_WhenHandleIsntReleased)} due to missing CatalogLocation.");
+                yield break;
+            }
+
             var location = m_Addressables.m_ResourceLocators[0].CatalogLocation;
 
             var op1 = m_Addressables.LoadContentCatalogAsync(location.InternalId, false);
@@ -278,6 +284,11 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator LoadingContentCatalogWithCacheTwice_DoesNotThrowException_WhenHandleIsntReleased()
         {
             yield return Init();
+            if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
+            {
+                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalogWithCacheTwice_DoesNotThrowException_WhenHandleIsntReleased)} due to missing CatalogLocation.");
+                yield break;
+            }
             var location = m_Addressables.m_ResourceLocators[0].CatalogLocation;
 
             var op1 = m_Addressables.LoadContentCatalogAsync(location.InternalId, false);
@@ -325,6 +336,11 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator LoadingContentCatalog_CachesCatalogData_IfValidHashFound()
         {
             yield return Init();
+            if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
+            {
+                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalog_CachesCatalogData_IfValidHashFound)} due to missing CatalogLocation.");
+                yield break;
+            }
             Directory.CreateDirectory(kCatalogFolderPath);
             string fullRemotePath = Path.Combine(kCatalogFolderPath, kCatalogRemotePath);
             string cachedDataPath = m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + Path.GetFileName(kCatalogRemotePath));
@@ -353,6 +369,12 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator LoadingContentCatalog_UpdatesCachedData_IfHashFileUpdates()
         {
             yield return Init();
+            if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
+            {
+                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalog_UpdatesCachedData_IfHashFileUpdates)} due to missing CatalogLocation.");
+                yield break;
+            }
+
             Directory.CreateDirectory(kCatalogFolderPath);
             string fullRemotePath = Path.Combine(kCatalogFolderPath, kCatalogRemotePath);
             string cachedDataPath = m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + Path.GetFileName(kCatalogRemotePath));
@@ -389,6 +411,12 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator LoadingContentCatalog_NoCacheDataCreated_IfRemoteHashDoesntExist()
         {
             yield return Init();
+            if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
+            {
+                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalog_NoCacheDataCreated_IfRemoteHashDoesntExist)} due to missing CatalogLocation.");
+                yield break;
+            }
+
             Directory.CreateDirectory(kCatalogFolderPath);
             string fullRemotePath = Path.Combine(kCatalogFolderPath, kCatalogRemotePath);
             string cachedDataPath = m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + Path.GetFileName(kCatalogRemotePath));
@@ -413,6 +441,12 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator ContentCatalogData_IsCleared_WhenInitializationOperationLoadContentCatalogOp_IsReleased()
         {
             yield return Init();
+            if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
+            {
+                UnityEngine.Debug.Log($"Skipping test {nameof(ContentCatalogData_IsCleared_WhenInitializationOperationLoadContentCatalogOp_IsReleased)} due to missing CatalogLocation.");
+                yield break;
+            }
+
             string baseCatalogPath = m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId;
 
             if (baseCatalogPath.StartsWith("file://"))
@@ -453,6 +487,12 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator ContentCatalogData_IsCleared_ForCorrectCatalogLoadOp_WhenOpIsReleased()
         {
             yield return Init();
+            if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
+            {
+                UnityEngine.Debug.Log($"Skipping test {nameof(ContentCatalogData_IsCleared_ForCorrectCatalogLoadOp_WhenOpIsReleased)} due to missing CatalogLocation.");
+                yield break;
+            }
+
             Directory.CreateDirectory(kCatalogFolderPath);
             string fullRemotePath = Path.Combine(kCatalogFolderPath, kCatalogRemotePath);
 
@@ -492,6 +532,11 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator ContentCatalogProvider_RemovesEntryFromMap_WhenOperationHandleReleased()
         {
             yield return Init();
+            if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
+            {
+                UnityEngine.Debug.Log($"Skipping test {nameof(ContentCatalogProvider_RemovesEntryFromMap_WhenOperationHandleReleased)} due to missing CatalogLocation.");
+                yield break;
+            }
             string baseCatalogPath = m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId;
             if (baseCatalogPath.StartsWith("file://"))
                 baseCatalogPath = new Uri(m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId).AbsolutePath;
@@ -910,7 +955,7 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
             List<object> keys = new List<object>() { "INVALID1", "INVALID2" };
-            AsyncOperationHandle<IList<GameObject>> gop = m_Addressables.LoadAssetsAsync<GameObject>(keys, null, Addressables.MergeMode.Intersection);
+            AsyncOperationHandle<IList<GameObject>> gop = m_Addressables.LoadAssetsAsync<GameObject>(keys, null, Addressables.MergeMode.Intersection, true);
             while (!gop.IsDone)
                 yield return null;
             Assert.IsTrue(gop.IsDone);
@@ -924,7 +969,7 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
             List<object> keys = new List<object>() { AddressablesTestUtility.GetPrefabLabel("BASE"), AddressablesTestUtility.GetPrefabUniqueLabel("BASE", 0) };
-            AsyncOperationHandle<IList<GameObject>> gop = m_Addressables.LoadAssetsAsync<GameObject>(keys, null, Addressables.MergeMode.Intersection);
+            AsyncOperationHandle<IList<GameObject>> gop = m_Addressables.LoadAssetsAsync<GameObject>(keys, null, Addressables.MergeMode.Intersection, true);
             while (!gop.IsDone)
                 yield return null;
             Assert.IsTrue(gop.IsDone);
@@ -1035,7 +1080,7 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
             string label = AddressablesTestUtility.GetPrefabLabel("BASE");
             HashSet<GameObject> ops = new HashSet<GameObject>();
-            var gop = m_Addressables.LoadAssetsAsync<GameObject>(label, x => { ops.Add(x); });
+            var gop = m_Addressables.LoadAssetsAsync<GameObject>(label, x => { ops.Add(x); }, true);
             yield return gop;
             Assert.AreEqual(AddressablesTestUtility.kPrefabCount, ops.Count);
             for (int i = 0; i < ops.Count; i++)
@@ -1084,6 +1129,20 @@ namespace AddressableAssetsIntegrationTests
             AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(label, true);
             yield return op;
             Assert.AreEqual(bundleCountBefore, AssetBundle.GetAllLoadedAssetBundles().Count());
+        }
+
+        [UnityTest]
+        public IEnumerator DownloadDependencies_ReturnsValidTask()
+        {
+            yield return Init();
+            string label = AddressablesTestUtility.GetPrefabLabel("BASE");
+            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(label);
+            
+            Assert.IsNotNull(op.Task);
+            yield return op;
+            Assert.IsNotNull(op.Task);
+            
+            op.Release();
         }
 
         [UnityTest]
@@ -1224,9 +1283,6 @@ namespace AddressableAssetsIntegrationTests
             AsyncOperationHandle<GameObject> slowHandle1 = new ManualPercentCompleteOperation(handle1PercentComplete).Handle;
             AsyncOperationHandle<GameObject> slowHandle2 = new ManualPercentCompleteOperation(handle2PercentComplete).Handle;
 
- //           while (!m_Addressables.InitializationOperation.IsDone)
- //               yield return null;
-
             slowHandle1.m_InternalOp.m_RM = m_Addressables.ResourceManager;
             slowHandle2.m_InternalOp.m_RM = m_Addressables.ResourceManager;
 
@@ -1256,6 +1312,7 @@ namespace AddressableAssetsIntegrationTests
 
             handle.Release();
         }
+
         static ResourceLocationMap GetRLM(AddressablesImpl addr)
         {
             foreach (var rl in addr.m_ResourceLocators)
@@ -1270,6 +1327,9 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForKey()
         {
             yield return Init();
+            var rlm = GetRLM(m_Addressables);
+            if (rlm == null)
+                yield break;
 #if ENABLE_CACHING
 
             string hash = "123456789";
@@ -1286,7 +1346,7 @@ namespace AddressableAssetsIntegrationTests
             IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object), 
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)));
 
-            GetRLM(m_Addressables).Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
             yield return m_Addressables.ClearDependencyCacheAsync(key);
             Caching.GetCachedVersions(bundleName, versions);
@@ -1301,6 +1361,9 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForKeyWithDependencies()
         {
             yield return Init();
+            var rlm = GetRLM(m_Addressables);
+            if (rlm == null)
+                yield break;
 #if ENABLE_CACHING
 
             string hash = "123456789";
@@ -1321,7 +1384,7 @@ namespace AddressableAssetsIntegrationTests
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)),
                 depLocation);
 
-            GetRLM(m_Addressables).Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
             yield return m_Addressables.ClearDependencyCacheAsync(key);
 
@@ -1341,6 +1404,9 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocation()
         {
             yield return Init();
+            var rlm = GetRLM(m_Addressables);
+            if (rlm == null)
+                yield break;
 #if ENABLE_CACHING
 
             string hash = "123456789";
@@ -1357,7 +1423,7 @@ namespace AddressableAssetsIntegrationTests
             IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)));
 
-            GetRLM(m_Addressables).Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
             yield return m_Addressables.ClearDependencyCacheAsync(location);
             Caching.GetCachedVersions(bundleName, versions);
@@ -1372,6 +1438,9 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocationWithDependencies()
         {
             yield return Init();
+            var rlm = GetRLM(m_Addressables);
+            if (rlm == null)
+                yield break;
 #if ENABLE_CACHING
             string hash = "123456789";
             string bundleName = $"test_{hash}";
@@ -1391,7 +1460,7 @@ namespace AddressableAssetsIntegrationTests
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)),
                 depLocation);
 
-            GetRLM(m_Addressables).Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
             yield return m_Addressables.ClearDependencyCacheAsync(location);
 
@@ -1411,6 +1480,9 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocationList()
         {
             yield return Init();
+            var rlm = GetRLM(m_Addressables);
+            if (rlm == null)
+                yield break;
 #if ENABLE_CACHING
             string hash = "123456789";
             string bundleName = $"test_{hash}";
@@ -1426,7 +1498,7 @@ namespace AddressableAssetsIntegrationTests
             IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)));
 
-            GetRLM(m_Addressables).Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
             yield return m_Addressables.ClearDependencyCacheAsync(new List<IResourceLocation>(){location});
             Caching.GetCachedVersions(bundleName, versions);
@@ -1441,6 +1513,9 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocationListWithDependencies()
         {
             yield return Init();
+            var rlm = GetRLM(m_Addressables);
+            if (rlm == null)
+                yield break;
 #if ENABLE_CACHING
 
             string hash = "123456789";
@@ -1461,7 +1536,7 @@ namespace AddressableAssetsIntegrationTests
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)),
                 depLocation);
 
-            GetRLM(m_Addressables).Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
             yield return m_Addressables.ClearDependencyCacheAsync(new List<IResourceLocation>() { location });
 
@@ -1477,9 +1552,71 @@ namespace AddressableAssetsIntegrationTests
 #endif
         }
 
+        [UnityTest]
+        public IEnumerator AssetBundleResource_RemovesCachedBundle_OnLoadFailure()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+            string bundleName = "bundleName";
+            string hash = "123456";
+            uint crc = 1;
+            AssetBundleResource abr = new AssetBundleResource();
+            abr.m_ProvideHandle = new ProvideHandle(m_Addressables.ResourceManager,new ProviderOperation<AssetBundleResource>());
+            abr.m_Options = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName,
+                Hash = hash,
+                Crc = crc,
+                RetryCount = 3
+            };
+            CreateFakeCachedBundle(bundleName, Hash128.Parse(hash).ToString());
+            CachedAssetBundle cab = new CachedAssetBundle(bundleName, Hash128.Parse(hash));
+            var request = abr.CreateWebRequest(new ResourceLocationBase("testName", bundleName, typeof(AssetBundleProvider).FullName,
+                typeof(AssetBundleResource)));
+
+            Assert.IsTrue(Caching.IsVersionCached(cab));
+            yield return request.SendWebRequest();
+            Assert.IsFalse(Caching.IsVersionCached(cab));
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator AssetBundleResource_RemovesCachedBundle_OnLoadFailure_WhenRetryCountIsZero()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+            string bundleName = "bundleName";
+            string hash = "123456";
+            uint crc = 1;
+            AssetBundleResource abr = new AssetBundleResource();
+            abr.m_ProvideHandle = new ProvideHandle(m_Addressables.ResourceManager, new ProviderOperation<AssetBundleResource>());
+            abr.m_Options = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName,
+                Hash = hash,
+                Crc = crc,
+                RetryCount = 0
+            };
+            CreateFakeCachedBundle(bundleName, Hash128.Parse(hash).ToString());
+            CachedAssetBundle cab = new CachedAssetBundle(bundleName, Hash128.Parse(hash));
+            var request = abr.CreateWebRequest(new ResourceLocationBase("testName", bundleName, typeof(AssetBundleProvider).FullName,
+                typeof(AssetBundleResource)));
+
+            Assert.IsTrue(Caching.IsVersionCached(cab));
+            yield return request.SendWebRequest();
+            Assert.IsFalse(Caching.IsVersionCached(cab));
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
+#endif
+        }
+
         string CreateFakeCachedBundle(string bundleName, string hash)
         {
-            string fakeCachePath = string.Format("{0}/{1}/{2}", Caching.defaultCache.path, bundleName, hash);
+            string fakeCachePath = string.Format("{0}/{1}/{2}", Caching.currentCacheForWriting.path, bundleName, hash);
             Directory.CreateDirectory(fakeCachePath);
             var dataFile = File.Create(Path.Combine(fakeCachePath, "__data"));
             var infoFile = File.Create(Path.Combine(fakeCachePath, "__info"));

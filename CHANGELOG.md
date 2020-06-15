@@ -4,6 +4,26 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.11.2] - 2020-06-15
+- Refactored Play Mode Script for "Use Asset Database" to pull data directly from the settings.  This reduces the time needed to enter play mode.
+- Added scrollbar to the Label dropdown
+- Fixed misleading dialog box shown to the user when there are unsaved scenes.
+- Fixed bug where DownloadDependenciesAsync always returns an AsyncOperationHandle with a null task.
+- Revamped Profiles window to a two panel layout.
+- Fixed issue with Profiles window where changes would occasionally not be serialized to the settings asset.
+- Fixed bug where an op with some failed dependencies would never release the ones that had succeeded.
+- Added optional parameter "releaseDependenciesOnFailure" to LoadAssetsAsync to handle the scenario of partial success.  This is when there are multiple locations being loaded, and not all succeed.  In the partial success scenario:
+  - By default, the new parameter is true, and all successful parts will be released.  The .Result on the returned handle will be null and Status will be Failed
+  - When false, the returned .Result will be a List of size matching the number of matching locations.  Any failed location will correlate to null in the List, while successful locations will correlate to valid objects in the List.  Status will still be Failed in this scenario.
+- Bundles that fail to load from the cache are now removed from the Cache and will be redownloaded.
+- Added option to disable CRC checks for cached AssetBundles on BundledAssetGroupSchema under Advanced Options.
+- If null is passed into Addressables.UpdateCatalogs(...) for the list of catalogIds, CheckForCatalogUpdates will be called automatically.
+- Added null reference check when running InitializationObjectsOperation to take failed RuntimeData operations into account.
+- Disabled hitting ENTER on an AssetReference inspector to open popup.  The drawer does not know which AssetReference to associate the popup should that MonoBehaviour have more than one. So disabling is unfortunately the only safe option. 
+- Fixed issue where assets located in subfolders marked as addressable would be added to build content multiple times.
+- Fixed bug where Groups window hierarchical search was not filtering the group contents.
+- Fixed bug with Groups window flat search not sorting.
+
 ## [1.10.0] - 2020-05-28
 - Fixed hosting service not working for special characters in addressable asset address
 - Fixed bug where tracked scene instance operation handles weren't matching the handles returned to the user.

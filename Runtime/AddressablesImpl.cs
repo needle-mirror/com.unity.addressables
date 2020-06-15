@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -20,7 +21,7 @@ using UnityEngine.SceneManagement;
 namespace UnityEngine.AddressableAssets
 {
 
-    internal class AddressablesImpl
+    internal class AddressablesImpl : IEqualityComparer<IResourceLocation>
     {
         ResourceManager m_ResourceManager;
         IInstanceProvider m_InstanceProvider;
@@ -334,9 +335,7 @@ namespace UnityEngine.AddressableAssets
                     {
                         if (current == null)
                         {
-                            current = new HashSet<IResourceLocation>();
-                            foreach (var loc in locations)
-                                current.Add(loc);
+                            current = new HashSet<IResourceLocation>(locations, this);
                         }
 
                         if (merge == Addressables.MergeMode.Intersection)
@@ -393,6 +392,22 @@ namespace UnityEngine.AddressableAssets
             m_OnHandleCompleteAction = OnHandleCompleted;
             m_OnSceneHandleCompleteAction = OnSceneHandleCompleted;
             m_OnHandleDestroyedAction = OnHandleDestroyed;
+
+#if UNITY_EDITOR
+            //this indicates that a specific addressables settings asset is being used for the runtime locations
+            if (runtimeDataPath.StartsWith("GUID:"))
+            {
+                var assembly = Assembly.Load("Unity.Addressables.Editor");
+                var settingsType = assembly.GetType("UnityEditor.AddressableAssets.Settings.AddressableAssetSettings");
+                var settingsGUID = runtimeDataPath.Substring(runtimeDataPath.IndexOf(':') + 1);
+                var settingsPath = UnityEditor.AssetDatabase.GUIDToAssetPath(settingsGUID);
+                var settingsObj = UnityEditor.AssetDatabase.LoadAssetAtPath(settingsPath, settingsType);
+                var settingsSetupMethod = settingsType.GetMethod("CreatePlayModeInitializationOperation", BindingFlags.Instance | BindingFlags.NonPublic);
+                m_InitializationOperation = (AsyncOperationHandle<IResourceLocator>)settingsSetupMethod.Invoke(settingsObj, new object[] { this });
+            }
+            else
+#endif
+
             m_InitializationOperation = Initialization.InitializationOperation.CreateInitializationOperation(this, runtimeDataPath, providerSuffix);
             if(autoReleaseHandle)
                 m_InitializationOperation.Completed += (x) => ResourceManager.Release(x);
@@ -579,43 +594,43 @@ namespace UnityEngine.AddressableAssets
             return TrackHandle(ResourceManager.StartOperation(op, default));
         }
 
-        public AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<IResourceLocation> locations, Action<TObject> callback)
+        public AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<IResourceLocation> locations, Action<TObject> callback, bool releaseDependenciesOnFailure)
         {
-            return TrackHandle(ResourceManager.ProvideResources(locations, callback));
+            return TrackHandle(ResourceManager.ProvideResources(locations, releaseDependenciesOnFailure,callback));
         }
 
-        AsyncOperationHandle<IList<TObject>> LoadAssetsWithChain<TObject>(AsyncOperationHandle dep, IList<object> keys, Action<TObject> callback, Addressables.MergeMode mode)
+        AsyncOperationHandle<IList<TObject>> LoadAssetsWithChain<TObject>(AsyncOperationHandle dep, IList<object> keys, Action<TObject> callback, Addressables.MergeMode mode, bool releaseDependenciesOnFailure)
         {
-            return ResourceManager.CreateChainOperation(dep, op => LoadAssetsAsync(keys, callback, mode));
+            return ResourceManager.CreateChainOperation(dep, op => LoadAssetsAsync(keys, callback, mode,releaseDependenciesOnFailure));
         }
 
-        public AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<object> keys, Action<TObject> callback, Addressables.MergeMode mode)
+        public AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<object> keys, Action<TObject> callback, Addressables.MergeMode mode, bool releaseDependenciesOnFailure)
         {
             if (ShouldChainRequest)
-                return TrackHandle(LoadAssetsWithChain(ChainOperation, keys, callback, mode));
+                return TrackHandle(LoadAssetsWithChain(ChainOperation, keys, callback, mode, releaseDependenciesOnFailure));
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(keys, typeof(TObject), mode, out locations))
                 return ResourceManager.CreateCompletedOperation<IList<TObject>>(null, new InvalidKeyException(keys, typeof(TObject)).Message);
 
-            return LoadAssetsAsync(locations, callback);
+            return LoadAssetsAsync(locations, callback, releaseDependenciesOnFailure);
         }
 
-        AsyncOperationHandle<IList<TObject>> LoadAssetsWithChain<TObject>(AsyncOperationHandle dep, object key, Action<TObject> callback)
+        AsyncOperationHandle<IList<TObject>> LoadAssetsWithChain<TObject>(AsyncOperationHandle dep, object key, Action<TObject> callback, bool releaseDependenciesOnFailure)
         {
-            return ResourceManager.CreateChainOperation(dep, op2 => LoadAssetsAsync(key, callback));
+            return ResourceManager.CreateChainOperation(dep, op2 => LoadAssetsAsync(key, callback, releaseDependenciesOnFailure));
         }
 
-        public AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(object key, Action<TObject> callback)
+        public AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(object key, Action<TObject> callback, bool releaseDependenciesOnFailure)
         {
             if (ShouldChainRequest)
-                return TrackHandle(LoadAssetsWithChain(ChainOperation, key, callback));
+                return TrackHandle(LoadAssetsWithChain(ChainOperation, key, callback, releaseDependenciesOnFailure));
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, typeof(TObject), out locations))
                 return ResourceManager.CreateCompletedOperation<IList<TObject>>(null, new InvalidKeyException(key, typeof(TObject)).Message);
 
-            return LoadAssetsAsync(locations, callback);
+            return LoadAssetsAsync(locations, callback, releaseDependenciesOnFailure);
         }
 
         void OnHandleDestroyed(AsyncOperationHandle handle)
@@ -766,7 +781,7 @@ namespace UnityEngine.AddressableAssets
                             locHash.Add(dep);
                     }
                 }
-                var handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null);
+                var handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null, true);
                 if (autoReleaseHandle)
                     handle.Completed += op => Release(op);
                 return handle;
@@ -796,7 +811,7 @@ namespace UnityEngine.AddressableAssets
                         locHash.Add(dep);
                 }
             }
-            var handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null);
+            var handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null, true);
             if (autoReleaseHandle)
                 handle.Completed += op => Release(op);
             return handle;
@@ -837,7 +852,7 @@ namespace UnityEngine.AddressableAssets
                             locHash.Add(dep);
                     }
                 }
-                var handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null);
+                var handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null, true);
                 if (autoReleaseHandle)
                     handle.Completed += op => Release(op);
                 return handle;
@@ -1067,11 +1082,25 @@ namespace UnityEngine.AddressableAssets
         {
             if (m_ActiveUpdateOperation.IsValid())
                 return m_ActiveUpdateOperation;
+            if (catalogIds == null && !CatalogsWithAvailableUpdates.Any())
+               return m_ResourceManager.CreateChainOperation(CheckForCatalogUpdates(), depOp => UpdateCatalogs(CatalogsWithAvailableUpdates, autoReleaseHandle));
 
             var op = new UpdateCatalogsOperation(this).Start(catalogIds == null ? CatalogsWithAvailableUpdates : catalogIds);
             if (autoReleaseHandle)
                 op.CompletedTypeless += o => ResourceManager.Release(o);
             return op;
+        }
+
+        //needed for IEqualityComparer<IResourceLocation> interface
+        public bool Equals(IResourceLocation x, IResourceLocation y)
+        {
+            return x.PrimaryKey.Equals(y.PrimaryKey) && x.ResourceType.Equals(y.ResourceType);
+        }
+
+        //needed for IEqualityComparer<IResourceLocation> interface
+        public int GetHashCode(IResourceLocation loc)
+        {
+            return loc.PrimaryKey.GetHashCode() * 31 + loc.ResourceType.GetHashCode();
         }
     }
 }

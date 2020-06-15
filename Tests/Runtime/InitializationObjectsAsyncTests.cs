@@ -16,6 +16,11 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
     [Timeout(3000)]
     public IEnumerator InitializationObjects_CompletesWhenNoObjectsPresent()
     {
+        if (m_RuntimeSettingsPath.StartsWith("GUID:"))
+        {
+            Debug.Log($"{nameof(InitializationObjects_CompletesWhenNoObjectsPresent)} skipped due to not having a runtime settings asset (Fast mode does not create this).");
+            yield break;
+        }
         InitalizationObjectsOperation op = new InitalizationObjectsOperation();
         op.Completed += obj =>
         {
@@ -34,6 +39,11 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
     [Test]
     public void InitializationObjects_OperationRegistersForCallbacks()
     {
+        if (m_RuntimeSettingsPath.StartsWith("GUID:"))
+        {
+            Debug.Log($"{nameof(InitializationObjects_OperationRegistersForCallbacks)} skipped due to not having a runtime settings asset (Fast mode does not create this).");
+            return;
+        }
         //We're checking to make sure we've created a new ResourceManagerCallbacks object.  If this isn't null
         //then we won't create a new one.  This would never be needed in a legitimate scenario.
         MonoBehaviourCallbackHooks.DestroySingleton();
@@ -56,6 +66,11 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
     [Timeout(5000)]
     public IEnumerator InitializationObjects_CompletesWhenObjectsPresent()
     {
+        if (m_RuntimeSettingsPath.StartsWith("GUID:"))
+        {
+            Debug.Log($"{nameof(InitializationObjects_CompletesWhenObjectsPresent)} skipped due to not having a runtime settings asset (Fast mode does not create this).");
+            yield break;
+        }
         InitalizationObjectsOperation op = new InitalizationObjectsOperation();
         op.Completed += obj =>
         {
@@ -82,6 +97,11 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
     [Timeout(3000)]
     public IEnumerator InitializationAsync_HandlesEmptyData()
     {
+        if (m_RuntimeSettingsPath.StartsWith("GUID:"))
+        {
+            Debug.Log($"{nameof(InitializationAsync_HandlesEmptyData)} skipped due to not having a runtime settings asset (Fast mode does not create this).");
+            yield break;
+        }
         InitalizationObjectsOperation op = new InitalizationObjectsOperation();
         op.Completed += obj =>
         {
@@ -100,6 +120,23 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
 
         var handle = m_Addressables.ResourceManager.StartOperation(op, rtdOp);
         yield return handle;
+    }
+
+    [UnityTest]
+    public IEnumerator InitializationObjectsOperation_DoesNotThrow_WhenRuntimeDataOpFails()
+    {
+        var initObjectsOp = new InitalizationObjectsOperation();
+        initObjectsOp.Init(new AsyncOperationHandle<ResourceManagerRuntimeData>()
+        {
+            m_InternalOp = new ProviderOperation<ResourceManagerRuntimeData>()
+            {
+                Result = null
+            }
+        }, m_Addressables);
+        LogAssert.Expect(LogType.Error, "RuntimeData is null.  Please ensure you have built the correct Player Content.");
+        var handle = m_Addressables.ResourceManager.StartOperation(initObjectsOp, default);
+        yield return handle;
+        Assert.AreEqual(AsyncOperationStatus.Succeeded, handle.Status);
     }
 
     [UnityTest]

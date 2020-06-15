@@ -169,7 +169,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void Build_WithInvalidAssetInResourcesFolder_Succeeds()
         {
-            var path = k_TestConfigFolder + "/Resources/unknownAsset.plist";
+            var path = GetAssetPath("Resources/unknownAsset.plist");
             if (!System.IO.Directory.Exists(System.IO.Path.GetDirectoryName(path)))
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
             System.IO.File.WriteAllText(path, "nothing");

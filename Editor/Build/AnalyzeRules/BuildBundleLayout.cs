@@ -15,7 +15,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         {
             ClearAnalysis();
 
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            if (!BuildUtility.CheckModifiedScenesAndAskToSave())
             {
                 Debug.LogError("Cannot run Analyze with unsaved scenes");
                 m_Results.Add(new AnalyzeResult {resultName = ruleName + "Cannot run Analyze with unsaved scenes"});

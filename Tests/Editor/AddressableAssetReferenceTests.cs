@@ -21,19 +21,19 @@ namespace UnityEditor.AddressableAssets.Tests
 		    var subSO = ScriptableObject.CreateInstance<TestSubObject>();
 		    subSO.name = "sub";
 
-		    m_ScriptableObjectPath = Path.Combine(k_TestConfigFolder, "testScriptableObject.asset");
+		    m_ScriptableObjectPath = GetAssetPath("testScriptableObject.asset");
 		    AssetDatabase.CreateAsset(mainSO, m_ScriptableObjectPath);
 		    AssetDatabase.AddObjectToAsset(subSO, m_ScriptableObjectPath);
 		    AssetDatabase.ImportAsset(m_ScriptableObjectPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 		    
 		    // create a Sprite atlas, + sprite
-		    m_SpriteAtlasPath = Path.Combine(k_TestConfigFolder, "testAtlas.spriteatlas");
+		    m_SpriteAtlasPath = GetAssetPath("testAtlas.spriteatlas");
 		    SpriteAtlas spriteAtlas = new SpriteAtlas();
 		    AssetDatabase.CreateAsset(spriteAtlas, m_SpriteAtlasPath);
 		    
 		    Texture2D texture = Texture2D.whiteTexture;
 		    byte[] data = texture.EncodeToPNG();
-		    m_TexturePath = Path.Combine( k_TestConfigFolder, "testTexture.png" );
+		    m_TexturePath = GetAssetPath("testTexture.png");
 		    File.WriteAllBytes(m_TexturePath, data);
 		    AssetDatabase.ImportAsset(m_TexturePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 

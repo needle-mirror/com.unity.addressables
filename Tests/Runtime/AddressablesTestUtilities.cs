@@ -72,7 +72,7 @@ static class AddressablesTestUtility
         var data = ImageConversion.EncodeToPNG(texture);
         UnityEngine.Object.DestroyImmediate(texture);
         AssetDatabase.GenerateUniqueAssetPath(RootFolder);
-        var spritePath = RootFolder + "sprite.png";
+        var spritePath = RootFolder + "/sprite.png";
         File.WriteAllBytes(spritePath, data);
             
         AssetDatabase.ImportAsset(spritePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
@@ -91,10 +91,10 @@ static class AddressablesTestUtility
         var so = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
         var sub = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
         sub.name = "sub";
-        AssetDatabase.CreateAsset(so, RootFolder + "sub.asset");
-        AssetDatabase.AddObjectToAsset(sub, RootFolder + "sub.asset");
-        AssetDatabase.ImportAsset(RootFolder + "sub.asset", ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-        var subGuid = AssetDatabase.AssetPathToGUID(RootFolder + "sub.asset");
+        AssetDatabase.CreateAsset(so, RootFolder + "/sub.asset");
+        AssetDatabase.AddObjectToAsset(sub, RootFolder + "/sub.asset");
+        AssetDatabase.ImportAsset(RootFolder + "/sub.asset", ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+        var subGuid = AssetDatabase.AssetPathToGUID(RootFolder + "/sub.asset");
         string assetRefGuid = CreateAsset(RootFolder + "/testIsReference.prefab", "IsReference");
         GameObject go = new GameObject("AssetReferenceBehavior");
         AssetReferenceTestBehavior aRefTestBehavior = go.AddComponent<AssetReferenceTestBehavior>();
@@ -144,6 +144,7 @@ static class AddressablesTestUtility
                 continue;
             buildContext.PathFormat = "{0}Library/com.unity.addressables/{1}_" + testType + "_TEST_" + suffix + ".json";
             b.BuildData<AddressableAssetBuildResult>(buildContext);
+            PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath + testType, PlayerPrefs.GetString(Addressables.kAddressablesRuntimeDataPath, ""));
         }
     }
 #endif

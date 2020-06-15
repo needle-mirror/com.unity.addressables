@@ -88,6 +88,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             m_Scenes = null;
             s_GUIDSceneIndexLookup = null;
+            s_PathSceneIndexLookup = null;
         }
 
         public static int GetSceneIndex(GUID guid)

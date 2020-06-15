@@ -369,7 +369,9 @@ namespace UnityEngine.ResourceManagement
 
             // Calculate the hash of the dependencies
             int depHash = location.DependencyHashCode;
-            var depOp = location.HasDependencies ? ProvideResourceGroupCached(location.Dependencies, depHash, null, null) : default(AsyncOperationHandle<IList<AsyncOperationHandle>>);
+            var depOp = location.HasDependencies ? 
+                ProvideResourceGroupCached(location.Dependencies, depHash, null, null) : 
+                default(AsyncOperationHandle<IList<AsyncOperationHandle>>);
             if (provider == null)
                 provider = GetResourceProvider(desiredType, location);
 
@@ -504,9 +506,7 @@ namespace UnityEngine.ResourceManagement
         /// <typeparam name="TObject">Object type.</typeparam>
         public AsyncOperationHandle<TObject> CreateCompletedOperation<TObject>(TObject result, string errorMsg)
         {
-            var cop = CreateOperation<CompletedOperation<TObject>>(typeof(CompletedOperation<TObject>), typeof(CompletedOperation<TObject>).GetHashCode(), 0, null);
-            cop.Init(result, string.IsNullOrEmpty(errorMsg), errorMsg);
-            return StartOperation(cop, default(AsyncOperationHandle));
+            return CreateCompletedOperation(result, string.IsNullOrEmpty(errorMsg), errorMsg);
         }
 
         internal AsyncOperationHandle<TObject> CreateCompletedOperation<TObject>(TObject result, bool success, string errorMsg)
@@ -574,7 +574,8 @@ namespace UnityEngine.ResourceManagement
             return StartOperation(op, default);
         }
 
-        internal AsyncOperationHandle<IList<AsyncOperationHandle>> ProvideResourceGroupCached(IList<IResourceLocation> locations, int groupHash, Type desiredType, Action<AsyncOperationHandle> callback)
+        internal AsyncOperationHandle<IList<AsyncOperationHandle>> ProvideResourceGroupCached(
+            IList<IResourceLocation> locations, int groupHash, Type desiredType, Action<AsyncOperationHandle> callback, bool releaseDependenciesOnFailure = true)
         {
             GroupOperation op = AcquireGroupOpFromCache(groupHash);
             AsyncOperationHandle<IList<AsyncOperationHandle>> handle;
@@ -585,7 +586,7 @@ namespace UnityEngine.ResourceManagement
                 foreach (var loc in locations)
                     ops.Add(ProvideResource(loc, desiredType));
 
-                op.Init(ops);
+                op.Init(ops, releaseDependenciesOnFailure);
 
                 handle = StartOperation(op, default(AsyncOperationHandle));
             }
@@ -608,12 +609,31 @@ namespace UnityEngine.ResourceManagement
 
         /// <summary>
         /// Asynchronously load all objects in the given collection of <paramref name="locations"/>.
+        /// If any matching location fails, all loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.  
         /// </summary>
         /// <returns>An async operation that will complete when all individual async load operations are complete.</returns>
         /// <param name="locations">locations to load.</param>
         /// <param name="callback">This callback will be invoked once for each object that is loaded.</param>
         /// <typeparam name="TObject">Object type to load.</typeparam>
         public AsyncOperationHandle<IList<TObject>> ProvideResources<TObject>(IList<IResourceLocation> locations, Action<TObject> callback = null)
+        {
+            return ProvideResources(locations, true, callback);
+        }
+        /// <summary>
+        /// Asynchronously load all objects in the given collection of <paramref name="locations"/>.
+        /// </summary>
+        /// <returns>An async operation that will complete when all individual async load operations are complete.</returns>
+        /// <param name="locations">locations to load.</param>
+        /// <param name="releaseDependenciesOnFailure">
+        /// If all matching locations succeed, this parameter is ignored.
+        /// When true, if any matching location fails, all loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.  
+        /// When false, if any matching location fails, the returned .Result will be an IList of size equal to the number of locations attempted.  Any failed location will
+        /// correlate to a null in the IList, while successful loads will correlate to a TObject in the list. The .Status will still be Failed.
+        /// When true, op does not need to be released if anything fails, when false, it must always be released. 
+        /// </param>
+        /// <param name="callback">This callback will be invoked once for each object that is loaded.</param>
+        /// <typeparam name="TObject">Object type to load.</typeparam>
+        public AsyncOperationHandle<IList<TObject>> ProvideResources<TObject>(IList<IResourceLocation> locations, bool releaseDependenciesOnFailure, Action<TObject> callback = null)
         {
             if (locations == null)
                 return CreateCompletedOperation<IList<TObject>>(null, "Null Location");
@@ -623,17 +643,51 @@ namespace UnityEngine.ResourceManagement
             {
                 callbackGeneric = (x) => callback((TObject)(x.Result));
             }
-            var typelessHandle = ProvideResourceGroupCached(locations, CalculateLocationsHash(locations, typeof(TObject)), typeof(TObject), callbackGeneric);
-            var chainOp = CreateChainOperation(typelessHandle, (x) =>
-            {
-                if (x.Status != AsyncOperationStatus.Succeeded)
-                    return CreateCompletedOperation<IList<TObject>>(null, x.OperationException != null ? x.OperationException.Message : "ProvidResources failed");
-
+            var typelessHandle = ProvideResourceGroupCached(locations, CalculateLocationsHash(locations, typeof(TObject)), typeof(TObject), callbackGeneric, releaseDependenciesOnFailure);
+            var chainOp = CreateChainOperation<IList<TObject>>(typelessHandle, (resultHandle) =>
+            {            
+                AsyncOperationHandle<IList<AsyncOperationHandle>> handleToHandles = resultHandle.Convert<IList<AsyncOperationHandle>>();
+           
                 var list = new List<TObject>();
-                foreach (var r in x.Result)
-                    list.Add(r.Convert<TObject>().Result);
-                return CreateCompletedOperation<IList<TObject>>(list, string.Empty);
+                var errorMessage = string.Empty;
+                if (handleToHandles.Status == AsyncOperationStatus.Succeeded)
+                {
+                    foreach (var r in handleToHandles.Result)
+                        list.Add(r.Convert<TObject>().Result);
+                }
+                else
+                {
+
+                    bool foundSuccess = false;
+                    if (!releaseDependenciesOnFailure)
+                    {
+                        foreach (AsyncOperationHandle handle in handleToHandles.Result)
+                        {
+                            if (handle.Status == AsyncOperationStatus.Succeeded)
+                            {
+                                list.Add(handle.Convert<TObject>().Result);
+                                foundSuccess = true;
+                            }
+                            else
+                                list.Add(default(TObject));
+                        }
+                    }
+
+                    if (!foundSuccess)
+                    {
+                        list = null;
+                        errorMessage = handleToHandles.OperationException != null ? handleToHandles.OperationException.Message : "ProvidResources failed";
+                    }
+                    else
+                    {
+                        errorMessage = "Partial success in ProvideResources.  Some items failed to load. See earlier logs for more info.";
+                    }
+                }
+            
+                return CreateCompletedOperation<IList<TObject>>(list, string.IsNullOrEmpty(errorMessage), errorMessage);
+                
             });
+
             // chain operation holds the dependency
             typelessHandle.Release();
             return chainOp;
