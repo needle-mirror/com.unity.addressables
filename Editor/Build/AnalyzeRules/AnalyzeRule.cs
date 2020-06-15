@@ -7,7 +7,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
     /// <summary>
     /// Base class for creating rules to analyze Addressables data.  Use AnalyzeWindow.RegisterNewRule<T>() to register
-    ///  a rule with the GUI window. 
+    ///  a rule with the GUI window.
     /// </summary>
     [Serializable]
     public class AnalyzeRule
@@ -21,7 +21,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         internal List<AnalyzeResult> m_Results = new List<AnalyzeResult>();
 
         [NonSerialized]
-        protected AnalyzeResult noErrors = new AnalyzeResult{resultName = "No issues found"};
+        protected AnalyzeResult noErrors = new AnalyzeResult { resultName = "No issues found" };
 
         /// <summary>
         /// Delimiter character used in analyze rule string names.  This is used when a rule result needs to display
@@ -31,9 +31,9 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         ///  ----- C
         /// </summary>
         public const char kDelimiter = ':';
-        
+
         /// <summary>
-        /// Result data returned by rules.  
+        /// Result data returned by rules.
         /// </summary>
         [Serializable]
         public class AnalyzeResult
@@ -61,7 +61,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 set { m_Severity = value; }
             }
         }
-        
+
         /// <summary>
         /// Display name for rule
         /// </summary>
@@ -71,7 +71,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         }
 
         /// <summary>
-        /// This method runs the actual analysis for the rule.   
+        /// This method runs the actual analysis for the rule.
         /// </summary>
         /// <param name="settings">The settings object to analyze</param>
         /// <returns>A list of resulting information (warnings, errors, or info)</returns>
@@ -83,13 +83,13 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         /// <summary>
         /// Fixing method to be run on results of the RefreshAnalysis.  If CanFix returns true, this method must be
         /// overriden.  It is recommended that RefreshAnalysis caches any data that will be needed to fix.  Fix should
-        /// not rerun RefreshAnalysis before fixing. 
+        /// not rerun RefreshAnalysis before fixing.
         /// </summary>
         /// <param name="settings">The settings object to analyze</param>
-        public virtual void FixIssues(AddressableAssetSettings settings) { }
+        public virtual void FixIssues(AddressableAssetSettings settings) {}
 
         /// <summary>
-        /// Clears out the analysis results. When overriding, use to clear rule-specific data as well. 
+        /// Clears out the analysis results. When overriding, use to clear rule-specific data as well.
         /// </summary>
         public virtual void ClearAnalysis()
         {

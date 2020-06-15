@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Diagnostics.Data;
 using UnityEngine;
@@ -14,7 +14,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI.Graph
         Rect m_Bounds;
         Vector2 m_GridSize;
 
-        public GraphLayerBarChartMesh(int stream, string name, string description, Color color) : base(stream, name, description, color) { }
+        public GraphLayerBarChartMesh(int stream, string name, string description, Color color) : base(stream, name, description, color) {}
 
         void AddQuadToMesh(float left, float right, float bot, float top)
         {

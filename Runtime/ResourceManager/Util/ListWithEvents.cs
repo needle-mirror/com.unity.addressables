@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -22,7 +22,6 @@ internal class ListWithEvents<T> : IList<T>
         if (OnElementRemoved != null)
             OnElementRemoved(element);
     }
-
 
     public T this[int index]
     {

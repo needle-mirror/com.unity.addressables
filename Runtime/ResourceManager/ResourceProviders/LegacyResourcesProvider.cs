@@ -17,7 +17,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             AsyncOperation m_RequestOperation;
             ProvideHandle m_ProvideHandle;
-            
+
             public void Start(ProvideHandle provideHandle)
             {
                 m_ProvideHandle = provideHandle;

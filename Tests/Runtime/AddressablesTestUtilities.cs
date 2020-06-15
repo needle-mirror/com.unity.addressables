@@ -18,7 +18,6 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 
 static class AddressablesTestUtility
 {
-
     static public void Reset(AddressablesImpl aa)
     {
         aa.ClearResourceLocators();
@@ -32,7 +31,7 @@ static class AddressablesTestUtility
         Reset(Addressables.Instance);
         var RootFolder = string.Format(pathFormat, testType, suffix);
         AssetDatabase.DeleteAsset(RootFolder);
-#endif 
+#endif
     }
 
     static public string GetPrefabLabel(string suffix) { return "prefabs" + suffix; }
@@ -52,7 +51,7 @@ static class AddressablesTestUtility
 
         var settings = AddressableAssetSettings.Create(RootFolder + "/Settings", "AddressableAssetSettings.Tests", false, true);
         var group = settings.FindGroup("TestStuff" + suffix);
-        
+
         if (group == null)
             group = settings.CreateGroup("TestStuff" + suffix, true, false, false, null, typeof(BundledAssetGroupSchema));
         group.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.OnlyHash;
@@ -74,16 +73,16 @@ static class AddressablesTestUtility
         AssetDatabase.GenerateUniqueAssetPath(RootFolder);
         var spritePath = RootFolder + "/sprite.png";
         File.WriteAllBytes(spritePath, data);
-            
+
         AssetDatabase.ImportAsset(spritePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 
         var spriteGuid = AssetDatabase.AssetPathToGUID(spritePath);
         var importer = (TextureImporter)AssetImporter.GetAtPath(spritePath);
         importer.textureType = TextureImporterType.Sprite;
         importer.spriteImportMode = SpriteImportMode.Multiple;
-        importer.spritesheet = new SpriteMetaData[] { new SpriteMetaData() { name = "topleft", pivot = Vector2.zero, rect = new Rect(0,0,16,16) },
-                                                    new SpriteMetaData() { name = "botright", pivot = Vector2.zero, rect = new Rect(16,16,16,16) }};
-        importer.SaveAndReimport(); 
+        importer.spritesheet = new SpriteMetaData[] { new SpriteMetaData() { name = "topleft", pivot = Vector2.zero, rect = new Rect(0, 0, 16, 16) },
+                                                      new SpriteMetaData() { name = "botright", pivot = Vector2.zero, rect = new Rect(16, 16, 16, 16) }};
+        importer.SaveAndReimport();
 
         var spriteEntry = settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(spritePath), group, false, false);
         spriteEntry.address = "sprite";
@@ -105,7 +104,7 @@ static class AddressablesTestUtility
         {
             labelString = settings.labelTable.labelNames[0]
         };
-            
+
         string hasBehaviorPath = RootFolder + "/AssetReferenceBehavior.prefab";
         PrefabUtility.SaveAsPrefabAsset(go, hasBehaviorPath);
         settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(hasBehaviorPath), group, false, false);
@@ -147,5 +146,6 @@ static class AddressablesTestUtility
             PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath + testType, PlayerPrefs.GetString(Addressables.kAddressablesRuntimeDataPath, ""));
         }
     }
+
 #endif
-    }
+}

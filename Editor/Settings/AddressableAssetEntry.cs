@@ -24,7 +24,7 @@ namespace UnityEditor.AddressableAssets.Settings
     internal struct ImplicitAssetEntry : IReferenceEntryData
     {
         public string AssetPath { get; set; }
-        public string address { get; set ; }
+        public string address { get; set; }
         public bool IsInResources { get; set; }
     }
 
@@ -110,6 +110,8 @@ namespace UnityEditor.AddressableAssets.Settings
                 m_Address = addr;
                 if (string.IsNullOrEmpty(m_Address))
                     m_Address = AssetPath;
+                if (m_GUID.Length > 0 && m_Address.Contains("[") && m_Address.Contains("]"))
+                    Debug.LogErrorFormat("Address '{0}' cannot contain '[ ]'.", m_Address);
                 SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
             }
         }
@@ -162,7 +164,6 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
                 return m_IsScene;
             }
-
         }
         /// <summary>
         /// The set of labels for this entry.  There is no inherent limit to the number of labels.
@@ -243,6 +244,8 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal AddressableAssetEntry(string guid, string address, AddressableAssetGroup parent, bool readOnly)
         {
+            if (guid.Length > 0 && address.Contains("[") && address.Contains("]"))
+                Debug.LogErrorFormat("Address '{0}' cannot contain '[ ]'.", address);
             m_GUID = guid;
             m_Address = address;
             m_ReadOnly = readOnly;
@@ -265,7 +268,6 @@ namespace UnityEditor.AddressableAssets.Settings
             formatter.Serialize(stream, IsInSceneList);
             formatter.Serialize(stream, IsSubAsset);
         }
-
 
         internal void SetDirty(AddressableAssetSettings.ModificationEvent e, object o, bool postEvent)
         {
@@ -342,7 +344,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-                if(m_TargetAsset == null)
+                if (m_TargetAsset == null)
                 {
                     if (!string.IsNullOrEmpty(AssetPath) || !IsSubAsset)
                     {
@@ -352,7 +354,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
                     if (ParentEntry == null || !string.IsNullOrEmpty(AssetPath) || string.IsNullOrEmpty(ParentEntry.AssetPath))
                         return null;
-                    
+
                     var mainAsset = ParentEntry.MainAsset;
                     if (ResourceManagerConfig.ExtractKeyAndSubKey(address, out string mainKey, out string subObjectName))
                     {
@@ -371,7 +373,6 @@ namespace UnityEditor.AddressableAssets.Settings
                                 break;
                             }
                         }
-
                     }
                 }
                 return m_TargetAsset;
@@ -405,7 +406,6 @@ namespace UnityEditor.AddressableAssets.Settings
                     path = path.Substring("assets/".Length);
                 return path;
             }
-
         }
 
         static string GetResourcesPath(string path)
@@ -431,7 +431,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public void GatherAllAssets(List<AddressableAssetEntry> assets, bool includeSelf, bool recurseAll, bool includeSubObjects, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
             var settings = parentGroup.Settings;
-            
+
             if (guid == EditorSceneListName)
             {
                 var pd = parentGroup.GetSchema<GroupSchemas.PlayerDataGroupSchema>();
@@ -586,7 +586,6 @@ namespace UnityEditor.AddressableAssets.Settings
                                     }
                                     else
                                     {
-
                                         if (spriteName.EndsWith("(Clone)"))
                                             spriteName = spriteName.Replace("(Clone)", "");
 
@@ -700,7 +699,7 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
-        /// Create all entries for this addressable asset.  This will expand subassets (Sprites, Meshes, etc) and also different representations.  
+        /// Create all entries for this addressable asset.  This will expand subassets (Sprites, Meshes, etc) and also different representations.
         /// </summary>
         /// <param name="entries">The list of entries to fill in.</param>
         /// <param name="isBundled">Whether the entry is bundles or not.  This will affect the load path.</param>
@@ -728,25 +727,18 @@ namespace UnityEditor.AddressableAssets.Settings
                 return;
             }
 
-            if (mainType != null)
-            {
-                Type runtimeProvider = GetRuntimeProviderType(providerType, mainType);
-                if (runtimeProvider != null)
-                    providerTypes.Add(runtimeProvider);
-
-                entries.Add(new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, dependencies, extraData));
-            }
+            Type runtimeProvider = GetRuntimeProviderType(providerType, mainType);
+            if (runtimeProvider != null)
+                providerTypes.Add(runtimeProvider);
 
             if (!IsScene)
             {
-                ObjectIdentifier[] ids = depInfo != null ? depInfo[new GUID(guid)].includedObjects.ToArray() : 
+                ObjectIdentifier[] ids = depInfo != null ? depInfo[new GUID(guid)].includedObjects.ToArray() :
                     ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(guid), EditorUserBuildSettings.activeBuildTarget);
-                
-                if (ids.Length > 1)
+                if (ids.Length > 0)
                 {
-                    Type [] typesForObjs = ContentBuildInterface.GetTypeForObjects(ids);
+                    Type[] typesForObjs = ContentBuildInterface.GetTypeForObjects(ids);
                     HashSet<Type> typesSeen = new HashSet<Type>();
-                    typesSeen.Add(mainType);
                     foreach (var objType in typesForObjs)
                     {
                         if (typeof(Component).IsAssignableFrom(objType))
@@ -759,6 +751,10 @@ namespace UnityEditor.AddressableAssets.Settings
                         }
                     }
                 }
+            }
+            else if (mainType != null)
+            {
+                entries.Add(new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, dependencies, extraData));
             }
         }
 

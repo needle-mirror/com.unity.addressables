@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEditor.AddressableAssets.HostingServices;
 using UnityEditor.AddressableAssets.Settings;
@@ -163,7 +163,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (m_IsResizingVerticalSplitter)
                 m_VerticalSplitterRatio = Mathf.Clamp(Event.current.mousePosition.y / position.height, 0.2f, 0.9f);
 
-            if(m_IsResizingHorizontalSplitter)
+            if (m_IsResizingHorizontalSplitter)
                 m_HorizontalSplitterRatio = Mathf.Clamp(Event.current.mousePosition.x / position.width, 0.15f, 0.6f);
 
             var toolbarRect = new Rect(0, 0, position.width, position.height);
@@ -180,7 +180,7 @@ namespace UnityEditor.AddressableAssets.GUI
             EditorGUIUtility.AddCursorRect(horizontalSplitterRect, MouseCursor.ResizeHorizontal);
             if (Event.current.type == EventType.MouseDown && verticalSplitterRect.Contains(Event.current.mousePosition))
                 m_IsResizingVerticalSplitter = true;
-            else if(Event.current.type == EventType.MouseDown && horizontalSplitterRect.Contains(Event.current.mousePosition))
+            else if (Event.current.type == EventType.MouseDown && horizontalSplitterRect.Contains(Event.current.mousePosition))
                 m_IsResizingHorizontalSplitter = true;
             else if (Event.current.type == EventType.MouseUp)
             {
@@ -207,7 +207,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
 
             DrawOutline(servicesRect, 1);
-           
+
             GUILayout.BeginArea(servicesRect);
             {
                 Rect r = new Rect(servicesRect);
@@ -256,11 +256,11 @@ namespace UnityEditor.AddressableAssets.GUI
                 return;
             }
 
-            if(m_ServicesList == null || m_ServicesList.Names.Count != svcList.Count || m_Reload)
+            if (m_ServicesList == null || m_ServicesList.Names.Count != svcList.Count || m_Reload)
             {
                 m_ServicesList = new HostingServicesListTreeView(new TreeViewState(), manager, this, HostingServicesListTreeView.CreateHeader());
 
-                if(m_Reload)
+                if (m_Reload)
                     m_Reload = false;
             }
             m_ServicesList.OnGUI(rect);
@@ -273,14 +273,14 @@ namespace UnityEditor.AddressableAssets.GUI
             var svcList = manager.HostingServices;
 
             List<IHostingService> lst = new List<IHostingService>(svcList);
-            if(lst.Count == 0)
+            if (lst.Count == 0)
             {
                 EditorGUILayout.Space();
                 EditorGUILayout.LabelField("No Hosting Services configured.");
                 GUILayout.EndScrollView();
                 return;
             }
-            else if(m_serviceIndex >= lst.Count)
+            else if (m_serviceIndex >= lst.Count)
             {
                 m_serviceIndex = lst.Count - 1;
             }
@@ -306,7 +306,7 @@ namespace UnityEditor.AddressableAssets.GUI
         /// <param name="showDialog">Indicates whether or not a warning dialogue box is shown.</param>
         public void RemoveService(IHostingService svc, bool showDialog = true)
         {
-            if(!showDialog)
+            if (!showDialog)
                 m_RemovalQueue.Add(svc);
             else if (EditorUtility.DisplayDialog("Remove Service", "Are you sure you want to remove " + svc.DescriptiveName + "? This action cannot be undone.", "Ok", "Cancel"))
                 m_RemovalQueue.Add(svc);
@@ -314,8 +314,8 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void DrawServiceElement(IHostingService svc, List<IHostingService> svcList)
         {
-            string newName =  EditorGUILayout.DelayedTextField("Service Name", svc.DescriptiveName);
-            if(svcList.Find(s => s.DescriptiveName == newName) == default(IHostingService))
+            string newName = EditorGUILayout.DelayedTextField("Service Name", svc.DescriptiveName);
+            if (svcList.Find(s => s.DescriptiveName == newName) == default(IHostingService))
             {
                 svc.DescriptiveName = newName;
                 m_ServicesList.Reload();
@@ -340,7 +340,6 @@ namespace UnityEditor.AddressableAssets.GUI
 
             using (new EditorGUI.DisabledScope(!svc.IsHostingServiceRunning))
             {
-
                 GUILayout.BeginHorizontal();
                 EditorGUILayout.LabelField("Hosting Service Variables");
 

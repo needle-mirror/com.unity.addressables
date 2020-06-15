@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -16,7 +16,7 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
     {
         CleanTemporaryPlayerBuildData();
     }
-    
+
     [InitializeOnLoadMethod]
     static void CleanTemporaryPlayerBuildData()
     {

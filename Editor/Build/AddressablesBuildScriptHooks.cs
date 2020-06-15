@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Build
@@ -21,9 +21,9 @@ namespace UnityEditor.AddressableAssets.Build
         {
             EditorApplication.playModeStateChanged += OnEditorPlayModeChanged;
         }
-        
+
         static void OnEditorPlayModeChanged(PlayModeStateChange state)
-        {  
+        {
             if (state == PlayModeStateChange.ExitingEditMode)
             {
                 var settings = AddressableAssetSettingsDefaultObject.Settings;
@@ -48,7 +48,6 @@ namespace UnityEditor.AddressableAssets.Build
                     Debug.LogError(err);
                     if (BuildScript.buildCompleted != null)
                     {
-                        
                         var result = AddressableAssetBuildResult.CreateResult<AddressableAssetBuildResult>(null, 0, err);
                         BuildScript.buildCompleted(result);
                     }

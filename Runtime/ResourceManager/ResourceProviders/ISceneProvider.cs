@@ -27,6 +27,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             m_Operation.allowSceneActivation = true;
         }
+
         /// <summary>
         /// Activate the scene via the AsyncOperation.  This is the scene loading AsyncOperation provided by the engine.
         /// The documentation for AsyncOperation can be found here: https://docs.unity3d.com/ScriptReference/AsyncOperation.html

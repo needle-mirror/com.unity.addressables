@@ -76,13 +76,13 @@ namespace UnityEditor.AddressableAssets.Tests
         public void PackedModeScript_CannotBuildPlayContent()
         {
             var buildScript = ScriptableObject.CreateInstance<BuildScriptPackedMode>();
-            
+
             Assert.IsFalse(buildScript.CanBuildData<AddressablesPlayModeBuildResult>());
-            
+
             Assert.IsTrue(buildScript.CanBuildData<AddressableAssetBuildResult>());
             Assert.IsTrue(buildScript.CanBuildData<AddressablesPlayerBuildResult>());
         }
-#if !UNITY_2020_2_OR_NEWER //https://jira.unity3d.com/browse/ADDR-1180
+
         [Test]
         public void ProcessPlayerDataSchema_Scenes_IncludeBuildSettingsScenesIsFalse_ShouldNotGenerateLocationsOrProviders()
         {
@@ -90,6 +90,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
             var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+            bool includeBuildSettingsScenes = schema.IncludeBuildSettingsScenes;
             schema.IncludeBuildSettingsScenes = false;
 
             var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
@@ -101,19 +102,21 @@ namespace UnityEditor.AddressableAssets.Tests
             var expectedProviderCount = 0;
             var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
             Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
+
+            schema.IncludeBuildSettingsScenes = includeBuildSettingsScenes;
         }
-#endif
+
         private static IEnumerable<object[]> PlayerDataGroupSchema_SceneCases()
         {
             string sc1 = k_SchemaTestFolder + "/TestScenes/testScene.unity";
             string sc2 = k_SchemaTestFolder + "/OtherFolder/testScene2.unity";
-            
-            yield return new object[] { new string[] { }};
-            yield return new object[] { new string[] { sc1 }};
-            yield return new object[] { new string[] { sc1, sc2}};
+
+            yield return new object[] { new string[] {} };
+            yield return new object[] { new string[] { sc1 } };
+            yield return new object[] { new string[] { sc1, sc2 } };
             //yield return new object[] { new string[] { sc1, sc1 }};
         }
-#if !UNITY_2020_2_OR_NEWER //https://jira.unity3d.com/browse/ADDR-1180
+
         [Test, TestCaseSource(nameof(PlayerDataGroupSchema_SceneCases))]
         public void ProcessPlayerDataSchema_Scenes_ShouldGenerateCorrectLocationsAndProviders(string[] scenePaths)
         {
@@ -122,6 +125,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
             var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+            bool includeBuildSettingsScenes = schema.IncludeBuildSettingsScenes;
             schema.IncludeBuildSettingsScenes = true;
 
             var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
@@ -135,8 +139,10 @@ namespace UnityEditor.AddressableAssets.Tests
             var expectedProviderCount = 0;
             var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
             Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
+
+            schema.IncludeBuildSettingsScenes = includeBuildSettingsScenes;
         }
-#endif
+
         [Test]
         public void SetAssetEntriesBundleFileIdToCatalogEntryBundleFileId_ModifiedOnlyAssetEntries_ThatAreIncludedInBuildWriteData()
         {
@@ -160,7 +166,7 @@ namespace UnityEditor.AddressableAssets.Tests
             };
 
             IBundleWriteData writeData = new BundleWriteData();
-            writeData.AssetToFiles.Add(entry1Guid, new List<string>(){ bundleFile });
+            writeData.AssetToFiles.Add(entry1Guid, new List<string>() { bundleFile });
             writeData.FileToBundle.Add(bundleFile, internalBundleName);
 
             Dictionary<string, ContentCatalogDataEntry> catalogMap = new Dictionary<string, ContentCatalogDataEntry>()
@@ -204,14 +210,14 @@ namespace UnityEditor.AddressableAssets.Tests
             //string res3 = k_SchemaTestFolder + "/Resources/Resources/testResource3.prefab";
             //string res4 = k_SchemaTestFolder + "/Resources/SubFolder/Resources/testResource4.prefab";
 
-            yield return new object[] { new string[] { } };
-            yield return new object[] { new string[] { res1 }};
-            yield return new object[] { new string[] { res1, res2 }};
-            yield return new object[] { new string[] { res1, res1 }};
+            yield return new object[] { new string[] {} };
+            yield return new object[] { new string[] { res1 } };
+            yield return new object[] { new string[] { res1, res2 } };
+            yield return new object[] { new string[] { res1, res1 } };
             //yield return new object[] { new string[] { res1, res2, res3 }};
             //yield return new object[] { new string[] { res1, res2, res3, res4 } };
         }
-#if !UNITY_2020_2_OR_NEWER //https://jira.unity3d.com/browse/ADDR-1180
+
         [Test, TestCaseSource(nameof(PlayerDataGroupSchema_ResourcesCases))]
         public void ProcessPlayerDataSchema_Resources_ShouldGenerateCorrectLocationsAndProviders(string[] resourcesPaths)
         {
@@ -220,6 +226,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
             var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+            bool includeResourceFolders = schema.IncludeResourcesFolders;
             schema.IncludeResourcesFolders = true;
 
             var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
@@ -227,7 +234,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             var actualLocations = m_BuildContext.locations;
             var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
-            
+
             var expectedLocationIds = resourcesPaths.Distinct().Select(s => Path.GetFileName(s).Replace(".prefab", ""));
             Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
             Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
@@ -241,14 +248,16 @@ namespace UnityEditor.AddressableAssets.Tests
             {
                 Assert.AreEqual(0, actualProviderIds.Length);
             }
+
+            schema.IncludeResourcesFolders = includeResourceFolders;
         }
-#endif
+
         [Test]
         public void ErrorCheckBundleSettings_FindsNoProblemsInDefaultScema()
         {
             var group = Settings.CreateGroup("PackedTest", false, false, false, null, typeof(BundledAssetGroupSchema));
             var schema = group.GetSchema<BundledAssetGroupSchema>();
-               
+
             var errorStr = BuildScriptPackedMode.ErrorCheckBundleSettings(schema, group, Settings);
             LogAssert.NoUnexpectedReceived();
             Assert.IsTrue(string.IsNullOrEmpty(errorStr));
@@ -260,7 +269,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var group = Settings.CreateGroup("PackedTest", false, false, false, null, typeof(BundledAssetGroupSchema));
             var schema = group.GetSchema<BundledAssetGroupSchema>();
             schema.BuildPath.Id = "BadPath";
-                
+
             var errorStr = BuildScriptPackedMode.ErrorCheckBundleSettings(schema, group, Settings);
             LogAssert.NoUnexpectedReceived();
             Assert.IsTrue(errorStr.Contains("is set to the dynamic-lookup version of StreamingAssets, but BuildPath is not."));
@@ -272,7 +281,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var group = Settings.CreateGroup("PackedTest", false, false, false, null, typeof(BundledAssetGroupSchema));
             var schema = group.GetSchema<BundledAssetGroupSchema>();
             schema.LoadPath.Id = "BadPath";
-                
+
             var errorStr = BuildScriptPackedMode.ErrorCheckBundleSettings(schema, group, Settings);
             LogAssert.NoUnexpectedReceived();
             Assert.IsTrue(errorStr.Contains("is set to the dynamic-lookup version of StreamingAssets, but LoadPath is not."));
@@ -329,7 +338,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var result = m_BuildScript.CreateCatalogFiles(jsonText, m_BuilderInput, m_BuildContext);
 
             Assert.IsTrue(result);
-            
+
             // Assert locations
             Assert.IsTrue(m_RuntimeData.CatalogLocations.Count == 1);
             Assert.IsTrue(m_RuntimeData.CatalogLocations.Any(l => l.InternalId.EndsWith(fileName)));
@@ -399,7 +408,6 @@ namespace UnityEditor.AddressableAssets.Tests
 
             //Cleanup
             Settings.RemoveGroup(group);
-
         }
 
         [Test]

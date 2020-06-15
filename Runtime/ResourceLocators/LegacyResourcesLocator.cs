@@ -19,7 +19,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         public bool Locate(object key, Type type, out IList<IResourceLocation> locations)
         {
             locations = null;
-            var strKey = key as string; 
+            var strKey = key as string;
             if (strKey == null)
                 return false;
             locations = new List<IResourceLocation>();

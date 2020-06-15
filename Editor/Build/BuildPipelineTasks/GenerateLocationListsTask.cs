@@ -108,7 +108,9 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                     bundles.Add(kvp.Key);
                     HashSet<string> bundleDeps = null;
                     dependencySetForBundle.TryGetValue(kvp.Key, out bundleDeps);
-                    CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetBundleProviderName(assetGroup), GetAssetProviderName(assetGroup), kvp.Value, bundleDeps, locations, aaContext.providerTypes, dependencyData);
+                    ReturnCode returnCode = CreateResourceLocationData(assetGroup, kvp.Key, GetLoadPath(assetGroup, kvp.Key), GetBundleProviderName(assetGroup), GetAssetProviderName(assetGroup), kvp.Value, bundleDeps, locations, aaContext.providerTypes, dependencyData);
+                    if (returnCode == ReturnCode.Error)
+                        return ReturnCode.Error;
                 }
             }
 
@@ -134,22 +136,22 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 return string.Empty;
             }
             var loadPath = bagSchema.LoadPath.GetValue(group.Settings) + "/" + name;
-            if(!string.IsNullOrEmpty(bagSchema.UrlSuffix))
+            if (!string.IsNullOrEmpty(bagSchema.UrlSuffix))
                 loadPath += bagSchema.UrlSuffix;
             return loadPath;
         }
 
-        internal static void CreateResourceLocationData(
-        AddressableAssetGroup assetGroup,
-        string bundleName,
-        string bundleInternalId,
-        string bundleProvider,
-        string assetProvider,
-        List<GUID> assetsInBundle,
-        HashSet<string> bundleDependencies,
-        List<ContentCatalogDataEntry> locations,
-        HashSet<Type> providerTypes,
-        IDependencyData dependencyData)
+        internal static ReturnCode CreateResourceLocationData(
+            AddressableAssetGroup assetGroup,
+            string bundleName,
+            string bundleInternalId,
+            string bundleProvider,
+            string assetProvider,
+            List<GUID> assetsInBundle,
+            HashSet<string> bundleDependencies,
+            List<ContentCatalogDataEntry> locations,
+            HashSet<Type> providerTypes,
+            IDependencyData dependencyData)
         {
             locations.Add(new ContentCatalogDataEntry(typeof(IAssetBundleResource), bundleInternalId, bundleProvider, new object[] { bundleName }));
 
@@ -163,9 +165,14 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 AddressableAssetEntry entry;
                 if (!guidToEntry.TryGetValue(a.ToString(), out entry))
                     continue;
+                if (entry.guid.Length > 0 && entry.address.Contains("[") && entry.address.Contains("]"))
+                {
+                    Debug.LogErrorFormat("Address '{0}' cannot contain '[ ]'.", entry.address);
+                    return ReturnCode.Error;
+                }
                 entry.CreateCatalogEntriesInternal(locations, true, assetProvider, bundleDependencies, null, dependencyData.AssetInfo, providerTypes);
             }
+            return ReturnCode.Success;
         }
     }
-
 }

@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -20,6 +20,7 @@ public class BuildScriptPackedIntegrationTests
         AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
         return AssetDatabase.AssetPathToGUID(path);
     }
+
     static IDataBuilder GetBuilderOfType(AddressableAssetSettings settings, Type modeType)
     {
         foreach (var db in settings.DataBuilders)
@@ -78,7 +79,7 @@ public class BuildScriptPackedIntegrationTests
     {
         AddressableAssetBuildResult result;
         var group = Settings.CreateGroup("MyTestGroup", true, false, false, null, typeof(BundledAssetGroupSchema));
-        
+
         var spriteEntry = Settings.CreateOrMoveEntry(CreateTexture($"{m_SingleTestAssetFolder}/testTexture.png"), group, false, false);
         Settings.profileSettings.SetValue(Settings.activeProfileId, AddressableAssetSettings.kLocalBuildPath, m_SingleTestBuildFolder);
         Settings.profileSettings.SetValue(Settings.activeProfileId, AddressableAssetSettings.kLocalLoadPath, "Library/LocalLoadPath");
@@ -86,7 +87,7 @@ public class BuildScriptPackedIntegrationTests
         IDataBuilder b = GetBuilderOfType(Settings, typeof(BuildScriptPackedMode));
         b.BuildData<AddressableAssetBuildResult>(new AddressablesDataBuilderInput(Settings));
 
-        string [] buildFiles = Directory.GetFiles(m_SingleTestBuildFolder);
+        string[] buildFiles = Directory.GetFiles(m_SingleTestBuildFolder);
 
         // Build again with a lock on the output bundle. This is how we ensure that the bundle is not written again
         using (File.Open(buildFiles[0], FileMode.Open, FileAccess.ReadWrite, FileShare.None))
@@ -110,13 +111,13 @@ public class BuildScriptPackedIntegrationTests
 
         string[] buildFiles = Directory.GetFiles(m_SingleTestBuildFolder);
 
-        byte [] initialBundleBytes = File.ReadAllBytes(buildFiles[0]);
+        byte[] initialBundleBytes = File.ReadAllBytes(buildFiles[0]);
         File.Delete(buildFiles[0]);
         File.WriteAllText(buildFiles[0], "content");
         File.SetLastWriteTime(buildFiles[0], new DateTime(2019, 1, 1));
 
         b.BuildData<AddressableAssetBuildResult>(new AddressablesDataBuilderInput(Settings));
-        
+
         Assert.AreEqual(1, buildFiles.Length, "There should only be one bundle file in the build output folder");
         CollectionAssert.AreEqual(initialBundleBytes, File.ReadAllBytes(buildFiles[0]));
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
@@ -7,7 +7,6 @@ namespace UnityEditor.AddressableAssets.Tests
 {
     public class KeyDataStoreTests
     {
-
         [Serializable]
         class CustomTestClass1
         {

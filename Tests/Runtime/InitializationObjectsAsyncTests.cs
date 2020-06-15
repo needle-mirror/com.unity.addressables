@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
@@ -91,6 +91,7 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
         var handle = m_Addressables.ResourceManager.StartOperation(op, rtdOp);
         yield return handle;
     }
+
 #endif
 
     [UnityTest]

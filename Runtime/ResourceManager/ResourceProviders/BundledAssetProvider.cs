@@ -40,7 +40,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 }
                 return bundle;
             }
-            
+
             public void Start(ProvideHandle provideHandle)
             {
                 provideHandle.SetProgressCallback(ProgressCallback);
@@ -67,7 +67,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     }
                     else
                     {
-                        if(ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
+                        if (ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
                         {
                             subObjectName = subKey;
                             m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(mainPath, m_ProvideHandle.Type);

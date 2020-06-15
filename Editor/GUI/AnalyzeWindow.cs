@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
 using UnityEditor.AddressableAssets.Settings;
@@ -7,7 +7,7 @@ using UnityEngine;
 namespace UnityEditor.AddressableAssets.GUI
 {
     /// <summary>
-    /// Window used to execute AnalyzeRule sets.  
+    /// Window used to execute AnalyzeRule sets.
     /// </summary>
     public class AnalyzeWindow : EditorWindow
     {
@@ -21,12 +21,12 @@ namespace UnityEditor.AddressableAssets.GUI
                 return s_Instance;
             }
         }
-        
+
         private AddressableAssetSettings m_Settings;
 
         [SerializeField]
         private AnalyzeRuleGUI m_AnalyzeEditor;
-        
+
         private Rect displayAreaRect
         {
             get
@@ -51,17 +51,17 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void OnEnable()
         {
-            if(m_AnalyzeEditor == null)
+            if (m_AnalyzeEditor == null)
                 m_AnalyzeEditor = new AnalyzeRuleGUI();
-
         }
 
-        void OnGUI() 
+        void OnGUI()
         {
             GUILayout.BeginArea(displayAreaRect);
             m_AnalyzeEditor.OnGUI(displayAreaRect);
             GUILayout.EndArea();
         }
+
         /// <summary>
         /// Obsolete - please use AnalyzeSystem.RegisterNewRule<TRule>()
         /// </summary>
@@ -70,6 +70,5 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             AnalyzeSystem.RegisterNewRule<TRule>();
         }
-
     }
 }

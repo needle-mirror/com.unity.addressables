@@ -15,7 +15,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 //    [CreateAssetMenu(fileName = "BundledAssetGroupSchema.asset", menuName = "Addressables/Group Schemas/Bundled Assets")]
     [DisplayName("Content Packing & Loading")]
     public class BundledAssetGroupSchema : AddressableAssetGroupSchema, IHostingServiceConfigurationProvider, ISerializationCallbackReceiver
-    {   
+    {
         /// <summary>
         /// Defines how bundles are created.
         /// </summary>
@@ -190,7 +190,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         [Tooltip("Indicates the number of times the request will be retried.")]
         int m_RetryCount;
         /// <summary>
-        /// Indicates the number of times the request will be retried.  
+        /// Indicates the number of times the request will be retried.
         /// </summary>
         public int RetryCount { get { return m_RetryCount; } set { m_RetryCount = value; } }
 
@@ -217,7 +217,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             get { return m_LoadPath; }
         }
-        
+
         //placeholder for UrlSuffix support...
         internal string UrlSuffix
         {
@@ -293,7 +293,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// </summary>
         public void OnBeforeSerialize()
         {
-
         }
 
         /// <summary>
@@ -301,13 +300,12 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// </summary>
         public void OnAfterDeserialize()
         {
-            BuildPath.OnValueChanged += s=> SetDirty(true);
+            BuildPath.OnValueChanged += s => SetDirty(true);
             LoadPath.OnValueChanged += s => SetDirty(true);
             if (m_AssetBundleProviderType.Value == null)
                 m_AssetBundleProviderType.Value = typeof(AssetBundleProvider);
             if (m_BundledAssetProviderType.Value == null)
                 m_BundledAssetProviderType.Value = typeof(BundledAssetProvider);
-
         }
 
         /// <summary>
@@ -327,12 +325,11 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             return ForceUniqueProvider ? string.Format("{0}_{1}", AssetBundleProviderType.Value.FullName, Group.Guid) : AssetBundleProviderType.Value.FullName;
         }
-        
-        
+
         /// <summary>
         /// Used to determine how the final bundle name should look.
         /// </summary>
-        
+
         public enum BundleNamingStyle
         {
             AppendHash,
@@ -340,7 +337,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             OnlyHash,
             FileNameHash
         }
-        
+
         /// <summary>
         /// Used to draw the Bundle Naming popup
         /// </summary>
@@ -367,12 +364,12 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
                 EditorGUI.BeginChangeCheck();
                 int newValue = EditorGUI.Popup(position, new GUIContent(label.text, "Controls how the output AssetBundle's will be named."), enumValue, contents);
-                if(EditorGUI.EndChangeCheck())
+                if (EditorGUI.EndChangeCheck())
                 {
                     newValue = newValue == 0 ? 1 : newValue == 1 ? 0 : newValue;
                     property.enumValueIndex = newValue;
                 }
-                
+
                 EditorGUI.EndProperty();
             }
         }
@@ -391,7 +388,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 SetDirty(true);
             }
         }
-        
+
         private bool m_ShowPaths = true;
         private bool m_ShowAdvanced = false;
 

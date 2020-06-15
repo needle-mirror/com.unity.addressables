@@ -29,7 +29,7 @@ namespace UnityEngine.ResourceManagement.Util
             {
                 if (m_Delegate == null || m_Delegate.Method.DeclaringType == null)
                     return "Null m_delegate for " + m_Id;
-                var n = m_Id + " (target=" + m_Delegate.Target + ") " + m_Delegate.Method.DeclaringType.Name + "." +  m_Delegate.Method.Name + "(";
+                var n = m_Id + " (target=" + m_Delegate.Target + ") " + m_Delegate.Method.DeclaringType.Name + "." + m_Delegate.Method.Name + "(";
                 var sep = "";
                 foreach (var o in m_Target)
                 {
@@ -94,7 +94,6 @@ namespace UnityEngine.ResourceManagement.Util
                 }
                 else
                 {
-
                     var n = m_DelayedActions.Last;
                     while (n != null && n.Value.InvocationTime > del.InvocationTime)
                         n = n.Previous;
@@ -108,7 +107,7 @@ namespace UnityEngine.ResourceManagement.Util
                 m_Actions[m_CollectionIndex].Add(del);
         }
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         void Awake()
         {
             if (!Application.isPlaying)
@@ -117,7 +116,8 @@ namespace UnityEngine.ResourceManagement.Util
                 EditorApplication.update += LateUpdate;
             }
         }
-        #endif
+
+#endif
 
         public static bool IsActive
         {
@@ -145,12 +145,12 @@ namespace UnityEngine.ResourceManagement.Util
             do
             {
                 Instance.InternalLateUpdate(t);
-                if(timeAdvanceAmount >= 0)
+                if (timeAdvanceAmount >= 0)
                     t += timeAdvanceAmount;
                 else
                     t = Time.unscaledTime;
-
-            } while (IsActive && (timeout <= 0 || timer.Elapsed.TotalSeconds < timeout));
+            }
+            while (IsActive && (timeout <= 0 || timer.Elapsed.TotalSeconds < timeout));
             return !IsActive;
         }
 
@@ -182,15 +182,16 @@ namespace UnityEngine.ResourceManagement.Util
                 }
                 iterationCount++;
                 Debug.Assert(iterationCount < 100);
-            } while (m_Actions[m_CollectionIndex].Count > 0);
+            }
+            while (m_Actions[m_CollectionIndex].Count > 0);
 
             if (m_DestroyOnCompletion && !IsActive)
                 Destroy(gameObject);
         }
-        
+
         private void OnApplicationQuit()
         {
-            if(Exists)
+            if (Exists)
                 Destroy(Instance.gameObject);
         }
     }

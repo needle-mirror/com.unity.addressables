@@ -86,7 +86,7 @@ namespace UnityEditor.AddressableAssets.Tests
             OnInit();
 
             //TODO: Remove when NSImage warning issue on bokken is fixed
-            //Removing here in the event we didn't recieve any messages during the setup, we can respond appropriately to 
+            //Removing here in the event we didn't recieve any messages during the setup, we can respond appropriately to
             //logs in the tests.
             Application.logMessageReceived -= CheckLogForWarning;
             if (resetFailingMessages)
@@ -101,7 +101,7 @@ namespace UnityEditor.AddressableAssets.Tests
             resetFailingMessages = true;
         }
 
-        protected virtual void OnInit() { }
+        protected virtual void OnInit() {}
 
         [OneTimeTearDown]
         public void Cleanup()

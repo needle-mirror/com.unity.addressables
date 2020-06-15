@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Injector;
 using UnityEditor.Build.Pipeline.Interfaces;
@@ -6,7 +6,7 @@ using UnityEditor.Build.Pipeline.Interfaces;
 namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 {
     /// <summary>
-    /// The BuildTask used to extract write data from the build. 
+    /// The BuildTask used to extract write data from the build.
     /// </summary>
     public class ExtractDataTask : IBuildTask
     {

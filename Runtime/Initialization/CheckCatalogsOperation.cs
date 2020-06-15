@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -34,7 +34,7 @@ namespace UnityEngine.AddressableAssets
 
             ContentCatalogProvider ccp = m_Addressables.ResourceManager.ResourceProviders
                 .FirstOrDefault(rp => rp.GetType() == typeof(ContentCatalogProvider)) as ContentCatalogProvider;
-            if(ccp != null)
+            if (ccp != null)
                 ccp.DisableCatalogUpdateOnStart = false;
 
             m_DepOp = m_Addressables.ResourceManager.CreateGroupOperation<string>(locations);
@@ -67,5 +67,4 @@ namespace UnityEngine.AddressableAssets
             Complete(result, true, null);
         }
     }
-
 }

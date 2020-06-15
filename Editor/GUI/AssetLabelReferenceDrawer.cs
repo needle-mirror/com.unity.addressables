@@ -30,7 +30,5 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             EditorGUI.EndProperty();
         }
-
     }
-
 }

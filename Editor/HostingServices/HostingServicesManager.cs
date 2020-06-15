@@ -27,7 +27,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             [SerializeField]
             internal KeyDataStore dataStore;
 
-            public void OnBeforeSerialize() { }
+            public void OnBeforeSerialize() {}
 
             public void OnAfterDeserialize()
             {
@@ -73,14 +73,13 @@ namespace UnityEditor.AddressableAssets.HostingServices
                     svc.Logger = m_Logger;
             }
         }
-        
+
         /// <summary>
         /// Static method for use in starting up the HostingServicesManager in batch mode.
         /// </summary>
         /// <param name="settings"> </param>
         public static void BatchMode(AddressableAssetSettings settings)
         {
-            
             if (settings == null)
             {
                 Debug.LogError("Could not load Addressable Assets settings - aborting.");
@@ -240,7 +239,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             svc.InstanceId = m_NextInstanceId;
             svc.HostingServiceContentRoots.AddRange(GetAllContentRoots());
             m_Settings.profileSettings.RegisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
-            
+
             m_HostingServiceInfoMap.Add(svc, info);
             s_HostingServicesCache[svc.InstanceId] = new WeakReference<IHostingService>(svc);
             m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true, true);
@@ -444,7 +443,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             try
             {
                 var objType = Type.GetType(classRef, true);
-                var svc = (IHostingService) Activator.CreateInstance(objType);
+                var svc = (IHostingService)Activator.CreateInstance(objType);
                 return svc;
             }
             catch (Exception e)

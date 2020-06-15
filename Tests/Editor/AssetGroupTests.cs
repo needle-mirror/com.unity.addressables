@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
@@ -32,6 +32,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual("folder-name", group.Name);
             group.Name = oldName;
         }
+
         [Test]
         public void RenameInvalidCharactersFails()
         {
@@ -48,8 +49,8 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             const string guid = "0000";
             const string address = "not/a/real/address";
-            AddressableAssetGroup group1 = Settings.CreateGroup("group1", false, false, true, null, new Type[] { });
-            AddressableAssetGroup group2 = Settings.CreateGroup("group2", false, false, true, null, new Type[] { });
+            AddressableAssetGroup group1 = Settings.CreateGroup("group1", false, false, true, null, new Type[] {});
+            AddressableAssetGroup group2 = Settings.CreateGroup("group2", false, false, true, null, new Type[] {});
 
             //We're making 2 identical enteries.  This is to simulate each group having it's own copy of an AA Entry that references the same object.
             //If we use the same object the call to AddAssetEntry won't give us the state we're looking for.
@@ -77,7 +78,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void RemoveEntries_InvokesModificationNotification()
         {
-            AddressableAssetGroup group1 = Settings.CreateGroup("group1", false, false, true, null, new Type[] { });
+            AddressableAssetGroup group1 = Settings.CreateGroup("group1", false, false, true, null, new Type[] {});
 
             List<AddressableAssetEntry> entries = new List<AddressableAssetEntry>();
             for (int i = 0; i < 10; i++)
@@ -101,7 +102,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CannotSetInvalidGroupAsDefault()
         {
-            AddressableAssetGroup group1 = Settings.CreateGroup("group1", false, true, true, null, new Type[] { });
+            AddressableAssetGroup group1 = Settings.CreateGroup("group1", false, true, true, null, new Type[] {});
             LogAssert.Expect(LogType.Error, "Unable to set " + group1.Name + " as the Default Group.  Default Groups must not be ReadOnly.");
             Settings.DefaultGroup = group1;
             Assert.AreNotEqual(Settings.DefaultGroup, group1);

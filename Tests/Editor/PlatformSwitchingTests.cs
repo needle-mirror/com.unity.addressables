@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
@@ -34,7 +34,7 @@ public class PlatformSwitchingTests : AddressableAssetTestBase
             EditorUserBuildSettings.SwitchActiveBuildTarget(BuildPipeline.GetBuildTargetGroup(target), target);
 
             AddressableAssetBuildResult result = null;
-            BuildScript.buildCompleted += r =>  result = r;
+            BuildScript.buildCompleted += r => result = r;
 
             Assert.DoesNotThrow(() => { Settings.BuildPlayerContentImpl(); });
             Assert.IsTrue(string.IsNullOrEmpty(result.Error));

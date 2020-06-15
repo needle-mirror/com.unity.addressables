@@ -184,11 +184,11 @@ namespace UnityEditor.AddressableAssets.Tests
         public void WhenPathIsNonAddrAndContainsAddrAssets_EnumerateFiles_ThrowsException()
         {
             string path = m_TestFolderPath;
-            Exception ex = Assert.Throws<Exception>(() => 
+            Exception ex = Assert.Throws<Exception>(() =>
             {
                 EnumerateAddressableFolder(path, Settings, true);
             });
             Assert.AreEqual($"Path {path} cannot be enumerated because it is not addressable", ex.Message);
         }
     }
-} 
+}

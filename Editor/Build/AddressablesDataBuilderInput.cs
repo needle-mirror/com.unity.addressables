@@ -9,7 +9,6 @@ namespace UnityEditor.AddressableAssets.Build
     /// </summary>
     public class AddressablesDataBuilderInput
     {
-
         /// <summary>
         /// The main addressables settings object.
         /// </summary>
@@ -24,12 +23,12 @@ namespace UnityEditor.AddressableAssets.Build
         /// Build target.
         /// </summary>
         public BuildTarget Target { get; private set; }
-        
+
         /// <summary>
         /// Player build version.
         /// </summary>
         public string PlayerVersion { get; private set; }
-    
+
         /// <summary>
         /// Bool to signify if profiler events should be broadcast.
         /// </summary>
@@ -39,7 +38,7 @@ namespace UnityEditor.AddressableAssets.Build
         /// Registry of files created during the build
         /// </summary>
         public FileRegistry Registry { get; private set; }
-        
+
         //used only by tests to inject custom info into build...
         internal string PathFormat = string.Empty;
 
@@ -58,7 +57,7 @@ namespace UnityEditor.AddressableAssets.Build
         /// null in standard builds.  This is only set during content update builds.
         /// </summary>
         public AddressablesContentState PreviousContentState { get; internal set; }
-        
+
 
         /// <summary>
         /// Creates a default context object with values taken from the AddressableAssetSettings parameter.
@@ -73,7 +72,7 @@ namespace UnityEditor.AddressableAssets.Build
             }
             else
                 version = settings.PlayerBuildVersion;
-            
+
             SetAllValues(settings,
                 BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
                 EditorUserBuildSettings.activeBuildTarget,
@@ -91,9 +90,9 @@ namespace UnityEditor.AddressableAssets.Build
             {
                 Debug.LogError("Attempting to set up AddressablesDataBuilderInput with null settings.");
             }
-            SetAllValues(settings, 
-                BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), 
-                EditorUserBuildSettings.activeBuildTarget, 
+            SetAllValues(settings,
+                BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
+                EditorUserBuildSettings.activeBuildTarget,
                 playerBuildVersion);
         }
 

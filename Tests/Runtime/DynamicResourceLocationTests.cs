@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -33,12 +33,14 @@ namespace UnityEngine.AddressableAssets.DynamicResourceLocators
             Dictionary<KeyType, IList<IResourceLocation>> m_Locations = new Dictionary<KeyType, IList<IResourceLocation>>();
             public TestLocator()
             {
-                m_Locations.Add(new KeyType() { key = kGoKey, type = typeof(GameObject) }, new List<IResourceLocation>(new IResourceLocation[] {
+                m_Locations.Add(new KeyType() { key = kGoKey, type = typeof(GameObject) }, new List<IResourceLocation>(new IResourceLocation[]
+                {
                     new ResourceLocationBase("go1", "internalId1", "provider", typeof(GameObject)),
                     new ResourceLocationBase("go2", "internalId2", "provider", typeof(GameObject)),
                 }));
 
-                m_Locations.Add(new KeyType() { key = kSpriteKey, type = typeof(SpriteAtlas) }, new List<IResourceLocation>(new IResourceLocation[] {
+                m_Locations.Add(new KeyType() { key = kSpriteKey, type = typeof(SpriteAtlas) }, new List<IResourceLocation>(new IResourceLocation[]
+                {
                     new ResourceLocationBase("spriteAtlas1", "internalId1", "provider", typeof(SpriteAtlas)),
                     new ResourceLocationBase("spriteAtlas2", "internalId2", "provider", typeof(SpriteAtlas)),
                 }));
@@ -72,7 +74,6 @@ namespace UnityEngine.AddressableAssets.DynamicResourceLocators
         [Test]
         public void GetResourceLocations_WithInvalidMainKey_DoesNotReturnALocation()
         {
-
             var res = m_Addressables.GetResourceLocations("none[blah]", typeof(GameObject), out IList<IResourceLocation> locs);
             Assert.IsFalse(res);
             Assert.IsNull(locs);
@@ -81,7 +82,6 @@ namespace UnityEngine.AddressableAssets.DynamicResourceLocators
         [Test]
         public void GetResourceLocations_WithInvalidType_DoesNotReturnALocation()
         {
-
             var res = m_Addressables.GetResourceLocations($"{kGoKey}[blah]", typeof(Sprite), out IList<IResourceLocation> locs);
             Assert.IsFalse(res);
             Assert.IsNull(locs);
@@ -110,7 +110,6 @@ namespace UnityEngine.AddressableAssets.DynamicResourceLocators
             Assert.IsFalse(res);
             Assert.IsNull(locs);
         }
-
 
         [Test]
         public void GetResourceLocations_WithCorrectBaseTypeForSprite_ReturnsTrue()

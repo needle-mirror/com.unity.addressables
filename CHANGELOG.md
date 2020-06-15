@@ -4,11 +4,28 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2020-06-15
+- Implemented Undo/Redo capability for the Profiles Window.
+- Fixed bug where the Profiles Window would occasionally throw a NullReferenceException when making a new profile.
+- Added RenameProfile to the AddressableAssetsProfileSettings API
+- Added error messages for failed attempts at renaming a Profile
+- Fixed bug where when there are AssetReferences with the same name but in different Addressable groups only one could be selected in field dropdown
+- Fixed bug surrounding addressable sprites that were also in a SpriteAtlas
+- Fixed bug where loading a scene in a package would only load an empty scene with no contents.
+- Fixed bug where Event Viewer window would always be empty.
+- LinkXmlGenerator moved to the Scriptable Build Pipeline package in the UnityEditor.Build.Pipeline.Utilities namespace.
+- Added documentation to explain how to make packages addressable.
+- Fixed bug where ArgumentException errors are thrown when selecting a prefab from a read-only package.
+- Fixed bug where setting AssetReference property to null wasn't dirtying the asset
+- Fixed a bug where IResourceLocations were returning a false positive on comparison.
+- Added error checking to make sure that an address doesn't have '[]'.
+
 ## [1.11.2] - 2020-06-15
 - Refactored Play Mode Script for "Use Asset Database" to pull data directly from the settings.  This reduces the time needed to enter play mode.
 - Added scrollbar to the Label dropdown
 - Fixed misleading dialog box shown to the user when there are unsaved scenes.
 - Fixed bug where DownloadDependenciesAsync always returns an AsyncOperationHandle with a null task.
+- Fixed bug where AddressableAssetSettings.asset is always being written to disk whenever something is changed in OnPostProcessAllAssets, including asset modified, moved, group created or deleted
 - Revamped Profiles window to a two panel layout.
 - Fixed issue with Profiles window where changes would occasionally not be serialized to the settings asset.
 - Fixed bug where an op with some failed dependencies would never release the ones that had succeeded.
@@ -19,7 +36,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added option to disable CRC checks for cached AssetBundles on BundledAssetGroupSchema under Advanced Options.
 - If null is passed into Addressables.UpdateCatalogs(...) for the list of catalogIds, CheckForCatalogUpdates will be called automatically.
 - Added null reference check when running InitializationObjectsOperation to take failed RuntimeData operations into account.
-- Disabled hitting ENTER on an AssetReference inspector to open popup.  The drawer does not know which AssetReference to associate the popup should that MonoBehaviour have more than one. So disabling is unfortunately the only safe option. 
+- Disabled hitting ENTER on an AssetReference inspector to open popup.  The drawer does not know which AssetReference to associate the popup should that MonoBehaviour have more than one. So disabling is unfortunately the only safe option.
 - Fixed issue where assets located in subfolders marked as addressable would be added to build content multiple times.
 - Fixed bug where Groups window hierarchical search was not filtering the group contents.
 - Fixed bug with Groups window flat search not sorting.
@@ -45,10 +62,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed issue where InitializationObjects were causing the InitializationOperation to hang.
 
 ## [1.8.4] - 2020-05-20
-- Taking an updated scriptable build pipeline that reverts a recent hashing change. 
+- Taking an updated scriptable build pipeline that reverts a recent hashing change.
 
 ## [1.8.3] - 2020-04-07
-- Option to disable sprites and subobjects has been added to the Groups window Tools menu. This option is persisted per user, not with the project. 
+- Option to disable sprites and subobjects has been added to the Groups window Tools menu. This option is persisted per user, not with the project.
 - Catalog entries for subobjects and sprites are no longer serialized into the catalog.  These are generated at runtime with a custom resource locator.
 - Added missing error logs to various failure cases.
 - Fixed subobject parsing to treat anything between the first '[' character and the last ']' as the subobject name instead of the last '[' and the last ']'.
@@ -60,7 +77,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed issues with Content Update when entry with dependant entries was modified.
 - Fixed "Unknown Exception" issue caused by releasing certain operation handles too many times.
 - Added link to online documentation in the addressable windows menu.
-- Fixed bug where two assets with the same address packed separately was causing an error. 
+- Fixed bug where two assets with the same address packed separately was causing an error.
 - Fixed issue where loading a content catalog multiple times was throwing exceptions.
 - Made it so using the LoadContentCatalogAsync API creates a ResourceLocation that allows those catalogs to be updated properly.
 - Fixed bug where the scene in a recycled InstanceOperation wasn't being cleaned.
@@ -91,7 +108,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Updating scripting defines to check if caching is enabled.
 - Changed the display of AssetReference types in the inspector from a dropdown to look like an object reference.
 - Prevent assets from being added to read only Addressable groups through the group editor window.
-- Group names can now be searched through the group editor window. 
+- Group names can now be searched through the group editor window.
 - Added ability to set variables in AddressablesRuntimeProperties more than once.
 - Fixed missed null check on drag and drop in Group Editor window.
 - Updated Scriptable Build Pipeline dependency to bring in these changes:
@@ -111,7 +128,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed issues with Content Update, including groups that are Packed Separately not updating properly.
 
 ## [1.6.0] - 2020-01-11
-- Fixed bug where unsubscribing to AsyncOperations events could throw if no subscription happened beforehand.   
+- Fixed bug where unsubscribing to AsyncOperations events could throw if no subscription happened beforehand.
 - Fixed NullReferenceException when displaying Groups window displaying entries with Missing Script References on SubAssets.
 - Moved AnalyzeWindow.RegisterNewRule to AnalyzeSystem.RegisterNewRule so that the API/logic wouldn't live in GUI code.
 - Fixed bug where scenes in a folder containing "Assets" in the folder name not loadable in "Use Asset Database" mode.
@@ -133,7 +150,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added Bundle Naming option for naming as a hash of the full filename string.
 - Added a delay before unloaded things are removed from Event Viewer graph.  Ideally this would track with dependencies, but for now it's simply time based.
 - Fixed ProfileValueReferences not getting set dirty when changed.
-- Added ability for Addressables to handle null references in the Addressables groups list.  
+- Added ability for Addressables to handle null references in the Addressables groups list.
   - Null groups should not affect or influence content builds, updates, or Analyze rules.
   - Right clicking on a [Missing Reference] will give you the option to remove all missing references.
 - Fixed issue with Analyze reporting multiple duplicate data for one group.
@@ -153,7 +170,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [1.3.8] - 2019-11-04
  - Properly suppressing a harmless "Unknown error in AsyncOperation" that has been popping up during init. It had to do with not finding a cached catalog before a catalog had been cached (so error shouldn't happen).
  - Fixed issue with asset hash calcluation for internal asset bundle name when building bundles.
- - Adding option "Unique Bundle IDs" to the General section of the AddressableAssetSettings Inspector.  
+ - Adding option "Unique Bundle IDs" to the General section of the AddressableAssetSettings Inspector.
    - If set, every content build (original or update) will result in asset bundles with more complex internal names.  This may result in more bundles being rebuilt, but safer mid-run updates.  See docs for more info.
    - This complex internal naming was added to 1.3.3 to support safter Content Catalog updating, but was forced on.  It is now optional as there are some drawbacks.
 
@@ -166,16 +183,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
    - "Fast Mode" (play mode) has been renamed "Use Asset Database (faster)"
    - "Virtual Mode" (play mode) has been renamed "Simulate Groups (advanced)"
    - "Packed Mode" (play mode) has been renamed "Use Existing Build (requires built groups)"
-   - There is no longer a current "Build Script" (Build Script menu in Addressables window).  Instead the script is selected when triggering the build.    
+   - There is no longer a current "Build Script" (Build Script menu in Addressables window).  Instead the script is selected when triggering the build.
    - Schemas have been given display names to be more clear of their intent BundledAssetGroupSchema.
      - BundledAssetGroupSchema displays as "Content Packing & Loading"
-	   - ContentUpdateGroupSchema displays as "Content Update Restriction"
-	 - Bundle and Asset providers within schema settings are named more descriptively
+       - ContentUpdateGroupSchema displays as "Content Update Restriction"
+     - Bundle and Asset providers within schema settings are named more descriptively
    - Profile management is in its own window ("Profiles")
    - Label management is in its own window
    - "Prepare for Content Update" is now under the "Tools" menu (in Addressables window), and is called "Check for Content Update Restriction"
    - "Build for Content Update" is "Update a Previous Build" (still in "Build" menu of Addressables window).
-   - "Profiler" window has been renamed "Event Viewer".  It's more accurate, and avoids confusion with "Profilers" window. 
+   - "Profiler" window has been renamed "Event Viewer".  It's more accurate, and avoids confusion with "Profilers" window.
  - Added additional parameter to AssetReference.LoadSceneAsync method to match Addressables.LoadSceneAsync API
  - Added AssetReference.UnloadScene API
  - Fixed issue with WebGL builds where re-loading the page was causing an exception to get thrown.
@@ -194,15 +211,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Added APIs to update content catalog at runtime: CheckForCatalogUpdates() and UpdateCatalogs().
 
 ## [1.2.4] - 2019-09-13
- - Further improvement to the % complete calculations.  
-   - Note that this is an average of dependency operations. Meaning a LoadAssetsAsync call will average the download, and the loading progress.  DownloadDependenciesAsync currently has one extra op, so the download will crawl to 50%, then jump to done (we will look into removing that). Similarly any op that is called before Addressables init's will jump to 50% once init is done.  
+ - Further improvement to the % complete calculations.
+   - Note that this is an average of dependency operations. Meaning a LoadAssetsAsync call will average the download, and the loading progress.  DownloadDependenciesAsync currently has one extra op, so the download will crawl to 50%, then jump to done (we will look into removing that). Similarly any op that is called before Addressables init's will jump to 50% once init is done.
 
 ## [1.2.3] - 2019-09-10
  - Actually "Made ContentUpdateScript.GatherModifiedEntries public."
- 
+
 ## [1.2.2] - 2019-09-09
  - Made ContentUpdateScript.GatherModifiedEntries public.
- - Added sub-object support to AssetReference.  For example, you can now have an AssetReference to a specific sprite within a sprite atlas.  
+ - Added sub-object support to AssetReference.  For example, you can now have an AssetReference to a specific sprite within a sprite atlas.
  - Added sub-object support to addresses via [] notation.  For example, sprite atlas "myAtlas", would support loading that atlas via that address, or a sprite via "myAtlas[mySprite]"
  - Fixed issue with Content Update workflow.  Assets that don't change groups during Content Update now remain in the same bundle.
  - Added funtionality to allow multiple diagnostic callbacks to the ResourceManager.
@@ -223,16 +240,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Fixed drag and drop NullRef in main addressables window.
  - Fixed AudioMixer type assets getting stripped from bundles.
  - Fixed issue where failed async operations weren't getting released from the async operation cache.
- - Fix unloading of scenes so that the dependencies will wait for the unload operation to complete before unloading.  This was causing an occasional 1-frame visual glitch during unload. 
+ - Fix unloading of scenes so that the dependencies will wait for the unload operation to complete before unloading.  This was causing an occasional 1-frame visual glitch during unload.
  - Fixed scenario where AsyncOperation Task fails to complete when AsyncOperation has already completed.
- - Fixed a missed init-log that was stuck always-logging. 
+ - Fixed a missed init-log that was stuck always-logging.
  - Fixed issue around assets losing dependencies when unloaded then reloaded.  This would manifest most often as sprites losing their texture or prefabs losing their shader/material/texture.
  - Changed checks for determining if a path is remote or not from looking for "://" to looking for starting with "http".  "://" is still used to determine if the asset should be loaded via UnityWebRequest or not.
  - Added Analyze Rule to show entire Asset Bundle layout
  - Added progress bars and some optimizations for calculating analyze rules
- 
+
 ## [1.1.7] - 2019-07-30
- - Fixed chain operation percent complete calculation.   
+ - Fixed chain operation percent complete calculation.
  - Fixed scenario where deleting assets would also delete groups that have similar names.
  - Fix in bundle caching bug surrounding bundles with '.' in their name
  - Significant improvements to the manual pages
@@ -247,9 +264,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
    - If Key does not exist but nothing else goes wrong, it will return an empty list and Success state.
  - Fixed NullRef caused when there was a deleted scene in the scenes list.
  - BuildCompression for Addressables can now be driven from the default group.  If necessary WebGL builds will fallback to LZ4Runtime and all other build targets will fallback to LZMA.
- - Added options for bundle naming: AppendHash, NoHash, OnlyHash.  
+ - Added options for bundle naming: AppendHash, NoHash, OnlyHash.
    - As a temporary workaround for updating issues, we recommend setting all groups with StaticContent=true to be NoHash.  This will make sure the updated catalog still refers to the correct unchanged bundle.  An actual fix will be out in a few releases.
- 
+
 ## [1.1.5] - 2019-07-15
  - Fixed scenario where scene unload simultaneously destroys objects being instantiated in different scenes.
  - Cleaned up SetDirty logic to remove excessive dirtying of assets.
@@ -259,32 +276,32 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [1.1.3-preview] - 2019-06-17
  - *BREAKING CODE CHANGES*
-   - ReleaseInstance will now return a bool saying if it successfully destroyed the instance.  If an instance is passed in that Addressables is unaware of, this will return false (as of 0.8 and earlier, it would print a log, and still destroy the instance).  It will no longer destroy unknown instances.  
- - Added PrimaryKey to the IResourceLocation.  By default, the PrimaryKey will be the address.  This allows you to use LoadResourceLocationsAsync and then map the results back to an address. 
+   - ReleaseInstance will now return a bool saying if it successfully destroyed the instance.  If an instance is passed in that Addressables is unaware of, this will return false (as of 0.8 and earlier, it would print a log, and still destroy the instance).  It will no longer destroy unknown instances.
+ - Added PrimaryKey to the IResourceLocation.  By default, the PrimaryKey will be the address.  This allows you to use LoadResourceLocationsAsync and then map the results back to an address.
  - Added ResourceType to IResourceLocation.
    - This allows you to know the type of a location before loading it.
    - Fixes a problem where calling Load*<Type>(key) would load all items that matched the key, then filter based on type.  Now it will do the filter before loading (after looking up location matches)
-   - This also adds a Type input to LoadResourceLocationsAsync.  null input will match all types.  
+   - This also adds a Type input to LoadResourceLocationsAsync.  null input will match all types.
  - Safety check AssetReference.Asset to return null if nothing loaded.
  - New rule added to Analyze window - CheckResourcesDupeDependencies - to check for dependencies between addressables and items in Resources
- - Added group rearranging support to the Addressables window. 
+ - Added group rearranging support to the Addressables window.
  - Improved logging when doing a Prepare for Content Update.
  - Added versions of DownloadDependencies to take a list of IResourceLocations or a list of keys with a MergeMode.
  - Fixed scenario where Task completion wouldn't happen if operation was already in a certain state
- - Made LoadResourceLocations no longer throw an exception if given unknown keys.  This method is the best way to check if an address exists.  
+ - Made LoadResourceLocations no longer throw an exception if given unknown keys.  This method is the best way to check if an address exists.
  - Exposed AnalyzeRule class to support creating custom rules for Addressables analysis.
  - Fixed some issues surrounding loading scenes in build scenes list via Addressables
  - Removed using alias directives defined in global space.
- - Proper disposal of DiagnosticEventCollector and DelayedActionManager when application closes. 
- - Added support for loading named sub-objects via an "address.name" pattern.  So a sprite named "trees" with sub-sprites, could be loaded via LoadAssetAsync<Sprite>("trees.trees_0"). 
- - Known issue: loading IList<Sprite> from a Texture2D or IList<AnimationClip> from an fbx will crash the player.  The workaround for now is to load items by name as mentioned just above.  Engine fix for this is on its way in. 
- 
+ - Proper disposal of DiagnosticEventCollector and DelayedActionManager when application closes.
+ - Added support for loading named sub-objects via an "address.name" pattern.  So a sprite named "trees" with sub-sprites, could be loaded via LoadAssetAsync<Sprite>("trees.trees_0").
+ - Known issue: loading IList<Sprite> from a Texture2D or IList<AnimationClip> from an fbx will crash the player.  The workaround for now is to load items by name as mentioned just above.  Engine fix for this is on its way in.
+
 ## [0.8.6-preview] - 2019-05-14
  - Fix to make UnloadSceneAsync(SceneInstance) actually unload the scene.
 
 ## [0.8.3-preview] - 2019-05-08
- - *BREAKING CODE CHANGES* 
-   - Chagned all asynchronous methods to include the word Async in method name.  This fits better with Unity's history and convention.  They should auto upgrade without actually breaking your game. 
+ - *BREAKING CODE CHANGES*
+   - Chagned all asynchronous methods to include the word Async in method name.  This fits better with Unity's history and convention.  They should auto upgrade without actually breaking your game.
    - Moved AsyncOperationHandle inside namespace UnityEngine.ResourceManagement
  - Addressable Analyze changes:
    - Analyze has been moved into it's own window.
@@ -293,46 +310,46 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
    - Analyze Rule operations for individuals or specific sets of Analyze Rules has been added via AnalyzeRule selections.
 
 ## [0.7.4-preview] - 2019-04-19
- - Removed support for .NET 3.x as it is deprecated for Unity in general. 
+ - Removed support for .NET 3.x as it is deprecated for Unity in general.
  - Replaced IAsyncOperation with AsyncOperationHandle.
    - Once the asset is no longer needed, the user can call Addressables.Release, passing in either the handle, or the result the handle provided.
  - Exposed AsyncOperationBase for creating custom operations
    - These operations must be started by ResourceManager.StartOperation
- - Replaced IDataBuilderContext and it's inherited classes with simpler AddressablesDataBuilderInput.  This class is fed into all IDataBuilder.BuildData calls. 
+ - Replaced IDataBuilderContext and it's inherited classes with simpler AddressablesDataBuilderInput.  This class is fed into all IDataBuilder.BuildData calls.
  - Fixed Nintendo Switch and PlayStation4 support.
  - Simplified the IResourceProvider interface.
- - Refactored build script interface.  Made BuildScriptBase and the provided concrete versions easier to inherit from. 
+ - Refactored build script interface.  Made BuildScriptBase and the provided concrete versions easier to inherit from.
  - Removed DelayedActionManager.
  - Removed ISceneProvider. Users can implement custom scene loading using a custom AsyncOperationBase.
  - Removed optional LRU caching of Assets and Bundles.
  - Addressables Profiler now tracks all active async operations
  - AssetBundles targetting StreamingAssets (by using the profile variable [UnityEngine.AddressableAssets.Addressables.BuildPath] now build to the Library instead of StreamingAssets.  During the player build, these files are copied into StreamingAssets, then after the build, the copies are deleted. They are also built into platform specific folders (so building for a second platform will not overwrite data from a first build).  We recommend deleting anything in Assets/StreamingAssets/aa.
- - The addressables_content_state.bin is built into a platform specific folder within Assets/AddressableAssetsData/.  We recommend deleting the addressables_content_state.bin in Assets/AddressableAssetsData to avoid future confusion.  
- - ScriptableBuildPipeline now purges stale data from its cache in the background after each build. 
- - Disabled Addressables automatic initialization.  It will now initialize itself upon the first call into it (such as Load or Instantiate).  To Initialize on startup instead of first use, call Addressables.Initialize().  
- - Optimized performance around instantiation and general garbage generation. 
- - Added per-group bundle compression settings. 
- - Fixes to AssetReference drawers. 
- - Improved the group template system for creating better defined asset groups. 
+ - The addressables_content_state.bin is built into a platform specific folder within Assets/AddressableAssetsData/.  We recommend deleting the addressables_content_state.bin in Assets/AddressableAssetsData to avoid future confusion.
+ - ScriptableBuildPipeline now purges stale data from its cache in the background after each build.
+ - Disabled Addressables automatic initialization.  It will now initialize itself upon the first call into it (such as Load or Instantiate).  To Initialize on startup instead of first use, call Addressables.Initialize().
+ - Optimized performance around instantiation and general garbage generation.
+ - Added per-group bundle compression settings.
+ - Fixes to AssetReference drawers.
+ - Improved the group template system for creating better defined asset groups.
  - Fixed bug in bundle caching that caused GetDownloadSize to report incorrectly
  - Cleaned up Load/Release calls to make sure all releases could take either the handle returned by Load, or the handle.Result.
  - Added editor-only analytics (nothing added in runtime).  If you have Analytics disabled in your project nothing will be reported. Currently only run when you build addressables, it includes data such as Addressables version and Build Script name.
  - Fixed null ref issue when cleaning all the data builders
- - KNOWN ISSUE: there is still an occasional issue with code stripping on iOS.  If you run into iOS issues, try turning stripping off for now.  
+ - KNOWN ISSUE: there is still an occasional issue with code stripping on iOS.  If you run into iOS issues, try turning stripping off for now.
 
 ## [0.6.8-preview] - 2019-03-25
 - fixed Build For Content Update to no longer delete everything it built.
 
 ## [0.6.7-preview] - 2019-03-07
  - Fix for iOS and Android. Symptom was NullReferenceException dring startup resulting in nothing working.  Fix requires re-running Build Player Content
- 
+
 ## [0.6.6-preview] - 2019-03-05
- - *BREAKING CODE CHANGES* 
-   - to ease code navigation, we have added several layers of namespace to the code.  
+ - *BREAKING CODE CHANGES*
+   - to ease code navigation, we have added several layers of namespace to the code.
    - All Instantiate API calls (Addressables and AssetReference) have been changed to only work with GameObjects.
-   - any hardcoded profile path to com.unity.addressables (specifically LocalLoadPath, RemoteLoadPath, etc) should use UnityEngine.AddressableAssets.Addressables.RuntimePath instead.  
+   - any hardcoded profile path to com.unity.addressables (specifically LocalLoadPath, RemoteLoadPath, etc) should use UnityEngine.AddressableAssets.Addressables.RuntimePath instead.
        For build paths, replace Assets/StreamingAssets/com.unity.addressables/[BuildTarget] with [UnityEngine.AddressableAssets.Addressables.BuildPath]/[BuildTarget]
-	   For load paths,  replace Assets/StreamingAssets/com.unity.addressables/[BuildTarget] with {UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]
+       For load paths,  replace Assets/StreamingAssets/com.unity.addressables/[BuildTarget] with {UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]
    - We have removed attribute AssetReferenceTypeRestriction as it is cleaner to enforce type via generics
    - Attribute AssetReferenceLabelRestriction is renamed to AssetReferenceUILabelRestriction and must be surrounded by #if UNITY_EDITOR in your game code, to enforce it's editor-only capability
    - Modifications to IResourceProvider API.
@@ -340,8 +357,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Content Update calculation has changed, this will invalide previously generated addressables_content_state.bin files.
    - Some types for content update were made private as a result of the above change.
  - Minimum Unity version is now 2018.3 to address a build-time bug with progressive lightmapper.
- - Moved all of the Resource Manager package to be contained within Addressables (no longer a stand alone package).  No code change implications. 
- - Change to content catalog building: 
+ - Moved all of the Resource Manager package to be contained within Addressables (no longer a stand alone package).  No code change implications.
+ - Change to content catalog building:
    - Previous model built one catalog per group, wherever that group built it's data.
    - New model builds one catalog locally, and optionally one "remote".  Remote location is set on the top level AddressableAssetSettings object.
    - Loading will now always check if remote has changes (if remote exists), and use local otherwise (or cached version of remote).
@@ -367,7 +384,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Fix AssetReferenceSprite to properly support sprites (as opposed to Texture2D's).
  - Fixed bug involving scenes being repeatedly added to the build scenes list.
  - Removed deprecated and obsolete code.  If you are upgrading from a very old version of Addressables, please update to 0.5.3-preview first.
- - Removed the default MergeMode on LoadAssets calls to enforce explicit behavior. 
+ - Removed the default MergeMode on LoadAssets calls to enforce explicit behavior.
  - Added IAsyncOperation<long> GetDownloadSize(object key) API to compute remaining data needed to load an asset
  - Fixed assets being stuck in a read-only state in UI
  - Unified asset moving API to clean up public interface
@@ -376,19 +393,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Renamed Addressables.LoadAddtionalCatalogs to Addressables.LoadContentCatalog and now it takes the path of the catalog instead of the settings file
  - Moved provider information from ResourceManagerRuntimeDate into ContentCatalogData
  - Updating ResourceManager to be a non-static class
- - Fixed bugs surrounding assets moving in or out of Resources (outside Addressables UI) 
- - Fixed the AssetReference dropdown to properly filter valid assets (no Resources and honoring type or label limitations). 
+ - Fixed bugs surrounding assets moving in or out of Resources (outside Addressables UI)
+ - Fixed the AssetReference dropdown to properly filter valid assets (no Resources and honoring type or label limitations).
  - Fixed AssetReferences to handle assets inside folders marked as Addressable.
  - Added attribute AssetReferenceUIRestriction to support user-created AssetReference restrictions (they are only enforced in UI, for dropdown and drag&drop)
  - Changed addressables_content_state.bin to only build to the folder containing the AddressableAssetSettings object (Assets/AddressableAssetsData/ in most cases)
  - Fixed issue where the wrong scene would sometimes be open post-build.
- 
+
 ## [0.5.3-preview] - 2018-12-19
  - fixed upgrade bug from 0.4.x or lower to 0.5.x or higher. During upgrade, the "Packed Mode" option was removed from play mode.  Now it's back and upgrades are safe from 0.4.x or from 0.5.x to 0.5.3
- 
+
 ## [0.5.2-preview] - 2018-12-14
- - *IMPORTANT CHANGE TO BUILDING* 
-   - We have disabled automatic asset bundle building.  That used to happen when you built the player, or entered play mode in "packed mode".  This is no longer the case.  You must now select "Build->Build Player Content" from the Addressables window, or call AddressableAssetSettings.BuildPlayerContent().  We did this because we determined that automatic building did not scale well at all for large projects.  
+ - *IMPORTANT CHANGE TO BUILDING*
+   - We have disabled automatic asset bundle building.  That used to happen when you built the player, or entered play mode in "packed mode".  This is no longer the case.  You must now select "Build->Build Player Content" from the Addressables window, or call AddressableAssetSettings.BuildPlayerContent().  We did this because we determined that automatic building did not scale well at all for large projects.
  - fixed regression loading local bundles
  - Added Addressables.DownloadDependencies() interface
  - fixes for Nintendo Switch support
@@ -396,13 +413,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Code refactor and naming convention fixes
  - Cleaned up missing docs
  - Content update now handles not having and groups marked as Static Content
- - Fixed errors when browing for the addressables_content_state.bin and cancelling 
+ - Fixed errors when browing for the addressables_content_state.bin and cancelling
  - Moved addressables_content_state.bin to be generated into the addressables settings folder
  - Changed some exceptions when releasing null bundles to warnings to handle the case of releasing a failed download operation
  - Separated hash and crc options to allow them to be used independently in asset bundle loads.
  - Use CRC in AssetBundle.LoadFromFileAsync calls if specified
  - Always include AssetBundleRequestOptions for asset bundle locations
- 
+
 ## [0.4.8-preview] - 2018-10-22
  - Added all referenced types in asset bundles to link.xml to prevent them from being stripped in IL2CPP builds
 
@@ -410,7 +427,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - updated Scriptable Build Pipeline version in dependencies
 
 ## [0.4.6-preview] - 2018-10-16
- - MINIMUM RECOMMENDED VERSION - 2018.2.11+ 
+ - MINIMUM RECOMMENDED VERSION - 2018.2.11+
    - We have re-enabled the addressables checkbox. Versions of 2018.2 older than the .11 release will work unless you attempt to view the Animation Import Settings inspector.  If you do have animations you need to inspect, use .11+. If you do not, use any official release version of 2018.2.
  - refactored the way IResourceProviders are initialized in the player - serialized data is constructed at runtime to control how the providers are configured
  - added readonly custom inspector for AddressableAssetEntryCollection
@@ -424,28 +441,28 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - added Hosting Services feature; provides extensible framework and implementation for serving packed content to player builds from the Editor
  - replaced addressables buildscript with an interface based system.  IDataBuilder class is now used to define builders of specific types of data.  The Addressables settings object
    contains a collection of data builders and uses these to create player and play mode data.  Users can implemented custom data builders to control the build process.
- - replaced AssetGroupProcessors with a collection of AssetGroupSchema objects.  The difference is that the schema objects only contain data and groups can have multiple schemas.  The 
+ - replaced AssetGroupProcessors with a collection of AssetGroupSchema objects.  The difference is that the schema objects only contain data and groups can have multiple schemas.  The
    logic for processing groups now resides in the build script and uses the schemas as data sources and filters for how to build.
  - Added Initialization objects that can be created during the build to run during addressables initialization
  - Implemented Caching API initialization with initialization objects
  - Changed some API and tests to work with 2019.x
  - fixed how AssetReference's draw when within lists, arrays, or contained classes
- - Fixed the workflow of scenes moving in and out of the Editor Build Settings Scene list. 
- - Removed "Preview" and added "Analyze". 
-   - The new system runs any rules it knows about. 
+ - Fixed the workflow of scenes moving in and out of the Editor Build Settings Scene list.
+ - Removed "Preview" and added "Analyze".
+   - The new system runs any rules it knows about.
    - Currently this is one rule that is manually set up in code. Future work will have additional rules, and expose the ability to create/add user- or project-specific rules
    - This process can be slow, as it runs most of a build to get accurate data.
-   - Within the Analyze window there is a "fix" button that allows each rule to fix any issues if the rule knows how. 
+   - Within the Analyze window there is a "fix" button that allows each rule to fix any issues if the rule knows how.
    - The current rule is a "check duplicate asset" rule. This looks for assets that are pulled into multiple asset bundles due to dependency calculations. The way it fixes things is to move all of those into a newly created group.
  - Added option to toggle logging of all exceptions within the Resource Manager
  - Refactored initialization of the addressable asset settings to prevent it getting into a bad state.
 
 ## [0.3.5-preview] - 2018-09-05
- - implemented content update workflow.  Added a dropdown to the "Build" button on main window's toolbar.   
+ - implemented content update workflow.  Added a dropdown to the "Build" button on main window's toolbar.
     - "Build/Prepare for Content Update" will detect assets in locked bundles (bundles flagged as static, by default all local bundles).
     - "Build/Build for Content Update" will build assets with a catalog that is compatible with a previously released player.
-	- "Build/Build Packed Data" will build in the same way entering play mode in PackedMode would.
-	- implemented Clean Build. "Build/Clean/*" will clear out build caches. 
+    - "Build/Build Packed Data" will build in the same way entering play mode in PackedMode would.
+    - implemented Clean Build. "Build/Clean/*" will clear out build caches.
  - cleaned up streaming assets folder better after build
  - moved asset group data into separate assets in order to better support version control
  - fixed bug when canceling export of entries to an AssetEntryCollection
@@ -458,10 +475,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - UI Redesign
   - Moved most data settings onto actual assets.  AddressableAssetSettings and AddressableAssetGroup assets.
     - AddressableAssetSettings asset has "Send Profile Events", list of groups, labels, and profiles
-	- AddressableAssetGroup assets have all data associated with that group (such as BuildPath)
+    - AddressableAssetGroup assets have all data associated with that group (such as BuildPath)
   - Made "preview" be a sub-section within the Addressables window.
   - The "Default" group can now be set with a right-click in the Addressables window.
-  - Set play mode from "Mode" dropdown on main window's toolbar. 
+  - Set play mode from "Mode" dropdown on main window's toolbar.
   - Moved "Hierarchical Search" option onto magnifying glass of search bar.  Removed now empty settings cog button.
  - fixed issue when packing groups into seperate bundles generated duplicate asset bundle names, leading to an error being thrown during build
  - added support for disabling the automatic initialization of the addressables system at runtime via a script define:  ADDRESSABLES_DISABLE_AUTO_INITIALIZATION
@@ -479,12 +496,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - fixes surrounding the stability of interacting with the "default" group.
  - Added docs for the Content Update flow.
  - Adjusted UI slightly so single-clicking groups shows their inspector.
- - removed not-helpful "Build/Build Packed Data" item from menu.  
+ - removed not-helpful "Build/Build Packed Data" item from menu.
  - fixed bug where you could no longer create groups, and group assets were not named correctly
- 
+
 ## [0.2.2-preview] - 2018-08-08
  - disabled asset inspector gui for addressables checkbox due to editor bug
- 
+
 ## [0.2.1-preview] - 2018-07-26
  - smoothed transition from 0.1.x data to 0.2.x data
  - added checks for adding duplicate scenes into the EditorBuildSettings.scenes list
@@ -498,7 +515,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Fixed dragging from Resources to a group.
  - Added ability to re-initialize Addressables with multiple runtime data paths.  This is to support split projects.
  - Clean up StreamingAssets folder after build/play mode
- 
+
 ## [0.1.2-preview] - 2018-06-11
  - fixed Application.streamingAssetsPath being stripped in IL2CPP platforms
 
@@ -517,19 +534,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - append hash to all bundle names
  - pass crc & hash to bundle provider
  - clear catalog cache whenever packed mode content is rebuilt
- 
+
 ## [0.0.27-preview] - 2018-05-31
- - fixed ResourceManager initialization to work as the stand-alone player 
- 
+ - fixed ResourceManager initialization to work as the stand-alone player
+
 ## [0.0.26-preview] - 2018-05-24
  - re-added Instantiate(AssetReference) for the sake of backwards compatability.
- 
+
 ## [0.0.25-preview] - 2018-05-23
  - workaround for engine bug surrounding shader build.  Fix to engine is on it's way in.
- 
+
 ## [0.0.24-preview] - 2018-05-21
  - minor bug fix
- 
+
 ## [0.0.23-preview] - 2018-05-21
  - new format for content catalogs
  - detects changes in project and invalidates cached runtime data and catalogs
@@ -538,13 +555,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - modifying large number of asset entries on the UI is no longer unresponsive
  - added an option to search the asset list in a hierarchical fashion. Helps track down which group an asset is in.
  - many small bug fixes.
- 
+
 ## [0.0.22-preview] - 2018-05-03
  - dependency update.
- 
+
 ## [0.0.21-preview] - 2018-05-03
  - fixed build-time object deletion bug.
- 
+
 ## [0.0.20-preview] - 2018-05-02
  - Added support for extracting Built-In Shaders to a common bundle
  - Added build task for generating extra data for sprite loading edge case
@@ -552,29 +569,29 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.0.19-preview] - 2018-05-01
  - Complete UI rework.
-	- Moved all functionality to one tab
-	- Preview is a toggle to view in-line.
-	- Profiles are edied from second window (this part is somewhat placeholder pending a better setup)
+    - Moved all functionality to one tab
+    - Preview is a toggle to view in-line.
+    - Profiles are edied from second window (this part is somewhat placeholder pending a better setup)
  - Dependency updates
  - Minor cleanup to build scripts
 
 ## [0.0.18-preview] - 2018-04-13
  - minor bug fixes
  - exposed memory cache parameters to build settings, changed defaults to use LRU and timed releases to make preloading dependencies more effective
- 
+
 ## [0.0.17-preview] - 2018-04-13
  - added tests
  - fixed bugs
  - major API rewrite
-	- all API that deals with addresses or keys have been moved to Addressables
-	- LoadDependencies APIs moved to Addressables
-	- Async suffix removed from all Load APIs
- 
+    - all API that deals with addresses or keys have been moved to Addressables
+    - LoadDependencies APIs moved to Addressables
+    - Async suffix removed from all Load APIs
+
 ## [0.0.16-preview] - 2018-04-04
 - added BuildResult and callback for BuildScript
 - added validation of instance to scene and scene to instance maps to help debug instances that change scenes and have not been updated
 - added ResourceManager.RecordInstanceSceneChange() method to allow RM to track when an instance is moved to another scene
-- moved variable expansion of location data to startup 
+- moved variable expansion of location data to startup
 
 ## [0.0.15-preview] - 2018-03-28
 - fixed scene unloading
@@ -594,5 +611,3 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.0.8-preview] - 2018-02-08
 - Initial submission for package distribution
-
-

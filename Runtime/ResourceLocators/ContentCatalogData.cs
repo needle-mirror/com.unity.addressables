@@ -163,10 +163,10 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         [FormerlySerializedAs("m_entryDataString")]
         [SerializeField]
         internal string m_EntryDataString = null;
-        
+
         const int k_ByteSize = 4;
         const int k_EntryDataItemPerEntry = 7;
-        
+
         [FormerlySerializedAs("m_extraDataString")]
         [SerializeField]
         internal string m_ExtraDataString = null;
@@ -351,7 +351,6 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         {
         }
 
-
 #if UNITY_EDITOR
         /// <summary>
         /// Create a new ContentCatalogData object with the specified entries.
@@ -439,7 +438,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             var internalIds = new KeyIndexer<string>(data.Select(s => s.InternalId), data.Count);
             var keys = new KeyIndexer<object>(data.SelectMany(s => s.Keys), data.Count * 3);
             var types = new KeyIndexer<Type>(data.Select(s => s.ResourceType), 50);
-            
+
             keys.Add(data.SelectMany(s => s.Dependencies));
             var keyIndexToEntries = new KeyIndexer<List<ContentCatalogDataEntry>, object>(keys.values, s => new List<ContentCatalogDataEntry>(), keys.values.Count);
             var entryToIndex = new Dictionary<ContentCatalogDataEntry, int>(data.Count);
@@ -478,7 +477,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                     continue;
 
                 int hashCode = CalculateCollectedHash(entry.Dependencies, hashSources);
-                
+
                 bool isNew = false;
                 keys.Add(hashCode, ref isNew);
                 if (isNew)
@@ -502,7 +501,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             m_Keys = keys.values.Where(x => x != null)
                 .Select(x => x.ToString())
                 .ToArray();
-                
+
 
             //serialize entries
             {
@@ -581,7 +580,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
 
             var keyToIndex = new Dictionary<object, int>(countEstimate);
             var tmpBuckets = new Dictionary<int, List<int>>(countEstimate);
-            
+
             for (int i = 0; i < locations.Count; i++)
             {
                 var rld = locations[i];
@@ -755,18 +754,18 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             var stream = new System.IO.MemoryStream();
             var bw = new System.IO.BinaryWriter(stream);
             foreach (var i in m_internalIds)
-                 bw.Write(i);
-             foreach (var p in m_providerIds)
-                 bw.Write(p);
+                bw.Write(i);
+            foreach (var p in m_providerIds)
+                bw.Write(p);
             bw.Write(entryData);
             bw.Write(keyData.ToArray());
             bw.Write(bucketData);
-                        bw.Flush();
-                        bw.Close();
-                        stream.Flush();
-                        System.IO.File.WriteAllBytes("Library/catalog_binary.bytes", stream.ToArray());
-                        System.IO.File.WriteAllText("Library/catalog_binary.txt", Convert.ToBase64String(stream.ToArray()));
-                        stream.Close();
+            bw.Flush();
+            bw.Close();
+            stream.Flush();
+            System.IO.File.WriteAllBytes("Library/catalog_binary.bytes", stream.ToArray());
+            System.IO.File.WriteAllText("Library/catalog_binary.txt", Convert.ToBase64String(stream.ToArray()));
+            stream.Close();
 #endif
         }
 
@@ -785,6 +784,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             bucket.Add(index);
             return keyIndex;
         }
+
 #endif
 #endif
     }

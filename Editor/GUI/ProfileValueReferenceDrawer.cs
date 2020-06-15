@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor.AddressableAssets.Settings;
@@ -54,7 +54,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
-                return 0; 
+                return 0;
             var idProp = property.FindPropertyRelative("m_Id");
             return ProfilesEditor.CalcGUIHeight(settings, label.text, idProp.stringValue);
         }

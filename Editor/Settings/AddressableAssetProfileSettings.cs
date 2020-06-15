@@ -20,7 +20,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         [NonSerialized]
         internal ProfileStringEvaluationDelegate onProfileStringEvaluation;
-        
+
         internal void RegisterProfileStringEvaluationFunc(ProfileStringEvaluationDelegate f)
         {
             onProfileStringEvaluation -= f;
@@ -31,7 +31,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             onProfileStringEvaluation -= f;
         }
-        
+
         [Serializable]
         internal class BuildProfile
         {
@@ -54,12 +54,13 @@ namespace UnityEditor.AddressableAssets.Settings
                     get { return m_Value; }
                     set { m_Value = value; }
                 }
-                internal ProfileEntry() { }
+                internal ProfileEntry() {}
                 internal ProfileEntry(string id, string v)
                 {
                     m_Id = id;
                     m_Value = v;
                 }
+
                 internal ProfileEntry(ProfileEntry copy)
                 {
                     m_Id = copy.m_Id;
@@ -118,6 +119,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     m_InheritedParent = copyFrom.m_InheritedParent;
                 }
             }
+
             internal void OnAfterDeserialize(AddressableAssetProfileSettings ps)
             {
                 m_ProfileParent = ps;
@@ -174,7 +176,6 @@ namespace UnityEditor.AddressableAssets.Settings
                 foreach (var v in values)
                     v.value = v.value.Replace(searchStr, replacementStr);
             }
-
 
             internal bool IsValueInheritedByName(string variableName)
             {
@@ -237,13 +238,14 @@ namespace UnityEditor.AddressableAssets.Settings
             [SerializeField]
             bool m_InlineUsage;
             internal bool InlineUsage { get { return m_InlineUsage; } }
-            internal ProfileIdData() { }
+            internal ProfileIdData() {}
             internal ProfileIdData(string entryId, string entryName, bool inline = false)
             {
                 m_Id = entryId;
                 m_Name = entryName;
                 m_InlineUsage = inline;
             }
+
             internal string Evaluate(AddressableAssetProfileSettings ps, string profileId)
             {
                 if (InlineUsage)
@@ -251,6 +253,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
                 return Evaluate(ps, profileId, Id);
             }
+
             internal static string Evaluate(AddressableAssetProfileSettings ps, string profileId, string idString)
             {
                 string baseValue = ps.GetValueById(profileId, idString);
@@ -322,6 +325,7 @@ namespace UnityEditor.AddressableAssets.Settings
             m_Profiles = new List<BuildProfile>();
             return CreateDefaultProfile();
         }
+
         /// <summary>
         /// Evaluate a string given a profile id.
         /// </summary>
@@ -350,7 +354,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
                 return v;
             };
-            
+
             return AddressablesRuntimeProperties.EvaluateString(varString, '[', ']', getVal);
         }
 
@@ -397,7 +401,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             if (m_Profiles.Count == 0)
                 return false;
-            
+
             var root = m_Profiles[0];
             if (root == null || root.values == null)
                 return false;
@@ -410,7 +414,7 @@ namespace UnityEditor.AddressableAssets.Settings
             for (int index = 1; index < m_Profiles.Count; index++)
             {
                 var profile = m_Profiles[index];
-                
+
                 if (profile == null || string.IsNullOrEmpty(profile.profileName))
                     return false;
 
@@ -452,7 +456,6 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (var p in m_Profiles)
                 result.Add(p.profileName);
             return result;
-
         }
 
         /// <summary>
@@ -537,6 +540,78 @@ namespace UnityEditor.AddressableAssets.Settings
             return prof.id;
         }
 
+        // Allows passing in the profile directly for internal methods, makes the profile window's code a bit cleaner
+        // Can't be public since BuildProfile is an internal class
+        internal bool RenameProfile(BuildProfile profile, string newName)
+        {
+            if (profile == null)
+            {
+                Addressables.LogError("Profile rename failed because profile passed in is null");
+                return false;
+            }
+
+            if (profile == GetDefaultProfile())
+            {
+                Addressables.LogError("Profile rename failed because default profile cannot be renamed.");
+                return false;
+            }
+
+            if (profile.profileName == newName) return false;
+
+            // new name cannot only contain spaces
+            if (newName.Trim().Length == 0)
+            {
+                Addressables.LogError("Profile rename failed because new profile name must not be only spaces.");
+                return false;
+            }
+
+
+            bool profileExistsInSettingsList = false;
+
+            for (int i = 0; i < m_Profiles.Count; i++)
+            {
+                // return false if there already exists a profile with the new name, no duplicates are allowed
+                if (m_Profiles[i].profileName == newName)
+                {
+                    Addressables.LogError("Profile rename failed because new profile name is not unique.");
+                    return false;
+                }
+
+                if (m_Profiles[i].id == profile.id)
+                {
+                    profileExistsInSettingsList = true;
+                }
+            }
+
+            // Rename the profile
+            profile.profileName = newName;
+
+            if (profileExistsInSettingsList)
+                SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, profile, true);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Renames a profile. profileId must refer to an existing profile. Profile names must be unique and must not be comprised of only whitespace.
+        /// Returns false if profileId or newName is invalid.
+        /// </summary>
+        /// <param name="profileId"> The id of the profile to be renamed. </param>
+        /// <param name="newName"> The new name to be given to the profile. </param>
+        /// <returns> True if the rename is successful, false otherwise. </returns>
+        public bool RenameProfile(string profileId, string newName)
+        {
+            var profileToRename = GetProfile(profileId);
+
+            if (profileToRename == null)
+            {
+                Addressables.LogError("Profile rename failed because profile with sought id does not exist.");
+                return false;
+            }
+
+            return RenameProfile(profileToRename, newName);
+        }
+
         /// <summary>
         /// Removes a profile.
         /// </summary>
@@ -566,7 +641,6 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             return string.Empty;
         }
-
 
         internal BuildProfile GetProfile(string profileId)
         {
@@ -628,7 +702,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// </summary>
         /// <param name="variableName">The name of the property.</param>
         /// <param name="defaultValue">The default value.</param>
-        /// <returns>The if of the created variable.</returns>
+        /// <returns>The id of the created variable.</returns>
         public string CreateValue(string variableName, string defaultValue)
         {
             return CreateValue(variableName, defaultValue, false);
@@ -691,7 +765,6 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             return GetValueById(profileId, GetVariableId(varName));
         }
-
 
         internal bool IsValueInheritedById(string profileId, string variableId)
         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine.Analytics;
 

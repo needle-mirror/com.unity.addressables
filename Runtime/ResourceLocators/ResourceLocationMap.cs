@@ -20,7 +20,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             Locations = new Dictionary<object, IList<IResourceLocation>>(capacity == 0 ? 100 : capacity);
         }
 
-        public string LocatorId {get; private set;}
+        public string LocatorId { get; private set; }
 
         /// <summary>
         /// Construct a new ResourceLocationMap object with a list of locations.
@@ -71,7 +71,6 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                     Add(k, kvp.Value);
             }
         }
-
 
         /// <summary>
         /// The mapping of key to location lists.

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
@@ -42,11 +42,10 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
         public void CheckResourcesDupe_ResourcesDependenciesMatchWithExplicitBundleDependencies()
         {
             var rule = new CheckResourcesDupeDependencies();
-            rule.BuiltInResourcesToDependenciesMap(new string[] { k_CheckDupePrefabA});
+            rule.BuiltInResourcesToDependenciesMap(new string[] { k_CheckDupePrefabA });
             rule.IntersectResourcesDepedenciesWithBundleDependencies(new List<GUID>()
             {
-                new GUID(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA)) 
-
+                new GUID(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA))
             });
 
             Assert.IsTrue(rule.m_ResourcesToDependencies.ContainsKey(k_CheckDupePrefabA));
@@ -62,7 +61,6 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             rule.IntersectResourcesDepedenciesWithBundleDependencies(new List<GUID>()
             {
                 new GUID(AssetDatabase.AssetPathToGUID(k_CheckDupeMyMaterial))
-
             });
 
             Assert.IsTrue(rule.m_ResourcesToDependencies.ContainsKey(k_PrefabWithMaterialPath));
@@ -79,7 +77,6 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             {
                 new GUID(AssetDatabase.AssetPathToGUID(k_CheckDupeMyMaterial)),
                 new GUID(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA))
-
             });
 
             Assert.IsTrue(rule.m_ResourcesToDependencies[k_PrefabWithMaterialPath].Contains(new GUID(AssetDatabase.AssetPathToGUID(k_CheckDupeMyMaterial))));

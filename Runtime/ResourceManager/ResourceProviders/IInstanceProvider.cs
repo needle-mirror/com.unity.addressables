@@ -49,6 +49,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             m_InstantiateInWorldPosition = instantiateInWorldSpace;
             m_SetPositionRotation = false;
         }
+
         /// <summary>
         /// Create a new InstantationParameters class that will set the position, rotation, and Transform parent of the instance.
         /// <param name="position">Position relative to the parent to set on the instance.</param>
@@ -90,7 +91,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             return result;
         }
     }
-    
+
     /// <summary>
     /// Interface that provides instances of objects.  This is used in ResourceManager.Instantiate* calls.
     /// </summary>

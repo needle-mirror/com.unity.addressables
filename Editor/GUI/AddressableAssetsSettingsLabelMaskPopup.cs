@@ -97,14 +97,14 @@ namespace UnityEditor.AddressableAssets.GUI
 
                 EditorGUILayout.EndHorizontal();
             }
-            
+
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Manage Labels", UnityEngine.GUI.skin.button, GUILayout.ExpandWidth(false)))
             {
                 EditorWindow.GetWindow<LabelWindow>(true).Intialize(m_Settings);
             }
             EditorGUILayout.EndHorizontal();
-            
+
             GUILayout.EndScrollView();
             GUILayout.EndArea();
         }

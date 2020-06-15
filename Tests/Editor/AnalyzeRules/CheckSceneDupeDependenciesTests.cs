@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
@@ -13,11 +13,11 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
 {
     public class CheckSceneDupeDependenciesTests : AddressableAssetTestBase
     {
-       string k_CheckDupePrefabA => GetAssetPath("checkDupe_prefabA.prefab");
-       string k_CheckDupePrefabB => GetAssetPath("checkDupe_prefabB.prefab");
-       string k_CheckDupeMyMaterial => GetAssetPath("checkDupe_myMaterial.mat");
-       string k_ScenePath => GetAssetPath("dupeSceneTest.unity");
-       string k_PrefabWithMaterialPath => GetAssetPath("checkDupe_prefabWithMaterial.prefab");
+        string k_CheckDupePrefabA => GetAssetPath("checkDupe_prefabA.prefab");
+        string k_CheckDupePrefabB => GetAssetPath("checkDupe_prefabB.prefab");
+        string k_CheckDupeMyMaterial => GetAssetPath("checkDupe_myMaterial.mat");
+        string k_ScenePath => GetAssetPath("dupeSceneTest.unity");
+        string k_PrefabWithMaterialPath => GetAssetPath("checkDupe_prefabWithMaterial.prefab");
 
         protected override void OnInit()
         {
@@ -28,7 +28,7 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             GameObject prefabWithMaterial = new GameObject("PrefabWithMaterial");
             var meshA = prefabA.AddComponent<MeshRenderer>();
             var meshB = prefabB.AddComponent<MeshRenderer>();
-            
+
             var mat = new Material(Shader.Find("Unlit/Color"));
             AssetDatabase.CreateAsset(mat, k_CheckDupeMyMaterial);
             meshA.sharedMaterial = mat;
@@ -60,7 +60,7 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             var rule = new CheckSceneDupeDependencies();
 
             EditorBuildSettingsScene editorScene = new EditorBuildSettingsScene(k_ScenePath, true);
-            rule.BuiltInResourcesToDependenciesMap(new string[]{ editorScene.path });
+            rule.BuiltInResourcesToDependenciesMap(new string[] { editorScene.path });
             rule.IntersectResourcesDepedenciesWithBundleDependencies(new List<GUID>() { new GUID(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA)) });
 
             Assert.IsTrue(rule.m_ResourcesToDependencies.ContainsKey(editorScene.path));
@@ -103,9 +103,11 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
 
             EditorBuildSettingsScene editorScene = new EditorBuildSettingsScene(k_ScenePath, true);
             rule.BuiltInResourcesToDependenciesMap(new string[] { editorScene.path });
-            rule.IntersectResourcesDepedenciesWithBundleDependencies(new List<GUID>() {
+            rule.IntersectResourcesDepedenciesWithBundleDependencies(new List<GUID>()
+            {
                 new GUID(AssetDatabase.AssetPathToGUID(k_CheckDupeMyMaterial)),
-                new GUID(AssetDatabase.AssetPathToGUID(k_PrefabWithMaterialPath)) });
+                new GUID(AssetDatabase.AssetPathToGUID(k_PrefabWithMaterialPath))
+            });
 
             Assert.IsTrue(rule.m_ResourcesToDependencies.ContainsKey(editorScene.path));
             Assert.AreEqual(2, rule.m_ResourcesToDependencies[editorScene.path].Count);

@@ -102,6 +102,5 @@ namespace UnityEngine.AddressableAssets.Initialization
                 m_CertificateHandlerType.Value = value;
             }
         }
-
     }
 }

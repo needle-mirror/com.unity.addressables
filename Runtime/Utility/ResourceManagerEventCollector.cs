@@ -24,7 +24,7 @@ namespace UnityEngine.AddressableAssets.Utility
         ResourceManager m_ResourceManager;
 
         /// <summary>
-        /// This class is responsible for passing events from the resource manager to the event collector, 
+        /// This class is responsible for passing events from the resource manager to the event collector,
         /// </summary>
         /// <param name="resourceManager"></param>
         public ResourceManagerDiagnostics(ResourceManager resourceManager)
@@ -32,6 +32,7 @@ namespace UnityEngine.AddressableAssets.Utility
             resourceManager.RegisterDiagnosticCallback(OnResourceManagerDiagnosticEvent);
             m_ResourceManager = resourceManager;
         }
+
         Dictionary<int, DiagnosticInfo> m_cachedDiagnosticInfo = new Dictionary<int, DiagnosticInfo>();
         List<AsyncOperationHandle> m_dependencyBuffer = new List<AsyncOperationHandle>();
 
@@ -58,12 +59,12 @@ namespace UnityEngine.AddressableAssets.Utility
                             depIds[i] = eventContext.Location.Dependencies[i].Hash(typeof(object));
                         depIds[i] = m_dependencyBuffer[i].GetHashCode();
                     }
-                    m_cachedDiagnosticInfo.Add(hashCode, diagInfo = new DiagnosticInfo() { ObjectId = hashCode, DisplayName = eventContext.OperationHandle.DebugName, Dependencies = depIds});
+                    m_cachedDiagnosticInfo.Add(hashCode, diagInfo = new DiagnosticInfo() { ObjectId = hashCode, DisplayName = eventContext.OperationHandle.DebugName, Dependencies = depIds });
                 }
             }
 
-            if( diagInfo != null )
-                DiagnosticEventCollectorSingleton.Instance.PostEvent( diagInfo.CreateEvent( "ResourceManager", eventContext.Type, Time.frameCount, eventContext.EventValue ) );
+            if (diagInfo != null)
+                DiagnosticEventCollectorSingleton.Instance.PostEvent(diagInfo.CreateEvent("ResourceManager", eventContext.Type, Time.frameCount, eventContext.EventValue));
         }
 
         public void Dispose()

@@ -21,7 +21,7 @@ namespace AddressableAssetsIntegrationTests
         List<object> m_PrefabKeysList = new List<object>();
 
         Action<AsyncOperationHandle, Exception> m_PrevHandler;
-        
+
         protected const string k_TestConfigName = "AddressableAssetSettings.Tests";
         protected const string k_TestConfigFolder = "Assets/AddressableAssetsData_AddressableAssetSettingsIntegrationTests";
 
@@ -32,7 +32,7 @@ namespace AddressableAssetsIntegrationTests
         protected virtual string GetCatalogPath(string testType, string suffix) { return string.Format("{0}Library/com.unity.addressables/catalog_{1}_TEST_{2}.json", "file://{UnityEngine.Application.dataPath}/../", testType, suffix); }
         protected virtual ILocationSizeData CreateLocationSizeData(string name, long size, uint crc, string hash) { return null; }
 
-        private object AssetReferenceObjectKey { get { return m_PrefabKeysList.FirstOrDefault(s => s.ToString().Contains("AssetReferenceBehavior")); }}
+        private object AssetReferenceObjectKey { get { return m_PrefabKeysList.FirstOrDefault(s => s.ToString().Contains("AssetReferenceBehavior")); } }
 
         public virtual void Setup()
         {
@@ -45,6 +45,7 @@ namespace AddressableAssetsIntegrationTests
             ResourceManager.ExceptionHandler = m_PrevHandler;
             AddressablesTestUtility.TearDown(TypeName, PathFormat, "BASE");
         }
+
         int m_StartingOpCount;
         int m_StartingTrackedHandleCount;
         int m_StartingInstanceCount;
@@ -78,7 +79,7 @@ namespace AddressableAssetsIntegrationTests
 
                     var runtimeSettingsPath = m_Addressables.RuntimePath + "/settingsBASE.json";
 #if UNITY_EDITOR
-                    
+
                     runtimeSettingsPath = GetRuntimePath(currentInitType, "BASE");
 #endif
                     runtimeSettingsPath = m_Addressables.ResolveInternalId(runtimeSettingsPath);
@@ -119,6 +120,7 @@ namespace AddressableAssetsIntegrationTests
             m_StartingTrackedHandleCount = m_Addressables.TrackedHandleCount;
             m_StartingInstanceCount = m_Addressables.ResourceManager.InstanceOperationCount;
         }
+
         private void ResetAddressables()
         {
             m_Addressables = null;
@@ -164,6 +166,7 @@ namespace AddressableAssetsIntegrationTests
             AddressablesTestUtility.Setup("BuildScriptPackedMode", PathFormat, "BASE");
             AddressablesTestUtility.Setup(TypeName, PathFormat, "BASE");
         }
+
         public override void DeleteTempFiles()
         {
             AddressablesTestUtility.TearDown("BuildScriptPackedMode", PathFormat, "BASE");
@@ -172,7 +175,7 @@ namespace AddressableAssetsIntegrationTests
     }
 
 #endif
-    
+
     class AddressablesIntegrationPlayer : AddressablesIntegrationTests
     {
         protected override string TypeName { get { return "BuildScriptPackedMode"; } }
@@ -184,12 +187,10 @@ namespace AddressableAssetsIntegrationTests
             return new AssetBundleRequestOptions()
             {
                 BundleName = name,
-                BundleSize =size,
+                BundleSize = size,
                 Crc = crc,
                 Hash = hash
             };
         }
-
     }
-
 }

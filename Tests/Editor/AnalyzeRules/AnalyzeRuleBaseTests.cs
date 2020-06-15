@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
@@ -53,7 +53,7 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
         }
 
         [Test]
-        public void BaseAnalyzeRule_DoesNotThrowOnFix() 
+        public void BaseAnalyzeRule_DoesNotThrowOnFix()
         {
             BundleRuleBase baseRule = new BundleRuleBase();
             Assert.DoesNotThrow(() => baseRule.FixIssues(Settings));

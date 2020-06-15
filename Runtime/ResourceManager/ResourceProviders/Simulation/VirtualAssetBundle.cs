@@ -12,7 +12,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
 {
     class VBAsyncOperation
     {
-
     }
 
     class VBAsyncOperation<TObject> : VBAsyncOperation
@@ -126,7 +125,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
         /// <summary>
         /// Construct a new VirtualAssetBundleEntry
         /// </summary>
-        public VirtualAssetBundleEntry() { }
+        public VirtualAssetBundleEntry() {}
         /// <summary>
         /// Construct a new VirtualAssetBundleEntry
         /// </summary>
@@ -272,7 +271,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
 
             public void Update(long localBandwidth, long remoteBandwidth, float unscaledDeltaTime)
             {
-                
                 if (!m_crcHashValidated)
                 {
                     var location = Context as IResourceLocation;

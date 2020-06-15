@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -40,8 +40,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 if (File.Exists(path))
                 {
 #if NET_4_6
-                    if(path.Length >= 260)
-                        path =  @"\\?\" + path;
+                    if (path.Length >= 260)
+                        path = @"\\?\" + path;
 #endif
                     var text = File.ReadAllText(path);
                     object result = m_Provider.Convert(m_PI.Type, text);
@@ -54,7 +54,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     if (m_RequestQueueOperation.IsDone)
                     {
                         m_RequestOperation = m_RequestQueueOperation.Result;
-                        if(m_RequestOperation.isDone)
+                        if (m_RequestOperation.isDone)
                             RequestOperation_completed(m_RequestOperation);
                         else
                             m_RequestOperation.completed += RequestOperation_completed;

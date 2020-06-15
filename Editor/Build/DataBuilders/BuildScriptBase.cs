@@ -46,6 +46,11 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 return "Undefined";
             }
         }
+        internal static void WriteBuildLog(BuildLog log, string directory)
+        {
+            Directory.CreateDirectory(directory);
+            File.WriteAllText(Path.Combine(directory, "AddressablesBuildTEP.json"), log.FormatForTraceEventProfiler());
+        }
 
         /// <summary>
         /// Build the specified data with the provided builderInput.  This is the public entry point.
@@ -76,17 +81,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     result.FileRegistry = builderInput.Registry;
             }
 
-            if (builderInput.Logger == null)
-            {
-                BuildLog log = (BuildLog)m_Log;
-                var perfOutputDirectory = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables";
-                File.WriteAllText(Path.Combine(perfOutputDirectory, "AddressablesBuildTEP.json"), log.FormatAsTraceEventProfiler());
-                File.WriteAllText(Path.Combine(perfOutputDirectory, "AddressablesBuildLog.txt"), log.FormatAsText());
-            }
+            if (builderInput.Logger == null && m_Log != null)
+                WriteBuildLog((BuildLog)m_Log, Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables");
 
             return result;
         }
-        
+
         /// <summary>
         /// The implementation of <see cref="BuildData{TResult}"/>.  That is the public entry point,
         ///  this is the home for child class overrides.
@@ -104,7 +104,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// </summary>
         /// <param name="aaContext">The Addressables builderInput object to base the group processing on</param>
         /// <returns>An error string if there were any problems processing the groups</returns>
-        protected virtual string ProcessAllGroups(AddressableAssetsBuildContext aaContext) 
+        protected virtual string ProcessAllGroups(AddressableAssetsBuildContext aaContext)
         {
             if (aaContext == null ||
                 aaContext.Settings == null ||
@@ -113,20 +113,20 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 return "No groups found to process in build script " + Name;
             }
             //intentionally for not foreach so groups can be added mid-loop.
-            for(int index = 0; index < aaContext.Settings.groups.Count; index++)  
+            for (int index = 0; index < aaContext.Settings.groups.Count; index++)
             {
                 AddressableAssetGroup assetGroup = aaContext.Settings.groups[index];
                 if (assetGroup == null)
                     continue;
 
                 if (assetGroup.Schemas.Find((x) => x.GetType() == typeof(PlayerDataGroupSchema)) &&
-                   assetGroup.Schemas.Find((x) => x.GetType() == typeof(BundledAssetGroupSchema)))
+                    assetGroup.Schemas.Find((x) => x.GetType() == typeof(BundledAssetGroupSchema)))
                 {
                     EditorUtility.ClearProgressBar();
                     return $"Addressable group {assetGroup.Name} cannot have both a {typeof(PlayerDataGroupSchema).Name} and a {typeof(BundledAssetGroupSchema).Name}";
                 }
 
-                EditorUtility.DisplayProgressBar($"Processing Addressable Group", assetGroup.Name, (float)index/aaContext.Settings.groups.Count);
+                EditorUtility.DisplayProgressBar($"Processing Addressable Group", assetGroup.Name, (float)index / aaContext.Settings.groups.Count);
                 var errorString = ProcessGroup(assetGroup, aaContext);
                 if (!string.IsNullOrEmpty(errorString))
                 {
@@ -138,9 +138,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             EditorUtility.ClearProgressBar();
             return string.Empty;
         }
-        
+
         /// <summary>
-        /// Build processing of an individual group.  
+        /// Build processing of an individual group.
         /// </summary>
         /// <param name="assetGroup">The group to process</param>
         /// <param name="aaContext">The Addressables builderInput object to base the group processing on</param>
@@ -229,7 +229,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 registry.RemoveFile(path);
                 return false;
             }
-
         }
 
         /// <summary>
@@ -237,7 +236,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// </summary>
         public virtual void ClearCachedData()
         {
-
         }
 
         /// <summary>

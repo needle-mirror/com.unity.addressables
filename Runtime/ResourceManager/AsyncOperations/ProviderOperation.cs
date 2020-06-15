@@ -41,7 +41,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         protected override void GetDependencies(List<AsyncOperationHandle> deps)
         {
-            if(m_DepOp.IsValid())
+            if (m_DepOp.IsValid())
                 deps.Add(m_DepOp);
         }
 
@@ -64,15 +64,17 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
             if (m_DepOp.Result == null)
                 return;
-            
+
             for (int i = 0; i < m_DepOp.Result.Count; i++)
                 dstList.Add(m_DepOp.Result[i].Result);
         }
 
         public Type RequestedType { get { return typeof(TObject); } }
 
-        public int DependencyCount {
-            get {
+        public int DependencyCount
+        {
+            get
+            {
                 return (!m_DepOp.IsValid() || m_DepOp.Result == null) ? 0 : m_DepOp.Result.Count;
             }
         }
@@ -106,7 +108,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             {
                 Result = (TObject)(object)null;
             }
-            else if(result != null && typeof(TObject).IsAssignableFrom(result.GetType()))
+            else if (result != null && typeof(TObject).IsAssignableFrom(result.GetType()))
             {
                 Result = (TObject)(object)result;
             }
@@ -119,6 +121,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
             Complete(Result, status, e != null ? e.Message : string.Empty);
         }
+
         protected override float Progress
         {
             get
@@ -145,7 +148,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                     }
 
                     float result = total / numberOfOps;
-                    //This is done because all AssetBundle operations (m_DepOp.Result) can complete as well as the 
+                    //This is done because all AssetBundle operations (m_DepOp.Result) can complete as well as the
                     //BundledAssetRequest operation (m_GetProgressCallBack) but this overall operation hasn't completed yet.
                     //Once the operation has a chance to complete we short circut calling into Progress here and just return 1.0f
                     return Mathf.Min(result, k_OperationWaitingToCompletePercentComplete);
@@ -194,7 +197,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 m_Provider.Release(m_Location, Result);
             if (m_DepOp.IsValid())
                 m_DepOp.Release();
-            Result = default(TObject); 
+            Result = default(TObject);
         }
     }
 }

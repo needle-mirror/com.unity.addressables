@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,7 +15,7 @@ namespace UnityEditor.AddressableAssets.Settings
         internal static void ClearState(bool clearCallbacks = false)
         {
             InvalidateCache();
-            if(s_IsListening)
+            if (s_IsListening)
             {
                 EditorBuildSettings.sceneListChanged -= EditorBuildSettings_sceneListChanged;
                 s_IsListening = false;
@@ -50,14 +50,14 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-                if(s_GUIDSceneIndexLookup == null)
+                if (s_GUIDSceneIndexLookup == null)
                 {
                     EditorBuildSettingsScene[] localScenes = scenes;
                     s_GUIDSceneIndexLookup = new Dictionary<GUID, int>();
                     int enabledIndex = 0;
                     for (int i = 0; i < scenes.Length; i++)
                     {
-                        if(localScenes[i] != null && localScenes[i].enabled)
+                        if (localScenes[i] != null && localScenes[i].enabled)
                             s_GUIDSceneIndexLookup[localScenes[i].guid] = enabledIndex++;
                     }
                 }
@@ -122,11 +122,8 @@ namespace UnityEditor.AddressableAssets.Settings
         private static void EditorBuildSettings_sceneListChanged()
         {
             InvalidateCache();
-            if(sceneListChanged != null)
+            if (sceneListChanged != null)
                 sceneListChanged();
         }
-
     }
-
-        
 }

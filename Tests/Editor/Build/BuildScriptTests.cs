@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build;
@@ -18,11 +19,10 @@ namespace UnityEditor.AddressableAssets.Tests
         public void ClearCachedData_CleansStreamingAssetFolder()
         {
             var context = new AddressablesDataBuilderInput(Settings);
-            
+
             int builderCount = 0;
             for (int i = 0; i < Settings.DataBuilders.Count; i++)
             {
-
                 var builder = Settings.DataBuilders[i] as IDataBuilder;
                 if (builder.CanBuildData<AddressablesPlayerBuildResult>())
                 {
@@ -43,7 +43,6 @@ namespace UnityEditor.AddressableAssets.Tests
                 }
             }
             Assert.IsTrue(builderCount > 0);
-
         }
 
         [Test]
@@ -98,19 +97,18 @@ namespace UnityEditor.AddressableAssets.Tests
                 return base.BuildDataImplementation<TResult>(builderInput);
             }
         }
-        
+
         [Test]
         public void BuildScript_DoesNotBuildWrongDataType()
         {
             var context = new AddressablesDataBuilderInput(Settings);
-            
+
             var baseScript = ScriptableObject.CreateInstance<BuildScriptTestClass>();
             baseScript.BuildData<AddressablesPlayerBuildResult>(context);
             LogAssert.Expect(LogType.Error, new Regex("Data builder Test Script cannot build requested type.*"));
-            
+
             baseScript.BuildData<AddressablesPlayModeBuildResult>(context);
             LogAssert.Expect(LogType.Error, "Inside BuildDataInternal for test script!");
-            
         }
 
         [Test]
@@ -124,6 +122,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Assert.AreEqual(expected, actual);
         }
+
         [Test]
         public void GetNameWithHashNaming_CanAppendHash()
         {
@@ -133,7 +132,9 @@ namespace UnityEditor.AddressableAssets.Tests
 
             var actual = BuildUtility.GetNameWithHashNaming(BundledAssetGroupSchema.BundleNamingStyle.AppendHash, hash, source);
 
-            Assert.AreEqual(expected, actual);}
+            Assert.AreEqual(expected, actual);
+        }
+
         [Test]
         public void GetNameWithHashNaming_CanReplaceFileNameWithHash()
         {
@@ -145,24 +146,41 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Assert.AreEqual(expected, actual);
         }
-        
+
         [Test]
         public void GetNameWithHashNaming_CanReplaceFileNameWithFileNameHash()
         {
             string source = "x/y.bundle";
             string hash = HashingMethods.Calculate(source).ToString();
             string expected = hash + ".bundle";
-            
+
             var actual = BuildUtility.GetNameWithHashNaming(BundledAssetGroupSchema.BundleNamingStyle.FileNameHash, hash, source);
 
             Assert.AreEqual(expected, actual);
+        }
+
+        // regression test for https://jira.unity3d.com/browse/ADDR-1292
+        [Test]
+        public void BuildScriptBaseWriteBuildLog_WhenDirectoryDoesNotExist_DirectoryCreated()
+        {
+            string dirName = "SomeTestDir";
+            string logFile = Path.Combine(dirName, "AddressablesBuildTEP.json");
+            try
+            {
+                BuildLog log = new BuildLog();
+                BuildScriptBase.WriteBuildLog(log, dirName);
+                FileAssert.Exists(logFile);
+            }
+            finally
+            {
+                Directory.Delete(dirName, true);
+            }
         }
 
         [Test]
         public void Building_CreatesPerformanceReport()
         {
             Settings.BuildPlayerContentImpl();
-            FileAssert.Exists("Library/com.unity.addressables/AddressablesBuildLog.txt");
             FileAssert.Exists("Library/com.unity.addressables/AddressablesBuildTEP.json");
         }
 
@@ -216,6 +234,30 @@ namespace UnityEditor.AddressableAssets.Tests
             }
 
             Settings.RemoveAssetEntry("abcde", false);
+        }
+
+        [Test]
+        public void WhenAddressHasSquareBrackets_AndContentCatalogsAreCreated_BuildFails()
+        {
+            var context = new AddressablesDataBuilderInput(Settings);
+
+            AddressableAssetEntry entry = Settings.CreateOrMoveEntry(m_AssetGUID, Settings.DefaultGroup);
+            entry.address = "[test]";
+            LogAssert.Expect(LogType.Error, $"Address '{entry.address}' cannot contain '[ ]'.");
+
+            foreach (IDataBuilder db in Settings.DataBuilders)
+            {
+                if (db.GetType() == typeof(BuildScriptFastMode) || db.GetType() == typeof(BuildScriptPackedPlayMode))
+                    continue;
+
+                if (db.CanBuildData<AddressablesPlayerBuildResult>())
+                    db.BuildData<AddressablesPlayerBuildResult>(context);
+                else if (db.CanBuildData<AddressablesPlayModeBuildResult>())
+                    db.BuildData<AddressablesPlayModeBuildResult>(context);
+                LogAssert.Expect(LogType.Error, $"Address '{entry.address}' cannot contain '[ ]'.");
+            }
+
+            Settings.RemoveAssetEntry(m_AssetGUID, false);
         }
     }
 }

@@ -21,7 +21,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public AssetDatabaseProvider() { }
+        public AssetDatabaseProvider() {}
 
         /// <summary>
         /// Constructor that allows for a sepcified delay for all requests.
@@ -43,9 +43,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 else
                     DelayedActionManager.AddAction((Action)LoadImmediate, loadDelay);
             }
-            
+
             void LoadImmediate()
-            { 
+            {
                 string assetPath = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
                 object result = null;
                 if (m_ProvideHandle.Type.IsArray)
@@ -58,7 +58,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 }
                 else
                 {
-                    if(ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
+                    if (ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
                     {
                         var objs = AssetDatabase.LoadAllAssetRepresentationsAtPath(mainPath);
                         foreach (var o in objs)

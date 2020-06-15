@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -15,11 +15,13 @@ namespace UnityEngine.AddressableAssets.Initialization
             //Not supported on UWP platforms
             return new Assembly[0];
         }
+
 #else
         static Assembly[] GetAssemblies()
         {
             return AppDomain.CurrentDomain.GetAssemblies();
         }
+
 #endif
 
         static Dictionary<string, string> s_CachedValues = new Dictionary<string, string>();
@@ -41,7 +43,7 @@ namespace UnityEngine.AddressableAssets.Initialization
 
         /// <summary>
         /// This will clear all PropertyValues that have been cached.  This includes all values set by
-        /// <see cref="SetPropertyValue"/> as well as any reflection-evaluated properties.  
+        /// <see cref="SetPropertyValue"/> as well as any reflection-evaluated properties.
         /// </summary>
         public static void ClearCachedPropertyValues()
         {
@@ -134,7 +136,7 @@ namespace UnityEngine.AddressableAssets.Initialization
                 int i = inputString.IndexOf(startDelimiter);
                 if (i < 0)
                     return inputString;
-                int e = inputString.IndexOf(endDelimiter, i+1);
+                int e = inputString.IndexOf(endDelimiter, i + 1);
                 if (e < i)
                     return inputString;
                 var token = inputString.Substring(i + 1, e - i - 1);
@@ -142,7 +144,5 @@ namespace UnityEngine.AddressableAssets.Initialization
                 inputString = inputString.Substring(0, i) + tokenVal + inputString.Substring(e + 1);
             }
         }
-
-
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine.Serialization;
@@ -49,7 +49,7 @@ namespace UnityEngine.ResourceManagement.Diagnostics
         /// <value>Stream Id</value>
         public int Stream { get { return m_Stream; } }
         /// <summary>
-        /// The frame that the event occurred 
+        /// The frame that the event occurred
         /// </summary>
         /// <value>Frame number</value>
         public int Frame { get { return m_Frame; } }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
@@ -49,38 +49,38 @@ namespace UnityEngine.AddressableAssets.Utility
                 switch (keyType)
                 {
                     case ObjectType.UnicodeString:
-                        {
-                            var dataLength = BitConverter.ToInt32(keyData, dataIndex);
-                            return Encoding.Unicode.GetString(keyData, dataIndex + 4, dataLength);
-                        }
+                    {
+                        var dataLength = BitConverter.ToInt32(keyData, dataIndex);
+                        return Encoding.Unicode.GetString(keyData, dataIndex + 4, dataLength);
+                    }
                     case ObjectType.AsciiString:
-                        {
-                            var dataLength = BitConverter.ToInt32(keyData, dataIndex);
-                            return Encoding.ASCII.GetString(keyData, dataIndex + 4, dataLength);
-                        }
+                    {
+                        var dataLength = BitConverter.ToInt32(keyData, dataIndex);
+                        return Encoding.ASCII.GetString(keyData, dataIndex + 4, dataLength);
+                    }
                     case ObjectType.UInt16: return BitConverter.ToUInt16(keyData, dataIndex);
                     case ObjectType.UInt32: return BitConverter.ToUInt32(keyData, dataIndex);
                     case ObjectType.Int32: return BitConverter.ToInt32(keyData, dataIndex);
                     case ObjectType.Hash128: return Hash128.Parse(Encoding.ASCII.GetString(keyData, dataIndex + 1, keyData[dataIndex]));
                     case ObjectType.Type: return Type.GetTypeFromCLSID(new Guid(Encoding.ASCII.GetString(keyData, dataIndex + 1, keyData[dataIndex])));
                     case ObjectType.JsonObject:
-                        {
-                            int assemblyNameLength = keyData[dataIndex];
-                            dataIndex++;
-                            string assemblyName = Encoding.ASCII.GetString(keyData, dataIndex, assemblyNameLength);
-                            dataIndex += assemblyNameLength;
+                    {
+                        int assemblyNameLength = keyData[dataIndex];
+                        dataIndex++;
+                        string assemblyName = Encoding.ASCII.GetString(keyData, dataIndex, assemblyNameLength);
+                        dataIndex += assemblyNameLength;
 
-                            int classNameLength = keyData[dataIndex];
-                            dataIndex++;
-                            string className = Encoding.ASCII.GetString(keyData, dataIndex, classNameLength);
-                            dataIndex += classNameLength;
-                            int jsonLength = BitConverter.ToInt32(keyData, dataIndex);
-                            dataIndex += 4;
-                            string jsonText = Encoding.Unicode.GetString(keyData, dataIndex, jsonLength);
-                            var assembly = Assembly.Load(assemblyName);
-                            var t = assembly.GetType(className);
-                            return JsonUtility.FromJson(jsonText, t);
-                        }
+                        int classNameLength = keyData[dataIndex];
+                        dataIndex++;
+                        string className = Encoding.ASCII.GetString(keyData, dataIndex, classNameLength);
+                        dataIndex += classNameLength;
+                        int jsonLength = BitConverter.ToInt32(keyData, dataIndex);
+                        dataIndex += 4;
+                        string jsonText = Encoding.Unicode.GetString(keyData, dataIndex, jsonLength);
+                        var assembly = Assembly.Load(assemblyName);
+                        var t = assembly.GetType(className);
+                        return JsonUtility.FromJson(jsonText, t);
+                    }
                 }
             }
             catch (Exception ex)
@@ -203,6 +203,5 @@ namespace UnityEngine.AddressableAssets.Utility
             length += tmpJson.Length;
             return length;
         }
-
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using NUnit.Framework;
@@ -9,7 +9,7 @@ using UnityEngine;
 namespace UnityEditor.AddressableAssets.Tests.HostingServices
 {
     using Random = System.Random;
-    
+
     public class HttpHostingServiceTests
     {
         class MyWebClient : WebClient
@@ -59,9 +59,9 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             if (!string.IsNullOrEmpty(m_ContentRoot) && Directory.Exists(m_ContentRoot))
                 Directory.Delete(m_ContentRoot, true);
         }
-        
-        [TestCase("subdir","subdir1","subdir3")]
-        [TestCase("subdír☠","subdirãúñ","subdirü", TestName = "ShouldServeFilesWSpecialCharacters")]
+
+        [TestCase("subdir", "subdir1", "subdir3")]
+        [TestCase("subdír☠", "subdirãúñ", "subdirü", TestName = "ShouldServeFilesWSpecialCharacters")]
         public void ShouldServeRequestedFiles(string subdir1, string subdir2, string subdir3)
         {
             var fileNames = new[]
@@ -94,7 +94,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
                 }
             }
         }
-        
+
         [Test]
         public void ShouldRespondWithStatus404IfFileDoesNotExist()
         {
@@ -107,7 +107,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             }
             catch (WebException e)
             {
-                var response = (HttpWebResponse) e.Response;
+                var response = (HttpWebResponse)e.Response;
                 Assert.AreEqual(response.StatusCode, HttpStatusCode.NotFound);
             }
             catch (Exception)

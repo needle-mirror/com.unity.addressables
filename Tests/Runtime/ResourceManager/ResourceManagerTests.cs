@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
@@ -16,7 +16,7 @@ namespace UnityEngine.ResourceManagement.Tests
     public class ResourceManagerTests
     {
         Action<AsyncOperationHandle, Exception> m_PrevHandler;
-       
+
         [OneTimeSetUp]
         public void OneTimeSetup()
         {
@@ -213,9 +213,8 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.IsTrue(releaseCalled);
         }
 
-
         // TODO:
-        // To test: release via operation, 
+        // To test: release via operation,
         // Edge cases: game object fails to load, callback throws exception, Release called on handle before operation completes
         //
         [Test]
@@ -226,7 +225,7 @@ namespace UnityEngine.ResourceManagement.Tests
 
             MockInstanceProvider iProvider = new MockInstanceProvider();
             InstantiationParameters instantiationParameters = new InstantiationParameters(null, true);
-            AsyncOperationHandle<GameObject> []refResource = new AsyncOperationHandle<GameObject>[1];
+            AsyncOperationHandle<GameObject>[] refResource = new AsyncOperationHandle<GameObject>[1];
             iProvider.ProvideInstanceCallback = (rm, prefabHandle, iParam) =>
             {
                 refResource[0] = prefabHandle;

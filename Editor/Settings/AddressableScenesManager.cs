@@ -46,7 +46,7 @@ namespace UnityEditor.AddressableAssets.Settings
             var settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
                 return;
-            
+
             foreach (var scene in BuiltinSceneCache.scenes)
             {
                 if (scene.enabled)

@@ -18,7 +18,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
         /// <summary>
         /// An enum used to specify which entry in the catalog dependencies should hold each hash item.
         ///  The Remote should point to the hash on the server.  The Cache should point to the
-        ///  local cache copy of the remote data. 
+        ///  local cache copy of the remote data.
         /// </summary>
         public enum DependencyHashIndex
         {
@@ -36,7 +36,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
         /// Constructor for this provider.
         /// </summary>
         /// <param name="resourceManagerInstance">The resource manager to use.</param>
-        public ContentCatalogProvider(ResourceManager resourceManagerInstance )
+        public ContentCatalogProvider(ResourceManager resourceManagerInstance)
         {
             m_RM = resourceManagerInstance;
             m_BehaviourFlags = ProviderBehaviourFlags.CanProvideWithFailedDependencies;
@@ -54,7 +54,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
 
         internal class InternalOp
         {
-         //   int m_StartFrame;
+            //   int m_StartFrame;
             string m_LocalDataPath;
             string m_RemoteHashValue;
             string m_LocalHashValue;
@@ -66,7 +66,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                 m_ProviderInterface = providerInterface;
                 m_LocalDataPath = null;
                 m_RemoteHashValue = null;
-         
+
                 List<object> deps = new List<object>(); // TODO: garbage. need to pass actual count and reuse the list
                 m_ProviderInterface.GetDependencies(deps);
                 string idToLoad = DetermineIdToLoad(m_ProviderInterface.Location, deps, disableCatalogUpdateOnStart);
@@ -128,7 +128,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                     {
                         throw new ArgumentNullException(nameof(bundlePath), "Catalog bundle path is null.");
                     }
-                    else if(!bundlePath.EndsWith(".bundle"))
+                    else if (!bundlePath.EndsWith(".bundle"))
                     {
                         throw new ArgumentException("You must supply a valid bundle file path.");
                     }
@@ -168,8 +168,8 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                             m_LoadTextAssetRequest.completed += op =>
                             {
                                 //Debug.Log($"m_LoadTextAssetRequest.completed frame : {Time.frameCount}");
-                                if (op is AssetBundleRequest loadRequest 
-                                    && loadRequest.asset is TextAsset textAsset 
+                                if (op is AssetBundleRequest loadRequest
+                                    && loadRequest.asset is TextAsset textAsset
                                     && textAsset.text != null)
                                 {
                                     m_CatalogData = JsonUtility.FromJson<ContentCatalogData>(textAsset.text);
@@ -229,8 +229,8 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                                 m_LocalHashValue = Hash128.Compute(idToLoad).ToString();
                             else
                             {
-                                idToLoad = GetTransformedInternalId(location.Dependencies[(int) DependencyHashIndex.Remote]).Replace(".hash", ".json");
-                                m_LocalDataPath = GetTransformedInternalId(location.Dependencies[(int) DependencyHashIndex.Cache]).Replace(".hash", ".json");
+                                idToLoad = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Remote]).Replace(".hash", ".json");
+                                m_LocalDataPath = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Cache]).Replace(".hash", ".json");
                             }
 
                             m_RemoteHashValue = remoteHash;
@@ -259,14 +259,14 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                         ccd.localHash = m_RemoteHashValue;
                     }
                 }
-                m_ProviderInterface.Complete(ccd, ccd != null, ccd==null?new Exception($"Unable to load ContentCatalogData  from location {m_ProviderInterface.Location}."):null);
+                m_ProviderInterface.Complete(ccd, ccd != null, ccd == null ? new Exception($"Unable to load ContentCatalogData  from location {m_ProviderInterface.Location}.") : null);
             }
         }
 
         ///<inheritdoc/>
         public override void Provide(ProvideHandle providerInterface)
         {
-            if(!m_LocationToCatalogLoadOpMap.ContainsKey(providerInterface.Location))
+            if (!m_LocationToCatalogLoadOpMap.ContainsKey(providerInterface.Location))
                 m_LocationToCatalogLoadOpMap.Add(providerInterface.Location, new InternalOp());
             m_LocationToCatalogLoadOpMap[providerInterface.Location].Start(providerInterface, DisableCatalogUpdateOnStart, IsLocalCatalogInBundle);
         }

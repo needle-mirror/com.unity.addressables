@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
@@ -27,9 +27,9 @@ namespace UnityEditor.AddressableAssets.Tests
         public void WhenCompressionSetForGroups_GetCompressionForIdentifier_ReturnsExpectedCompression()
         {
             var bundleToAssetGroup = new Dictionary<string, string>();
-            var expectedValues = new BuildCompression[] { BuildCompression.Uncompressed, BuildCompression.LZ4, BuildCompression.LZMA, BuildCompression.UncompressedRuntime, BuildCompression.LZ4Runtime};
+            var expectedValues = new BuildCompression[] { BuildCompression.Uncompressed, BuildCompression.LZ4, BuildCompression.LZMA, BuildCompression.UncompressedRuntime, BuildCompression.LZ4Runtime };
             var bundleNames = new List<string>();
-            
+
             foreach (var en in GetValues(typeof(BundledAssetGroupSchema.BundleCompressionMode)))
             {
                 var g = Settings.CreateGroup(en.ToString(), true, false, false, null, typeof(BundledAssetGroupSchema));
@@ -40,7 +40,7 @@ namespace UnityEditor.AddressableAssets.Tests
             }
             var testParams = new AddressableAssetsBundleBuildParameters(Settings, bundleToAssetGroup, BuildTarget.StandaloneWindows64, BuildTargetGroup.Standalone, "Unused");
 
-            for(int i = 0; i < bundleNames.Count; i++)
+            for (int i = 0; i < bundleNames.Count; i++)
             {
                 var comp = testParams.GetCompressionForIdentifier(bundleNames[i]);
                 Assert.AreEqual(expectedValues[i].blockSize, comp.blockSize);

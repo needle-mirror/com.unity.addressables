@@ -11,7 +11,7 @@ namespace UnityEditor.AddressableAssets.Settings
 #else
     using BuildCompression = UnityEditor.Build.Content.BuildCompression;
 #endif
-    
+
     /// <summary>
     /// Build settings for addressables.
     /// </summary>
@@ -97,6 +97,7 @@ namespace UnityEditor.AddressableAssets.Settings
             if (m_Settings != null)
                 m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.BuildSettingsChanged, this, true, false);
         }
+
         internal void OnAfterDeserialize(AddressableAssetSettings settings)
         {
             m_Settings = settings;
@@ -104,7 +105,6 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal void Validate(AddressableAssetSettings addressableAssetSettings)
         {
-
         }
     }
 }

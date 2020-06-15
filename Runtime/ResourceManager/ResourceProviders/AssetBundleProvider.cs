@@ -12,12 +12,11 @@ using UnityEngine.Serialization;
 namespace UnityEngine.ResourceManagement.ResourceProviders
 {
     /// <summary>
-    /// Wrapper for asset bundles. 
+    /// Wrapper for asset bundles.
     /// </summary>
     public interface IAssetBundleResource
     {
         AssetBundle GetAssetBundle();
-
     }
 
     /// <summary>
@@ -65,7 +64,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         [SerializeField]
         int m_RetryCount;
         /// <summary>
-        /// Indicates the number of times the request will be retried.  
+        /// Indicates the number of times the request will be retried.
         /// </summary>
         public int RetryCount { get { return m_RetryCount; } set { m_RetryCount = value; } }
 
@@ -88,7 +87,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <summary>
         /// If false, the CRC will not be used when loading bundles from the cache.
         /// </summary>
-        public bool UseCrcForCachedBundle {get {return m_UseCrcForCachedBundles;} set {m_UseCrcForCachedBundles = value;}}
+        public bool UseCrcForCachedBundle { get { return m_UseCrcForCachedBundles; } set { m_UseCrcForCachedBundles = value; } }
         /// <summary>
         /// Computes the amount of data needed to be downloaded for this bundle.
         /// </summary>
@@ -140,7 +139,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             {
                 CachedAssetBundle cachedBundle = new CachedAssetBundle(m_Options.BundleName, Hash128.Parse(m_Options.Hash));
 #if ENABLE_CACHING
-                if(m_Options.UseCrcForCachedBundle || !Caching.IsVersionCached(cachedBundle))
+                if (m_Options.UseCrcForCachedBundle || !Caching.IsVersionCached(cachedBundle))
                     webRequest = UnityWebRequestAssetBundle.GetAssetBundle(url, cachedBundle, m_Options.Crc);
                 else
                     webRequest = UnityWebRequestAssetBundle.GetAssetBundle(url, cachedBundle);
@@ -150,14 +149,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
             else
                 webRequest = UnityWebRequestAssetBundle.GetAssetBundle(url, m_Options.Crc);
-            
+
             if (m_Options.Timeout > 0)
                 webRequest.timeout = m_Options.Timeout;
             if (m_Options.RedirectLimit > 0)
                 webRequest.redirectLimit = m_Options.RedirectLimit;
-            #if !UNITY_2019_3_OR_NEWER
+#if !UNITY_2019_3_OR_NEWER
             webRequest.chunkedTransfer = m_Options.ChunkedTransfer;
-            #endif
+#endif
             if (m_ProvideHandle.ResourceManager.CertificateHandlerInstance != null)
             {
                 webRequest.certificateHandler = m_ProvideHandle.ResourceManager.CertificateHandlerInstance;
@@ -288,6 +287,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
             webReq.Dispose();
         }
+
         /// <summary>
         /// Unloads all resources associated with this asset bundle.
         /// </summary>
@@ -313,18 +313,18 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     [DisplayName("AssetBundle Provider")]
     public class AssetBundleProvider : ResourceProviderBase
     {
-
         /// <inheritdoc/>
         public override void Provide(ProvideHandle providerInterface)
         {
             new AssetBundleResource().Start(providerInterface);
         }
+
         /// <inheritdoc/>
         public override Type GetDefaultType(IResourceLocation location)
         {
             return typeof(IAssetBundleResource);
         }
-        
+
         /// <summary>
         /// Releases the asset bundle via AssetBundle.Unload(true).
         /// </summary>
@@ -346,7 +346,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 bundle.Unload();
                 return;
             }
-            return;
         }
     }
 }

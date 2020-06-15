@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
@@ -67,7 +67,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         /// <inheritdoc/>
         public virtual int InstanceId { get; set; }
 
-        /// <inheritdoc/>	
+        /// <inheritdoc/>
         public virtual string EvaluateProfileString(string key)
         {
             string retVal;

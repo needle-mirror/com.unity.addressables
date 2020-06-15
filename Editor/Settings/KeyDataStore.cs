@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor.AddressableAssets.GUI;
@@ -166,7 +166,6 @@ namespace UnityEditor.AddressableAssets.Settings
             if (m_EntryMap.TryGetValue(key, out val))
                 return val.GetType();
             return null;
-
         }
 
         internal string GetDataString(string key, string defaultValue)
@@ -202,6 +201,5 @@ namespace UnityEditor.AddressableAssets.Settings
                 SetData(key, defaultValue);
             return defaultValue;
         }
-
     }
 }

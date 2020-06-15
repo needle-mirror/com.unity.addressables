@@ -30,7 +30,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         int m_ServicePort;
         readonly List<string> m_ContentRoots;
         readonly Dictionary<string, string> m_ProfileVariables;
-        
+
         // ReSharper disable once MemberCanBePrivate.Global
         /// <summary>
         /// The actual Http listener used by this service
@@ -176,7 +176,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         }
 
         /// <summary>
-        /// Handles any configuration necessary for <see cref="MyHttpListener"/> before listening for connections. 
+        /// Handles any configuration necessary for <see cref="MyHttpListener"/> before listening for connections.
         /// </summary>
         protected virtual void ConfigureHttpListener()
         {
@@ -215,7 +215,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             var remoteAddress = c.Request.RemoteEndPoint != null ? c.Request.RemoteEndPoint.Address : null;
             var timestamp = DateTime.Now.ToString("o");
 
-            Log("{0} - - [{1}] \"{2}\" {3} {4}", remoteAddress, timestamp, fullPath, (int) result, size);
+            Log("{0} - - [{1}] \"{2}\" {3} {4}", remoteAddress, timestamp, fullPath, (int)result, size);
 
             switch (result)
             {
@@ -280,7 +280,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         }
 
         /// <summary>
-        /// Tests to see if the given port # is already in use 
+        /// Tests to see if the given port # is already in use
         /// </summary>
         /// <param name="port">port number to test</param>
         /// <returns>true if there is not a listener on the port</returns>

@@ -18,7 +18,7 @@ namespace UnityEditor.AddressableAssets.GUI
         // Used for Multi-group editing
         AddressableAssetGroup[] m_GroupTargets;
 
-        // Stores a 2D list of schemas found on the other selected asset groups. 
+        // Stores a 2D list of schemas found on the other selected asset groups.
         // Each schema list contains only schemas of the same type (e.g. BundledAssetGroupSchema).
         List<List<AddressableAssetGroupSchema>> m_GroupSchemas;
 
@@ -46,7 +46,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void OnDisable()
         {
-            if (m_GroupTarget != null) 
+            if (m_GroupTarget != null)
                 m_GroupTarget.Settings.OnModification -= OnSettingsModification;
         }
 
@@ -84,7 +84,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             EditorGUI.DrawRect(r, color);
         }
-                
+
         public override void OnInspectorGUI()
         {
             try
@@ -93,8 +93,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 DrawSchemas(GetSchemasToDraw());
                 serializedObject.ApplyModifiedProperties();
             }
-
-            catch (UnityEngine.ExitGUIException )
+            catch (UnityEngine.ExitGUIException)
             {
                 throw;
             }
@@ -112,7 +111,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 return values;
 
             values.AddRange(m_GroupTarget.Schemas);
-            
+
             foreach (var group in m_GroupTargets)
             {
                 if (group != m_GroupTarget)
@@ -125,8 +124,8 @@ namespace UnityEditor.AddressableAssets.GUI
         List<AddressableAssetGroupSchema> GetSchemasForOtherTargets(AddressableAssetGroupSchema schema)
         {
             List<AddressableAssetGroupSchema> values = m_GroupTargets
-                                                       .Where(t => t.HasSchema(schema.GetType()) && t != m_GroupTarget)
-                                                       .Select(t => t.GetSchema(schema.GetType())).ToList();
+                .Where(t => t.HasSchema(schema.GetType()) && t != m_GroupTarget)
+                .Select(t => t.GetSchema(schema.GetType())).ToList();
 
             return values;
         }
@@ -151,8 +150,8 @@ namespace UnityEditor.AddressableAssets.GUI
 
             EditorGUILayout.EndHorizontal();
             GUILayout.Space(6);
-            
-            
+
+
             if (m_FoldoutState == null || m_FoldoutState.Length != schemas.Count)
                 m_FoldoutState = new bool[schemas.Count];
 
@@ -212,7 +211,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         menu.AddItem(AddressableAssetGroup.ExpandSchemaContent, false, () =>
                         {
                             m_FoldoutState[currentIndex] = true;
-                            foreach(var targetSchema in m_GroupTarget.Schemas)
+                            foreach (var targetSchema in m_GroupTarget.Schemas)
                                 targetSchema.ShowAllProperties();
                         });
                         menu.ShowAsContext();
@@ -225,7 +224,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     try
                     {
                         EditorGUI.indentLevel++;
-                        if(m_GroupTargets.Length == 1)
+                        if (m_GroupTargets.Length == 1)
                             schema.OnGUI();
                         else
                             schema.OnGUIMultiple(GetSchemasForOtherTargets(schema));
@@ -283,7 +282,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (targets.Length > 1)
             {
                 foreach (var t in m_GroupTargets)
-                    if(!t.HasSchema(schemaType))
+                    if (!t.HasSchema(schemaType))
                         t.AddSchema(schemaType);
             }
             else
@@ -300,7 +299,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             public bool Equals(AddressableAssetGroupSchema x, AddressableAssetGroupSchema y)
             {
-                if(x.GetType() == y.GetType())
+                if (x.GetType() == y.GetType())
                     return true;
 
                 return false;

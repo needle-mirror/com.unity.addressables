@@ -21,7 +21,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             get
             {
-                if(string.IsNullOrEmpty(m_ProviderId))
+                if (string.IsNullOrEmpty(m_ProviderId))
                     m_ProviderId = GetType().FullName;
 
                 return m_ProviderId;
@@ -94,7 +94,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
             protected override void Execute()
             {
-                if(m_CallBack != null)
+                if (m_CallBack != null)
                     Complete(m_CallBack(), true, "");
                 else
                     Complete(true, true, "");

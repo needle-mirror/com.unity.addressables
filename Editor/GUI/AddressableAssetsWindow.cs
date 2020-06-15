@@ -25,7 +25,7 @@ namespace UnityEditor.AddressableAssets.GUI
             var setting = AddressableAssetSettingsDefaultObject.Settings;
             if (setting == null)
             {
-                Debug.LogWarning("Attempting to inspect default Addressables Settings, but no settings file exists.  Open 'Window/Asset Management/Addressables/Groups' for more info.");   
+                Debug.LogWarning("Attempting to inspect default Addressables Settings, but no settings file exists.  Open 'Window/Asset Management/Addressables/Groups' for more info.");
             }
             else
             {
@@ -41,6 +41,7 @@ namespace UnityEditor.AddressableAssets.GUI
             window.titleContent = new GUIContent("Addressables Groups");
             window.Show();
         }
+
         public static Vector2 GetWindowPosition()
         {
             var window = GetWindow<AddressableAssetsWindow>();
@@ -57,7 +58,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             if (m_GroupEditor != null)
                 m_GroupEditor.OnEnable();
-            
+
             if (m_Request == null || m_Request.Status == StatusCode.Failure)
             {
                 m_Request = PackageManager.Client.Search("com.unity.addressables");

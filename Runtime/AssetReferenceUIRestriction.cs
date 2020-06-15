@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using Object = UnityEngine.Object;
 
@@ -19,6 +19,7 @@ namespace UnityEngine
         {
             return true;
         }
+
         /// <summary>
         /// Validates that the referenced asset allowable for this asset reference.
         /// </summary>

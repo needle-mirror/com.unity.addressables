@@ -94,7 +94,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             InternalOp.SetProgressCallback(callback);
         }
-        
+
         /// <summary>
         /// Called to complete the operation.
         /// </summary>

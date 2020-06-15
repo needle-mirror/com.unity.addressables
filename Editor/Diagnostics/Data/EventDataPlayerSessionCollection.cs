@@ -37,6 +37,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
 
             return m_PlayerSessions[index];
         }
+
         public EventDataPlayerSession GetPlayerSession(int playerId, bool create)
         {
             foreach (var c in m_PlayerSessions)

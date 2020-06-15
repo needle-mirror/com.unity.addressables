@@ -42,7 +42,6 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         void Start(ResourceManager rm, AsyncOperationHandle dependency, DelegateList<float> updateCallbacks);
 
         AsyncOperationHandle Handle { get; }
-
     }
 
     /// <summary>
@@ -60,7 +59,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// This will be called by the resource manager when the reference count of the operation reaches zero. This method should not be called manually.
         /// A custom operation should override this method and release any held resources
         /// </summary>
-        protected virtual void Destroy() { }
+        protected virtual void Destroy() {}
 
         /// <summary>
         /// A custom operation should override this method to return the progress of the operation.
@@ -77,7 +76,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// A custom operation should override this method to provide a list of AsyncOperationHandles that it depends on.
         /// </summary>
         /// <param name="dependencies">The list that should be populated with dependent AsyncOperationHandles.</param>
-        protected virtual void GetDependencies(List<AsyncOperationHandle> dependencies) { }
+        protected virtual void GetDependencies(List<AsyncOperationHandle> dependencies) {}
 
         /// <summary>
         /// Accessor to Result of the operation.
@@ -105,7 +104,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         Action<AsyncOperationHandle> m_dependencyCompleteAction;
 
         /// <summary>
-        /// Basic constructor for AsyncOperationBase. 
+        /// Basic constructor for AsyncOperationBase.
         /// </summary>
         protected AsyncOperationBase()
         {
@@ -203,7 +202,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 return System.Threading.Tasks.Task.Factory.StartNew((Func<object, TObject>)(o =>
                 {
                     var asyncOperation = o as AsyncOperationBase<TObject>;
-                    if (asyncOperation == null) 
+                    if (asyncOperation == null)
                         return default(TObject);
                     handle.WaitOne();
                     return (TObject)asyncOperation.Result;
@@ -319,7 +318,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             }
         }
         internal bool MoveNext() { return !IsDone; }
-        internal void Reset() { }
+        internal void Reset() {}
         internal object Current { get { return null; } } // should throw exception?
         internal bool IsDone { get { return Status == AsyncOperationStatus.Failed || Status == AsyncOperationStatus.Succeeded; } }
         internal float PercentComplete
@@ -374,7 +373,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         }
 
         /// <summary>
-        /// Complete the operation and invoke events. 
+        /// Complete the operation and invoke events.
         /// </summary>
         /// <remarks>
         /// An operation is considered to have failed silently if success is true and if errorMsg isn't null or empty.
@@ -388,8 +387,9 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             Complete(result, success, errorMsg, true);
         }
+
         /// <summary>
-        /// Complete the operation and invoke events. 
+        /// Complete the operation and invoke events.
         /// </summary>
         /// <remarks>
         /// An operation is considered to have failed silently if success is true and if errorMsg isn't null or empty.
@@ -522,6 +522,5 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             Start(rm, dependency, updateCallbacks);
         }
-
     }
 }

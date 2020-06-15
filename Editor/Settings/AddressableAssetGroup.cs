@@ -16,17 +16,12 @@ namespace UnityEditor.AddressableAssets.Settings
     [Serializable]
     public class AddressableAssetGroup : ScriptableObject, IComparer<AddressableAssetEntry>, ISerializationCallbackReceiver
     {
-
-
-
         internal static GUIContent RemoveSchemaContent = new GUIContent("Remove Schema", "Remove this schema.");
         internal static GUIContent MoveSchemaUpContent = new GUIContent("Move Up", "Move schema up one in list.");
         internal static GUIContent MoveSchemaDownContent = new GUIContent("Move Down", "Move schema down one in list.");
         internal static GUIContent ExpandSchemaContent = new GUIContent("Expand All", "Expand all settings within schema.");
-   
-        
-        
-        
+
+
         [FormerlySerializedAs("m_name")]
         [SerializeField]
         string m_GroupName;
@@ -68,7 +63,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 m_GroupName = value;
                 m_GroupName = m_GroupName.Replace('/', '-');
                 m_GroupName = m_GroupName.Replace('\\', '-');
-                if(m_GroupName != value)
+                if (m_GroupName != value)
                     Debug.Log("Group names cannot include '\\' or '/'.  Replacing with '-'. " + m_GroupName);
                 if (m_GroupName != name)
                 {
@@ -89,7 +84,6 @@ namespace UnityEditor.AddressableAssets.Settings
                                     Debug.LogError("Rename of Group failed. " + setPath);
                                 }
                                 m_GroupName = name;
-
                             }
                         }
                     }
@@ -355,7 +349,6 @@ namespace UnityEditor.AddressableAssets.Settings
                     Debug.LogException(ex);
                 }
             }
-
         }
 
         void OnEnable()
@@ -365,7 +358,6 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal void Validate()
         {
-
             bool allValid = false;
             while (!allValid)
             {
@@ -378,7 +370,7 @@ namespace UnityEditor.AddressableAssets.Settings
                         allValid = false;
                         break;
                     }
-                    if(m_SchemaSet.Schemas[i].Group == null)
+                    if (m_SchemaSet.Schemas[i].Group == null)
                         m_SchemaSet.Schemas[i].Group = this;
                 }
             }
@@ -390,12 +382,12 @@ namespace UnityEditor.AddressableAssets.Settings
                     m_GroupName = AddressableAssetSettings.PlayerDataGroupName;
                 if (m_Data != null)
                 {
-                    if(!HasSchema<PlayerDataGroupSchema>())
+                    if (!HasSchema<PlayerDataGroupSchema>())
                         AddSchema<PlayerDataGroupSchema>();
                     m_Data = null;
                 }
             }
-            else if(Settings != null)
+            else if (Settings != null)
             {
                 if (m_GroupName == null)
                     m_GroupName = Settings.FindUniqueGroupName("Packed Content Group");
@@ -414,16 +406,16 @@ namespace UnityEditor.AddressableAssets.Settings
                 AddressableAssetEntry lookedUpEntry = m_Settings.FindAssetEntry(e.guid);
                 if (lookedUpEntry.parentGroup != this)
                 {
-                    Debug.LogWarning(  e.address
-                                     + " is already a member of group "
-                                     + lookedUpEntry.parentGroup
-                                     + " but group "
-                                     + m_GroupName
-                                     + " contained a reference to it.  Removing referece.");
+                    Debug.LogWarning(e.address
+                        + " is already a member of group "
+                        + lookedUpEntry.parentGroup
+                        + " but group "
+                        + m_GroupName
+                        + " contained a reference to it.  Removing referece.");
                     removeEntries.Add(e);
                 }
             }
-            if(removeEntries.Count > 0)
+            if (removeEntries.Count > 0)
                 RemoveAssetEntries(removeEntries);
         }
 
@@ -446,7 +438,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public virtual void GatherAllAssets(List<AddressableAssetEntry> results, bool includeSelf, bool recurseAll, bool includeSubObjects, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
             foreach (var e in entries)
-                if(entryFilter == null || entryFilter(e))
+                if (entryFilter == null || entryFilter(e))
                     e.GatherAllAssets(results, includeSelf, recurseAll, includeSubObjects, entryFilter);
         }
 

@@ -26,7 +26,7 @@ using static UnityEditor.AddressableAssets.Settings.AddressablesFileEnumeration;
 namespace UnityEditor.AddressableAssets.Settings
 {
     using Object = UnityEngine.Object;
-    
+
     /// <summary>
     /// Contains editor data for the addressables system.
     /// </summary>
@@ -39,6 +39,7 @@ namespace UnityEditor.AddressableAssets.Settings
             if (AddressableAssetSettingsDefaultObject.Settings != null)
                 AddressablesAssetPostProcessor.OnPostProcess = AddressableAssetSettingsDefaultObject.Settings.OnPostprocessAllAssets;
         }
+
         /// <summary>
         /// Default name of a newly created group.
         /// </summary>
@@ -158,7 +159,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return GroupFolder + "/Schemas";
             }
         }
-        
+
         /// <summary>
         /// The default folder for the group template assets.
         /// </summary>
@@ -169,7 +170,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return ConfigFolder + "/AssetGroupTemplates";
             }
         }
-        
+
         /// <summary>
         /// Event for handling settings changes.  The object passed depends on the event type.
         /// </summary>
@@ -235,7 +236,7 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
-        /// Tells Addressables if it should check for a Content Catalog Update during the initialization step. 
+        /// Tells Addressables if it should check for a Content Catalog Update during the initialization step.
         /// </summary>
         public bool DisableCatalogUpdateOnStartup
         {
@@ -323,6 +324,7 @@ namespace UnityEditor.AddressableAssets.Settings
             CreateOrMoveEntry(guid, DefaultGroup);
             return new AssetReference(guid);
         }
+
         [SerializeField]
         string m_overridePlayerVersion = "";
         /// <summary>
@@ -388,22 +390,16 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="index">The index to remove at.</param>
         /// <param name="postEvent">Indicates if an even should be posted to the Addressables event system for this change.</param>
         /// <returns>True if the schema was removed.</returns>
+        [Obsolete("GroupSchemaTemplates are deprecated, use GroupTemplateObjects")]
         public bool RemoveSchemaTemplate(int index, bool postEvent = true)
         {
-            if (index < 0 || index >= m_SchemaTemplates.Count)
-            {
-                Debug.LogWarningFormat("Invalid index for schema template: {0}.", index);
-                return false;
-            }
-            var s = m_SchemaTemplates[index];
-            m_SchemaTemplates.RemoveAt(index);
-            SetDirty(ModificationEvent.GroupSchemaRemoved, s, postEvent, true);
-            return true;
+            Debug.LogError("GroupSchemaTemplates are deprecated, use GroupTemplateObjects");
+            return false;
         }
-        
-         [SerializeField]
+
+        [SerializeField]
         List<ScriptableObject> m_GroupTemplateObjects = new List<ScriptableObject>();
-        
+
         /// <summary>
         /// List of ScriptableObjects that implement the IGroupTemplate interface for providing new templates.
         /// For use in the AddressableAssetsWindow to display new groups to create
@@ -493,12 +489,11 @@ namespace UnityEditor.AddressableAssets.Settings
                 Debug.LogWarning("AddressableAssetGroupTemplate objects must inherit from ScriptableObject.");
                 return false;
             }
-        
+
             m_GroupTemplateObjects[index] = so;
             SetDirty(ModificationEvent.GroupTemplateAdded, so, postEvent, true);
             return true;
         }
-
 
         [FormerlySerializedAs("m_initializationObjects")]
         [SerializeField]
@@ -596,7 +591,6 @@ namespace UnityEditor.AddressableAssets.Settings
             SetDirty(ModificationEvent.InitializationObjectAdded, so, postEvent, true);
             return true;
         }
-
 
         [SerializeField]
         [SerializedTypeRestriction(type = typeof(UnityEngine.Networking.CertificateHandler))]
@@ -748,7 +742,7 @@ namespace UnityEditor.AddressableAssets.Settings
             set
             {
                 if (m_ActivePlayerDataBuilderIndex != value)
-                { 
+                {
                     m_ActivePlayerDataBuilderIndex = value;
                     SetDirty(ModificationEvent.ActiveBuildScriptChanged, ActivePlayerDataBuilder, true, true);
                 }
@@ -772,7 +766,7 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
-        /// Gets the list of all defined labels. 
+        /// Gets the list of all defined labels.
         /// </summary>
         public List<string> GetLabels()
         {
@@ -859,7 +853,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="entryFilter">A method to filter entries.  Entries will be processed if filter is null, or it returns TRUE</param>
         public void GetAllAssets(List<AddressableAssetEntry> assets, bool includeSubObjects, Func<AddressableAssetGroup, bool> groupFilter = null, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
-            using(var cache = new AddressablesFileEnumerationCache(this, false, null))
+            using (var cache = new AddressablesFileEnumerationCache(this, false, null))
             {
                 foreach (var g in groups)
                     if (g != null && (groupFilter == null || groupFilter(g)))
@@ -916,21 +910,7 @@ namespace UnityEditor.AddressableAssets.Settings
             // Begin update any SchemaTemplate to GroupTemplateObjects
             if (m_SchemaTemplates != null && m_SchemaTemplates.Count > 0)
             {
-                for (int i = m_SchemaTemplates.Count - 1; i >= 0; --i)
-                {
-                    string assetPath = GroupTemplateFolder + "/" + m_SchemaTemplates[i].DisplayName + ".asset";
-                    if (File.Exists(assetPath))
-                    {
-                        if(LoadGroupTemplateObject(this, assetPath))
-                            m_SchemaTemplates.RemoveAt(i);
-                    }
-                    else
-                    {
-                        if (CreateAndAddGroupTemplate(m_SchemaTemplates[i].DisplayName,
-                                m_SchemaTemplates[i].Description, m_SchemaTemplates[i].GetTypes()))
-                            m_SchemaTemplates.RemoveAt(i);
-                    }
-                }
+                Debug.LogError("Updating from GroupSchema version that is too old, deleting schemas");
                 m_SchemaTemplates = null;
             }
             if (m_GroupTemplateObjects.Count == 0)
@@ -1033,7 +1013,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             if (!Directory.Exists(GroupTemplateFolder))
                 Directory.CreateDirectory(GroupTemplateFolder);
-            
+
             AddressableAssetGroupTemplate newAssetGroupTemplate = ScriptableObject.CreateInstance<AddressableAssetGroupTemplate>();
             newAssetGroupTemplate.Description = description;
 
@@ -1045,7 +1025,6 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (Type type in types)
                 newAssetGroupTemplate.AddSchema(type);
 
-            
 
             return true;
         }
@@ -1092,7 +1071,6 @@ namespace UnityEditor.AddressableAssets.Settings
             return true;
         }
 
-
         /// <summary>
         /// Find asset group by functor.
         /// </summary>
@@ -1102,7 +1080,6 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             return groups.Find(g => g != null && func(g));
         }
-
 
         /// <summary>
         /// Find asset group by name.
@@ -1174,8 +1151,8 @@ namespace UnityEditor.AddressableAssets.Settings
             aa.m_DefaultGroup = localGroup.Guid;
             return localGroup;
         }
-        
-        private static bool CreateDefaultGroupTemplate( AddressableAssetSettings aa)
+
+        private static bool CreateDefaultGroupTemplate(AddressableAssetSettings aa)
         {
             string assetPath = aa.GroupTemplateFolder + "/" + aa.m_DefaultGroupTemplateName + ".asset";
 
@@ -1197,7 +1174,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 entry = new AddressableAssetEntry(guid, address, parent, readOnly);
 
             if (!readOnly)
-                SetDirty(ModificationEvent.EntryCreated, entry, postEvent, true);
+                SetDirty(ModificationEvent.EntryCreated, entry, postEvent, false);
 
             return entry;
         }
@@ -1250,6 +1227,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             return false;
         }
+
         /// <summary>
         /// Find and asset entry by guid.
         /// </summary>
@@ -1271,13 +1249,15 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal void MoveAssetsFromResources(Dictionary<string, string> guidToNewPath, AddressableAssetGroup targetParent)
         {
-            if (guidToNewPath == null)
+            if (guidToNewPath == null || targetParent == null)
+            {
                 return;
+            }
+
             var entries = new List<AddressableAssetEntry>();
             AssetDatabase.StartAssetEditing();
             foreach (var item in guidToNewPath)
             {
-
                 var dirInfo = new FileInfo(item.Value).Directory;
                 if (dirInfo != null && !dirInfo.Exists)
                 {
@@ -1311,7 +1291,6 @@ namespace UnityEditor.AddressableAssets.Settings
                     }
                     entries.Add(newEntry);
                 }
-
             }
             AssetDatabase.StopAssetEditing();
             AssetDatabase.Refresh();
@@ -1459,7 +1438,7 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (var t in types)
                 group.AddSchema(t);
 
-            if(!m_GroupAssets.Contains(group))
+            if (!m_GroupAssets.Contains(group))
                 groups.Add(group);
 
             if (setAsDefaultGroup)
@@ -1536,7 +1515,6 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-
         internal void SetLabelValueForEntries(List<AddressableAssetEntry> entries, string label, bool value, bool postEvent = true)
         {
             if (value)
@@ -1551,7 +1529,8 @@ namespace UnityEditor.AddressableAssets.Settings
         internal void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
             var aa = this;
-            bool modified = false;
+            bool relatedAssetChanged = false;
+            bool settingsChanged = false;
             foreach (string str in importedAssets)
             {
                 var assetType = AssetDatabase.GetMainAssetTypeAtPath(str);
@@ -1571,7 +1550,8 @@ namespace UnityEditor.AddressableAssets.Settings
                         {
                             aa.groups.Add(foundGroup);
                             group = aa.FindGroup(Path.GetFileNameWithoutExtension(str));
-                            modified = true;
+                            relatedAssetChanged = true;
+                            settingsChanged = true;
                         }
                     }
                     if (group != null)
@@ -1581,17 +1561,17 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (typeof(AddressableAssetEntryCollection).IsAssignableFrom(assetType))
                 {
                     aa.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(str), aa.DefaultGroup);
-                    modified = true;
+                    relatedAssetChanged = true;
                 }
 
                 var guid = AssetDatabase.AssetPathToGUID(str);
                 if (aa.FindAssetEntry(guid) != null)
-                    modified = true;
+                    relatedAssetChanged = true;
 
                 if (AddressableAssetUtility.IsInResources(str))
-                    modified = true;
+                    relatedAssetChanged = true;
             }
-            
+
             if (deletedAssets.Length > 0)
             {
                 // if any directly referenced assets were deleted while Unity was closed, the path isn't useful, so Remove(null) is our only option
@@ -1601,27 +1581,27 @@ namespace UnityEditor.AddressableAssets.Settings
                     GroupTemplateObjects.Remove(null) ||
                     InitializationObjects.Remove(null))
                 {
-                    modified = true;
+                    relatedAssetChanged = true;
                 }
-
             }
 
             foreach (string str in deletedAssets)
             {
                 if (AddressableAssetUtility.IsInResources(str))
-                    modified = true;
+                    relatedAssetChanged = true;
                 else
                 {
                     if (CheckForGroupDataDeletion(str))
                     {
-                        modified = true;
+                        relatedAssetChanged = true;
+                        settingsChanged = true;
                         continue;
                     }
 
                     var guidOfDeletedAsset = AssetDatabase.AssetPathToGUID(str);
                     if (aa.RemoveAssetEntry(guidOfDeletedAsset))
                     {
-                        modified = true;
+                        relatedAssetChanged = true;
                     }
                 }
             }
@@ -1644,7 +1624,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     var guid = AssetDatabase.AssetPathToGUID(str);
                     AddressableAssetEntry entry = aa.FindAssetEntry(guid);
 
-                    bool isAlreadyAddressable =  entry != null;
+                    bool isAlreadyAddressable = entry != null;
                     bool startedInResources = AddressableAssetUtility.IsInResources(movedFromAssetPaths[i]);
                     bool endedInResources = AddressableAssetUtility.IsInResources(str);
                     bool inEditorSceneList = BuiltinSceneCache.Contains(new GUID(guid));
@@ -1659,16 +1639,16 @@ namespace UnityEditor.AddressableAssets.Settings
                         Addressables.Log("You have moved addressable asset " + fileName + " into a Resources directory.  It has been unmarked as addressable, but can still be loaded via the Addressables API via its Resources path.");
                         aa.RemoveAssetEntry(guid, false);
                     }
-                    else if(inEditorSceneList)
+                    else if (inEditorSceneList)
                         BuiltinSceneCache.ClearState();
 
                     //any addressables move or resources move (even resources to within resources) needs to refresh the UI.
-                    modified = isAlreadyAddressable || startedInResources || endedInResources || inEditorSceneList;
+                    relatedAssetChanged = isAlreadyAddressable || startedInResources || endedInResources || inEditorSceneList;
                 }
             }
 
-            if(modified)
-                aa.SetDirty(ModificationEvent.BatchModification, null, true, true);
+            if (relatedAssetChanged || settingsChanged)
+                aa.SetDirty(ModificationEvent.BatchModification, null, true, settingsChanged);
         }
 
         internal bool CheckForGroupDataDeletion(string str)
@@ -1681,7 +1661,7 @@ namespace UnityEditor.AddressableAssets.Settings
             bool deleteGroup = false;
             foreach (var group in groups)
             {
-                if(group!=null)
+                if (group != null)
                 {
                     if (AssetDatabase.GUIDToAssetPath(group.Guid) == str)
                     {
@@ -1730,7 +1710,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             settings.BuildPlayerContentImpl();
         }
-        
+
         internal void BuildPlayerContentImpl()
         {
             if (Directory.Exists(Addressables.BuildPath))
@@ -1794,7 +1774,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal AsyncOperationHandle<IResourceLocator> CreatePlayModeInitializationOperation(AddressablesImpl addressables)
         {
-            return addressables.ResourceManager.StartOperation(new FastModeInitializationOperation(addressables, this), default );
+            return addressables.ResourceManager.StartOperation(new FastModeInitializationOperation(addressables, this), default);
         }
     }
 }

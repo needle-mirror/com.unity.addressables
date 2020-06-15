@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -22,8 +22,8 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <summary>
         /// Get the profile variable id.
         /// </summary>
-        public string Id 
-        { 
+        public string Id
+        {
             get { return m_Id; }
             internal set { m_Id = value; }
         }
@@ -77,7 +77,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return null;
             }
             var pid = settings.profileSettings.GetProfileDataById(m_Id);
-            if(pid == null)
+            if (pid == null)
                 Debug.LogWarningFormat("ProfileValueReference: GetName() - Unable to find variable id {0} in settings object.", m_Id);
 
             return pid == null ? string.Empty : pid.ProfileName;

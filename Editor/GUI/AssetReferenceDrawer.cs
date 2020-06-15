@@ -27,7 +27,7 @@ namespace UnityEditor.AddressableAssets.GUI
         string m_AssetName;
         internal Rect assetDropDownRect;
         internal const string noAssetString = "None (AddressableAsset)";
-        AssetReference m_AssetRefObject;
+        internal AssetReference m_AssetRefObject;
 
         List<AssetReferenceUIRestrictionSurrogate> m_Restrictions = null;
 
@@ -57,7 +57,7 @@ namespace UnityEditor.AddressableAssets.GUI
             return false;
         }
 
-        bool SetObject(SerializedProperty property, Object target, out string guid)
+        internal bool SetObject(SerializedProperty property, Object target, out string guid)
         {
             guid = null;
             try
@@ -68,6 +68,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (target == null)
                 {
                     m_AssetRefObject.SetEditorAsset(null);
+                    EditorUtility.SetDirty(property.serializedObject.targetObject);
                     return true;
                 }
 
@@ -210,7 +211,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                 }
             }
-            
+
             assetDropDownRect = EditorGUI.PrefixLabel(position, label);
             var nameToUse = m_AssetName;
             if (isNotAddressable)
@@ -264,16 +265,19 @@ namespace UnityEditor.AddressableAssets.GUI
             var asset = m_AssetRefObject?.editorAsset;
             if (asset != null)
             {
-                var assetName = asset.name;
-                asset.name = nameToUse;
+                float iconHeight = EditorGUIUtility.singleLineHeight - EditorGUIUtility.standardVerticalSpacing * 3;
+                Vector2 iconSize = EditorGUIUtility.GetIconSize();
+                EditorGUIUtility.SetIconSize(new Vector2(iconHeight, iconHeight));
+                string assetPath = AssetDatabase.GUIDToAssetPath(m_AssetRefObject.AssetGUID);
+                Texture2D assetIcon = AssetDatabase.GetCachedIcon(assetPath) as Texture2D;
 
-                EditorGUI.ObjectField(assetDropDownRect, asset, asset.GetType(), false);
+                EditorGUI.LabelField(assetDropDownRect, new GUIContent(nameToUse, assetIcon), EditorStyles.objectField);
 
-                asset.name = assetName;
+                EditorGUIUtility.SetIconSize(iconSize);
             }
             else
             {
-                EditorGUI.ObjectField(assetDropDownRect, null, typeof(AddressableAsset), false);
+                EditorGUI.LabelField(assetDropDownRect, new GUIContent($"None ({typeof(AddressableAsset).Name})"), EditorStyles.objectField);
             }
 
 #if UNITY_2019_1_OR_NEWER
@@ -474,7 +478,7 @@ namespace UnityEditor.AddressableAssets.GUI
         }
     }
 
-    class AddressableAsset { };
+    class AddressableAsset {};
 
     class AssetReferencePopup : PopupWindowContent
     {
@@ -567,7 +571,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        class AssetReferenceTreeView : TreeView
+        internal class AssetReferenceTreeView : TreeView
         {
             AssetReferenceDrawer m_Drawer;
             AssetReferencePopup m_Popup;
@@ -656,7 +660,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         if (!entry.IsInResources &&
                             m_Drawer.ValidateAsset(entry.AssetPath))
                         {
-                            var child = new AssetRefTreeViewItem(entry.address.GetHashCode(), 0, entry.address, entry.AssetPath);
+                            var child = new AssetRefTreeViewItem(entry.AssetPath.GetHashCode(), 0, entry.address, entry.AssetPath);
                             root.AddChild(child);
                         }
                     }
@@ -835,6 +839,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             data = initData;
         }
+
         /// <summary>
         /// Validates the referenced asset allowable for this asset reference.
         /// </summary>
@@ -846,7 +851,7 @@ namespace UnityEditor.AddressableAssets.GUI
         }
     }
     /// <summary>
-    /// Surrogate to AssetReferenceUILabelRestriction 
+    /// Surrogate to AssetReferenceUILabelRestriction
     /// This surrogate class provides the editor-side implementation of AssetReferenceUILabelRestriction attribute
     /// Used to restrict an AssetReference field or property to only allow items wil specific labels. This is only enforced through the UI.
     /// </summary>
@@ -869,6 +874,7 @@ namespace UnityEditor.AddressableAssets.GUI
             var path = AssetDatabase.GetAssetOrScenePath(obj);
             return ValidateAsset(path);
         }
+
         /// <inheritdoc/>
         public override bool ValidateAsset(string path)
         {
@@ -907,7 +913,6 @@ namespace UnityEditor.AddressableAssets.GUI
         /// <returns>Type of the surrogate found for the Assembly with a particular Target Type.</returns>
         public static Type GetSurrogate(Type targetType)
         {
-
             if (targetType == null)
             {
                 Debug.LogError("targetType cannot be null");
@@ -924,7 +929,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 typesList.AddRange(assemblyTypeList);
             }
 
-            if(typesList.Count==0)
+            if (typesList.Count == 0)
                 return null;
 
             typesList.Sort(AssetReferenceUtility.CompareTypes);

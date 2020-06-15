@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
@@ -76,11 +76,12 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             };
             return aaContext;
         }
+
         protected bool IsValidPath(string path)
         {
             return AddressableAssetUtility.IsPathValidForEntry(path) &&
-                   !path.ToLower().Contains("/resources/") &&
-                   !path.ToLower().StartsWith("resources/");
+                !path.ToLower().Contains("/resources/") &&
+                !path.ToLower().StartsWith("resources/");
         }
 
         internal ReturnCode RefreshBuild(AddressableAssetsBuildContext buildContext)
@@ -208,16 +209,18 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 newName = bid.assetBundleName.Replace(".bundle", string.Format("{0}.bundle", count++));
             return new AssetBundleBuild
             {
-                assetBundleName = newName, addressableNames = bid.addressableNames,
-                assetBundleVariant = bid.assetBundleVariant, assetNames = bid.assetNames
+                assetBundleName = newName,
+                addressableNames = bid.addressableNames,
+                assetBundleVariant = bid.assetBundleVariant,
+                assetNames = bid.assetNames
             };
         }
 
         internal List<GUID> GetImplicitGuidsForBundle(string fileName)
         {
             List<GUID> guids = (from id in m_ExtractData.WriteData.FileToObjects[fileName]
-                                where !m_ExtractData.WriteData.AssetToFiles.Keys.Contains(id.guid)
-                                select id.guid).ToList();
+                where !m_ExtractData.WriteData.AssetToFiles.Keys.Contains(id.guid)
+                select id.guid).ToList();
             return guids;
         }
 
@@ -248,16 +251,16 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             if (!BuildUtility.CheckModifiedScenesAndAskToSave())
             {
                 Debug.LogError("Cannot run Analyze with unsaved scenes");
-                results.Add(new AnalyzeResult{resultName = ruleName + "Cannot run Analyze with unsaved scenes"});
+                results.Add(new AnalyzeResult { resultName = ruleName + "Cannot run Analyze with unsaved scenes" });
                 return results;
             }
 
             m_AddressableAssets = (from aaGroup in settings.groups
-                                   where aaGroup != null
-                                   from entry in aaGroup.entries
-                                   select new GUID(entry.guid)).ToList();
+                where aaGroup != null
+                from entry in aaGroup.entries
+                select new GUID(entry.guid)).ToList();
 
-            
+
             BuiltInResourcesToDependenciesMap(builtInResourcesPaths);
             CalculateInputDefinitions(settings);
 
@@ -266,7 +269,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             if (exitCode < ReturnCode.Success)
             {
                 Debug.LogError("Analyze build failed. " + exitCode);
-                results.Add(new AnalyzeResult{resultName = ruleName + "Analyze build failed. " + exitCode});
+                results.Add(new AnalyzeResult { resultName = ruleName + "Analyze build failed. " + exitCode });
                 return results;
             }
 
@@ -275,24 +278,27 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             ConvertBundleNamesToGroupNames(context);
 
             results = (from resource in m_ResourcesToDependencies.Keys
-                       from dependency in m_ResourcesToDependencies[resource]
+                from dependency in m_ResourcesToDependencies[resource]
 
-                       let assetPath = AssetDatabase.GUIDToAssetPath(dependency.ToString())
-                       let files = m_ExtractData.WriteData.FileToObjects.Keys
+                let assetPath = AssetDatabase.GUIDToAssetPath(dependency.ToString())
+                    let files = m_ExtractData.WriteData.FileToObjects.Keys
 
-                       from file in files
-                       where m_ExtractData.WriteData.FileToObjects[file].Any(oid => oid.guid == dependency)
-                       where m_ExtractData.WriteData.FileToBundle.ContainsKey(file)
-                       let bundle = m_ExtractData.WriteData.FileToBundle[file]
-                       
-                       select new AnalyzeResult { resultName =
-                           resource + kDelimiter +
-                           bundle + kDelimiter +
-                           assetPath,
-                           severity = MessageType.Warning }).ToList();
+                    from file in files
+                    where m_ExtractData.WriteData.FileToObjects[file].Any(oid => oid.guid == dependency)
+                    where m_ExtractData.WriteData.FileToBundle.ContainsKey(file)
+                    let bundle = m_ExtractData.WriteData.FileToBundle[file]
+
+                    select new AnalyzeResult
+                {
+                    resultName =
+                        resource + kDelimiter +
+                        bundle + kDelimiter +
+                        assetPath,
+                    severity = MessageType.Warning
+                }).ToList();
 
             if (results.Count == 0)
-                results.Add(new AnalyzeResult{resultName = ruleName + " - No issues found."});
+                results.Add(new AnalyzeResult { resultName = ruleName + " - No issues found." });
 
             return results;
         }

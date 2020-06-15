@@ -27,18 +27,19 @@ namespace SceneTests
         int m_StartingSceneCount;
         const int numScenes = 2;
         List<String> sceneKeys;
-        const string prefabKey = "prefabKey";        
+        const string prefabKey = "prefabKey";
         public SceneTests()
         {
             sceneKeys = new List<string>();
-            for(int i=0;i<numScenes;i++)
+            for (int i = 0; i < numScenes; i++)
             {
                 sceneKeys.Add("SceneTests_Scene" + i);
             }
         }
+
 #if UNITY_EDITOR
         internal override void Setup(AddressableAssetSettings settings, string tempAssetFolder)
-        { 
+        {
             var group = settings.CreateGroup("SceneGroup", true, false, false, null, typeof(BundledAssetGroupSchema));
             group.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.OnlyHash;
             // Create prefab
@@ -56,6 +57,7 @@ namespace SceneTests
                 entry.address = Path.GetFileNameWithoutExtension(entry.AssetPath);
             }
         }
+
         static string CreatePrefab(string assetPath)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -63,6 +65,7 @@ namespace SceneTests
             Object.DestroyImmediate(go, false);
             return AssetDatabase.AssetPathToGUID(assetPath);
         }
+
 #endif
         [SetUp]
         public void SetUp()
@@ -95,7 +98,7 @@ namespace SceneTests
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.AreEqual(sceneKeys[0], SceneManager.GetSceneByName(sceneKeys[0]).name);
-            
+
             var op1 = m_Addressables.LoadSceneAsync(sceneKeys[1], LoadSceneMode.Additive);
             yield return op1;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op1.Status);
@@ -111,7 +114,7 @@ namespace SceneTests
             //Setup
             var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
 
-            //Test            
+            //Test
             float lastPercentComplete = 0f;
             while (!op.IsDone)
             {
@@ -145,7 +148,6 @@ namespace SceneTests
             Assert.IsFalse(instOp.IsValid());
         }
 
-
         [UnityTest]
         public IEnumerator WhenSceneUnloadedWithSceneManager_InstanitatedObjectsInThatSceneAreReleased()
         {
@@ -167,7 +169,6 @@ namespace SceneTests
             Assert.IsNull(SceneManager.GetSceneByName(sceneKeys[0]).name);
             Assert.IsFalse(instOp.IsValid());
         }
-
 
         [UnityTest]
         public IEnumerator WhenSceneUnloaded_InstantiatedObjectsInOtherScenesAreNotReleased()
@@ -198,12 +199,12 @@ namespace SceneTests
         }
 
         /* Regression test for https://jira.unity3d.com/browse/ADDR-1032
-         * 
+         *
          * Bug occurs when an instantiation happens after a previously completed instantiation.
          * The InstanceOperation is recycled from the previous instantiation, but its m_scene field is not cleaned.
          *
          * Test ensures that when instantiating a prefab and the InstanceOperation is recycled from a previous instantiation,
-         * the m_Scene (field in InstanceOperation) should be null until the InstanceOperation is completed.  
+         * the m_Scene (field in InstanceOperation) should be null until the InstanceOperation is completed.
          */
         [UnityTest]
         public IEnumerator WhenInstantiatingPrefab_AndOperationIsRecycled_SceneIsNullUntilCompletion()

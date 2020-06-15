@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.ResourceManagement.Util;
@@ -14,7 +14,7 @@ namespace UnityEditor.AddressableAssets.Tests
             protected override string GetGameObjectName() => kTestSingletonName;
         }
 
-        public class TestSingletonWithDefaultName : ComponentSingleton<TestSingletonWithDefaultName> { }
+        public class TestSingletonWithDefaultName : ComponentSingleton<TestSingletonWithDefaultName> {}
 
         [TearDown]
         public void Teardown()

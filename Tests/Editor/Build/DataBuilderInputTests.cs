@@ -19,7 +19,7 @@ namespace UnityEditor.AddressableAssets.Tests
             LogAssert.Expect(LogType.Error, "Attempting to set up AddressablesDataBuilderInput with null settings.");
             Assert.AreEqual("123", input.PlayerVersion);
         }
-        
+
         [Test]
         public void BuildInput_CreatesProperBuildData()
         {
@@ -27,8 +27,8 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(EditorUserBuildSettings.activeBuildTarget, input.Target);
             Assert.AreEqual(BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), input.TargetGroup);
             Assert.AreEqual(Settings.PlayerBuildVersion, input.PlayerVersion);
-            
-            
+
+
             input = new AddressablesDataBuilderInput(Settings, "1234");
             Assert.AreEqual(EditorUserBuildSettings.activeBuildTarget, input.Target);
             Assert.AreEqual(BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget), input.TargetGroup);
@@ -42,12 +42,12 @@ namespace UnityEditor.AddressableAssets.Tests
             ProjectConfigData.postProfilerEvents = true;
             var input = new AddressablesDataBuilderInput(Settings);
             Assert.AreEqual(true, input.ProfilerEventsEnabled);
-            
+
             ProjectConfigData.postProfilerEvents = false;
             input = new AddressablesDataBuilderInput(Settings);
             Assert.AreEqual(false, input.ProfilerEventsEnabled);
-            
-            
+
+
             ProjectConfigData.postProfilerEvents = oldState;
         }
 

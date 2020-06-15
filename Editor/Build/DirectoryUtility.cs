@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using UnityEngine;
 
 internal static class DirectoryUtility
@@ -8,7 +8,7 @@ internal static class DirectoryUtility
         if (!Directory.Exists(directoryPath))
             return;
 
-       if (!onlyIfEmpty || (onlyIfEmpty && Directory.GetFiles(directoryPath).Length == 0 && Directory.GetDirectories(directoryPath).Length == 0))
+        if (!onlyIfEmpty || (onlyIfEmpty && Directory.GetFiles(directoryPath).Length == 0 && Directory.GetDirectories(directoryPath).Length == 0))
             Directory.Delete(directoryPath, recursiveDelete);
     }
 

@@ -18,7 +18,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             titleContent = new GUIContent("Addressables Labels");
             m_Settings = settings;
-            
+
             var labels = m_Settings.labelTable.labelNames;
             m_LabelNamesRl = new ReorderableList(labels, typeof(string), true, false, true, true);
             m_LabelNamesRl.drawElementCallback = DrawLabelNamesCallback;
@@ -32,11 +32,11 @@ namespace UnityEditor.AddressableAssets.GUI
             GUILayout.BeginVertical(EditorStyles.label);
             GUILayout.Space(m_BorderSpacing);
             m_ScrollPosition = GUILayout.BeginScrollView(m_ScrollPosition);
-            m_LabelNamesRl.DoLayoutList(); 
+            m_LabelNamesRl.DoLayoutList();
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
         }
-        
+
         void DrawLabelNamesCallback(Rect rect, int index, bool isActive, bool isFocused)
         {
             var oldName = m_Settings.labelTable.labelNames[index];
@@ -54,7 +54,7 @@ namespace UnityEditor.AddressableAssets.GUI
             buttonRect.y -= 13;
             PopupWindow.Show(buttonRect, new LabelNamePopup(position.width, m_LabelNamesRl.elementHeight, m_Settings));
         }
-        
+
         class LabelNamePopup : PopupWindowContent
         {
             internal float windowWidth;
@@ -97,6 +97,8 @@ namespace UnityEditor.AddressableAssets.GUI
                         Debug.LogError("Cannot add empty label to Addressables label list");
                     else if (name != settings.labelTable.GetUniqueLabelName(name))
                         Debug.LogError("Label name '" + name + "' is already in the labels list.");
+                    else if (name.Contains("[") && name.Contains("]"))
+                        Debug.LogErrorFormat("Label name '{0}' cannot contain '[ ]'.", name);
                     else
                         settings.AddLabel(name);
 

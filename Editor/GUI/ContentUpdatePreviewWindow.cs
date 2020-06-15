@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.AddressableAssets.Build;
@@ -23,7 +23,6 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             titleContent = new GUIContent("Content Update Preview");
         }
-
 
         class ContentUpdateTreeView : TreeView
         {
@@ -132,7 +131,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     EditorGUI.LabelField(cellRect, item.entry.AssetPath);
                 }
-                else if(column == 3)
+                else if (column == 3)
                 {
                     EditorGUI.LabelField(cellRect, item.entry.parentGroup.Name);
                 }

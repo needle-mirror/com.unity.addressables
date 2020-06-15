@@ -30,7 +30,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI.Graph
 
     class GraphLayerVertValueLine : GraphLayerBase
     {
-        internal GraphLayerVertValueLine(int stream, string name, string desc, Color color) : base(stream, name, desc, color) { }
+        internal GraphLayerVertValueLine(int stream, string name, string desc, Color color) : base(stream, name, desc, color) {}
         public override void Draw(EventDataSet dataSet, Rect rect, int startFrame, int frameCount, int inspectFrame, bool expanded, Material material, int maxValue)
         {
             if (dataSet == null)

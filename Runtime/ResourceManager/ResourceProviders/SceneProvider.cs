@@ -27,6 +27,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             {
                 m_ResourceManager = rm;
             }
+
             public void Init(IResourceLocation location, LoadSceneMode loadMode, bool activateOnLoad, int priority, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
             {
                 m_DepOp = depOp;
@@ -44,6 +45,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 if (m_DepOp.IsValid())
                     deps.Add(m_DepOp);
             }
+
             protected override string DebugName { get { return string.Format("Scene({0})", m_Location == null ? "Invalid" : ShortenPath(m_ResourceManager.TransformInternalId(m_Location), false)); } }
 
             protected override void Execute()
@@ -80,11 +82,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     return SceneManager.LoadSceneAsync(path, new LoadSceneParameters() { loadSceneMode = mode });
                 else
                 {
-                    if (!path.ToLower().StartsWith("assets/"))
+                    if (!path.ToLower().StartsWith("assets/") && !path.ToLower().StartsWith("packages/"))
                         path = "Assets/" + path;
                     if (path.LastIndexOf(".unity") == -1)
                         path += ".unity";
-                            
+
                     return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(path, new LoadSceneParameters() { loadSceneMode = mode });
                 }
 #endif
@@ -138,6 +140,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     m_Instance = m_sceneLoadHandle.Result;
                 }
             }
+
             protected override void Execute()
             {
                 if (m_sceneLoadHandle.IsValid() && m_Instance.Scene.isLoaded)
@@ -163,7 +166,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             {
                 get { return m_sceneLoadHandle.PercentComplete; }
             }
-
         }
 
         /// <inheritdoc/>

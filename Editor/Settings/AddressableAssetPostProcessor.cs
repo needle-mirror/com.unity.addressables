@@ -34,7 +34,6 @@ namespace UnityEditor.AddressableAssets.Settings
         }
         static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
-
             if (s_Handler != null)
             {
                 s_Handler(importedAssets, deletedAssets, movedAssets, movedFromAssetPaths);

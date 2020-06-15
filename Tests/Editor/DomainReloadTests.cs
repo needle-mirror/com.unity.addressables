@@ -1,4 +1,4 @@
-﻿#if UNITY_2019_3_OR_NEWER
+#if UNITY_2019_3_OR_NEWER
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine.AddressableAssets;
@@ -10,7 +10,7 @@ namespace UnityEditor.AddressableAssets.Tests
     {
         [Test]
         public void DomainReloadTests_ReInitAddressablesFlagIsSetCorrectly_WhenExitingPlaymode()
-        { 
+        {
             bool savedState = EditorSettings.enterPlayModeOptionsEnabled;
             EditorSettings.enterPlayModeOptionsEnabled = true;
             Addressables.reinitializeAddressables = true;

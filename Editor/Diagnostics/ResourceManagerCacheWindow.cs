@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
@@ -13,7 +13,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
      */
     class ResourceManagerCacheWindow : EditorWindow
     {
-    //    [MenuItem("Window/Asset Management/Resource Manager Cache", priority = 2051)]
+        //    [MenuItem("Window/Asset Management/Resource Manager Cache", priority = 2051)]
         static void ShowWindow()
         {
             var window = GetWindow<ResourceManagerCacheWindow>();
@@ -28,7 +28,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             {
                 return ((EventTreeViewItem)b).m_state.ReferenceCount - ((EventTreeViewItem)a).m_state.ReferenceCount;
             }
-              
+
             class EventTreeViewItem : TreeViewItem
             {
                 internal OperationState m_state;
@@ -88,7 +88,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         }
 
         Dictionary<int, OperationState> m_OpStates = new Dictionary<int, OperationState>();
-        int m_lastRepaintedFrame =-1;
+        int m_lastRepaintedFrame = -1;
         public void OnEvent(DiagnosticEvent evt)
         {
             var hash = evt.ObjectId;

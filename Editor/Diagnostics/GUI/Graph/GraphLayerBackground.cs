@@ -20,7 +20,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI.Graph
                 return;
 
             int endFrame = startFrame + frameCount;
-            
+
             EventDataSetStream refStream = dataSet.GetStream(Stream);
             if (refStream != null)
             {

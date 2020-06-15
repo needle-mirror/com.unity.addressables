@@ -11,7 +11,7 @@ using UnityEngine.AddressableAssets;
 namespace UnityEditor.AddressableAssets.GUI
 {
     using Object = UnityEngine.Object;
-    
+
     class AddressableAssetEntryTreeView : TreeView
     {
         AddressableAssetsSettingsGroupEditor m_Editor;
@@ -56,24 +56,24 @@ namespace UnityEditor.AddressableAssets.GUI
 
         protected override void SelectionChanged(IList<int> selectedIds)
         {
-            if(selectedIds.Count == 1)
+            if (selectedIds.Count == 1)
             {
                 var item = FindItemInVisibleRows(selectedIds[0]);
                 if (item != null && item.group != null)
                 {
                     m_FirstSelectedGroup = item.group.name;
-                }               
+                }
             }
 
             base.SelectionChanged(selectedIds);
 
             UnityEngine.Object[] selectedObjects = new UnityEngine.Object[selectedIds.Count];
-            for(int i = 0; i < selectedIds.Count; i++)
+            for (int i = 0; i < selectedIds.Count; i++)
             {
                 var item = FindItemInVisibleRows(selectedIds[i]);
                 if (item != null)
                 {
-                    if(item.group != null)
+                    if (item.group != null)
                         selectedObjects[i] = item.group;
                     else if (item.entry != null)
                         selectedObjects[i] = item.entry.TargetAsset;
@@ -81,9 +81,9 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             // Make last selected group the first object in the array
-            if(selectedObjects.Length > 1)
+            if (selectedObjects.Length > 1)
             {
-                if(selectedObjects[0].name == m_FirstSelectedGroup)
+                if (selectedObjects[0].name == m_FirstSelectedGroup)
                 {
                     var temp = selectedObjects[0];
                     selectedObjects[0] = selectedObjects[selectedIds.Count - 1];
@@ -98,7 +98,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var root = new TreeViewItem(-1, -1);
             foreach (var group in m_Editor.settings.groups)
-                    AddGroupChildrenBuild(group, root);
+                AddGroupChildrenBuild(group, root);
 
             return root;
         }
@@ -116,14 +116,14 @@ namespace UnityEditor.AddressableAssets.GUI
                 SortChildren(root);
                 return Search(base.BuildRows(root));
             }
-            
+
             SortChildren(root);
             return base.BuildRows(root);
         }
 
         protected IList<TreeViewItem> Search(IList<TreeViewItem> rows)
         {
-            if(rows == null) 
+            if (rows == null)
                 return new List<TreeViewItem>();
 
             m_SearchedEntries.Clear();
@@ -146,7 +146,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
             bool isMatching = DoesItemMatchSearch(aeItem, search) || IsInMatchingGroup(aeItem);
             m_SearchedEntries.Add(aeItem, isMatching);
-            
+
             if ((!isMatching || aeItem.IsGroup) && aeItem.children != null)
             {
                 foreach (var c in aeItem.children)
@@ -176,7 +176,7 @@ namespace UnityEditor.AddressableAssets.GUI
             searchString = string.Empty;
             m_SearchedEntries.Clear();
         }
-        
+
         internal void SwapSearchType()
         {
             string temp = customSearchString;
@@ -242,7 +242,6 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (child != null)
                     SortHierarchical(child.children);
             }
-
         }
 
         IEnumerable<AssetEntryTreeViewItem> OrderByLabels(List<AssetEntryTreeViewItem> kids, bool ascending)
@@ -329,6 +328,8 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 foreach (var e in subAssets)
                 {
+                    if (e.guid.Length > 0 && e.address.Contains("[") && e.address.Contains("]"))
+                        Debug.LogErrorFormat("Subasset address '{0}' cannot contain '[ ]'.", e.address);
                     AddAndRecurseEntriesBuild(e, item, depth + 1, IsExpanded(item.id));
                 }
             }
@@ -428,15 +429,15 @@ namespace UnityEditor.AddressableAssets.GUI
             switch ((ColumnId)column)
             {
                 case ColumnId.Id:
-                    {
-                        // The rect is assumed indented and sized after the content when pinging
-                        float indent = GetContentIndent(item) + extraSpaceBeforeIconAndLabel;
-                        cellRect.xMin += indent;
+                {
+                    // The rect is assumed indented and sized after the content when pinging
+                    float indent = GetContentIndent(item) + extraSpaceBeforeIconAndLabel;
+                    cellRect.xMin += indent;
 
-                        if (Event.current.type == EventType.Repaint)
-                            m_LabelStyle.Draw(cellRect, item.entry.address, false, false, args.selected, args.focused);
-                    }
-                    break;
+                    if (Event.current.type == EventType.Repaint)
+                        m_LabelStyle.Draw(cellRect, item.entry.address, false, false, args.selected, args.focused);
+                }
+                break;
                 case ColumnId.Path:
                     if (Event.current.type == EventType.Repaint)
                     {
@@ -477,7 +478,6 @@ namespace UnityEditor.AddressableAssets.GUI
                         PopupWindow.Show(cellRect, new LabelMaskPopupContent(m_Editor.settings, entries, labelCounts));
                     }
                     break;
-
             }
         }
 
@@ -499,7 +499,8 @@ namespace UnityEditor.AddressableAssets.GUI
 
         static MultiColumnHeaderState.Column[] GetColumns()
         {
-            var retVal = new[] {
+            var retVal = new[]
+            {
                 new MultiColumnHeaderState.Column(),
                 new MultiColumnHeaderState.Column(),
                 new MultiColumnHeaderState.Column(),
@@ -562,6 +563,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             return result;
         }
+
         protected override bool CanRename(TreeViewItem item)
         {
             return !string.IsNullOrEmpty(CheckForRename(item, true));
@@ -593,7 +595,12 @@ namespace UnityEditor.AddressableAssets.GUI
 
             if (item != null)
             {
-                if (item.entry != null)
+                if (args.newName != null && args.newName.Contains("[") && args.newName.Contains("]"))
+                {
+                    args.acceptedRename = false;
+                    Debug.LogErrorFormat("Rename of address '{0}' cannot contain '[ ]'.", args.originalName);
+                }
+                else if (item.entry != null)
                 {
                     item.entry.address = args.newName;
                 }
@@ -621,7 +628,6 @@ namespace UnityEditor.AddressableAssets.GUI
             var item = FindItemInVisibleRows(id);
             if (item != null)
             {
-
                 Object o = null;
                 if (item.entry != null)
                     o = AssetDatabase.LoadAssetAtPath<Object>(item.entry.AssetPath);
@@ -652,10 +658,10 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void PopulateGeneralContextMenu(ref GenericMenu menu)
         {
-            foreach( var templateObject in m_Editor.settings.GroupTemplateObjects )
+            foreach (var templateObject in m_Editor.settings.GroupTemplateObjects)
             {
-                Assert.IsNotNull( templateObject );
-                menu.AddItem( new GUIContent( "Create New Group/" + templateObject.name ), false, CreateNewGroup, templateObject );
+                Assert.IsNotNull(templateObject);
+                menu.AddItem(new GUIContent("Create New Group/" + templateObject.name), false, CreateNewGroup, templateObject);
             }
         }
 
@@ -720,7 +726,7 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 if (isGroup)
                 {
-                    var group = selectedNodes.First().group; 
+                    var group = selectedNodes.First().group;
                     if (!group.IsDefaultGroup())
                         menu.AddItem(new GUIContent("Remove Group(s)"), false, RemoveGroup, selectedNodes);
 
@@ -742,18 +748,16 @@ namespace UnityEditor.AddressableAssets.GUI
                     var groups = new HashSet<AddressableAssetGroup>();
                     foreach (var n in selectedNodes)
                         groups.Add(n.entry.parentGroup);
-                    foreach(var g in groups)
+                    foreach (var g in groups)
                         menu.AddItem(new GUIContent("Move Addressables to New Group/With settings from: " + g.Name), false, MoveEntriesToNewGroup, new KeyValuePair<string, AddressableAssetGroup>(AddressableAssetSettings.kNewGroupName, g));
-                    
+
 
                     menu.AddItem(new GUIContent("Remove Addressables"), false, RemoveEntry, selectedNodes);
                     menu.AddItem(new GUIContent("Simplify Addressable Names"), false, SimplifyAddresses, selectedNodes);
                     menu.AddItem(new GUIContent("Export Addressables"), false, CreateExternalEntryCollection, selectedNodes);
-
                 }
                 else
                     menu.AddItem(new GUIContent("Clear missing references."), false, RemoveMissingReferences);
-
             }
             else
             {
@@ -781,12 +785,12 @@ namespace UnityEditor.AddressableAssets.GUI
             if (selectedNodes.Count == 1)
             {
                 var label = CheckForRename(selectedNodes.First(), false);
-                if(!string.IsNullOrEmpty(label))
+                if (!string.IsNullOrEmpty(label))
                     menu.AddItem(new GUIContent(label), false, RenameItem, selectedNodes);
             }
-            
+
             PopulateGeneralContextMenu(ref menu);
-            
+
             menu.ShowAsContext();
         }
 
@@ -806,7 +810,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var path = EditorUtility.SaveFilePanel("Create Entry Collection", "Assets", "AddressableEntryCollection", "asset");
             List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
-            
+
             if (!string.IsNullOrEmpty(path) && selectedNodes != null)
             {
                 var col = ScriptableObject.CreateInstance<AddressableAssetEntryCollection>();
@@ -893,8 +897,8 @@ namespace UnityEditor.AddressableAssets.GUI
             var groupTemplate = context as AddressableAssetGroupTemplate;
             if (groupTemplate != null)
             {
-                AddressableAssetGroup newGroup = m_Editor.settings.CreateGroup( groupTemplate.Name, false, false, true, null, groupTemplate.GetTypes() );
-                groupTemplate.ApplyToAddressableAssetGroup( newGroup );
+                AddressableAssetGroup newGroup = m_Editor.settings.CreateGroup(groupTemplate.Name, false, false, true, null, groupTemplate.GetTypes());
+                groupTemplate.ApplyToAddressableAssetGroup(newGroup);
             }
             else
             {
@@ -917,7 +921,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         protected void RemoveMissingReferences()
         {
-            if(m_Editor.settings.RemoveMissingGroupReferences())
+            if (m_Editor.settings.RemoveMissingGroupReferences())
                 m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupRemoved, null, true, true);
         }
 
@@ -1071,7 +1075,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 selectedNodes.Add(item);
             }
             DragAndDrop.paths = null;
-            DragAndDrop.objectReferences = new Object[] { };
+            DragAndDrop.objectReferences = new Object[] {};
             DragAndDrop.SetGenericData("AssetEntryTreeViewItem", selectedNodes);
             DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
             DragAndDrop.StartDrag("AssetBundleTree");
@@ -1082,7 +1086,7 @@ namespace UnityEditor.AddressableAssets.GUI
             DragAndDropVisualMode visualMode = DragAndDropVisualMode.None;
 
             var target = args.parentItem as AssetEntryTreeViewItem;
-            
+
             if (target != null && target.entry != null && target.entry.ReadOnly)
                 return DragAndDropVisualMode.Rejected;
 
@@ -1101,7 +1105,7 @@ namespace UnityEditor.AddressableAssets.GUI
         DragAndDropVisualMode HandleDragAndDropItems(AssetEntryTreeViewItem target, DragAndDropArgs args)
         {
             DragAndDropVisualMode visualMode = DragAndDropVisualMode.None;
-            
+
             var draggedNodes = DragAndDrop.GetGenericData("AssetEntryTreeViewItem") as List<AssetEntryTreeViewItem>;
             if (draggedNodes != null && draggedNodes.Count > 0)
             {
@@ -1111,7 +1115,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 bool parentGroupIsReadOnly = target?.@group != null && target.@group.ReadOnly;
 
                 if (isDraggingGroup && !dropParentIsRoot || !isDraggingGroup && dropParentIsRoot || parentGroupIsReadOnly)
-                        visualMode = DragAndDropVisualMode.Rejected;
+                    visualMode = DragAndDropVisualMode.Rejected;
 
                 if (args.performDrop)
                 {
@@ -1121,10 +1125,10 @@ namespace UnityEditor.AddressableAssets.GUI
                         int index = m_Editor.settings.groups.FindIndex(g => g == group);
                         if (index < args.insertAtIndex)
                             args.insertAtIndex--;
-                        
+
                         m_Editor.settings.groups.RemoveAt(index);
 
-                        if(args.insertAtIndex < 0 || args.insertAtIndex > m_Editor.settings.groups.Count)
+                        if (args.insertAtIndex < 0 || args.insertAtIndex > m_Editor.settings.groups.Count)
                             m_Editor.settings.groups.Insert(m_Editor.settings.groups.Count, group);
                         else
                             m_Editor.settings.groups.Insert(args.insertAtIndex, group);
@@ -1269,16 +1273,13 @@ namespace UnityEditor.AddressableAssets.GUI
                                     modified = true;
                                 }
                             }
-
                         }
                     }
 
                     if (modified)
                         m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupAdded,
                             m_Editor.settings, true, true);
-
                 }
-
             }
             return visualMode;
         }

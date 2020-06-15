@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
@@ -10,7 +10,6 @@ namespace UnityEngine.ResourceManagement.Tests
 {
     public class DelayedActionManagerTests
     {
-
         class DamTest
         {
             public bool methodInvoked;
@@ -30,7 +29,6 @@ namespace UnityEngine.ResourceManagement.Tests
                 Assert.AreEqual(p3, true);
                 Assert.AreEqual(p4, 3.14f);
             }
-
         }
 
         [UnityTest]
@@ -49,7 +47,7 @@ namespace UnityEngine.ResourceManagement.Tests
             var testObj = new DamTest();
             float timeCalled = Time.unscaledTime;
             DelayedActionManager.AddAction((Action)testObj.Method, 2);
-            while(!testObj.methodInvoked)
+            while (!testObj.methodInvoked)
                 yield return null;
             //make sure delay was at least 1 second (to account for test slowness)
             Assert.Greater(testObj.timeInvoked, timeCalled + 1);
@@ -163,16 +161,17 @@ namespace UnityEngine.ResourceManagement.Tests
             delList.Invoke(null);
             Assert.IsFalse(del1Called);
         }
-        
+
         DelegateList<T> CreateDelegateList<T>()
         {
             var cache = new LinkedListNodeCache<Action<T>>();
             return new DelegateList<T>(cache.Acquire, cache.Release);
         }
+
         void InvokeAllocTest<T>(T p)
         {
             var delList = CreateDelegateList<T>();
-            delList.Add(s => { });
+            delList.Add(s => {});
             Assert.That(() =>
             {
                 delList.Invoke(p);

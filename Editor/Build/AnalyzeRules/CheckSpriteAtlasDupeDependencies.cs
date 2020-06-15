@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine.U2D;
@@ -46,17 +46,16 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                     {
                         m_Results.Add(new AnalyzeResult()
                         {
-
                             resultName = m_ExtractData.WriteData.FileToBundle[atlasFile] + kDelimiter +
-                                         atlasPath + kDelimiter +
-                                         m_ExtractData.WriteData.FileToBundle[file.FileName] + kDelimiter +
-                                         file.SpritePath
+                                atlasPath + kDelimiter +
+                                m_ExtractData.WriteData.FileToBundle[file.FileName] + kDelimiter +
+                                file.SpritePath
                         });
                     }
                 }
             }
 
-            if(m_Results.Count == 0)
+            if (m_Results.Count == 0)
                 m_Results.Add(noErrors);
 
             return m_Results;
@@ -69,17 +68,17 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
         internal string[] GetAllAddressableSpriteAtlasPaths(AddressableAssetSettings settings)
         {
-           return (from addrGroup in settings.groups
-                   where addrGroup != null
-                   from asset in addrGroup.entries
-                   where asset.MainAssetType == typeof(SpriteAtlas)
-                   select asset.AssetPath).ToArray();
+            return (from addrGroup in settings.groups
+                where addrGroup != null
+                from asset in addrGroup.entries
+                where asset.MainAssetType == typeof(SpriteAtlas)
+                select asset.AssetPath).ToArray();
         }
 
         internal List<SpriteDuplicationData> GetDuplicatedSpriteData(string atlasPath)
         {
             return (from spritePath in AssetDatabase.GetDependencies(atlasPath)
-                    let spriteGuid = new GUID(AssetDatabase.AssetPathToGUID(spritePath))
+                let spriteGuid = new GUID(AssetDatabase.AssetPathToGUID(spritePath))
                     from fileName in m_ExtractData.WriteData.FileToObjects.Keys
                     from objectId in m_ExtractData.WriteData.FileToObjects[fileName]
                     where objectId.guid == spriteGuid

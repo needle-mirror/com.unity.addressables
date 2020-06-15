@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor.AddressableAssets.Settings;
@@ -37,8 +37,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             //Do nothing.  There's nothing to fix.
         }
     }
-    
-    
+
 
     [InitializeOnLoad]
     class RegisterCheckResourcesDupeDependencies

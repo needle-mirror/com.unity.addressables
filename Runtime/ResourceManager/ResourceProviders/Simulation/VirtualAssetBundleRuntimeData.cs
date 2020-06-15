@@ -37,7 +37,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
         /// <summary>
         /// Construct a new VirtualAssetBundleRuntimeData object.
         /// </summary>
-        public VirtualAssetBundleRuntimeData() { }
+        public VirtualAssetBundleRuntimeData() {}
         /// <summary>
         /// Construct a new VirtualAssetBundleRuntimeData object.
         /// </summary>

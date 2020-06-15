@@ -20,7 +20,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
             Reload();
         }
-        
+
         private List<AnalyzeRuleContainerTreeViewItem> GatherAllInheritRuleContainers(TreeViewItem baseContainer)
         {
             List<AnalyzeRuleContainerTreeViewItem> retValue = new List<AnalyzeRuleContainerTreeViewItem>();
@@ -43,8 +43,8 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             List<AnalyzeRuleContainerTreeViewItem> activeSelection = (from id in GetSelection()
                 let selection = FindItem(id, rootItem)
-                where selection is AnalyzeRuleContainerTreeViewItem
-                select selection as AnalyzeRuleContainerTreeViewItem).ToList();
+                    where selection is AnalyzeRuleContainerTreeViewItem
+                    select selection as AnalyzeRuleContainerTreeViewItem).ToList();
 
             List<AnalyzeRuleContainerTreeViewItem> inheritSelection = new List<AnalyzeRuleContainerTreeViewItem>();
             foreach (var selected in activeSelection)
@@ -117,8 +117,8 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var allSelectedRuleContainers = (from id in selectedIds
                 let ruleContainer = FindItem(id, rootItem) as AnalyzeRuleContainerTreeViewItem
-                where ruleContainer != null
-                select ruleContainer);
+                    where ruleContainer != null
+                    select ruleContainer);
 
             List<AnalyzeRuleContainerTreeViewItem> allRuleContainers = new List<AnalyzeRuleContainerTreeViewItem>();
             foreach (var ruleContainer in allSelectedRuleContainers)
@@ -130,9 +130,9 @@ namespace UnityEditor.AddressableAssets.GUI
             allRuleContainers = allRuleContainers.Distinct().ToList();
 
             SelectionContainsErrors = (from container in allRuleContainers
-                                       from child in container.children
-                                       where child is AnalyzeResultsTreeViewItem && (child as AnalyzeResultsTreeViewItem).IsError
-                                       select child).Any();
+                from child in container.children
+                where child is AnalyzeResultsTreeViewItem && (child as AnalyzeResultsTreeViewItem).IsError
+                select child).Any();
 
             SelectionContainsRuleContainer = allRuleContainers.Any();
 
@@ -196,11 +196,10 @@ namespace UnityEditor.AddressableAssets.GUI
                 AnalyzeRuleContainerTreeViewItem ruleContainer = new AnalyzeRuleContainerTreeViewItem(
                     AnalyzeSystem.Rules[i].ruleName.GetHashCode(), m_CurrentDepth, AnalyzeSystem.Rules[i]);
 
-                if(ruleContainer.analyzeRule.CanFix)
+                if (ruleContainer.analyzeRule.CanFix)
                     fixable.AddChild(ruleContainer);
                 else
                     unfixable.AddChild(ruleContainer);
-
             }
 
             m_CurrentDepth++;
@@ -209,7 +208,6 @@ namespace UnityEditor.AddressableAssets.GUI
             var ruleContainers = GatherAllInheritRuleContainers(baseViewItem);
             foreach (var ruleContainer in ruleContainers)
             {
-
                 if (ruleContainer != null && AnalyzeSystem.AnalyzeData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
                 {
                     EditorUtility.DisplayProgressBar("Calculating Results for " + ruleContainer.displayName, "", (index / ruleContainers.Count) % 100);
@@ -253,7 +251,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     {
                         AnalyzeResultsTreeViewItem item = new AnalyzeResultsTreeViewItem(hash, i + m_CurrentDepth, resPath[i], parentHash, result.severity);
                         item.children = new List<TreeViewItem>();
-                        treeViewItems.AddLast(item);  
+                        treeViewItems.AddLast(item);
                     }
                 }
 
@@ -263,7 +261,7 @@ namespace UnityEditor.AddressableAssets.GUI
             //create dictionary
             foreach (var item in treeViewItems)
             {
-                if (item != null) 
+                if (item != null)
                 {
                     if (!hashToTreeViewItems.ContainsKey(item.id))
                         hashToTreeViewItems.Add(item.id, item);
@@ -372,11 +370,10 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             get { return currentDisplayName; }
             set { baseDisplayName = value; }
-
         }
 
         public AnalyzeTreeViewItemBase(int id, int depth, string displayName) : base(id, depth,
-            displayName)
+                                                                                     displayName)
         {
             currentDisplayName = baseDisplayName = displayName;
         }
@@ -413,12 +410,11 @@ namespace UnityEditor.AddressableAssets.GUI
         }
 
         public AnalyzeResultsTreeViewItem(int id, int depth, string displayName, int parent, MessageType type) : base(id, depth,
-            displayName)
+                                                                                                                      displayName)
         {
             severity = type;
             parentHash = parent;
         }
-
     }
 
     class AnalyzeRuleContainerTreeViewItem : AnalyzeTreeViewItemBase

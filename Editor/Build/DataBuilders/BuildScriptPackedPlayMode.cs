@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -64,7 +64,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             if (BuildPipeline.GetBuildTargetGroup(dataBuildTarget) != BuildTargetGroup.Standalone)
                 Debug.LogWarningFormat("Asset bundles built with build target {0} may not be compatible with running in the Editor.", dataBuildTarget);
-           
+
             //TODO: detect if the data that does exist is out of date..
             var runtimeSettingsPath = "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/settings.json";
             PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath, runtimeSettingsPath);

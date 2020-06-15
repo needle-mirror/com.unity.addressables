@@ -10,7 +10,7 @@ using UnityEngine;
 namespace UnityEditor.AddressableAssets.Settings
 {
     using Object = UnityEngine.Object;
-    
+
     static class AddressableAssetUtility
     {
         internal static bool IsInResources(string path)
@@ -32,7 +32,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             return true;
         }
-        
+
         internal static bool IsPathValidForEntry(string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -100,7 +100,6 @@ namespace UnityEditor.AddressableAssets.Settings
             return null;
         }
 
-
         internal static void ConvertAssetBundlesToAddressables()
         {
             AssetDatabase.RemoveUnusedAssetBundleNames();
@@ -134,8 +133,8 @@ namespace UnityEditor.AddressableAssets.Settings
                         imp.SetAssetBundleNameAndVariant(string.Empty, string.Empty);
                 }
             }
-            
-            if(fullCount > 0)
+
+            if (fullCount > 0)
                 settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true, true);
             EditorUtility.ClearProgressBar();
             AssetDatabase.RemoveUnusedAssetBundleNames();
@@ -203,7 +202,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
             }
         }
-        
+
         internal static bool SafeMoveResourcesToGroup(AddressableAssetSettings settings, AddressableAssetGroup targetGroup, List<string> paths)
         {
             var guids = new List<string>();
@@ -213,6 +212,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             return SafeMoveResourcesToGroup(settings, targetGroup, paths, guids);
         }
+
         internal static bool SafeMoveResourcesToGroup(AddressableAssetSettings settings, AddressableAssetGroup targetGroup, List<string> paths, List<string> guids)
         {
             if (guids == null || guids.Count == 0 || paths == null || guids.Count != paths.Count)
@@ -250,11 +250,10 @@ namespace UnityEditor.AddressableAssets.Settings
             return false;
         }
 
-
         static Dictionary<Type, string> s_CachedDisplayNames = new Dictionary<Type, string>();
         internal static string GetCachedTypeDisplayName(Type type)
         {
-            string result = "<none>"; 
+            string result = "<none>";
             if (type != null)
             {
                 if (!s_CachedDisplayNames.TryGetValue(type, out result))
@@ -269,11 +268,9 @@ namespace UnityEditor.AddressableAssets.Settings
 
                     s_CachedDisplayNames.Add(type, result);
                 }
-                
             }
 
             return result;
         }
-        
     }
 }

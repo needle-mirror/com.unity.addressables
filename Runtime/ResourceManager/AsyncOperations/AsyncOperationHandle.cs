@@ -13,7 +13,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
     {
         internal AsyncOperationBase<TObject> m_InternalOp;
         int m_Version;
-        
+
         /// <summary>
         /// Conversion from typed to non typed handles.  This does not increment the reference count.
         /// To convert from non-typed back, use AsyncOperationHandle.Convert<T>()
@@ -23,7 +23,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             return new AsyncOperationHandle(obj.m_InternalOp, obj.m_Version);
         }
-        
+
         internal AsyncOperationHandle(AsyncOperationBase<TObject> op)
         {
             m_InternalOp = op;
@@ -35,13 +35,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_InternalOp = (AsyncOperationBase<TObject>)op;
             m_Version = op?.Version ?? 0;
         }
-        
+
         internal AsyncOperationHandle(IAsyncOperation op, int version)
         {
             m_InternalOp = (AsyncOperationBase<TObject>)op;
             m_Version = version;
         }
-        
+
         /// <summary>
         /// Acquire a new handle to the internal operation.  This will increment the reference count, therefore the returned handle must also be released.
         /// </summary>
@@ -51,7 +51,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             InternalOp.IncrementReferenceCount();
             return this;
         }
-        
+
         /// <summary>
         /// Completion event for the internal operation.  If this is assigned on a completed operation, the callback is deferred until the LateUpdate of the current frame.
         /// </summary>
@@ -82,9 +82,9 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 return ((IAsyncOperation)InternalOp).DebugName;
             }
         }
-        
+
         /// <summary>
-        /// Event for handling the destruction of the operation.  
+        /// Event for handling the destruction of the operation.
         /// </summary>
         public event Action<AsyncOperationHandle> Destroyed
         {
@@ -110,7 +110,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             return m_InternalOp == null ? 0 : m_InternalOp.GetHashCode() * 17 + m_Version;
         }
-        
+
         AsyncOperationBase<TObject> InternalOp
         {
             get
@@ -153,7 +153,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get { return InternalOp.PercentComplete; }
         }
-        
+
         /// <summary>
         /// The current reference count of the internal operation.
         /// </summary>
@@ -178,7 +178,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get { return InternalOp.Result; }
         }
-        
+
         /// <summary>
         /// The status of the internal operation.
         /// </summary>
@@ -199,13 +199,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get { return Result; }
         }
-        
+
         bool IEnumerator.MoveNext()
         {
             return !IsDone;
         }
 
-        void IEnumerator.Reset() { }
+        void IEnumerator.Reset() {}
     }
 
     /// <summary>
@@ -221,13 +221,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_InternalOp = op;
             m_Version = op?.Version ?? 0;
         }
-        
+
         internal AsyncOperationHandle(IAsyncOperation op, int version)
         {
             m_InternalOp = op;
             m_Version = version;
         }
-        
+
         /// <summary>
         /// Acquire a new handle to the internal operation.  This will increment the reference count, therefore the returned handle must also be released.
         /// </summary>
@@ -237,7 +237,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             InternalOp.IncrementReferenceCount();
             return this;
         }
-        
+
         /// <summary>
         /// Completion event for the internal operation.  If this is assigned on a completed operation, the callback is deferred until the LateUpdate of the current frame.
         /// </summary>
@@ -246,10 +246,10 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             add { InternalOp.CompletedTypeless += value; }
             remove { InternalOp.CompletedTypeless -= value; }
         }
-        
+
         /// <summary>
         /// Converts handle to be typed.  This does not increment the reference count.
-        /// To convert back to non-typed, implicit conversion is available. 
+        /// To convert back to non-typed, implicit conversion is available.
         /// </summary>
         /// <typeparam name="T">The type of the handle.</typeparam>
         /// <returns>A new handle that is typed.</returns>
@@ -270,16 +270,16 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 return InternalOp.DebugName;
             }
         }
-        
+
         /// <summary>
-        /// Event for handling the destruction of the operation.  
+        /// Event for handling the destruction of the operation.
         /// </summary>
         public event Action<AsyncOperationHandle> Destroyed
         {
             add { InternalOp.Destroyed += value; }
             remove { InternalOp.Destroyed -= value; }
         }
-        
+
         /// <summary>
         /// Get dependency operations.
         /// </summary>
@@ -288,7 +288,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             InternalOp.GetDependencies(deps);
         }
-        
+
         /// <summary>
         /// Get hash code of this struct.
         /// </summary>
@@ -315,7 +315,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get { return !IsValid() || InternalOp.IsDone; }
         }
-        
+
         /// <summary>
         /// Check if the internal operation is not null and has the same version of this handle.
         /// </summary>
@@ -324,7 +324,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             return m_InternalOp != null && m_InternalOp.Version == m_Version;
         }
-        
+
         /// <summary>
         /// The exception for a failed operation.  This will be null unless Status is failed.
         /// </summary>
@@ -332,7 +332,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get { return InternalOp.OperationException; }
         }
-        
+
         /// <summary>
         /// The progress of the internal operation.
         /// </summary>
@@ -348,7 +348,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get { return InternalOp.ReferenceCount; }
         }
-        
+
         /// <summary>
         /// Release the handle.  If the internal operation reference count reaches 0, the resource will be released.
         /// </summary>
@@ -365,7 +365,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get { return InternalOp.GetResultAsObject(); }
         }
-        
+
         /// <summary>
         /// The status of the internal operation.
         /// </summary>
@@ -373,7 +373,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get { return InternalOp.Status; }
         }
-        
+
         /// <summary>
         /// Return a Task object to wait on when using async await.
         /// </summary>
@@ -386,12 +386,12 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             get { return Result; }
         }
-        
+
         bool IEnumerator.MoveNext()
         {
             return !IsDone;
         }
 
-        void IEnumerator.Reset() { }
+        void IEnumerator.Reset() {}
     }
 }

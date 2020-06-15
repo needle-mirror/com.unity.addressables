@@ -153,7 +153,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             long remoteCount = 0;
             foreach (VirtualAssetBundle bundle in m_ActiveBundles.Values)
                 bundle.CountBandwidthUsage(ref localCount, ref remoteCount);
-            
+
             long localBw = localCount > 1 ? (m_BundleData.LocalLoadSpeed / localCount) : m_BundleData.LocalLoadSpeed;
             long remoteBw = remoteCount > 1 ? (m_BundleData.RemoteLoadSpeed / remoteCount) : m_BundleData.RemoteLoadSpeed;
             m_UpdatingActiveBundles = true;
@@ -177,7 +177,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
         {
             Update(unscaledDeltaTime);
         }
-
     }
 }
 #endif

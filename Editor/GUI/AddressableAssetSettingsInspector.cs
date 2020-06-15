@@ -78,11 +78,11 @@ namespace UnityEditor.AddressableAssets.GUI
             m_InitObjectsRl.onRemoveCallback = OnRemoveInitializationObject;
         }
 
-        GUIContent m_SendProfilerEvents =  
-            new GUIContent("Send Profiler Events", 
+        GUIContent m_SendProfilerEvents =
+            new GUIContent("Send Profiler Events",
                 "Turning this on enables the use of the Addressables Profiler window.");
-        GUIContent m_LogRuntimeExceptions = 
-            new GUIContent("Log Runtime Exceptions", 
+        GUIContent m_LogRuntimeExceptions =
+            new GUIContent("Log Runtime Exceptions",
                 "Addressables does not throw exceptions at run time when there are loading issues, instead it adds to the error state of the IAsyncOperation.  With this flag enabled, exceptions will also be logged.");
         GUIContent m_OverridePlayerVersion =
             new GUIContent("Player Version Override", "If set, this will be used as the player version instead of one based off of a time stamp.");
@@ -99,8 +99,8 @@ namespace UnityEditor.AddressableAssets.GUI
         GUIContent m_RemoteCatLoadPath =
             new GUIContent("Load Path", "The path to load a remote content catalog.");
         GUIContent m_CertificateHandlerType =
-             new GUIContent("Custom certificate handler", "The class to use for custom certificate handling.  This type must inherit from UnityEngine.Networking.CertificateHandler.");
-        GUIContent m_ProfileInUse = 
+            new GUIContent("Custom certificate handler", "The class to use for custom certificate handling.  This type must inherit from UnityEngine.Networking.CertificateHandler.");
+        GUIContent m_ProfileInUse =
             new GUIContent("Profile In Use", "This is the active profile that will be used to evaluate all profile variables during a build and when entering play mode.");
 
         public override void OnInspectorGUI()
@@ -112,7 +112,7 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 AddressableAssetsWindow.Init();
             }
-            
+
             GUILayout.Space(12);
             m_ProfilesFoldout = EditorGUILayout.Foldout(m_ProfilesFoldout, "Profile");
             if (m_ProfilesFoldout)
@@ -122,16 +122,16 @@ namespace UnityEditor.AddressableAssets.GUI
                     if (m_CurrentProfileIndex < 0 || m_CurrentProfileIndex >= m_AasTarget.profileSettings.profiles.Count)
                         m_CurrentProfileIndex = 0;
                     var profileNames = m_AasTarget.profileSettings.GetAllProfileNames();
-                   
+
                     // Current profile in use was changed by different window
                     if (AddressableAssetSettingsDefaultObject.Settings.profileSettings.profiles[m_CurrentProfileIndex].id != AddressableAssetSettingsDefaultObject.Settings.activeProfileId)
                     {
                         m_CurrentProfileIndex = profileNames.IndexOf(AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileName(AddressableAssetSettingsDefaultObject.Settings.activeProfileId));
                     }
-                    
+
                     m_CurrentProfileIndex = EditorGUILayout.Popup(m_ProfileInUse, m_CurrentProfileIndex, profileNames.ToArray());
                     AddressableAssetSettingsDefaultObject.Settings.activeProfileId = AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileId(profileNames[m_CurrentProfileIndex]);
-                    
+
                     EditorGUILayout.BeginHorizontal();
                     GUILayout.FlexibleSpace();
                     if (GUILayout.Button("Manage Profiles", "Minibutton"))
@@ -145,7 +145,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     EditorGUILayout.LabelField("No valid profiles found");
                 }
             }
-            
+
             GUILayout.Space(6);
             m_CatalogFoldout = EditorGUILayout.Foldout(m_CatalogFoldout, "Catalog");
             if (m_CatalogFoldout)
@@ -155,14 +155,14 @@ namespace UnityEditor.AddressableAssets.GUI
                 m_AasTarget.BuildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
                 m_AasTarget.BundleLocalCatalog = EditorGUILayout.Toggle(m_BundleLocalCatalog, m_AasTarget.BundleLocalCatalog);
 
-                if ( (m_AasTarget.RemoteCatalogBuildPath != null && m_AasTarget.RemoteCatalogLoadPath != null) // these will never actually be null, as the accessor initializes them.
-                     && (m_AasTarget.BuildRemoteCatalog))
+                if ((m_AasTarget.RemoteCatalogBuildPath != null && m_AasTarget.RemoteCatalogLoadPath != null) // these will never actually be null, as the accessor initializes them.
+                    && (m_AasTarget.BuildRemoteCatalog))
                 {
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogBuildPath"), m_RemoteCatBuildPath);
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogLoadPath"), m_RemoteCatLoadPath);
                 }
             }
-            
+
             GUILayout.Space(6);
             m_GeneralFoldout = EditorGUILayout.Foldout(m_GeneralFoldout, "General");
             if (m_GeneralFoldout)
@@ -248,7 +248,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void OnAddDataBuilder(Rect buttonRect, ReorderableList list)
         {
-            var assetPath = EditorUtility.OpenFilePanelWithFilters("Data Builder", "Assets", new[] {"Data Builder", "asset" });
+            var assetPath = EditorUtility.OpenFilePanelWithFilters("Data Builder", "Assets", new[] { "Data Builder", "asset" });
             if (string.IsNullOrEmpty(assetPath))
                 return;
             var builder = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath.Substring(assetPath.IndexOf("Assets/")));
@@ -324,7 +324,5 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             m_AasTarget.AddInitializationObject(initObj as IObjectInitializationDataProvider);
         }
-
     }
-
 }

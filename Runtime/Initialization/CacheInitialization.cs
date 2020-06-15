@@ -36,7 +36,7 @@ namespace UnityEngine.AddressableAssets.Initialization
                         Directory.CreateDirectory(dir);
 
                     activeCache = Caching.GetCacheByPath(dir);
-                    if(!activeCache.valid)
+                    if (!activeCache.valid)
                         activeCache = Caching.AddCache(dir);
 
                     Caching.currentCacheForWriting = activeCache;
@@ -138,7 +138,7 @@ namespace UnityEngine.AddressableAssets.Initialization
         [SerializeField]
         bool m_LimitCacheSize;
         /// <summary>
-        /// If true, the maximum cache size will be set to MaximumCacheSize. 
+        /// If true, the maximum cache size will be set to MaximumCacheSize.
         /// </summary>
         public bool LimitCacheSize { get { return m_LimitCacheSize; } set { m_LimitCacheSize = value; } }
 

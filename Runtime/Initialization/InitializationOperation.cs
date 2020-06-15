@@ -72,7 +72,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             }
             var rtd = m_rtdOp.Result;
             m_Addressables.Release(m_rtdOp);
-            if(rtd.CertificateHandlerType != null)
+            if (rtd.CertificateHandlerType != null)
                 m_Addressables.ResourceManager.CertificateHandlerInstance = Activator.CreateInstance(rtd.CertificateHandlerType) as CertificateHandler;
 
 #if UNITY_EDITOR
@@ -90,11 +90,11 @@ namespace UnityEngine.AddressableAssets.Initialization
 
             //   DiagnosticEventCollector.ResourceManagerProfilerEventsEnabled = rtd.ProfileEvents;
             Addressables.Log("Addressables - loading initialization objects.");
-           
+
             ContentCatalogProvider ccp = m_Addressables.ResourceManager.ResourceProviders
                 .FirstOrDefault(rp => rp.GetType() == typeof(ContentCatalogProvider)) as ContentCatalogProvider;
             if (ccp != null)
-            { 
+            {
                 ccp.DisableCatalogUpdateOnStart = rtd.DisableCatalogUpdateOnStartup;
                 ccp.IsLocalCatalogInBundle = rtd.IsLocalCatalogInBundle;
             }
@@ -117,7 +117,7 @@ namespace UnityEngine.AddressableAssets.Initialization
         }
 
         static void LoadProvider(AddressablesImpl addressables, ObjectInitializationData providerData, string providerSuffix)
-        {                
+        {
             //don't add providers that have the same id...
             var indexOfExistingProvider = -1;
             var newProviderId = string.IsNullOrEmpty(providerSuffix) ? providerData.Id : (providerData.Id + providerSuffix);
@@ -138,7 +138,6 @@ namespace UnityEngine.AddressableAssets.Initialization
             var provider = providerData.CreateInstance<IResourceProvider>(newProviderId);
             if (provider != null)
             {
-                
                 if (indexOfExistingProvider < 0 || !string.IsNullOrEmpty(providerSuffix))
                 {
                     Addressables.LogFormat("Addressables - added provider {0} with id {1}.", provider, provider.ProviderId);
@@ -154,7 +153,6 @@ namespace UnityEngine.AddressableAssets.Initialization
             {
                 Addressables.LogWarningFormat("Addressables - Unable to load resource provider from {0}.", providerData);
             }
-
         }
 
         static AsyncOperationHandle<IResourceLocator> OnCatalogDataLoaded(AddressablesImpl addressables, AsyncOperationHandle<ContentCatalogData> op, string providerSuffix)
@@ -189,6 +187,7 @@ namespace UnityEngine.AddressableAssets.Initialization
                 return addressables.ResourceManager.CreateCompletedOperation<IResourceLocator>(locMap, string.Empty);
             }
         }
+
         public static AsyncOperationHandle<IResourceLocator> LoadContentCatalog(AddressablesImpl addressables, IResourceLocation loc, string providerSuffix)
         {
             var loadOp = addressables.LoadAssetAsync<ContentCatalogData>(loc);
@@ -201,7 +200,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             return LoadContentCatalog(m_Addressables, loc, providerSuffix);
         }
 
-        //Attempts to load each catalog in order, stopping at first success. 
+        //Attempts to load each catalog in order, stopping at first success.
         void LoadContentCatalogInternal(IList<IResourceLocation> catalogs, int index, ResourceLocationMap locMap)
         {
             Addressables.LogFormat("Addressables - loading content catalog from {0}.", m_Addressables.ResourceManager.TransformInternalId(catalogs[index]));

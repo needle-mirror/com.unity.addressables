@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System.Collections;
 using System.IO;
 #if UNITY_EDITOR
@@ -19,11 +19,12 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
     internal AddressablesImpl m_Addressables;
     internal string m_RuntimeSettingsPath;
     internal readonly string m_UniqueTestName;
- 
+
     protected AddressablesTestFixture()
     {
         m_UniqueTestName = this.GetType().Name;
     }
+
     protected enum TestBuildScriptMode
     {
         Fast,
@@ -43,7 +44,7 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
         yield return op;
         Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
         OnRuntimeSetup();
-        if(op.IsValid())
+        if (op.IsValid())
             op.Release();
     }
 
@@ -72,7 +73,7 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
         Directory.CreateDirectory(rootFolder);
 
         AddressableAssetSettings settings = AddressableAssetSettings.Create(Path.Combine(rootFolder, "Settings"), "AddressableAssetSettings.Tests", false, true);
-        
+
         Setup(settings, rootFolder);
         RunBuilder(settings);
 
@@ -86,14 +87,14 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
     {
 #if UNITY_EDITOR
         string path = Path.Combine("Assets", "gen");
-        if(Directory.Exists(path))
+        if (Directory.Exists(path))
             Directory.Delete(path, true);
 #endif
     }
 
 #if UNITY_EDITOR
 
-    internal virtual void Setup(AddressableAssetSettings settings, string tempAssetFolder) { }
+    internal virtual void Setup(AddressableAssetSettings settings, string tempAssetFolder) {}
 
     protected virtual void RunBuilder(AddressableAssetSettings settings)
     {

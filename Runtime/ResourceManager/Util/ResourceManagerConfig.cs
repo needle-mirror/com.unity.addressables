@@ -30,7 +30,6 @@ namespace UnityEngine.ResourceManagement.Util
         /// <param name="data">Serialized data for the object.</param>
         /// <returns>Async operation</returns>
         AsyncOperationHandle<bool> InitializeAsync(ResourceManager rm, string id, string data);
-        
     }
 
 
@@ -78,10 +77,10 @@ namespace UnityEngine.ResourceManagement.Util
         {
             return Activator.CreateInstance(type);
         }
+
         /// <inheritdoc/>
         public void Release(int typeHash, object obj)
         {
-            
         }
     }
 
@@ -209,6 +208,7 @@ namespace UnityEngine.ResourceManagement.Util
             node.Value = default(T);
             m_NodeCache.AddLast(node);
         }
+
         internal int CreatedNodeCount { get { return m_NodesCreated; } }
         internal int CachedNodeCount { get { return m_NodeCache == null ? 0 : m_NodeCache.Count; } }
     }
@@ -222,6 +222,7 @@ namespace UnityEngine.ResourceManagement.Util
                 m_globalCache = new LinkedListNodeCache<T>();
             return m_globalCache.Acquire(val);
         }
+
         public static void Release(LinkedListNode<T> node)
         {
             if (m_globalCache == null)
@@ -282,8 +283,8 @@ namespace UnityEngine.ResourceManagement.Util
                 }
                 catch (Exception ex)
                 {
-                    //file not found is most likely an editor only type, we can ignore error. 
-                    if(ex.GetType() != typeof(FileNotFoundException))
+                    //file not found is most likely an editor only type, we can ignore error.
+                    if (ex.GetType() != typeof(FileNotFoundException))
                         Debug.LogException(ex);
                     return null;
                 }
@@ -338,7 +339,7 @@ namespace UnityEngine.ResourceManagement.Util
         /// String representation of the data that will be passed to the IInitializableObject.Initialize method of the created object.  This is usually a JSON string of the serialized data object.
         /// </summary>
         public string Data { get { return m_Data; } }
-#pragma warning restore 0649 
+#pragma warning restore 0649
 
         /// <inheritdoc/>
         public override string ToString()
@@ -440,6 +441,7 @@ namespace UnityEngine.ResourceManagement.Util
         {
             return m_RuntimeTypes;
         }
+
 #endif
     }
 
@@ -519,7 +521,7 @@ namespace UnityEngine.ResourceManagement.Util
 
             foreach (var asset in allAssets)
             {
-                if(elementType.IsAssignableFrom(asset.GetType()))
+                if (elementType.IsAssignableFrom(asset.GetType()))
                     array.SetValue(asset, index++);
             }
 
@@ -553,7 +555,7 @@ namespace UnityEngine.ResourceManagement.Util
                 return null;
             foreach (var a in allAssets)
             {
-                if(elementType.IsAssignableFrom(a.GetType()))
+                if (elementType.IsAssignableFrom(a.GetType()))
                     list.Add(a);
             }
             return list;
@@ -586,6 +588,5 @@ namespace UnityEngine.ResourceManagement.Util
             return tB.IsAssignableFrom(tA);
 #endif
         }
-
     }
 }

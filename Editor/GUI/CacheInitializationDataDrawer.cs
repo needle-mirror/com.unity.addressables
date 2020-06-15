@@ -88,7 +88,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             var totalHeight = rectStartYPos + rectForGUIRow.height + EditorGUIUtility.standardVerticalSpacing;
-            if (limProp.boolValue) 
+            if (limProp.boolValue)
                 totalHeight += rectForGUIRow.height; // add extra line for rendered m_MaximumCacheSize, no extra border space b/c it's the last line
             return totalHeight;
         }
@@ -106,7 +106,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            Vector2 labelSize = EditorStyles.label.CalcSize(label); 
+            Vector2 labelSize = EditorStyles.label.CalcSize(label);
             Rect rectForGUIRowWithHeight = new Rect(0, 0, 0, labelSize.y + EditorGUIUtility.standardVerticalSpacing);
             return DrawGUI(rectForGUIRowWithHeight, property, true);
         }

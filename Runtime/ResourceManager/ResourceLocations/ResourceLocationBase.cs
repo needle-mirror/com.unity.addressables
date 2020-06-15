@@ -17,7 +17,7 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         Type m_Type;
         List<IResourceLocation> m_Dependencies;
         string m_PrimaryKey;
-        
+
         /// <summary>
         /// Internal id.
         /// </summary>
@@ -97,6 +97,7 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
             m_Type = t;
             ComputeDependencyHash();
         }
+
         /// <summary>
         /// Compute the dependency hash for this location
         /// </summary>
@@ -107,5 +108,4 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
                 m_DependencyHashCode = m_DependencyHashCode * 31 + d.Hash(typeof(object));
         }
     }
-
 }

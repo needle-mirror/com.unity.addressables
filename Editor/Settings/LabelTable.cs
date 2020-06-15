@@ -15,12 +15,15 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal List<string> labelNames { get { return m_LabelNames; } }
         const int k_KNameCountCap = 3;
-        
+
         internal void AddLabelName(string name)
         {
-            if(!m_LabelNames.Contains(name))
-            { 
-                m_LabelNames.Add(name);
+            if (!m_LabelNames.Contains(name))
+            {
+                if (name.Contains("[") && name.Contains("]"))
+                    Debug.LogErrorFormat("Label name '{0}' cannot contain '[ ]'.", name);
+                else
+                    m_LabelNames.Add(name);
             }
         }
 

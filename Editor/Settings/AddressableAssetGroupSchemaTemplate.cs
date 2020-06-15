@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.ResourceManagement.Util;
@@ -6,7 +6,7 @@ using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets.Settings
 {
-    // TODO: OBSELETE: This is replaced with AddressableAssetGroupTemplate, this is needed to update existing setups to new Preset method 
+    // TODO: OBSELETE: This is replaced with AddressableAssetGroupTemplate, this is needed to update existing setups to new Preset method
     /// <summary>
     /// Contains a set of schemas used by the GUI to create predefined asset groups.
     /// </summary>
@@ -30,7 +30,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get { return m_DisplayName; }
         }
-         
+
         /// <summary>
         /// the description of the template.
         /// </summary>

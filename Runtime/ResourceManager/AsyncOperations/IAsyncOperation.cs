@@ -14,5 +14,4 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         Succeeded,
         Failed
     }
-  
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
@@ -22,7 +22,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             ClearAnalysis();
 
             string[] scenePaths = (from editorScene in EditorBuildSettings.scenes
-                                   select editorScene.path).ToArray();
+                select editorScene.path).ToArray();
 
             return CalculateBuiltInResourceDependenciesToBundleDependecies(settings, scenePaths);
         }

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.IO;
 using NUnit.Framework;
 #if UNITY_EDITOR
@@ -42,6 +42,7 @@ namespace LegacyResourcesTests
             File.WriteAllBytes(spritePath, data);
             AssetDatabase.ImportAsset(spritePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
         }
+
 #endif
 
         [UnityTest]
@@ -78,5 +79,4 @@ namespace LegacyResourcesTests
 
     [UnityPlatform(exclude = new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor })]
     class LegacyResourceTests_PackedMode : LegacyResourceTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Packed; } } }
-
 }

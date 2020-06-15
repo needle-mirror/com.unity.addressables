@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using NUnit.Framework;
 using UnityEngine;
@@ -18,14 +18,14 @@ namespace UnityEditor.AddressableAssets.Tests
             AssetDatabase.CreateAsset(m_TestSchemaObjectSubClass, GetAssetPath("testSchemaObjectSubClass.asset"));
         }
 
-       private static string ObjectToFilename(UnityEngine.Object obj)
+        private static string ObjectToFilename(UnityEngine.Object obj)
         {
             string guid;
-            if(!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out long lfid))
+            if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out long lfid))
                 return null;
-            
+
             string path = AssetDatabase.GUIDToAssetPath(guid);
-            if(path == null)
+            if (path == null)
                 return null;
 
             return Path.GetFileName(path);
@@ -179,5 +179,4 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsTrue(group.RemoveSchema<CustomTestSchema>());
         }
     }
-
 }

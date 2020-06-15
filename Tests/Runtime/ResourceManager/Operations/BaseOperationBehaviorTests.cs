@@ -90,7 +90,7 @@ namespace UnityEngine.ResourceManagement.Tests
 
         class MockOperation<T> : AsyncOperationBase<T>
         {
-            public Action ExecuteCallback = () => { };
+            public Action ExecuteCallback = () => {};
             protected override void Execute()
             {
                 ExecuteCallback();
@@ -117,7 +117,7 @@ namespace UnityEngine.ResourceManagement.Tests
         public void WhenOperationIsSuccessfulButHasErrorMsg_FailsSilently_CompletesButExceptionHandlerIsCalled()
         {
             bool exceptionHandlerCalled = false;
-            ResourceManager.ExceptionHandler += (h, ex) => exceptionHandlerCalled = true; 
+            ResourceManager.ExceptionHandler += (h, ex) => exceptionHandlerCalled = true;
 
             var op = m_RM.CreateCompletedOperation<int>(1, true, "An exception occured.");
 
@@ -147,7 +147,7 @@ namespace UnityEngine.ResourceManagement.Tests
         // public void AsyncOperationHandle_WhenReleaseOnInvalidHandle_Throws
         // public void AsyncOperationHandle_WhenConvertToIncompatibleHandleType_Throws
         //
-      
+
         [Test]
         public void AsyncOperationHandle_EventSubscriptions_UnsubscribingToNonSubbedEventsShouldHaveNoEffect()
         {
@@ -155,14 +155,14 @@ namespace UnityEngine.ResourceManagement.Tests
             var handle = m_RM.StartOperation(op, default(AsyncOperationHandle));
 
             Assert.False(op.CompletedEventHasListeners);
-            handle.Completed -= oph => { };
+            handle.Completed -= oph => {};
             Assert.False(op.CompletedEventHasListeners);
 
             Assert.False(op.DestroyedEventHasListeners);
-            handle.Destroyed -= oph => { };
+            handle.Destroyed -= oph => {};
             Assert.False(op.DestroyedEventHasListeners);
 
-            Action<AsyncOperationHandle> dummy = oph => { };
+            Action<AsyncOperationHandle> dummy = oph => {};
             Assert.False(op.CompletedTypelessEventHasListeners);
 
             handle.CompletedTypeless += dummy;
@@ -174,6 +174,5 @@ namespace UnityEngine.ResourceManagement.Tests
 
             handle.Release();
         }
-
     }
 }

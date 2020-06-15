@@ -40,6 +40,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
                 m_ProviderId = id;
                 m_Hash = hash;
             }
+
             public override void Provide(ProvideHandle provideHandle)
             {
                 provideHandle.Complete(m_Hash, true, null);
@@ -53,6 +54,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             {
                 m_LocatorId = locatorId;
             }
+
             public override void Provide(ProvideHandle provideHandle)
             {
                 var deps = new List<object>();

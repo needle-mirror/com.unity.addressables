@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor.AddressableAssets.Settings;
@@ -28,7 +28,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
             List<GUIContent> typeContent = new List<GUIContent>();
             typeContent.Add(new GUIContent("<none>", "Clear the type."));
-            foreach(var type in m_Types)
+            foreach (var type in m_Types)
                 typeContent.Add(new GUIContent(AddressableAssetUtility.GetCachedTypeDisplayName(type), ""));
 
             bool resetShowMixed = EditorGUI.showMixedValue;
@@ -43,12 +43,12 @@ namespace UnityEditor.AddressableAssets.GUI
             if (selectedValue != index)
             {
                 Undo.RecordObject(m_Property.serializedObject.targetObject, "Set Serialized Type");
-                m_SerializedFieldInfo.SetValue(m_Property.serializedObject.targetObject, 
+                m_SerializedFieldInfo.SetValue(m_Property.serializedObject.targetObject,
                     new SerializedType
                     {
                         Value = selectedValue == 0 ? null : m_Types[selectedValue - 1],
                         ValueChanged = true
-                    } );
+                    });
                 EditorUtility.SetDirty(m_Property.serializedObject.targetObject);
             }
 

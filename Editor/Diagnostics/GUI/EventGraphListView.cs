@@ -42,7 +42,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             }
         }
 
-        internal EventGraphListView(Func<EventDataSet> dsFunc,  TreeViewState tvs, MultiColumnHeaderState mchs, Func<string, bool> filter, IComparer<EventDataSet> dsComparer) : base(tvs, new MultiColumnHeader(mchs))
+        internal EventGraphListView(Func<EventDataSet> dsFunc, TreeViewState tvs, MultiColumnHeaderState mchs, Func<string, bool> filter, IComparer<EventDataSet> dsComparer) : base(tvs, new MultiColumnHeader(mchs))
         {
             m_GetRootDataSetAction = dsFunc;
             showBorder = true;
@@ -117,7 +117,6 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             base.OnGUI(rect);
         }
 
-
         bool IsItemMaximized(int id)
         {
             bool expanded;
@@ -144,30 +143,30 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             switch (column)
             {
                 case 0:
+                {
+                    var maximized = IsItemMaximized(item.id);
+                    if (UnityEngine.GUI.Button(cellRect, maximized ? m_MinusGUIContent : m_PlusGUIContent, EditorStyles.toolbarButton))
                     {
-                        var maximized = IsItemMaximized(item.id);
-                        if (UnityEngine.GUI.Button(cellRect, maximized ? m_MinusGUIContent : m_PlusGUIContent, EditorStyles.toolbarButton))
+                        if (!IsSelected(item.id))
                         {
-                            if (!IsSelected(item.id))
-                            {
-                                m_MaximizedState[item.id] = !maximized;
-                            }
-                            else
-                            {
-                                foreach (var i in GetSelection())
-                                    m_MaximizedState[i] = !maximized;
-                            }
-                            Reload();
-                            m_LastReloadTime = Time.unscaledTime;
+                            m_MaximizedState[item.id] = !maximized;
                         }
+                        else
+                        {
+                            foreach (var i in GetSelection())
+                                m_MaximizedState[i] = !maximized;
+                        }
+                        Reload();
+                        m_LastReloadTime = Time.unscaledTime;
                     }
-                    break;
+                }
+                break;
                 case 1:
-                    {
-                        cellRect.xMin += (GetContentIndent(item) + extraSpaceBeforeIconAndLabel);
-                        EditorGUI.LabelField(cellRect, item.Content);
-                    }
-                    break;
+                {
+                    cellRect.xMin += (GetContentIndent(item) + extraSpaceBeforeIconAndLabel);
+                    EditorGUI.LabelField(cellRect, item.Content);
+                }
+                break;
                 case 2:
                     DrawGraph(item.Entry, cellRect, visibleStartTime, visibleDuration, IsItemMaximized(item.id));
                     break;
@@ -197,7 +196,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
             if (m_GraphMaterial == null)
             {
-                // best material options are "Unlit/Color" or "UI/Default". 
+                // best material options are "Unlit/Color" or "UI/Default".
                 //  Unlit/Color is more efficient, but does not support alpha
                 //  UI/Default does support alpha
                 m_GraphMaterial = new Material(Shader.Find("Unlit/Color"));

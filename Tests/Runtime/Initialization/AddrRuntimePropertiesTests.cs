@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using NUnit.Framework;
 using System;
 using UnityEngine.AddressableAssets.Initialization;
@@ -15,7 +15,7 @@ namespace AddrRuntimePropertiesTests
 
             Assert.AreEqual(1, AddressablesRuntimeProperties.GetCachedValueCount());
         }
-        
+
         [Test]
         public void RuntimeProperties_CanSetValueMultipleTimes()
         {
@@ -25,7 +25,7 @@ namespace AddrRuntimePropertiesTests
 
             Assert.AreEqual(1, AddressablesRuntimeProperties.GetCachedValueCount());
         }
-        
+
         [Test]
         public void RuntimeProperties_ClearCacheClears()
         {
@@ -35,7 +35,7 @@ namespace AddrRuntimePropertiesTests
 
             Assert.AreEqual(0, AddressablesRuntimeProperties.GetCachedValueCount());
         }
-        
+
         [Test]
         public void RuntimeProperties_EvaluatePropertyCanEvaluateSetValue()
         {
@@ -45,7 +45,7 @@ namespace AddrRuntimePropertiesTests
             AddressablesRuntimeProperties.SetPropertyValue(key, expectedResult);
 
             string actualResult = AddressablesRuntimeProperties.EvaluateProperty(key);
-            
+
             Assert.AreEqual(expectedResult, actualResult);
         }
 
@@ -56,11 +56,10 @@ namespace AddrRuntimePropertiesTests
             AddressablesRuntimeProperties.ClearCachedPropertyValues();
             string expectedResult = ReflectableStringValue;
             string actualResult = AddressablesRuntimeProperties.EvaluateProperty("AddrRuntimePropertiesTests.AddrRuntimePropertiesTests.ReflectableStringValue");
-            
+
             Assert.AreEqual(expectedResult, actualResult);
         }
-        
-        
+
         [Test]
         public void RuntimeProperties_EvaluateStringCanParseAutomaticTokens()
         {
@@ -75,7 +74,7 @@ namespace AddrRuntimePropertiesTests
 
             Assert.AreEqual(expectedResult, actualResult);
         }
-        
+
         [Test]
         public void RuntimeProperties_EvaluateStringCanParseInExplicitOverride()
         {
@@ -84,19 +83,19 @@ namespace AddrRuntimePropertiesTests
             string tok3 = "moo";
             string replacement = "_parsed_";
             char delim = '?';
-            
+
             string toEval = tok1 + delim + tok2 + delim + tok3;
-            
+
             string expectedResult = tok1 + replacement + tok3;
 
-            string actualResult = AddressablesRuntimeProperties.EvaluateString(toEval, delim,delim, s =>
+            string actualResult = AddressablesRuntimeProperties.EvaluateString(toEval, delim, delim, s =>
             {
                 return replacement;
             });
 
             Assert.AreEqual(expectedResult, actualResult);
         }
-        
+
         [Test]
         public void RuntimeProperties_EvaluateStringIgnoresSingleDelim()
         {
@@ -108,27 +107,27 @@ namespace AddrRuntimePropertiesTests
             string expectedResult = toEval;
             string actualResult = AddressablesRuntimeProperties.EvaluateString(toEval);
             Assert.AreEqual(expectedResult, actualResult);
-            
-            
+
+
             toEval = tok1 + '{' + tok2 + tok3;
             expectedResult = toEval;
             actualResult = AddressablesRuntimeProperties.EvaluateString(toEval);
             Assert.AreEqual(expectedResult, actualResult);
-            
-            
+
+
             string replacement = "_parsed_";
             char delim = '?';
             toEval = tok1 + tok2 + delim + tok3;
             expectedResult = toEval;
-            actualResult = AddressablesRuntimeProperties.EvaluateString(toEval, delim,delim, s =>
+            actualResult = AddressablesRuntimeProperties.EvaluateString(toEval, delim, delim, s =>
             {
                 return replacement;
             });
             Assert.AreEqual(expectedResult, actualResult);
-            
+
             toEval = tok1 + delim + tok2 + tok3;
             expectedResult = toEval;
-            actualResult = AddressablesRuntimeProperties.EvaluateString(toEval, delim,delim, s =>
+            actualResult = AddressablesRuntimeProperties.EvaluateString(toEval, delim, delim, s =>
             {
                 return replacement;
             });

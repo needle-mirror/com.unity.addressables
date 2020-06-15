@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.ResourceManagement.Diagnostics;
@@ -21,13 +21,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         string m_Graph;
         int m_SortOrder = 0;
         public int ObjectId { get { return m_ObjectId; } }
-        public string DisplayName { get { return m_DisplayName; }  set { m_DisplayName = value; } }
+        public string DisplayName { get { return m_DisplayName; } set { m_DisplayName = value; } }
         public string Graph { get { return m_Graph; } }
         public IEnumerable<EventDataSet> Children { get { return m_Children.Values; } }
         internal bool HasChildren { get { return m_Children != null && m_Children.Count > 0; } }
         internal int FirstSampleFrame { get { return m_FirstSampleFrame; } }
         Dictionary<int, EventDataSet> m_Children;
-        internal EventDataSet() { }
+        internal EventDataSet() {}
         internal EventDataSet(int id, string graph, string displayName, int sortOrder)
         {
             m_SortOrder = sortOrder;
@@ -35,10 +35,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             m_Graph = graph;
             m_DisplayName = displayName;
         }
+
         internal EventDataSet(DiagnosticEvent evt)
         {
             Init(evt);
         }
+
         internal void Init(DiagnosticEvent evt)
         {
             m_ObjectId = evt.ObjectId;
@@ -127,5 +129,4 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             m_Streams.Clear();
         }
     }
-
 }

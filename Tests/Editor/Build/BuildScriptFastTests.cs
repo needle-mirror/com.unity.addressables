@@ -12,9 +12,9 @@ namespace UnityEditor.AddressableAssets.Tests
         public void FastModeScript_CannotBuildPlayerContent()
         {
             var buildScript = ScriptableObject.CreateInstance<BuildScriptFastMode>();
-            
+
             Assert.IsFalse(buildScript.CanBuildData<AddressablesPlayerBuildResult>());
-            
+
             Assert.IsTrue(buildScript.CanBuildData<AddressableAssetBuildResult>());
             Assert.IsTrue(buildScript.CanBuildData<AddressablesPlayModeBuildResult>());
         }

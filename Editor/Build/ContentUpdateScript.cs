@@ -289,10 +289,10 @@ namespace UnityEditor.AddressableAssets.Build
                 Dictionary<string, AddressableAssetEntry> guidToEntries = new Dictionary<string, AddressableAssetEntry>();
                 Dictionary<string, ContentCatalogDataEntry> key1ToCCEntries = new Dictionary<string, ContentCatalogDataEntry>();
 
-                foreach(AddressableAssetEntry entry in entries)
+                foreach (AddressableAssetEntry entry in entries)
                     if (!guidToEntries.ContainsKey(entry.guid))
                         guidToEntries[entry.guid] = entry;
-                foreach(ContentCatalogDataEntry ccEntry in locations)
+                foreach (ContentCatalogDataEntry ccEntry in locations)
                     if (ccEntry != null && ccEntry.Keys != null && ccEntry.Keys.Count > 1 && (ccEntry.Keys[1] as string) != null && !key1ToCCEntries.ContainsKey(ccEntry.Keys[1] as string))
                         key1ToCCEntries[ccEntry.Keys[1] as string] = ccEntry;
 
@@ -310,14 +310,14 @@ namespace UnityEditor.AddressableAssets.Build
                 {
                     guidToEntries.TryGetValue(sceneData.Key.ToString(), out AddressableAssetEntry addressableSceneEntry);
                     key1ToCCEntries.TryGetValue(sceneData.Key.ToString(), out ContentCatalogDataEntry catalogSceneEntry);
-                    if (addressableSceneEntry != null && catalogSceneEntry != null && 
+                    if (addressableSceneEntry != null && catalogSceneEntry != null &&
                         GetCachedAssetStateForData(sceneData.Key, addressableSceneEntry.BundleFileId, addressableSceneEntry.parentGroup.Guid, catalogSceneEntry.Data, sceneData.Value.referencedObjects.Select(x => x.guid), out CachedAssetState cachedAssetState))
                         cachedInfos.Add(cachedAssetState);
                 }
 
                 if (carryOverCacheState != null)
                 {
-                    foreach(var cs in carryOverCacheState)
+                    foreach (var cs in carryOverCacheState)
                         cachedInfos.Add(cs);
                 }
 
@@ -423,7 +423,6 @@ namespace UnityEditor.AddressableAssets.Build
                         Directory.Delete(kStreamingAssetsPath);
                         if (File.Exists(kStreamingAssetsPath + ".meta"))
                             File.Delete(kStreamingAssetsPath + ".meta");
-
                     }
                 }
             }
@@ -482,6 +481,7 @@ namespace UnityEditor.AddressableAssets.Build
 
             return true;
         }
+
         /// <summary>
         /// Get all modified addressable asset entries in groups that have BundledAssetGroupSchema and ContentUpdateGroupSchema with static content enabled.
         /// This includes any Addressable dependencies that are affected by the modified entries.
@@ -495,10 +495,10 @@ namespace UnityEditor.AddressableAssets.Build
             var entriesMap = GatherModifiedEntriesWithDependencies(settings, cacheDataPath);
             foreach (var entry in entriesMap.Keys)
             {
-                if(!retVal.Contains(entry))
+                if (!retVal.Contains(entry))
                     retVal.Add(entry);
 
-                foreach(var dependency in entriesMap[entry])
+                foreach (var dependency in entriesMap[entry])
                     if (!retVal.Contains(dependency))
                         retVal.Add(dependency);
             }
@@ -570,7 +570,7 @@ namespace UnityEditor.AddressableAssets.Build
             AddAllDependentScenesFromModifiedEnteries(modifiedEntries);
             foreach (var entry in modifiedEntries)
             {
-                if(!dependencyMap.ContainsKey(entry))
+                if (!dependencyMap.ContainsKey(entry))
                     dependencyMap.Add(entry, new List<AddressableAssetEntry>());
             }
         }
@@ -614,14 +614,14 @@ namespace UnityEditor.AddressableAssets.Build
                         if (!groupHasStaticContentMap.TryGetValue(depEntry.parentGroup, out bool groupHasStaticContentEnabled))
                         {
                             groupHasStaticContentEnabled = depEntry.parentGroup.HasSchema<ContentUpdateGroupSchema>() &&
-                                                           depEntry.parentGroup.GetSchema<ContentUpdateGroupSchema>().StaticContent;
+                                depEntry.parentGroup.GetSchema<ContentUpdateGroupSchema>().StaticContent;
 
                             groupHasStaticContentMap.Add(depEntry.parentGroup, groupHasStaticContentEnabled);
                         }
 
                         if (!dependencyMap.ContainsKey(depEntry) && groupHasStaticContentEnabled)
                         {
-                            if(!dependencyMap.ContainsKey(entry))
+                            if (!dependencyMap.ContainsKey(entry))
                                 dependencyMap.Add(entry, new List<AddressableAssetEntry>());
                             dependencyMap[entry].Add(depEntry);
                         }

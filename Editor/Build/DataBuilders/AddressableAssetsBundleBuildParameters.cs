@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
@@ -28,7 +28,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             m_bundleToAssetGroup = bundleToAssetGroup;
 
             //If default group has BundledAssetGroupSchema use the compression there otherwise check if the target is webgl or not and try set the compression accordingly
-            if(m_settings.DefaultGroup.HasSchema<BundledAssetGroupSchema>())
+            if (m_settings.DefaultGroup.HasSchema<BundledAssetGroupSchema>())
                 BundleCompression = ConverBundleCompressiontToBuildCompression(m_settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().Compression);
             else
                 BundleCompression = target == BuildTarget.WebGL ? BuildCompression.LZ4Runtime : BuildCompression.LZMA;
@@ -44,7 +44,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     break;
                 case BundledAssetGroupSchema.BundleCompressionMode.LZ4:
                     compresion = BuildCompression.LZ4;
-                        break;
+                    break;
                 case BundledAssetGroupSchema.BundleCompressionMode.Uncompressed:
                     compresion = BuildCompression.Uncompressed;
                     break;

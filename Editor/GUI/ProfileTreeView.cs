@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.AddressableAssets.HostingServices;
 using UnityEditor.AddressableAssets.Settings;
@@ -12,17 +12,17 @@ namespace UnityEditor.AddressableAssets.GUI
         private List<string> m_Names;
         private Dictionary<int, AddressableAssetProfileSettings.BuildProfile> m_TreeIndexToBuildProfileMap;
         public List<string> Names => m_Names;
-        
+
 
         private ProfileWindow m_Window;
-        
+
         private List<AddressableAssetProfileSettings.BuildProfile> m_ProfileList;
 
-        static Texture2D k_checkMark;
+        static Texture2D k_CheckMark;
 
         public static MultiColumnHeader CreateHeader()
         {
-            k_checkMark = EditorGUIUtility.isProSkin
+            k_CheckMark = EditorGUIUtility.isProSkin
                 ? EditorGUIUtility.FindTexture("d_FilterSelectedOnly")
                 : EditorGUIUtility.FindTexture("FilterSelectedOnly");
 
@@ -58,7 +58,7 @@ namespace UnityEditor.AddressableAssets.GUI
         }
 
         internal ProfileTreeView(TreeViewState treeViewState, List<AddressableAssetProfileSettings.BuildProfile> profiles, ProfileWindow window,
-            MultiColumnHeader header) : base(treeViewState, header)
+                                 MultiColumnHeader header) : base(treeViewState, header)
         {
             m_Window = window;
             m_ProfileList = profiles;
@@ -72,32 +72,31 @@ namespace UnityEditor.AddressableAssets.GUI
             Reload();
 
             if (m_Window.ProfileIndex >= 0)
-                SetSelection(new List<int> {m_Window.ProfileIndex});
+                SetSelection(new List<int> { m_Window.ProfileIndex });
         }
 
         protected override TreeViewItem BuildRoot()
         {
-            var root = new TreeViewItem {id = -1, depth = -1, displayName = "Root"};
+            var root = new TreeViewItem { id = -1, depth = -1, displayName = "Root" };
             m_Names.Clear();
             m_TreeIndexToBuildProfileMap.Clear();
-            
+
             for (int i = 0; i < m_ProfileList.Count; i++)
             {
                 var profile = m_ProfileList[i];
                 m_Names.Add(profile.profileName);
                 m_TreeIndexToBuildProfileMap.Add(i, profile);
-                root.AddChild(new TreeViewItem {id = i, displayName = profile.profileName});
+                root.AddChild(new TreeViewItem { id = i, displayName = profile.profileName });
             }
 
             return root;
         }
 
-
         protected override void RowGUI(RowGUIArgs args)
         {
             //Don't draw the background if the current item is being renamed
             if (args.isRenaming) return;
-            
+
             for (var i = 0; i < args.GetNumVisibleColumns(); ++i)
             {
                 CellGUI(ref args, i);
@@ -116,14 +115,14 @@ namespace UnityEditor.AddressableAssets.GUI
                 case 0:
                     //Display checkmark next to the active profile
                     if (GetProfile(item.id).id.Equals(m_Window.settings.activeProfileId))
-                        UnityEngine.GUI.DrawTexture(cellRect, k_checkMark, ScaleMode.ScaleToFit);
+                        UnityEngine.GUI.DrawTexture(cellRect, k_CheckMark, ScaleMode.ScaleToFit);
                     break;
                 case 1:
                     EditorGUI.LabelField(cellRect, item.displayName);
                     break;
             }
         }
-        
+
         TreeViewItem FindItemInVisibleRows(int id)
         {
             var rows = GetRows();
@@ -133,14 +132,12 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             return null;
         }
-        
-        //uses the profile name right now, looks thru every profile and returns the one with same profile name
-        //goes from (i -> BuildProfile, returns the BuildProfile)
+
         AddressableAssetProfileSettings.BuildProfile GetProfile(int id)
         {
             return m_TreeIndexToBuildProfileMap.ContainsKey(id) ? m_TreeIndexToBuildProfileMap[id] : default(AddressableAssetProfileSettings.BuildProfile);
         }
-        
+
         List<TreeViewItem> GetSelectedNodes()
         {
             List<TreeViewItem> selectedNodes = new List<TreeViewItem>();
@@ -154,13 +151,13 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             return selectedNodes;
         }
-        
+
         protected override void SingleClickedItem(int id)
         {
             List<TreeViewItem> selectedNodes = GetSelectedNodes();
             m_Window.ProfileIndex = selectedNodes[0].id;
         }
-        
+
         protected override void ContextClickedItem(int id)
         {
             base.ContextClickedItem(id);
@@ -183,7 +180,7 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 menu.AddItem(new GUIContent("Set Active"), false, UseProfile, selectedNodes);
 
-                if(selectedNodes[0].displayName == "Default")
+                if (selectedNodes[0].displayName == "Default")
                 {
                     menu.AddDisabledItem(new GUIContent("Rename Profile"));
                     menu.AddDisabledItem(new GUIContent("Delete Profile"));
@@ -194,15 +191,15 @@ namespace UnityEditor.AddressableAssets.GUI
                     menu.AddItem(new GUIContent("Delete Profile"), false, DeleteProfile, selectedNodes);
                 }
             }
-            
+
             menu.ShowAsContext();
         }
-        
+
         protected override bool CanRename(TreeViewItem item)
         {
             return true;
         }
-        
+
         protected void RenameProfile(object context)
         {
             List<TreeViewItem> selectedNodes = context as List<TreeViewItem>;
@@ -212,39 +209,18 @@ namespace UnityEditor.AddressableAssets.GUI
                 BeginRename(item);
             }
         }
-        
+
         protected override void RenameEnded(RenameEndedArgs args)
         {
             var item = FindItemInVisibleRows(args.itemID);
 
-            if (args.originalName.Equals(args.newName) || args.newName.Trim().Length == 0) // new name cannot only contain spaces
-                return;
+            AddressableAssetProfileSettings.BuildProfile profile = GetProfile(item.id);
 
-            if (item != null)
-            {
-                int changeIndex = -1;
-                for (int i = 0; i < m_Window.settings.profileSettings.profiles.Count; i++)
-                {
-                    // Compare new name with existing profile names
-                    if (m_Window.settings.profileSettings.profiles[i].profileName.Equals(args.newName))
-                    {
-                        return;
-                    }
+            Undo.RecordObject(m_Window.settings, "Profile renamed");
 
-                    // Found name to change
-                    if (m_Window.settings.profileSettings.profiles[i].profileName.Equals(args.originalName))
-                    {
-                        changeIndex = i;
-                    }
-                }
+            bool renameSuccessful = m_Window.settings.profileSettings.RenameProfile(profile, args.newName);
 
-                if (changeIndex == -1) return;
-
-                // Rename the profile
-                m_Window.settings.profileSettings.profiles[changeIndex].profileName = args.newName;
-                m_Window.settings.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, null, false, true);
-                Reload();
-            }
+            if (renameSuccessful) Reload();
         }
 
         public Rect GetRow(int i)
@@ -257,6 +233,7 @@ namespace UnityEditor.AddressableAssets.GUI
             List<TreeViewItem> selectedNodes = context as List<TreeViewItem>;
             if (selectedNodes != null && selectedNodes.Count >= 1)
             {
+                Undo.RecordObject(m_Window.settings, "Active Profile Changed");
                 var item = selectedNodes.First();
                 string activeProfileId = m_TreeIndexToBuildProfileMap[item.id].id;
                 m_Window.settings.activeProfileId = activeProfileId;
@@ -271,6 +248,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 var prof = m_TreeIndexToBuildProfileMap[item.id];
                 if (prof != default)
                 {
+                    Undo.RecordObject(m_Window.settings, "Profile Deleted");
                     m_Window.settings.profileSettings.RemoveProfile(prof.id);
                     AssetDatabase.SaveAssets();
                 }
@@ -278,7 +256,7 @@ namespace UnityEditor.AddressableAssets.GUI
             m_Window.ProfileIndex = -1;
             Reload();
         }
-        
+
         internal AddressableAssetProfileSettings.BuildProfile GetSelectedProfile()
         {
             foreach (var nodeId in GetSelection())
@@ -291,6 +269,5 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             return default(AddressableAssetProfileSettings.BuildProfile);
         }
-        
     }
 }

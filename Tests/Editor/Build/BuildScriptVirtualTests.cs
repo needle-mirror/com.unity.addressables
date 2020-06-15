@@ -12,9 +12,9 @@ namespace UnityEditor.AddressableAssets.Tests
         public void VirtualModeScript_CannotBuildPlayerContent()
         {
             var buildScript = ScriptableObject.CreateInstance<BuildScriptVirtualMode>();
-            
+
             Assert.IsFalse(buildScript.CanBuildData<AddressablesPlayerBuildResult>());
-            
+
             Assert.IsTrue(buildScript.CanBuildData<AddressableAssetBuildResult>());
             Assert.IsTrue(buildScript.CanBuildData<AddressablesPlayModeBuildResult>());
         }

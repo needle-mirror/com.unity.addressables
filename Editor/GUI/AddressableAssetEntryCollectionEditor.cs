@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditorInternal;
 using UnityEngine;
@@ -38,8 +38,5 @@ namespace UnityEditor.AddressableAssets.GUI
             m_EntriesList.DoLayoutList();
             serializedObject.ApplyModifiedProperties();
         }
-
-
     }
-
 }

@@ -20,10 +20,10 @@ namespace UnityEngine.ResourceManagement.Diagnostics
     {
         static Guid s_editorConnectionGuid;
 
-        Dictionary<int, DiagnosticEvent> m_CreatedEvents = new Dictionary<int, DiagnosticEvent>();
-        List<DiagnosticEvent> k_UnhandledEvents = new List<DiagnosticEvent>();
+        internal Dictionary<int, DiagnosticEvent> m_CreatedEvents = new Dictionary<int, DiagnosticEvent>();
+        internal List<DiagnosticEvent> k_UnhandledEvents = new List<DiagnosticEvent>();
 
-        DelegateList<DiagnosticEvent> s_EventHandlers = DelegateList<DiagnosticEvent>.CreateWithGlobalCache();
+        internal DelegateList<DiagnosticEvent> s_EventHandlers = DelegateList<DiagnosticEvent>.CreateWithGlobalCache();
 
         /// <summary>
         /// The guid used for the PlayerConnect messaging system.
@@ -32,7 +32,7 @@ namespace UnityEngine.ResourceManagement.Diagnostics
         {
             get
             {
-                if(s_editorConnectionGuid ==  Guid.Empty)
+                if (s_editorConnectionGuid == Guid.Empty)
                     s_editorConnectionGuid = new Guid(1, 2, 3, new byte[] { 20, 1, 32, 32, 4, 9, 6, 44 });
                 return s_editorConnectionGuid;
             }
@@ -49,16 +49,18 @@ namespace UnityEngine.ResourceManagement.Diagnostics
         /// <returns>True if registered, false if not.</returns>
         public static bool RegisterEventHandler(Action<DiagnosticEvent> handler, bool register, bool create)
         {
-            DiagnosticEventCollectorSingleton ec = null;
-            if (!Exists && create && register)
-                ec = Instance;
-            if (ec == null)
-                return false;
-            if (register)
-                ec.RegisterEventHandler(handler);
-            else
-                ec.UnregisterEventHandler(handler);
-            return register;
+            if (register && (create || Exists))
+            {
+                Instance.RegisterEventHandler(handler);
+                return true;
+            }
+
+            if (!register && Exists)
+            {
+                Instance.UnregisterEventHandler(handler);
+            }
+
+            return false;
         }
 
         void RegisterEventHandler(Action<DiagnosticEvent> handler)
@@ -134,7 +136,7 @@ namespace UnityEngine.ResourceManagement.Diagnostics
     }
 
     /// <summary>
-    /// Collects ResourceManager events and passed them on the registered event handlers.  In editor play mode, events are passed directly to the ResourceManager profiler window.  
+    /// Collects ResourceManager events and passed them on the registered event handlers.  In editor play mode, events are passed directly to the ResourceManager profiler window.
     /// In player builds, events are sent to the editor via the EditorConnection API.
     /// </summary>
     public class DiagnosticEventCollector : MonoBehaviour

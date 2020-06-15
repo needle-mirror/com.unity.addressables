@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEngine.AddressableAssets;
@@ -36,7 +36,7 @@ namespace UnityEditor.AddressableAssets.Settings
         protected override void Execute()
         {
             var db = GetBuilderOfType<BuildScriptFastMode>(m_settings);
-            if(db == null)
+            if (db == null)
                 UnityEngine.Debug.Log($"Unable to find {nameof(BuildScriptFastMode)} builder in settings assets. Using default Instance and Scene Providers.");
 
             var locator = new AddressableAssetSettingsLocator(m_settings);

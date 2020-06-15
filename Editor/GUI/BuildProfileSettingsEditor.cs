@@ -24,7 +24,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 toolTip = data.Evaluate(settings.profileSettings, settings.activeProfileId);
             }
             displayNames.Add(AddressableAssetProfileSettings.customEntryString);
-      
+
 
             var content = new GUIContent(label, toolTip);
             EditorGUILayout.BeginHorizontal();
@@ -130,9 +130,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 pathBox.wordWrap = true;
                 EditorGUI.LabelField(bottomRect, " ", toolTip, pathBox);
             }
-                
+
             return result;
         }
-
     }
 }

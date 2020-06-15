@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.Serialization;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -13,24 +13,24 @@ namespace UnityEngine.ResourceManagement.Exceptions
         /// <summary>
         /// Construct a new ResourceManagerException.
         /// </summary>
-        public ResourceManagerException() { }
+        public ResourceManagerException() {}
         /// <summary>
         /// Construct a new ResourceManagerException.
         /// </summary>
         /// <param name="message">Message to describe the exception.</param>
-        public ResourceManagerException(string message) : base(message) { }
+        public ResourceManagerException(string message) : base(message) {}
         /// <summary>
         /// Construct a new ResourceManagerException.
         /// </summary>
         /// <param name="message">Message to describe the exception.</param>
         /// <param name="innerException">Inner exception that caused this exception.</param>
-        public ResourceManagerException(string message, Exception innerException) : base(message, innerException) { }
+        public ResourceManagerException(string message, Exception innerException) : base(message, innerException) {}
         /// <summary>
         /// Construct a new ResourceManagerException.
         /// </summary>
         /// <param name="message">Message to describe the exception.</param>
         /// <param name="context">Context related to the exception.</param>
-        protected ResourceManagerException(SerializationInfo message, StreamingContext context) : base(message, context) { }
+        protected ResourceManagerException(SerializationInfo message, StreamingContext context) : base(message, context) {}
     }
     /// <summary>
     /// Exception returned when the IResourceProvider is not found for a location.
@@ -49,27 +49,28 @@ namespace UnityEngine.ResourceManagement.Exceptions
         {
             Location = location;
         }
+
         /// <summary>
         ///  Construct a new UnknownResourceProviderException
         /// </summary>
-        public UnknownResourceProviderException() { }
+        public UnknownResourceProviderException() {}
         /// <summary>
         /// Construct a new UnknownResourceProviderException
         /// </summary>
         /// <param name="message">Message to describe the exception.</param>
-        public UnknownResourceProviderException(string message) : base(message) { }
+        public UnknownResourceProviderException(string message) : base(message) {}
         /// <summary>
         /// Construct a new UnknownResourceProviderException
         /// </summary>
         /// <param name="message">Message to describe the exception.</param>
         /// <param name="innerException">Inner exception that caused this exception.</param>
-        public UnknownResourceProviderException(string message, Exception innerException) : base(message, innerException) { }
+        public UnknownResourceProviderException(string message, Exception innerException) : base(message, innerException) {}
         /// <summary>
         /// Construct a new UnknownResourceProviderException
         /// </summary>
         /// <param name="message">Message to describe the exception.</param>
         /// <param name="context">Context related to the exception.</param>
-        protected UnknownResourceProviderException(SerializationInfo message, StreamingContext context) : base(message, context) { }
+        protected UnknownResourceProviderException(SerializationInfo message, StreamingContext context) : base(message, context) {}
 
         /// <summary>
         /// Returns a string describing  this exception
@@ -89,6 +90,5 @@ namespace UnityEngine.ResourceManagement.Exceptions
         {
             return Message;
         }
-
     }
 }

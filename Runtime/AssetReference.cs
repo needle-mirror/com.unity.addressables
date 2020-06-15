@@ -19,7 +19,6 @@ namespace UnityEngine.AddressableAssets
     /// <typeparam name="TObject"></typeparam>
     public class AssetReferenceT<TObject> : AssetReference where TObject : Object
     {
-
         /// <summary>
         /// Construct a new AssetReference object.
         /// </summary>
@@ -47,14 +46,14 @@ namespace UnityEngine.AddressableAssets
         {
             return LoadAssetAsync<TObject>();
         }
-        
+
         /// <inheritdoc/>
         public override bool ValidateAsset(Object obj)
         {
             var type = obj.GetType();
             return typeof(TObject).IsAssignableFrom(type);
         }
-        
+
         /// <inheritdoc/>
         public override bool ValidateAsset(string path)
         {
@@ -65,7 +64,7 @@ namespace UnityEngine.AddressableAssets
             return false;
 #endif
         }
-                
+
 #if UNITY_EDITOR
         /// <summary>
         /// Type-specific override of parent editorAsset.  Used by the editor to represent the asset referenced.
@@ -77,14 +76,12 @@ namespace UnityEngine.AddressableAssets
             {
                 Object baseAsset = base.editorAsset;
                 TObject asset = baseAsset as TObject;
-                if( asset == null && baseAsset != null )
-                    Debug.Log( "editorAsset cannot cast to " + typeof(TObject) );
+                if (asset == null && baseAsset != null)
+                    Debug.Log("editorAsset cannot cast to " + typeof(TObject));
                 return asset;
             }
         }
 #endif
-
-        
     }
 
     /// <summary>
@@ -93,7 +90,7 @@ namespace UnityEngine.AddressableAssets
     [Serializable]
     public class AssetReferenceGameObject : AssetReferenceT<GameObject>
     {
-        public AssetReferenceGameObject(string guid) : base(guid) { }
+        public AssetReferenceGameObject(string guid) : base(guid) {}
     }
     /// <summary>
     /// Texture only asset reference.
@@ -101,7 +98,7 @@ namespace UnityEngine.AddressableAssets
     [Serializable]
     public class AssetReferenceTexture : AssetReferenceT<Texture>
     {
-        public AssetReferenceTexture(string guid) : base(guid) { }
+        public AssetReferenceTexture(string guid) : base(guid) {}
     }
     /// <summary>
     /// Texture2D only asset reference.
@@ -109,7 +106,7 @@ namespace UnityEngine.AddressableAssets
     [Serializable]
     public class AssetReferenceTexture2D : AssetReferenceT<Texture2D>
     {
-        public AssetReferenceTexture2D(string guid) : base(guid) { }
+        public AssetReferenceTexture2D(string guid) : base(guid) {}
     }
     /// <summary>
     /// Texture3D only asset reference
@@ -117,7 +114,7 @@ namespace UnityEngine.AddressableAssets
     [Serializable]
     public class AssetReferenceTexture3D : AssetReferenceT<Texture3D>
     {
-        public AssetReferenceTexture3D(string guid) : base(guid) { }
+        public AssetReferenceTexture3D(string guid) : base(guid) {}
     }
 
     /// <summary>
@@ -126,7 +123,7 @@ namespace UnityEngine.AddressableAssets
     [Serializable]
     public class AssetReferenceSprite : AssetReferenceT<Sprite>
     {
-        public AssetReferenceSprite(string guid) : base(guid) { }
+        public AssetReferenceSprite(string guid) : base(guid) {}
 
         /// <inheritdoc/>
         public override bool ValidateAsset(string path)
@@ -145,7 +142,7 @@ namespace UnityEngine.AddressableAssets
 #endif
             return false;
         }
-        
+
 #if UNITY_EDITOR
         /// <summary>
         /// Typeless override of parent editorAsset. Used by the editor to represent the asset referenced.
@@ -156,21 +153,21 @@ namespace UnityEngine.AddressableAssets
             {
                 if (CachedAsset != null || string.IsNullOrEmpty(AssetGUID))
                     return CachedAsset;
-                
+
                 var prop = typeof(AssetReference).GetProperty("editorAsset");
                 return prop.GetValue(this, null) as Object;
             }
         }
 #endif
     }
-    
+
     /// <summary>
     /// Assetreference that only allows atlassed sprites.
     /// </summary>
     [Serializable]
     public class AssetReferenceAtlasedSprite : AssetReferenceT<Sprite>
     {
-        public AssetReferenceAtlasedSprite(string guid) : base(guid) { }
+        public AssetReferenceAtlasedSprite(string guid) : base(guid) {}
 
         /// <inheritdoc/>
         public override bool ValidateAsset(string path)
@@ -181,7 +178,7 @@ namespace UnityEngine.AddressableAssets
             return false;
 #endif
         }
-        
+
 #if UNITY_EDITOR
         /// <summary>
         /// SpriteAtlas Type-specific override of parent editorAsset. Used by the editor to represent the asset referenced.
@@ -192,7 +189,7 @@ namespace UnityEngine.AddressableAssets
             {
                 if (CachedAsset != null || string.IsNullOrEmpty(AssetGUID))
                     return CachedAsset as SpriteAtlas;
-                
+
                 var assetPath = AssetDatabase.GUIDToAssetPath(AssetGUID);
                 var main = AssetDatabase.LoadMainAssetAtPath(assetPath) as SpriteAtlas;
                 if (main != null)
@@ -205,7 +202,7 @@ namespace UnityEngine.AddressableAssets
 
     /// <summary>
     /// Reference to an addressable asset.  This can be used in script to provide fields that can be easily set in the editor and loaded dynamically at runtime.
-    /// To determine if the reference is set, use RuntimeKeyIsValid().  
+    /// To determine if the reference is set, use RuntimeKeyIsValid().
     /// </summary>
     [Serializable]
     public class AssetReference : IKeyEvaluator
@@ -288,7 +285,7 @@ namespace UnityEngine.AddressableAssets
 
 #if UNITY_EDITOR
         Object m_CachedAsset;
-        
+
         /// <summary>
         /// Cached Editor Asset.
         /// </summary>
@@ -333,6 +330,7 @@ namespace UnityEngine.AddressableAssets
         {
             return LoadSceneAsync();
         }
+
         /// <summary>
         /// InstantiateAsync the referenced asset as type TObject.
         /// </summary>
@@ -382,11 +380,11 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The operation handle for the request.</returns>
         public virtual AsyncOperationHandle<SceneInstance> LoadSceneAsync(LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
         {
-
             var result = Addressables.LoadSceneAsync(RuntimeKey, loadMode, activateOnLoad, priority);
             m_Operation = result;
             return result;
         }
+
         /// <summary>
         /// Unloads the reference as a scene.
         /// </summary>
@@ -395,6 +393,7 @@ namespace UnityEngine.AddressableAssets
         {
             return Addressables.UnloadSceneAsync(m_Operation, true);
         }
+
         /// <summary>
         /// InstantiateAsync the referenced asset as type TObject.
         /// </summary>
@@ -444,7 +443,6 @@ namespace UnityEngine.AddressableAssets
             m_Operation = default(AsyncOperationHandle);
         }
 
-
         /// <summary>
         /// Release an instantiated object.
         /// </summary>
@@ -463,7 +461,7 @@ namespace UnityEngine.AddressableAssets
         {
             return true;
         }
-        
+
         /// <summary>
         /// Validates that the referenced asset allowable for this asset reference.
         /// </summary>
@@ -497,7 +495,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public virtual bool SetEditorAsset(Object value)
         {
-            if(value == null)
+            if (value == null)
             {
                 m_CachedAsset = null;
                 m_AssetGUID = string.Empty;
@@ -527,7 +525,7 @@ namespace UnityEngine.AddressableAssets
                         SetEditorSubObject(value);
                 }
             }
-            
+
             return true;
         }
 
@@ -571,6 +569,7 @@ namespace UnityEngine.AddressableAssets
             }
             return false;
         }
+
 #endif
     }
 }

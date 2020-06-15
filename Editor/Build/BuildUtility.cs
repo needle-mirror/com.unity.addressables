@@ -35,7 +35,7 @@ namespace UnityEditor.AddressableAssets.Build
             var splitName = assembly.FullName.Split(',');
             return splitName.Length > 0 && editorAssemblies.Contains(splitName[0]);
         }
-        
+
         public static string GetNameWithHashNaming(BundledAssetGroupSchema.BundleNamingStyle schemaBundleNaming, string hash, string sourceBundleName)
         {
             string result = sourceBundleName;

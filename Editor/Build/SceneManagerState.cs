@@ -27,7 +27,7 @@ namespace UnityEditor.AddressableAssets.Build
             [SerializeField]
             internal string path;
 
-            internal SceneState() { }
+            internal SceneState() {}
             internal SceneState(SceneSetup s)
             {
                 isActive = s.isActive;
@@ -54,7 +54,7 @@ namespace UnityEditor.AddressableAssets.Build
             [FormerlySerializedAs("m_enabled")]
             [SerializeField]
             internal bool enabled;
-            internal EbsSceneState() { }
+            internal EbsSceneState() {}
             internal EbsSceneState(EditorBuildSettingsScene s) { guid = s.guid.ToString(); enabled = s.enabled; }
             internal EditorBuildSettingsScene GetBuildSettingsScene() { return new EditorBuildSettingsScene(new GUID(guid), enabled); }
         }
@@ -139,7 +139,7 @@ namespace UnityEditor.AddressableAssets.Build
             try
             {
                 var state = JsonUtility.FromJson<SceneManagerState>(File.ReadAllText(path));
-                if(restoreSceneManagerSetup)
+                if (restoreSceneManagerSetup)
                     EditorSceneManager.RestoreSceneManagerSetup(state.GetSceneSetups());
                 BuiltinSceneCache.scenes = state.GetEditorBuildSettingScenes();
             }

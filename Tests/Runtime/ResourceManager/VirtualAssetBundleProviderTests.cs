@@ -53,7 +53,7 @@ namespace UnityEngine.ResourceManagement.Tests
         }
 
         [Test]
-        public void WhenMultipleBundlesLoading_BandwidthIsAmortizedAcrossAllBundles([Values(true, false)]bool localBundles)
+        public void WhenMultipleBundlesLoading_BandwidthIsAmortizedAcrossAllBundles([Values(true, false)] bool localBundles)
         {
             const int kBundleCount = 4;
             const int kLocalBW = 800;
@@ -73,14 +73,14 @@ namespace UnityEngine.ResourceManagement.Tests
             VirtualAssetBundleProvider provider = new VirtualAssetBundleProvider(data);
             rm.ResourceProviders.Add(provider);
             var ops = new List<AsyncOperationHandle<VirtualAssetBundle>>();
-            foreach(IResourceLocation loc in locations )
+            foreach (IResourceLocation loc in locations)
                 ops.Add(rm.ProvideResource<VirtualAssetBundle>(loc));
 
 
             int totalUpdatesNeeded = kUpdatesLocalLoad + (localBundles ? 0 : kUpdatesForRemoteDownload);
             for (int i = 0; i < totalUpdatesNeeded; i++)
             {
-                foreach(AsyncOperationHandle<VirtualAssetBundle> op in ops)
+                foreach (AsyncOperationHandle<VirtualAssetBundle> op in ops)
                 {
                     Assert.IsFalse(op.IsDone);
                     Assert.Less(op.PercentComplete, 1.0f);
@@ -88,7 +88,7 @@ namespace UnityEngine.ResourceManagement.Tests
                 provider.Update(kTimeSlize);
             }
 
-            foreach(var op in ops)
+            foreach (var op in ops)
             {
                 Assert.IsTrue(op.IsDone);
                 Assert.AreEqual(1.0f, op.PercentComplete);
@@ -99,7 +99,7 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.Zero(rm.OperationCacheCount);
             rm.Dispose();
         }
-        
+
         [UnityTest]
         public IEnumerator WhenLoadingUnknownBundle_OperationFailsWithMessage()
         {
@@ -111,9 +111,9 @@ namespace UnityEngine.ResourceManagement.Tests
             rm.ResourceProviders.Add(provider);
             ResourceLocationBase unknownLocation = new ResourceLocationBase("unknown", "unknown", typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource));
             var op = rm.ProvideResource<VirtualAssetBundle>(unknownLocation);
-            // wait for delayed action manager. 
+            // wait for delayed action manager.
             // TODO: refactor delayed action manager so we can pump it instead of waiting a frame
-            yield return null; 
+            yield return null;
             Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
             StringAssert.Contains("Unable to unload virtual bundle", op.OperationException.Message);
             op.Release();
@@ -136,4 +136,3 @@ namespace UnityEngine.ResourceManagement.Tests
     }
 }
 #endif
-

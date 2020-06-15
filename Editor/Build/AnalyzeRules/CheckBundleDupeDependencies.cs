@@ -24,7 +24,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         {
             get { return true; }
         }
-        
+
         public override string ruleName
         { get { return "Check Duplicate Bundle Dependencies"; } }
 
@@ -41,11 +41,10 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
         List<AnalyzeResult> CheckForDuplicateDependencies(AddressableAssetSettings settings)
         {
-
             if (!BuildUtility.CheckModifiedScenesAndAskToSave())
             {
                 Debug.LogError("Cannot run Analyze with unsaved scenes");
-                m_Results.Add(new AnalyzeResult{resultName = ruleName + "Cannot run Analyze with unsaved scenes"});
+                m_Results.Add(new AnalyzeResult { resultName = ruleName + "Cannot run Analyze with unsaved scenes" });
                 return m_Results;
             }
 
@@ -58,7 +57,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 if (exitCode < ReturnCode.Success)
                 {
                     Debug.LogError("Analyze build failed. " + exitCode);
-                    m_Results.Add(new AnalyzeResult{resultName = ruleName + "Analyze build failed. " + exitCode});
+                    m_Results.Add(new AnalyzeResult { resultName = ruleName + "Analyze build failed. " + exitCode });
                     return m_Results;
                 }
 
@@ -67,12 +66,16 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 BuildImplicitDuplicatedAssetsSet(checkDupeResults);
 
                 m_Results = (from issueGroup in m_AllIssues
-                            from bundle in issueGroup.Value
-                            from item in bundle.Value
-                            select new AnalyzeResult {resultName = ruleName + kDelimiter +
-                                                     issueGroup.Key + kDelimiter +
-                                                     ConvertBundleName(bundle.Key, issueGroup.Key) + kDelimiter +
-                                                     item, severity = MessageType.Warning}).ToList();
+                    from bundle in issueGroup.Value
+                    from item in bundle.Value
+                    select new AnalyzeResult
+                    {
+                        resultName = ruleName + kDelimiter +
+                            issueGroup.Key + kDelimiter +
+                            ConvertBundleName(bundle.Key, issueGroup.Key) + kDelimiter +
+                            item,
+                        severity = MessageType.Warning
+                    }).ToList();
             }
 
             if (m_Results.Count == 0)
@@ -94,16 +97,16 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 from guidToFile in validGuids
                 from file in guidToFile.Value
 
-                    //Get the files that belong to those guids
+                //Get the files that belong to those guids
                 let fileToBundle = m_ExtractData.WriteData.FileToBundle[file]
 
-                //Get the bundles that belong to those files
-                let bundleToGroup = aaContext.bundleToAssetGroup[fileToBundle]
+                    //Get the bundles that belong to those files
+                    let bundleToGroup = aaContext.bundleToAssetGroup[fileToBundle]
 
-                //Get the asset groups that belong to those bundles
-                let selectedGroup = aaContext.Settings.FindGroup(findGroup => findGroup != null && findGroup.Guid == bundleToGroup)
+                    //Get the asset groups that belong to those bundles
+                    let selectedGroup = aaContext.Settings.FindGroup(findGroup => findGroup != null && findGroup.Guid == bundleToGroup)
 
-                select new CheckDupeResult
+                    select new CheckDupeResult
                 {
                     Group = selectedGroup,
                     DuplicatedFile = file,
@@ -145,10 +148,10 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
             if (m_ImplicitAssets.Count == 0)
                 return;
-            
+
             var group = settings.CreateGroup("Duplicate Asset Isolation", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
             group.GetSchema<ContentUpdateGroupSchema>().StaticContent = true;
-            
+
             foreach (var asset in m_ImplicitAssets)
                 settings.CreateOrMoveEntry(asset.ToString(), group, false, false);
 
@@ -162,7 +165,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             base.ClearAnalysis();
         }
     }
-    
+
 
     [InitializeOnLoad]
     class RegisterCheckBundleDupeDependencies

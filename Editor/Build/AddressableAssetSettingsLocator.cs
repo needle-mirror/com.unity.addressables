@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEditor.Build.Content;
 using UnityEngine;
@@ -19,7 +19,6 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             LocatorId = settings.name;
             m_keyToEntries = GatherEntries(settings);
-
         }
 
         static Dictionary<object, List<AddressableAssetEntry>> GatherEntries(AddressableAssetSettings settings)
@@ -29,7 +28,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 foreach (var g in settings.groups)
                 {
-                    if(g == null)
+                    if (g == null)
                         continue;
                     foreach (var me in g.entries)
                         me.GatherAllAssets(null, true, true, false, e =>
@@ -45,7 +44,6 @@ namespace UnityEditor.AddressableAssets.Settings
                             return false;
                         });
                 }
-
             }
             catch (Exception e)
             {
@@ -65,6 +63,12 @@ namespace UnityEditor.AddressableAssets.Settings
             locations = new List<IResourceLocation>(entries.Count);
             foreach (var e in entries)
             {
+                if (e.guid.Length > 0 && e.address.Contains("[") && e.address.Contains("]"))
+                {
+                    Debug.LogErrorFormat("Address '{0}' cannot contain '[ ]'.", e.address);
+                    locations = null;
+                    return false;
+                }
                 if (type == null || type.IsAssignableFrom(e.MainAssetType) || (type == typeof(SceneInstance) && e.IsScene))
                 {
                     locations.Add(new ResourceLocationBase(e.address, e.AssetPath, kProviderId, e.MainAssetType));
@@ -94,6 +98,5 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             return true;
         }
-
     }
 }

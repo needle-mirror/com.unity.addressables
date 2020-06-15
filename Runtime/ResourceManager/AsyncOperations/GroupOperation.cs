@@ -6,7 +6,6 @@ using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEngine.ResourceManagement.AsyncOperations
 {
-
     class GroupOperation : AsyncOperationBase<IList<AsyncOperationHandle>>, ICachable
     {
         Action<AsyncOperationHandle> m_InternalOnComplete;
@@ -68,7 +67,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         protected override void Destroy()
         {
             for (int i = 0; i < Result.Count; i++)
-                if(Result[i].IsValid())
+                if (Result[i].IsValid())
                     Result[i].Release();
             Result.Clear();
         }

@@ -18,7 +18,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             if (m_Tree == null)
             {
-                if(m_TreeState == null)
+                if (m_TreeState == null)
                     m_TreeState = new TreeViewState();
 
                 m_Tree = new AssetSettingsAnalyzeTreeView(m_TreeState);

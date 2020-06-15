@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -17,6 +17,7 @@ namespace UnityEngine.ResourceManagement.Tests
             m_ResourceManager.ResourceProviders.Add(new AssetDatabaseProvider());
             return locs;
         }
+
         IResourceLocation CreateLocationForAsset(string name, string path)
         {
             return new ResourceLocationBase(name, path, typeof(AssetDatabaseProvider).FullName, typeof(UnityEngine.Object));

@@ -1,4 +1,3 @@
-
 using UnityEditor;
 
 namespace UnityEngine.ResourceManagement.Util
@@ -61,7 +60,7 @@ namespace UnityEngine.ResourceManagement.Util
             }
         }
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         void OnEnable()
         {
             EditorApplication.playModeStateChanged += PlayModeChanged;
@@ -83,6 +82,7 @@ namespace UnityEngine.ResourceManagement.Util
                 }
             }
         }
-        #endif
+
+#endif
     }
 }

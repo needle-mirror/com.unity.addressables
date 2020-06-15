@@ -58,13 +58,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         protected override void OnDrawEventDetail(Rect rect, DiagnosticEvent evt)
         {
-  }
+        }
 
         protected override void OnGetColumns(List<string> columnNames, List<float> columnSizes)
         {
             if (columnNames == null || columnSizes == null)
                 return;
-            columnNames.AddRange(new[] { "Event", "Key"});
+            columnNames.AddRange(new[] { "Event", "Key" });
             columnSizes.AddRange(new float[] { 150, 400 });
         }
 
@@ -74,7 +74,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             {
                 case 0: EditorGUI.LabelField(cellRect, ((ResourceManager.DiagnosticEventType)evt.Stream).ToString()); break;
                 case 1: EditorGUI.LabelField(cellRect, evt.DisplayName); break;
-               }
+            }
 
             return true;
         }
@@ -97,10 +97,9 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                 new GraphLayerEventMarker((int)ResourceManager.DiagnosticEventType.AsyncOperationDestroy, "", "", Color.black, Color.black),
                 new GraphLayerEventMarker((int)ResourceManager.DiagnosticEventType.AsyncOperationFail, "", "", Color.red, Color.red),
                 new GraphLayerLabel((int)ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, "RefCount", "Reference Count", new Color(123 / 255f, 158 / 255f, 6 / 255f, 1), labelBgColor, v => v.ToString())
-                );
+            );
 
             graphView.DefineGraph("InstantiationCount", 0, new GraphLayerVertValueLine(0, "Instantiation Count", "Instantiation Count", Color.green));
-
         }
     }
 }

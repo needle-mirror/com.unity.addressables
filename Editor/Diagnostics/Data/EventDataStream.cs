@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace UnityEditor.AddressableAssets.Diagnostics.Data
@@ -40,5 +40,4 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             return lastSample.frame > frame || lastSample.data > 0;
         }
     }
-
 }

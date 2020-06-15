@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -168,6 +168,5 @@ namespace UnityEditor.AddressableAssets
                 Settings = AddressableAssetSettings.Create(kDefaultConfigFolder, kDefaultConfigAssetName, true, true);
             return Settings;
         }
-
     }
 }

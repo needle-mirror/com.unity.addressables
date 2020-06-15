@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -19,6 +19,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsTrue(AddressableAssetUtility.IsInResources("/resources/"));
             Assert.IsTrue(AddressableAssetUtility.IsInResources("/RESOURCES/"));
         }
+
         [Test]
         public void IsInResourcesHandlesExtraPathing()
         {
@@ -35,6 +36,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsFalse(AddressableAssetUtility.IsInResources("path/resourcesOther/path"));
             Assert.IsFalse(AddressableAssetUtility.IsInResources("/path/res/ources/path"));
         }
+
         [Test]
         public void IsPathValidBlocksCommonStrings()
         {
@@ -43,6 +45,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(CommonStrings.UnityDefaultResourcePath));
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(CommonStrings.UnityBuiltInExtraPath));
         }
+
         [Test]
         public void IsPathValidBlocksBadExtensions()
         {
@@ -52,6 +55,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("file.exe"));
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("file.dll"));
         }
+
         [Test]
         public void IsPathValidAllowsBasicTypes()
         {
@@ -66,7 +70,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.avi"));
             Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.controller"));
         }
-
 
         [Test]
         public void IsEditorTypeRemappedToNull()

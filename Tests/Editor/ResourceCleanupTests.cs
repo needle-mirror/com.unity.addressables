@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.ResourceManagement.Diagnostics;
@@ -7,7 +7,7 @@ using UnityEngine.ResourceManagement.Util;
 namespace UnityEditor.AddressableAssets.Tests
 {
     using Object = UnityEngine.Object;
-    
+
     public class ResourceCleanupTests : AddressableAssetTestBase
     {
         int CountResourcesByName(string name)
@@ -44,7 +44,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.False(DelayedActionManager.Exists);
 
             Assert.AreEqual(0, CountResourcesByName("DelayedActionManager"));
-            
         }
     }
 }

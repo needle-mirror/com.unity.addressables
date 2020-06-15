@@ -7,14 +7,13 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 
 namespace UnityEditor.AddressableAssets.Build.DataBuilders
 {
-    
     /// <summary>
-    /// Interface for any Addressables specific context objects to be used in the Scriptable Build Pipeline context store  
+    /// Interface for any Addressables specific context objects to be used in the Scriptable Build Pipeline context store
     /// </summary>
-    public interface IAddressableAssetsBuildContext : IContextObject { }
+    public interface IAddressableAssetsBuildContext : IContextObject {}
 
     /// <summary>
-    /// Simple context object for passing data through SBP, between different sections of Addressables code. 
+    /// Simple context object for passing data through SBP, between different sections of Addressables code.
     /// </summary>
     public class AddressableAssetsBuildContext : IAddressableAssetsBuildContext
     {
@@ -27,15 +26,15 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// <summary>
         /// The settings object to use.
         /// </summary>
-        public AddressableAssetSettings Settings 
-        {    
+        public AddressableAssetSettings Settings
+        {
             get
             {
                 if (m_Settings == null && !string.IsNullOrEmpty(m_SettingsAssetPath))
                     m_Settings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(m_SettingsAssetPath);
                 return m_Settings;
             }
-            set 
+            set
             {
                 m_Settings = value;
                 string guid;

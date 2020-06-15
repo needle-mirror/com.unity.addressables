@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.ResourceManagement;
@@ -27,7 +27,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         public int FrameCount { get { return m_FrameCount; } }
 
 
-        public EventDataPlayerSession() { }
+        public EventDataPlayerSession() {}
         public EventDataPlayerSession(string eventName, int playerId)
         {
             m_EventName = eventName;
@@ -55,7 +55,6 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             return null;
         }
 
-
         Dictionary<int, EventDataSet> m_dataSets = new Dictionary<int, EventDataSet>();
         Dictionary<int, HashSet<int>> m_objectToParents = new Dictionary<int, HashSet<int>>();
         int lastInstantiationCountFrame = -1;
@@ -72,12 +71,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         }
 
         List<EvtQueueData> m_Queue = new List<EvtQueueData>();
-        
+
         internal void AddSample(DiagnosticEvent evt, bool recordEvent, ref bool entryCreated)
         {
             m_LatestFrame = evt.Frame;
             m_StartFrame = m_LatestFrame - m_FrameCount;
-            
+
             if (recordEvent && !evt.DisplayName.StartsWith("Instance"))
             {
                 List<DiagnosticEvent> frameEvents;
@@ -97,7 +96,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
                 }
                 frameEvents.Add(evt);
             }
-            
+
             if (evt.DisplayName.StartsWith("Instance"))
             {
                 if (evt.Stream == (int)ResourceManager.DiagnosticEventType.AsyncOperationCreate)
@@ -154,10 +153,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             {
                 data.AddSample(evt.Stream, evt.Frame, evt.Value);
             }
-            
+
             if (evt.Stream == (int)ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
             {
-                m_Queue.Add(new EvtQueueData { Event = evt, frameDelay = 50});
+                m_Queue.Add(new EvtQueueData { Event = evt, frameDelay = 50 });
             }
         }
 

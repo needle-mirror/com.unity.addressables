@@ -69,7 +69,6 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
                 GUILayout.EndHorizontal();
                 EditorGUI.indentLevel--;
-
             }
 
 
@@ -80,12 +79,10 @@ namespace UnityEditor.AddressableAssets.GUI
 
         internal void OnEnable()
         {
-
         }
 
         internal void OnDisable()
         {
-
         }
     }
 }

@@ -143,7 +143,7 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        public void  GetStaticContentDependenciesOfModifiedEntries_DoesNotFlagEntryDependencies_WithStaticContentDisabled()
+        public void GetStaticContentDependenciesOfModifiedEntries_DoesNotFlagEntryDependencies_WithStaticContentDisabled()
         {
             var mainAssetGroup = Settings.CreateGroup("MainAssetGroup", false, false, false, null,
                 typeof(ContentUpdateGroupSchema), typeof(BundledAssetGroupSchema));
@@ -372,11 +372,15 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         private ContentUpdateScript.ContentUpdateContext GetContentUpdateContext(string contentUpdateTestAssetGUID, string contentUpdateTestCachedAssetHash,
-        string contentUpdateTestNewInternalBundleName, string contentUpdateTestNewBundleName, string contentUpdateTestCachedBundlePath, string contentUpdateTestGroupGuid, string contentUpdateTestFileName)
+            string contentUpdateTestNewInternalBundleName, string contentUpdateTestNewBundleName, string contentUpdateTestCachedBundlePath, string contentUpdateTestGroupGuid, string contentUpdateTestFileName)
         {
-            Dictionary<string, string> bundleToInternalBundle = new Dictionary<string, string>() { {
-                contentUpdateTestNewInternalBundleName,
-                contentUpdateTestNewBundleName } };
+            Dictionary<string, string> bundleToInternalBundle = new Dictionary<string, string>()
+            {
+                {
+                    contentUpdateTestNewInternalBundleName,
+                    contentUpdateTestNewBundleName
+                }
+            };
 
             Dictionary<string, CachedAssetState> guidToCachedState = new Dictionary<string, CachedAssetState>()
             {
@@ -390,7 +394,7 @@ namespace UnityEditor.AddressableAssets.Tests
                             guid = new GUID(contentUpdateTestAssetGUID),
                             hash = Hash128.Parse(contentUpdateTestCachedAssetHash)
                         },
-                        dependencies = new AssetState[] { },
+                        dependencies = new AssetState[] {},
                         data = null,
                         groupGuid = contentUpdateTestGroupGuid
                     }
@@ -401,13 +405,12 @@ namespace UnityEditor.AddressableAssets.Tests
             {
                 //bundle entry
                 { contentUpdateTestNewBundleName,
-                    new ContentCatalogDataEntry(typeof(IAssetBundleResource), contentUpdateTestNewBundleName,
-                        typeof(AssetBundleProvider).FullName, new []{ contentUpdateTestNewBundleName})
-                },
+                  new ContentCatalogDataEntry(typeof(IAssetBundleResource), contentUpdateTestNewBundleName,
+                      typeof(AssetBundleProvider).FullName, new[] { contentUpdateTestNewBundleName})},
                 //asset entry
                 {
                     contentUpdateTestAssetGUID,
-                    new ContentCatalogDataEntry(typeof(IResourceLocation), contentUpdateTestAssetGUID, typeof(BundledAssetProvider).FullName, new []{contentUpdateTestAssetGUID})
+                    new ContentCatalogDataEntry(typeof(IResourceLocation), contentUpdateTestAssetGUID, typeof(BundledAssetProvider).FullName, new[] {contentUpdateTestAssetGUID})
                 }
             };
 
@@ -619,9 +622,9 @@ namespace UnityEditor.AddressableAssets.Tests
             var ops = RevertUnchangedAssetsToPreviousAssetState.DetermineRequiredAssetEntryUpdates(group, context);
 
             LogAssert.Expect(LogType.Warning, $"CachedAssetState found for {assetEntry.AssetPath} but the previous bundle at {k_ContentUpdateTestCachedBundlePath} cannot be found. " +
-                                              $"The modified assets will not be able to use the previously built bundle which will result in new bundles being created " +
-                                              $"for these static content groups.  This will point the Content Catalog to local bundles that do not exist on currently " +
-                                              $"deployed versions of an application.");
+                $"The modified assets will not be able to use the previously built bundle which will result in new bundles being created " +
+                $"for these static content groups.  This will point the Content Catalog to local bundles that do not exist on currently " +
+                $"deployed versions of an application.");
             Assert.IsTrue(ops.Count == 0);
 
             Settings.RemoveGroup(group);

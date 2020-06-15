@@ -15,6 +15,7 @@ namespace UnityEngine.ResourceManagement
         {
             m_CachedOnWrappedCompleted = OnWrappedCompleted;
         }
+
         protected override string DebugName { get { return string.Format("{2} - Chain<{0},{1}>", typeof(TObject).Name, typeof(TObjectDependency).Name, m_DepOp.DebugName); } }
 
         protected override void GetDependencies(List<AsyncOperationHandle> deps)
@@ -43,13 +44,13 @@ namespace UnityEngine.ResourceManagement
                 errorMsg = string.Format("ChainOperation of Type: {0} failed because dependent operation failed\n{1}", typeof(TObject), x.OperationException != null ? x.OperationException.Message : string.Empty);
             Complete(m_WrappedOp.Result, x.Status == AsyncOperationStatus.Succeeded, errorMsg);
         }
-         
+
         protected override void Destroy()
         {
-            if(m_WrappedOp.IsValid())
+            if (m_WrappedOp.IsValid())
                 m_WrappedOp.Release();
 
-            if(m_DepOp.IsValid())
+            if (m_DepOp.IsValid())
                 m_DepOp.Release();
         }
 
@@ -85,6 +86,7 @@ namespace UnityEngine.ResourceManagement
         {
             m_CachedOnWrappedCompleted = OnWrappedCompleted;
         }
+
         protected override string DebugName { get { return string.Format("{1} - Chain<{0}>", typeof(TObject).Name, m_DepOp.DebugName); } }
 
         protected override void GetDependencies(List<AsyncOperationHandle> deps)
@@ -116,10 +118,10 @@ namespace UnityEngine.ResourceManagement
 
         protected override void Destroy()
         {
-            if(m_WrappedOp.IsValid())
+            if (m_WrappedOp.IsValid())
                 m_WrappedOp.Release();
 
-            if(m_DepOp.IsValid())
+            if (m_DepOp.IsValid())
                 m_DepOp.Release();
         }
 

@@ -1,6 +1,8 @@
-﻿using System;
+using System;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -14,7 +16,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.activeProfileId = null;
             var mainId = Settings.profileSettings.Reset();
 
-            //Act 
+            //Act
             var secondId = Settings.profileSettings.AddProfile("TestProfile", mainId);
 
             //Assert
@@ -57,6 +59,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(path, Settings.profileSettings.GetValueByName(mainId, "SomePath"));
             Assert.AreEqual(path, Settings.profileSettings.GetValueByName(secondId, "SomePath"));
         }
+
         [Test]
         public void SetValueOnlySetsDesiredProfile()
         {
@@ -76,6 +79,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(originalPath, Settings.profileSettings.GetValueByName(mainId, "SomePath"));
             Assert.AreEqual(newPath, Settings.profileSettings.GetValueByName(secondId, "SomePath"));
         }
+
         [Test]
         public void CanGetValueById()
         {
@@ -100,6 +104,7 @@ namespace UnityEditor.AddressableAssets.Tests
             //Assert
             Assert.AreEqual(originalPath, Settings.profileSettings.GetValueById(mainId, varId));
         }
+
         [Test]
         public void EvaluatingUnknownIdReturnsIdAsResult()
         {
@@ -114,8 +119,8 @@ namespace UnityEditor.AddressableAssets.Tests
 
             //Assert
             Assert.AreEqual(badIdName, AddressableAssetProfileSettings.ProfileIdData.Evaluate(Settings.profileSettings, Settings.activeProfileId, badIdName));
-
         }
+
         [Test]
         public void MissingVariablesArePassThrough()
         {
@@ -129,6 +134,7 @@ namespace UnityEditor.AddressableAssets.Tests
             //Assert
             Assert.AreEqual("VariableNotThere", Settings.profileSettings.GetValueById("invalid key", "VariableNotThere"));
         }
+
         [Test]
         public void CanRenameEntry()
         {
@@ -142,9 +148,9 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.profileSettings.CreateValue(entryName, originalPath);
 
             AddressableAssetProfileSettings.ProfileIdData currEntry = null;
-            foreach(var entry in Settings.profileSettings.profileEntryNames)
+            foreach (var entry in Settings.profileSettings.profileEntryNames)
             {
-                if(entry.ProfileName == entryName)
+                if (entry.ProfileName == entryName)
                 {
                     currEntry = entry;
                     break;
@@ -158,6 +164,149 @@ namespace UnityEditor.AddressableAssets.Tests
             //Assert
             Assert.AreEqual(currEntry.ProfileName, newName);
         }
+
+        [Test]
+        public void RenameProfileFailsOnNullProfile()
+        {
+            Assert.IsNotNull(Settings.profileSettings, "Profile settings should not be null");
+            Settings.activeProfileId = null;
+            var baseid = Settings.profileSettings.Reset();
+            var profile1Id = Settings.profileSettings.AddProfile("Profile1", baseid);
+
+            AddressableAssetProfileSettings.BuildProfile nullProfile = null;
+            //Act
+            bool renameSuccessful = Settings.profileSettings.RenameProfile(nullProfile, "invalidId");
+
+            //Assert
+            LogAssert.Expect(LogType.Error, "Profile rename failed because profile passed in is null");
+            Assert.AreEqual(false, renameSuccessful, "Rename succeeded when it should have failed because of null profile.");
+            Assert.AreEqual("Profile1", Settings.profileSettings.GetProfileName(profile1Id), "Profile name was changed when rename should have failed.");
+        }
+
+        [Test]
+        public void RenameProfileFailsOnExternallyCreatedProfile()
+        {
+            //Arrange
+            Assert.IsNotNull(Settings.profileSettings, "Profile settings should not be null");
+            Settings.activeProfileId = null;
+            var baseid = Settings.profileSettings.Reset();
+            var baseProfile = Settings.profileSettings.GetProfile(baseid);
+            var externalProfile = new AddressableAssetProfileSettings.BuildProfile("Bad profile", baseProfile, Settings.profileSettings);
+            //Act
+            bool renameSuccessful = Settings.profileSettings.RenameProfile(externalProfile, "new name");
+
+            //Assert
+            Assert.AreEqual(true, renameSuccessful, "Rename was unsuccessful when it should have succeeded.");
+            Assert.AreEqual("new name", externalProfile.profileName, "Profile name was not changed despite rename succeeding. ");
+            Assert.AreEqual(1, Settings.profileSettings.profiles.Count, "Number of profiles changed when should be left the same");
+            Assert.AreEqual(null, Settings.profileSettings.GetProfile(externalProfile.id), "Externally created profile was added to profile settings despite not being created properly.");
+        }
+
+        [Test]
+        public void RenameProfileFailsOnInvalidId()
+        {
+            Assert.IsNotNull(Settings.profileSettings, "Profile settings should not be null");
+            Settings.activeProfileId = null;
+            var baseid = Settings.profileSettings.Reset();
+            var profile1Id = Settings.profileSettings.AddProfile("Profile1", baseid);
+
+            //Act
+            bool renameSuccessful = Settings.profileSettings.RenameProfile("invalidId", "invalidId");
+
+            //Assert
+            LogAssert.Expect(LogType.Error, "Profile rename failed because profile with sought id does not exist.");
+            Assert.AreEqual(false, renameSuccessful, "Rename succeeded when it should have failed because of invalid id.");
+            Assert.AreEqual("Profile1", Settings.profileSettings.GetProfileName(profile1Id), "Profile name was changed when rename should have failed.");
+        }
+
+        [Test]
+        public void RenameProfileFailsOnDuplicateName()
+        {
+            //Arrange
+            Assert.IsNotNull(Settings.profileSettings, "Profile settings should not be null");
+            Settings.activeProfileId = null;
+            var baseid = Settings.profileSettings.Reset();
+            var profile1Id = Settings.profileSettings.AddProfile("Profile1", baseid);
+            var profile2Id = Settings.profileSettings.AddProfile("Profile2", baseid);
+
+            //Act
+            bool renameSuccessful = Settings.profileSettings.RenameProfile(profile1Id, "Profile2");
+
+            //Assert
+            LogAssert.Expect(LogType.Error, "Profile rename failed because new profile name is not unique.");
+            Assert.AreEqual(false, renameSuccessful, "Rename succeeded when failure should have occured from duplicate name");
+            Assert.AreEqual("Profile1", Settings.profileSettings.GetProfileName(profile1Id), "Profile name was changed when rename should have failed.");
+        }
+
+        [Test]
+        public void RenameProfileFailsOnRenameDefault()
+        {
+            //Arrange
+            Assert.IsNotNull(Settings.profileSettings, "Profile settings should not be null. ");
+            Settings.activeProfileId = null;
+            var defaultId = Settings.profileSettings.Reset();
+
+            //Act
+            bool renameSuccessful = Settings.profileSettings.RenameProfile(defaultId, "Profile2");
+            LogAssert.Expect(LogType.Error, "Profile rename failed because default profile cannot be renamed.");
+            Assert.AreEqual(false, renameSuccessful, "Rename succeeded when failure should have occured because default is not renamable.");
+            Assert.AreEqual("Default", Settings.profileSettings.GetProfileName(defaultId), "Name for default profile was changed when default should be prevented from changing.");
+        }
+
+        [Test]
+        public void RenameProfileFailsOnInvalidName()
+        {
+            //Arrange
+            Assert.IsNotNull(Settings.profileSettings, "Profile settings should not be null");
+            Settings.activeProfileId = null;
+            var baseid = Settings.profileSettings.Reset();
+            var profile1Id = Settings.profileSettings.AddProfile("Profile1", baseid);
+
+            //Act
+            bool renameSuccessful = Settings.profileSettings.RenameProfile(profile1Id, "          ");
+
+            //Assert
+            LogAssert.Expect(LogType.Error, "Profile rename failed because new profile name must not be only spaces.");
+            Assert.AreEqual(false, renameSuccessful, "Rename succeeded when failure should have occured from invalid name");
+            Assert.AreEqual("Profile1", Settings.profileSettings.GetProfileName(profile1Id), "Profile name was changed when rename should have failed.");
+        }
+
+        [Test]
+        public void RenameProfileFailsOnUnchangedName()
+        {
+            //Arrange
+            Assert.IsNotNull(Settings.profileSettings, "Profile settings is null");
+            Settings.activeProfileId = null;
+            var baseid = Settings.profileSettings.Reset();
+            var profile1Id = Settings.profileSettings.AddProfile("Profile1", baseid);
+
+            //Act
+            bool renameSuccessful = Settings.profileSettings.RenameProfile(profile1Id, "Profile1");
+
+            //Assert
+            Assert.AreEqual(false, renameSuccessful, "Rename succeeded when failure should have occured from unchanged name");
+            Assert.AreEqual("Profile1", Settings.profileSettings.GetProfileName(profile1Id), "Profile name was changed when rename should have failed.");
+        }
+
+        [Test]
+        public void RenameProfileSucceedsOnValidName()
+        {
+            //Arrange
+            Assert.IsNotNull(Settings.profileSettings, "Profile settings is null");
+            Settings.activeProfileId = null;
+            var baseid = Settings.profileSettings.Reset();
+            var profile1Id = Settings.profileSettings.AddProfile("Profile1", baseid);
+            var profile2Id = Settings.profileSettings.AddProfile("Profile2", baseid);
+
+            //Act
+            bool renameSuccessful = Settings.profileSettings.RenameProfile(profile1Id, "Profile3");
+
+            //Assert
+            Assert.AreEqual(true, renameSuccessful, "Rename failed when name change should have been successful.");
+            Assert.AreEqual("Profile3", Settings.profileSettings.GetProfile(profile1Id).profileName, "Rename was successful, but name was not correctly changed.");
+            Assert.AreEqual("Profile2", Settings.profileSettings.GetProfile(profile2Id).profileName, "Rename was successful, but other profile name was changed when it shouldn't have been.");
+        }
+
         [Test]
         public void CannotRenameEntryToDuplicateName()
         {
@@ -188,6 +337,5 @@ namespace UnityEditor.AddressableAssets.Tests
             //Assert
             Assert.AreNotEqual(currEntry.ProfileName, newName);
         }
-
     }
 }

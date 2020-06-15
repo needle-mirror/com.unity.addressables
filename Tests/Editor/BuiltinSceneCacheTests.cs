@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,7 +13,7 @@ namespace UnityEditor.AddressableAssets.Settings.Tests
     {
         const string kTestScenePath = "Assets/TestScenes";
         const int kTestSceneCount = 3;
-        private EditorBuildSettingsScene []m_OldScenes;
+        private EditorBuildSettingsScene[] m_OldScenes;
         private GUID[] m_TestGUIDs;
 
         private static string GetTestScenePath(int index)

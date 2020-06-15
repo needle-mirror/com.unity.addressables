@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Diagnostics.Data;
@@ -61,11 +61,11 @@ namespace UnityEditor.AddressableAssets.Tests.Diagnostics
             AddAlternativeSegments(stream, -99, 99, 0, kFrameIncrement, kSampleCount);
             GraphUtility.Segment[] segs = GraphUtility.IterateSegments(stream, 0, kSampleCount * kFrameIncrement, IsContinuationOfSegment).ToArray();
             Assert.AreEqual(kSampleCount, segs.Length);
-            for(int i = 0; i < segs.Length; i++)
+            for (int i = 0; i < segs.Length; i++)
             {
                 Assert.AreEqual(segs[i].data, (i % 2 == 0) ? -99 : 99);
                 Assert.AreEqual(segs[i].frameStart, i * kFrameIncrement);
-                Assert.AreEqual(segs[i].frameEnd, (i+1) * kFrameIncrement);
+                Assert.AreEqual(segs[i].frameEnd, (i + 1) * kFrameIncrement);
             }
         }
 

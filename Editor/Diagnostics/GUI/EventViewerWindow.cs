@@ -87,8 +87,8 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
         void RegisterEventHandler(bool reg)
         {
-            if(ProjectConfigData.postProfilerEvents)
-                DiagnosticEventCollectorSingleton.RegisterEventHandler(OnEditorPlayModeEvent, reg, false);
+            if (ProjectConfigData.postProfilerEvents)
+                DiagnosticEventCollectorSingleton.RegisterEventHandler(OnEditorPlayModeEvent, reg, true);
         }
 
         void OnEditorPlayModeEvent(DiagnosticEvent evt)
@@ -108,7 +108,6 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             var entryCreated = m_EventData.ProcessEvent(diagnosticEvent, session);
             OnEventProcessed(diagnosticEvent, entryCreated);
         }
-
 
         public int Compare(EventDataSet x, EventDataSet y)
         {
@@ -150,9 +149,9 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                 return true;
             foreach (var s in sel)
             {
-//                m_GraphList.Fi
+                //                m_GraphList.Fi
             }
-            
+
             return true;
         }
 
@@ -193,7 +192,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             if (m_InspectFrame < 0)
                 m_InspectFrame = 0;
 
-            if(m_EventList != null)
+            if (m_EventList != null)
                 m_EventList.SetEvents(activeSession == null ? null : activeSession.GetFrameEvents(m_InspectFrame));
             m_LastEventListUpdate = Time.unscaledTime;
             m_EventListFrame = m_InspectFrame;
@@ -311,7 +310,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                     m_GraphList.Reload();
                 RegisterEventHandler(true);
             }
-            
+
             /*
             if (GUILayout.Button("Load", EditorStyles.toolbarButton))
                 EditorUtility.DisplayDialog("Feature not implemented", "Saving and loading profile data is not yet supported", "Close");
@@ -344,7 +343,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                 return;
             columnNames.Add("Event"); columnSizes.Add(50);
             columnNames.Add("Id"); columnSizes.Add(200);
-    //        columnNames.Add("Data"); columnSizes.Add(400);
+            //        columnNames.Add("Data"); columnSizes.Add(400);
         }
 
         protected virtual bool OnDrawColumnCell(Rect cellRect, DiagnosticEvent diagnosticEvent, int column)
@@ -360,7 +359,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                 {
                     case 0: EditorGUI.LabelField(cellRect, diagnosticEvent.Stream.ToString()); break;
                     case 1: EditorGUI.LabelField(cellRect, diagnosticEvent.DisplayName); break;
-//                    case 2: EditorGUI.LabelField(cellRect, diagnosticEvent. == null ? "null" : diagnosticEvent.Data.ToString()); break;
+                        //                    case 2: EditorGUI.LabelField(cellRect, diagnosticEvent. == null ? "null" : diagnosticEvent.Data.ToString()); break;
                 }
             }
         }
@@ -377,7 +376,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                     MultiColumnHeaderState.OverwriteSerializedFields(m_GraphListMchs, headerState);
 
                 m_GraphListMchs = headerState;
-                m_GraphList = new EventGraphListView(()=> { return activeSession == null ? null : activeSession.RootStreamEntry; }, m_GraphListTreeViewState, m_GraphListMchs, CanHandleEvent, this);
+                m_GraphList = new EventGraphListView(() => { return activeSession == null ? null : activeSession.RootStreamEntry; }, m_GraphListTreeViewState, m_GraphListMchs, CanHandleEvent, this);
                 InitializeGraphView(m_GraphList);
                 m_GraphList.Reload();
             }
@@ -401,18 +400,18 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
             if (m_EventListFrame != m_InspectFrame && m_InspectFrame != m_LatestFrame && !m_DraggingInspectLine && Time.unscaledTime - m_LastEventListUpdate > .25f)
             {
-                if(activeSession != null)
+                if (activeSession != null)
                     m_EventList.SetEvents(activeSession.GetFrameEvents(m_InspectFrame));
                 m_LastEventListUpdate = Time.unscaledTime;
                 m_EventListFrame = m_InspectFrame;
             }
-            
+
             if (m_GraphListMchs != null && m_GraphListMchs.columns.Length > 2)
             {
                 string warningText = string.Empty;
                 if (!ProjectConfigData.postProfilerEvents)
                     warningText = "Warning: Profile events must be enabled in your Addressable Asset settings to view profile data";
-                    m_GraphListMchs.columns[2].headerContent.text = warningText;
+                m_GraphListMchs.columns[2].headerContent.text = warningText;
             }
         }
 
@@ -420,14 +419,14 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         {
             graphView.DefineGraph("EventCount", 0, new GraphLayerVertValueLine(0, "Events", "Event count per frame", Color.green));
             graphView.DefineGraph("FrameCount", 1, new GraphLayerBarChartMesh(1, "FPS", "Current Frame Rate", Color.blue),
-                                new GraphLayerLabel(1, "FPS", "Current Frame Rate", Color.white, GraphColors.LabelGraphLabelBackground, v => string.Format("{0} FPS", v)));
+                new GraphLayerLabel(1, "FPS", "Current Frame Rate", Color.white, GraphColors.LabelGraphLabelBackground, v => string.Format("{0} FPS", v)));
             graphView.DefineGraph("MemoryCount", 2, new GraphLayerBarChartMesh(2, "MonoHeap", "Current Mono Heap Size", Color.green * .75f),
-                                new GraphLayerLabel(2, "MonoHeap", "Current Mono Heap Size", Color.white, GraphColors.LabelGraphLabelBackground, v => string.Format("{0:0.0}MB", (v/1024f))));
+                new GraphLayerLabel(2, "MonoHeap", "Current Mono Heap Size", Color.white, GraphColors.LabelGraphLabelBackground, v => string.Format("{0:0.0}MB", (v / 1024f))));
 
             OnInitializeGraphView(graphView);
         }
 
-        protected virtual void OnInitializeGraphView(EventGraphListView graphView) { }
+        protected virtual void OnInitializeGraphView(EventGraphListView graphView) {}
     }
 
     [Serializable]

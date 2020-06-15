@@ -59,7 +59,7 @@ namespace UnityEngine.ResourceManagement
 
             /// <summary>
             /// The IResourceLocation being provided by the operation triggering this event.
-            /// This value is null if the event is not while providing a resource. 
+            /// This value is null if the event is not while providing a resource.
             /// </summary>
             public IResourceLocation Location { get; }
 
@@ -141,7 +141,7 @@ namespace UnityEngine.ResourceManagement
         static int s_InstanceOperationTypeHash = typeof(InstanceOperation).GetHashCode();
 
         /// <summary>
-        /// Add an update reveiver. 
+        /// Add an update reveiver.
         /// </summary>
         /// <param name="receiver">The object to add. The Update method will be called until the object is removed. </param>
         public void AddUpdateReceiver(IUpdateReceiver receiver)
@@ -176,13 +176,13 @@ namespace UnityEngine.ResourceManagement
         /// The allocation strategy object.
         /// </summary>
         public IAllocationStrategy Allocator { get { return m_allocator; } set { m_allocator = value; } }
-        
+
         /// <summary>
         /// Gets the list of configured <see cref="IResourceProvider"/> objects. Resource Providers handle load and release operations for <see cref="IResourceLocation"/> objects.
         /// </summary>
         /// <value>The resource providers list.</value>
         public IList<IResourceProvider> ResourceProviders { get { return m_ResourceProviders; } }
-        
+
         /// <summary>
         /// The CertificateHandler instance object.
         /// </summary>
@@ -369,8 +369,8 @@ namespace UnityEngine.ResourceManagement
 
             // Calculate the hash of the dependencies
             int depHash = location.DependencyHashCode;
-            var depOp = location.HasDependencies ? 
-                ProvideResourceGroupCached(location.Dependencies, depHash, null, null) : 
+            var depOp = location.HasDependencies ?
+                ProvideResourceGroupCached(location.Dependencies, depHash, null, null) :
                 default(AsyncOperationHandle<IList<AsyncOperationHandle>>);
             if (provider == null)
                 provider = GetResourceProvider(desiredType, location);
@@ -384,6 +384,7 @@ namespace UnityEngine.ResourceManagement
 
             return handle;
         }
+
         Dictionary<Type, Type> m_ProviderOperationTypeCache = new Dictionary<Type, Type>();
 
         /// <summary>
@@ -422,13 +423,14 @@ namespace UnityEngine.ResourceManagement
         {
             bool m_Success;
             string m_ErrorMsg;
-            public CompletedOperation() { }
+            public CompletedOperation() {}
             public void Init(TObject result, bool success, string errorMsg)
             {
                 Result = result;
                 m_Success = success;
                 m_ErrorMsg = errorMsg;
             }
+
             protected override void Execute()
             {
                 Complete(Result, m_Success, m_ErrorMsg);
@@ -476,7 +478,7 @@ namespace UnityEngine.ResourceManagement
 
         internal void AddOperationToCache(int hash, IAsyncOperation operation)
         {
-            if(!IsOperationCached(hash))
+            if (!IsOperationCached(hash))
                 m_AssetOperationCache.Add(hash, operation);
         }
 
@@ -524,6 +526,7 @@ namespace UnityEngine.ResourceManagement
         {
             handle.Release();
         }
+
         /// <summary>
         /// Increment reference count of operation handle.
         /// </summary>
@@ -609,7 +612,7 @@ namespace UnityEngine.ResourceManagement
 
         /// <summary>
         /// Asynchronously load all objects in the given collection of <paramref name="locations"/>.
-        /// If any matching location fails, all loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.  
+        /// If any matching location fails, all loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.
         /// </summary>
         /// <returns>An async operation that will complete when all individual async load operations are complete.</returns>
         /// <param name="locations">locations to load.</param>
@@ -619,6 +622,7 @@ namespace UnityEngine.ResourceManagement
         {
             return ProvideResources(locations, true, callback);
         }
+
         /// <summary>
         /// Asynchronously load all objects in the given collection of <paramref name="locations"/>.
         /// </summary>
@@ -626,10 +630,10 @@ namespace UnityEngine.ResourceManagement
         /// <param name="locations">locations to load.</param>
         /// <param name="releaseDependenciesOnFailure">
         /// If all matching locations succeed, this parameter is ignored.
-        /// When true, if any matching location fails, all loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.  
+        /// When true, if any matching location fails, all loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.
         /// When false, if any matching location fails, the returned .Result will be an IList of size equal to the number of locations attempted.  Any failed location will
         /// correlate to a null in the IList, while successful loads will correlate to a TObject in the list. The .Status will still be Failed.
-        /// When true, op does not need to be released if anything fails, when false, it must always be released. 
+        /// When true, op does not need to be released if anything fails, when false, it must always be released.
         /// </param>
         /// <param name="callback">This callback will be invoked once for each object that is loaded.</param>
         /// <typeparam name="TObject">Object type to load.</typeparam>
@@ -645,9 +649,9 @@ namespace UnityEngine.ResourceManagement
             }
             var typelessHandle = ProvideResourceGroupCached(locations, CalculateLocationsHash(locations, typeof(TObject)), typeof(TObject), callbackGeneric, releaseDependenciesOnFailure);
             var chainOp = CreateChainOperation<IList<TObject>>(typelessHandle, (resultHandle) =>
-            {            
+            {
                 AsyncOperationHandle<IList<AsyncOperationHandle>> handleToHandles = resultHandle.Convert<IList<AsyncOperationHandle>>();
-           
+
                 var list = new List<TObject>();
                 var errorMessage = string.Empty;
                 if (handleToHandles.Status == AsyncOperationStatus.Succeeded)
@@ -657,7 +661,6 @@ namespace UnityEngine.ResourceManagement
                 }
                 else
                 {
-
                     bool foundSuccess = false;
                     if (!releaseDependenciesOnFailure)
                     {
@@ -683,9 +686,8 @@ namespace UnityEngine.ResourceManagement
                         errorMessage = "Partial success in ProvideResources.  Some items failed to load. See earlier logs for more info.";
                     }
                 }
-            
+
                 return CreateCompletedOperation<IList<TObject>>(list, string.IsNullOrEmpty(errorMessage), errorMessage);
-                
             });
 
             // chain operation holds the dependency
@@ -707,6 +709,7 @@ namespace UnityEngine.ResourceManagement
             op.Init(dependentOp, callback);
             return StartOperation(op, dependentOp);
         }
+
         /// <summary>
         /// Create a chain operation to handle dependencies.
         /// </summary>
@@ -720,6 +723,7 @@ namespace UnityEngine.ResourceManagement
             cOp.Init(dependentOp, callback);
             return StartOperation(cOp, dependentOp);
         }
+
         internal class InstanceOperation : AsyncOperationBase<GameObject>
         {
             AsyncOperationHandle<GameObject> m_dependency;
@@ -741,6 +745,7 @@ namespace UnityEngine.ResourceManagement
             {
                 deps.Add(m_dependency);
             }
+
             protected override string DebugName
             {
                 get
@@ -781,7 +786,6 @@ namespace UnityEngine.ResourceManagement
                     Complete(m_instance, false, string.Format("Dependency operation failed with {0}.", e));
                 }
             }
-
         }
 
 
@@ -873,7 +877,7 @@ namespace UnityEngine.ResourceManagement
 
         internal void RegisterForDeferredCallback(IAsyncOperation op, bool incrementRefCount = true)
         {
-            if(incrementRefCount)
+            if (incrementRefCount)
                 op.IncrementReferenceCount();
             m_DeferredCompleteCallbacks.Add(op);
             RegisterForCallbacks();

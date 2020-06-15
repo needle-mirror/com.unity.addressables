@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -64,7 +64,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             Reload();
 
-            if(m_Window.ServiceIndex >= 0)
+            if (m_Window.ServiceIndex >= 0)
                 SetSelection(new List<int> { m_Window.ServiceIndex });
         }
 
@@ -75,7 +75,7 @@ namespace UnityEditor.AddressableAssets.GUI
         public void SelectRow(int index)
         {
             IList<TreeViewItem> rows = GetRows();
-            if(index >= 0 && index < rows.Count)
+            if (index >= 0 && index < rows.Count)
             {
                 SelectionClick(rows[index], false);
             }
@@ -85,16 +85,16 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var root = new TreeViewItem { id = -1, depth = -1, displayName = "Root" };
             m_Names.Clear();
-            foreach(var service in m_Manager.HostingServices)
+            foreach (var service in m_Manager.HostingServices)
             {
                 m_Names.Add(service.DescriptiveName);
             }
 
-            for (int i=0; i < m_Names.Count; i++)
+            for (int i = 0; i < m_Names.Count; i++)
             {
                 root.AddChild(new TreeViewItem { id = i, displayName = m_Names[i] });
             }
-            
+
             return root;
         }
 
@@ -141,9 +141,9 @@ namespace UnityEditor.AddressableAssets.GUI
         int GetServiceIndex(string name)
         {
             int i = 0;
-            foreach(var service in m_Manager.HostingServices)
+            foreach (var service in m_Manager.HostingServices)
             {
-                if(name == service.DescriptiveName)
+                if (name == service.DescriptiveName)
                     return i;
                 ++i;
             }
@@ -213,6 +213,5 @@ namespace UnityEditor.AddressableAssets.GUI
 
             menu.ShowAsContext();
         }
-
     }
 }

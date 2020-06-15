@@ -1,4 +1,4 @@
-﻿namespace UnityEditor.AddressableAssets.Settings
+namespace UnityEditor.AddressableAssets.Settings
 {
     public interface IGroupTemplate
     {

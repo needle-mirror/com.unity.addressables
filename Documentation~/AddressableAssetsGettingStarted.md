@@ -35,6 +35,20 @@ The Addressables Asset System needs to build your content into files that can be
 * To build content in the Editor, open the **Addressables Groups** window, then select **Build** > **New Build** > **Default Build Script**.
 * To build content using the API, use [`AddressableAssetSettings.BuildPlayerContent()`](../api/UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.html#UnityEditor_AddressableAssets_Settings_AddressableAssetSettings_BuildPlayerContent).
 
+## Assets in Packages
+
+**Important**: Marking package assets as Addressable requires Unity version 2020.2.0a9 or later.
+
+### Marking package assets as Addressable
+Currently, assets in a package cannot be marked as Addressable in the Inspector. You can only mark an asset as Addressable using the **Addressables Groups** window. 
+
+### Creating Addressable Groups in packages 
+Create a group in the **Addressables Groups** window. When you are done modifying the group, save the project. Move the group asset and its respective schema assets into your package.
+
+Open a new project that uses your package. If your group has a “Content Packing & Unloading” schema, update its build and load paths. Your group can now be included in your next Addressables build.
+
+If you want to modify the group again, make sure to close all projects that use the package and reopen them once you save all modifications. This will reload the group asset. If your group has a “Content Packing & Unloading” schema, update its build and load paths again.
+
 ## Using Addressable Assets
 ### Loading or instantiating by address
 You can load or instantiate an Addressable Asset at runtime. Loading an asset loads all dependencies into memory (including the asset's bundle data if applicable), allowing you to use the asset when you need to.  This does not actually put the desired asset into your scene. To add the asset to your scene you must instantiate.  Using Addressables instantiation interfaces will load the asset, then immediately adds it to your Scene. 

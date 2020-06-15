@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEditor.AddressableAssets.HostingServices;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
@@ -24,7 +24,7 @@ namespace UnityEditor.AddressableAssets.GUI
             m_Settings = settings;
             m_HostingName = string.Format("My Hosting Service {0}(Custom)", m_Settings.HostingServicesManager.NextInstanceId);
         }
-        
+
         void OnGUI()
         {
             if (m_Settings == null) return;
@@ -43,7 +43,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 else if (scriptType.IsAbstract)
                 {
                     EditorUtility.DisplayDialog("Error", "Script cannot be an Abstract class", "Ok");
-                    m_Script = null;                       
+                    m_Script = null;
                 }
                 else if (!typeof(IHostingService).IsAssignableFrom(scriptType))
                 {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
@@ -12,7 +12,7 @@ using UnityEngine;
 namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 {
     /// <summary>
-    /// The BuildTask used to append the asset hash to the internal bundle name. 
+    /// The BuildTask used to append the asset hash to the internal bundle name.
     /// </summary>
     public class AddHashToBundleNameTask : IBuildTask
     {

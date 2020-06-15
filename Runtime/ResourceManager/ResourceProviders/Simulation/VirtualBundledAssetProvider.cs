@@ -57,7 +57,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
         /// </summary>
         public VirtualBundledAssetProvider()
         {
-            m_ProviderId = typeof(BundledAssetProvider).FullName; 
+            m_ProviderId = typeof(BundledAssetProvider).FullName;
         }
 
         class InternalOp

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -8,10 +8,10 @@ using UnityEngine.Serialization;
 namespace UnityEditor.AddressableAssets.Settings
 {
     /// <summary>
-    /// Contains data for AddressableAssetGroups. 
+    /// Contains data for AddressableAssetGroups.
     /// </summary>
     public class AddressableAssetGroupSchema : ScriptableObject
-    {   
+    {
         [FormerlySerializedAs("m_group")]
         [HideInInspector]
         [SerializeField]
@@ -29,7 +29,7 @@ namespace UnityEditor.AddressableAssets.Settings
             internal set
             {
                 m_Group = value;
-                if(m_Group != null)
+                if (m_Group != null)
                     OnSetGroup(m_Group);
             }
         }
@@ -40,7 +40,6 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="group">The group that the schema is added to.</param>
         protected virtual void OnSetGroup(AddressableAssetGroup group)
         {
-
         }
 
         /// <summary>
@@ -55,7 +54,7 @@ namespace UnityEditor.AddressableAssets.Settings
             while (p.Next(false))
             {
                 var prop = type.GetField(p.name, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-                if(prop != null)
+                if (prop != null)
                     EditorGUILayout.PropertyField(p, true);
             }
             so.ApplyModifiedProperties();
@@ -67,7 +66,6 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="otherSchemas">Schema instances in the other selected groups</param>
         public virtual void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
         {
-
         }
 
         /// <summary>
@@ -84,12 +82,12 @@ namespace UnityEditor.AddressableAssets.Settings
                     m_Group.SetDirty(AddressableAssetSettings.ModificationEvent.GroupSchemaModified, this, postEvent, false);
             }
         }
+
         /// <summary>
         /// Used for drawing properties in the inspector.
         /// </summary>
         public virtual void ShowAllProperties()
         {
-
         }
 
         protected void ShowMixedValue(SerializedProperty property, List<AddressableAssetGroupSchema> otherSchemas, Type type, string propertyName)
@@ -135,6 +133,5 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
             }
         }
-
     }
 }
