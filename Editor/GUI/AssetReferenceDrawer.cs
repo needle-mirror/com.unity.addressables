@@ -172,21 +172,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     var path = AssetDatabase.GUIDToAssetPath(guid);
                     if (!string.IsNullOrEmpty(path))
                     {
-                        var dir = Path.GetDirectoryName(path);
-                        bool foundAddr = false;
-                        while (!string.IsNullOrEmpty(dir))
-                        {
-                            var dirEntry = aaSettings.FindAssetEntry(AssetDatabase.AssetPathToGUID(dir));
-                            if (dirEntry != null)
-                            {
-                                foundAddr = true;
-                                m_AssetName = dirEntry.address + path.Remove(0, dir.Length);
-                                break;
-                            }
-                            dir = Path.GetDirectoryName(dir);
-                        }
-
-                        if (!foundAddr)
+                        if (!aaSettings.IsAssetPathInAddressableDirectory(path, out m_AssetName))
                         {
                             m_AssetName = path;
                             if (!string.IsNullOrEmpty(checkToForceAddressable))
@@ -271,13 +257,25 @@ namespace UnityEditor.AddressableAssets.GUI
                 string assetPath = AssetDatabase.GUIDToAssetPath(m_AssetRefObject.AssetGUID);
                 Texture2D assetIcon = AssetDatabase.GetCachedIcon(assetPath) as Texture2D;
 
-                EditorGUI.LabelField(assetDropDownRect, new GUIContent(nameToUse, assetIcon), EditorStyles.objectField);
+                UnityEngine.GUI.Box(assetDropDownRect, new GUIContent(nameToUse, assetIcon), EditorStyles.objectField);
 
                 EditorGUIUtility.SetIconSize(iconSize);
+
+                bool isFieldPressed = Event.current.type == EventType.MouseDown && Event.current.button == 0 && assetDropDownRect.Contains(Event.current.mousePosition);
+                if (isFieldPressed)
+                {
+                    if (Event.current.clickCount == 1)
+                        EditorGUIUtility.PingObject(asset);
+                    if (Event.current.clickCount == 2)
+                    {
+                        AssetDatabase.OpenAsset(asset);
+                        GUIUtility.ExitGUI();
+                    }
+                }
             }
             else
             {
-                EditorGUI.LabelField(assetDropDownRect, new GUIContent($"None ({typeof(AddressableAsset).Name})"), EditorStyles.objectField);
+                UnityEngine.GUI.Box(assetDropDownRect, new GUIContent(noAssetString), EditorStyles.objectField);
             }
 
 #if UNITY_2019_1_OR_NEWER
@@ -367,28 +365,37 @@ namespace UnityEditor.AddressableAssets.GUI
                     if (DragAndDrop.paths != null && DragAndDrop.paths.Length == 1)
                     {
                         var path = DragAndDrop.paths[0];
-                        if (AddressableAssetUtility.IsInResources(path))
-                            Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first. ");
-                        else if (!AddressableAssetUtility.IsPathValidForEntry(path))
-                            Addressables.LogWarning("Dragged asset is not valid as an Asset Reference. " + path);
-                        else
-                        {
-                            Object obj;
-                            if (DragAndDrop.objectReferences != null && DragAndDrop.objectReferences.Length == 1)
-                                obj = DragAndDrop.objectReferences[0];
-                            else
-                                obj = AssetDatabase.LoadAssetAtPath<Object>(path);
+                        DragAndDropNotFromAddressableGroupWindow(path, guid, property, aaSettings);
+                    }
+                }
+            }
+        }
 
-                            if (SetObject(property, obj, out guid))
-                            {
-                                aaSettings = AddressableAssetSettingsDefaultObject.GetSettings(true);
-                                var entry = aaSettings.FindAssetEntry(guid);
-                                if (entry == null && !string.IsNullOrEmpty(guid))
-                                {
-                                    aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup);
-                                    newGuid = guid;
-                                }
-                            }
+        internal void DragAndDropNotFromAddressableGroupWindow(string path, string guid, SerializedProperty property, AddressableAssetSettings aaSettings)
+        {
+            if (AddressableAssetUtility.IsInResources(path))
+                Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first. ");
+            else if (!AddressableAssetUtility.IsPathValidForEntry(path))
+                Addressables.LogWarning("Dragged asset is not valid as an Asset Reference. " + path);
+            else
+            {
+                Object obj;
+                if (DragAndDrop.objectReferences != null && DragAndDrop.objectReferences.Length == 1)
+                    obj = DragAndDrop.objectReferences[0];
+                else
+                    obj = AssetDatabase.LoadAssetAtPath<Object>(path);
+
+                if (SetObject(property, obj, out guid))
+                {
+                    aaSettings = AddressableAssetSettingsDefaultObject.GetSettings(true);
+                    var entry = aaSettings.FindAssetEntry(guid);
+                    if (entry == null && !string.IsNullOrEmpty(guid))
+                    {
+                        string assetName;
+                        if (!aaSettings.IsAssetPathInAddressableDirectory(path, out assetName))
+                        {
+                            aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup);
+                            newGuid = guid;
                         }
                     }
                 }

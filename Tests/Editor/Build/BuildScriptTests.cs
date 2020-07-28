@@ -9,6 +9,7 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.TestTools;
 
 namespace UnityEditor.AddressableAssets.Tests
@@ -178,9 +179,12 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        public void Building_CreatesPerformanceReport()
+        public void Building_CreatesPerformanceReportWithMetaData()
         {
             Settings.BuildPlayerContentImpl();
+            string text = File.ReadAllText("Library/com.unity.addressables/AddressablesBuildTEP.json");
+            StringAssert.Contains(AddressablesVersion.kPackageVersion, text);
+            StringAssert.Contains(AddressablesVersion.kPackageName, text);
             FileAssert.Exists("Library/com.unity.addressables/AddressablesBuildTEP.json");
         }
 
@@ -254,7 +258,9 @@ namespace UnityEditor.AddressableAssets.Tests
                     db.BuildData<AddressablesPlayerBuildResult>(context);
                 else if (db.CanBuildData<AddressablesPlayModeBuildResult>())
                     db.BuildData<AddressablesPlayModeBuildResult>(context);
-                LogAssert.Expect(LogType.Error, $"Address '{entry.address}' cannot contain '[ ]'.");
+                string error = "Build Task GenerateLocationListsTask failed with exception:" +
+                    "Address '[test]' cannot contain '[ ]'.";
+                LogAssert.Expect(LogType.Error, new Regex(@"Address \'\[test\]\' cannot contain \'\[ \]\'"));
             }
 
             Settings.RemoveAssetEntry(m_AssetGUID, false);

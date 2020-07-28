@@ -4,7 +4,29 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [1.12.0] - 2020-06-15
+## [1.13.1] - 2020-07-28
+- Made `AssetReferenceT<TObject>` be Serializable.  This will only matter if using Unity 2020.1 or later.
+- Added AddressableAssetSettings.ContiguousBundles option, which when enabled will improve asset loading times.
+  - In testing, performance improvements varied from 10% improvement over all, with improvements up to 50% for large complex assets such as extensive UI prefabs.
+- Add New Build unclickable No Build Script Available option when no valid builder is found and added line in docs to explain what is needed
+- Fixed bug where dragging a non addressable asset from an addressable folder in project viewer to AssetReference field would mark the asset as addressable and put it in the default group
+- Fixed bug where enumerate exception is being thrown when expanding a group folder containing subfolders in the Addressable Groups window.
+- Changed to only ask to convert legacy bundles when AddressableAssetSettings is first created or when selected from the Tools menu
+- Fixed bug where clicking on an AssetReference property won't ping the referenced asset in the Project window.
+- Fixed bug where GetDownloadSizeAsync was returning non-zero values for cached AssetBundles.
+- Removed Event Viewer Record button because it didn't do anything.
+- Fixed bug where changes made through the AddressableAssetProfileSettings API would not be immediately represented in the Profiles Window.
+- Fixed bug where Instantiation and EventCount events in the Event Viewer would not update as expected.
+- Fixed bug where events that occurred immediately after entering play mode would not be properly represented in the Event Viewer.
+- Added Documentation for the following:
+  - LoadAssetAsync
+  - LoadAssetsAsync
+  - InitializeAsync
+  - TransformInternalId
+- Fixed bug where changing the value of "Optimize Mesh Data" in PlayerSettings doesn't affect bundle building until the old build cache is deleted.
+- Expanded bundle dependencies so that loaded bundles maintain a reference to all bundle they references. This fixes various bugs when unloading and reloading a bundle that is being referenced by another bundle.
+
+## [1.12.0] - 2020-07-14
 - Implemented Undo/Redo capability for the Profiles Window.
 - Fixed bug where the Profiles Window would occasionally throw a NullReferenceException when making a new profile.
 - Added RenameProfile to the AddressableAssetsProfileSettings API

@@ -24,6 +24,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         public AddressableAssetsBundleBuildParameters(AddressableAssetSettings aaSettings, Dictionary<string, string> bundleToAssetGroup, BuildTarget target, BuildTargetGroup group, string outputFolder) : base(target, group, outputFolder)
         {
             UseCache = true;
+            ContiguousBundles = aaSettings.ContiguousBundles;
             m_settings = aaSettings;
             m_bundleToAssetGroup = bundleToAssetGroup;
 

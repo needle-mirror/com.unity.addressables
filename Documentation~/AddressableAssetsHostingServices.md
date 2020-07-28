@@ -10,7 +10,7 @@ Moving from Editor Play mode testing to platform application build testing intro
 You can deploy Asset Hosting Services into a server environment by running in batch mode (headless) to host content for both intranet- and internet-facing Unity application clients.
 
 ## Setup
-This article details the initial setup of Asset Hosting Services for your Project. While the setup guide focuses on Editor workflows, you can use the API to configure Hosting Services by setting the [`HostingServicesManager`](../api/UnityEditor.AddressableAssets.HostingServices.HostingServicesManager.html) property of the [`AddressableAssetSettings`](../api/UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.html) class.
+This article details the initial setup of Asset Hosting Services for your project. While the setup guide focuses on Editor workflows, you can use the API to configure Hosting Services by setting the [`HostingServicesManager`](../api/UnityEditor.AddressableAssets.HostingServices.HostingServicesManager.html) property of the [`AddressableAssetSettings`](../api/UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.html) class.
 
 ### Configuring a new Hosting Service
 Use the **Hosting window** to add, configure, and enable new Hosting Services. In the Editor, select **Window** > **Asset Management** > **Addressables** > **Hosting**, or click the **Tools** > **Hosting Services** button from the **Addressables Groups** window menu to access the **Addressables Hosting** window.
@@ -48,7 +48,7 @@ _Creating a service profile._
 
 Modify the loading path fields to instead load from the Hosting Service. [`HttpHostingService`](../api/UnityEditor.AddressableAssets.HostingServices.HttpHostingService.html) is a URL that uses the local IP address and the port assigned to the service. From the **Addressables Hosting** window, you can use the profile variables named `PrivateIpAddress` and `HostingServicePort` to construct the URL (for example, `http://[PrivateIpAddress]:[HostingServicePort]`).
 
-Additionally, you should modify all build path variables to point to a common directory outside of the Project's _Assets_ folder.
+Additionally, you should modify all build path variables to point to a common directory outside of the project's `Assets` folder.
 
 ![Configuring the service's profile.](images/HostingServicesProfiles_2.png)</br>
 _Configuring the service's profile._

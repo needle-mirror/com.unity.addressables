@@ -6,9 +6,9 @@ For each profile, you specify values for each variable. This way, instead of man
 ## Profile Setup
 
 There are multiple ways to access the Profile setup window in the Editor.
-* Select **Windows** > **Asset Management** > **Addressables** > **Profiles**.
-* Select **Windows** > **Asset Management** > **Addressables** > **Groups**, then select **Tools** > **Profiles**.
-* Select **Windows** > **Asset Management** > **Addressables** > **Groups**, then select **Profile** > **Manage Profiles**..
+* Select **Window** > **Asset Management** > **Addressables** > **Profiles**.
+* Select **Window** > **Asset Management** > **Addressables** > **Groups**, then select **Tools** > **Profiles**.
+* Select **Window** > **Asset Management** > **Addressables** > **Groups**, then select **Profile** > **Manage Profiles**..
 * You can also access these settings via the `AddressableAssetSettings` Inspector.
 
 ![Creating a service profile.](images/HostingServicesProfiles_1.png)</br>
@@ -39,8 +39,8 @@ Right-click the variable name to rename or delete the variable. You can likewise
 All variables are of type "string". In general, you can type in exactly the needed path or value, but there are two additional syntax designators allowed:
 * Square brackets [ ]. Items surrounded by square brackets are evaluated at build time. The values inside can be other profile variables (such as [BuildTarget]) or code variables (such as [UnityEditor.EditorUserBuildSettings.activeBuildTarget]). During build time, as the groups are being processed, the items inside square brackets are evaluated and the resulting string is written into the catalog.
 * Curly brackets { }. Items surrounded by curly brackets are evaluated at runtime. Generally values here will be code variables (such as {UnityEngine.AddressableAssets.Addressables.RuntimePath}).
-<br/>For example, you have a load path of: _{MyNamespace.MyClass.MyURL}/content/[BuildTarget]}_
-set on a group that is creating an asset bundle called "trees.bundle". During the build, the catalog would register the load path for that bundle as _{MyNamespace.MyClass.MyURL}/content/Android/trees.bundle}_. Then, at startup, as the catalog is being processed, the profile system would evaluate MyNamespace.MyClass.MyURL to end up with the final load path of `http://myinternet.com/content/Android/trees.bundle`.
+<br/>For example, you have a load path of: `{MyNamespace.MyClass.MyURL}/content/[BuildTarget]}`
+set on a group that is creating an AssetBundle called "trees.bundle". During the build, the catalog would register the load path for that bundle as `{MyNamespace.MyClass.MyURL}/content/Android/trees.bundle}`. Then, at startup, as the catalog is being processed, the profile system would evaluate MyNamespace.MyClass.MyURL to end up with the final load path of `http://myinternet.com/content/Android/trees.bundle`.
 
 ## Specifying packing and loading paths
 Once you set up the necessary variables in your profile, you can select the build and load paths for an asset group based on those specified variables.
@@ -56,10 +56,10 @@ Consider the following example, demonstrating the local development phase of you
 ![Creating a service profile.](images/ProfilesExample1.png)</br>
 _Content with local and remote bundles stored locally for development._
 
-While in development, you would have both your local and remote bundles using local paths, as seen in the "Local" row below.
+While in development, you would have both your local and remote bundles using local paths, as seen below.
 
 ![Creating a service profile.](images/ProfilesExample3.png)</br>
-_Paths set for local development and production._
+_Paths set for local development._
 
 In this instance, you can see that the local and remote paths are in fact local, which makes more sense for development, as setting up a remote server would be a pain. However, once the content is ready for production, you would move the remote bundles to a server, as the diagram below shows.
 

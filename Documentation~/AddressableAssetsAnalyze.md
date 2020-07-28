@@ -13,7 +13,7 @@ The Analyze window displays a list of Analyze rules, along with the following op
 ### The analyze operation
 The analyze operation is the information-gathering step of the rule. Running this action on a rule or set of rules gathers data about the build, dependency maps, and more. Each rule is responsible for gathering the desired data and reporting it back as a list of [`AnalyzeResult`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.AnalyzeResult.html) objects.
 
-No action should be taken to modify any data or the state of the Project during the analyze step. Based on the data gathered in this step, the [fix](#the-fix-operation) operation may be the appropriate course of action. Some rules, however, only contain an analyze step, as no reasonably appropriate and universal action can be taken based on the information gathered. [_Check Scene to Addressable Duplicate Dependencies_](#check-scene-to-addressable-duplicate-dependencies) and [_Check Resources to Addressable Duplicate Dependencies_](#check-resources-to-addressable-duplicate-dependencies) are examples of such rules.
+No action should be taken to modify any data or the state of the Project during the analyze step. Based on the data gathered in this step, the [fix](#the-fix-operation) operation may be the appropriate course of action. Some rules, however, only contain an analyze step, as no reasonably appropriate and universal action can be taken based on the information gathered. [Check Scene to Addressable Duplicate Dependencies](#check-scene-to-addressable-duplicate-dependencies) and [Check Resources to Addressable Duplicate Dependencies](#check-resources-to-addressable-duplicate-dependencies) are examples of such rules.
 
 Rules that are purely informational and contain no fix operation are categorized as **Unfixable Rules**. Those that do have a fix operation are categorized as **Fixable Rules**.
 
@@ -23,7 +23,7 @@ This operation will remove any data gathered by the analysis and update the `Tre
 ### The fix operation
 For **Fixable Rules**, you may choose to run the fix operation. This uses data gathered during the analyze step to perform any necessary modifications and resolve the issues.
 
-[_Check Duplicate Bundle Dependencies_](#check-duplicate-bundle-dependencies) is an example of a fixable rule, because there is a reasonably appropriate action that can be taken to resolve the issues detected in the analysis.
+[Check Duplicate Bundle Dependencies](#check-duplicate-bundle-dependencies) is an example of a fixable rule, because there is a reasonably appropriate action that can be taken to resolve the issues detected in the analysis.
 
 ## Provided Analyze rules
 ### Fixable rules
@@ -40,11 +40,11 @@ Also note that duplicate assets may not always be an issue. If assets will never
 
 ### Unfixable rules
 #### Check Resources to Addressable Duplicate Dependencies
-This rule detects if any assets or asset dependencies are duplicated between built Addressable data and assets residing in a _Resources_ folder. 
+This rule detects if any assets or asset dependencies are duplicated between built Addressable data and assets residing in a `Resources` folder. 
 
 **Issues**: These duplications mean that data will be included in both the application build and the Addressables build.
 
-**Resolution**: This rule is unfixable, because no appropriate action exists. It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any. One example of a possible manual fix is to move the offending asset(s) out of the _Resources_ folder, and make them Addressable.
+**Resolution**: This rule is unfixable, because no appropriate action exists. It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any. One example of a possible manual fix is to move the offending asset(s) out of the `Resources` folder, and make them Addressable.
 
 #### Check Scene to Addressable Duplicate Dependencies
 This rule detects any assets or asset dependencies that are shared between the Scenes in the Editor Scene list and Addressables. 

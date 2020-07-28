@@ -9,15 +9,30 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
     [Serializable]
     class EventDataPlayerSession
     {
-        EventDataSet m_RootStreamEntry = new EventDataSet(0, null, null, -1);
+        internal EventDataSet m_RootStreamEntry = new EventDataSet(0, null, null, -1);
+        internal EventDataSet m_EventCountDataSet;
+        internal EventDataSet m_InstantitationCountDataSet;
+        
+        internal Dictionary<int, EventDataSet> m_DataSets = new Dictionary<int, EventDataSet>();
+        Dictionary<int, HashSet<int>> m_objectToParents = new Dictionary<int, HashSet<int>>();
+        internal Dictionary<int, List<DiagnosticEvent>> m_FrameEvents = new Dictionary<int, List<DiagnosticEvent>>();
+        
+        internal List<EvtQueueData> m_Queue = new List<EvtQueueData>();
+        
+        
         string m_EventName;
         int m_PlayerId;
         bool m_IsActive;
         int m_LatestFrame;
         int m_StartFrame;
-        int m_FrameCount = 300;
-        Dictionary<int, List<DiagnosticEvent>> m_FrameEvents = new Dictionary<int, List<DiagnosticEvent>>();
+        int m_LastInstantiationFrame = -1;
+        int m_LastFrameInstantiationCount = 0;
+        int m_LastFrameWithEvents = -1;
 
+        const int k_DestroyEventFrameDelay = 30;
+        
+        int m_FrameCount = 300;
+        
         public EventDataSet RootStreamEntry { get { return m_RootStreamEntry; } }
         public string EventName { get { return m_EventName; } }
         public int PlayerId { get { return m_PlayerId; } }
@@ -25,9 +40,9 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         public int LatestFrame { get { return m_LatestFrame; } }
         public int StartFrame { get { return m_StartFrame; } }
         public int FrameCount { get { return m_FrameCount; } }
+      
+        public EventDataPlayerSession() { }
 
-
-        public EventDataPlayerSession() {}
         public EventDataPlayerSession(string eventName, int playerId)
         {
             m_EventName = eventName;
@@ -39,11 +54,11 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         {
             RootStreamEntry.Clear();
             m_FrameEvents.Clear();
-            lastFrameWithEvents = -1;
-            lastInstantiationCountValue = 0;
-            m_eventCountDataSet = null;
-            m_instantitationCountDataSet = null;
-            m_dataSets.Clear();
+            m_LastFrameWithEvents = -1;
+            m_LastFrameInstantiationCount = 0;
+            m_EventCountDataSet = null;
+            m_InstantitationCountDataSet = null;
+            m_DataSets.Clear();
             m_objectToParents.Clear();
         }
 
@@ -55,111 +70,126 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             return null;
         }
 
-        Dictionary<int, EventDataSet> m_dataSets = new Dictionary<int, EventDataSet>();
-        Dictionary<int, HashSet<int>> m_objectToParents = new Dictionary<int, HashSet<int>>();
-        int lastInstantiationCountFrame = -1;
-        int lastInstantiationCountValue = 0;
-
-        int lastFrameWithEvents = -1;
-        EventDataSet m_eventCountDataSet;
-        EventDataSet m_instantitationCountDataSet;
-
-        class EvtQueueData
+        internal class EvtQueueData
         {
             public DiagnosticEvent Event;
             public int frameDelay;
         }
 
-        List<EvtQueueData> m_Queue = new List<EvtQueueData>();
-
         internal void AddSample(DiagnosticEvent evt, bool recordEvent, ref bool entryCreated)
         {
             m_LatestFrame = evt.Frame;
             m_StartFrame = m_LatestFrame - m_FrameCount;
+            entryCreated = false;
+            
+            bool countedAllRecordedEventsOnCurrentFrame = evt.Frame > m_LastFrameWithEvents
+                && m_LastFrameWithEvents >= 0
+                && m_FrameEvents[m_LastFrameWithEvents] != null 
+                && m_FrameEvents[m_LastFrameWithEvents].Count > 0
+                && m_EventCountDataSet != null;
 
-            if (recordEvent && !evt.DisplayName.StartsWith("Instance"))
+            //once all recorded events on a given frame have been logged in m_FrameEvents, create a sample for alevents
+            if (countedAllRecordedEventsOnCurrentFrame)
             {
-                List<DiagnosticEvent> frameEvents;
-                if (!m_FrameEvents.TryGetValue(evt.Frame, out frameEvents))
-                {
-                    if (lastFrameWithEvents >= 0)
-                    {
-                        if (m_eventCountDataSet == null)
-                        {
-                            m_eventCountDataSet = new EventDataSet(0, "EventCount", "Event Counts", EventDataSet.kEventCountSortOrder);
-                            RootStreamEntry.AddChild(m_eventCountDataSet);
-                        }
-                        m_eventCountDataSet.AddSample(0, lastFrameWithEvents, m_FrameEvents[lastFrameWithEvents].Count);
-                    }
-                    lastFrameWithEvents = evt.Frame;
-                    m_FrameEvents.Add(evt.Frame, frameEvents = new List<DiagnosticEvent>());
-                }
-                frameEvents.Add(evt);
+                m_EventCountDataSet.AddSample(0, m_LastFrameWithEvents, m_FrameEvents[m_LastFrameWithEvents].Count);
             }
 
+            // Registers events under "Event Counts" (excluding instantiations)
+            if (recordEvent && !evt.DisplayName.StartsWith("Instance"))
+            {
+                HandleRecordedEvent(evt);
+            }
+            
+            bool countedAllInstantiationEventsOnCurrentFrame = evt.Frame > m_LastInstantiationFrame 
+                && m_LastInstantiationFrame >= 0 
+                && m_LastFrameInstantiationCount > 0
+                && m_InstantitationCountDataSet != null;
+            
+            if (countedAllInstantiationEventsOnCurrentFrame)
+            {
+                m_InstantitationCountDataSet.AddSample(0, m_LastInstantiationFrame, m_LastFrameInstantiationCount);
+                m_LastFrameInstantiationCount = 0;
+            }
+            
             if (evt.DisplayName.StartsWith("Instance"))
             {
-                if (evt.Stream == (int)ResourceManager.DiagnosticEventType.AsyncOperationCreate)
-                {
-                    if (evt.Frame != lastInstantiationCountFrame)
-                    {
-                        if (lastInstantiationCountFrame >= 0 && lastInstantiationCountValue > 0)
-                        {
-                            if (m_instantitationCountDataSet == null)
-                            {
-                                m_instantitationCountDataSet = new EventDataSet(1, "InstantiationCount", "Instantiation Counts", EventDataSet.kInstanceCountSortOrder);
-                                RootStreamEntry.AddChild(m_instantitationCountDataSet);
-                            }
-                            m_instantitationCountDataSet.AddSample(0, lastInstantiationCountFrame, lastInstantiationCountValue);
-                        }
-                        lastInstantiationCountFrame = evt.Frame;
-                        lastInstantiationCountValue = 0;
-                    }
-                    lastInstantiationCountValue++;
-                }
+                if ((ResourceManager.DiagnosticEventType) evt.Stream == ResourceManager.DiagnosticEventType.AsyncOperationCreate)
+                    HandleInstantiationEvent(evt);
                 return;
             }
 
             //if creation event, create a data set and update all dependecies
-            if (!m_dataSets.ContainsKey(evt.ObjectId))
+            if (!m_DataSets.ContainsKey(evt.ObjectId))
             {
-                var ds = new EventDataSet(evt);
-                m_dataSets.Add(evt.ObjectId, ds);
-                if (evt.Dependencies != null)
-                {
-                    foreach (var d in evt.Dependencies)
-                    {
-                        EventDataSet depDS;
-                        if (m_dataSets.TryGetValue(d, out depDS))
-                        {
-                            ds.AddChild(depDS);
-                            HashSet<int> depParents = null;
-                            if (!m_objectToParents.TryGetValue(d, out depParents))
-                            {
-                                RootStreamEntry.RemoveChild(d);
-                                m_objectToParents.Add(d, depParents = new HashSet<int>());
-                            }
-                            depParents.Add(evt.ObjectId);
-                        }
-                    }
-                }
-                if (!m_objectToParents.ContainsKey(evt.ObjectId))
-                    RootStreamEntry.AddChild(ds);
+                HandleEventDataSetCreation(evt);
+                entryCreated = true;
             }
-
-
+            
             EventDataSet data = null;
-            if (m_dataSets.TryGetValue(evt.ObjectId, out data))
+            if (m_DataSets.TryGetValue(evt.ObjectId, out data))
             {
                 data.AddSample(evt.Stream, evt.Frame, evt.Value);
             }
-
-            if (evt.Stream == (int)ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
+            
+            if ((ResourceManager.DiagnosticEventType) evt.Stream == ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
             {
-                m_Queue.Add(new EvtQueueData { Event = evt, frameDelay = 50 });
+                m_Queue.Add(new EvtQueueData { Event = evt, frameDelay = k_DestroyEventFrameDelay});
             }
         }
+        
+        internal void HandleRecordedEvent(DiagnosticEvent evt)
+        {
+            List<DiagnosticEvent> frameEvents;
+            if (!m_FrameEvents.TryGetValue(evt.Frame, out frameEvents))
+            {
+                if (m_EventCountDataSet == null)
+                {
+                    m_EventCountDataSet = new EventDataSet(0, "EventCount", "Event Counts", EventDataSet.k_EventCountSortOrder);
+                    RootStreamEntry.AddChild(m_EventCountDataSet);
+                }
+                m_LastFrameWithEvents = evt.Frame;
+                m_FrameEvents.Add(evt.Frame, frameEvents = new List<DiagnosticEvent>());
+            }
+            frameEvents.Add(evt);
+        }
 
+        internal void HandleInstantiationEvent(DiagnosticEvent evt)
+        {
+            if (m_InstantitationCountDataSet == null)
+            {
+                    m_InstantitationCountDataSet = new EventDataSet(1, "InstantiationCount", "Instantiation Counts", EventDataSet.k_InstanceCountSortOrder);
+                    RootStreamEntry.AddChild(m_InstantitationCountDataSet);
+            }
+            m_LastInstantiationFrame = evt.Frame;
+            m_LastFrameInstantiationCount++;
+        }
+
+        internal void HandleEventDataSetCreation(DiagnosticEvent evt)
+        {
+            var ds = new EventDataSet(evt);
+            m_DataSets.Add(evt.ObjectId, ds);
+            if (evt.Dependencies != null)
+            {
+                foreach (var d in evt.Dependencies)
+                {
+                    EventDataSet depDS;
+                    if (m_DataSets.TryGetValue(d, out depDS))
+                    {
+                        ds.AddChild(depDS);
+                        HashSet<int> depParents = null;
+                        if (!m_objectToParents.TryGetValue(d, out depParents))
+                        {
+                            RootStreamEntry.RemoveChild(d);
+                            m_objectToParents.Add(d, depParents = new HashSet<int>());
+                        }
+                        depParents.Add(evt.ObjectId);
+                    }
+                }
+            }
+            if (!m_objectToParents.ContainsKey(evt.ObjectId))
+                RootStreamEntry.AddChild(ds);
+        }  
+        
         public void Update()
         {
             foreach (var q in m_Queue)
@@ -174,7 +204,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             m_Queue.RemoveAll(q => q.frameDelay < 1);
         }
 
-        void HandleOperationDestroy(DiagnosticEvent evt)
+        internal void HandleOperationDestroy(DiagnosticEvent evt)
         {
             if (evt.Dependencies != null)
             {
@@ -187,21 +217,21 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
                         if (depParents.Count == 0)
                         {
                             m_objectToParents.Remove(d);
-                            RootStreamEntry.AddChild(m_dataSets[d]);
+                            RootStreamEntry.AddChild(m_DataSets[d]);
                         }
                     }
                 }
             }
-            m_dataSets.Remove(evt.ObjectId);
+            m_DataSets.Remove(evt.ObjectId);
 
             HashSet<int> parents = null;
             if (m_objectToParents.TryGetValue(evt.ObjectId, out parents))
             {
-                foreach (var p in parents)
+                foreach (var parentId in parents)
                 {
-                    EventDataSet pp;
-                    if (m_dataSets.TryGetValue(p, out pp))
-                        pp.RemoveChild(evt.ObjectId);
+                    EventDataSet parent;
+                    if (m_DataSets.TryGetValue(parentId, out parent))
+                        parent.RemoveChild(evt.ObjectId);
                 }
             }
             else

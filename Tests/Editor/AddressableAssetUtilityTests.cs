@@ -10,7 +10,7 @@ using UnityEngine.Audio;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
-    public class AddressableAssetUtilityTests
+    public class AddressableAssetUtilityTests : AddressableAssetTestBase
     {
         [Test]
         public void IsInResourcesProperlyHandlesCase()
@@ -99,6 +99,46 @@ namespace UnityEditor.AddressableAssets.Tests
             {
                 var type = AddressableAssetUtility.MapEditorTypeToRuntimeType(key, false);
                 Assert.AreEqual(type, conversionMapping[key]);
+            }
+        }
+
+        [TestCase(1, TestName = "OneBundle")]
+        [TestCase(5, TestName = "MultipleBundles")]
+        [Test]
+        public void AddressableAssetUtility_ConvertAssetBundlesToAddressables_CanConvertBundles(int numBundles)
+        {
+            // Setup
+            var prevGroupCount = Settings.groups.Count;
+            var testAssetGUIDs = new List<string>();
+            for (int i = 0; i < numBundles; i++)
+            {
+                var testObject = new GameObject("TestObjectForBundles" + i);
+#if UNITY_2018_3_OR_NEWER
+                PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/testasset" + i + ".prefab");
+#else
+                PrefabUtility.CreatePrefab(k_TestConfigFolder + "/testasset" + i + ".prefab", testObject);
+#endif
+                testAssetGUIDs.Add(AssetDatabase.AssetPathToGUID(ConfigFolder + "/testasset" + i + ".prefab"));
+                var importer = AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(testAssetGUIDs[i]));
+                importer.assetBundleName = "testAssetBundleName" + i;
+                AssetDatabase.SaveAssets();
+            }
+            AddressableAssetSettingsDefaultObject.Settings = Settings;
+
+            // Test
+            AddressableAssetUtility.ConvertAssetBundlesToAddressables();
+            Assert.AreEqual(prevGroupCount + numBundles, Settings.groups.Count);
+            Assert.AreEqual(0, AssetDatabase.GetAllAssetBundleNames().Length);
+            for (int i = 0; i < numBundles; i++)
+            {
+                Assert.NotNull(Settings.FindAssetEntry(testAssetGUIDs[i]));
+            }
+
+            // Cleanup
+            for (int i = 0; i < numBundles; i++)
+            {
+                var lastGroupIndex = AddressableAssetSettingsDefaultObject.Settings.groups.Count - 1;
+                AddressableAssetSettingsDefaultObject.Settings.RemoveGroup(AddressableAssetSettingsDefaultObject.Settings.groups[lastGroupIndex]);
             }
         }
     }

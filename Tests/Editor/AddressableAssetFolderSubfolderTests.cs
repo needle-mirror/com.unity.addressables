@@ -175,20 +175,93 @@ namespace UnityEditor.AddressableAssets.Tests
             string path = "PathDoesntExist";
             Exception ex = Assert.Throws<Exception>(() =>
             {
-                EnumerateAddressableFolder(path, Settings, true);
+                EnumerateAddressableFolder(path, Settings, false);
             });
-            Assert.AreEqual($"Path {path} was not in the enumeration tree", ex.Message);
+            Assert.AreEqual($"Path {path} cannot be enumerated because it does not exist", ex.Message);
         }
 
         [Test]
-        public void WhenPathIsNonAddrAndContainsAddrAssets_EnumerateFiles_ThrowsException()
+        public void WhenPathIsNotInTree_EnumerateFiles_ReturnsFiles()
         {
-            string path = m_TestFolderPath;
-            Exception ex = Assert.Throws<Exception>(() =>
+            string path = m_AddrParentFolderPath + "/ChildFolder";
+            string guid = AssetDatabase.CreateFolder(m_AddrParentFolderPath, "ChildFolder");
+
+            GameObject obj = new GameObject("TestObject");
+            string objPath = path + "/childObj.prefab";
+#if UNITY_2018_3_OR_NEWER
+            PrefabUtility.SaveAsPrefabAsset(obj, objPath);
+#else
+            PrefabUtility.CreatePrefab(objPath, obj);
+#endif
+            List<string> assetPaths = EnumerateAddressableFolder(path, Settings, true);
+            Assert.AreEqual(1, assetPaths.Count);
+            Assert.AreEqual(objPath, assetPaths[0]);
+
+            AssetDatabase.DeleteAsset(path);
+        }
+
+        [Test]
+        public void WhenNoFolderIsAddressable_EnumerateFiles_ReturnsNothing()
+        {
+            string parentFolderGuid = AssetDatabase.AssetPathToGUID(m_AddrParentFolderPath);
+            string childFolderGuid = AssetDatabase.AssetPathToGUID(m_AddrChildSubfolderPath);
+            Settings.RemoveAssetEntry(parentFolderGuid);
+            Settings.RemoveAssetEntry(childFolderGuid);
+
+            using (var cache = new AddressablesFileEnumerationCache(Settings, true, null))
             {
-                EnumerateAddressableFolder(path, Settings, true);
-            });
-            Assert.AreEqual($"Path {path} cannot be enumerated because it is not addressable", ex.Message);
+                List<string> assetPaths = EnumerateAddressableFolder(m_TestFolderPath, Settings, false);
+                Assert.AreEqual(0, assetPaths.Count);
+            }
+
+            Settings.CreateOrMoveEntry(parentFolderGuid, m_ParentGroup);
+            Settings.CreateOrMoveEntry(childFolderGuid, m_ChildGroup);
+        }
+
+        [Test]
+        public void WhenAFolderIsAddressable_FileEnumerationCache_CreatesFileTree()
+        {
+            using (var cache = new AddressablesFileEnumerationCache(Settings, false, null))
+            {
+                Assert.IsTrue(m_PrecomputedTree != null);
+            }
+        }
+
+        [Test]
+        public void WhenNoFolderIsAddressable_FileEnumerationCache_DoesNotCreateFileTree()
+        {
+            string parentFolderGuid = AssetDatabase.AssetPathToGUID(m_AddrParentFolderPath);
+            string childFolderGuid = AssetDatabase.AssetPathToGUID(m_AddrChildSubfolderPath);
+            Settings.RemoveAssetEntry(parentFolderGuid);
+            Settings.RemoveAssetEntry(childFolderGuid);
+
+            using (var cache = new AddressablesFileEnumerationCache(Settings, true, null))
+            {
+                Assert.IsTrue(m_PrecomputedTree == null);
+            }
+
+            Settings.CreateOrMoveEntry(parentFolderGuid, m_ParentGroup);
+            Settings.CreateOrMoveEntry(childFolderGuid, m_ChildGroup);
+        }
+
+        [Test]
+        public void WhenPrepopulateAssetsIsTrue_FileEnumerationCache_AddsAllAssetsToTree()
+        {
+            using (var cache = new AddressablesFileEnumerationCache(Settings, true, null))
+            {
+                AddressableAssetTree.TreeNode node = m_PrecomputedTree.FindNode(m_ChildObjPath, false);
+                Assert.IsTrue(node != null);
+            }
+        }
+
+        [Test]
+        public void WhenPrepopulateAssetsIsFalse_FileEnumerationCache_OnlyAddsAddressablesToTree()
+        {
+            using (var cache = new AddressablesFileEnumerationCache(Settings, false, null))
+            {
+                AddressableAssetTree.TreeNode node = m_PrecomputedTree.FindNode(m_ChildObjPath, false);
+                Assert.IsTrue(node == null);
+            }
         }
     }
 }

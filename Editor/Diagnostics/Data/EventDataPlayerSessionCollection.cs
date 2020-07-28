@@ -15,13 +15,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             m_OnRecordEvent = onRecordEvent;
         }
 
-        bool RecordEvent(DiagnosticEvent e)
+        internal bool RecordEvent(DiagnosticEvent e)
         {
             if (m_OnRecordEvent != null)
                 return m_OnRecordEvent(e);
             return false;
         }
-
+        
         public bool ProcessEvent(DiagnosticEvent diagnosticEvent, int sessionId)
         {
             var session = GetPlayerSession(sessionId, true);
@@ -54,7 +54,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
 
         public string[] GetConnectionNames()
         {
-            string[] names = new string[m_PlayerSessions.Count];// + 1];
+            string[] names = new string[m_PlayerSessions.Count];
             for (int i = 0; i < m_PlayerSessions.Count; i++)
                 names[i] = m_PlayerSessions[i].EventName;
             return names;

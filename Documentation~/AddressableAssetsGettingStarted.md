@@ -25,9 +25,9 @@ Select **Window** > **Asset Management** > **Addressables** > **Groups** to open
 _Marking an asset as Addressable in the **Addressables Groups** window._
 
 ### Specifying an address
-The default address for your asset is the path to the asset in your Project (for example, _Assets/images/myImage.png_). To change the asset's address from the **Addressables Groups** window, right-click the asset and select **Change Address**.
+The default address for your asset is the path to the asset in your project (for example, `Assets/images/myImage.png`). To change the asset's address from the **Addressables Groups** window, right-click the asset and select **Change Address**.
 
-When you first start using Addressable Assets, the system saves some edit-time and runtime data assets for your Project in the _Assets/AddressableAssetsData_ file, which should be added to your version control check-in.
+When you first start using Addressable Assets, the system saves some edit-time and runtime data assets for your project in the `Assets/AddressableAssetsData` file, which should be added to your version control check-in.
 
 ### Building your Addressable content
 The Addressables Asset System needs to build your content into files that can be consumed by the running game before you build the application. This step is not automatic. You can build this content via the Editor or API:
@@ -51,7 +51,7 @@ If you want to modify the group again, make sure to close all projects that use 
 
 ## Using Addressable Assets
 ### Loading or instantiating by address
-You can load or instantiate an Addressable Asset at runtime. Loading an asset loads all dependencies into memory (including the asset's bundle data if applicable), allowing you to use the asset when you need to.  This does not actually put the desired asset into your scene. To add the asset to your scene you must instantiate.  Using Addressables instantiation interfaces will load the asset, then immediately adds it to your Scene. 
+You can load or instantiate an Addressable Asset at runtime. Loading an asset loads all dependencies into memory (including the AssetBundle data if applicable), allowing you to use the asset when you need to.  This does not actually put the desired asset into your scene. To add the asset to your scene you must instantiate.  Using Addressables instantiation interfaces will load the asset, then immediately adds it to your Scene. 
 
 To access an asset from your game script using a string address, declare the [`UnityEngine.AddressableAssets`](../api/UnityEngine.AddressableAssets.html) namespace, then call the following methods:
 
@@ -117,7 +117,7 @@ The [`AssetReference`](../api/UnityEngine.AddressableAssets.AssetReference.html)
 1. Select a GameObject from your Scene hierarchy or **Project** window.
 2. In the Inspector, click the **Add Component** button, then select the component type. Any serializable component can support an `AssetReference` variable (for example, a game script, ScriptableObject, or other serializable class).
 3. Add a public `AssetReference` variable in the component (for example, `public AssetReference explosion;`).
-4. In the Inspector, select which Addressable Asset to link to the object, by either dragging the asset from the **Project** window into the exposed `AssetReference` field, or choosing from the dropdown of previously defined Addressable Assets in your Project (shown below).
+4. In the Inspector, select which Addressable Asset to link to the object, by either dragging the asset from the **Project** window into the exposed `AssetReference` field, or choosing from the dropdown of previously defined Addressable Assets in your project (shown below).
 
 ![Referencing an Addressable Asset via script component.](images/Inspectorreferenceselection2.png)</br>
 _Referencing an Addressable Asset via script component._
@@ -142,19 +142,19 @@ If an asset that contains sub-assets (such as a SpriteAtlas or FBX) is added to 
 
 ## Build considerations
 ### Local data in StreamingAssets
-The Addressable Asset System needs some files at runtime to know what to load and how to load it. Those files are generated when you build Addressables data and wind up in the _StreamingAssets_ folder, which is a special folder in Unity that includes all its files in the build. When you build Addressables content, the system stages those files in the Library. Then, when you build the application, the system copies the required files over to _StreamingAssets_, builds, and deletes them from the folder. This way, you can build data for multiple platforms while only having the relevant data included in each build. 
+The Addressable Asset System needs some files at runtime to know what to load and how to load it. Those files are generated when you build Addressables data and wind up in the `StreamingAssets` folder, which is a special folder in Unity that includes all its files in the build. When you build Addressables content, the system stages those files in the Library. Then, when you build the application, the system copies the required files over to `StreamingAssets`, builds, and deletes them from the folder. This way, you can build data for multiple platforms while only having the relevant data included in each build. 
 
-In addition to the Addressables-specific data, any groups that build their data for local use will also use the Library platform-specific staging location. To verify that this works, set your build path and load paths to [profile variables](./AddressableAssetsProfiles.md) starting with `[UnityEngine.AddressableAssets.Addressables.BuildPath]` and `{UnityEngine.AddressableAssets.Addressables.RuntimePath}` respectively. You can specify these settings in the `AddressableAssetSettings` Inspector (by default, this object is located in your Project's _Assets/AddressableAssetsData_ directory).
+In addition to the Addressables-specific data, any groups that build their data for local use will also use the Library platform-specific staging location. To verify that this works, set your build path and load paths to [profile variables](./AddressableAssetsProfiles.md) starting with `[UnityEngine.AddressableAssets.Addressables.BuildPath]` and `{UnityEngine.AddressableAssets.Addressables.RuntimePath}` respectively. You can specify these settings in the `AddressableAssetSettings` Inspector (by default, this object is located in your project's `Assets/AddressableAssetsData` directory).
 
 ### Downloading in advance
-Calling the [`Addressables.DownloadDependenciesAsync()`](../api/UnityEngine.AddressableAssets.Addressables.html#UnityEngine_AddressableAssets_Addressables_DownloadDependenciesAsync_System_Object_System_Boolean_) method loads the dependencies for the address or label that you pass in. Typically, this is the asset bundle.
+Calling the [`Addressables.DownloadDependenciesAsync()`](../api/UnityEngine.AddressableAssets.Addressables.html#UnityEngine_AddressableAssets_Addressables_DownloadDependenciesAsync_System_Object_System_Boolean_) method loads the dependencies for the address or label that you pass in. Typically, this is the AssetBundle.
 
 The [`AsyncOperationHandle`](AddressableAssetsAsyncOperationHandle.md) struct returned by this call includes a `PercentComplete` attribute that you can use to monitor and display download progress. You can also have the app wait until the content has loaded.
 
 ##### Regarding `PercentComplete`
 `PercentComplete` takes into account several aspects of the underlying operations being handled by a single `AsyncOperationHandle`.  There may be instances where the progression isn't linear, or some semblance of linear.  This can be due to quick operations being weighted the same as operations that will take longer.
 
-For example, given an asset you wish to load from a remote location that takes a non-trival amount of time to download and is reliant on a local bundle as a dependcy you'll see your `PercentComplete` jump to 50% before contuning.  This is because the local bundle is able to be loaded much quicker than the remote bundle.  However, all the system is aware of is the need for 2 operations to be complete. 
+For example, given an asset you wish to load from a remote location that takes a non-trival amount of time to download and is reliant on a local bundle as a dependcy you'll see your `PercentComplete` jump to 50% before continuing.  This is because the local bundle is able to be loaded much quicker than the remote bundle.  However, all the system is aware of is the need for two operations to be complete. 
 
 If you wish to ask the user for consent prior to download, use [`Addressables.GetDownloadSize()`](../api/UnityEngine.AddressableAssets.Addressables.html#UnityEngine_AddressableAssets_Addressables_GetDownloadSize_System_Object_) to return how much space is needed to download the content from a given address or label. Note that this takes into account any previously downloaded bundles that are still in Unity's asset bundle cache.
 
@@ -166,7 +166,7 @@ While it can be advantageous to download assets for your app in advance, there a
 Rather than using the percent complete value to wait until the content is loaded, you can use the preload functionality to show that the download has started, then continue on. This implementation would require a loading or waiting screen to handle instances where the asset has not finished loading by the time it's needed.
 
 ### Building for multiple platforms
-The Addressable Asset System generates asset bundles containing your Addressable Assets when building application content. Asset bundles are platform-dependant, and thus must be rebuilt for every unique platform you intend to support.
+The Addressable Asset System generates AssetBundles containing your Addressable Assets when building application content. AssetBundles are platform-dependant, and thus must be rebuilt for every unique platform you intend to support.
 
 By default, when building Addressables app data, data for your given platform is stored in platform-specific subdirectories of the Addressables build path(s). The runtime path accounts for these platform folders, and points to the applicable app data.  
 
@@ -177,7 +177,7 @@ It is a good practice to logically collect assets into multiple groups rather th
 
 ### Building scenes that are packed together
 After running a build where you have multiple Scenes in an Addressable Assets group, those Scenes will become interdependent if:
-* Under _Packed Assets_ in the Project window, the group's Bundle Mode is set to **Pack Together**.
+* Under `Packed Assets` in the **Project** window, the group's Bundle Mode is set to **Pack Together**.
 * The Scenes in that group all have the same asset label, and the Bundle Mode is set to **Pack Together By Label**.
 
 If you modify even one of these grouped Scenes then perform a [content update build](AddressableAssetsDevelopmentCycle.md#building-for-content-updates), all the interdependent Scenes will move together into a new Content Update group.

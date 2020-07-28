@@ -148,7 +148,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
                         var bundleList = AssetDatabase.GetAllAssetBundleNames();
                         if (bundleList != null && bundleList.Length > 0)
-                            menu.AddItem(new GUIContent("Convert Legacy AssetBundles"), false, window.OfferToConvert);
+                            menu.AddItem(new GUIContent("Convert Legacy AssetBundles"), false, () => window.OfferToConvert(AddressableAssetSettingsDefaultObject.Settings));
 
                         menu.DropDown(rMode);
                     }
@@ -180,13 +180,20 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     //GUIUtility.hotControl = 0;
                     var menu = new GenericMenu();
+                    var AddressablesPlayerBuildResultBuilderExists = false;
                     for (int i = 0; i < settings.DataBuilders.Count; i++)
                     {
                         var m = settings.GetDataBuilder(i);
                         if (m.CanBuildData<AddressablesPlayerBuildResult>())
                         {
+                            AddressablesPlayerBuildResultBuilderExists = true;
                             menu.AddItem(new GUIContent("New Build/" + m.Name), false, OnBuildScript, i);
                         }
+                    }
+
+                    if (!AddressablesPlayerBuildResultBuilderExists)
+                    {
+                        menu.AddDisabledItem(new GUIContent("New Build/No Build Script Available"));
                     }
 
                     menu.AddItem(new GUIContent("Update a Previous Build"), false, OnUpdateBuild);

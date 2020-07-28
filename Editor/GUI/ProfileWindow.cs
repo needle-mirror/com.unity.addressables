@@ -44,7 +44,7 @@ namespace UnityEditor.AddressableAssets.GUI
         private ProfileTreeView m_ProfileTreeView;
 
         private bool m_IsResizingHorizontalSplitter;
-        private bool m_Reload = false;
+        internal static bool m_Reload = false;
 
         private Vector2 m_ProfilesPaneScrollPosition;
         private Vector2 m_VariablesPaneScrollPosition;
@@ -96,6 +96,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         private void OnEnable()
         {
+            
             Undo.undoRedoPerformed += MarkForReload;
             titleContent = new GUIContent("Addressables Profiles");
             m_ItemRectPadding = new GUIStyle();
@@ -107,7 +108,7 @@ namespace UnityEditor.AddressableAssets.GUI
             Undo.undoRedoPerformed -= MarkForReload;
         }
 
-        private void MarkForReload()
+        internal static void MarkForReload()
         {
             m_Reload = true;
         }

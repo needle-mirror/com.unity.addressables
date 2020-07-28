@@ -86,24 +86,27 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void ProcessPlayerDataSchema_Scenes_IncludeBuildSettingsScenesIsFalse_ShouldNotGenerateLocationsOrProviders()
         {
-            CreateBuiltInTestScene(k_SchemaTestFolder + "/TestScenes/testScene.unity");
+            using (new HideResourceFoldersScope())
+            {
+                CreateBuiltInTestScene(k_SchemaTestFolder + "/TestScenes/testScene.unity");
 
-            var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
-            bool includeBuildSettingsScenes = schema.IncludeBuildSettingsScenes;
-            schema.IncludeBuildSettingsScenes = false;
+                var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+                var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+                bool includeBuildSettingsScenes = schema.IncludeBuildSettingsScenes;
+                schema.IncludeBuildSettingsScenes = false;
 
-            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
-            Assert.True(string.IsNullOrEmpty(errorStr));
+                var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+                Assert.True(string.IsNullOrEmpty(errorStr));
 
-            var actualLocations = m_BuildContext.locations;
-            Assert.AreEqual(0, actualLocations.Count);
+                var actualLocations = m_BuildContext.locations;
+                Assert.AreEqual(0, actualLocations.Count);
 
-            var expectedProviderCount = 0;
-            var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
-            Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
+                var expectedProviderCount = 0;
+                var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
+                Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
 
-            schema.IncludeBuildSettingsScenes = includeBuildSettingsScenes;
+                schema.IncludeBuildSettingsScenes = includeBuildSettingsScenes;
+            }
         }
 
         private static IEnumerable<object[]> PlayerDataGroupSchema_SceneCases()
@@ -120,27 +123,31 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test, TestCaseSource(nameof(PlayerDataGroupSchema_SceneCases))]
         public void ProcessPlayerDataSchema_Scenes_ShouldGenerateCorrectLocationsAndProviders(string[] scenePaths)
         {
-            foreach (string path in scenePaths)
-                CreateBuiltInTestScene(path);
+            using (new HideResourceFoldersScope())
+            {
+                foreach (string path in scenePaths)
+                    CreateBuiltInTestScene(path);
 
-            var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
-            bool includeBuildSettingsScenes = schema.IncludeBuildSettingsScenes;
-            schema.IncludeBuildSettingsScenes = true;
+                var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+                var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+                bool includeBuildSettingsScenes = schema.IncludeBuildSettingsScenes;
+                schema.IncludeBuildSettingsScenes = true;
 
-            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
-            Assert.True(string.IsNullOrEmpty(errorStr));
+                var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+                Assert.True(string.IsNullOrEmpty(errorStr));
 
-            var actualLocations = m_BuildContext.locations;
-            var expectedLocationIds = scenePaths.Distinct().Select(s => s.Replace(".unity", "").Replace("Assets/", ""));
-            Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
-            Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
+                var actualLocations = m_BuildContext.locations;
+                var expectedLocationIds =
+                    scenePaths.Distinct().Select(s => s.Replace(".unity", "").Replace("Assets/", ""));
+                Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
+                Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
 
-            var expectedProviderCount = 0;
-            var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
-            Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
+                var expectedProviderCount = 0;
+                var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
+                Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
 
-            schema.IncludeBuildSettingsScenes = includeBuildSettingsScenes;
+                schema.IncludeBuildSettingsScenes = includeBuildSettingsScenes;
+            }
         }
 
         [Test]
@@ -221,35 +228,39 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test, TestCaseSource(nameof(PlayerDataGroupSchema_ResourcesCases))]
         public void ProcessPlayerDataSchema_Resources_ShouldGenerateCorrectLocationsAndProviders(string[] resourcesPaths)
         {
-            foreach (string path in resourcesPaths)
-                CreateTestResourceAsset(path);
-
-            var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
-            bool includeResourceFolders = schema.IncludeResourcesFolders;
-            schema.IncludeResourcesFolders = true;
-
-            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
-            Assert.True(string.IsNullOrEmpty(errorStr));
-
-            var actualLocations = m_BuildContext.locations;
-            var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
-
-            var expectedLocationIds = resourcesPaths.Distinct().Select(s => Path.GetFileName(s).Replace(".prefab", ""));
-            Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
-            Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
-
-            if (resourcesPaths.Any())
+            using (new HideResourceFoldersScope())
             {
-                Assert.AreEqual(1, actualProviderIds.Length);
-                Assert.True(actualProviderIds.Contains(typeof(LegacyResourcesProvider).FullName));
-            }
-            else
-            {
-                Assert.AreEqual(0, actualProviderIds.Length);
-            }
+                foreach (string path in resourcesPaths)
+                    CreateTestResourceAsset(path);
 
-            schema.IncludeResourcesFolders = includeResourceFolders;
+                var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+                var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+                bool includeResourceFolders = schema.IncludeResourcesFolders;
+                schema.IncludeResourcesFolders = true;
+
+                var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+                Assert.True(string.IsNullOrEmpty(errorStr));
+
+                var actualLocations = m_BuildContext.locations;
+                var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
+
+                var expectedLocationIds =
+                    resourcesPaths.Distinct().Select(s => Path.GetFileName(s).Replace(".prefab", ""));
+                Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
+                Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
+
+                if (resourcesPaths.Any())
+                {
+                    Assert.AreEqual(1, actualProviderIds.Length);
+                    Assert.True(actualProviderIds.Contains(typeof(LegacyResourcesProvider).FullName));
+                }
+                else
+                {
+                    Assert.AreEqual(0, actualProviderIds.Length);
+                }
+
+                schema.IncludeResourcesFolders = includeResourceFolders;
+            }
         }
 
         [Test]

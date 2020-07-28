@@ -626,9 +626,9 @@ namespace AddressableAssetsIntegrationTests
 
             Caching.ClearCache();
             //Simulating a cached bundle
-            string fakeCachePath = CreateFakeCachedBundle("GetDownloadSize_CalculatesCachedBundlesBundle1", "be38e35d2177c282d5d6a2e54a803aab");
+            string fakeCachePath = CreateFakeCachedBundle("cachedSizeTestBundle1", "be38e35d2177c282d5d6a2e54a803aab");
 
-            var bundleLoc1 = new ResourceLocationBase("sizeTestBundle1", "http://nowhere.com/GetDownloadSize_CalculatesCachedBundlesBundle1.bundle",
+            var bundleLoc1 = new ResourceLocationBase("cachedSizeTestBundle1", "http://nowhere.com/GetDownloadSize_CalculatesCachedBundlesBundle1.bundle",
                 typeof(AssetBundleProvider).FullName, typeof(object));
             var sizeData1 =
                 (bundleLoc1.Data = CreateLocationSizeData("cachedSizeTestBundle1", bundleSize1, 123,
@@ -636,10 +636,10 @@ namespace AddressableAssetsIntegrationTests
             if (sizeData1 != null)
                 expectedSize += sizeData1.ComputeSize(bundleLoc1, null);
 
-            var bundleLoc2 = new ResourceLocationBase("cachedSizeTestBundle2", "http://nowhere.com/GetDownloadSize_CalculatesCachedBundlesBundle2.bundle",
+            var bundleLoc2 = new ResourceLocationBase("sizeTestBundle2", "http://nowhere.com/GetDownloadSize_CalculatesCachedBundlesBundle2.bundle",
                 typeof(AssetBundleProvider).FullName, typeof(object));
             var sizeData2 =
-                (bundleLoc2.Data = CreateLocationSizeData("cachedSizeTestBundle2", bundleSize2, 123,
+                (bundleLoc2.Data = CreateLocationSizeData("sizeTestBundle2", bundleSize2, 123,
                     "d9fe965a6b253fb9dbd3e1cb08b7d66f")) as ILocationSizeData;
             if (sizeData2 != null)
                 expectedSize += sizeData2.ComputeSize(bundleLoc2, null);
@@ -678,9 +678,9 @@ namespace AddressableAssetsIntegrationTests
 
             Assert.IsTrue(Caching.ClearCache(), "Was unable to clear the cache.  Test results are affected");
             //Simulating a cached bundle
-            string fakeCachePath = CreateFakeCachedBundle("GetDownloadSize_WithList_CalculatesCachedBundlesBundle1", "0e38e35d2177c282d5d6a2e54a803aab");
+            string fakeCachePath = CreateFakeCachedBundle("cachedSizeTestBundle1", "0e38e35d2177c282d5d6a2e54a803aab");
 
-            var bundleLoc1 = new ResourceLocationBase("sizeTestBundle1", "http://nowhere.com/GetDownloadSize_WithList_CalculatesCachedBundlesBundle1.bundle",
+            var bundleLoc1 = new ResourceLocationBase("cachedSizeTestBundle1", "http://nowhere.com/GetDownloadSize_WithList_CalculatesCachedBundlesBundle1.bundle",
                 typeof(AssetBundleProvider).FullName, typeof(object));
             var sizeData1 =
                 (bundleLoc1.Data = CreateLocationSizeData("cachedSizeTestBundle1", bundleSize1, 123,
@@ -688,10 +688,10 @@ namespace AddressableAssetsIntegrationTests
             if (sizeData1 != null)
                 expectedSize += sizeData1.ComputeSize(bundleLoc1, null);
 
-            var bundleLoc2 = new ResourceLocationBase("cachedSizeTestBundle2", "http://nowhere.com/GetDownloadSize_WithList_CalculatesCachedBundlesBundle2.bundle",
+            var bundleLoc2 = new ResourceLocationBase("sizeTestBundle2", "http://nowhere.com/GetDownloadSize_WithList_CalculatesCachedBundlesBundle2.bundle",
                 typeof(AssetBundleProvider).FullName, typeof(object));
             var sizeData2 =
-                (bundleLoc2.Data = CreateLocationSizeData("cachedSizeTestBundle2", bundleSize2, 123,
+                (bundleLoc2.Data = CreateLocationSizeData("sizeTestBundle2", bundleSize2, 123,
                     "09fe965a6b253fb9dbd3e1cb08b7d66f")) as ILocationSizeData;
             if (sizeData2 != null)
                 expectedSize += sizeData2.ComputeSize(bundleLoc2, null);
@@ -1565,6 +1565,69 @@ namespace AddressableAssetsIntegrationTests
 #else
             Assert.Ignore("Caching not enabled.");
             yield return null;
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator AssetBundleRequestOptions_ComputesCorrectSize_WhenLocationDoesNotMatchBundleName_WithoutHash()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+
+            //Setup
+            string bundleName = "bundle";
+            string bundleLocation = "http://fake.com/default-bundle";
+            long size = 123;
+            IResourceLocation location = new ResourceLocationBase("test", bundleLocation,
+                typeof(AssetBundleProvider).FullName, typeof(GameObject));
+
+            Hash128 hash = Hash128.Compute("213412341242134");
+            AssetBundleRequestOptions abro = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName,
+                BundleSize = size,
+            };
+
+            //Test
+            Assert.AreEqual(size, abro.ComputeSize(location, m_Addressables.ResourceManager));
+            CreateFakeCachedBundle(bundleName, hash.ToString());
+            Assert.AreEqual(0, abro.ComputeSize(location, m_Addressables.ResourceManager));
+
+            //Cleanup
+            Caching.ClearAllCachedVersions(bundleName);
+
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator AssetBundleRequestOptions_ComputesCorrectSize_WhenLocationDoesNotMatchBundleName_WithHash()
+        {
+#if ENABLE_CACHING
+            yield return Init();
+
+            //Setup
+            string bundleName = "bundle";
+            string bundleLocation = "http://fake.com/default-bundle";
+            long size = 123;
+            IResourceLocation location = new ResourceLocationBase("test", bundleLocation,
+                typeof(AssetBundleProvider).FullName, typeof(GameObject));
+
+            Hash128 hash = Hash128.Compute("213412341242134");
+            AssetBundleRequestOptions abro = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName,
+                BundleSize = size,
+                Hash = hash.ToString()
+            };
+
+            //Test
+            Assert.AreEqual(size, abro.ComputeSize(location, m_Addressables.ResourceManager));
+            CreateFakeCachedBundle(bundleName, hash.ToString());
+            Assert.AreEqual(0, abro.ComputeSize(location, m_Addressables.ResourceManager));
+
+            //Cleanup
+            Caching.ClearAllCachedVersions(bundleName);
+
 #endif
         }
 

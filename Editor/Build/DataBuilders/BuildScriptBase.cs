@@ -7,6 +7,7 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -49,6 +50,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         internal static void WriteBuildLog(BuildLog log, string directory)
         {
             Directory.CreateDirectory(directory);
+            log.AddMetaData(AddressablesVersion.kPackageName, AddressablesVersion.kPackageVersion);
             File.WriteAllText(Path.Combine(directory, "AddressablesBuildTEP.json"), log.FormatForTraceEventProfiler());
         }
 

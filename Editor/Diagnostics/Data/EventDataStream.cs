@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets.Diagnostics.Data
 {
@@ -8,16 +9,20 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
     {
         internal int maxValue;
         internal List<EventDataSample> samples = new List<EventDataSample>();
+        
         internal void AddSample(int frame, int val)
         {
+            bool streamHasSamples = samples.Count > 0;
+            if (streamHasSamples && frame < samples[samples.Count - 1].frame)
+                return;
             if (val > maxValue)
                 maxValue = val;
-            if (samples.Count > 0 && samples[samples.Count - 1].frame == frame)
+            if (streamHasSamples && samples[samples.Count - 1].frame == frame)
                 samples[samples.Count - 1] = new EventDataSample(frame, val);
             else
                 samples.Add(new EventDataSample(frame, val));
         }
-
+        
         internal int GetValue(int f)
         {
             if (samples.Count == 0 || f < samples[0].frame)

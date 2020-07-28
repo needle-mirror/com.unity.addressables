@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor.AddressableAssets.GUI;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.Initialization;
@@ -103,7 +104,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 get { return m_Values; }
                 set { m_Values = value; }
             }
-
+            
             internal BuildProfile(string name, BuildProfile copyFrom, AddressableAssetProfileSettings ps)
             {
                 m_InheritedParent = null;
@@ -232,6 +233,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 foreach (var p in ps.profiles)
                     p.ReplaceVariableValueSubString(currRefStr, newRefStr);
                 ps.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, null, false);
+                ProfileWindow.MarkForReload();
             }
 
             [FormerlySerializedAs("m_inlineUsage")]
@@ -537,6 +539,7 @@ namespace UnityEditor.AddressableAssets.Settings
             var prof = new BuildProfile(name, copyRoot, this);
             m_Profiles.Add(prof);
             SetDirty(AddressableAssetSettings.ModificationEvent.ProfileAdded, prof, true);
+            ProfileWindow.MarkForReload();
             return prof.id;
         }
 
@@ -589,6 +592,7 @@ namespace UnityEditor.AddressableAssets.Settings
             if (profileExistsInSettingsList)
                 SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, profile, true);
 
+            ProfileWindow.MarkForReload();
             return true;
         }
 
@@ -621,6 +625,7 @@ namespace UnityEditor.AddressableAssets.Settings
             m_Profiles.RemoveAll(p => p.id == profileId);
             m_Profiles.ForEach(p => { if (p.inheritedParent == profileId) p.inheritedParent = null; });
             SetDirty(AddressableAssetSettings.ModificationEvent.ProfileRemoved, profileId, true);
+            ProfileWindow.MarkForReload();
         }
 
         BuildProfile GetProfileByName(string profileName)
@@ -681,6 +686,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             profile.SetValueById(id, val);
             SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, profile, true);
+            ProfileWindow.MarkForReload();
         }
 
         internal string GetUniqueProfileEntryName(string name)
@@ -741,6 +747,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             m_ProfileEntryNames.RemoveAll(x => x.Id == variableId);
             SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, null, false);
+            ProfileWindow.MarkForReload();
         }
 
         /// <summary>

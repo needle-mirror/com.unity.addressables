@@ -13,6 +13,7 @@ using UnityEngine.TestTools;
 
 public class PlatformSwitchingTests : AddressableAssetTestBase
 {
+#if UNITY_2019_1_OR_NEWER
     [TestCase(BuildTarget.Switch)]
     [TestCase(BuildTarget.PS4)]
     public void WhenBuildingForPlatform_BuildFilesAreGenerated(BuildTarget target)
@@ -47,4 +48,6 @@ public class PlatformSwitchingTests : AddressableAssetTestBase
             EditorUserBuildSettings.SwitchActiveBuildTarget(backupTargetGroup, backupTarget);
         }
     }
+
+#endif
 }

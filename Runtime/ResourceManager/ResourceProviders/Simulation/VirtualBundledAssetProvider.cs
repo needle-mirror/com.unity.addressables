@@ -27,17 +27,16 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
                 return BundleSize;
 
 #if ENABLE_CACHING
-            var bundleName = Path.GetFileNameWithoutExtension(id);
             if (locHash.isValid) //If we have a hash, ensure that our desired version is cached.
             {
-                if (Caching.IsVersionCached(bundleName, locHash))
+                if (Caching.IsVersionCached(BundleName, locHash))
                     return 0;
                 return BundleSize;
             }
             else //If we don't have a hash, any cached version will do.
             {
                 List<Hash128> versions = new List<Hash128>();
-                Caching.GetCachedVersions(bundleName, versions);
+                Caching.GetCachedVersions(BundleName, versions);
                 if (versions.Count > 0)
                     return 0;
             }

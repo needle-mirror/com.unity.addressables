@@ -101,6 +101,7 @@ namespace UnityEngine.ResourceManagement
 
         /// <summary>
         /// Functor to transform internal ids before being used by the providers.
+        /// See the [TransformInternalId](../manual/TransformInternalId.html) documentation for more details.
         /// </summary>
         public Func<IResourceLocation, string> InternalIdTransformFunc { get; set; }
 
@@ -274,7 +275,7 @@ namespace UnityEngine.ResourceManagement
         {
             m_diagnosticsHandler += func;
         }
-
+        
         internal void PostDiagnosticEvent(DiagnosticEventContext context)
         {
             m_diagnosticsHandler?.Invoke(context);

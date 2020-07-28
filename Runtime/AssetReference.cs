@@ -17,6 +17,7 @@ namespace UnityEngine.AddressableAssets
     /// Generic version of AssetReference class.  This should not be used directly as CustomPropertyDrawers do not support generic types.  Instead use the concrete derived classes such as AssetReferenceGameObject.
     /// </summary>
     /// <typeparam name="TObject"></typeparam>
+    [Serializable]
     public class AssetReferenceT<TObject> : AssetReference where TObject : Object
     {
         /// <summary>

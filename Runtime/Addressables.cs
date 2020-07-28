@@ -126,6 +126,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Functor to transform internal ids before being used by the providers.
+        /// See the [TransformInternalId](../manual/TransformInternalId.html) documentation for more details.
         /// </summary>
         static public Func<IResourceLocation, string> InternalIdTransformFunc
         {
@@ -265,6 +266,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Initialize Addressables system.  Addressables will be initialized on the first API call if this is not called explicitly.
+        /// See the [InitializeAsync](../manual/InitializeAsync.html) documentation for more details.
         /// </summary>
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<IResourceLocator> InitializeAsync()
@@ -342,6 +344,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load a single asset
+        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
         /// <param name="location">The location of the asset.</param>
         public static AsyncOperationHandle<TObject> LoadAssetAsync<TObject>(IResourceLocation location)
@@ -351,6 +354,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load a single asset
+        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
         /// <param name="key">The key of the location of the asset.</param>
         public static AsyncOperationHandle<TObject> LoadAssetAsync<TObject>(object key)
@@ -428,6 +432,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load multiple assets, based on list of locations provided.
         /// If any fail, all successful loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.
+        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
         /// <param name="locations">The locations of the assets.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
@@ -439,6 +444,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load multiple assets, based on list of locations provided.
+        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
         /// <param name="locations">The locations of the assets.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
@@ -475,6 +481,7 @@ namespace UnityEngine.AddressableAssets
         /// down to one based on the provided MergeMode.
         /// If any locations from the final list fail, all successful loads and dependencies will be released.  The returned
         /// .Result will be null, and .Status will be Failed.
+        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
         /// <param name="keys">List of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
@@ -489,6 +496,7 @@ namespace UnityEngine.AddressableAssets
         /// Load multiple assets.
         /// Each key in the provided list will be translated into a list of locations.  Those many lists will be combined
         /// down to one based on the provided MergeMode.
+        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
         /// <param name="keys">List of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
@@ -508,6 +516,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load mutliple assets
+        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
         /// <param name="key">Key for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
@@ -522,6 +531,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load all assets that match the provided key.
         /// If any fail, all successful loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.
+        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
         /// <param name="key">Key for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation (per loaded asset).</param>
@@ -533,6 +543,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load all assets that match the provided key.
+        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
         /// <param name="key">Key for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation (per loaded asset).</param>

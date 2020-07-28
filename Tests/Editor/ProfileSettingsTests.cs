@@ -1,5 +1,6 @@
 using System;
 using NUnit.Framework;
+using UnityEditor.AddressableAssets.GUI;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -305,6 +306,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(true, renameSuccessful, "Rename failed when name change should have been successful.");
             Assert.AreEqual("Profile3", Settings.profileSettings.GetProfile(profile1Id).profileName, "Rename was successful, but name was not correctly changed.");
             Assert.AreEqual("Profile2", Settings.profileSettings.GetProfile(profile2Id).profileName, "Rename was successful, but other profile name was changed when it shouldn't have been.");
+            Assert.IsTrue(ProfileWindow.m_Reload, "m_Reload should be set to true after a successful change is made. ");
         }
 
         [Test]

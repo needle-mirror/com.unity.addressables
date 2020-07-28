@@ -19,7 +19,6 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         GUIContent m_NextFrameIcon;
         int m_PlayerSessionIndex;
         int m_InspectFrame;
-        bool m_Record = true;
         int m_EventListFrame = -1;
         VerticalSplitter m_VerticalSplitter = new VerticalSplitter();
         HorizontalSplitter m_HorizontalSplitter = new HorizontalSplitter();
@@ -50,10 +49,14 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             m_PrevFrameIcon = EditorGUIUtility.IconContent("Profiler.PrevFrame", "|Go one frame backwards");
             m_NextFrameIcon = EditorGUIUtility.IconContent("Profiler.NextFrame", "|Go one frame forwards");
             EditorApplication.playModeStateChanged += OnEditorPlayModeChanged;
-            RegisterEventHandler(true);
+
             if (m_EventData == null)
+            {
+                RegisterEventHandler(true);
                 m_EventData = new EventDataPlayerSessionCollection(OnRecordEvent);
-            m_EventData.GetPlayerSession(0, true).IsActive = true;
+                m_EventData.GetPlayerSession(0, true).IsActive = true;
+            }
+            
         }
 
         void OnDisable()
@@ -136,7 +139,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                 m_PlayerSessionIndex = 0;
                 RegisterEventHandler(true);
             }
-            else if (state == PlayModeStateChange.EnteredEditMode)
+            if (state == PlayModeStateChange.EnteredEditMode)
             {
                 RegisterEventHandler(false);
             }
@@ -154,13 +157,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
             return true;
         }
-
+        
         protected virtual bool OnRecordEvent(DiagnosticEvent diagnosticEvent)
         {
             return false;
         }
 
-        int m_lastRepaintedFrame = -1;
+        int m_LastRepaintedFrame = -1;
         void OnEventProcessed(DiagnosticEvent diagnosticEvent, bool entryCreated)
         {
             if (!CanHandleEvent(diagnosticEvent.Graph))
@@ -177,10 +180,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             if (moveInspectFrame)
                 SetInspectFrame(m_LatestFrame);
 
-            if (diagnosticEvent.Frame != m_lastRepaintedFrame)
+            if (diagnosticEvent.Frame != m_LastRepaintedFrame)
             {
                 Repaint();
-                m_lastRepaintedFrame = diagnosticEvent.Frame;
+                m_LastRepaintedFrame = diagnosticEvent.Frame;
             }
         }
 
@@ -264,6 +267,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
         void OnInspectorUpdate()
         {
+            if (m_EventData == null) return;
             m_EventData.Update();
             Repaint();
         }
@@ -299,10 +303,8 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         void DrawToolBar(EventDataPlayerSession session)
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            GUILayout.FlexibleSpace();
-            m_Record = GUILayout.Toggle(m_Record, "Record", EditorStyles.toolbarButton, GUILayout.ExpandWidth(false));
 
-            if (GUILayout.Button("Clear", EditorStyles.toolbarButton))
+            if (GUILayout.Button("Clear Events", EditorStyles.toolbarButton))
             {
                 RegisterEventHandler(false);
                 session.Clear();
@@ -310,27 +312,18 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                     m_GraphList.Reload();
                 RegisterEventHandler(true);
             }
-
-            /*
-            if (GUILayout.Button("Load", EditorStyles.toolbarButton))
-                EditorUtility.DisplayDialog("Feature not implemented", "Saving and loading profile data is not yet supported", "Close");
-            if (GUILayout.Button("Save", EditorStyles.toolbarButton))
-                EditorUtility.DisplayDialog("Feature not implemented", "Saving and loading profile data is not yet supported", "Close");
-             */
-
+            
             GUILayout.FlexibleSpace();
             GUILayout.Label(m_InspectFrame == m_LatestFrame ? "Frame:     " : "Frame: " + m_InspectFrame + "/" + m_LatestFrame, EditorStyles.miniLabel);
 
             using (new EditorGUI.DisabledScope(m_InspectFrame <= 0))
                 if (GUILayout.Button(m_PrevFrameIcon, EditorStyles.toolbarButton))
                     SetInspectFrame(m_InspectFrame - 1);
-
-
+            
             using (new EditorGUI.DisabledScope(m_InspectFrame >= m_LatestFrame))
                 if (GUILayout.Button(m_NextFrameIcon, EditorStyles.toolbarButton))
                     SetInspectFrame(m_InspectFrame + 1);
-
-
+            
             if (GUILayout.Button("Current", EditorStyles.toolbarButton, GUILayout.ExpandWidth(false)))
                 SetInspectFrame(m_LatestFrame);
 

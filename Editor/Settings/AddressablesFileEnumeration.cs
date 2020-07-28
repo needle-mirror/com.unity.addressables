@@ -74,8 +74,6 @@ namespace UnityEditor.AddressableAssets.Settings
             TreeNode node = FindNode(path, false);
             if (node == null)
                 throw new Exception($"Path {path} was not in the enumeration tree");
-            if (!node.IsAddressable)
-                throw new Exception($"Path {path} cannot be enumerated because it is not addressable");
             if (!node.HasEnumerated)
                 throw new Exception($"Path {path} cannot be enumerated because the file system has not enumerated them yet");
 
@@ -107,25 +105,42 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             using (logger.ScopedStep(LogLevel.Verbose, "BuildAddressableTree"))
             {
+                if (!ExtractAddressablePaths(settings, out HashSet<string> paths))
+                    return null;
+
                 AddressableAssetTree tree = new AddressableAssetTree();
-                foreach (AddressableAssetGroup group in settings.groups)
+                foreach (string path in paths)
                 {
-                    if (group == null)
-                        continue;
-                    foreach (AddressableAssetEntry entry in group.entries)
-                    {
-                        string convertedPath = entry.AssetPath.Replace('\\', '/');
-                        AddressableAssetTree.TreeNode node = tree.FindNode(convertedPath, true);
-                        node.IsAddressable = true;
-                    }
+                    AddressableAssetTree.TreeNode node = tree.FindNode(path, true);
+                    node.IsAddressable = true;
                 }
                 return tree;
             }
         }
 
+        static bool ExtractAddressablePaths(AddressableAssetSettings settings, out HashSet<string> paths)
+        {
+            paths = new HashSet<string>();
+            bool hasAddrFolder = false;
+
+            foreach (AddressableAssetGroup group in settings.groups)
+            {
+                if (group == null)
+                    continue;
+                foreach (AddressableAssetEntry entry in group.entries)
+                {
+                    string convertedPath = entry.AssetPath.Replace('\\', '/');
+                    if (Directory.Exists(convertedPath))
+                        hasAddrFolder = true;
+                    paths.Add(convertedPath);
+                }
+            }
+            return hasAddrFolder;
+        }
+
         static void AddLocalFilesToTreeIfNotEnumerated(AddressableAssetTree tree, string path, IBuildLogger logger)
         {
-            AddressableAssetTree.TreeNode pathNode = tree.FindNode(path, false);
+            AddressableAssetTree.TreeNode pathNode = tree.FindNode(path, true);
 
             if (pathNode == null || pathNode.HasEnumerated) // Already enumerated
                 return;
@@ -158,14 +173,14 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        static AddressableAssetTree m_PrecomputedTree;
+        internal static AddressableAssetTree m_PrecomputedTree;
 
         static void BeginPrecomputedEnumerationSession(AddressableAssetSettings settings, bool prepopulateAssetsFolder, IBuildLogger logger)
         {
             using (logger.ScopedStep(LogLevel.Info, "AddressablesFileEnumeration.BeginPrecomputedEnumerationSession"))
             {
                 m_PrecomputedTree = BuildAddressableTree(settings, logger);
-                if (prepopulateAssetsFolder)
+                if (m_PrecomputedTree != null && prepopulateAssetsFolder)
                     AddLocalFilesToTreeIfNotEnumerated(m_PrecomputedTree, "Assets", logger);
             }
         }
@@ -175,13 +190,19 @@ namespace UnityEditor.AddressableAssets.Settings
             m_PrecomputedTree = null;
         }
 
-        public static List<string> EnumerateAddressableFolder(string path, AddressableAssetSettings settings, bool recurseAll, IBuildLogger log = null)
+        public static List<string> EnumerateAddressableFolder(string path, AddressableAssetSettings settings, bool recurseAll, IBuildLogger logger = null)
         {
-            AddressableAssetTree tree = m_PrecomputedTree != null ? m_PrecomputedTree : BuildAddressableTree(settings, log);
-            AddLocalFilesToTreeIfNotEnumerated(tree, path, log);
+            if(!Directory.Exists(path))
+                throw new Exception($"Path {path} cannot be enumerated because it does not exist");
+
+            AddressableAssetTree tree = m_PrecomputedTree != null ? m_PrecomputedTree : BuildAddressableTree(settings, logger);
+            if (tree == null)
+                return new List<string>();
+
+            AddLocalFilesToTreeIfNotEnumerated(tree, path, logger);
 
             List<string> files = new List<string>();
-            using (log.ScopedStep(LogLevel.Info, $"Enumerating Addressables Tree {path}"))
+            using (logger.ScopedStep(LogLevel.Info, $"Enumerating Addressables Tree {path}"))
             {
                 foreach (string file in tree.Enumerate(path, recurseAll))
                 {

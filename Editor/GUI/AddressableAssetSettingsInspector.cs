@@ -88,6 +88,8 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Player Version Override", "If set, this will be used as the player version instead of one based off of a time stamp.");
         GUIContent m_UniqueBundles =
             new GUIContent("Unique Bundle IDs", "If set, every content build (original or update) will result in asset bundles with more complex internal names.  This may result in more bundles being rebuilt, but safer mid-run updates.  See docs for more info.");
+        GUIContent m_ContiguousBundles =
+            new GUIContent("Contiguous Bundles", "If set, packs assets in bundles contiguously based on the ordering of the source asset which results in improved asset loading times. Disable this if you've built bundles with a version of Addressables older than 1.12.1 and you want to minimize bundle changes.");
         GUIContent m_BuildRemoteCatalog =
             new GUIContent("Build Remote Catalog", "If set, this will create a copy of the content catalog for storage on a remote server.  This catalog can be overwritten later for content updates.");
         GUIContent m_BundleLocalCatalog =
@@ -152,9 +154,9 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 m_AasTarget.DisableCatalogUpdateOnStartup = EditorGUILayout.Toggle(m_CheckForCatalogUpdateOnInit, m_AasTarget.DisableCatalogUpdateOnStartup);
                 m_AasTarget.OverridePlayerVersion = EditorGUILayout.TextField(m_OverridePlayerVersion, m_AasTarget.OverridePlayerVersion);
-                m_AasTarget.BuildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
                 m_AasTarget.BundleLocalCatalog = EditorGUILayout.Toggle(m_BundleLocalCatalog, m_AasTarget.BundleLocalCatalog);
 
+                m_AasTarget.BuildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
                 if ((m_AasTarget.RemoteCatalogBuildPath != null && m_AasTarget.RemoteCatalogLoadPath != null) // these will never actually be null, as the accessor initializes them.
                     && (m_AasTarget.BuildRemoteCatalog))
                 {
@@ -162,7 +164,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogLoadPath"), m_RemoteCatLoadPath);
                 }
             }
-
+            
             GUILayout.Space(6);
             m_GeneralFoldout = EditorGUILayout.Foldout(m_GeneralFoldout, "General");
             if (m_GeneralFoldout)
@@ -171,6 +173,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 m_AasTarget.buildSettings.LogResourceManagerExceptions = EditorGUILayout.Toggle(m_LogRuntimeExceptions, m_AasTarget.buildSettings.LogResourceManagerExceptions);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("m_CertificateHandlerType"), m_CertificateHandlerType);
                 m_AasTarget.UniqueBundleIds = EditorGUILayout.Toggle(m_UniqueBundles, m_AasTarget.UniqueBundleIds);
+                m_AasTarget.ContiguousBundles = EditorGUILayout.Toggle(m_ContiguousBundles, m_AasTarget.ContiguousBundles);
             }
 
             GUILayout.Space(6);

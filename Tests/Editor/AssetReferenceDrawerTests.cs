@@ -134,6 +134,75 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void AssetReferenceDrawer_IsAssetPathInAddressableDirectory_PathInAddressableFolder()
+        {
+            // Asset setup
+            m_AssetReferenceDrawer = new AssetReferenceDrawer();
+            string assetName = "";
+            var newEntryPath = ConfigFolder + "/test" + "/test.prefab";
+            GameObject testObject = new GameObject("TestObject");
+            Directory.CreateDirectory(ConfigFolder + "/test");
+            PrefabUtility.SaveAsPrefabAsset(testObject, newEntryPath);
+            var folderGuid = AssetDatabase.AssetPathToGUID(ConfigFolder + "/test");
+            Settings.CreateOrMoveEntry(folderGuid, Settings.groups[0]);
+
+            // Test
+            Assert.IsTrue(Settings.IsAssetPathInAddressableDirectory(newEntryPath, out assetName));
+            Assert.AreEqual(assetName, newEntryPath);
+
+            // Cleanup
+            Settings.RemoveAssetEntry(AssetDatabase.AssetPathToGUID(newEntryPath));
+            Settings.RemoveAssetEntry(folderGuid);
+            if (Directory.Exists(ConfigFolder + "/test"))
+                AssetDatabase.DeleteAsset(ConfigFolder + "/test");
+            m_AssetReferenceDrawer = null;
+        }
+
+        [Test]
+        public void AssetReferenceDrawer_IsAssetPathInAddressableDirectory_PathNotInAddressableFolder()
+        {
+            // Asset setup
+            m_AssetReferenceDrawer = new AssetReferenceDrawer();
+            string assetName = "";
+            var newEntryPath = ConfigFolder + "/test" + "/test.prefab";
+            GameObject testObject = new GameObject("TestObject");
+            Directory.CreateDirectory(ConfigFolder + "/test");
+            PrefabUtility.SaveAsPrefabAsset(testObject, newEntryPath);
+            var folderGuid = AssetDatabase.AssetPathToGUID(ConfigFolder + "/test");
+
+            // Test
+            Assert.IsFalse(Settings.IsAssetPathInAddressableDirectory(newEntryPath, out assetName));
+            Assert.AreEqual(assetName, "");
+
+            // Cleanup
+            Settings.RemoveAssetEntry(AssetDatabase.AssetPathToGUID(newEntryPath));
+            Settings.RemoveAssetEntry(folderGuid);
+            if (Directory.Exists(ConfigFolder + "/test"))
+                AssetDatabase.DeleteAsset(ConfigFolder + "/test");
+            m_AssetReferenceDrawer = null;
+        }
+
+        [Test]
+        public void AssetReferenceDrawer_IsAssetPathInAddressableDirectory_PathEmptyString()
+        {
+            m_AssetReferenceDrawer = new AssetReferenceDrawer();
+            string assetName = "";
+
+            Assert.IsFalse(Settings.IsAssetPathInAddressableDirectory("", out assetName));
+            Assert.AreEqual(assetName, "");
+        }
+
+        [Test]
+        public void AssetReferenceDrawer_IsAssetPathInAddressableDirectory_PathPointToNonexistentAsset()
+        {
+            m_AssetReferenceDrawer = new AssetReferenceDrawer();
+            string assetName = "";
+
+            Assert.IsFalse(Settings.IsAssetPathInAddressableDirectory(ConfigFolder + "/test.prefab", out assetName));
+            Assert.AreEqual(assetName, "");
+        }
+
+        [Test]
         public void AssetReferenceDrawer_SelectionChanged_CanSelectSameNameAssetsInDifferentGroups()
         {
             // Drawer Setup
@@ -175,6 +244,47 @@ namespace UnityEditor.AddressableAssets.Tests
             EditorBuildSettings.RemoveConfigObject("Assets/AddressableAssetsData");
             Settings.RemoveAssetEntry(AssetDatabase.AssetPathToGUID(newEntryPath));
             Settings.RemoveAssetEntry(m_AssetGUID);
+        }
+
+        [Test]
+        public void AssetReferenceDrawer_HandleDragAndDrop_CanRecognizeNonAddressableInAddressableFolder()
+        {
+            // ScriptableObject property and Drawer setup
+            m_AssetReferenceDrawer = new AssetReferenceDrawer();
+            m_AssetReferenceDrawer.m_AssetRefObject = new AssetReference();
+            TestARDObject obj = ScriptableObject.CreateInstance<TestARDObject>();
+            var so = new SerializedObject(obj);
+            var propertyName = "Reference";
+            var property = so.FindProperty(propertyName);
+
+            // Group setup
+            string groupName = "TestGroup";
+            Settings.CreateGroup(groupName, false, false, false, null);
+
+            // Asset setup
+            var newEntryPath = ConfigFolder + "/test" + "/test.prefab";
+            GameObject testObject = new GameObject("TestObject");
+            Directory.CreateDirectory(ConfigFolder + "/test");
+            PrefabUtility.SaveAsPrefabAsset(testObject, newEntryPath);
+            var newAssetGuid = AssetDatabase.AssetPathToGUID(newEntryPath);
+            var folderGuid = AssetDatabase.AssetPathToGUID(ConfigFolder + "/test");
+            Settings.CreateOrMoveEntry(folderGuid, Settings.groups[2]);
+            Directory.CreateDirectory("Assets/AddressableAssetsData");
+            AddressableAssetSettingsDefaultObject.Settings = Settings;
+
+            // Test
+            m_AssetReferenceDrawer.DragAndDropNotFromAddressableGroupWindow(newEntryPath, newAssetGuid, property, Settings);
+            var newentry = Settings.FindAssetEntry(newAssetGuid);
+            Assert.IsNull(newentry);
+            Assert.AreEqual(m_AssetReferenceDrawer.m_AssetRefObject.AssetGUID, newAssetGuid);
+
+            // Cleanup
+            Settings.RemoveAssetEntry(AssetDatabase.AssetPathToGUID(newEntryPath));
+            Settings.RemoveAssetEntry(folderGuid);
+            Settings.RemoveGroup(Settings.groups[2]);
+            if (Directory.Exists(ConfigFolder + "/test"))
+                AssetDatabase.DeleteAsset(ConfigFolder + "/test");
+            m_AssetReferenceDrawer = null;
         }
 
         [Test]

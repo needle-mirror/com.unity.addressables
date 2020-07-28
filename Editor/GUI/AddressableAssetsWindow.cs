@@ -15,10 +15,6 @@ namespace UnityEditor.AddressableAssets.GUI
         [SerializeField]
         AddressableAssetsSettingsGroupEditor m_GroupEditor;
 
-        [FormerlySerializedAs("m_ignoreLegacyBundles")]
-        [SerializeField]
-        bool m_IgnoreLegacyBundles;
-
         [MenuItem("Window/Asset Management/Addressables/Settings", priority = 2051)]
         internal static void ShowSettingsInspector()
         {
@@ -50,12 +46,6 @@ namespace UnityEditor.AddressableAssets.GUI
 
         public void OnEnable()
         {
-            if (!m_IgnoreLegacyBundles)
-            {
-                var bundleList = AssetDatabase.GetAllAssetBundleNames();
-                if (bundleList != null && bundleList.Length > 0)
-                    OfferToConvert();
-            }
             if (m_GroupEditor != null)
                 m_GroupEditor.OnEnable();
 
@@ -71,15 +61,21 @@ namespace UnityEditor.AddressableAssets.GUI
                 m_GroupEditor.OnDisable();
         }
 
-        internal void OfferToConvert()
+        internal void OfferToConvert(AddressableAssetSettings settings)
         {
             var bundleList = AssetDatabase.GetAllAssetBundleNames();
-            if (EditorUtility.DisplayDialog("Legacy Bundles Detected", "We have detected the use of legacy bundles in this project.  Would you like to auto-convert those into Addressables? \nThis will take each asset bundle you have defined (we have detected " + bundleList.Length + " bundles), create an Addressables group with a matching name, then move all assets from those bundles into corresponding groups.  This will remove the asset bundle assignment from all assets, and remove all asset bundle definitions from this project.  This cannot be undone.", "Convert", "Ignore"))
+            if (settings != null && bundleList.Length > 0)
             {
-                AddressableAssetUtility.ConvertAssetBundlesToAddressables();
+                var displayChoice = EditorUtility.DisplayDialog("Legacy Bundles Detected",
+                    "We have detected the use of legacy bundles in this project.  Would you like to auto-convert those into Addressables? \nThis will take each asset bundle you have defined (we have detected " +
+                    bundleList.Length +
+                    " bundles), create an Addressables group with a matching name, then move all assets from those bundles into corresponding groups.  This will remove the asset bundle assignment from all assets, and remove all asset bundle definitions from this project.  This cannot be undone.",
+                    "Convert", "Ignore");
+                if (displayChoice)
+                {
+                    AddressableAssetUtility.ConvertAssetBundlesToAddressables();
+                }
             }
-            else
-                m_IgnoreLegacyBundles = true;
         }
 
         public void OnGUI()
@@ -91,6 +87,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     m_GroupEditor = null;
                     AddressableAssetSettingsDefaultObject.Settings = AddressableAssetSettings.Create(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, AddressableAssetSettingsDefaultObject.kDefaultConfigAssetName, true, true);
+                    OfferToConvert(AddressableAssetSettingsDefaultObject.Settings);
                 }
                 //if (GUILayout.Button("Import Addressables Settings"))
                 //{

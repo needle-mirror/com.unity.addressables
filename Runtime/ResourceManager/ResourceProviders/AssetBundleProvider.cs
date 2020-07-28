@@ -100,17 +100,16 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 return 0;
             var locHash = Hash128.Parse(Hash);
 #if ENABLE_CACHING
-            var bundleName = Path.GetFileNameWithoutExtension(id);
             if (locHash.isValid) //If we have a hash, ensure that our desired version is cached.
             {
-                if (Caching.IsVersionCached(new CachedAssetBundle(bundleName, locHash)))
+                if (Caching.IsVersionCached(new CachedAssetBundle(BundleName, locHash)))
                     return 0;
                 return BundleSize;
             }
             else //If we don't have a hash, any cached version will do.
             {
                 List<Hash128> versions = new List<Hash128>();
-                Caching.GetCachedVersions(bundleName, versions);
+                Caching.GetCachedVersions(BundleName, versions);
                 if (versions.Count > 0)
                     return 0;
             }
