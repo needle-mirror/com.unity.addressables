@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Reflection;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditorInternal;
@@ -46,6 +48,8 @@ namespace UnityEditor.AddressableAssets.GUI
         [SerializeField]
         int m_CurrentProfileIndex = -1;
 
+        List<Action> m_QueuedChanges = new List<Action>();
+        
         void OnEnable()
         {
             m_AasTarget = target as AddressableAssetSettings;
@@ -104,10 +108,14 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Custom certificate handler", "The class to use for custom certificate handling.  This type must inherit from UnityEngine.Networking.CertificateHandler.");
         GUIContent m_ProfileInUse =
             new GUIContent("Profile In Use", "This is the active profile that will be used to evaluate all profile variables during a build and when entering play mode.");
+        GUIContent m_MaxConcurrentWebRequests =
+            new GUIContent("Max Concurrent Web Requests", "Limits the number of concurrent web requests.  If more requests are made, they will be queued until some requests complete.");
 
         public override void OnInspectorGUI()
         {
+            m_QueuedChanges.Clear();
             serializedObject.UpdateIfRequiredOrScript(); // use updated values
+            EditorGUI.BeginChangeCheck();
 
             GUILayout.Space(8);
             if (GUILayout.Button("Manage Groups", "Minibutton", GUILayout.ExpandWidth(true)))
@@ -125,14 +133,19 @@ namespace UnityEditor.AddressableAssets.GUI
                         m_CurrentProfileIndex = 0;
                     var profileNames = m_AasTarget.profileSettings.GetAllProfileNames();
 
+                    int currentProfileIndex = m_CurrentProfileIndex;
                     // Current profile in use was changed by different window
                     if (AddressableAssetSettingsDefaultObject.Settings.profileSettings.profiles[m_CurrentProfileIndex].id != AddressableAssetSettingsDefaultObject.Settings.activeProfileId)
                     {
-                        m_CurrentProfileIndex = profileNames.IndexOf(AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileName(AddressableAssetSettingsDefaultObject.Settings.activeProfileId));
+                        currentProfileIndex =  profileNames.IndexOf(AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileName(AddressableAssetSettingsDefaultObject.Settings.activeProfileId));
+                        if(currentProfileIndex != m_CurrentProfileIndex)
+                            m_QueuedChanges.Add(() => m_CurrentProfileIndex = currentProfileIndex);
                     }
-
-                    m_CurrentProfileIndex = EditorGUILayout.Popup(m_ProfileInUse, m_CurrentProfileIndex, profileNames.ToArray());
-                    AddressableAssetSettingsDefaultObject.Settings.activeProfileId = AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileId(profileNames[m_CurrentProfileIndex]);
+                    currentProfileIndex = EditorGUILayout.Popup(m_ProfileInUse, m_CurrentProfileIndex, profileNames.ToArray());
+                    if(currentProfileIndex != m_CurrentProfileIndex)
+                        m_QueuedChanges.Add(() => m_CurrentProfileIndex = currentProfileIndex);
+                    
+                    AddressableAssetSettingsDefaultObject.Settings.activeProfileId = AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileId(profileNames[currentProfileIndex]);
 
                     EditorGUILayout.BeginHorizontal();
                     GUILayout.FlexibleSpace();
@@ -152,28 +165,44 @@ namespace UnityEditor.AddressableAssets.GUI
             m_CatalogFoldout = EditorGUILayout.Foldout(m_CatalogFoldout, "Catalog");
             if (m_CatalogFoldout)
             {
-                m_AasTarget.DisableCatalogUpdateOnStartup = EditorGUILayout.Toggle(m_CheckForCatalogUpdateOnInit, m_AasTarget.DisableCatalogUpdateOnStartup);
-                m_AasTarget.OverridePlayerVersion = EditorGUILayout.TextField(m_OverridePlayerVersion, m_AasTarget.OverridePlayerVersion);
-                m_AasTarget.BundleLocalCatalog = EditorGUILayout.Toggle(m_BundleLocalCatalog, m_AasTarget.BundleLocalCatalog);
-
-                m_AasTarget.BuildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
+                bool disableCatalogOnStartup = EditorGUILayout.Toggle(m_CheckForCatalogUpdateOnInit, m_AasTarget.DisableCatalogUpdateOnStartup);
+                if (disableCatalogOnStartup != m_AasTarget.DisableCatalogUpdateOnStartup)
+                    m_QueuedChanges.Add(() => m_AasTarget.DisableCatalogUpdateOnStartup = disableCatalogOnStartup);
+                string overridePlayerVersion = EditorGUILayout.TextField(m_OverridePlayerVersion, m_AasTarget.OverridePlayerVersion);
+                if(overridePlayerVersion!= m_AasTarget.OverridePlayerVersion)
+                    m_QueuedChanges.Add(() => m_AasTarget.OverridePlayerVersion = overridePlayerVersion);
+                bool bundleLocalCatalog = EditorGUILayout.Toggle(m_BundleLocalCatalog, m_AasTarget.BundleLocalCatalog);
+                if (bundleLocalCatalog != m_AasTarget.BundleLocalCatalog)
+                    m_QueuedChanges.Add(() => m_AasTarget.BundleLocalCatalog = bundleLocalCatalog);
+                bool buildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
+                if(buildRemoteCatalog !=m_AasTarget.BuildRemoteCatalog)
+                    m_QueuedChanges.Add(() => m_AasTarget.BuildRemoteCatalog = buildRemoteCatalog);
                 if ((m_AasTarget.RemoteCatalogBuildPath != null && m_AasTarget.RemoteCatalogLoadPath != null) // these will never actually be null, as the accessor initializes them.
-                    && (m_AasTarget.BuildRemoteCatalog))
+                    && (buildRemoteCatalog))
                 {
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogBuildPath"), m_RemoteCatBuildPath);
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogLoadPath"), m_RemoteCatLoadPath);
                 }
             }
-            
+
             GUILayout.Space(6);
             m_GeneralFoldout = EditorGUILayout.Foldout(m_GeneralFoldout, "General");
             if (m_GeneralFoldout)
             {
                 ProjectConfigData.postProfilerEvents = EditorGUILayout.Toggle(m_SendProfilerEvents, ProjectConfigData.postProfilerEvents);
-                m_AasTarget.buildSettings.LogResourceManagerExceptions = EditorGUILayout.Toggle(m_LogRuntimeExceptions, m_AasTarget.buildSettings.LogResourceManagerExceptions);
+                bool logResourceManagerExceptions = EditorGUILayout.Toggle(m_LogRuntimeExceptions, m_AasTarget.buildSettings.LogResourceManagerExceptions);
+                if(logResourceManagerExceptions != m_AasTarget.buildSettings.LogResourceManagerExceptions)
+                    m_QueuedChanges.Add(() => m_AasTarget.buildSettings.LogResourceManagerExceptions = logResourceManagerExceptions);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("m_CertificateHandlerType"), m_CertificateHandlerType);
-                m_AasTarget.UniqueBundleIds = EditorGUILayout.Toggle(m_UniqueBundles, m_AasTarget.UniqueBundleIds);
-                m_AasTarget.ContiguousBundles = EditorGUILayout.Toggle(m_ContiguousBundles, m_AasTarget.ContiguousBundles);
+                bool uniqueBundleIds = EditorGUILayout.Toggle(m_UniqueBundles, m_AasTarget.UniqueBundleIds);
+                if(uniqueBundleIds != m_AasTarget.UniqueBundleIds)
+                    m_QueuedChanges.Add(() => m_AasTarget.UniqueBundleIds = uniqueBundleIds);
+                bool contiguousBundles = EditorGUILayout.Toggle(m_ContiguousBundles, m_AasTarget.ContiguousBundles);
+                if(contiguousBundles != m_AasTarget.ContiguousBundles)
+                    m_QueuedChanges.Add(() => m_AasTarget.ContiguousBundles = contiguousBundles);
+                var maxWebReqs = EditorGUILayout.IntSlider(m_MaxConcurrentWebRequests, m_AasTarget.MaxConcurrentWebRequests, 1, 1024);
+                if (maxWebReqs != m_AasTarget.MaxConcurrentWebRequests)
+                    m_QueuedChanges.Add(() => m_AasTarget.MaxConcurrentWebRequests = maxWebReqs);
             }
 
             GUILayout.Space(6);
@@ -191,8 +220,16 @@ namespace UnityEditor.AddressableAssets.GUI
             if (m_InitObjectsFoldout)
                 m_InitObjectsRl.DoLayoutList();
 
-
-            serializedObject.ApplyModifiedProperties();
+            if (EditorGUI.EndChangeCheck() || m_QueuedChanges.Count > 0)
+            {
+                Undo.RecordObject(m_AasTarget, "AddressableAssetSettings before changes");
+                foreach (var change in m_QueuedChanges)
+                {
+                    change.Invoke();
+                }
+                m_AasTarget.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true, true);
+                serializedObject.ApplyModifiedProperties();
+            }
         }
 
         void DrawProfileEntriesHeader(Rect rect)

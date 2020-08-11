@@ -13,6 +13,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
     {
         internal AsyncOperationBase<TObject> m_InternalOp;
         int m_Version;
+        string m_LocationName;
+        
+        internal string LocationName
+        {
+            get { return m_LocationName; }
+            set { m_LocationName = value; }
+        }
 
         /// <summary>
         /// Conversion from typed to non typed handles.  This does not increment the reference count.
@@ -21,25 +28,58 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// <param name="obj"></param>
         static public implicit operator AsyncOperationHandle(AsyncOperationHandle<TObject> obj)
         {
-            return new AsyncOperationHandle(obj.m_InternalOp, obj.m_Version);
+            return new AsyncOperationHandle(obj.m_InternalOp, obj.m_Version, obj.m_LocationName);
         }
 
         internal AsyncOperationHandle(AsyncOperationBase<TObject> op)
         {
             m_InternalOp = op;
             m_Version = op?.Version ?? 0;
+            m_LocationName = null;
+        }
+
+        /// <summary>
+        /// Return the current download status for this operation and its dependencies.
+        /// </summary>
+        /// <returns>The download status.</returns>
+        public DownloadStatus GetDownloadStatus()
+        {
+            return InternalGetDownloadStatus(new HashSet<object>());
+        }
+
+        internal DownloadStatus InternalGetDownloadStatus(HashSet<object> visited)
+        {
+            if (visited == null)
+                visited = new HashSet<object>();
+            return visited.Add(InternalOp) ? InternalOp.GetDownloadStatus(visited) : new DownloadStatus() { IsDone = IsDone };
         }
 
         internal AsyncOperationHandle(IAsyncOperation op)
         {
             m_InternalOp = (AsyncOperationBase<TObject>)op;
             m_Version = op?.Version ?? 0;
+            m_LocationName = null;
         }
 
         internal AsyncOperationHandle(IAsyncOperation op, int version)
         {
             m_InternalOp = (AsyncOperationBase<TObject>)op;
             m_Version = version;
+            m_LocationName = null;
+        }
+
+        internal AsyncOperationHandle(IAsyncOperation op, string locationName)
+        {
+            m_InternalOp = (AsyncOperationBase<TObject>)op;
+            m_Version = op?.Version ?? 0;
+            m_LocationName = locationName;
+        }
+        
+        internal AsyncOperationHandle(IAsyncOperation op, int version, string locationName)
+        {
+            m_InternalOp = (AsyncOperationBase<TObject>)op;
+            m_Version = version;
+            m_LocationName = locationName;
         }
 
         /// <summary>
@@ -215,17 +255,40 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
     {
         internal IAsyncOperation m_InternalOp;
         int m_Version;
+        string m_LocationName;
+        
+        internal string LocationName
+        {
+            get { return m_LocationName; }
+            set { m_LocationName = value; }
+        }
 
         internal AsyncOperationHandle(IAsyncOperation op)
         {
             m_InternalOp = op;
             m_Version = op?.Version ?? 0;
+            m_LocationName = null;
         }
 
         internal AsyncOperationHandle(IAsyncOperation op, int version)
         {
             m_InternalOp = op;
             m_Version = version;
+            m_LocationName = null;
+        }
+        
+        internal AsyncOperationHandle(IAsyncOperation op, string locationName)
+        {
+            m_InternalOp = op;
+            m_Version = op?.Version ?? 0;
+            m_LocationName = locationName;
+        }
+        
+        internal AsyncOperationHandle(IAsyncOperation op, int version, string locationName)
+        {
+            m_InternalOp = op;
+            m_Version = version;
+            m_LocationName = locationName;
         }
 
         /// <summary>
@@ -255,7 +318,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// <returns>A new handle that is typed.</returns>
         public AsyncOperationHandle<T> Convert<T>()
         {
-            return new AsyncOperationHandle<T>(InternalOp, m_Version);
+            return new AsyncOperationHandle<T>(InternalOp, m_Version, m_LocationName);
         }
 
         /// <summary>
@@ -270,7 +333,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 return InternalOp.DebugName;
             }
         }
-
+        
         /// <summary>
         /// Event for handling the destruction of the operation.
         /// </summary>
@@ -341,6 +404,22 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             get { return InternalOp.PercentComplete; }
         }
 
+        /// <summary>
+        /// Return the current download status for this operation and its dependencies.  In some instances, the information will not be available.  This can happen if the operation
+        /// is dependent on the initialization operation for addressables.  Once the initialization operation completes, the information returned will be accurate.
+        /// </summary>
+        /// <returns>The download status.</returns>
+        public DownloadStatus GetDownloadStatus()
+        {
+            return InternalGetDownloadStatus(new HashSet<object>());
+        }
+
+        internal DownloadStatus InternalGetDownloadStatus(HashSet<object> visited)
+        {
+            if (visited == null)
+                visited = new HashSet<object>();
+            return visited.Add(InternalOp) ? InternalOp.GetDownloadStatus(visited) : new DownloadStatus() { IsDone = IsDone };
+        }
         /// <summary>
         /// The current reference count of the internal operation.
         /// </summary>

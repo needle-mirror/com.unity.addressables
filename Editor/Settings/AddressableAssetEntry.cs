@@ -699,6 +699,15 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
+        /// Returns the address of the AddressableAssetEntry.
+        /// </summary>
+        /// <returns>The address of the AddressableAssetEntry</returns>
+        public override string ToString()
+        {
+            return m_Address;
+        }
+
+        /// <summary>
         /// Create all entries for this addressable asset.  This will expand subassets (Sprites, Meshes, etc) and also different representations.
         /// </summary>
         /// <param name="entries">The list of entries to fill in.</param>
@@ -735,26 +744,32 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 ObjectIdentifier[] ids = depInfo != null ? depInfo[new GUID(guid)].includedObjects.ToArray() :
                     ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(guid), EditorUserBuildSettings.activeBuildTarget);
-                if (ids.Length > 0)
-                {
-                    Type[] typesForObjs = ContentBuildInterface.GetTypeForObjects(ids);
-                    HashSet<Type> typesSeen = new HashSet<Type>();
-                    foreach (var objType in typesForObjs)
-                    {
-                        if (typeof(Component).IsAssignableFrom(objType))
-                            continue;
-                        Type rtType = AddressableAssetUtility.MapEditorTypeToRuntimeType(objType, false);
-                        if (rtType != null && !typesSeen.Contains(rtType))
-                        {
-                            entries.Add(new ContentCatalogDataEntry(rtType, assetPath, providerType, keyList, dependencies, extraData));
-                            typesSeen.Add(rtType);
-                        }
-                    }
-                }
+                foreach (var t in GatherSubObjectTypes(ids, guid))
+                    entries.Add(new ContentCatalogDataEntry(t, assetPath, providerType, keyList, dependencies, extraData));
             }
             else if (mainType != null)
             {
                 entries.Add(new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, dependencies, extraData));
+            }
+        }
+
+        static internal IEnumerable<Type> GatherSubObjectTypes(ObjectIdentifier[] ids, string guid)
+        {
+            if (ids.Length > 0)
+            {
+                Type[] typesForObjs = ContentBuildInterface.GetTypeForObjects(ids);
+                HashSet<Type> typesSeen = new HashSet<Type>();
+                foreach (var objType in typesForObjs)
+                {
+                    if (typeof(Component).IsAssignableFrom(objType))
+                        continue;
+                    Type rtType = AddressableAssetUtility.MapEditorTypeToRuntimeType(objType, false);
+                    if (rtType != null && !typesSeen.Contains(rtType))
+                    {
+                        yield return rtType;
+                        typesSeen.Add(rtType);
+                    }
+                }
             }
         }
 

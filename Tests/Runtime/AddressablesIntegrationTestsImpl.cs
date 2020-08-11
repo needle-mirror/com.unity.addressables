@@ -13,12 +13,13 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.AddressableAssets.ResourceProviders;
+using UnityEngine.AddressableAssets.Utility;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.U2D;
 using Object = UnityEngine.Object;
 
@@ -26,12 +27,30 @@ namespace AddressableAssetsIntegrationTests
 {
     internal abstract partial class AddressablesIntegrationTests : IPrebuildSetup
     {
+        internal class IgnoreFailingLogMessage : IDisposable
+        {
+            private bool m_SavedIgnoreFailingMessagesFlag;
+            public IgnoreFailingLogMessage()
+            {
+                m_SavedIgnoreFailingMessagesFlag = LogAssert.ignoreFailingMessages;
+                LogAssert.ignoreFailingMessages = true;
+            }
+            public void Dispose()
+            {
+                LogAssert.ignoreFailingMessages = m_SavedIgnoreFailingMessagesFlag;
+            }
+        }
+
+
         [UnityTest]
         public IEnumerator AsyncCache_IsCleaned_OnFailedOperation()
         {
             yield return Init();
 
-            var op = m_Addressables.LoadAssetAsync<GameObject>("notARealKey");
+            AsyncOperationHandle<GameObject> op;
+            using (new IgnoreFailingLogMessage())
+                op = m_Addressables.LoadAssetAsync<GameObject>("notARealKey");
+
             op.Completed += handle =>
             {
                 Assert.AreEqual(0, m_Addressables.ResourceManager.CachedOperationCount());
@@ -64,6 +83,18 @@ namespace AddressableAssetsIntegrationTests
             {
                 m_Addressables.LoadResourceLocationsAsync(AddressablesTestUtility.GetPrefabLabel("BASE"), typeof(GameObject));
             });
+        }
+
+        [UnityTest]
+        public IEnumerator LoadPrefabWithComponentType_Fails()
+        {
+            //Setup
+            yield return Init();
+
+            //Test
+            var op = m_Addressables.LoadAssetAsync<MeshRenderer>("test0BASE");
+            yield return op;
+            Assert.IsNull(op.Result);
         }
 
         [UnityTest]
@@ -1192,6 +1223,27 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator AssetReference_HandleIsInvalidated_WhenReleasingLoadOperation()
+        {
+            yield return Init();
+            AsyncOperationHandle handle = m_Addressables.InstantiateAsync(AssetReferenceObjectKey);
+            yield return handle;
+            Assert.IsNotNull(handle.Result as GameObject);
+            AssetReferenceTestBehavior behavior =
+                (handle.Result as GameObject).GetComponent<AssetReferenceTestBehavior>();
+
+            using(new IgnoreFailingLogMessage())
+                yield return behavior.Reference.LoadAssetAsync<GameObject>();
+
+            AsyncOperationHandle referenceHandle = behavior.Reference.OperationHandle;
+            Assert.IsTrue(behavior.Reference.IsValid());
+            m_Addressables.Release(referenceHandle);
+            Assert.IsFalse(behavior.Reference.IsValid());
+
+            handle.Release();
+        }
+
+        [UnityTest]
         public IEnumerator CanUnloadAssetReference_WithAddressables()
         {
             yield return Init();
@@ -1289,6 +1341,133 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator ResourceManagerDiagnostics_SumDependencyNameHashCodes_ProperlyCalculatesForOneLayerOfDependencies()
+        {
+            yield return Init();
+            var rmd = new ResourceManagerDiagnostics(m_Addressables.ResourceManager);
+            
+            GroupOperation groupOp = new GroupOperation();
+
+
+            float handle1PercentComplete = 0.22f;
+            float handle2PercentComplete = 0.78f;
+            float handle3PercentComplete = 1.0f;
+            float handle4PercentComplete = 0.35f;
+
+            List<AsyncOperationHandle> handles = new List<AsyncOperationHandle>()
+            {
+                new ManualPercentCompleteOperation(handle1PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle2PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle3PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle4PercentComplete).Handle
+            };
+
+            groupOp.Init(handles);
+
+            var handle = groupOp.Handle;
+            var dependencyNameHashSum = handle.DebugName.GetHashCode() + rmd.SumDependencyNameHashCodes(handle);
+            var manualDepNameHashSum = handle.DebugName.GetHashCode();
+            foreach (var h in handles)
+                manualDepNameHashSum += h.DebugName.GetHashCode();
+            Assert.AreEqual(manualDepNameHashSum, dependencyNameHashSum, "Calculation of hashcode was not completed as expected.");
+        }
+        
+        [UnityTest]
+        public IEnumerator ResourceManagerDiagnostics_SumDependencyNameHashCodes_ProperlyCalculatesForMultipleLayersOfDependencies()
+        {
+            yield return Init();
+            var rmd = new ResourceManagerDiagnostics(m_Addressables.ResourceManager);
+            
+            GroupOperation groupOp = new GroupOperation();
+            GroupOperation embeddedOp = new GroupOperation();
+
+
+            float handle1PercentComplete = 0.22f;
+            float handle2PercentComplete = 0.78f;
+            float handle3PercentComplete = 1.0f;
+            float handle4PercentComplete = 0.35f;
+
+            List<AsyncOperationHandle> embeddedHandles = new List<AsyncOperationHandle>()
+            {
+                new ManualPercentCompleteOperation(handle1PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle2PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle3PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle4PercentComplete).Handle
+            };
+
+            embeddedOp.Init(embeddedHandles);
+            
+            List<AsyncOperationHandle> handles = new List<AsyncOperationHandle>()
+            {
+                embeddedOp.Handle,
+                new ManualPercentCompleteOperation(handle1PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle2PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle3PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle4PercentComplete).Handle
+            };
+            
+            groupOp.Init(handles);
+            
+            var dependencyNameHashSum = groupOp.Handle.DebugName.GetHashCode() + rmd.SumDependencyNameHashCodes(groupOp.Handle);
+            int manualDepNameHashSum;
+            
+            unchecked
+            {
+                manualDepNameHashSum = groupOp.Handle.DebugName.GetHashCode();
+                foreach (var h in handles)
+                    manualDepNameHashSum += h.DebugName.GetHashCode();
+                foreach (var h in embeddedHandles)
+                    manualDepNameHashSum += h.DebugName.GetHashCode();
+            }
+            
+            Assert.AreEqual(dependencyNameHashSum,manualDepNameHashSum, "Calculation of hashcode was not completed as expected.");
+        }
+        
+        [UnityTest]
+        public IEnumerator ResourceManagerDiagnostics_CalculateHashCode_NonChangingNameCase()
+        {
+            yield return Init();
+            var rmd = new ResourceManagerDiagnostics(m_Addressables.ResourceManager);
+            
+            GroupOperation groupOp = new GroupOperation();
+
+
+            float handle1PercentComplete = 0.22f;
+            float handle2PercentComplete = 0.78f;
+            float handle3PercentComplete = 1.0f;
+            float handle4PercentComplete = 0.35f;
+
+            List<AsyncOperationHandle> handles = new List<AsyncOperationHandle>()
+            {
+                new ManualPercentCompleteOperation(handle1PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle2PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle3PercentComplete).Handle,
+                new ManualPercentCompleteOperation(handle4PercentComplete).Handle
+            };
+
+            groupOp.Init(handles);
+
+            var handle = groupOp.Handle;
+            var dependencyNameHashSum = rmd.CalculateHashCode(handle);
+            var manualDepNameHashSum = handle.DebugName.GetHashCode();
+            foreach (var h in handles)
+                manualDepNameHashSum += h.DebugName.GetHashCode();
+            Assert.AreEqual(manualDepNameHashSum, dependencyNameHashSum, "Calculation of hashcode was not completed as expected.");
+        }
+        
+        [UnityTest]
+        public IEnumerator ResourceManagerDiagnostics_CalculateHashCode_NameChangingCase()
+        {
+            yield return Init();
+            var rmd = new ResourceManagerDiagnostics(m_Addressables.ResourceManager);
+            
+            AsyncOperationHandle changingHandle = new ManualPercentCompleteOperation(0.22f).Handle;
+            
+            Assert.AreEqual(changingHandle.GetHashCode(), rmd.CalculateHashCode(changingHandle), "Default hashcode should have been use since ManualPercentCompleteOperation includes its status in its DebugName");
+        }
+        
+
+        [UnityTest]
         public IEnumerator PercentComplete_CalculationIsCorrect_WhenInAChainOperation()
         {
             yield return Init();
@@ -1359,12 +1538,12 @@ namespace AddressableAssetsIntegrationTests
             versions.Clear();
 
             string key = "lockey";
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)));
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
-            yield return m_Addressables.ClearDependencyCacheAsync(key);
+            yield return m_Addressables.ClearDependencyCacheAsync(key, true);
             Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(0, versions.Count);
 #else
@@ -1393,16 +1572,16 @@ namespace AddressableAssetsIntegrationTests
 
             string key = "lockey_withdeps";
 
-            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(object),
-                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(object)));
+            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
 
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
-                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)),
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)),
                 depLocation);
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
-            yield return m_Addressables.ClearDependencyCacheAsync(key);
+            yield return m_Addressables.ClearDependencyCacheAsync(key, true);
 
             List<Hash128> versions = new List<Hash128>();
             Caching.GetCachedVersions(bundleName, versions);
@@ -1436,12 +1615,12 @@ namespace AddressableAssetsIntegrationTests
             versions.Clear();
 
             string key = "lockey_forlocationtest";
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
-                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)));
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
-            yield return m_Addressables.ClearDependencyCacheAsync(location);
+            yield return m_Addressables.ClearDependencyCacheAsync(location, true);
             Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(0, versions.Count);
 #else
@@ -1469,16 +1648,16 @@ namespace AddressableAssetsIntegrationTests
 
             string key = "lockey_withdeps_forlocationtest";
 
-            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(object),
-                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(object)));
+            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
 
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
-                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)),
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)),
                 depLocation);
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
-            yield return m_Addressables.ClearDependencyCacheAsync(location);
+            yield return m_Addressables.ClearDependencyCacheAsync(location, true);
 
             List<Hash128> versions = new List<Hash128>();
             Caching.GetCachedVersions(bundleName, versions);
@@ -1511,12 +1690,12 @@ namespace AddressableAssetsIntegrationTests
             versions.Clear();
 
             string key = "lockey_forlocationlisttest";
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
-                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)));
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
-            yield return m_Addressables.ClearDependencyCacheAsync(new List<IResourceLocation>() { location });
+            yield return m_Addressables.ClearDependencyCacheAsync(new List<IResourceLocation>() { location }, true);
             Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(0, versions.Count);
 #else
@@ -1545,16 +1724,16 @@ namespace AddressableAssetsIntegrationTests
 
             string key = "lockey_withdeps_forlocationlisttest";
 
-            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(object),
-                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(object)));
+            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
 
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(object),
-                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)),
+            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)),
                 depLocation);
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
-            yield return m_Addressables.ClearDependencyCacheAsync(new List<IResourceLocation>() { location });
+            yield return m_Addressables.ClearDependencyCacheAsync(new List<IResourceLocation>() { location }, true);
 
             List<Hash128> versions = new List<Hash128>();
             Caching.GetCachedVersions(bundleName, versions);
@@ -1651,7 +1830,7 @@ namespace AddressableAssetsIntegrationTests
             CreateFakeCachedBundle(bundleName, Hash128.Parse(hash).ToString());
             CachedAssetBundle cab = new CachedAssetBundle(bundleName, Hash128.Parse(hash));
             var request = abr.CreateWebRequest(new ResourceLocationBase("testName", bundleName, typeof(AssetBundleProvider).FullName,
-                typeof(AssetBundleResource)));
+                typeof(IAssetBundleResource)));
 
             Assert.IsTrue(Caching.IsVersionCached(cab));
             yield return request.SendWebRequest();
@@ -1682,7 +1861,7 @@ namespace AddressableAssetsIntegrationTests
             CreateFakeCachedBundle(bundleName, Hash128.Parse(hash).ToString());
             CachedAssetBundle cab = new CachedAssetBundle(bundleName, Hash128.Parse(hash));
             var request = abr.CreateWebRequest(new ResourceLocationBase("testName", bundleName, typeof(AssetBundleProvider).FullName,
-                typeof(AssetBundleResource)));
+                typeof(IAssetBundleResource)));
 
             Assert.IsTrue(Caching.IsVersionCached(cab));
             yield return request.SendWebRequest();

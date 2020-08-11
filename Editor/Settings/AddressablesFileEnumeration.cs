@@ -101,7 +101,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
     internal class AddressablesFileEnumeration
     {
-        static AddressableAssetTree BuildAddressableTree(AddressableAssetSettings settings, IBuildLogger logger = null)
+        internal static AddressableAssetTree BuildAddressableTree(AddressableAssetSettings settings, IBuildLogger logger = null)
         {
             using (logger.ScopedStep(LogLevel.Verbose, "BuildAddressableTree"))
             {
@@ -157,6 +157,21 @@ namespace UnityEditor.AddressableAssets.Settings
                     node.IsFolder = Directory.Exists(filename);
                     node.HasEnumerated = true;
                 }
+            }
+        }
+
+        internal class AddressablesFileEnumerationScope : IDisposable
+        {
+            AddressableAssetTree m_PrevTree;
+            internal AddressablesFileEnumerationScope(AddressableAssetTree tree)
+            {
+                m_PrevTree = m_PrecomputedTree;
+                m_PrecomputedTree = tree;
+            }
+
+            public void Dispose()
+            {
+                m_PrecomputedTree = m_PrevTree;
             }
         }
 

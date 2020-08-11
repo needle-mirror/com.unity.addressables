@@ -172,6 +172,8 @@ By default, when building Addressables app data, data for your given platform is
 
 **Note**: If you use the Addressables [`BuildScriptPackedPlayMode`](../api/UnityEditor.AddressableAssets.Build.DataBuilders.BuildScriptPackedPlayMode.html) script in the Editor Play mode, Addressables will attempt to load data for your current active build target. As such, issues may arise if your current build target data isn't compatible with your current Editor platform. For more information, see documentation on [Play mode scripts](AddressableAssetsDevelopmentCycle.md#play-mode-scripts).
 
+**Note**: If a group has a “Content Packing & Unloading” schema, its **Compression** mode can be modified in the **Inspector** window. For optimal asset loading times regardless of platform, only use **LZ4** for local content and **LZMA** for online content.
+
 ### Grouping assets
 It is a good practice to logically collect assets into multiple groups rather than put them all in one large group. The key benefit of this method is to avoid conflicts in version control systems (VCS) when multiple contributors make edits to the same file. Having one large asset group might result in the VCS's inability to cleanly merge these various changes.
 

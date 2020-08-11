@@ -83,16 +83,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
         }
 
-
         /// <inheritdoc/>
         public override bool CanProvide(Type t, IResourceLocation location)
         {
-            if (t.IsArray)
-                t = t.GetElementType();
-            else if (t.IsGenericType && typeof(IList<>) == t.GetGenericTypeDefinition())
-                t = t.GetGenericArguments()[0];
-
-            return t == typeof(object) || typeof(Object).IsAssignableFrom(t);
+            return base.CanProvide(t, location);
         }
 
         public override void Provide(ProvideHandle provideHandle)

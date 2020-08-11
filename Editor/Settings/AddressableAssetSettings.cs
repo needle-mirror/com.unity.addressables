@@ -211,6 +211,17 @@ namespace UnityEditor.AddressableAssets.Settings
         [SerializeField]
         bool m_UniqueBundleIds = false;
 
+        [SerializeField]
+        int m_maxConcurrentWebRequests = 500;
+        /// <summary>
+        /// The maximum number of concurrent web requests.  This value will be clamped from 1 to 1024.
+        /// </summary>
+        public int MaxConcurrentWebRequests
+        {
+            get { return m_maxConcurrentWebRequests; }
+            set { m_maxConcurrentWebRequests = Mathf.Clamp(value, 1, 1024); }
+        }
+
         public bool UniqueBundleIds
         {
             get { return m_UniqueBundleIds; }

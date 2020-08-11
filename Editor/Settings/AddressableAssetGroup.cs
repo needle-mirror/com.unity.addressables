@@ -345,7 +345,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
                 catch (Exception ex)
                 {
-                    Addressables.Log(e.address);
+                    Addressables.InternalSafeSerializationLog(e.address);
                     Debug.LogException(ex);
                 }
             }

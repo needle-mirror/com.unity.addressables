@@ -38,6 +38,11 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             return m_PlayerSessions[index];
         }
 
+        internal int GetSessionIndexById(int playerId)
+        {
+            return m_PlayerSessions.FindIndex(edps => edps.PlayerId == playerId);
+        }
+
         public EventDataPlayerSession GetPlayerSession(int playerId, bool create)
         {
             foreach (var c in m_PlayerSessions)
@@ -52,12 +57,22 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             return null;
         }
 
+        internal void RemoveSession(int playerId)
+        {
+            m_PlayerSessions.RemoveAll(edps => edps.PlayerId == playerId);
+        }
+        
         public string[] GetConnectionNames()
         {
             string[] names = new string[m_PlayerSessions.Count];
             for (int i = 0; i < m_PlayerSessions.Count; i++)
                 names[i] = m_PlayerSessions[i].EventName;
             return names;
+        }
+
+        internal int GetSessionCount()
+        {
+            return m_PlayerSessions.Count;
         }
 
         public void AddSession(string name, int id)
@@ -68,9 +83,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         public void Update()
         {
             foreach (var s in m_PlayerSessions)
-            {
                 s.Update();
-            }
         }
     }
 }

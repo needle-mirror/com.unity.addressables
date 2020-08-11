@@ -96,6 +96,15 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
 
         /// <summary>
+        /// Set the func for handling download progress requests.
+        /// </summary>
+        /// <param name="callback">The callback function.</param>
+        public void SetDownloadProgressCallbacks(Func<DownloadStatus> callback)
+        {
+            InternalOp.SetDownloadProgressCallback(callback);
+        }
+
+        /// <summary>
         /// Called to complete the operation.
         /// </summary>
         /// <typeparam name="T">The type of object requested.</typeparam>

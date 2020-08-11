@@ -4,6 +4,34 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.14.2] - 2020-08-11
+- Addressables now logs the package version on initialization.
+- Renamed Build Bundle Layout analyze rule to Bundle Layout Preview
+- Marked RawWriteOperation obsolete.
+- Marked SceneRawWriteOperation obsolete.
+- AsyncOperationHandle<bool> ClearDependencyCacheAsync has been added.  The new API takes an autoReleaseHandle parameter and returns the AsyncOperationHandle.
+- Made the AsyncOperationHandle in AssetReference public.
+- Fixed loading of items from Resources and the built in ScenesList.
+- Improved the performance of loading local content on Android by using LoadFromFileAsync instead of UnityWebRequest. Please note that the bundle compression mode for all local content (on any platform) should be LZ4 or uncompressed to have optimal load performance. 
+- Fixed issue where some Addressables settings were not being saved if they were only serialized properties or textfields like 'Build Remote Catalog'
+- Fixed a bug where DiagnosticEvents would be created even if 'Send Profiler Events' was set to false.
+- Refactored the DebugNames of many of the most common implementations of AsyncOperationHandle to improve readability in the event viewer.
+- Events in the Event viewer should now display more accurately in the case of Repeated loads and unloads of the same object. 
+- AddressableAssetEntry now overrides ToString() to return the address of the entry
+- Added support for setting multiple assets and subasset references at a time for field in GameObject script in the AssetReference Inspector
+- Improved performance of the GenerateLocationLists task
+- Refactored DiagnosticEventCollector.RegisterEventHandler so that events are always handled in frame order. 
+- Fixed bug where the Event Viewer would not work when connected to a standalone player.
+- Added docs describing the process of connecting the Event Viewer to a standalone player.
+- Fixed exception that was getting thrown on Editor restart regarding accessing EditorSettings.enterPlayModeOptionsEnabled during serialization.
+- Added MaxConcurrentWebRequests option to the AddressableAssetSettings.
+- Added GetDownloadStatus method to AsyncOperationHandle.  The DownloadStatus struct returned will contain the total number of bytes needed to be downloaded and the current number of bytes already downloaded.  Cached AssetBundles will not be included in the count and if everything is cached, the values in the struct will be zero.
+- Added Documentation for the following:
+  - InstantiateAsync
+  - DownloadDependenciesAsync
+  - LoadContentCatalogAsync
+  - UpdateCatalogs
+
 ## [1.13.1] - 2020-07-28
 - Made `AssetReferenceT<TObject>` be Serializable.  This will only matter if using Unity 2020.1 or later.
 - Added AddressableAssetSettings.ContiguousBundles option, which when enabled will improve asset loading times.
@@ -18,6 +46,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed bug where changes made through the AddressableAssetProfileSettings API would not be immediately represented in the Profiles Window.
 - Fixed bug where Instantiation and EventCount events in the Event Viewer would not update as expected.
 - Fixed bug where events that occurred immediately after entering play mode would not be properly represented in the Event Viewer.
+- Fixed bug where Instantiation and EventCount events would not display their most recent value when inspected in the Event Viewer.
 - Added Documentation for the following:
   - LoadAssetAsync
   - LoadAssetsAsync

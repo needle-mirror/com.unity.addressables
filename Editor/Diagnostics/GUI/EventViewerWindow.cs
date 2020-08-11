@@ -34,7 +34,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         MultiColumnHeaderState m_GraphListMchs;
         EventGraphListView m_GraphList;
 
-        EventDataPlayerSession activeSession { get { return m_EventData == null ? null : m_EventData.GetSessionByIndex(m_PlayerSessionIndex); } }
+        EventDataPlayerSession activeSession
+        {
+            get { return m_EventData == null ? null : m_EventData.GetSessionByIndex(m_PlayerSessionIndex); }
+        }
         protected virtual bool ShowEventDetailPanel { get { return false; } }
         protected virtual bool ShowEventPanel { get { return false; } }
 
@@ -71,15 +74,16 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             if (m_EventData == null)
                 m_EventData = new EventDataPlayerSessionCollection(OnRecordEvent);
             m_EventData.GetPlayerSession(id, true).IsActive = true;
+            int connectedSessionIndex = m_EventData.GetSessionIndexById(id);
+            m_PlayerSessionIndex = connectedSessionIndex != -1 ? connectedSessionIndex : 0;
         }
 
         void OnPlayerDisconnection(int id)
         {
             if (m_EventData == null)
                 return;
-            var playerSession = m_EventData.GetPlayerSession(id, false);
-            if (playerSession != null)
-                playerSession.IsActive = false;
+            m_EventData.RemoveSession(id);
+            m_PlayerSessionIndex = 0;
         }
 
         void OnPlayerConnectionMessage(MessageEventArgs args)
@@ -403,19 +407,17 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             {
                 string warningText = string.Empty;
                 if (!ProjectConfigData.postProfilerEvents)
-                    warningText = "Warning: Profile events must be enabled in your Addressable Asset settings to view profile data";
+                    warningText = "Warning: 'Send Profiler events' must be enabled in your Addressable Asset settings to view profile data. Changes to 'Send Profiler Events' will be applied on the following build.";
                 m_GraphListMchs.columns[2].headerContent.text = warningText;
             }
         }
 
         void InitializeGraphView(EventGraphListView graphView)
         {
-            graphView.DefineGraph("EventCount", 0, new GraphLayerVertValueLine(0, "Events", "Event count per frame", Color.green));
             graphView.DefineGraph("FrameCount", 1, new GraphLayerBarChartMesh(1, "FPS", "Current Frame Rate", Color.blue),
                 new GraphLayerLabel(1, "FPS", "Current Frame Rate", Color.white, GraphColors.LabelGraphLabelBackground, v => string.Format("{0} FPS", v)));
             graphView.DefineGraph("MemoryCount", 2, new GraphLayerBarChartMesh(2, "MonoHeap", "Current Mono Heap Size", Color.green * .75f),
                 new GraphLayerLabel(2, "MonoHeap", "Current Mono Heap Size", Color.white, GraphColors.LabelGraphLabelBackground, v => string.Format("{0:0.0}MB", (v / 1024f))));
-
             OnInitializeGraphView(graphView);
         }
 

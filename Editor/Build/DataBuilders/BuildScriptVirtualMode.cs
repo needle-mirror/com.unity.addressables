@@ -89,7 +89,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 runtimeData = new ResourceManagerRuntimeData(),
                 bundleToAssetGroup = new Dictionary<string, string>(),
                 locations = new List<ContentCatalogDataEntry>(),
-                providerTypes = new HashSet<Type>()
+                providerTypes = new HashSet<Type>(),
+                assetEntries = new List<AddressableAssetEntry>()
             };
             m_AllBundleInputDefinitions = new List<AssetBundleBuild>();
             aaContext.runtimeData.BuildTarget = builderInput.Target.ToString();
@@ -100,8 +101,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 new[] { ResourceManagerRuntimeData.kCatalogAddress },
                 string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"),
                 typeof(ContentCatalogProvider), typeof(ContentCatalogData)));
-
-
+#if UNITY_2019_3_OR_NEWER
+            aaContext.runtimeData.AddressablesVersion = PackageManager.PackageInfo.FindForAssembly(typeof(Addressables).Assembly).version;
+#endif
             m_CreatedProviderIds = new Dictionary<string, VirtualAssetBundleRuntimeData>();
             m_ResourceProviderData = new List<ObjectInitializationData>();
 
@@ -297,7 +299,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
 
             var bundleInputDefs = new List<AssetBundleBuild>();
-            BuildScriptPackedMode.PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema.BundleMode);
+            List<AddressableAssetEntry> list = BuildScriptPackedMode.PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema.BundleMode);
+            aaContext.assetEntries.AddRange(list);
             for (int i = 0; i < bundleInputDefs.Count; i++)
             {
                 if (aaContext.bundleToAssetGroup.ContainsKey(bundleInputDefs[i].assetBundleName))
@@ -323,14 +326,27 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return path.StartsWith("{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
         }
 
-        static long ComputeSize(string a)
+        static string OutputLibraryPathForAsset(string a)
         {
             var guid = AssetDatabase.AssetPathToGUID(a);
-            if (string.IsNullOrEmpty(guid) || guid.Length < 2)
-                return 1024;
-            var path = string.Format("Library/metadata/{0}{1}/{2}", guid[0], guid[1], guid);
+#if UNITY_2019_3_OR_NEWER
+            var hash = Experimental.AssetDatabaseExperimental.GetArtifactHash(guid);
+            if (Experimental.AssetDatabaseExperimental.GetArtifactPaths(hash, out var paths))
+                return Path.GetFullPath(paths[0]);
+            return string.Format("Library/metadata/{0}{1}/{2}", guid[0], guid[1], guid);
+
+#else
+            return string.Format("Library/metadata/{0}{1}/{2}", guid[0], guid[1], guid);
+#endif
+        }
+
+        static long ComputeSize(string a)
+        {
+            var path = OutputLibraryPathForAsset(a);
             if (!File.Exists(path))
-                return 1024;
+            {
+                return 1024 * 1024;
+            }
             return new FileInfo(path).Length;
         }
 

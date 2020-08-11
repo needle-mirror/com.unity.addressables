@@ -105,12 +105,23 @@ public class GenerateLocationListsTaskTests
         CollectionAssert.AreEquivalent(e1.Dependencies, deps);
     }
 
+    static List<AddressableAssetEntry> BuildAddressableAssetEntryList(AddressableAssetSettings settings)
+    {
+        List<AddressableAssetEntry> entries = new List<AddressableAssetEntry>();
+        foreach (AddressableAssetGroup group in settings.groups)
+        {
+            group.GatherAllAssets(entries, true, true, false);
+        }
+        return entries;
+    }
+
     [Test]
     public void WhenAssetLoadsFromBundle_ProviderTypesIncludesBundledAssetProvider()
     {
         GenerateLocationListsTask.Input input = GenerateDefaultInput();
         AddressableAssetGroup groupX = CreateGroupMappedToBundle(input, "X");
         CreateAddressablePrefab(input, "p1", groupX, "fileX");
+        input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
         GenerateLocationListsTask.Output output = GenerateLocationListsTask.RunInternal(input);
         CollectionAssert.Contains(output.ProviderTypes, typeof(BundledAssetProvider));
     }
@@ -126,7 +137,7 @@ public class GenerateLocationListsTaskTests
         input.FileToBundle["fileY"] = "bundle2";
         CreateAddressablePrefab(input, "p1", group, "fileX");
         CreateAddressablePrefab(input, "p2", group, "fileY");
-
+        input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
         GenerateLocationListsTask.Output output = GenerateLocationListsTask.RunInternal(input);
         CollectionAssert.AreEquivalent(new string[] { "bundle1", "bundle2" }, output.AssetGroupToBundles[group]);
     }
@@ -148,6 +159,7 @@ public class GenerateLocationListsTaskTests
         CreateAddressablePrefab(input, "p5", groupZ, "fileZ", "fileW");
         CreateAddressablePrefab(input, "p6", groupW, "fileW");
 
+        input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
         GenerateLocationListsTask.Output output = GenerateLocationListsTask.RunInternal(input);
 
         AssertLocationDependencies(output, "p1", "bundleX", "bundleY", "bundleZ", "bundleW");

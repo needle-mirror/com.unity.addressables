@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.Diagnostics;
@@ -71,15 +70,15 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             return false;
         }
 
-        internal bool HasRefcountAfterFrame(int frame)
+        internal bool HasRefcountAfterFrame(int frame, bool checkChildren)
         {
             var refCountStream = m_Streams[k_RefCountIndex];
             if (refCountStream != null)
                 if (refCountStream.HasDataAfterFrame(frame)) 
                     return true;
-            if (m_Children != null)
+            if (m_Children != null && checkChildren)
                 foreach (var c in m_Children)
-                    if (c.Value.HasRefcountAfterFrame(frame))
+                    if (c.Value.HasRefcountAfterFrame(frame, checkChildren))
                         return true;
             return false;
         }
@@ -106,12 +105,15 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         {
             if (m_Children == null)
                 m_Children = new Dictionary<int, EventDataSet>();
-            m_Children.Add(eventDataSet.ObjectId, eventDataSet);
+            if (!m_Children.ContainsKey(eventDataSet.ObjectId)) 
+                m_Children.Add(eventDataSet.ObjectId, eventDataSet);
         }
+        
 
         internal void RemoveChild(int d)
         {
-            m_Children.Remove(d);
+            if (m_Children.ContainsKey(d))
+                m_Children.Remove(d);
             if (m_Children.Count == 0)
                 m_Children = null;
         }

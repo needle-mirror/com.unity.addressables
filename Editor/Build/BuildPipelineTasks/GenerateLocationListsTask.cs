@@ -55,12 +55,19 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             input.Logger = m_Log;
             input.Settings = aaContext.Settings;
             input.BundleToAssetGroup = aaContext.bundleToAssetGroup;
+            input.AddressableAssetEntries = aaContext.assetEntries;
 
             Output output = RunInternal(input);
 
-            aaContext.locations = output.Locations;
+            if (aaContext.locations == null)
+                aaContext.locations = output.Locations;
+            else
+                aaContext.locations.AddRange(output.Locations);
             aaContext.assetGroupToBundles = output.AssetGroupToBundles;
-            aaContext.providerTypes = output.ProviderTypes;
+            if (aaContext.providerTypes == null)
+                aaContext.providerTypes = output.ProviderTypes;
+            else
+                aaContext.providerTypes.UnionWith(output.ProviderTypes);
 
             return ReturnCode.Success;
         }
@@ -75,6 +82,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             public IBuildLogger Logger;
             public AddressableAssetSettings Settings;
             public Dictionary<string, string> BundleToAssetGroup;
+            public List<AddressableAssetEntry> AddressableAssetEntries;
         }
 
         internal struct Output
@@ -179,15 +187,13 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             }
 
             using (input.Logger.ScopedStep(LogLevel.Info, "Calculate Locations"))
-            using (var cache = new AddressablesFileEnumerationCache(input.Settings, true, input.Logger))
             {
+                // build a mapping of asset guid to AddressableAssetEntry
+                Dictionary<string, AddressableAssetEntry> guidToEntry = input.AddressableAssetEntries.ToDictionary(x => x.guid, x => x);
+
                 foreach (BundleEntry bEntry in bundleToEntry.Values)
                 {
                     string assetProvider = GetAssetProviderName(bEntry.Group);
-                    var assets = new List<AddressableAssetEntry>();
-                    bEntry.Group.GatherAllAssets(assets, true, true, false);
-                    Dictionary<string, AddressableAssetEntry> guidToEntry = assets.ToDictionary(x => x.guid, x => x);
-
                     foreach (GUID assetGUID in bEntry.Assets)
                     {
                         if (guidToEntry.TryGetValue(assetGUID.ToString(), out AddressableAssetEntry entry))

@@ -327,8 +327,8 @@ namespace UnityEditor.AddressableAssets.Tests
             group.AddAssetEntry(scene2, false);
             group.AddAssetEntry(scene3, false);
 
-            scene1.SetLabel("label", true);
-            scene3.SetLabel("label", true);
+            scene1.SetLabel("label", true, true);
+            scene3.SetLabel("label", true, true);
 
             List<AddressableAssetEntry> modifedEnteries = new List<AddressableAssetEntry>()
             {

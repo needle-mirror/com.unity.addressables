@@ -24,11 +24,12 @@ namespace UnityEditor.AddressableAssets.GUI
     {
         public string newGuid;
         public string newGuidPropertyPath;
-        string m_AssetName;
+        internal string m_AssetName;
         internal Rect assetDropDownRect;
         internal const string noAssetString = "None (AddressableAsset)";
         internal AssetReference m_AssetRefObject;
-
+        internal GUIContent m_label;
+        internal bool m_ReferencesSame = true;
         List<AssetReferenceUIRestrictionSurrogate> m_Restrictions = null;
 
 #if UNITY_2019_1_OR_NEWER
@@ -67,8 +68,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 Undo.RecordObject(property.serializedObject.targetObject, "Assign Asset Reference");
                 if (target == null)
                 {
-                    m_AssetRefObject.SetEditorAsset(null);
-                    EditorUtility.SetDirty(property.serializedObject.targetObject);
+                    guid = SetSingleAsset(property, null, null);
+                    if(property.serializedObject.targetObjects.Length > 1)
+                        return SetMainAssets(property, null, null, fieldInfo);
                     return true;
                 }
 
@@ -94,18 +96,15 @@ namespace UnityEditor.AddressableAssets.GUI
                         break;
                     }
                 }
-                var success = m_AssetRefObject.SetEditorAsset(target);
-                if (success)
-                {
-                    if (subObject != null)
-                        m_AssetRefObject.SetEditorSubObject(subObject);
-                    guid = m_AssetRefObject.AssetGUID;
-                    EditorUtility.SetDirty(property.serializedObject.targetObject);
 
-                    var comp = property.serializedObject.targetObject as Component;
-                    if (comp != null && comp.gameObject != null && comp.gameObject.activeInHierarchy)
-                        EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
+                guid = SetSingleAsset(property, target, subObject);
+                
+                var success = true;
+                if (property.serializedObject.targetObjects.Length > 1)
+                {
+                    success = SetMainAssets(property, target, subObject, fieldInfo);
                 }
+
                 return success;
             }
             catch (Exception e)
@@ -113,6 +112,70 @@ namespace UnityEditor.AddressableAssets.GUI
                 Debug.LogException(e);
             }
             return false;
+        }
+
+        internal string SetSingleAsset(SerializedProperty property, Object asset, Object subObject)
+        {
+            string guid = null;
+            bool success = false;
+            if (asset == null)
+            {
+                m_AssetRefObject.SetEditorAsset(null);
+                EditorUtility.SetDirty(property.serializedObject.targetObject);
+                return guid;
+            }
+            success = m_AssetRefObject.SetEditorAsset(asset);
+            if (success)
+            {
+                if (subObject != null)
+                    m_AssetRefObject.SetEditorSubObject(subObject);
+                else
+                    m_AssetRefObject.SubObjectName = null;
+                guid = m_AssetRefObject.AssetGUID;
+                EditorUtility.SetDirty(property.serializedObject.targetObject);
+
+                Component comp = property.serializedObject.targetObject as Component;
+                if (comp != null && comp.gameObject != null && comp.gameObject.activeInHierarchy)
+                    EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
+            }
+
+            return guid;
+        }
+
+        internal bool SetMainAssets(SerializedProperty property, Object asset, Object subObject ,FieldInfo propertyField)
+        {
+            var allsuccess = true;
+            foreach (var targetObj in property.serializedObject.targetObjects)
+            {
+                var serializeObjectMulti = new SerializedObject(targetObj);
+                SerializedProperty sp = serializeObjectMulti.FindProperty(property.name);
+                string labelText = m_label.text;
+                var assetRefObject =
+                    sp.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
+                if (assetRefObject != null )
+                {
+                    Undo.RecordObject(targetObj, "Assign Asset Reference");
+                    var success = assetRefObject.SetEditorAsset(asset);
+                    if (success)
+                    {
+                        if (subObject != null)
+                            assetRefObject.SetEditorSubObject(subObject);
+                        else
+                            assetRefObject.SubObjectName = null;
+                        EditorUtility.SetDirty(targetObj);
+                        Component comp = targetObj as Component;
+                        if (comp != null && comp.gameObject != null && comp.gameObject.activeInHierarchy)
+                            EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
+                    }
+                    else
+                    {
+                        allsuccess = false;
+                    }
+                }
+            }
+
+            m_ReferencesSame = allsuccess;
+            return allsuccess;
         }
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -129,6 +192,7 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 label = new GUIContent(labelText, label.tooltip);
             }
+            m_label = label;
 
             if (m_AssetRefObject == null)
             {
@@ -199,9 +263,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             assetDropDownRect = EditorGUI.PrefixLabel(position, label);
-            var nameToUse = m_AssetName;
-            if (isNotAddressable)
-                nameToUse = "Not Addressable - " + nameToUse;
+            var nameToUse = GetNameForAsset(property, isNotAddressable, fieldInfo);
             if (m_AssetRefObject.editorAsset != null)
             {
                 var subAssets = new List<Object>();
@@ -217,7 +279,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     subAssets.AddRange(sprites);
                 }
 
-                if (subAssets.Count > 1)
+                if (subAssets.Count > 1 && m_ReferencesSame)
                 {
                     assetDropDownRect = DrawSubAssetsControl(property, subAssets);
                 }
@@ -249,7 +311,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             var asset = m_AssetRefObject?.editorAsset;
-            if (asset != null)
+            if (asset != null && m_ReferencesSame)
             {
                 float iconHeight = EditorGUIUtility.singleLineHeight - EditorGUIUtility.standardVerticalSpacing * 3;
                 Vector2 iconSize = EditorGUIUtility.GetIconSize();
@@ -275,9 +337,23 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             else
             {
-                UnityEngine.GUI.Box(assetDropDownRect, new GUIContent(noAssetString), EditorStyles.objectField);
+                UnityEngine.GUI.Box(assetDropDownRect, new GUIContent(nameToUse), EditorStyles.objectField);
             }
 
+#if UNITY_2019_1_OR_NEWER
+            DrawCaret(pickerRect);
+#endif
+
+            if (isPickerPressed)
+            {
+                newGuidPropertyPath = property.propertyPath;
+                var nonAddressedOption = isNotAddressable ? m_AssetName : string.Empty;
+                PopupWindow.Show(assetDropDownRect, new AssetReferencePopup(this, guid, nonAddressedOption));
+            }
+        }
+
+        private void DrawCaret(Rect pickerRect)
+        {
 #if UNITY_2019_1_OR_NEWER
             if (m_CaretTexture == null)
             {
@@ -296,13 +372,6 @@ namespace UnityEditor.AddressableAssets.GUI
                 UnityEngine.GUI.DrawTexture(pickerRect, m_CaretTexture, ScaleMode.ScaleToFit);
             }
 #endif
-
-            if (isPickerPressed)
-            {
-                newGuidPropertyPath = property.propertyPath;
-                var nonAddressedOption = isNotAddressable ? m_AssetName : string.Empty;
-                PopupWindow.Show(assetDropDownRect, new AssetReferencePopup(this, guid, nonAddressedOption));
-            }
         }
 
         private void HandleDragAndDrop(SerializedProperty property, bool isDragging, bool isDropping, string guid)
@@ -406,35 +475,134 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             assetDropDownRect = new Rect(assetDropDownRect.position, new Vector2(assetDropDownRect.width / 2, assetDropDownRect.height));
             var objRect = new Rect(assetDropDownRect.xMax, assetDropDownRect.y, assetDropDownRect.width, assetDropDownRect.height);
+            float pickerWidth = 20f;
+            Rect pickerRect = objRect;
+            pickerRect.width = pickerWidth;
+            pickerRect.x = objRect.xMax - pickerWidth;
             var objNames = new string[subAssets.Count];
+            bool multipleSubassets = false;
             var selIndex = 0;
+            
+            // Get currently selected subasset
             for (int i = 0; i < subAssets.Count; i++)
             {
-                var s = subAssets[i];
-                var objName = s == null ? "<none>" : s.name;
+                var subAsset = subAssets[i];
+                var objName = subAsset == null ? "<none>" : subAsset.name;
                 if (objName.EndsWith("(Clone)"))
                     objName = objName.Replace("(Clone)", "");
                 objNames[i] = objName;
-                if (m_AssetRefObject.SubObjectName == objName)
-                    selIndex = i;
+                
+                // Check if targetObjects have multiple different selected
+                if (!multipleSubassets)
+                    multipleSubassets = CheckTargetObjectsSubassetsAreDifferent(property, objName, i, ref selIndex);
+                else
+                    break;
             }
 
-            //TODO: handle large amounts of sprites with a custom popup
-            var newIndex = EditorGUI.Popup(objRect, selIndex, objNames);
-            if (newIndex != selIndex)
+            // Do custom popup with scroll to pick subasset
+            var subassetPopup = new SubassetPopup(selIndex,objNames,subAssets,property,this);
+            
+            bool isPickerPressed = Event.current.type == EventType.MouseDown && Event.current.button == 0 && pickerRect.Contains(Event.current.mousePosition);
+            if (isPickerPressed)
+            { 
+                PopupWindow.Show(objRect, subassetPopup);
+            }
+            
+            // Show selected name
+            GUIContent nameSelected = new GUIContent("--");
+            if (!multipleSubassets)
+                nameSelected.text = objNames[subassetPopup.SelectedIndex];
+            UnityEngine.GUI.Box(objRect, nameSelected, EditorStyles.objectField);
+            
+#if UNITY_2019_1_OR_NEWER
+            // Draw picker arrow
+            DrawCaret(pickerRect);
+#endif
+            return assetDropDownRect;
+        }
+
+        private bool CheckTargetObjectsSubassetsAreDifferent(SerializedProperty property, string objName, int currentIndex,ref int selIndex)
+        {
+            
+            foreach (var targetObject in property.serializedObject.targetObjects)
             {
-                Undo.RecordObject(property.serializedObject.targetObject, "Assign Asset Reference Sub Object");
-                var success = m_AssetRefObject.SetEditorSubObject(subAssets[newIndex]);
-                if (success)
+                var serializeObjectMulti = new SerializedObject(targetObject);
+                var sp = serializeObjectMulti.FindProperty(property.name);
+                string labelText = m_label.text;
+                var assetRefObject =
+                    sp.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
+                if (assetRefObject.SubObjectName == objName)
                 {
-                    EditorUtility.SetDirty(property.serializedObject.targetObject);
-                    var comp = property.serializedObject.targetObject as Component;
-                    if (comp != null && comp.gameObject != null && comp.gameObject.activeInHierarchy)
-                        EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
+                    if (selIndex == 0)
+                        selIndex = currentIndex;
+                    else if (selIndex != currentIndex)
+                    {
+                        return true;
+                    }
                 }
             }
 
-            return assetDropDownRect;
+            return false;
+        }
+
+        internal bool SetSubAssets(SerializedProperty property,Object subAsset, FieldInfo propertyField)
+        {
+            bool valueChanged = false;
+            string spriteName = null;
+            if (subAsset != null){
+                spriteName = subAsset.name;
+                if (spriteName.EndsWith("(Clone)"))
+                    spriteName = spriteName.Replace("(Clone)", "");
+            }
+            
+            foreach (var t in property.serializedObject.targetObjects)
+            {
+                var serializeObjectMulti = new SerializedObject(t);
+                var sp = serializeObjectMulti.FindProperty(property.name);
+                string labelText = m_label.text;
+                var assetRefObject =
+                    sp.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
+                if (assetRefObject != null && (assetRefObject.SubObjectName == null || assetRefObject.SubObjectName != spriteName))
+                {
+                    Undo.RecordObject(t, "Assign Asset Reference Sub Object");
+                    var success = assetRefObject.SetEditorSubObject(subAsset);
+                    if (success)
+                    {
+                        valueChanged = true;
+                        EditorUtility.SetDirty(t);
+                        var comp = t as Component;
+                        if (comp != null && comp.gameObject != null && comp.gameObject.activeInHierarchy)
+                            EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
+                    }
+                }
+            }
+            return valueChanged;
+        }
+
+        internal string GetNameForAsset(SerializedProperty property, bool isNotAddressable, FieldInfo propertyField)
+        {
+            var nameToUse = m_AssetName;
+            string labelText = m_label.text;
+            var currentRef = property.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
+            if(property.serializedObject.targetObjects.Length > 1){
+                foreach (var t in property.serializedObject.targetObjects)
+                {
+                    var serializeObjectMulti = new SerializedObject(t);
+                    var sp = serializeObjectMulti.FindProperty(property.name);
+                    var assetRefObject =
+                        sp.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
+                    if (assetRefObject.AssetGUID != currentRef.AssetGUID)
+                    {
+                        m_ReferencesSame = false;
+                        return "--";
+                    }
+                }
+            }
+            if (isNotAddressable)
+            {
+                nameToUse = "Not Addressable - " + nameToUse;
+            }
+            return nameToUse;
         }
 
         internal void GatherFilters(SerializedProperty property)
@@ -486,6 +654,53 @@ namespace UnityEditor.AddressableAssets.GUI
     }
 
     class AddressableAsset {};
+
+    class SubassetPopup : PopupWindowContent
+    {
+        internal int SelectedIndex = 0;
+        private SerializedProperty m_property;
+        private string[] m_objNames;
+        private List<Object> m_subAssets;
+        private AssetReferenceDrawer m_drawer;
+        private Vector2 m_scrollPosition;
+
+        internal SubassetPopup(int selIndex,string[] objNames, List<Object> subAssets, SerializedProperty property, AssetReferenceDrawer drawer)
+        { 
+            SelectedIndex = selIndex;
+            m_objNames =objNames;
+            m_property = property;
+            m_drawer = drawer;
+            m_subAssets = subAssets;
+        }
+
+        public override void OnGUI(Rect rect)
+        {
+            var buttonStyle = new GUIStyle();
+            buttonStyle.fontStyle = FontStyle.Normal;
+            buttonStyle.fontSize = 12;
+            buttonStyle.contentOffset = new Vector2(10,0);
+            buttonStyle.normal.textColor = Color.white;
+            
+            EditorGUILayout.BeginVertical();
+            m_scrollPosition = EditorGUILayout.BeginScrollView(m_scrollPosition, GUILayout.Width(rect.width),GUILayout.Height(rect.height));
+
+            for (int i = 0; i < m_objNames.Length; i++)
+            {
+                if (GUILayout.Button(m_objNames[i],buttonStyle))
+                {
+                    SelectedIndex = i;
+                    if (!m_drawer.SetSubAssets(m_property, m_subAssets[SelectedIndex], m_drawer.fieldInfo))
+                    {
+                        Debug.LogError("Unable to set all of the objects selected subassets");
+                    }
+                    PopupWindow.focusedWindow.Close();
+                    break;
+                }
+            }
+            EditorGUILayout.EndScrollView();
+            EditorGUILayout.EndVertical();
+        }
+    }
 
     class AssetReferencePopup : PopupWindowContent
     {

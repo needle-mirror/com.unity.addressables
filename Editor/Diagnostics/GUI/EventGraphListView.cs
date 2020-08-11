@@ -178,7 +178,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             ToggleItemMaximize(id);
             base.DoubleClickedItem(id);
         }
-
+        
         public void DefineGraph(string name, int maxValueStream, params IGraphLayer[] layers)
         {
             m_GraphDefinitions.Add(name, new GraphDefinition(maxValueStream, layers));
@@ -203,7 +203,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             }
 
             int maxValue = gd.GetMaxValue(dataSet);
-
+            
             foreach (var l in gd.layers)
                 l.Draw(dataSet, rect, startTime, duration, m_InspectFrame, expanded, m_GraphMaterial, maxValue);
         }

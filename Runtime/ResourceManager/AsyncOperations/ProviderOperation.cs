@@ -17,6 +17,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         void SetProgressCallback(Func<float> callback);
         void ProviderCompleted<T>(T result, bool status, Exception e);
         Type RequestedType { get; }
+
+        void SetDownloadProgressCallback(Func<DownloadStatus> callback);
     }
 
     internal class ProviderOperation<TObject> : AsyncOperationBase<TObject>, IGenericProviderOperation, ICachable
@@ -24,6 +26,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         private Action<int, object, bool, Exception> m_CompletionCallback;
         private Action<int, IList<object>> m_GetDepCallback;
         private Func<float> m_GetProgressCallback;
+        private Func<DownloadStatus> m_GetDownloadProgressCallback;
+        private DownloadStatus m_DownloadStatus;
         private IResourceProvider m_Provider;
         internal AsyncOperationHandle<IList<AsyncOperationHandle>> m_DepOp;
         private IResourceLocation m_Location;
@@ -34,6 +38,27 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         private const float k_OperationWaitingToCompletePercentComplete = 0.99f;
         public int ProvideHandleVersion { get { return m_ProvideHandleVersion; } }
         public IResourceLocation Location { get { return m_Location; } }
+        public void SetDownloadProgressCallback(Func<DownloadStatus> callback)
+        {
+            m_GetDownloadProgressCallback = callback;
+            if (m_GetDownloadProgressCallback != null)
+                m_DownloadStatus = m_GetDownloadProgressCallback();
+        }
+
+        internal override DownloadStatus GetDownloadStatus(HashSet<object> visited)
+        {
+            var depDLS = m_DepOp.IsValid() ? m_DepOp.InternalGetDownloadStatus(visited) : default;
+
+            if (m_GetDownloadProgressCallback != null)
+                m_DownloadStatus = m_GetDownloadProgressCallback();
+            else if(IsDone)
+                m_DownloadStatus.DownloadedBytes = m_DownloadStatus.TotalBytes;
+
+            if (IsDone)
+                m_DownloadStatus.DownloadedBytes = m_DownloadStatus.TotalBytes;
+
+            return new DownloadStatus() { DownloadedBytes = m_DownloadStatus.DownloadedBytes + depDLS.DownloadedBytes, TotalBytes = m_DownloadStatus.TotalBytes + depDLS.TotalBytes, IsDone = IsDone };
+        }
 
         public ProviderOperation()
         {
@@ -96,7 +121,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             m_ProvideHandleVersion++;
             m_GetProgressCallback = null;
-
+            m_GetDownloadProgressCallback = null;
             m_NeedsRelease = status;
 
             ProviderOperation<T> top = this as ProviderOperation<T>;
@@ -183,6 +208,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         public void Init(ResourceManager rm, IResourceProvider provider, IResourceLocation location, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
         {
+            m_DownloadStatus = default;
             m_ResourceManager = rm;
             m_DepOp = depOp;
             if (m_DepOp.IsValid())

@@ -67,12 +67,12 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         }
 
         /// <summary>
-        /// Returns the name of the location. This is usally set to the primary key of the location, or its "address".
+        /// Returns the Internal name used by the provider to load this location
         /// </summary>
         /// <returns></returns>
         public override string ToString()
         {
-            return m_Name;
+            return m_Id;
         }
 
         /// <summary>

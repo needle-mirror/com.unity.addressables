@@ -168,16 +168,19 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 
             var bytes = new byte[] { 1, 2, 3, 4, 5, 6 };
             File.WriteAllBytes(bundleFilePath, bytes);
+            
+#if UNITY_2020_1_OR_NEWER
+            LogAssert.Expect(LogType.Error, new Regex("Failed to read data for the AssetBundle", RegexOptions.IgnoreCase));
+#endif
+            
+            LogAssert.Expect(LogType.Error, new Regex("Unable to load dependent " +
+                                            $"bundle from location :", RegexOptions.IgnoreCase));
 
             var bundledCatalog = new ContentCatalogProvider.InternalOp.BundledCatalog(bundleFilePath);
             bundledCatalog.LoadCatalogFromBundleAsync();
 
             yield return new WaitWhile(() => bundledCatalog.OpInProgress);
 
-#if UNITY_2020_1_OR_NEWER
-            LogAssert.Expect(LogType.Error, new Regex("Failed to read data for", RegexOptions.IgnoreCase));
-#endif
-            LogAssert.Expect(LogType.Error, new Regex("Unable to load", RegexOptions.IgnoreCase));
             Assert.IsFalse(bundledCatalog.OpIsSuccess);
 
             if (Directory.Exists(k_TempBuildFolder))

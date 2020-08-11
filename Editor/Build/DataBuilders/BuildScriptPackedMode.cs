@@ -97,7 +97,11 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 ProfileEvents = builderInput.ProfilerEventsEnabled,
                 LogResourceManagerExceptions = aaSettings.buildSettings.LogResourceManagerExceptions,
                 DisableCatalogUpdateOnStartup = aaSettings.DisableCatalogUpdateOnStartup,
-                IsLocalCatalogInBundle = aaSettings.BundleLocalCatalog
+                IsLocalCatalogInBundle = aaSettings.BundleLocalCatalog,
+#if UNITY_2019_3_OR_NEWER
+                AddressablesVersion = PackageManager.PackageInfo.FindForAssembly(typeof(Addressables).Assembly).version,
+#endif
+                MaxConcurrentWebRequests = aaSettings.MaxConcurrentWebRequests
             };
             m_Linker = UnityEditor.Build.Pipeline.Utilities.LinkXmlGenerator.CreateDefault();
             m_Linker.AddAssemblies(new[] { typeof(Addressables).Assembly, typeof(UnityEngine.ResourceManagement.ResourceManager).Assembly });
@@ -110,7 +114,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 runtimeData = runtimeData,
                 bundleToAssetGroup = bundleToAssetGroup,
                 locations = new List<ContentCatalogDataEntry>(),
-                providerTypes = new HashSet<Type>()
+                providerTypes = new HashSet<Type>(),
+                assetEntries = new List<AddressableAssetEntry>()
             };
 
             m_CreatedProviderIds = new HashSet<string>();
@@ -515,7 +520,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
 
             var bundleInputDefs = new List<AssetBundleBuild>();
-            PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema.BundleMode);
+            List<AddressableAssetEntry> list = PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema.BundleMode);
+            aaContext.assetEntries.AddRange(list);
             HandleDuplicateBundleNames(bundleInputDefs, aaContext.bundleToAssetGroup, assetGroup.Guid, out var uniqueNames);
             m_OutputAssetBundleNames.AddRange(uniqueNames);
             m_AllBundleInputDefs.AddRange(bundleInputDefs);
@@ -555,11 +561,11 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             var message = string.Empty;
 
-            var buildPath = settings.profileSettings.GetValueById(settings.activeProfileId, schema.BuildPath.Id);
-            var loadPath = settings.profileSettings.GetValueById(settings.activeProfileId, schema.LoadPath.Id);
+            string buildPath = settings.profileSettings.GetValueById(settings.activeProfileId, schema.BuildPath.Id);
+            string loadPath = settings.profileSettings.GetValueById(settings.activeProfileId, schema.LoadPath.Id);
 
-            var buildLocal = buildPath.Contains("[UnityEngine.AddressableAssets.Addressables.BuildPath]");
-            var loadLocal = loadPath.Contains("{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
+            bool buildLocal = buildPath.Contains("[UnityEngine.AddressableAssets.Addressables.BuildPath]");
+            bool loadLocal = loadPath.Contains("{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
 
             if (buildLocal && !loadLocal)
             {
@@ -575,36 +581,46 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 message += "BuildPath: '" + buildPath + "'\n";
                 message += "LoadPath: '" + loadPath + "'";
             }
-
+            if (schema.Compression == BundledAssetGroupSchema.BundleCompressionMode.LZMA && (buildLocal || loadLocal))
+            {
+                Debug.LogWarningFormat("Bundle compression is set to LZMA, but group {0} uses local content.", assetGroup.Name);
+            }
             return message;
         }
 
-        internal static void PrepGroupBundlePacking(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, BundledAssetGroupSchema.BundlePackingMode packingMode)
+        internal static string CalculateGroupHash(IEnumerable<AddressableAssetEntry> entries)
         {
-            if (packingMode == BundledAssetGroupSchema.BundlePackingMode.PackTogether)
+            return HashingMethods.Calculate(new HashSet<string>(entries.Select(e => e.guid))).ToString();
+        }
+
+
+        internal static List<AddressableAssetEntry> PrepGroupBundlePacking(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, BundledAssetGroupSchema.BundlePackingMode packingMode)
+        {
+            var combinedEntries = new List<AddressableAssetEntry>();
+            switch (packingMode)
             {
-                var allEntries = new List<AddressableAssetEntry>();
-                foreach (var a in assetGroup.entries)
-                    a.GatherAllAssets(allEntries, true, true, false);
-                GenerateBuildInputDefinitions(allEntries, bundleInputDefs,
-                    HashingMethods.Calculate(new HashSet<string>(allEntries.Select(e => e.guid))).ToString(), "all");
-            }
-            else
-            {
-                if (packingMode == BundledAssetGroupSchema.BundlePackingMode.PackSeparately)
+                case BundledAssetGroupSchema.BundlePackingMode.PackTogether:
                 {
-                    foreach (var a in assetGroup.entries)
+                    var allEntries = new List<AddressableAssetEntry>();
+                    foreach (AddressableAssetEntry a in assetGroup.entries)
+                        a.GatherAllAssets(allEntries, true, true, false);
+                    combinedEntries.AddRange(allEntries);
+                    GenerateBuildInputDefinitions(allEntries, bundleInputDefs, CalculateGroupHash(allEntries), "all");
+                } break;
+                case BundledAssetGroupSchema.BundlePackingMode.PackSeparately:
+                {
+                    foreach (AddressableAssetEntry a in assetGroup.entries)
                     {
                         var allEntries = new List<AddressableAssetEntry>();
                         a.GatherAllAssets(allEntries, true, true, false);
-                        GenerateBuildInputDefinitions(allEntries, bundleInputDefs,
-                            HashingMethods.Calculate(new HashSet<string>(allEntries.Select(e => e.guid))).ToString(), a.address);
+                        combinedEntries.AddRange(allEntries);
+                        GenerateBuildInputDefinitions(allEntries, bundleInputDefs, CalculateGroupHash(allEntries), a.address);
                     }
-                }
-                else
+                } break;
+                case BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel:
                 {
                     var labelTable = new Dictionary<string, List<AddressableAssetEntry>>();
-                    foreach (var a in assetGroup.entries)
+                    foreach (AddressableAssetEntry a in assetGroup.entries)
                     {
                         var sb = new StringBuilder();
                         foreach (var l in a.labels)
@@ -621,11 +637,14 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         var allEntries = new List<AddressableAssetEntry>();
                         foreach (var a in entryGroup.Value)
                             a.GatherAllAssets(allEntries, true, true, false);
-                        GenerateBuildInputDefinitions(allEntries, bundleInputDefs,
-                            HashingMethods.Calculate(new HashSet<string>(allEntries.Select(e => e.guid))).ToString(), entryGroup.Key);
+                        combinedEntries.AddRange(allEntries);
+                        GenerateBuildInputDefinitions(allEntries, bundleInputDefs, CalculateGroupHash(allEntries), entryGroup.Key);
                     }
-                }
+                } break;
+                default:
+                    throw new Exception("Unknown Packing Mode");
             }
+            return combinedEntries;
         }
 
         static void GenerateBuildInputDefinitions(List<AddressableAssetEntry> allEntries, List<AssetBundleBuild> buildInputDefs, string groupGuid, string address)

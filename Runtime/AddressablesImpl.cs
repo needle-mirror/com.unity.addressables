@@ -234,9 +234,9 @@ namespace UnityEngine.AddressableAssets
         public void LogException(AsyncOperationHandle op, Exception ex)
         {
             if (op.Status == AsyncOperationStatus.Failed)
-                Debug.LogErrorFormat("{0} encountered in operation {1}: {2}", ex.GetType().Name, op.DebugName, ex.Message);
+                Debug.LogErrorFormat("{0} encountered in operation {1}, status={2}, result={3} : {4}", ex.GetType().Name, op.DebugName, op.Status, op.Result, ex.Message);
             else
-                Addressables.LogFormat("{0} encountered in operation {1}: {2}", ex.GetType().Name, op.DebugName, ex.Message);
+                Addressables.LogFormat("{0} encountered in operation {1}, status={2}, result={3} : {2}", ex.GetType().Name, op.DebugName, op.Status, op.Result, ex.Message);
         }
 
         public void LogErrorFormat(string format, params object[] args)
@@ -417,7 +417,13 @@ namespace UnityEngine.AddressableAssets
 
         public AsyncOperationHandle<IResourceLocator> InitializeAsync()
         {
-            return InitializeAsync(ResolveInternalId(PlayerPrefs.GetString(Addressables.kAddressablesRuntimeDataPath, RuntimePath + "/settings.json")));
+            var settingsPath =
+#if UNITY_EDITOR
+                PlayerPrefs.GetString(Addressables.kAddressablesRuntimeDataPath, RuntimePath + "/settings.json");
+#else
+                RuntimePath + "/settings.json";
+#endif
+            return InitializeAsync(ResolveInternalId(settingsPath));
         }
 
         internal ResourceLocationBase CreateCatalogLocationWithHashDependencies(string catalogPath, string hashFilePath)
@@ -758,6 +764,25 @@ namespace UnityEngine.AddressableAssets
             return handle;
         }
 
+        static List<IResourceLocation> GatherDependenciesFromLocations(IList<IResourceLocation> locations)
+        {
+            var locHash = new HashSet<IResourceLocation>();
+            foreach (var loc in locations)
+            {
+                if (loc.ResourceType == typeof(IAssetBundleResource))
+                {
+                    locHash.Add(loc);
+                }
+                if (loc.HasDependencies)
+                {
+                    foreach (var dep in loc.Dependencies)
+                        if (dep.ResourceType == typeof(IAssetBundleResource))
+                            locHash.Add(dep);
+                }
+            }
+            return new List<IResourceLocation>(locHash);
+        }
+
         public AsyncOperationHandle DownloadDependenciesAsync(object key, bool autoReleaseHandle = false)
         {
             if (ShouldChainRequest)
@@ -774,16 +799,7 @@ namespace UnityEngine.AddressableAssets
             }
             else
             {
-                var locHash = new HashSet<IResourceLocation>();
-                foreach (var loc in locations)
-                {
-                    if (loc.HasDependencies)
-                    {
-                        foreach (var dep in loc.Dependencies)
-                            locHash.Add(dep);
-                    }
-                }
-                var handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null, true);
+                var handle = LoadAssetsAsync<IAssetBundleResource>(GatherDependenciesFromLocations(locations), null, true);
                 if (autoReleaseHandle)
                     handle.Completed += op => Release(op);
                 return handle;
@@ -803,16 +819,7 @@ namespace UnityEngine.AddressableAssets
             if (ShouldChainRequest)
                 return DownloadDependenciesAsyncWithChain(ChainOperation, locations, autoReleaseHandle);
 
-            var locHash = new HashSet<IResourceLocation>();
-            foreach (var loc in locations)
-            {
-                if (loc.HasDependencies)
-                {
-                    foreach (var dep in loc.Dependencies)
-                        locHash.Add(dep);
-                }
-            }
-            var handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null, true);
+            var handle = LoadAssetsAsync<IAssetBundleResource>(GatherDependenciesFromLocations(locations), null, true);
             if (autoReleaseHandle)
                 handle.Completed += op => Release(op);
             return handle;
@@ -842,16 +849,7 @@ namespace UnityEngine.AddressableAssets
             }
             else
             {
-                var locHash = new HashSet<IResourceLocation>();
-                foreach (var loc in locations)
-                {
-                    if (loc.HasDependencies)
-                    {
-                        foreach (var dep in loc.Dependencies)
-                            locHash.Add(dep);
-                    }
-                }
-                var handle = LoadAssetsAsync<IAssetBundleResource>(new List<IResourceLocation>(locHash), null, true);
+                var handle = LoadAssetsAsync<IAssetBundleResource>(GatherDependenciesFromLocations(locations), null, true);
                 if (autoReleaseHandle)
                     handle.Completed += op => Release(op);
                 return handle;
@@ -869,53 +867,50 @@ namespace UnityEngine.AddressableAssets
             }
             else if (GetResourceLocations(key, typeof(object), out locations))
             {
-                foreach (var loc in locations)
-                {
-                    if (loc.HasDependencies)
-                    {
-                        foreach (var dep in loc.Dependencies)
-                            Caching.ClearAllCachedVersions(Path.GetFileName(dep.InternalId));
-                    }
-                }
+                foreach (var dep in GatherDependenciesFromLocations(locations))
+                    Caching.ClearAllCachedVersions(Path.GetFileName(dep.InternalId));
             }
 #endif
         }
 
-        public AsyncOperationHandle<bool> ClearDependencyCacheAsync(object key)
+        public AsyncOperationHandle<bool> ClearDependencyCacheAsync(object key, bool autoReleaseHandle)
         {
             if (ShouldChainRequest)
-                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(key));
+                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(key, autoReleaseHandle));
 
             ClearDependencyCacheForKey(key);
 
             var completedOp = ResourceManager.CreateCompletedOperation(true, string.Empty);
-            Release(completedOp);
+            if (autoReleaseHandle)
+                Release(completedOp);
             return completedOp;
         }
 
-        public AsyncOperationHandle<bool> ClearDependencyCacheAsync(IList<IResourceLocation> locations)
+        public AsyncOperationHandle<bool> ClearDependencyCacheAsync(IList<IResourceLocation> locations, bool autoReleaseHandle)
         {
             if (ShouldChainRequest)
-                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(locations));
+                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(locations, autoReleaseHandle));
 
             foreach (var location in locations)
                 ClearDependencyCacheForKey(location);
 
             var completedOp = ResourceManager.CreateCompletedOperation(true, string.Empty);
-            Release(completedOp);
+            if (autoReleaseHandle)
+                Release(completedOp);
             return completedOp;
         }
 
-        public AsyncOperationHandle<bool> ClearDependencyCacheAsync(IList<object> keys)
+        public AsyncOperationHandle<bool> ClearDependencyCacheAsync(IList<object> keys, bool autoReleaseHandle)
         {
             if (ShouldChainRequest)
-                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(keys));
+                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(keys, autoReleaseHandle));
 
             foreach (var key in keys)
                 ClearDependencyCacheForKey(key);
 
             var completedOp = ResourceManager.CreateCompletedOperation(true, string.Empty);
-            Release(completedOp);
+            if (autoReleaseHandle)
+                Release(completedOp);
             return completedOp;
         }
 

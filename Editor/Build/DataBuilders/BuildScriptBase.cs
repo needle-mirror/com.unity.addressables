@@ -50,7 +50,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         internal static void WriteBuildLog(BuildLog log, string directory)
         {
             Directory.CreateDirectory(directory);
-            log.AddMetaData(AddressablesVersion.kPackageName, AddressablesVersion.kPackageVersion);
+#if UNITY_2019_2_OR_NEWER // PackageManager package inspection APIs didn't exist until 2019.2
+            PackageManager.PackageInfo info = PackageManager.PackageInfo.FindForAssembly(typeof(BuildScriptBase).Assembly);
+            log.AddMetaData(info.name, info.version);
+#endif
             File.WriteAllText(Path.Combine(directory, "AddressablesBuildTEP.json"), log.FormatForTraceEventProfiler());
         }
 
@@ -182,7 +185,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         continue;
                     if (!playerDataSchema.IncludeResourcesFolders && a.IsInResources)
                         continue;
-                    a.CreateCatalogEntries(locations, false, a.IsScene ? "" : typeof(LegacyResourcesProvider).FullName, null, null, providerTypes);
+                    a.CreateCatalogEntries(locations, false, a.IsScene ? typeof(SceneProvider).FullName : typeof(LegacyResourcesProvider).FullName, null, null, providerTypes);
                     if (!a.IsScene)
                         needsLegacyProvider = true;
                 }

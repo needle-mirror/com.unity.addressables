@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 // ReSharper disable DelegateSubtraction
 
 #if UNITY_EDITOR
@@ -21,7 +22,7 @@ namespace UnityEngine.ResourceManagement.Diagnostics
         static Guid s_editorConnectionGuid;
 
         internal Dictionary<int, DiagnosticEvent> m_CreatedEvents = new Dictionary<int, DiagnosticEvent>();
-        internal List<DiagnosticEvent> k_UnhandledEvents = new List<DiagnosticEvent>();
+        internal List<DiagnosticEvent> m_UnhandledEvents = new List<DiagnosticEvent>();
 
         internal DelegateList<DiagnosticEvent> s_EventHandlers = DelegateList<DiagnosticEvent>.CreateWithGlobalCache();
 
@@ -63,19 +64,20 @@ namespace UnityEngine.ResourceManagement.Diagnostics
             return false;
         }
 
-        void RegisterEventHandler(Action<DiagnosticEvent> handler)
+        internal void RegisterEventHandler(Action<DiagnosticEvent> handler)
         {
-            Debug.Assert(k_UnhandledEvents != null, "DiagnosticEventCollectorSingleton.RegisterEventHandler - s_unhandledEvents == null.");
+            Debug.Assert(m_UnhandledEvents != null, "DiagnosticEventCollectorSingleton.RegisterEventHandler - s_unhandledEvents == null.");
             if (handler == null)
                 throw new ArgumentNullException("handler");
             s_EventHandlers.Add(handler);
-            foreach (var c in m_CreatedEvents)
-                handler(c.Value);
-            foreach (var e in k_UnhandledEvents)
-                handler(e);
-            k_UnhandledEvents.Clear();
-        }
 
+            //Ensure that events are handled in frame order
+            var combinedAndSortedList = m_UnhandledEvents.Concat(m_CreatedEvents.Values).OrderBy(evt => evt.Frame);
+            foreach (var evt in combinedAndSortedList)
+                handler(evt);
+            m_UnhandledEvents.Clear();
+        }
+        
         /// <summary>
         /// Unregister event hander
         /// </summary>
@@ -98,12 +100,12 @@ namespace UnityEngine.ResourceManagement.Diagnostics
             else if (diagnosticEvent.Stream == (int)ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
                 m_CreatedEvents.Remove(diagnosticEvent.ObjectId);
 
-            Debug.Assert(k_UnhandledEvents != null, "DiagnosticEventCollectorSingleton.PostEvent - s_unhandledEvents == null.");
+            Debug.Assert(m_UnhandledEvents != null, "DiagnosticEventCollectorSingleton.PostEvent - s_unhandledEvents == null.");
 
             if (s_EventHandlers.Count > 0)
                 s_EventHandlers.Invoke(diagnosticEvent);
             else
-                k_UnhandledEvents.Add(diagnosticEvent);
+                m_UnhandledEvents.Add(diagnosticEvent);
         }
 
         void Awake()

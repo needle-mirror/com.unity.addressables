@@ -62,9 +62,9 @@ static class AddressablesTestUtility
             var entry = settings.CreateOrMoveEntry(guid, group, false, false);
             entry.address = Path.GetFileNameWithoutExtension(entry.AssetPath);
 
-            entry.SetLabel(GetPrefabLabel(suffix), true, false);
-            entry.SetLabel(GetPrefabAlternatingLabel(suffix, i), true, false);
-            entry.SetLabel(GetPrefabUniqueLabel(suffix, i), true, false);
+            entry.SetLabel(GetPrefabLabel(suffix), true, true);
+            entry.SetLabel(GetPrefabAlternatingLabel(suffix, i), true, true);
+            entry.SetLabel(GetPrefabUniqueLabel(suffix, i), true, true);
         }
 
         var texture = new Texture2D(32, 32);

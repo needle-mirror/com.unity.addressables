@@ -185,6 +185,44 @@ namespace UnityEngine.AddressableAssets
         /// <value>The resource locators collection.</value>
         public static IEnumerable<IResourceLocator> ResourceLocators { get { return m_Addressables.ResourceLocators; } }
 
+        [Conditional(k_AddressablesLogConditional)]
+        internal static void InternalSafeSerializationLog(string msg, LogType logType = LogType.Log)
+        {
+            if (m_AddressablesInstance == null)
+                return;
+            switch (logType)
+            {
+                case LogType.Warning:
+                    m_AddressablesInstance.LogWarning(msg);
+                    break;
+                case LogType.Error:
+                    m_AddressablesInstance.LogError(msg);
+                    break;
+                case LogType.Log:
+                    m_AddressablesInstance.Log(msg);
+                    break;
+            }
+        }
+
+        [Conditional(k_AddressablesLogConditional)]
+        internal static void InternalSafeSerializationLogFormat(string format, LogType logType = LogType.Log, params object[] args)
+        {
+            if (m_AddressablesInstance == null)
+                return;
+            switch (logType)
+            {
+                case LogType.Warning:
+                    m_AddressablesInstance.LogWarningFormat(format, args);
+                    break;
+                case LogType.Error:
+                    m_AddressablesInstance.LogErrorFormat(format, args);
+                    break;
+                case LogType.Log:
+                    m_AddressablesInstance.LogFormat(format, args);
+                    break;
+            }
+        }
+
         /// <summary>
         /// Debug.Log wrapper method that is contional on the ADDRESSABLES_LOG_ALL symbol definition.  This can be set in the Player preferences in the 'Scripting Define Symbols'.
         /// </summary>
@@ -291,6 +329,7 @@ namespace UnityEngine.AddressableAssets
         /// Additively load catalogs from runtime data.  In order for content catalog caching to work properly the catalog json file
         /// should have a .hash file associated with the catalog.  This hash file will be used to determine if the catalog
         /// needs to be updated or not.  If no .hash file is provided, the catalog will be loaded from the specified path every time.
+        /// See the [LoadContentCatalogAsync](../manual/LoadContentCatalogAsync.html) documentation for more details.
         /// </summary>
         /// <param name="catalogPath">The path to the runtime data.</param>
         /// <param name="providerSuffix">This value, if not null or empty, will be appended to all provider ids loaded from this data.</param>
@@ -304,6 +343,7 @@ namespace UnityEngine.AddressableAssets
         /// Additively load catalogs from runtime data.  In order for content catalog caching to work properly the catalog json file
         /// should have a .hash file associated with the catalog.  This hash file will be used to determine if the catalog
         /// needs to be updated or not.  If no .hash file is provided, the catalog will be loaded from the specified path every time.
+        /// See the [LoadContentCatalogAsync](../manual/LoadContentCatalogAsync.html) documentation for more details.
         /// </summary>
         /// <param name="catalogPath">The path to the runtime data.</param>
         /// <param name="autoReleaseHandle">If true, the async operation handle will be automatically released on completion.</param>
@@ -673,6 +713,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Downloads dependencies of assets marked with the specified label or address.
+        /// See the [DownloadDependenciesAsync](../manual/DownloadDependenciesAsync.html) documentation for more details.
         /// </summary>
         /// <param name="key">The key of the asset(s) to load dependencies for.</param>
         /// <param name="autoReleaseHandle">Automatically releases the handle on completion</param>
@@ -684,6 +725,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Downloads dependencies of assets at given locations.
+        /// See the [DownloadDependenciesAsync](../manual/DownloadDependenciesAsync.html) documentation for more details.
         /// </summary>
         /// <param name="locations">The locations of the assets.</param>
         /// <param name="autoReleaseHandle">Automatically releases the handle on completion</param>
@@ -695,6 +737,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Downloads dependencies of assets marked with the specified labels or addresses.
+        /// See the [DownloadDependenciesAsync](../manual/DownloadDependenciesAsync.html) documentation for more details.
         /// </summary>
         /// <param name="keys">List of keys for the locations.</param>
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
@@ -712,7 +755,7 @@ namespace UnityEngine.AddressableAssets
         /// <param name="key">The key to clear the cache for.</param>
         public static void ClearDependencyCacheAsync(object key)
         {
-            m_Addressables.ClearDependencyCacheAsync(key);
+            m_Addressables.ClearDependencyCacheAsync(key, true);
         }
 
         /// <summary>
@@ -722,7 +765,7 @@ namespace UnityEngine.AddressableAssets
         /// <param name="locations">The locations to clear the cache for.</param>
         public static void ClearDependencyCacheAsync(IList<IResourceLocation> locations)
         {
-            m_Addressables.ClearDependencyCacheAsync(locations);
+            m_Addressables.ClearDependencyCacheAsync(locations, true);
         }
 
         /// <summary>
@@ -732,7 +775,43 @@ namespace UnityEngine.AddressableAssets
         /// <param name="keys">The keys to clear the cache for.</param>
         public static void ClearDependencyCacheAsync(IList<object> keys)
         {
-            m_Addressables.ClearDependencyCacheAsync(keys);
+            m_Addressables.ClearDependencyCacheAsync(keys, true);
+        }
+
+        /// <summary>
+        /// Clear the cached AssetBundles for a given key.  Operation may be performed async if Addressables
+        /// is initializing or updating.
+        /// </summary>
+        /// <param name="key">The key to clear the cache for.</param>
+        /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<bool> ClearDependencyCacheAsync(object key, bool autoReleaseHandle)
+        {
+            return m_Addressables.ClearDependencyCacheAsync(key, autoReleaseHandle);
+        }
+
+        /// <summary>
+        /// Clear the cached AssetBundles for a list of Addressable locations.  Operation may be performed async if Addressables
+        /// is initializing or updating.
+        /// </summary>
+        /// <param name="locations">The locations to clear the cache for.</param>
+        /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<bool> ClearDependencyCacheAsync(IList<IResourceLocation> locations, bool autoReleaseHandle)
+        {
+            return m_Addressables.ClearDependencyCacheAsync(locations, autoReleaseHandle);
+        }
+
+        /// <summary>
+        /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
+        /// is initializing or updating.
+        /// </summary>
+        /// <param name="keys">The keys to clear the cache for.</param>
+        /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<bool> ClearDependencyCacheAsync(IList<object> keys, bool autoReleaseHandle)
+        {
+            return m_Addressables.ClearDependencyCacheAsync(keys, autoReleaseHandle);
         }
 
         /// <summary>
@@ -827,6 +906,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
+        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>
         /// <param name="parent">Parent transform for instantiated object.</param>
@@ -840,6 +920,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
+        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>
         /// <param name="position">The position of the instantiated object.</param>
@@ -854,6 +935,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
+        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
         /// </summary>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
         /// <param name="parent">Parent transform for instantiated object.</param>
@@ -867,6 +949,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
+        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
         /// </summary>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
         /// <param name="position">The position of the instantiated object.</param>
@@ -881,6 +964,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
+        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
         /// </summary>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
         /// <param name="instantiateParameters">Parameters for instantiation.</param>
@@ -893,6 +977,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
+        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>
         /// <param name="instantiateParameters">Parameters for instantiation.</param>
@@ -1043,6 +1128,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Update the specified catalogs.
+        /// See the [UpdateCatalogs](../manual/UpdateCatalogs.html) documentation for more details.
         /// </summary>
         /// <param name="catalogs">The set of catalogs to update.  If null, all catalogs that have an available update will be updated.</param>
         /// <param name="autoReleaseHandle">If true, the handle will automatically be released when the operation completes.</param>

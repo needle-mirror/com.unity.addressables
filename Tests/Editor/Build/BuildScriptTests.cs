@@ -178,15 +178,17 @@ namespace UnityEditor.AddressableAssets.Tests
             }
         }
 
+#if UNITY_2019_2_OR_NEWER // PackageManager package inspection APIs didn't exist until 2019.2
         [Test]
         public void Building_CreatesPerformanceReportWithMetaData()
         {
             Settings.BuildPlayerContentImpl();
             string text = File.ReadAllText("Library/com.unity.addressables/AddressablesBuildTEP.json");
-            StringAssert.Contains(AddressablesVersion.kPackageVersion, text);
-            StringAssert.Contains(AddressablesVersion.kPackageName, text);
+            StringAssert.Contains("com.unity.addressables", text);
             FileAssert.Exists("Library/com.unity.addressables/AddressablesBuildTEP.json");
         }
+
+#endif
 
         [Test]
         public void Build_WithInvalidAssetInResourcesFolder_Succeeds()
@@ -258,8 +260,6 @@ namespace UnityEditor.AddressableAssets.Tests
                     db.BuildData<AddressablesPlayerBuildResult>(context);
                 else if (db.CanBuildData<AddressablesPlayModeBuildResult>())
                     db.BuildData<AddressablesPlayModeBuildResult>(context);
-                string error = "Build Task GenerateLocationListsTask failed with exception:" +
-                    "Address '[test]' cannot contain '[ ]'.";
                 LogAssert.Expect(LogType.Error, new Regex(@"Address \'\[test\]\' cannot contain \'\[ \]\'"));
             }
 

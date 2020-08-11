@@ -34,7 +34,7 @@ namespace UnityEditor.AddressableAssets.Tests.Diagnostics
         }
 
         [Test]
-        public void EventDataPlayerSessionCollect_GetSessionByIndex_ReturnsNullOnInvalidInput()
+        public void EventDataPlayerSessionCollection_GetSessionByIndex_ReturnsNullOnInvalidInput()
         {
             EventDataPlayerSessionCollection edpsc = new EventDataPlayerSessionCollection((DiagnosticEvent x) => true);
             Assert.IsNull(edpsc.GetSessionByIndex(0), "Trying to request a session with a nonexistent index should return null. ");
@@ -42,6 +42,49 @@ namespace UnityEditor.AddressableAssets.Tests.Diagnostics
             edpsc.AddSession("test session", 0);
             Assert.IsNull(edpsc.GetSessionByIndex(2), "Trying to request a session with a nonexistent index should return null. ");
             Assert.NotNull(edpsc.GetSessionByIndex(0), "Session not returned properly on valid index. ");
+        }
+
+        [Test]
+        public void EventDataPlayerSessionCollection_GetSessionIndexById_SimpleCase()
+        {
+            EventDataPlayerSessionCollection edpsc = new EventDataPlayerSessionCollection((DiagnosticEvent x) => true);
+            edpsc.AddSession("Test session", 0);
+            edpsc.AddSession("Test session 2", 1);
+            
+            Assert.AreEqual(1, edpsc.GetSessionIndexById(1), "Session index not properly returned. ");
+        }
+
+        [Test]
+        public void EventDataPlayerSessionCollection_GetSessionIndexById_NullCase()
+        {
+            EventDataPlayerSessionCollection edpsc = new EventDataPlayerSessionCollection((DiagnosticEvent x) => true);
+            edpsc.AddSession("Test session", 0);
+            edpsc.AddSession("Test session 2", 1);
+            
+            Assert.AreEqual(-1, edpsc.GetSessionIndexById(10000000), "Incorrect value returned, GetSessionIndexById should return -1 when the queried id does not exist.");
+        }
+
+        [Test]
+        public void EventDataPlayerSessionCollection_RemoveSession_SimpleCase()
+        {
+            EventDataPlayerSessionCollection edpsc = new EventDataPlayerSessionCollection((DiagnosticEvent x) => true);
+            edpsc.AddSession("Test session", 0);
+            edpsc.RemoveSession(0);
+            
+            Assert.AreEqual(0, edpsc.GetSessionCount(), "Session was not properly removed.");
+        }
+
+        [Test]
+        public void EventDataPlayerSessionCollection_TestPlayerConnection()
+        {
+            EventDataPlayerSessionCollection edpsc = new EventDataPlayerSessionCollection((DiagnosticEvent x) => true);
+            
+            edpsc.AddSession("Default", 0);
+            edpsc.GetPlayerSession(1000, true).IsActive = true;
+            Assert.AreEqual(2, edpsc.GetSessionCount(), "Session not properly added. ");
+            
+            int connectedSessionIndex = edpsc.GetSessionIndexById(1000);
+            Assert.AreEqual(1, connectedSessionIndex, "Session index not properly set. ");
         }
     }
 }

@@ -165,7 +165,7 @@ namespace UnityEditor.AddressableAssets.Tests.Diagnostics
             EventDataSet testSet = new EventDataSet();
             //Add sample to the refcount stream
             testSet.AddSample((int) ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, 5, 1);
-            Assert.AreEqual(true, testSet.HasRefcountAfterFrame(0), "Refcount after frame was considered 0 when sample should have been added.");
+            Assert.AreEqual(true, testSet.HasRefcountAfterFrame(0, true), "Refcount after frame was considered 0 when sample should have been added.");
         }
 
         [Test]
@@ -180,7 +180,7 @@ namespace UnityEditor.AddressableAssets.Tests.Diagnostics
             
             testSet.AddChild(childSet);
 
-            Assert.AreEqual(true, testSet.HasRefcountAfterFrame(3), "Child refcount not properly considered when checking parent's refcount.");
+            Assert.AreEqual(true, testSet.HasRefcountAfterFrame(3, true), "Child refcount not properly considered when checking parent's refcount.");
         }
         
     }

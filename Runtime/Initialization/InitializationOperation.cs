@@ -38,6 +38,11 @@ namespace UnityEngine.AddressableAssets.Initialization
             }
         }
 
+        protected override string DebugName
+        {
+            get { return "InitializationOperation"; }
+        }
+
         internal static AsyncOperationHandle<IResourceLocator> CreateInitializationOperation(AddressablesImpl aa, string playerSettingsLocation, string providerSuffix)
         {
             var jp = new JsonAssetProvider();
@@ -70,7 +75,13 @@ namespace UnityEngine.AddressableAssets.Initialization
                 Complete(Result, false, string.Format("Addressables - Unable to load runtime data at location {0}.", m_rtdOp));
                 return;
             }
+#if UNITY_2019_3_OR_NEWER
+            Addressables.LogFormat("Initializing Addressables version {0}.", m_rtdOp.Result.AddressablesVersion);
+#endif
             var rtd = m_rtdOp.Result;
+            
+            m_Addressables.ResourceManager.postProfilerEvents = rtd.ProfileEvents;
+
             m_Addressables.Release(m_rtdOp);
             if (rtd.CertificateHandlerType != null)
                 m_Addressables.ResourceManager.CertificateHandlerInstance = Activator.CreateInstance(rtd.CertificateHandlerType) as CertificateHandler;
@@ -86,9 +97,9 @@ namespace UnityEngine.AddressableAssets.Initialization
             {
                 m_Diagnostics.Dispose();
                 m_Diagnostics = null;
+                m_Addressables.ResourceManager.ClearDiagnosticCallbacks();
             }
-
-            //   DiagnosticEventCollector.ResourceManagerProfilerEventsEnabled = rtd.ProfileEvents;
+            
             Addressables.Log("Addressables - loading initialization objects.");
 
             ContentCatalogProvider ccp = m_Addressables.ResourceManager.ResourceProviders

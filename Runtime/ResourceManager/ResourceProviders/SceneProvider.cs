@@ -28,6 +28,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_ResourceManager = rm;
             }
 
+            internal override DownloadStatus GetDownloadStatus(HashSet<object> visited)
+            {
+                return m_DepOp.IsValid() ? m_DepOp.InternalGetDownloadStatus(visited) : new DownloadStatus() { IsDone = IsDone };
+            }
+
             public void Init(IResourceLocation location, LoadSceneMode loadMode, bool activateOnLoad, int priority, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
             {
                 m_DepOp = depOp;

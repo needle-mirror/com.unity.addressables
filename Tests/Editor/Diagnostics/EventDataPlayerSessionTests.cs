@@ -158,6 +158,35 @@ namespace UnityEditor.AddressableAssets.Tests.Diagnostics
         }
         
         [Test]
+        public void EventDataPlayerSession_HandleOperationDestroy_DoesNotDestroyOnNonzeroRefcount()
+        {
+            EventDataPlayerSession edps = new EventDataPlayerSession();
+            
+            DiagnosticEvent creationEvt = CreateNewGenericEvent(ResourceManager.DiagnosticEventType.AsyncOperationCreate, 0, 1, 1000);
+            DiagnosticEvent refcountEvt = CreateNewGenericEvent(ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, 0, 1, 1000);
+            DiagnosticEvent deletionEvt = CreateNewGenericEvent(ResourceManager.DiagnosticEventType.AsyncOperationDestroy, 1, 1, 1000);
+            
+            bool entryCreated = false;
+            
+            edps.AddSample(creationEvt, false, ref entryCreated);
+            Assert.IsTrue(entryCreated, "creationEvt: Either a new entry was supposed to be created, but was not, or the value of entryCreated was not properly updated.");
+            
+            edps.AddSample(refcountEvt, false, ref entryCreated);
+            Assert.IsFalse(entryCreated, "refcountEvt: Either a new entry was created when it shouldn't have been, or the value of entryCreated was not properly updated.");
+
+            edps.AddSample(deletionEvt, false, ref entryCreated);
+            Assert.IsFalse(entryCreated, "deletionEvt: Either a new entry was created when it shouldn't have been, or the value of entryCreated was not properly updated.");
+            
+            Assert.AreEqual(1, edps.m_Queue.Count, "Deletion event should've been added to the removal queue.");
+
+            edps.HandleOperationDestroy(deletionEvt);
+            
+            Assert.IsTrue(edps.m_DataSets.ContainsKey(creationEvt.ObjectId), "Dataset should not have been removed because it's refcount is greater than 0. ");
+        }
+        
+        
+        
+        [Test]
         public void EventDataPlayerSession_HandleOperationDestroy_DependencyHasNoRefcountCase()
         {
             EventDataPlayerSession edps = new EventDataPlayerSession();

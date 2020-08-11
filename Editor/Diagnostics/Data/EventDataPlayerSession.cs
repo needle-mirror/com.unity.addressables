@@ -186,8 +186,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
                     }
                 }
             }
+
             if (!m_objectToParents.ContainsKey(evt.ObjectId))
+            {
                 RootStreamEntry.AddChild(ds);
+            }
+              
         }  
         
         public void Update()
@@ -206,6 +210,14 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
 
         internal void HandleOperationDestroy(DiagnosticEvent evt)
         {
+            EventDataSet ds;
+
+            if (m_DataSets.TryGetValue(evt.ObjectId, out ds))
+            {
+                if (ds.HasRefcountAfterFrame(evt.Frame, false))
+                    return;
+            }
+            
             if (evt.Dependencies != null)
             {
                 foreach (var d in evt.Dependencies)
@@ -217,7 +229,8 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
                         if (depParents.Count == 0)
                         {
                             m_objectToParents.Remove(d);
-                            RootStreamEntry.AddChild(m_DataSets[d]);
+                            if (m_DataSets.ContainsKey(d))
+                                m_RootStreamEntry.AddChild(m_DataSets[d]);
                         }
                     }
                 }

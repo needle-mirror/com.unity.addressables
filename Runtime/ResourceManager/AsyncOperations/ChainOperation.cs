@@ -16,7 +16,7 @@ namespace UnityEngine.ResourceManagement
             m_CachedOnWrappedCompleted = OnWrappedCompleted;
         }
 
-        protected override string DebugName { get { return string.Format("{2} - Chain<{0},{1}>", typeof(TObject).Name, typeof(TObjectDependency).Name, m_DepOp.DebugName); } }
+        protected override string DebugName { get { return $"ChainOperation<{typeof(TObject).Name},{typeof(TObjectDependency).Name}> - {m_DepOp.DebugName}"; } }
 
         protected override void GetDependencies(List<AsyncOperationHandle> deps)
         {
@@ -54,6 +54,13 @@ namespace UnityEngine.ResourceManagement
                 m_DepOp.Release();
         }
 
+        internal override DownloadStatus GetDownloadStatus(HashSet<object> visited)
+        {
+            var depStatus = m_DepOp.IsValid() ? m_DepOp.InternalGetDownloadStatus(visited) : default;
+            var wrapStatus = m_WrappedOp.IsValid() ? m_WrappedOp.InternalGetDownloadStatus(visited) : default;
+            return new DownloadStatus() { DownloadedBytes = depStatus.DownloadedBytes + wrapStatus.DownloadedBytes, TotalBytes = depStatus.TotalBytes + wrapStatus.TotalBytes, IsDone = IsDone };
+        }
+
         protected override float Progress
         {
             get
@@ -87,7 +94,7 @@ namespace UnityEngine.ResourceManagement
             m_CachedOnWrappedCompleted = OnWrappedCompleted;
         }
 
-        protected override string DebugName { get { return string.Format("{1} - Chain<{0}>", typeof(TObject).Name, m_DepOp.DebugName); } }
+        protected override string DebugName { get { return $"ChainOperation<{typeof(TObject).Name}> - {m_DepOp.DebugName}"; } }
 
         protected override void GetDependencies(List<AsyncOperationHandle> deps)
         {
@@ -123,6 +130,13 @@ namespace UnityEngine.ResourceManagement
 
             if (m_DepOp.IsValid())
                 m_DepOp.Release();
+        }
+
+        internal override DownloadStatus GetDownloadStatus(HashSet<object> visited)
+        {
+            var depStatus = m_DepOp.IsValid() ? m_DepOp.InternalGetDownloadStatus(visited) : default;
+            var wrapStatus = m_WrappedOp.IsValid() ? m_WrappedOp.InternalGetDownloadStatus(visited) : default;
+            return new DownloadStatus() { DownloadedBytes = depStatus.DownloadedBytes + wrapStatus.DownloadedBytes, TotalBytes = depStatus.TotalBytes + wrapStatus.TotalBytes, IsDone = IsDone };
         }
 
         protected override float Progress

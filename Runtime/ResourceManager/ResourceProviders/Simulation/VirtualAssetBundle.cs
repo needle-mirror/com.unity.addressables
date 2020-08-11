@@ -12,6 +12,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
 {
     class VBAsyncOperation
     {
+        public virtual DownloadStatus GetDownloadStatus() { return default; }
     }
 
     class VBAsyncOperation<TObject> : VBAsyncOperation
@@ -259,6 +260,13 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
                 m_TimeInLoadingState = 0.0f;
             }
 
+            public override DownloadStatus GetDownloadStatus()
+            {
+                if (m_Bundle.m_IsLocal)
+                    return new DownloadStatus() { IsDone = IsDone };
+                return new DownloadStatus() { DownloadedBytes = m_Bundle.m_DataBytesLoaded, TotalBytes = m_Bundle.m_DataSize, IsDone = IsDone };
+            }
+
             public override float PercentComplete
             {
                 get
@@ -321,16 +329,28 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             if (m_IsLocal)
             {
                 m_HeaderBytesLoaded += localBytes;
-                return m_HeaderBytesLoaded >= m_HeaderSize;
+                if (m_HeaderBytesLoaded < m_HeaderSize)
+                    return false;
+                m_HeaderBytesLoaded = m_HeaderSize;
+                return true;
             }
-
-            m_DataBytesLoaded += remoteBytes;
-            if (m_DataBytesLoaded >= m_DataSize)
+            else
             {
-                m_IsLocal = true;
-                m_HeaderBytesLoaded = 0;
+                if (m_DataBytesLoaded < m_DataSize)
+                {
+                    m_DataBytesLoaded += remoteBytes;
+                    if (m_DataBytesLoaded < m_DataSize)
+                        return false;
+                    m_DataBytesLoaded = m_DataSize;
+                    return false;
+                }
+
+                m_HeaderBytesLoaded += localBytes;
+                if (m_HeaderBytesLoaded < m_HeaderSize)
+                    return false;
+                m_HeaderBytesLoaded = m_HeaderSize;
+                return true;
             }
-            return false;
         }
 
         internal bool Unload()
@@ -394,9 +414,16 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             }
 
             if (m_IsLocal)
+            {
                 localCount++;
+            }
             else
-                remoteCount++;
+            {
+                if (m_DataBytesLoaded < m_DataSize)
+                    remoteCount++;
+                else
+                    localCount++;
+            }
         }
 
         interface IVirtualLoadable

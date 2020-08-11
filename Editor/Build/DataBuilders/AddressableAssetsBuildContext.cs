@@ -65,5 +65,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// Set of provider types needed in this build.
         /// </summary>
         public HashSet<Type> providerTypes;
+
+        /// <summary>
+        /// The list of all AddressableAssetEntry objects.
+        /// </summary>
+        public List<AddressableAssetEntry> assetEntries;
     }
 }

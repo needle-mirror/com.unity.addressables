@@ -9,7 +9,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
     class BuildBundleLayout : BundleRuleBase
     {
         public override bool CanFix { get { return false; } }
-        public override string ruleName { get { return "Build Bundle Layout"; } }
+        public override string ruleName { get { return "Bundle Layout Preview"; } }
 
         public override List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)
         {

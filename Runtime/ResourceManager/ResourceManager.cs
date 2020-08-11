@@ -36,6 +36,8 @@ namespace UnityEngine.ResourceManagement
             AsyncOperationReferenceCount,
             AsyncOperationDestroy,
         }
+        
+        internal bool postProfilerEvents = false;
 
         /// <summary>
         /// Container for information associated with a Diagnostics event.
@@ -360,7 +362,7 @@ namespace UnityEngine.ResourceManagement
             if (m_AssetOperationCache.TryGetValue(hash, out op))
             {
                 op.IncrementReferenceCount();
-                return new AsyncOperationHandle(op);
+                return new AsyncOperationHandle(op, location.ToString());;
             }
 
             Type provType;
@@ -379,6 +381,7 @@ namespace UnityEngine.ResourceManagement
             ((IGenericProviderOperation)op).Init(this, provider, location, depOp);
 
             var handle = StartOperation(op, depOp);
+            handle.LocationName = location.ToString();
 
             if (depOp.IsValid())
                 depOp.Release();
@@ -430,6 +433,11 @@ namespace UnityEngine.ResourceManagement
                 Result = result;
                 m_Success = success;
                 m_ErrorMsg = errorMsg;
+            }
+
+            protected override string DebugName
+            {
+                get { return "CompletedOperation" ;}
             }
 
             protected override void Execute()
@@ -589,7 +597,7 @@ namespace UnityEngine.ResourceManagement
                 var ops = new List<AsyncOperationHandle>(locations.Count);
                 foreach (var loc in locations)
                     ops.Add(ProvideResource(loc, desiredType));
-
+                
                 op.Init(ops, releaseDependenciesOnFailure);
 
                 handle = StartOperation(op, default(AsyncOperationHandle));
@@ -742,6 +750,11 @@ namespace UnityEngine.ResourceManagement
                 m_scene = default(Scene);
             }
 
+            internal override DownloadStatus GetDownloadStatus(HashSet<object> visited)
+            {
+                return m_dependency.IsValid() ? m_dependency.InternalGetDownloadStatus(visited) : new DownloadStatus() { IsDone = IsDone };
+            }
+
             protected override void GetDependencies(List<AsyncOperationHandle> deps)
             {
                 deps.Add(m_dependency);
@@ -823,7 +836,7 @@ namespace UnityEngine.ResourceManagement
         }
 
         /// <summary>
-        /// Asynchronouslly instantiate a prefab (GameObject) at the specified <paramref name="location"/>.
+        /// Asynchronously instantiate a prefab (GameObject) at the specified <paramref name="location"/>.
         /// </summary>
         /// <returns>Async operation that will complete when the prefab is instantiated.</returns>
         /// <param name="provider">An implementation of IInstanceProvider that will be used to instantiate and destroy the GameObject.</param>

@@ -28,7 +28,7 @@ namespace AssetReferenceDrawerTests
             CreateTextureOnPath(texturePath);
             var texEntry = settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(texturePath), group, false, false);
             texEntry.address = textureName;
-            texEntry.SetLabel(allowedLabels[0], true, false);
+            texEntry.SetLabel(allowedLabels[0], true, true);
         }
 
         void CreateTextureOnPath(string spritePath)

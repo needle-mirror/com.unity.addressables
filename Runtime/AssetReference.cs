@@ -216,6 +216,18 @@ namespace UnityEngine.AddressableAssets
 
         AsyncOperationHandle m_Operation;
         /// <summary>
+        /// The AsyncOperationHandle currently being used by the AssetReference.
+        /// For example, if you call AssetReference.LoadAssetAsync, this property will return a handle to that operation.
+        /// </summary>
+        public AsyncOperationHandle OperationHandle
+        {
+            get
+            {
+                return m_Operation;
+            }
+        }
+
+        /// <summary>
         /// The actual key used to request the asset at runtime. RuntimeKeyIsValid() can be used to determine if this reference was set.
         /// </summary>
         public virtual object RuntimeKey

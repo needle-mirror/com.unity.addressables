@@ -55,6 +55,7 @@ namespace UnityEngine.ResourceManagement.Tests
         {
             m_RM = new ResourceManager();
             m_RM.CallbackHooksEnabled = false;
+            m_RM.postProfilerEvents = true;
 
             m_Provider = new MockProvider();
             m_Provider.ProvideCallback = ProvideBasicCallback;

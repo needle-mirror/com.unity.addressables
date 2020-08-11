@@ -870,6 +870,22 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void AddressableAssetSettings_SetMaxConcurrentWebRequests_CanSet()
+        {
+            Settings.MaxConcurrentWebRequests = 100;
+            Assert.AreEqual(100, Settings.MaxConcurrentWebRequests);
+        }
+
+        [Test]
+        public void AddressableAssetSettings_SetMaxConcurrentWebRequestsWithValueOutsideOfBounds_IsClamped()
+        {
+            Settings.MaxConcurrentWebRequests = 0;
+            Assert.AreEqual(1, Settings.MaxConcurrentWebRequests);
+            Settings.MaxConcurrentWebRequests = 2000;
+            Assert.AreEqual(1024, Settings.MaxConcurrentWebRequests);
+        }
+
+        [Test]
         public void AddressableAssetSettings_SetLabelValueForEntries_CanSet()
         {
             // Setup

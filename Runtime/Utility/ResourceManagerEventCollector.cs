@@ -34,11 +34,41 @@ namespace UnityEngine.AddressableAssets.Utility
         }
 
         Dictionary<int, DiagnosticInfo> m_cachedDiagnosticInfo = new Dictionary<int, DiagnosticInfo>();
-        List<AsyncOperationHandle> m_dependencyBuffer = new List<AsyncOperationHandle>();
+
+        internal int SumDependencyNameHashCodes(AsyncOperationHandle handle)
+        {
+            List<AsyncOperationHandle> deps = new List<AsyncOperationHandle>();
+            handle.GetDependencies(deps);
+            
+            int sumOfDependencyHashes = 0;
+            foreach (var d in deps)
+                unchecked
+                {
+                    sumOfDependencyHashes += d.DebugName.GetHashCode() + SumDependencyNameHashCodes(d);
+                }
+            return sumOfDependencyHashes;
+        }
+
+        internal int CalculateHashCode(AsyncOperationHandle handle)
+        {
+            int sumOfDependencyHashes = SumDependencyNameHashCodes(handle);
+            bool nameChangesWithState = handle.DebugName.Contains("result=") && handle.DebugName.Contains("status=");
+            
+            // We default to the regular hash code in the case of operations with names that change with their state
+            // since their names aren't a reliable way to reference them
+            
+            if (nameChangesWithState)
+                return handle.GetHashCode();
+            //its okay if this overflows
+            unchecked
+            {
+                return handle.DebugName.GetHashCode() + sumOfDependencyHashes;
+            }
+        }
 
         void OnResourceManagerDiagnosticEvent(ResourceManager.DiagnosticEventContext eventContext)
         {
-            var hashCode = eventContext.OperationHandle.GetHashCode();
+            var hashCode = CalculateHashCode(eventContext.OperationHandle);
             DiagnosticInfo diagInfo = null;
 
             if (eventContext.Type == ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
@@ -50,15 +80,13 @@ namespace UnityEngine.AddressableAssets.Utility
             {
                 if (!m_cachedDiagnosticInfo.TryGetValue(hashCode, out diagInfo))
                 {
-                    m_dependencyBuffer.Clear();
-                    eventContext.OperationHandle.GetDependencies(m_dependencyBuffer);
-                    var depIds = new int[m_dependencyBuffer.Count];
+                    List<AsyncOperationHandle> deps = new List<AsyncOperationHandle>();
+                    eventContext.OperationHandle.GetDependencies(deps);
+                    var depIds = new int[deps.Count];
+                    
                     for (int i = 0; i < depIds.Length; i++)
-                    {
-                        if (eventContext.Location != null)
-                            depIds[i] = eventContext.Location.Dependencies[i].Hash(typeof(object));
-                        depIds[i] = m_dependencyBuffer[i].GetHashCode();
-                    }
+                        depIds[i] = CalculateHashCode(deps[i]);
+                    
                     m_cachedDiagnosticInfo.Add(hashCode, diagInfo = new DiagnosticInfo() { ObjectId = hashCode, DisplayName = eventContext.OperationHandle.DebugName, Dependencies = depIds });
                 }
             }

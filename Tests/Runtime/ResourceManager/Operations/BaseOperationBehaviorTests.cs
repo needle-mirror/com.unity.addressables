@@ -174,5 +174,105 @@ namespace UnityEngine.ResourceManagement.Tests
 
             handle.Release();
         }
+
+        internal class ManualDownloadPercentCompleteOperation : AsyncOperationBase<IAssetBundleResource>
+        {
+            public long m_bytesDownloaded = 0;
+            public long m_totalBytes = 1024;
+            public bool m_IsDone = false;
+            protected override void Execute()
+            {
+            }
+
+            public void CompleteNow()
+            {
+                m_bytesDownloaded = m_totalBytes;
+                Complete(null, true, null);
+            }
+
+            internal override DownloadStatus GetDownloadStatus(HashSet<object> visited)
+            {
+                return new DownloadStatus() { DownloadedBytes = m_bytesDownloaded, TotalBytes = m_totalBytes, IsDone = m_IsDone };
+            }
+        }
+
+        static void AssertExpectedDownloadStatus(DownloadStatus dls, long dl, long tot, float per)
+        {
+            Assert.AreEqual(dl, dls.DownloadedBytes);
+            Assert.AreEqual(tot, dls.TotalBytes);
+            Assert.AreEqual(per, dls.Percent);
+        }
+
+        [Test]
+        public void DownloadStatusWithNoBytes_WithIsDoneFalse_Returns_PercentCompleteZero()
+        {
+            var dls = new DownloadStatus() { DownloadedBytes = 0, TotalBytes = 0, IsDone = false };
+            Assert.AreEqual(0f, dls.Percent);
+        }
+
+        [Test]
+        public void DownloadStatusWithNoBytes_WithIsDoneTrue_Returns_PercentCompleteOne()
+        {
+            var dls = new DownloadStatus() { DownloadedBytes = 0, TotalBytes = 0, IsDone = true };
+            Assert.AreEqual(1f, dls.Percent);
+        }
+
+        [Test]
+        public void GroupOperation_WithOpsThatImplementGetDownloadStatus_ComputesExpectedDownloadPercentComplete()
+        {
+            var ops = new List<AsyncOperationHandle>();
+            var mdpco = new List<ManualDownloadPercentCompleteOperation>();
+            for (int i = 0; i < 4; i++)
+            {
+                var o = m_RM.CreateOperation<ManualDownloadPercentCompleteOperation>(typeof(ManualDownloadPercentCompleteOperation), 1, 0, null);
+                o.Start(m_RM, default, null);
+                mdpco.Add(o);
+                ops.Add(new AsyncOperationHandle(o));
+            }
+
+            var gOp = m_RM.CreateGenericGroupOperation(ops, true);
+            AssertExpectedDownloadStatus(gOp.GetDownloadStatus(), 0, 4096, 0);
+            mdpco[0].m_bytesDownloaded = 512;
+            AssertExpectedDownloadStatus(gOp.GetDownloadStatus(), 512, 4096, .125f);
+            foreach (var o in mdpco)
+                o.CompleteNow();
+            AssertExpectedDownloadStatus(gOp.GetDownloadStatus(), 4096, 4096, 1f);
+            m_RM.Release(gOp);
+        }
+
+        [Test]
+        public void ChainOperation_WithOpThatImplementGetDownloadStatus_ComputesExpectedDownloadPercentComplete()
+        {
+            var depOp = m_RM.CreateOperation<ManualDownloadPercentCompleteOperation>(typeof(ManualDownloadPercentCompleteOperation), 1, 0, null);
+            depOp.Start(m_RM, default, null);
+            var chainOp = m_RM.CreateChainOperation<object>(new AsyncOperationHandle(depOp), s => m_RM.CreateCompletedOperation<object>(null, true, null));
+
+            AssertExpectedDownloadStatus(chainOp.GetDownloadStatus(), 0, 1024, 0f);
+            depOp.m_bytesDownloaded = 512;
+            AssertExpectedDownloadStatus(chainOp.GetDownloadStatus(), 512, 1024, .5f);
+            depOp.CompleteNow();
+            m_RM.Update(.1f);
+            Assert.IsTrue(chainOp.IsDone);
+            AssertExpectedDownloadStatus(chainOp.GetDownloadStatus(), 1024, 1024, 1f);
+            m_RM.Release(chainOp);
+        }
+
+        [Test]
+        public void GroupOperation_WithDuplicateOpThatImplementGetDownloadStatus_DoesNotOverCountValues()
+        {
+            var ops = new List<AsyncOperationHandle>();
+            var o = m_RM.CreateOperation<ManualDownloadPercentCompleteOperation>(typeof(ManualDownloadPercentCompleteOperation), 1, 0, null);
+            o.Start(m_RM, default, null);
+            for (int i = 0; i < 4; i++)
+                ops.Add(new AsyncOperationHandle(o));
+
+            var gOp = m_RM.CreateGenericGroupOperation(ops, true);
+            AssertExpectedDownloadStatus(gOp.GetDownloadStatus(), 0, 1024, 0);
+            o.m_bytesDownloaded = 512;
+            AssertExpectedDownloadStatus(gOp.GetDownloadStatus(), 512, 1024, .5f);
+            o.CompleteNow();
+            AssertExpectedDownloadStatus(gOp.GetDownloadStatus(), 1024, 1024, 1f);
+            m_RM.Release(gOp);
+        }
     }
 }

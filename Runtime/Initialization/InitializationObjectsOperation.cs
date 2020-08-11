@@ -21,6 +21,11 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_Addressables.ResourceManager.RegisterForCallbacks();
         }
 
+        protected override string DebugName
+        {
+            get { return "InitializationObjectsOperation"; }
+        }
+
         protected override void Execute()
         {
             var rtd = m_RtdOp.Result;
@@ -57,7 +62,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_DepOp.Completed += (obj) =>
             {
                 bool success = obj.Status == AsyncOperationStatus.Succeeded;
-                Complete(true, success, success ? "" : $"{obj.DebugName} failed initialization.");
+                Complete(true, success, success ? "" : $"{obj.DebugName}, status={obj.Status}, result={obj.Result} failed initialization.");
                 m_Addressables.Release(m_DepOp);
             };
         }

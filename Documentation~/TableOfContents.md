@@ -44,3 +44,7 @@
         * [LoadingAddressableAssets](LoadingAddressableAssets)
         * [InitializeAsync](InitializeAsync)
         * [TransformInternalId](TransformInternalId)
+        * [InstantiateAsync](InstantiateAsync)
+        * [DownloadDependenciesAsync](DownloadDependenciesAsync)
+        * [LoadContentCatalogAsync](LoadContentCatalogAsync)
+        * [UpdateCatalogs](UpdateCatalogs)

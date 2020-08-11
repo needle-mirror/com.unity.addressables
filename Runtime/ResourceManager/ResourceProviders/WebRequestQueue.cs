@@ -36,6 +36,12 @@ namespace UnityEngine.ResourceManagement
         private static int s_MaxRequest = 500;
         internal static Queue<WebRequestQueueOperation> s_QueuedOperations = new Queue<WebRequestQueueOperation>();
         internal static List<UnityWebRequestAsyncOperation> s_ActiveRequests = new List<UnityWebRequestAsyncOperation>();
+        public static void SetMaxConcurrentRequests(int maxRequests)
+        {
+            if (maxRequests < 1)
+                throw new ArgumentException("MaxRequests must be 1 or greater.", "maxRequests");
+            s_MaxRequest = maxRequests;
+        }
 
         public static WebRequestQueueOperation QueueRequest(UnityWebRequest request)
         {

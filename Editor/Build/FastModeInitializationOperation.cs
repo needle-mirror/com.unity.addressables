@@ -72,7 +72,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 groupOp.Completed += op =>
                 {
                     bool success = op.Status == AsyncOperationStatus.Succeeded;
-                    Complete(locator, success, success ? "" : $"{op.DebugName} failed initialization.");
+                    Complete(locator, success, success ? "" : $"{op.DebugName}, status={op.Status}, result={op.Result} failed initialization.");
                     m_addressables.Release(op);
                 };
             }

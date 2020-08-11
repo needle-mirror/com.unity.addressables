@@ -38,7 +38,8 @@ Operations that do not return anything in the [`AsyncOperationHandle.Result`](..
 ## The Addressables Event Viewer
 Use the **Addressables Event Viewer** window to monitor the ref-counts of all Addressables system operations. To access the window in the Editor, select **Window** > **Asset Management** > **Addressables** > **Event Viewer**. 
 
-**Important**: In order to view data in the Event Viewer, you must enable the **Send Profiler Events** setting in your [`AddressableAssetSettings`](../api/UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.html) object's Inspector.
+**Important**: In order to view data in the Event Viewer, you must enable the **Send Profiler Events** setting in your [`AddressableAssetSettings`](../api/UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.html) object's Inspector. Changes to **Send Profiler Events** will be reflected in the following build. This means that entering play mode when using the **Use Existing Build** play mode script will use the value set during the most recent build. Alternatively, entering play mode when using the **Use Asset Database** or **Simulate Groups** play mode scripts will pick up the current state, as those play mode scripts rebuild the settings data upon entering play mode.
+
 
 The following information is available in the Event Viewer:
 
@@ -53,6 +54,7 @@ Listed under the Assets column, you will see a row for each of the following, pe
 * FPS: The frames per second count.
 * MonoHeap: The amount of RAM in use.
 * Event Counts: The total number of events in a frame.
+* Instantiation Counts: The total number of calls to Addressables.InstantiateAsync on a frame.
 * Asset requests: Displays the reference count on an operation over time. If the Asset request has any dependencies, a triangle appears that you can click on to view the children's request operations.
 
 You can click the left and right arrows in order to step through the frames one by one, or click **Current** to jump to the latest frame. Press the **+** button to expand a row for more details.
@@ -60,6 +62,9 @@ You can click the left and right arrows in order to step through the frames one 
 The information displayed in the Event Viewer is related to the [build script](AddressableAssetsDevelopmentCycle.md#build-scripts) you use to create Play mode data.
 
 When using the Event Viewer, avoid the **Use Asset Database** built script because it does not account for any shared dependencies among the Assets. Use the **Simulate Groups** script or the **Use Existing Build** script instead, but the latter is better suited for the Event Viewer because it gives a more accurate monitoring of the ref-counts.
+
+# Connecting the Event Viewer to a standalone player
+To connect the Event Viewer to a standalone player, go into the build menu, select the platform you wish to use, and ensure that **Development Build** and **Autoconnect Profiler** are both enabled. Next, open the Unity Profiler by selecting **Window** > **Analysis** > **Profiler** and select the platform you wish to build for on the top toolbar. Finally, select **Build and Run** in the Build Settings window and the Event Viewer will automatically connect to and display events for the standalone player selected.
 
 ## When is memory cleared?
 An Asset no longer being referenced (indicated by the end of a blue section in the profiler) does not necessarily mean that Asset was unloaded. A common applicable scenario involves multiple Assets in an [AssetBundle](https://docs.unity3d.com/Manual/AssetBundlesIntro.html "AssetBundles"). For example: 
@@ -70,3 +75,19 @@ An Asset no longer being referenced (indicated by the end of a blue section in t
 * If you release `tree`, it's ref-count becomes zero, and the blue bar goes away. 
 
 In this example, the `tree` Asset is not actually unloaded at this point. You can load an AssetBundle, or its partial contents, but you cannot partially unload an AssetBundle. No Asset in `stuff` will unload until the bundle itself is completely unloaded. The exception to this rule is the engine interface [`Resources.UnloadUnusedAssets`](https://docs.unity3d.com/ScriptReference/Resources.UnloadUnusedAssets.html). Executing this method in the above scenario will cause `tree` to unload. Because the Addressables system cannot be aware of these events, the profiler graph only reflects the Addressables ref-counts (not exactly what memory holds). Note that if you choose to use `Resources.UnloadUnusedAssets`, it is a very slow operation, and should only be called on a screen that won't show any hitches (such as a loading screen).
+
+## AssetBundle dependencies
+Loading an Addressable Asset loads all the AssetBundle dependencies and keeps them loaded until you call [`Addressables.Release`](../api/UnityEngine.AddressableAssets.Addressables.html?q=addressables.release#UnityEngine_AddressableAssets_Addressables_Release__1___0_) on the handle returned from the loading method.
+
+AssetBundle dependencies are created when an asset in one AssetBundle references an asset in another AssetBundle. The dependencies of all these AssetBundles can be thought of as a dependency graph. During the catalog generation stage of the build process, Addressables walks this graph to calculate all the AssetBundles that must be loaded for each Addressable Asset. Because dependencies are calculated at the AssetBundle level, all Addressable Assets within a single AssetBundle have the same dependencies. Adding an Addressable Asset that has an external reference (references an object in another AssetBundle) to an AssetBundle adds that AssetBundle as a dependency for all the other Addressable Assets in the AssetBundle.
+
+For Example:
+
+`BundleA` contains Addressable Assets `Asset1` and `Asset2`. `Asset2` references `Asset3`, which is contained in `BundleB`. Even though `Asset1` has no reference to `BundleB`, `BundleB` is still a dependency of `Asset1` because `Asset1` is in `BundleA`, which has a reference on `BundleB`.
+
+---
+**NOTE**
+
+The dependency calculation for the required set of AssetBundles has changed as of 1.13.0. Prior to 1.13.0, only the AssetBundles that contained assets for the requested Addressable Asset were loaded. In the example above, `Asset1` would not have had a dependency on `BundleB`. This previous behavior was resulting in references breaking when an AssetBundle being referenced by another AssetBundle was unloaded and reloaded.
+
+---

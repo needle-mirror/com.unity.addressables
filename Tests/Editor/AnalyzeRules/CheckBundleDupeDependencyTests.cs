@@ -56,7 +56,8 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
                 Settings = Settings,
                 runtimeData = runtimeData,
                 bundleToAssetGroup = rule.m_BundleToAssetGroup,
-                locations = rule.m_Locations
+                locations = rule.m_Locations,
+                assetEntries = new List<AddressableAssetEntry>()
             };
             return aaContext;
         }

@@ -29,6 +29,8 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         [NonSerialized]
         internal readonly Dictionary<string, string> m_BundleToAssetGroup = new Dictionary<string, string>();
         [NonSerialized]
+        internal readonly List<AddressableAssetEntry> m_AssetEntries = new List<AddressableAssetEntry>();
+        [NonSerialized]
         internal ExtractDataTask m_ExtractData = new ExtractDataTask();
 
         internal IList<IBuildTask> RuntimeDataBuildTasks(string builtinShaderBundleName)
@@ -72,7 +74,8 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 runtimeData = runtimeData,
                 bundleToAssetGroup = m_BundleToAssetGroup,
                 locations = m_Locations,
-                providerTypes = new HashSet<Type>()
+                providerTypes = new HashSet<Type>(),
+                assetEntries = m_AssetEntries
             };
             return aaContext;
         }
@@ -186,7 +189,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 {
                     var schema = group.GetSchema<BundledAssetGroupSchema>();
                     List<AssetBundleBuild> bundleInputDefinitions = new List<AssetBundleBuild>();
-                    BuildScriptPackedMode.PrepGroupBundlePacking(group, bundleInputDefinitions, schema.BundleMode);
+                    m_AssetEntries.AddRange(BuildScriptPackedMode.PrepGroupBundlePacking(group, bundleInputDefinitions, schema.BundleMode));
 
                     for (int i = 0; i < bundleInputDefinitions.Count; i++)
                     {
