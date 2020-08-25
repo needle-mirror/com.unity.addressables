@@ -8,11 +8,17 @@ using UnityEngine.SceneManagement;
 namespace UnityEngine.ResourceManagement.ResourceProviders
 {
     /// <summary>
-    /// Flags for resource providers.
+    /// Options for resource provider behavior.
     /// </summary>
     public enum ProviderBehaviourFlags
     {
+        /// <summary>
+        /// Indicates that the provider does not have extra specified behavior.
+        /// </summary>
         None = 0,
+        /// <summary>
+        /// Indicates that the provider will still fulfill requests even with failed dependencies.
+        /// </summary>
         CanProvideWithFailedDependencies = 1
     }
 
@@ -153,7 +159,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <summary>
         /// Release and/or unload the given resource location and asset
         /// </summary>
-        /// <returns><c>true</c>, if release was successful. <c>false</c> otherwise.</returns>
         /// <param name="location">Location to release.</param>
         /// <param name="asset">Asset to unload.</param>
         void Release(IResourceLocation location, object asset);

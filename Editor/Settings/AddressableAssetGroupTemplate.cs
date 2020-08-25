@@ -6,6 +6,9 @@ using UnityEngine.Assertions;
 
 namespace UnityEditor.AddressableAssets.Settings
 {
+    /// <summary>
+    /// Used to create template groups to make it easier for the user to create new groups.
+    /// </summary>
     [CreateAssetMenu(fileName = "AddressableAssetGroupTemplate.asset", menuName = "Addressables/Group Templates/Blank Group Template")]
     public class AddressableAssetGroupTemplate : ScriptableObject, IGroupTemplate
     {

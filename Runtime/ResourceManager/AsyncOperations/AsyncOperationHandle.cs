@@ -14,7 +14,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         internal AsyncOperationBase<TObject> m_InternalOp;
         int m_Version;
         string m_LocationName;
-        
+
         internal string LocationName
         {
             get { return m_LocationName; }
@@ -23,9 +23,10 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         /// <summary>
         /// Conversion from typed to non typed handles.  This does not increment the reference count.
-        /// To convert from non-typed back, use AsyncOperationHandle.Convert<T>()
+        /// To convert from non-typed back, use AsyncOperationHandle.Convert&lt;T&gt;()
         /// </summary>
-        /// <param name="obj"></param>
+        /// <param name="obj">The typed handle to convert.</param>
+        /// <returns>Returns the converted operation handle.</returns>
         static public implicit operator AsyncOperationHandle(AsyncOperationHandle<TObject> obj)
         {
             return new AsyncOperationHandle(obj.m_InternalOp, obj.m_Version, obj.m_LocationName);
@@ -74,7 +75,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_Version = op?.Version ?? 0;
             m_LocationName = locationName;
         }
-        
+
         internal AsyncOperationHandle(IAsyncOperation op, int version, string locationName)
         {
             m_InternalOp = (AsyncOperationBase<TObject>)op;
@@ -240,11 +241,18 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             get { return Result; }
         }
 
+        /// <summary>
+        /// Overload for <see cref="IEnumerator.MoveNext"/>.
+        /// </summary>
+        /// <returns>Returns true if the enumerator can advance to the next element in the collectin. Returns false otherwise.</returns>
         bool IEnumerator.MoveNext()
         {
             return !IsDone;
         }
 
+        /// <summary>
+        /// Overload for <see cref="IEnumerator.Reset"/>.
+        /// </summary>
         void IEnumerator.Reset() {}
     }
 
@@ -256,7 +264,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         internal IAsyncOperation m_InternalOp;
         int m_Version;
         string m_LocationName;
-        
+
         internal string LocationName
         {
             get { return m_LocationName; }
@@ -276,14 +284,14 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_Version = version;
             m_LocationName = null;
         }
-        
+
         internal AsyncOperationHandle(IAsyncOperation op, string locationName)
         {
             m_InternalOp = op;
             m_Version = op?.Version ?? 0;
             m_LocationName = locationName;
         }
-        
+
         internal AsyncOperationHandle(IAsyncOperation op, int version, string locationName)
         {
             m_InternalOp = op;
@@ -333,7 +341,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 return InternalOp.DebugName;
             }
         }
-        
+
         /// <summary>
         /// Event for handling the destruction of the operation.
         /// </summary>
@@ -466,11 +474,18 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             get { return Result; }
         }
 
+        /// <summary>
+        /// Overload for <see cref="IEnumerator.MoveNext"/>.
+        /// </summary>
+        /// <returns>Returns true if the enumerator can advance to the next element in the collectin. Returns false otherwise.</returns>
         bool IEnumerator.MoveNext()
         {
             return !IsDone;
         }
 
+        /// <summary>
+        /// Overload for <see cref="IEnumerator.Reset"/>.
+        /// </summary>
         void IEnumerator.Reset() {}
     }
 }

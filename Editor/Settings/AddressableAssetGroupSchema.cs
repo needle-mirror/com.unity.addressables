@@ -90,6 +90,13 @@ namespace UnityEditor.AddressableAssets.Settings
         {
         }
 
+        /// <summary>
+        /// Display mixed values for the specified property found in a list of schemas.
+        /// </summary>
+        /// <param name="property">The property.</param>
+        /// <param name="otherSchemas">The list of schemas that may contain the property.</param>
+        /// <param name="type">The property type.</param>
+        /// <param name="propertyName">The property name.</param>
         protected void ShowMixedValue(SerializedProperty property, List<AddressableAssetGroupSchema> otherSchemas, Type type, string propertyName)
         {
             foreach (var schema in otherSchemas)

@@ -161,6 +161,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
         }
 
         [UnityTest]
+        [Ignore("https://jira.unity3d.com/browse/ADDR-1451")]
         public IEnumerator BundledCatalog_LoadCatalogFromBundle_InvalidBundleFileFormat_ShouldFail()
         {
             var bundleFilePath = Path.Combine(k_TempBuildFolder, "catalog.bundle");
@@ -169,7 +170,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var bytes = new byte[] { 1, 2, 3, 4, 5, 6 };
             File.WriteAllBytes(bundleFilePath, bytes);
             
-#if UNITY_2020_1_OR_NEWER
+#if UNITY_2019_4_OR_NEWER
             LogAssert.Expect(LogType.Error, new Regex("Failed to read data for the AssetBundle", RegexOptions.IgnoreCase));
 #endif
             

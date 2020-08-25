@@ -63,8 +63,9 @@ namespace UnityEditor.AddressableAssets.GUI
         }
 
         /// <summary>
-        /// Obsolete - please use AnalyzeSystem.RegisterNewRule<TRule>()
+        /// Obsolete - please use AnalyzeSystem.RegisterNewRule&lt;TRule&gt;()
         /// </summary>
+        /// <typeparam name="TRule">The rule type.</typeparam>
         [Obsolete("Please use AnalyzeSystem.RegisterNewRule<TRule>()")]
         public static void RegisterNewRule<TRule>() where TRule : AnalyzeRule, new()
         {

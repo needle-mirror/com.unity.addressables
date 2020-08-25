@@ -9,3 +9,7 @@ This page exists in addition to the standard Addressable Assets [Scripting API d
 * [DownloadDependenciesAsync](DownloadDependenciesAsync.html)
 * [LoadContentCatalogAsync](LoadContentCatalogAsync.html)
 * [UpdateCatalogs](UpdateCatalogs.html)
+* [LoadSceneAsync](LoadSceneAsync.html)
+* [ExceptionHandler](ExceptionHandler.html)
+* [BuildPlayerContent](BuildPlayerContent.html)
+* [LoadResourceLocationsAsync](LoadResourceLocations.html)

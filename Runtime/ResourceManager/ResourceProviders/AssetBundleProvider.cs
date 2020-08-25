@@ -16,6 +16,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     /// </summary>
     public interface IAssetBundleResource
     {
+        /// <summary>
+        /// Retrieves the asset bundle.
+        /// </summary>
+        /// <returns>Returns the asset bundle.</returns>
         AssetBundle GetAssetBundle();
     }
 
@@ -91,7 +95,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <summary>
         /// Computes the amount of data needed to be downloaded for this bundle.
         /// </summary>
-        /// <param name="loc">The location of the bundle.</param>
+        /// <param name="location">The location of the bundle.</param>
+        /// <param name="resourceManager">The object that contains all the resource locations.</param>
         /// <returns>The size in bytes of the bundle that is needed to be downloaded.  If the local cache contains the bundle or it is a local bundle, 0 will be returned.</returns>
         public virtual long ComputeSize(IResourceLocation location, ResourceManager resourceManager)
         {
@@ -348,7 +353,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// </summary>
         /// <param name="location">The location of the asset to release</param>
         /// <param name="asset">The asset in question</param>
-        /// <returns></returns>
         public override void Release(IResourceLocation location, object asset)
         {
             if (location == null)

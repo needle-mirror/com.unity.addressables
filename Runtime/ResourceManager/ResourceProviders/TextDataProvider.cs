@@ -105,7 +105,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <summary>
         /// Method to convert the text into the object type requested.  Usually the text contains a JSON formatted serialized object.
         /// </summary>
-        /// <typeparam name="TObject">The object type to convert the text to.</typeparam>
+        /// <param name="type">The object type the text is converted to.</param>
         /// <param name="text">The text to be converted.</param>
         /// <returns>The converted object.</returns>
         public virtual object Convert(Type type, string text) { return text; }
@@ -113,10 +113,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <summary>
         /// Provides raw text data from the location.
         /// </summary>
-        /// <typeparam name="TObject">Object type.</typeparam>
-        /// <param name="location">Location of the data to load.</param>
-        /// <param name="loadDependencyOperation">Depency operation.</param>
-        /// <returns>Operation to load the raw data.</returns>
+        /// <param name="provideHandle">The data needed by the provider to perform the load.</param>
         public override void Provide(ProvideHandle provideHandle)
         {
             new InternalOp().Start(provideHandle, this, IgnoreFailures);

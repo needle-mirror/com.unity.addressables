@@ -11,7 +11,7 @@ If `Addressables.ResourceManager.InternalIdTransformFunc` is not assigned to or 
 
 You do not need to call `TransformInternalId` manually in order for `ResourceManager` to use it.
 
-See [`ResourceManager`](../api/UnityEngine.ResourceManagement.ResourceManager.html) for its full API documentation.
+See [`ResourceManager`](xref:UnityEngine.ResourceManagement.ResourceManager)) for its full API documentation.
 
 #### Code Sample
 ```

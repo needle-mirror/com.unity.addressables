@@ -258,6 +258,19 @@ namespace UnityEngine.ResourceManagement.Tests
         }
 
         [Test]
+        public void PercentComplete_ReturnsZero_WhenChainOperationHasNotBegun()
+        {
+            var baseOperation = m_RM.CreateChainOperation<AsyncOperationHandle>(
+                new AsyncOperationHandle(new ManualPercentCompleteOperation(1f)), 
+                (obj) =>
+            {
+                return new AsyncOperationHandle<AsyncOperationHandle>();
+            });
+
+            Assert.AreEqual(0, baseOperation.PercentComplete);
+        }
+
+        [Test]
         public void GroupOperation_WithDuplicateOpThatImplementGetDownloadStatus_DoesNotOverCountValues()
         {
             var ops = new List<AsyncOperationHandle>();

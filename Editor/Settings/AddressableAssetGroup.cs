@@ -287,7 +287,14 @@ namespace UnityEditor.AddressableAssets.Settings
             get { return Guid == Settings.DefaultGroup.Guid; }
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Compares two asset entries based on their guids.
+        /// </summary>
+        /// <param name="x">The first entry to compare.</param>
+        /// <param name="y">The second entry to compare.</param>
+        /// <returns>Returns 0 if both entries are null or equivalent.
+        /// Returns -1 if the first entry is null or the first entry precedes the second entry in the sort order.
+        /// Returns 1 if the second entry is null or the first entry follows the second entry in the sort order.</returns>
         public virtual int Compare(AddressableAssetEntry x, AddressableAssetEntry y)
         {
             if (x == null && y == null)

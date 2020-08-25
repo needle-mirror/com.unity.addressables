@@ -14,6 +14,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// The key is converted to a string and used as the internal id of the location added to the locations parameter.
         /// </summary>
         /// <param name="key">The key of the location.  This should be a string with the resources path of the asset.</param>
+        /// <param name="type">The resource type.</param>
         /// <param name="locations">The list of locations.  This will have at most one item.</param>
         /// <returns>True if the key is a string object and a location was created, false otherwise.</returns>
         public bool Locate(object key, Type type, out IList<IResourceLocation> locations)

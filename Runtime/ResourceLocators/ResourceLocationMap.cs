@@ -13,6 +13,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// <summary>
         /// Construct a new ResourceLocationMap object.
         /// </summary>
+        /// <param name="id">The locator id.</param>
         /// <param name="capacity">The expected number of items.</param>
         public ResourceLocationMap(string id, int capacity = 0)
         {
@@ -20,11 +21,15 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             Locations = new Dictionary<object, IList<IResourceLocation>>(capacity == 0 ? 100 : capacity);
         }
 
+        /// <summary>
+        /// Stores the resource locator id.
+        /// </summary>
         public string LocatorId { get; private set; }
 
         /// <summary>
         /// Construct a new ResourceLocationMap object with a list of locations.
         /// </summary>
+        /// <param name="id">The locator id.</param>
         /// <param name="locations">The list of locations to initialize with.</param>
         public ResourceLocationMap(string id, IList<ResourceLocationData> locations)
         {
@@ -92,8 +97,9 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// Locate all of the locations that match the given key.
         /// </summary>
         /// <param name="key">The key used to locate the locations.</param>
+        /// <param name="type">The resource type.</param>
         /// <param name="locations">The list of found locations.  This list is shared so it should not be modified.</param>
-        /// <returns></returns>
+        /// <returns>Returns true if a location was found. Returns false otherwise.</returns>
         public bool Locate(object key, Type type, out IList<IResourceLocation> locations)
         {
             IList<IResourceLocation> locs = null;

@@ -36,12 +36,21 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         }
 
         /// <summary>
-        /// Compression mode for bundles in this group.
+        /// Options for compressing bundles in this group.
         /// </summary>
         public enum BundleCompressionMode
         {
+            /// <summary>
+            /// Use to indicate that bundles will not be compressed.
+            /// </summary>
             Uncompressed,
+            /// <summary>
+            /// Use to indicate that bundles will be compressed using the LZ4 compression algorithm.
+            /// </summary>
             LZ4,
+            /// <summary>
+            /// Use to indicate that bundles will be compressed using the LZMA compression algorithm.
+            /// </summary>
             LZMA
         }
 
@@ -60,6 +69,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <summary>
         /// Gets the build compression settings for bundles in this group.
         /// </summary>
+        /// <param name="bundleId">The bundle id.</param>
         /// <returns>The build compression.</returns>
         public virtual BuildCompression GetBuildCompressionForBundle(string bundleId)
         {
@@ -329,12 +339,23 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <summary>
         /// Used to determine how the final bundle name should look.
         /// </summary>
-
         public enum BundleNamingStyle
         {
+            /// <summary>
+            /// Use to indicate that the hash should be appended to the bundle name.
+            /// </summary>
             AppendHash,
+            /// <summary>
+            /// Use to indicate that the bundle name should not contain the hash.
+            /// </summary>
             NoHash,
+            /// <summary>
+            /// Use to indicate that the bundle name should only contain the given hash.
+            /// </summary>
             OnlyHash,
+            /// <summary>
+            /// Use to indicate that the bundle name should only contain the hash of the file name.
+            /// </summary>
             FileNameHash
         }
 

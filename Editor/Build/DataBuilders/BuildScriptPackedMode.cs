@@ -238,26 +238,38 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             WriteFile(settingsPath, JsonUtility.ToJson(aaContext.runtimeData), builderInput.Registry);
 
             var opResult = AddressableAssetBuildResult.CreateResult<TResult>(settingsPath, aaContext.locations.Count);
-            //save content update data if building for the player
-            var allEntries = new List<AddressableAssetEntry>();
-            aaContext.Settings.GetAllAssets(allEntries, false, g => g != null && g.HasSchema<ContentUpdateGroupSchema>() && g.GetSchema<ContentUpdateGroupSchema>().StaticContent);
-
-            var remoteCatalogLoadPath = aaContext.Settings.BuildRemoteCatalog ? aaContext.Settings.RemoteCatalogLoadPath.GetValue(aaContext.Settings) : string.Empty;
-            if (extractData.BuildCache != null && ContentUpdateScript.SaveContentState(aaContext.locations, tempPath, allEntries, extractData.DependencyData, playerBuildVersion, remoteCatalogLoadPath, carryOverCachedState))
+            if (extractData.BuildCache != null)
             {
-                try
+                var allEntries = new List<AddressableAssetEntry>();
+                aaContext.Settings.GetAllAssets(allEntries, false, FilterGroupForContentState);
+                var remoteCatalogLoadPath = aaContext.Settings.BuildRemoteCatalog ? aaContext.Settings.RemoteCatalogLoadPath.GetValue(aaContext.Settings) : string.Empty;
+                if (ContentUpdateScript.SaveContentState(aaContext.locations, tempPath, allEntries, extractData.DependencyData, playerBuildVersion, remoteCatalogLoadPath, carryOverCachedState))
                 {
-                    var contentStatePath = ContentUpdateScript.GetContentStateDataPath(false);
-                    File.Copy(tempPath, contentStatePath, true);
-                    builderInput.Registry.AddFile(contentStatePath);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
+                    try
+                    {
+                        var contentStatePath = ContentUpdateScript.GetContentStateDataPath(false);
+                        File.Copy(tempPath, contentStatePath, true);
+                        builderInput.Registry.AddFile(contentStatePath);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
                 }
             }
 
             return opResult;
+        }
+
+        private static bool FilterGroupForContentState(AddressableAssetGroup g)
+        {
+            if (g == null)
+                return false;
+            if (!g.HasSchema<ContentUpdateGroupSchema>() || !g.GetSchema<ContentUpdateGroupSchema>().StaticContent)
+                return false;
+            if (!g.HasSchema<BundledAssetGroupSchema>() || !g.GetSchema<BundledAssetGroupSchema>().IncludeInBuild)
+                return false;
+            return true;
         }
 
         private static void ProcessCatalogEntriesForBuild(AddressableAssetsBuildContext aaContext, IBuildLogger log,
@@ -400,6 +412,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             {
                 Directory.Delete(tempFolderPath, true);
                 builderInput.Registry.RemoveFile(tempFilePath);
+            }
+
+            var tempFolderMetaFile = tempFolderPath + ".meta";
+            if (File.Exists(tempFolderMetaFile))
+            {
+                File.Delete(tempFolderMetaFile);
+                builderInput.Registry.RemoveFile(tempFolderMetaFile);
             }
 
             if (File.Exists(filepath))
@@ -593,7 +612,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return HashingMethods.Calculate(new HashSet<string>(entries.Select(e => e.guid))).ToString();
         }
 
-
         internal static List<AddressableAssetEntry> PrepGroupBundlePacking(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, BundledAssetGroupSchema.BundlePackingMode packingMode)
         {
             var combinedEntries = new List<AddressableAssetEntry>();
@@ -735,6 +753,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             // Player Scripts
             buildTasks.Add(new BuildPlayerScripts());
+            buildTasks.Add(new PostScriptsCallback());
 
             // Dependency
             buildTasks.Add(new CalculateSceneDependencyData());
@@ -742,19 +761,21 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             buildTasks.Add(new AddHashToBundleNameTask());
             buildTasks.Add(new StripUnusedSpriteSources());
             buildTasks.Add(new CreateBuiltInShadersBundle(builtinShaderBundleName));
+            buildTasks.Add(new PostDependencyCallback());
 
             // Packing
             buildTasks.Add(new GenerateBundlePacking());
             buildTasks.Add(new UpdateBundleObjectLayout());
-
             buildTasks.Add(new GenerateBundleCommands());
             buildTasks.Add(new GenerateSubAssetPathMaps());
             buildTasks.Add(new GenerateBundleMaps());
+            buildTasks.Add(new PostPackingCallback());
 
             // Writing
             buildTasks.Add(new WriteSerializedFiles());
             buildTasks.Add(new ArchiveAndCompressBundles());
             buildTasks.Add(new GenerateLocationListsTask());
+            buildTasks.Add(new PostWritingCallback());
 
             return buildTasks;
         }
@@ -844,6 +865,14 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
         }
 
+        /// <summary>
+        /// Creates a name for an asset bundle using the provided information.
+        /// </summary>
+        /// <param name="assetGroup">The asset group.</param>
+        /// <param name="schema">The schema of the group.</param>
+        /// <param name="info">The bundle information.</param>
+        /// <param name="assetBundleName">The base name of the asset bundle.</param>
+        /// <returns>Returns the asset bundle name with the provided information.</returns>
         protected virtual string ConstructAssetBundleName(AddressableAssetGroup assetGroup, BundledAssetGroupSchema schema, BundleDetails info, string assetBundleName)
         {
             string groupName = assetGroup.Name.Replace(" ", "").Replace('\\', '/').Replace("//", "/").ToLower();

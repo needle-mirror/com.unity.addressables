@@ -24,6 +24,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
         private bool m_DataBuilt;
 
+        /// <inheritdoc />
         public override void ClearCachedData()
         {
             m_DataBuilt = false;

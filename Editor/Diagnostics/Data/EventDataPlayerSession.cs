@@ -28,8 +28,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         int m_LastInstantiationFrame = -1;
         int m_LastFrameInstantiationCount = 0;
         int m_LastFrameWithEvents = -1;
+        
+        internal bool NeedsReload = false;
 
-        const int k_DestroyEventFrameDelay = 30;
+        const int k_DestroyEventFrameDelay = 300;
         
         int m_FrameCount = 300;
         
@@ -73,7 +75,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         internal class EvtQueueData
         {
             public DiagnosticEvent Event;
-            public int frameDelay;
+            public int DestroyFrame;
         }
 
         internal void AddSample(DiagnosticEvent evt, bool recordEvent, ref bool entryCreated)
@@ -133,7 +135,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
             
             if ((ResourceManager.DiagnosticEventType) evt.Stream == ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
             {
-                m_Queue.Add(new EvtQueueData { Event = evt, frameDelay = k_DestroyEventFrameDelay});
+                m_Queue.Add(new EvtQueueData { Event = evt, DestroyFrame = evt.Frame});
             }
         }
         
@@ -198,14 +200,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
         {
             foreach (var q in m_Queue)
             {
-                q.frameDelay--;
-                if (q.frameDelay < 1)
+                if (m_LatestFrame - q.DestroyFrame >= k_DestroyEventFrameDelay)
                 {
                     HandleOperationDestroy(q.Event);
                 }
             }
 
-            m_Queue.RemoveAll(q => q.frameDelay < 1);
+            m_Queue.RemoveAll(q => m_LatestFrame - q.DestroyFrame >= k_DestroyEventFrameDelay);
         }
 
         internal void HandleOperationDestroy(DiagnosticEvent evt)
@@ -217,6 +218,8 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
                 if (ds.HasRefcountAfterFrame(evt.Frame, false))
                     return;
             }
+
+            NeedsReload = true;
             
             if (evt.Dependencies != null)
             {

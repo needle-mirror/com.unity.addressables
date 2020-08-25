@@ -273,6 +273,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         {
             if (m_EventData == null) return;
             m_EventData.Update();
+            if (activeSession != null && activeSession.NeedsReload)
+            {
+                activeSession.NeedsReload = false;
+                m_EventList?.Reload();
+            }
+                
             Repaint();
         }
 
@@ -312,11 +318,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             {
                 RegisterEventHandler(false);
                 session.Clear();
-                if (m_GraphList != null)
-                    m_GraphList.Reload();
+                m_GraphList?.Reload();
                 RegisterEventHandler(true);
             }
             
+            if (m_GraphList != null && m_GraphList.HasHiddenEvents && GUILayout.Button("Unhide All Hidden Events", EditorStyles.toolbarButton)) 
+                m_GraphList.UnhideAllHiddenEvents();
+
             GUILayout.FlexibleSpace();
             GUILayout.Label(m_InspectFrame == m_LatestFrame ? "Frame:     " : "Frame: " + m_InspectFrame + "/" + m_LatestFrame, EditorStyles.miniLabel);
 

@@ -87,10 +87,14 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void Initialize(AddressableAssetSettings settings)
         {
+            if (m_Logger == null)
+                m_Logger = new Logger(this);
+
             if (m_Settings == null)
                 m_Settings = settings;
 
-            m_Settings.HostingServicesManager.Logger = m_Logger;
+            if (m_Settings != null)
+                m_Settings.HostingServicesManager.Logger = m_Logger;
         }
 
         void OnEnable()
@@ -130,7 +134,8 @@ namespace UnityEditor.AddressableAssets.GUI
         void Awake()
         {
             titleContent = new GUIContent("Addressables Hosting");
-            m_Logger = new Logger(this);
+
+            Initialize(m_Settings);
         }
 
         internal static void DrawOutline(Rect rect, float size)
@@ -290,9 +295,9 @@ namespace UnityEditor.AddressableAssets.GUI
         }
 
         /// <summary>
-        /// Add a hosting service of a given type.  The service at index <paramref name="typeIndex"/> in ServiceTypes must implement the
-        /// <see cref="IHostingService"/> interface, or an <see cref="ArgumentException"/> is thrown.
-        /// <param name="typeIndex">The index of the service stored in ServiceTypes. The service this this index must implement <see cref="IHostingService"/></param>
+        /// Add a new hosting service to the HostingServicesManager. The service at index <paramref name="typeIndex"/> in ServiceTypes must implement the <see cref="IHostingService"/> interface, or an <see cref="ArgumentException"/> is thrown.
+        /// </summary>
+        /// <param name="typeIndex">The index of the service stored in ServiceTypes. The service at this index must implement <see cref="IHostingService"/></param>
         /// <param name="serviceName">A descriptive name for the new service instance.</param>
         public void AddService(int typeIndex, string serviceName)
         {
@@ -302,6 +307,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         /// <summary>
         /// Add a hosting service to the removal queue.
+        /// </summary>
         /// <param name="svc">The service type to be removed.</param>
         /// <param name="showDialog">Indicates whether or not a warning dialogue box is shown.</param>
         public void RemoveService(IHostingService svc, bool showDialog = true)
@@ -314,11 +320,13 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void DrawServiceElement(IHostingService svc, List<IHostingService> svcList)
         {
+            bool isDirty = false;
             string newName = EditorGUILayout.DelayedTextField("Service Name", svc.DescriptiveName);
             if (svcList.Find(s => s.DescriptiveName == newName) == default(IHostingService))
             {
                 svc.DescriptiveName = newName;
                 m_ServicesList.Reload();
+                isDirty = true;
             }
 
             var typeAndId = string.Format("{0} ({1})", svc.GetType().Name, svc.InstanceId.ToString());
@@ -334,6 +342,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     svc.StartHostingService();
                 else
                     svc.StopHostingService();
+                isDirty = true;
             }
 
             EditorGUILayout.Space();
@@ -351,6 +360,9 @@ namespace UnityEditor.AddressableAssets.GUI
 
                 DrawProfileVarTable(svc, svc.ProfileVariables);
             }
+
+            if (isDirty && m_Settings != null)
+                m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, false, true);
         }
 
         void DrawLogArea(Rect rect)
@@ -429,8 +441,7 @@ namespace UnityEditor.AddressableAssets.GUI
         /// <inheritdoc/>
         public void OnAfterDeserialize()
         {
-            m_Logger = new Logger(this);
-            Initialize(m_Settings);
+            // No implementation
         }
     }
 }

@@ -25,18 +25,36 @@ namespace UnityEngine.ResourceManagement
     public class ResourceManager : IDisposable
     {
         /// <summary>
-        /// Event types that will be sent by the ResourceManager
+        /// Options for event types that will be sent by the ResourceManager
         /// </summary>
         public enum DiagnosticEventType
         {
+            /// <summary>
+            /// Use to indicate that an operation failed.
+            /// </summary>
             AsyncOperationFail,
+            /// <summary>
+            /// Use to indicate that an operation was created.
+            /// </summary>
             AsyncOperationCreate,
+            /// <summary>
+            /// Use to indicate the percentage of completion for an operation was updated.
+            /// </summary>
             AsyncOperationPercentComplete,
+            /// <summary>
+            /// Use to indicate that an operation has completed.
+            /// </summary>
             AsyncOperationComplete,
+            /// <summary>
+            /// Use to indicate that the reference count of an operation was modified.
+            /// </summary>
             AsyncOperationReferenceCount,
+            /// <summary>
+            /// Use to indicate that an operation was destroyed.
+            /// </summary>
             AsyncOperationDestroy,
         }
-        
+
         internal bool postProfilerEvents = false;
 
         /// <summary>
@@ -98,6 +116,7 @@ namespace UnityEngine.ResourceManagement
 
         /// <summary>
         /// Global exception handler.  This will be called whenever an IAsyncOperation.OperationException is set to a non-null value.
+        /// See the [ResourceManager.ExceptionHandler](../manual/ExceptionHandler.html) documentation for more details.
         /// </summary>
         public static Action<AsyncOperationHandle, Exception> ExceptionHandler { get; set; }
 
@@ -277,7 +296,7 @@ namespace UnityEngine.ResourceManagement
         {
             m_diagnosticsHandler += func;
         }
-        
+
         internal void PostDiagnosticEvent(DiagnosticEventContext context)
         {
             m_diagnosticsHandler?.Invoke(context);
@@ -291,8 +310,8 @@ namespace UnityEngine.ResourceManagement
         /// Gets the appropriate <see cref="IResourceProvider"/> for the given <paramref name="location"/> and <paramref name="type"/>.
         /// </summary>
         /// <returns>The resource provider. Or null if an appropriate provider cannot be found</returns>
+        /// <param name="t">The desired object type to be loaded from the provider.</param>
         /// <param name="location">The resource location.</param>
-        /// <param name="type">The desired object type to be loaded from the provider.</param>
         public IResourceProvider GetResourceProvider(Type t, IResourceLocation location)
         {
             if (location != null)
@@ -437,7 +456,7 @@ namespace UnityEngine.ResourceManagement
 
             protected override string DebugName
             {
-                get { return "CompletedOperation" ;}
+                get { return "CompletedOperation";}
             }
 
             protected override void Execute()
@@ -515,6 +534,7 @@ namespace UnityEngine.ResourceManagement
         /// <param name="result">The result that the operation will provide.</param>
         /// <param name="errorMsg">The error message if the operation should be in the failed state. Otherwise null or empty string.</param>
         /// <typeparam name="TObject">Object type.</typeparam>
+        /// <returns>The operation handle used for the completed operation.</returns>
         public AsyncOperationHandle<TObject> CreateCompletedOperation<TObject>(TObject result, string errorMsg)
         {
             return CreateCompletedOperation(result, string.IsNullOrEmpty(errorMsg), errorMsg);
@@ -597,7 +617,7 @@ namespace UnityEngine.ResourceManagement
                 var ops = new List<AsyncOperationHandle>(locations.Count);
                 foreach (var loc in locations)
                     ops.Add(ProvideResource(loc, desiredType));
-                
+
                 op.Init(ops, releaseDependenciesOnFailure);
 
                 handle = StartOperation(op, default(AsyncOperationHandle));
@@ -857,6 +877,10 @@ namespace UnityEngine.ResourceManagement
             return StartOperation<GameObject>(baseOp, depOp);
         }
 
+        /// <summary>
+        /// Releases all instances the given scence.
+        /// </summary>
+        /// <param name="scene">The scene whose instances should be released.</param>
         public void CleanupSceneInstances(Scene scene)
         {
             List<InstanceOperation> handlesToRelease = null;

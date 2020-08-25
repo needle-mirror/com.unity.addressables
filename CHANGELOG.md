@@ -4,6 +4,34 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.15.1] - 2020-08-25
+- Change to not allow the same AssetReference to LoadAssetAsync or LoadSceneAsync twice if current handle is valid, instead log an error with note about how to get the valid handle
+- Fixed issue where disabled asset groups data would be included in the addressables_content_state.bin file for the build.
+- Add ability to use custom ResourceManager exception handlers by not overwriting it in InitializeAsync if it is not null
+- Fixed bug where Content Update would not use asset bundle load options for unchanged static remote bundles.
+- Fixed LoadAssetAsync<IList<T>> to return the same set of objects in all play modes.  The main asset is always first and hidden objects are ignored.
+- Changed keys parameter for many Addressables APIs to be IEnumerable instead of IList<object>.  This allows for passing collections of AssetReferences or AssetLabelReferences directly instead of requiring them to be copied into a new List<object>.
+- Fix bug where lists of AssetReferenceSprites were not displayed or set right by AssetReferenceDrawer. Also fixed where multiple selected objects in project hierarchy couldn't set all lists of AssetReferences elements.
+- Added better error logging when unrecognized file in build.
+- Added error log when building asset bundles during player build.
+- Added "Hide Events" context menu option in Event Viewer 
+- Fixed a bug where running the "Check Scene to Addressable Duplicate Dependencies" analyze rule multiple times would cause a duplicate key exception
+- The "Check Scene to Addressable Duplicate Dependencies" analyze rule now only considers scenes that are enabled in the build settings.
+- Fixed a bug where an error would be thrown when Unity 2019 opens and if the hosting window was previously left open 
+- Fixed a bug where changes to a service where not applied in the hosting window
+- Fixed a bug where profile selection in the inspector was incorrectly reverted to the default one on domain reload
+- Added documentation for LoadResourceLocationsAsync
+- Added documentation for ResourceManager.ExceptionHandler
+- Added documentation for AddressableAssetSettings.BuildPlayerContent
+- Added documentation for LoadSceneAsync
+- Added ScriptableBuildPipeline Build Callbacks to Addressables Build Scripts
+- Temporary files made during bundled catalog creation are now properly cleaned up
+- Inspector window now opens if it was closed when inspecting addressable settings
+- Fixed bug where AsyncOperation.PercentComplete was returning 100% when IsDone was false before the operation had started.
+- Progress bar is no longer updated for every entry while running Analyze rules for performance purposes.
+- Fixed loading of scenes from scenes list through Addressables. Clears out an InvalidCastException that occured on init.
+- Fixed issue where AssetReference wasn't able to load Addressable assets in folders during AssetDatabase Mode.
+
 ## [1.14.2] - 2020-08-11
 - Addressables now logs the package version on initialization.
 - Renamed Build Bundle Layout analyze rule to Bundle Layout Preview

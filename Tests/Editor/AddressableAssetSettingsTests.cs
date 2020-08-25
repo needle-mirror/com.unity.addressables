@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -578,7 +578,7 @@ namespace UnityEditor.AddressableAssets.Tests
         public void AddressableAssetSettings_GetGroupTemplateObject_CannotGetFromEmptyGroupTemplateObjectList()
         {
             var testSettings = new AddressableAssetSettings();
-            while(!IsNullOrEmpty(testSettings.GroupTemplateObjects))
+            while (!IsNullOrEmpty(testSettings.GroupTemplateObjects))
             {
                 testSettings.RemoveGroupTemplateObject(0);
             }
@@ -681,7 +681,7 @@ namespace UnityEditor.AddressableAssets.Tests
         public void AddressableAssetSettings_GetDataBuilder_CannotGetDataBuilderFromEmpty()
         {
             var testSettings = new AddressableAssetSettings();
-            while(!IsNullOrEmpty(testSettings.DataBuilders))
+            while (!IsNullOrEmpty(testSettings.DataBuilders))
             {
                 testSettings.RemoveDataBuilder(0);
             }
@@ -799,7 +799,7 @@ namespace UnityEditor.AddressableAssets.Tests
         public void AddressableAssetSettings_GetInitializationObject_CannotGetInitializationObjectFromEmptyList()
         {
             var testSettings = new AddressableAssetSettings();
-            while(!IsNullOrEmpty(testSettings.InitializationObjects))
+            while (!IsNullOrEmpty(testSettings.InitializationObjects))
             {
                 testSettings.RemoveInitializationObject(0);
             }
@@ -814,9 +814,9 @@ namespace UnityEditor.AddressableAssets.Tests
             var testGuidsToPaths = new Dictionary<string, string>();
             var testObject = new GameObject("TestObjectMoveAssets");
 #if UNITY_2018_3_OR_NEWER
-                PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/testasset.prefab");
+            PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/testasset.prefab");
 #else
-                PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
+            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
 #endif
             var testAssetGUID = AssetDatabase.AssetPathToGUID(ConfigFolder + "/testasset.prefab");
             Settings.CreateOrMoveEntry(testAssetGUID, Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName));
@@ -851,6 +851,52 @@ namespace UnityEditor.AddressableAssets.Tests
             if (Directory.Exists(testAssetPath))
                 AssetDatabase.DeleteAsset(testAssetPath);
             EditorBuildSettings.RemoveConfigObject(testAssetPath);
+        }
+
+        [Test]
+        public void AddressableAssetSettings_MoveAssetsFromResources_AddressRespectFolderHierarchy()
+        {
+            // Setup
+            var guidsToPaths = new Dictionary<string, string>();
+            var obj = new GameObject("TestObjectMoveAssets");
+
+            var objFolder = ConfigFolder + "/Resources/subfolder/subsubfolder";
+            if (!Directory.Exists(objFolder))
+            {
+                Directory.CreateDirectory(objFolder);
+            }
+
+            var objPath = objFolder + "/testasset.prefab";
+            PrefabUtility.SaveAsPrefabAsset(obj, objPath);
+
+            var guid = AssetDatabase.AssetPathToGUID(objPath);
+            var playerDataGroup = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+            Settings.CreateOrMoveEntry(guid, playerDataGroup);
+
+            var destinationFolder = ConfigFolder + "/testMoveAssets";
+            guidsToPaths[guid] = destinationFolder + "/testasset.prefab";
+
+            // Test
+            var defaultLocalGroup = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            Settings.MoveAssetsFromResources(guidsToPaths, defaultLocalGroup);
+
+            var idx = objPath.ToLower().LastIndexOf("resources/");
+            var expectedAddress = objPath.Substring(idx + 10).Replace(Path.GetExtension(objPath), "");
+            var entry = Settings.FindAssetEntry(guid);
+            Assert.AreEqual(expectedAddress, entry.address);
+            Assert.AreEqual(guidsToPaths[guid], AssetDatabase.GUIDToAssetPath(guid));
+            Assert.AreEqual(defaultLocalGroup, entry.parentGroup);
+
+            //Cleanup
+            if (Directory.Exists(ConfigFolder + "/Resources"))
+                AssetDatabase.DeleteAsset(ConfigFolder + "/Resources");
+            EditorBuildSettings.RemoveConfigObject(ConfigFolder + "/Resources");
+
+            Settings.RemoveAssetEntry(guid);
+            AssetDatabase.DeleteAsset(guidsToPaths[guid]);
+            if (Directory.Exists(destinationFolder))
+                AssetDatabase.DeleteAsset(destinationFolder);
+            EditorBuildSettings.RemoveConfigObject(destinationFolder);
         }
 
         [Test]
@@ -893,9 +939,9 @@ namespace UnityEditor.AddressableAssets.Tests
             var testObject = new GameObject("TestObjectSetLabel");
             var newLabel = "testSetLabelValueForEntries";
 #if UNITY_2018_3_OR_NEWER
-                PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/testasset.prefab");
+            PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/testasset.prefab");
 #else
-                PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
+            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
 #endif
             var testAssetGUID = AssetDatabase.AssetPathToGUID(ConfigFolder + "/testasset.prefab");
             entries.Add(Settings.CreateOrMoveEntry(m_AssetGUID, Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName)));

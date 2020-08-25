@@ -639,7 +639,7 @@ namespace AddressableAssetsIntegrationTests
             locMap.Add("sizeTestAsset", assetLoc);
             m_Addressables.AddResourceLocator(locMap);
 
-            var dOp = m_Addressables.GetDownloadSizeAsync("sizeTestAsset");
+            var dOp = m_Addressables.GetDownloadSizeAsync((object)"sizeTestAsset");
             yield return dOp;
             Assert.AreEqual(expectedSize, dOp.Result);
             dOp.Release();
@@ -683,7 +683,7 @@ namespace AddressableAssetsIntegrationTests
             locMap.Add("cachedSizeTestAsset", assetLoc);
             m_Addressables.AddResourceLocator(locMap);
 
-            var dOp = m_Addressables.GetDownloadSizeAsync("cachedSizeTestAsset");
+            var dOp = m_Addressables.GetDownloadSizeAsync((object)"cachedSizeTestAsset");
             yield return dOp;
             Assert.IsTrue((bundleSize1 + bundleSize2) > dOp.Result);
             Assert.AreEqual(expectedSize, dOp.Result);
@@ -1285,6 +1285,20 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator LoadAssets_WithHiddenSubObjects_OnlyReturnsNonHidden_WithMainAssetFirst()
+        {
+            yield return Init();
+
+            var handle = m_Addressables.LoadAssetAsync<IList<Object>>("assetWithSubObjects");
+            yield return handle;
+            Assert.IsNotNull(handle.Result);
+            Assert.AreEqual(handle.Result.Count, 2);
+            Assert.AreEqual(handle.Result[0].name, "assetWithSubObjects");
+            Assert.AreEqual(handle.Result[1].name, "sub-shown");
+            handle.Release();
+        }
+
+        [UnityTest]
         public IEnumerator RuntimeKeyIsValid_ReturnsTrueForSubObjects()
         {
             yield return Init();
@@ -1455,6 +1469,39 @@ namespace AddressableAssetsIntegrationTests
             Assert.AreEqual(manualDepNameHashSum, dependencyNameHashSum, "Calculation of hashcode was not completed as expected.");
         }
         
+        private class DebugNameTestOperation : AsyncOperationBase<string>
+        {
+            string m_DebugName;
+            List<AsyncOperationHandle> m_Dependencies;
+            protected override void Execute()
+            {
+                return;
+            }
+
+            internal DebugNameTestOperation(string debugName)
+            {
+                m_DebugName = debugName;
+                m_Dependencies = new List<AsyncOperationHandle>();
+            }
+
+            internal DebugNameTestOperation(string debugName, List<AsyncOperationHandle> deps)
+            {
+                m_DebugName = debugName;
+                m_Dependencies = deps;
+            }
+
+            protected override void GetDependencies(List<AsyncOperationHandle> dependencies)
+            {
+                foreach (var handle in m_Dependencies)
+                    dependencies.Add(handle);
+            } 
+
+            protected override string DebugName
+            {
+                get { return m_DebugName;}
+            }
+        }
+        
         [UnityTest]
         public IEnumerator ResourceManagerDiagnostics_CalculateHashCode_NameChangingCase()
         {
@@ -1463,7 +1510,79 @@ namespace AddressableAssetsIntegrationTests
             
             AsyncOperationHandle changingHandle = new ManualPercentCompleteOperation(0.22f).Handle;
             
-            Assert.AreEqual(changingHandle.GetHashCode(), rmd.CalculateHashCode(changingHandle), "Default hashcode should have been use since ManualPercentCompleteOperation includes its status in its DebugName");
+            Assert.AreEqual(changingHandle.GetHashCode(), rmd.CalculateHashCode(changingHandle), "Default hashcode should have been used since ManualPercentCompleteOperation includes its status in its DebugName");
+        }
+        
+        [UnityTest]
+        public IEnumerator ResourceManagerDiagnostics_CalculateHashCode_SameNameGivesSameHashcode()
+        {
+            yield return Init();
+            var rmd = new ResourceManagerDiagnostics(m_Addressables.ResourceManager);
+            
+            DebugNameTestOperation op1 = new DebugNameTestOperation("Same name");
+            AsyncOperationHandle handle1 = new AsyncOperationHandle(op1);
+            
+            DebugNameTestOperation op2 = new DebugNameTestOperation("Same name");
+            AsyncOperationHandle handle2 = new AsyncOperationHandle(op2);
+            
+            Assert.AreEqual(rmd.CalculateHashCode(handle1), rmd.CalculateHashCode(handle2), "Two separate handles with the same DebugName should have the same hashcode. ");
+        }
+        
+        [UnityTest]
+        public IEnumerator ResourceManagerDiagnostics_CalculateHashCode_SimilarNameGivesDifHashcode()
+        {
+            yield return Init();
+            var rmd = new ResourceManagerDiagnostics(m_Addressables.ResourceManager);
+            
+            DebugNameTestOperation op1 = new DebugNameTestOperation("Same name");
+            AsyncOperationHandle handle1 = new AsyncOperationHandle(op1);
+            
+            DebugNameTestOperation op2 = new DebugNameTestOperation("SaMe name");
+            AsyncOperationHandle handle2 = new AsyncOperationHandle(op2);
+            
+            Assert.AreNotEqual(rmd.CalculateHashCode(handle1), rmd.CalculateHashCode(handle2), "Two similar, but different names should have different hashcodes. ");
+        }
+        
+        [UnityTest]
+        public IEnumerator ResourceManagerDiagnostics_CalculateHashCode_SameNameDifDepsGivesDifHashcode()
+        {
+            yield return Init();
+            var rmd = new ResourceManagerDiagnostics(m_Addressables.ResourceManager);
+
+            var dependency1 = new DebugNameTestOperation("Dependency 1");
+            var dependency2 = new DebugNameTestOperation("Dependency 2");
+
+            var depList1 = new List<AsyncOperationHandle> { new AsyncOperationHandle(dependency1) };
+            var depList2 = new List<AsyncOperationHandle> { new AsyncOperationHandle(dependency2) };
+            
+            DebugNameTestOperation op1 = new DebugNameTestOperation("Same name", depList1);
+            AsyncOperationHandle handle1 = new AsyncOperationHandle(op1);
+
+            DebugNameTestOperation op2 = new DebugNameTestOperation("Same name", depList2);
+            AsyncOperationHandle handle2 = new AsyncOperationHandle(op2);
+            
+            Assert.AreNotEqual(rmd.CalculateHashCode(handle1), rmd.CalculateHashCode(handle2), "Two separate handles with the same DebugName, but different dependency names should not have the same hashcode.");
+        }
+        
+        [UnityTest]
+        public IEnumerator ResourceManagerDiagnostics_CalculateHashCode_SameNameSameDepNamesGivesSameHashcode()
+        {
+            yield return Init();
+            var rmd = new ResourceManagerDiagnostics(m_Addressables.ResourceManager);
+
+            var dependency1 = new DebugNameTestOperation("Dependency 1");
+            var dependency2 = new DebugNameTestOperation("Dependency 2");
+
+            var depList1 = new List<AsyncOperationHandle> { new AsyncOperationHandle(dependency1), new AsyncOperationHandle(dependency2) };
+            var depList2 = new List<AsyncOperationHandle> { new AsyncOperationHandle(dependency2), new AsyncOperationHandle(dependency1) };
+            
+            DebugNameTestOperation op1 = new DebugNameTestOperation("Same name", depList1);
+            AsyncOperationHandle handle1 = new AsyncOperationHandle(op1);
+
+            DebugNameTestOperation op2 = new DebugNameTestOperation("Same name", depList2);
+            AsyncOperationHandle handle2 = new AsyncOperationHandle(op2);
+            
+            Assert.AreEqual(rmd.CalculateHashCode(handle1), rmd.CalculateHashCode(handle2), "Two handles with the same DebugName and same dependency names should have the same hashcode.");
         }
         
 
@@ -1475,8 +1594,8 @@ namespace AddressableAssetsIntegrationTests
             float handle1PercentComplete = 0.6f;
             float handle2PercentComplete = 0.98f;
 
-            AsyncOperationHandle<GameObject> slowHandle1 = new ManualPercentCompleteOperation(handle1PercentComplete).Handle;
-            AsyncOperationHandle<GameObject> slowHandle2 = new ManualPercentCompleteOperation(handle2PercentComplete).Handle;
+            AsyncOperationHandle<GameObject> slowHandle1 = new ManualPercentCompleteOperation(handle1PercentComplete, new DownloadStatus(){DownloadedBytes = 1, IsDone = false, TotalBytes = 2}).Handle;
+            AsyncOperationHandle<GameObject> slowHandle2 = new ManualPercentCompleteOperation(handle2PercentComplete, new DownloadStatus() { DownloadedBytes = 1, IsDone = false, TotalBytes = 2 }).Handle;
 
             slowHandle1.m_InternalOp.m_RM = m_Addressables.ResourceManager;
             slowHandle2.m_InternalOp.m_RM = m_Addressables.ResourceManager;
@@ -1543,7 +1662,7 @@ namespace AddressableAssetsIntegrationTests
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
-            yield return m_Addressables.ClearDependencyCacheAsync(key, true);
+            yield return m_Addressables.ClearDependencyCacheAsync((object)key, true);
             Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(0, versions.Count);
 #else
@@ -1581,7 +1700,7 @@ namespace AddressableAssetsIntegrationTests
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
-            yield return m_Addressables.ClearDependencyCacheAsync(key, true);
+            yield return m_Addressables.ClearDependencyCacheAsync((object)key, true);
 
             List<Hash128> versions = new List<Hash128>();
             Caching.GetCachedVersions(bundleName, versions);
@@ -1774,7 +1893,9 @@ namespace AddressableAssetsIntegrationTests
 
             //Cleanup
             Caching.ClearAllCachedVersions(bundleName);
-
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 
@@ -1806,7 +1927,9 @@ namespace AddressableAssetsIntegrationTests
 
             //Cleanup
             Caching.ClearAllCachedVersions(bundleName);
-
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 

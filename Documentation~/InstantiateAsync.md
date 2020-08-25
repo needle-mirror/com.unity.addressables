@@ -50,6 +50,8 @@ public IEnumerator Start()
 ```
 This has the added benefit of being able to keep the load operation handle in memory and instantiating the `Result` as often as needed without incuring additional unwanted overhead.  One downside is it's be possible to release the load handle too early and unload all the data needed by any currently instantiated prefabs.
 
+If there are any issues during the excecution of these operations, an Exception is generated and returned in the operations `OperationException`. That exception is also logged as an error by default. If you would like to see the exceptions when they happen, process them, and choose how to handle them, see [`ResourceManager.ExceptionHandler`](ExceptionHandler).
+
 Either use of instantiation can benefit from information found in the [Memory Management](MemoryManagement.html) manual page.
 
 #### Code Sample

@@ -39,6 +39,7 @@ namespace UnityEngine.ResourceManagement.Diagnostics
             }
         }
 
+        /// <inheritdoc/>
         protected override string GetGameObjectName() => "EventCollector";
 
         /// <summary>
@@ -77,7 +78,7 @@ namespace UnityEngine.ResourceManagement.Diagnostics
                 handler(evt);
             m_UnhandledEvents.Clear();
         }
-        
+
         /// <summary>
         /// Unregister event hander
         /// </summary>

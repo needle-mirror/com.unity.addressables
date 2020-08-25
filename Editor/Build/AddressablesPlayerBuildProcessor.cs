@@ -5,13 +5,20 @@ using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
+/// <summary>
+/// Maintains Addresssables build data when processing a player build.
+/// </summary>
 public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPostprocessBuildWithReport
 {
+    /// <summary>
+    /// Returns the player build processor callback order.
+    /// </summary>
     public int callbackOrder
     {
         get { return 1; }
     }
 
+    /// <inheritdoc />
     public void OnPostprocessBuild(BuildReport report)
     {
         CleanTemporaryPlayerBuildData();
@@ -32,6 +39,7 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
         }
     }
 
+    /// <inheritdoc />
     public void OnPreprocessBuild(BuildReport report)
     {
         if (Directory.Exists(Addressables.BuildPath))

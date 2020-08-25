@@ -62,41 +62,137 @@ namespace UnityEditor.AddressableAssets.Settings
         public const string kRemoteLoadPath = "RemoteLoadPath";
 
         /// <summary>
-        /// Enumeration of different event types that are generated.
+        /// Options for labelling all the different generated events.
         /// </summary>
         public enum ModificationEvent
         {
+            /// <summary>
+            /// Use to indicate that a group was added to the settings object.
+            /// </summary>
             GroupAdded,
+            /// <summary>
+            /// Use to indicate that a group was removed from the the settings object.
+            /// </summary>
             GroupRemoved,
+            /// <summary>
+            /// Use to indicate that a group in the settings object was renamed.
+            /// </summary>
             GroupRenamed,
+            /// <summary>
+            /// Use to indicate that a schema was added to a group.
+            /// </summary>
             GroupSchemaAdded,
+            /// <summary>
+            /// Use to indicate that a schema was removed from a group.
+            /// </summary>
             GroupSchemaRemoved,
+            /// <summary>
+            /// Use to indicate that a schema was modified.
+            /// </summary>
             GroupSchemaModified,
+            /// <summary>
+            /// Use to indicate that a group template was added to the settings object.
+            /// </summary>
             GroupTemplateAdded,
+            /// <summary>
+            /// Use to indicate that a group template was removed from the settings object.
+            /// </summary>
             GroupTemplateRemoved,
+            /// <summary>
+            /// Use to indicate that a schema was added to a group template.
+            /// </summary>
             GroupTemplateSchemaAdded,
+            /// <summary>
+            /// Use to indicate that a schema was removed from a group template.
+            /// </summary>
             GroupTemplateSchemaRemoved,
+            /// <summary>
+            /// Use to indicate that an asset entry was created.
+            /// </summary>
             EntryCreated,
+            /// <summary>
+            /// Use to indicate that an asset entry was added to a group.
+            /// </summary>
             EntryAdded,
+            /// <summary>
+            /// Use to indicate that an asset entry moved from one group to another.
+            /// </summary>
             EntryMoved,
+            /// <summary>
+            /// Use to indicate that an asset entry was removed from a group.
+            /// </summary>
             EntryRemoved,
+            /// <summary>
+            /// Use to indicate that an asset label was added to the settings object.
+            /// </summary>
             LabelAdded,
+            /// <summary>
+            /// Use to indicate that an asset label was removed from the settings object.
+            /// </summary>
             LabelRemoved,
+            /// <summary>
+            /// Use to indicate that a profile was added to the settings object.
+            /// </summary>
             ProfileAdded,
+            /// <summary>
+            /// Use to indicate that a profile was removed from the settings object.
+            /// </summary>
             ProfileRemoved,
+            /// <summary>
+            /// Use to indicate that a profile was modified.
+            /// </summary>
             ProfileModified,
+            /// <summary>
+            /// Use to indicate that a profile has been set as the active profile.
+            /// </summary>
             ActiveProfileSet,
+            /// <summary>
+            /// Use to indicate that an asset entry was modified.
+            /// </summary>
             EntryModified,
+            /// <summary>
+            /// Use to indicate that the build settings object was modified.
+            /// </summary>
             BuildSettingsChanged,
+            /// <summary>
+            /// Use to indicate that a new build script is being used as the active build script.
+            /// </summary>
             ActiveBuildScriptChanged,
+            /// <summary>
+            /// Use to indicate that a new data builder script was added to the settings object.
+            /// </summary>
             DataBuilderAdded,
+            /// <summary>
+            /// Use to indicate that a data builder script was removed from the settings object.
+            /// </summary>
             DataBuilderRemoved,
+            /// <summary>
+            /// Use to indicate a new initialization object was added to the settings object.
+            /// </summary>
             InitializationObjectAdded,
+            /// <summary>
+            /// Use to indicate a initialization object was removed from the settings object.
+            /// </summary>
             InitializationObjectRemoved,
+            /// <summary>
+            /// Use to indicate that a new script is being used as the active playmode data builder.
+            /// </summary>
             ActivePlayModeScriptChanged,
-            BatchModification, // <-- posted object will be null.
+            /// <summary>
+            /// Use to indicate that a batch of asset entries was modified. Note that the posted object will be null.
+            /// </summary>
+            BatchModification,
+            /// <summary>
+            /// Use to indicate that the hosting services manager was modified.
+            /// </summary>
             HostingServicesManagerModified,
+            /// <summary>
+            /// Use to indicate that a group changed its order placement within the list of groups in the settings object.
+            /// </summary>
             GroupMoved,
+            /// <summary>
+            /// Use to indicate that a new certificate handler is being used for the initialization object provider.
+            /// </summary>
             CertificateHandlerChanged
         }
 
@@ -222,6 +318,9 @@ namespace UnityEditor.AddressableAssets.Settings
             set { m_maxConcurrentWebRequests = Mathf.Clamp(value, 1, 1024); }
         }
 
+        /// <summary>
+        /// Set this to true to ensure unique bundle ids. Set to false to allow duplicate bundle ids.
+        /// </summary>
         public bool UniqueBundleIds
         {
             get { return m_UniqueBundleIds; }
@@ -791,6 +890,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <summary>
         /// Gets the list of all defined labels.
         /// </summary>
+        /// <returns>Returns a list of all defined labels.</returns>
         public List<string> GetLabels()
         {
             return m_LabelTable.labelNames.ToList();
@@ -1329,7 +1429,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     var index = oldPath.ToLower().LastIndexOf("resources/");
                     if (index >= 0)
                     {
-                        var newAddress = Path.GetFileNameWithoutExtension(oldPath.Substring(index + 10));
+                        var newAddress = oldPath.Substring(index + 10).Replace(Path.GetExtension(oldPath), "");
                         if (!string.IsNullOrEmpty(newAddress))
                         {
                             newEntry.address = newAddress;
@@ -1350,7 +1450,6 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="targetParent">The group to add the entries to.</param>
         /// <param name="readOnly">Should the entries be read only.</param>
         /// <param name="postEvent">Send modification event.</param>
-        /// <returns></returns>
         public void MoveEntries(List<AddressableAssetEntry> entries, AddressableAssetGroup targetParent, bool readOnly = false, bool postEvent = true)
         {
             if (entries != null)
@@ -1371,7 +1470,6 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="targetParent">The group to add the entry to.</param>
         /// <param name="readOnly">Should the entry be read only.</param>
         /// <param name="postEvent">Send modification event.</param>
-        /// <returns></returns>
         public void MoveEntry(AddressableAssetEntry entry, AddressableAssetGroup targetParent, bool readOnly = false, bool postEvent = true)
         {
             if (targetParent == null || entry == null)
@@ -1732,6 +1830,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         /// <summary>
         /// Runs the active player data build script to create runtime data.
+        /// See the [BuildPlayerContent](../manual/BuildPlayerContent.html) documentation for more details.
         /// </summary>
         public static void BuildPlayerContent()
         {

@@ -25,7 +25,7 @@ Select **Window** > **Asset Management** > **Addressables** > **Groups** to open
 _Marking an asset as Addressable in the **Addressables Groups** window._
 
 ### Specifying an address
-The default address for your asset is the path to the asset in your project (for example, `Assets/images/myImage.png`). To change the asset's address from the **Addressables Groups** window, right-click the asset and select **Change Address**.
+The default address for your asset is the path to the asset in your project (for example, `Assets/images/myImage.png`). To change the asset's address from the **Addressables Groups** window, right-click the asset and select **Change Address**. **Please Note:** The address cannot contain square brackets `[]`, and will fail the build if it does. This is meant to protect the runtime functionality that parses brackets to locate sub assets. For example, at runtime, loading `myAsset[mySubAsset]` will try to look up an asset at address `myAsset`, and then attempt to load the sub asset `mySubAsset` from that.
 
 When you first start using Addressable Assets, the system saves some edit-time and runtime data assets for your project in the `Assets/AddressableAssetsData` file, which should be added to your version control check-in.
 
@@ -33,7 +33,7 @@ When you first start using Addressable Assets, the system saves some edit-time a
 The Addressables Asset System needs to build your content into files that can be consumed by the running game before you build the application. This step is not automatic. You can build this content via the Editor or API:
 
 * To build content in the Editor, open the **Addressables Groups** window, then select **Build** > **New Build** > **Default Build Script**.
-* To build content using the API, use [`AddressableAssetSettings.BuildPlayerContent()`](../api/UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.html#UnityEditor_AddressableAssets_Settings_AddressableAssetSettings_BuildPlayerContent).
+* To build content using the API, use [`AddressableAssetSettings.BuildPlayerContent()`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.BuildPlayerContent).
 
 ## Assets in Packages
 
@@ -53,7 +53,7 @@ If you want to modify the group again, make sure to close all projects that use 
 ### Loading or instantiating by address
 You can load or instantiate an Addressable Asset at runtime. Loading an asset loads all dependencies into memory (including the AssetBundle data if applicable), allowing you to use the asset when you need to.  This does not actually put the desired asset into your scene. To add the asset to your scene you must instantiate.  Using Addressables instantiation interfaces will load the asset, then immediately adds it to your Scene. 
 
-To access an asset from your game script using a string address, declare the [`UnityEngine.AddressableAssets`](../api/UnityEngine.AddressableAssets.html) namespace, then call the following methods:
+To access an asset from your game script using a string address, declare the [`UnityEngine.AddressableAssets`](xref:UnityEngine.AddressableAssets) namespace, then call the following methods:
 
 ```
 Addressables.LoadAssetAsync<GameObject>("AssetAddress");
@@ -67,7 +67,7 @@ Addressables.InstantiateAsync("AssetAddress");
 
 This instantiates the asset with the specified address into your Scene.
 
-**Note**: [`LoadAssetAsync`](../api/UnityEngine.AddressableAssets.Addressables.html#UnityEngine_AddressableAssets_Addressables_LoadAssetAsync__1_System_Object_) and [`InstantiateAsync`](../api/UnityEngine.AddressableAssets.Addressables.html#UnityEngine_AddressableAssets_Addressables_InstantiateAsync_System_Object_Transform_System_Boolean_System_Boolean_) are asynchronous operations. You may provide a callback to work with the asset when it finishes loading (see documentation on [**Async operation handling**](AddressableAssetsAsyncOperationHandle) for more information).
+**Note**: [`LoadAssetAsync`](xref:UnityEngine.AddressableAssets.Addressables.LoadAssetAsync``1(System.Object)) and [`InstantiateAsync`](xref:UnityEngine.AddressableAssets.Addressables.InstantiateAsync(System.Object,UnityEngine.Transform,System.Boolean,System.Boolean)) are asynchronous operations. You may provide a callback to work with the asset when it finishes loading (see documentation on [**Async operation handling**](AddressableAssetsAsyncOperationHandle.md) for more information).
 
 ```
 using System.Collections;
@@ -107,12 +107,12 @@ To load a single sub-object in an asset, you could do this:
 `Addressables.LoadAssetAsync<Sprite>("MySpriteSheetAddress[MySpriteName]");`
 
 The names available within an asset are visible in the main Addressables group editor window. 
-In addition, you can use an [`AssetReference`](../api/UnityEngine.AddressableAssets.AssetReference.html) to access the sub-object of an asset.  See notes in the below section. 
+In addition, you can use an [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) to access the sub-object of an asset.  See notes in the below section. 
 
 For `SpriteAtlas` objects specifically, be sure that the **Include In Build** is enabled on the `SpriteAtlas` object.  If **Include in Build** is disabled, then the `SpriteAtlas` cannot be built in any form, including the content build done by Addressables.
 
 ### Using the AssetReference class
-The [`AssetReference`](../api/UnityEngine.AddressableAssets.AssetReference.html) class provides a way to access Addressable Assets without needing to know their addresses. To access an Addressable Asset using the `AssetReference` class:
+The [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) class provides a way to access Addressable Assets without needing to know their addresses. To access an Addressable Asset using the `AssetReference` class:
 
 1. Select a GameObject from your Scene hierarchy or **Project** window.
 2. In the Inspector, click the **Add Component** button, then select the component type. Any serializable component can support an `AssetReference` variable (for example, a game script, ScriptableObject, or other serializable class).
@@ -122,7 +122,7 @@ The [`AssetReference`](../api/UnityEngine.AddressableAssets.AssetReference.html)
 ![Referencing an Addressable Asset via script component.](images/Inspectorreferenceselection2.png)</br>
 _Referencing an Addressable Asset via script component._
 
-To load or instantiate an [`AssetReference`](../api/UnityEngine.AddressableAssets.AssetReference.html) asset, call its corresponding method. For example:
+To load or instantiate an [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) asset, call its corresponding method. For example:
 
 ```
 AssetRefMember.LoadAssetAsync<GameObject>();
@@ -134,7 +134,7 @@ or
 AssetRefMember.InstantiateAsync(pos, rot);
 ```
 
-**Note**: As with normal Addressable Assets, [`LoadAssetAsync`](../api/UnityEngine.AddressableAssets.AssetReference.html#UnityEngine_AddressableAssets_AssetReference_LoadAssetAsync__1) and [`InstantiateAsync`](../api/UnityEngine.AddressableAssets.AssetReference.html#UnityEngine_AddressableAssets_AssetReference_InstantiateAsync_Transform_System_Boolean_) are asynchronous operations. You may provide a callback to work with the asset when it finishes loading (see documentation on [**Async operation handling**](AddressableAssetsAsyncOperationHandle) for more information).
+**Note**: As with normal Addressable Assets, [`LoadAssetAsync`](xref:UnityEngine.AddressableAssets.AssetReference.LoadAssetAsync``1) and [`InstantiateAsync`](xref:UnityEngine.AddressableAssets.AssetReference.InstantiateAsync(UnityEngine.Transform,System.Boolean)) are asynchronous operations. You may provide a callback to work with the asset when it finishes loading (see documentation on [**Async operation handling**](AddressableAssetsAsyncOperationHandle.md) for more information).
 
 ##### Sub-assets
 If an asset that contains sub-assets (such as a SpriteAtlas or FBX) is added to an AssetReference, you are given the option to reference the asset itself, or a sub-asset.  The single dropdown you are used to seeing becomes two. The first selects the asset itself, and the second selects the sub-asset. If you select "<none>" in the second dropdown, that will be treated as a reference to the main asset. 
@@ -147,7 +147,7 @@ The Addressable Asset System needs some files at runtime to know what to load an
 In addition to the Addressables-specific data, any groups that build their data for local use will also use the Library platform-specific staging location. To verify that this works, set your build path and load paths to [profile variables](./AddressableAssetsProfiles.md) starting with `[UnityEngine.AddressableAssets.Addressables.BuildPath]` and `{UnityEngine.AddressableAssets.Addressables.RuntimePath}` respectively. You can specify these settings in the `AddressableAssetSettings` Inspector (by default, this object is located in your project's `Assets/AddressableAssetsData` directory).
 
 ### Downloading in advance
-Calling the [`Addressables.DownloadDependenciesAsync()`](../api/UnityEngine.AddressableAssets.Addressables.html#UnityEngine_AddressableAssets_Addressables_DownloadDependenciesAsync_System_Object_System_Boolean_) method loads the dependencies for the address or label that you pass in. Typically, this is the AssetBundle.
+Calling the [`Addressables.DownloadDependenciesAsync()`](xref:UnityEngine.AddressableAssets.Addressables.DownloadDependenciesAsync(System.Object,System.Boolean)) method loads the dependencies for the address or label that you pass in. Typically, this is the AssetBundle.
 
 The [`AsyncOperationHandle`](AddressableAssetsAsyncOperationHandle.md) struct returned by this call includes a `PercentComplete` attribute that you can use to monitor and display download progress. You can also have the app wait until the content has loaded.
 
@@ -156,7 +156,7 @@ The [`AsyncOperationHandle`](AddressableAssetsAsyncOperationHandle.md) struct re
 
 For example, given an asset you wish to load from a remote location that takes a non-trival amount of time to download and is reliant on a local bundle as a dependcy you'll see your `PercentComplete` jump to 50% before continuing.  This is because the local bundle is able to be loaded much quicker than the remote bundle.  However, all the system is aware of is the need for two operations to be complete. 
 
-If you wish to ask the user for consent prior to download, use [`Addressables.GetDownloadSize()`](../api/UnityEngine.AddressableAssets.Addressables.html#UnityEngine_AddressableAssets_Addressables_GetDownloadSize_System_Object_) to return how much space is needed to download the content from a given address or label. Note that this takes into account any previously downloaded bundles that are still in Unity's asset bundle cache.
+If you wish to ask the user for consent prior to download, use [`Addressables.GetDownloadSize()`](xref:UnityEngine.AddressableAssets.Addressables.GetDownloadSize(System.Object)) to return how much space is needed to download the content from a given address or label. Note that this takes into account any previously downloaded bundles that are still in Unity's asset bundle cache.
 
 While it can be advantageous to download assets for your app in advance, there are instances where you might choose not to do so. For example:
 
@@ -170,7 +170,7 @@ The Addressable Asset System generates AssetBundles containing your Addressable 
 
 By default, when building Addressables app data, data for your given platform is stored in platform-specific subdirectories of the Addressables build path(s). The runtime path accounts for these platform folders, and points to the applicable app data.  
 
-**Note**: If you use the Addressables [`BuildScriptPackedPlayMode`](../api/UnityEditor.AddressableAssets.Build.DataBuilders.BuildScriptPackedPlayMode.html) script in the Editor Play mode, Addressables will attempt to load data for your current active build target. As such, issues may arise if your current build target data isn't compatible with your current Editor platform. For more information, see documentation on [Play mode scripts](AddressableAssetsDevelopmentCycle.md#play-mode-scripts).
+**Note**: If you use the Addressables [`BuildScriptPackedPlayMode`](xref:UnityEditor.AddressableAssets.Build.DataBuilders.BuildScriptPackedPlayMode) script in the Editor Play mode, Addressables will attempt to load data for your current active build target. As such, issues may arise if your current build target data isn't compatible with your current Editor platform. For more information, see documentation on [Play mode scripts](AddressableAssetsDevelopmentCycle.md#play-mode-scripts).
 
 **Note**: If a group has a “Content Packing & Unloading” schema, its **Compression** mode can be modified in the **Inspector** window. For optimal asset loading times regardless of platform, only use **LZ4** for local content and **LZMA** for online content.
 

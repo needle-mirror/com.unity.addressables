@@ -265,5 +265,34 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Settings.RemoveAssetEntry(m_AssetGUID, false);
         }
+
+        [Test]
+        public void WhenFileTypeIsInvalid_AndContentCatalogsAreCreated_BuildFails()
+        {
+            var context = new AddressablesDataBuilderInput(Settings);
+
+            string path = GetAssetPath("fake.file");
+            FileStream fs = File.Create(path);
+            fs.Close();
+            AssetDatabase.ImportAsset(path);
+            string guid = AssetDatabase.AssetPathToGUID(path);
+
+            AddressableAssetEntry entry = Settings.CreateOrMoveEntry(guid, Settings.DefaultGroup);
+
+            foreach (IDataBuilder db in Settings.DataBuilders)
+            {
+                if (db.GetType() == typeof(BuildScriptFastMode) || db.GetType() == typeof(BuildScriptPackedPlayMode))
+                    continue;
+
+                if (db.CanBuildData<AddressablesPlayerBuildResult>())
+                    db.BuildData<AddressablesPlayerBuildResult>(context);
+                else if (db.CanBuildData<AddressablesPlayModeBuildResult>())
+                    db.BuildData<AddressablesPlayModeBuildResult>(context);
+                LogAssert.Expect(LogType.Error, new Regex($"Cannot recognize file type for entry located at '{path}'. Asset import failed or using an unsupported file type."));
+            }
+
+            Settings.RemoveAssetEntry(guid, false);
+            AssetDatabase.DeleteAsset(path);
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -316,7 +317,7 @@ namespace UnityEngine.AddressableAssets
             return true;
         }
 
-        internal bool GetResourceLocations(IEnumerable<object> keys, Type type, Addressables.MergeMode merge, out IList<IResourceLocation> locations)
+        internal bool GetResourceLocations(IEnumerable keys, Type type, Addressables.MergeMode merge, out IList<IResourceLocation> locations)
         {
             locations = null;
             HashSet<IResourceLocation> current = null;
@@ -375,7 +376,10 @@ namespace UnityEngine.AddressableAssets
                 return ResourceManager.CreateCompletedOperation(m_ResourceLocators[0].Locator, null);
             }
 
-            ResourceManager.ExceptionHandler = LogException;
+            if (ResourceManager.ExceptionHandler == null)
+            {
+                ResourceManager.ExceptionHandler = LogException;
+            }
             hasStartedInitialization = true;
             if (m_InitializationOperation.IsValid())
                 return m_InitializationOperation;
@@ -525,22 +529,22 @@ namespace UnityEngine.AddressableAssets
 
         class LoadResourceLocationKeyOp : AsyncOperationBase<IList<IResourceLocation>>
         {
-            object m_Key;
+            object m_Keys;
             IList<IResourceLocation> m_locations;
             AddressablesImpl m_Addressables;
             Type m_ResourceType;
-            protected override string DebugName { get { return m_Key.ToString(); } }
+            protected override string DebugName { get { return m_Keys.ToString(); } }
 
-            public void Init(AddressablesImpl aa, Type t, object key)
+            public void Init(AddressablesImpl aa, Type t, object keys)
             {
-                m_Key = key;
+                m_Keys = keys;
                 m_ResourceType = t;
                 m_Addressables = aa;
             }
 
             protected override void Execute()
             {
-                m_Addressables.GetResourceLocations(m_Key, m_ResourceType, out m_locations);
+                m_Addressables.GetResourceLocations(m_Keys, m_ResourceType, out m_locations);
                 if (m_locations == null)
                     m_locations = new List<IResourceLocation>();
                 Complete(m_locations, true, string.Empty);
@@ -549,14 +553,14 @@ namespace UnityEngine.AddressableAssets
 
         class LoadResourceLocationKeysOp : AsyncOperationBase<IList<IResourceLocation>>
         {
-            IList<object> m_Key;
+            IEnumerable m_Key;
             Addressables.MergeMode m_MergeMode;
             IList<IResourceLocation> m_locations;
             AddressablesImpl m_Addressables;
             Type m_ResourceType;
 
             protected override string DebugName { get { return "LoadResourceLocationKeysOp"; } }
-            public void Init(AddressablesImpl aa, Type t, IList<object> key, Addressables.MergeMode mergeMode)
+            public void Init(AddressablesImpl aa, Type t, IEnumerable key, Addressables.MergeMode mergeMode)
             {
                 m_Key = key;
                 m_ResourceType = t;
@@ -573,12 +577,12 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
-        public AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsWithChain(AsyncOperationHandle dep, IList<object> keys, Addressables.MergeMode mode, Type type)
+        public AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsWithChain(AsyncOperationHandle dep, IEnumerable keys, Addressables.MergeMode mode, Type type)
         {
             return ResourceManager.CreateChainOperation(dep, op => LoadResourceLocationsAsync(keys, mode, type));
         }
 
-        public AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(IList<object> keys, Addressables.MergeMode mode, Type type = null)
+        public AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(IEnumerable keys, Addressables.MergeMode mode, Type type = null)
         {
             if (ShouldChainRequest)
                 return TrackHandle(LoadResourceLocationsWithChain(ChainOperation, keys, mode, type));
@@ -608,12 +612,12 @@ namespace UnityEngine.AddressableAssets
             return TrackHandle(ResourceManager.ProvideResources(locations, releaseDependenciesOnFailure, callback));
         }
 
-        AsyncOperationHandle<IList<TObject>> LoadAssetsWithChain<TObject>(AsyncOperationHandle dep, IList<object> keys, Action<TObject> callback, Addressables.MergeMode mode, bool releaseDependenciesOnFailure)
+        AsyncOperationHandle<IList<TObject>> LoadAssetsWithChain<TObject>(AsyncOperationHandle dep, IEnumerable keys, Action<TObject> callback, Addressables.MergeMode mode, bool releaseDependenciesOnFailure)
         {
             return ResourceManager.CreateChainOperation(dep, op => LoadAssetsAsync(keys, callback, mode, releaseDependenciesOnFailure));
         }
 
-        public AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<object> keys, Action<TObject> callback, Addressables.MergeMode mode, bool releaseDependenciesOnFailure)
+        public AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IEnumerable keys, Action<TObject> callback, Addressables.MergeMode mode, bool releaseDependenciesOnFailure)
         {
             if (ShouldChainRequest)
                 return TrackHandle(LoadAssetsWithChain(ChainOperation, keys, callback, mode, releaseDependenciesOnFailure));
@@ -707,17 +711,17 @@ namespace UnityEngine.AddressableAssets
             return ResourceManager.CreateChainOperation(dep, op => GetDownloadSizeAsync(key));
         }
 
-        AsyncOperationHandle<long> GetDownloadSizeWithChain(AsyncOperationHandle dep, IList<object> keys)
+        AsyncOperationHandle<long> GetDownloadSizeWithChain(AsyncOperationHandle dep, IEnumerable keys)
         {
             return ResourceManager.CreateChainOperation(dep, op => GetDownloadSizeAsync(keys));
         }
 
         public AsyncOperationHandle<long> GetDownloadSizeAsync(object key)
         {
-            return GetDownloadSizeAsync(new List<object> { key });
+            return GetDownloadSizeAsync(new object[] { key });
         }
 
-        public AsyncOperationHandle<long> GetDownloadSizeAsync(IList<object> keys)
+        public AsyncOperationHandle<long> GetDownloadSizeAsync(IEnumerable keys)
         {
             if (ShouldChainRequest)
                 return TrackHandle(GetDownloadSizeWithChain(ChainOperation, keys));
@@ -825,7 +829,7 @@ namespace UnityEngine.AddressableAssets
             return handle;
         }
 
-        AsyncOperationHandle DownloadDependenciesAsyncWithChain(AsyncOperationHandle dep, IList<object> keys, Addressables.MergeMode mode, bool autoReleaseHandle)
+        AsyncOperationHandle DownloadDependenciesAsyncWithChain(AsyncOperationHandle dep, IEnumerable keys, Addressables.MergeMode mode, bool autoReleaseHandle)
         {
             var handle = ResourceManager.CreateChainOperation(dep, op => DownloadDependenciesAsync(keys, mode).Convert<IList<IAssetBundleResource>>());
             if (autoReleaseHandle)
@@ -833,7 +837,7 @@ namespace UnityEngine.AddressableAssets
             return handle;
         }
 
-        public AsyncOperationHandle DownloadDependenciesAsync(IList<object> keys, Addressables.MergeMode mode, bool autoReleaseHandle = false)
+        public AsyncOperationHandle DownloadDependenciesAsync(IEnumerable keys, Addressables.MergeMode mode, bool autoReleaseHandle = false)
         {
             if (ShouldChainRequest)
                 return DownloadDependenciesAsyncWithChain(ChainOperation, keys, mode, autoReleaseHandle);
@@ -900,7 +904,7 @@ namespace UnityEngine.AddressableAssets
             return completedOp;
         }
 
-        public AsyncOperationHandle<bool> ClearDependencyCacheAsync(IList<object> keys, bool autoReleaseHandle)
+        public AsyncOperationHandle<bool> ClearDependencyCacheAsync(IEnumerable keys, bool autoReleaseHandle)
         {
             if (ShouldChainRequest)
                 return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(keys, autoReleaseHandle));

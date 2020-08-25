@@ -4,25 +4,43 @@ using System.Linq;
 
 namespace UnityEditor.AddressableAssets.Build
 {
+    /// <summary>
+    /// Use to contain files created during a build.
+    /// </summary>
     public class FileRegistry
     {
         private readonly HashSet<string> m_FilePaths;
 
+        /// <summary>
+        /// Initializes a new file registry instance.
+        /// </summary>
         public FileRegistry()
         {
             m_FilePaths = new HashSet<string>();
         }
 
+        /// <summary>
+        /// Retrieves all the stored file paths.
+        /// </summary>
+        /// <returns>Returns all file paths as an IEnumerable.</returns>
         public IEnumerable<string> GetFilePaths()
         {
             return new HashSet<string>(m_FilePaths);
         }
 
+        /// <summary>
+        /// Adds a file path to our set of file paths.
+        /// </summary>
+        /// <param name="path">The file path.</param>
         public void AddFile(string path)
         {
             m_FilePaths.Add(path);
         }
 
+        /// <summary>
+        /// Removes a file path from our set of file paths.
+        /// </summary>
+        /// <param name="path">The file path.</param>
         public void RemoveFile(string path)
         {
             m_FilePaths.Remove(path);

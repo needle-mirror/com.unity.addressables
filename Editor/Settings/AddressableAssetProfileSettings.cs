@@ -104,7 +104,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 get { return m_Values; }
                 set { m_Values = value; }
             }
-            
+
             internal BuildProfile(string name, BuildProfile copyFrom, AddressableAssetProfileSettings ps)
             {
                 m_InheritedParent = null;
@@ -295,7 +295,13 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
+        /// <summary>
+        /// Text that represents a custom profile entry.
+        /// </summary>
         public const string customEntryString = "<custom>";
+        /// <summary>
+        /// Text that represents an undefined profile entry.
+        /// </summary>
         public const string undefinedEntryValue = "<undefined>";
 
         internal ProfileIdData GetProfileDataById(string id)

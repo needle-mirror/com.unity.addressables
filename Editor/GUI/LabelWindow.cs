@@ -14,6 +14,10 @@ namespace UnityEditor.AddressableAssets.GUI
         private Vector2 m_ScrollPosition;
         private int m_BorderSpacing = 7;
 
+        /// <summary>
+        /// Creates a new LabelWindow instance and retrieves label names from the given settings object.
+        /// </summary>
+        /// <param name="settings">The settings object.</param>
         public void Intialize(AddressableAssetSettings settings)
         {
             titleContent = new GUIContent("Addressables Labels");

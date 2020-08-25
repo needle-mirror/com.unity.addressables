@@ -10,21 +10,60 @@ using UnityEditor;
 
 namespace UnityEngine.AddressableAssets
 {
+    /// <summary>
+    /// Options for the Addressables build platform.
+    /// </summary>
     public enum AddressablesPlatform
     {
+        /// <summary>
+        /// Use to indicate that the build platform is unknown.
+        /// </summary>
         Unknown,
+        /// <summary>
+        /// Use to indicate that the build platform is Windows.
+        /// </summary>
         Windows,
+        /// <summary>
+        /// Use to indicate that the build platform is OSX.
+        /// </summary>
         OSX,
+        /// <summary>
+        /// Use to indicate that the build platform is Linux.
+        /// </summary>
         Linux,
+        /// <summary>
+        /// Use to indicate that the build platform is PS4.
+        /// </summary>
         PS4,
+        /// <summary>
+        /// Use to indicate that the build platform is PS4.
+        /// </summary>
         Switch,
+        /// <summary>
+        /// Use to indicate that the build platform is XboxOne.
+        /// </summary>
         XboxOne,
+        /// <summary>
+        /// Use to indicate that the build platform is WebGL.
+        /// </summary>
         WebGL,
+        /// <summary>
+        /// Use to indicate that the build platform is iOS.
+        /// </summary>
         iOS,
+        /// <summary>
+        /// Use to indicate that the build platform is Android.
+        /// </summary>
         Android,
+        /// <summary>
+        /// Use to indicate that the build platform is WindowsUniversal.
+        /// </summary>
         WindowsUniversal
     }
 
+    /// <summary>
+    /// Determines the Addressables build platform that should be used based on the target player build platform.
+    /// </summary>
     public class PlatformMappingService
     {
 #if UNITY_EDITOR
@@ -84,6 +123,10 @@ namespace UnityEngine.AddressableAssets
             return AddressablesPlatform.Unknown;
         }
 
+        /// <summary>
+        /// Retrieves the Addressables build platform that is being used.
+        /// </summary>
+        /// <returns>Returns the Addressables build platform that is being used.</returns>
         public static AddressablesPlatform GetPlatform()
         {
 #if UNITY_EDITOR

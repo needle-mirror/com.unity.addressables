@@ -89,17 +89,23 @@ static class AddressablesTestUtility
 
         var so = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
         var sub = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
-        sub.name = "sub";
-        AssetDatabase.CreateAsset(so, RootFolder + "/sub.asset");
-        AssetDatabase.AddObjectToAsset(sub, RootFolder + "/sub.asset");
-        AssetDatabase.ImportAsset(RootFolder + "/sub.asset", ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-        var subGuid = AssetDatabase.AssetPathToGUID(RootFolder + "/sub.asset");
+        sub.name = "sub-shown";
+        var sub2 = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
+        sub2.hideFlags |= HideFlags.HideInHierarchy;
+        sub2.name = "sub2-hidden";
+        so.name = "main";
+        AssetDatabase.CreateAsset(so, RootFolder + "/assetWithSubObjects.asset");
+        AssetDatabase.AddObjectToAsset(sub, RootFolder + "/assetWithSubObjects.asset");
+        AssetDatabase.AddObjectToAsset(sub2, RootFolder + "/assetWithSubObjects.asset");
+        AssetDatabase.ImportAsset(RootFolder + "/assetWithSubObjects.asset", ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+        var assetWithSubObjectsGUID = AssetDatabase.AssetPathToGUID(RootFolder + "/assetWithSubObjects.asset");
         string assetRefGuid = CreateAsset(RootFolder + "/testIsReference.prefab", "IsReference");
         GameObject go = new GameObject("AssetReferenceBehavior");
         AssetReferenceTestBehavior aRefTestBehavior = go.AddComponent<AssetReferenceTestBehavior>();
+        settings.CreateOrMoveEntry(assetWithSubObjectsGUID, settings.DefaultGroup).address = "assetWithSubObjects";
         aRefTestBehavior.Reference = settings.CreateAssetReference(assetRefGuid);
-        aRefTestBehavior.ReferenceWithSubObject = settings.CreateAssetReference(subGuid);
-        aRefTestBehavior.ReferenceWithSubObject.SubObjectName = "sub";
+        aRefTestBehavior.ReferenceWithSubObject = settings.CreateAssetReference(assetWithSubObjectsGUID);
+        aRefTestBehavior.ReferenceWithSubObject.SubObjectName = "sub-shown";
         aRefTestBehavior.LabelReference = new AssetLabelReference()
         {
             labelString = settings.labelTable.labelNames[0]

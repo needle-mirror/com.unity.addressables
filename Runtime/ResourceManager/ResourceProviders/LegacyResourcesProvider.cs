@@ -38,6 +38,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             public float PercentComplete() { return m_RequestOperation != null ? m_RequestOperation.progress : 0.0f; }
         }
 
+        /// <inheritdoc/>
         public override void Provide(ProvideHandle pi)
         {
             Type t = pi.Type;

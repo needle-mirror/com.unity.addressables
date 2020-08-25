@@ -42,8 +42,9 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         public Type ResourceType { get; private set; }
 
         /// <summary>
-        /// Construct a new ContentCatalogEntry.
+        /// Creates a new ContentCatalogEntry object.
         /// </summary>
+        /// <param name="type">The entry type.</param>
         /// <param name="internalId">The internal id.</param>
         /// <param name="provider">The provider id.</param>
         /// <param name="keys">The collection of keys that can be used to retrieve this entry.</param>
@@ -83,6 +84,9 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         [SerializeField]
         internal string m_LocatorId;
 
+        /// <summary>
+        /// Stores the id of the data provider.
+        /// </summary>
         public string ProviderId
         {
             get { return m_LocatorId; }

@@ -32,12 +32,16 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                     from asset in bundleBuild.assetNames
                     select new AnalyzeResult { resultName = bundleName + kDelimiter + "Explicit" + kDelimiter + asset }).ToList();
 
-            m_Results.AddRange((from fileToBundle in m_ExtractData.WriteData.FileToBundle
-                from guid in GetImplicitGuidsForBundle(fileToBundle.Key)
-                let bundleName = fileToBundle.Value
+            if (m_ExtractData.WriteData != null)
+            {
+                m_Results.AddRange((from fileToBundle in m_ExtractData.WriteData.FileToBundle
+                    from guid in GetImplicitGuidsForBundle(fileToBundle.Key)
+                    let bundleName = fileToBundle.Value
                     let assetPath = AssetDatabase.GUIDToAssetPath(guid.ToString())
                     where AddressableAssetUtility.IsPathValidForEntry(assetPath)
-                    select new AnalyzeResult { resultName = bundleName + kDelimiter + "Implicit" + kDelimiter + assetPath }).ToList());
+                    select new AnalyzeResult
+                        {resultName = bundleName + kDelimiter + "Implicit" + kDelimiter + assetPath}).ToList());
+            }
 
             if (m_Results.Count == 0)
                 m_Results.Add(noErrors);

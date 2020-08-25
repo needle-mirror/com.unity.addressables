@@ -6,7 +6,7 @@ using UnityEngine;
 namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
     /// <summary>
-    /// Base class for creating rules to analyze Addressables data.  Use AnalyzeWindow.RegisterNewRule<T>() to register
+    /// Base class for creating rules to analyze Addressables data.  Use AnalyzeWindow.RegisterNewRule&lt;T&gt;() to register.
     ///  a rule with the GUI window.
     /// </summary>
     [Serializable]
@@ -20,6 +20,9 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         [SerializeField]
         internal List<AnalyzeResult> m_Results = new List<AnalyzeResult>();
 
+        /// <summary>
+        /// Represents a state where no errors were found after analyzing Addressables data.
+        /// </summary>
         [NonSerialized]
         protected AnalyzeResult noErrors = new AnalyzeResult { resultName = "No issues found" };
 

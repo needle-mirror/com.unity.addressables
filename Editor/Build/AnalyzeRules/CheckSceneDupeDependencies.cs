@@ -21,8 +21,8 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         {
             ClearAnalysis();
 
-            string[] scenePaths = (from editorScene in EditorBuildSettings.scenes
-                select editorScene.path).ToArray();
+            string[] scenePaths = (from editorScene in EditorBuildSettings.scenes 
+                 where editorScene.enabled select editorScene.path).ToArray();
 
             return CalculateBuiltInResourceDependenciesToBundleDependecies(settings, scenePaths);
         }

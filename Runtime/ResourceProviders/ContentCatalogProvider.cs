@@ -16,18 +16,34 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
     public class ContentCatalogProvider : ResourceProviderBase
     {
         /// <summary>
-        /// An enum used to specify which entry in the catalog dependencies should hold each hash item.
+        /// Options for specifying which entry in the catalog dependencies should hold each hash item.
         ///  The Remote should point to the hash on the server.  The Cache should point to the
         ///  local cache copy of the remote data.
         /// </summary>
         public enum DependencyHashIndex
         {
+            /// <summary>
+            /// Use to represent the index of the remote entry in the dependencies list.
+            /// </summary>
             Remote = 0,
+            /// <summary>
+            /// Use to represent the index of the cache entry in the dependencies list.
+            /// </summary>
             Cache,
+            /// <summary>
+            /// Use to represent the number of entries in the dependencies list.
+            /// </summary>
             Count
         }
 
+        /// <summary>
+        /// Use to indicate if the updating the catalog on startup should be disabled.
+        /// </summary>
         public bool DisableCatalogUpdateOnStart = false;
+
+        /// <summary>
+        /// Use to indicate if the local catalog is in a bundle.
+        /// </summary>
         public bool IsLocalCatalogInBundle = false;
 
         internal Dictionary<IResourceLocation, InternalOp> m_LocationToCatalogLoadOpMap = new Dictionary<IResourceLocation, InternalOp>();
@@ -42,6 +58,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
             m_BehaviourFlags = ProviderBehaviourFlags.CanProvideWithFailedDependencies;
         }
 
+        /// <inheritdoc/>
         public override void Release(IResourceLocation location, object obj)
         {
             if (m_LocationToCatalogLoadOpMap.ContainsKey(location))
@@ -103,6 +120,9 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                 }
             }
 
+            /// <summary>
+            /// Clear all content catalog data.
+            /// </summary>
             public void Release()
             {
                 m_ContentCatalogData?.CleanData();

@@ -200,6 +200,8 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                         {
                             if (entry.guid.Length > 0 && entry.address.Contains("[") && entry.address.Contains("]"))
                                 throw new Exception($"Address '{entry.address}' cannot contain '[ ]'.");
+                            if (entry.MainAssetType == typeof(DefaultAsset) && !AssetDatabase.IsValidFolder(entry.AssetPath))
+                                throw new Exception($"Cannot recognize file type for entry located at '{entry.AssetPath}'. Asset import failed or using an unsupported file type.");
                             entry.CreateCatalogEntriesInternal(locations, true, assetProvider, bEntry.ExpandedDependencies.Select(x => x.BundleName), null, input.AssetToAssetInfo, providerTypes);
                         }
                     }

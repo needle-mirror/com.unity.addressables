@@ -25,6 +25,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             else
             {
+                EditorApplication.ExecuteMenuItem("Window/General/Inspector");
                 EditorGUIUtility.PingObject(setting);
                 Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
             }

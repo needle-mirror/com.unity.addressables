@@ -2,13 +2,23 @@ using UnityEditor;
 
 namespace UnityEngine.ResourceManagement.Util
 {
+    /// <summary>
+    /// Creates a singleton.
+    /// </summary>
+    /// <typeparam name="T">The singleton type.</typeparam>
     [ExecuteInEditMode]
     public abstract class ComponentSingleton<T> : MonoBehaviour where T : ComponentSingleton<T>
     {
         static T s_Instance;
 
+        /// <summary>
+        /// Indicates whether or not there is an existing instance of the singleton.
+        /// </summary>
         public static bool Exists => s_Instance != null;
 
+        /// <summary>
+        /// Stores the instance of the singleton.
+        /// </summary>
         public static T Instance
         {
             get
@@ -21,6 +31,10 @@ namespace UnityEngine.ResourceManagement.Util
             }
         }
 
+        /// <summary>
+        /// Retrieves the name of the object.
+        /// </summary>
+        /// <returns>Returns the name of the object.</returns>
         protected virtual string GetGameObjectName() => typeof(T).Name;
 
         static T CreateNewSingleton()
@@ -51,6 +65,9 @@ namespace UnityEngine.ResourceManagement.Util
             s_Instance = this as T;
         }
 
+        /// <summary>
+        /// Destroys the singleton.
+        /// </summary>
         public static void DestroySingleton()
         {
             if (Exists)

@@ -30,12 +30,25 @@ namespace UnityEditor.AddressableAssets.Build
                 return s_EditorAssemblies;
             }
         }
+
+        /// <summary>
+        /// Determines if the given assembly is an editor assembly.
+        /// </summary>
+        /// <param name="assembly">The assembly.</param>
+        /// <returns>Returns true if the assembly is an editor assembly. Returns false otherwise.</returns>
         public static bool IsEditorAssembly(System.Reflection.Assembly assembly)
         {
             var splitName = assembly.FullName.Split(',');
             return splitName.Length > 0 && editorAssemblies.Contains(splitName[0]);
         }
 
+        /// <summary>
+        /// Creates a new bundle name using its hash and a given naming style.
+        /// </summary>
+        /// <param name="schemaBundleNaming">The bundle naming style.</param>
+        /// <param name="hash">The bundle hash.</param>
+        /// <param name="sourceBundleName">The original bundle name.</param>
+        /// <returns>Returns the new bundle name.</returns>
         public static string GetNameWithHashNaming(BundledAssetGroupSchema.BundleNamingStyle schemaBundleNaming, string hash, string sourceBundleName)
         {
             string result = sourceBundleName;

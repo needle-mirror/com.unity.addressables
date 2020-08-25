@@ -2,7 +2,7 @@
 #### API
 - `static AsyncOperationHandle DownloadDependenciesAsync(object key, bool autoReleaseHandle = false)`
 - `static AsyncOperationHandle DownloadDependenciesAsync(IList<IResourceLocation> locations, bool autoReleaseHandle = false)`
-- `static AsyncOperationHandle DownloadDependenciesAsync(IList<object> keys, MergeMode mode, bool autoReleaseHandle = false)`
+- `static AsyncOperationHandle DownloadDependenciesAsync(IEnumerable keys, MergeMode mode, bool autoReleaseHandle = false)`
 
 #### Returns
 `AsyncOperationHandle`: an async operation handle that encompasses all the operations used to download the requested dependencies.  Once complete, this handle can be safely released.
@@ -12,7 +12,7 @@
 
 This operation can be safely released once it is complete or you can pass `true` in the `autoReleaseHandle` parameter to ensure it is released on completion.  Of note, if the handle is released you won't be able to check the success of the operation handle through the `Status` property since the release invalidates the operation handle.
 
-Downloaded `AssetBundles` are stored in the engines `AssetBundle` cache.  `Addressables` provides a type of initialization object called a [`CacheInitializationSettings`](../api/UnityEditor.AddressableAssets.Settings.CacheInitializationSettings.html) which can be used to control the `AssetBundle` cache settings.
+Downloaded `AssetBundles` are stored in the engines `AssetBundle` cache.  `Addressables` provides a type of initialization object called a [`CacheInitializationSettings`](xref:UnityEditor.AddressableAssets.Settings.CacheInitializationSettings) which can be used to control the `AssetBundle` cache settings.
 
 ##### Related API
 `GetDownloadSizeAsync` checks the total size of all `AssetBundles` that need to be downloaded.  Cached `AssetBundles` return a size of 0.  Unlike most operations that don't load anything, `GetDownloadSizeAsync` does not autorelease.  It does not autorelease because the `Result` is needed which could not be accessed from a released handle.  Once you have read the size out of the `Result`, you are responsible for releasing the operation handle; not doing so has little impact on the memory footprint.

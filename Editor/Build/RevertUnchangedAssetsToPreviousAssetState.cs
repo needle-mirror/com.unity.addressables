@@ -34,6 +34,8 @@ internal class RevertUnchangedAssetsToPreviousAssetState
     {
         var aaContext = aaBuildContext as AddressableAssetsBuildContext;
         var groups = aaContext.Settings.groups.Where(group => group != null && group.HasSchema<BundledAssetGroupSchema>());
+        if (updateContext.ContentState.cachedBundles == null)
+            UnityEngine.Debug.LogWarning($"ContentUpdateContext does not contain previous asset bundle info, remote static bundles that are updated will not be cacheable.  If this is needed, rebuild the shipped application state with the current version of addressables to update the addressables_content_state.bin file.  The updated addressables_content_state.bin file can be used to create the content update.");
 
         foreach (var assetGroup in groups)
         {
@@ -141,8 +143,11 @@ internal class RevertUnchangedAssetsToPreviousAssetState
             {
                 File.Delete(operation.CurrentBuildPath);
                 operation.BundleCatalogEntry.InternalId = operation.PreviousAssetState.bundleFileId;
-                operation.BundleCatalogEntry.Data = operation.PreviousAssetState.data;
-
+                if (contentUpdateContext.ContentState.cachedBundles != null)
+                {
+                    var bundleState = contentUpdateContext.ContentState.cachedBundles.FirstOrDefault(s => s.bundleFileId == operation.PreviousAssetState.bundleFileId);
+                    operation.BundleCatalogEntry.Data = bundleState != null ? bundleState.data : null;
+                }
                 //If the entry has dependencies, we need to update those to point to their respective cached versions as well.
                 if (operation.PreviousAssetState.dependencies.Length > 0)
                 {

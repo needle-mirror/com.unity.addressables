@@ -168,6 +168,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// <summary>
         /// Utility method for creating locations from player data.
         /// </summary>
+        /// <param name="playerDataSchema">The schema for the group.</param>
         /// <param name="assetGroup">The group to extract the locations from.</param>
         /// <param name="locations">The list of created locations to fill in.</param>
         /// <param name="providerTypes">Any unknown provider types are added to this set in order to ensure they are not stripped.</param>
@@ -185,7 +186,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         continue;
                     if (!playerDataSchema.IncludeResourcesFolders && a.IsInResources)
                         continue;
-                    a.CreateCatalogEntries(locations, false, a.IsScene ? typeof(SceneProvider).FullName : typeof(LegacyResourcesProvider).FullName, null, null, providerTypes);
+                    a.CreateCatalogEntries(locations, false, a.IsScene ? "" : typeof(LegacyResourcesProvider).FullName, null, null, providerTypes);
                     if (!a.IsScene)
                         needsLegacyProvider = true;
                 }
@@ -246,6 +247,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// <summary>
         /// Checks to see if the data is built for the given builder.
         /// </summary>
+        /// <returns>Returns true if the data is built. Returns false otherwise.</returns>
         public virtual bool IsDataBuilt()
         {
             return false;

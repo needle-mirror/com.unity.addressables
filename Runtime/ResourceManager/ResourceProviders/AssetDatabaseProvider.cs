@@ -32,6 +32,16 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             m_LoadDelay = delay;
         }
 
+        internal static Object[] LoadAssetsWithSubAssets(string assetPath)
+        {
+            var subObjects = AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
+            var allObjects = new Object[subObjects.Length + 1];
+            allObjects[0] = AssetDatabase.LoadMainAssetAtPath(assetPath);
+            for (int i = 0; i < subObjects.Length; i++)
+                allObjects[i + 1] = subObjects[i];
+            return allObjects;
+        }
+
         class InternalOp
         {
             ProvideHandle m_ProvideHandle;
@@ -44,17 +54,18 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     DelayedActionManager.AddAction((Action)LoadImmediate, loadDelay);
             }
 
+
             void LoadImmediate()
             {
                 string assetPath = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
                 object result = null;
                 if (m_ProvideHandle.Type.IsArray)
                 {
-                    result = ResourceManagerConfig.CreateArrayResult(m_ProvideHandle.Type, AssetDatabase.LoadAllAssetsAtPath(assetPath));
+                    result = ResourceManagerConfig.CreateArrayResult(m_ProvideHandle.Type, LoadAssetsWithSubAssets(assetPath));
                 }
                 else if (m_ProvideHandle.Type.IsGenericType && typeof(IList<>) == m_ProvideHandle.Type.GetGenericTypeDefinition())
                 {
-                    result = ResourceManagerConfig.CreateListResult(m_ProvideHandle.Type, AssetDatabase.LoadAllAssetsAtPath(assetPath));
+                    result = ResourceManagerConfig.CreateListResult(m_ProvideHandle.Type, LoadAssetsWithSubAssets(assetPath));
                 }
                 else
                 {

@@ -75,7 +75,8 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 bundleToAssetGroup = m_BundleToAssetGroup,
                 locations = m_Locations,
                 providerTypes = new HashSet<Type>(),
-                assetEntries = m_AssetEntries
+                assetEntries = m_AssetEntries,
+                assetGroupToBundles = new Dictionary<AddressableAssetGroup, List<string>>()
             };
             return aaContext;
         }
@@ -317,6 +318,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         {
             m_Locations.Clear();
             m_AddressableAssets.Clear();
+            m_AssetEntries.Clear(); 
             m_AllBundleInputDefs.Clear();
             m_BundleToAssetGroup.Clear();
             m_ResourcesToDependencies.Clear();

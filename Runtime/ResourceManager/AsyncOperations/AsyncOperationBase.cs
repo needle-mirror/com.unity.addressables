@@ -48,6 +48,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
     /// <summary>
     /// base class for implemented AsyncOperations, implements the needed interfaces and consolidates redundant code
     /// </summary>
+    /// <typeparam name="TObject">The type of the operation.</typeparam>
     public abstract class AsyncOperationBase<TObject> : IAsyncOperation
     {
         /// <summary>
@@ -131,7 +132,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             if (m_referenceCount == 0)
                 throw new Exception(string.Format("Cannot increment reference count on operation {0} because it has already been destroyed", this));
-            
+
             m_referenceCount++;
             if (m_RM != null && m_RM.postProfilerEvents)
                 m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount));
@@ -143,7 +144,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 throw new Exception(string.Format("Cannot decrement reference count for operation {0} because it is already 0", this));
 
             m_referenceCount--;
-            
+
             if (m_RM != null && m_RM.postProfilerEvents)
                 m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount));
 
@@ -245,7 +246,10 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             }
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Converts the information about the operation to a formatted string.
+        /// </summary>
+        /// <returns>Returns the information about the operation.</returns>
         public override string ToString()
         {
             var instId = "";
@@ -514,7 +518,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         Action<IAsyncOperation> IAsyncOperation.OnDestroy { set { OnDestroy = value; } }
 
         string IAsyncOperation.DebugName { get { return DebugName; } }
-        
+
+        /// <inheritdoc/>
         object IAsyncOperation.GetResultAsObject()
         {
             return Result;
@@ -522,19 +527,25 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         Type IAsyncOperation.ResultType { get { return typeof(TObject); } }
 
+        /// <inheritdoc/>
         void IAsyncOperation.GetDependencies(List<AsyncOperationHandle> deps) { GetDependencies(deps); }
 
+        /// <inheritdoc/>
         void IAsyncOperation.DecrementReferenceCount() { DecrementReferenceCount(); }
 
+        /// <inheritdoc/>
         void IAsyncOperation.IncrementReferenceCount() { IncrementReferenceCount(); }
 
+        /// <inheritdoc/>
         void IAsyncOperation.InvokeCompletionEvent() { InvokeCompletionEvent(); }
 
+        /// <inheritdoc/>
         void IAsyncOperation.Start(ResourceManager rm, AsyncOperationHandle dependency, DelegateList<float> updateCallbacks)
         {
             Start(rm, dependency, updateCallbacks);
         }
 
+        /// <inheritdoc/>
         DownloadStatus IAsyncOperation.GetDownloadStatus(HashSet<object> visited)
         {
             return GetDownloadStatus(visited);

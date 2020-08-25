@@ -135,6 +135,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         var menu = new GenericMenu();
                         menu.AddItem(new GUIContent("Inspect System Settings"), false, () =>
                         {
+                            EditorApplication.ExecuteMenuItem("Window/General/Inspector");
                             EditorGUIUtility.PingObject(AddressableAssetSettingsDefaultObject.Settings);
                             Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
                         });

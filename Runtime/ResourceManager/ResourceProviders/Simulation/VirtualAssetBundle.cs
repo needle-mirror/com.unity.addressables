@@ -464,9 +464,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
 
                 var pt = m_provideHandle.Type;
                 if (pt.IsArray)
-                    result = ResourceManagerConfig.CreateArrayResult(pt, AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
+                    result = ResourceManagerConfig.CreateArrayResult(pt, AssetDatabaseProvider.LoadAssetsWithSubAssets(assetPath));
                 else if (pt.IsGenericType && typeof(IList<>) == pt.GetGenericTypeDefinition())
-                    result = ResourceManagerConfig.CreateListResult(pt, AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
+                    result = ResourceManagerConfig.CreateListResult(pt, AssetDatabaseProvider.LoadAssetsWithSubAssets(assetPath));
                 else
                 {
                     if (ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))

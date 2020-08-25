@@ -23,8 +23,9 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// Is the operation completed.  This is used to determine if the computed Percent should be 0 or 1 when TotalBytes is 0.
         /// </summary>
         public bool IsDone;
+        
         /// <summary>
-        /// Returns the computed percent complete as a float value between 0 & 1.  If TotalBytes == 0, 1 is returned.
+        /// Returns the computed percent complete as a float value between 0 &amp; 1.  If TotalBytes == 0, 1 is returned.
         /// </summary>
         public float Percent => (TotalBytes > 0) ? ((float)DownloadedBytes / (float)TotalBytes) : (IsDone ? 1.0f : 0f);
     }

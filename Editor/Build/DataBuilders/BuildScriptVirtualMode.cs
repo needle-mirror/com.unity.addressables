@@ -393,18 +393,24 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             // Player Scripts
             if (compileScripts)
+            {
                 buildTasks.Add(new BuildPlayerScripts());
+                buildTasks.Add(new PostScriptsCallback());
+            }
 
             // Dependency
             buildTasks.Add(new PreviewSceneDependencyData());
             buildTasks.Add(new CalculateAssetDependencyData());
             buildTasks.Add(new StripUnusedSpriteSources());
             buildTasks.Add(new CreateBuiltInShadersBundle(builtinShaderBundleName));
+            buildTasks.Add(new PostDependencyCallback());
 
             // Packing
             buildTasks.Add(new GenerateBundlePacking());
             buildTasks.Add(new UpdateBundleObjectLayout());
             buildTasks.Add(new GenerateLocationListsTask());
+            buildTasks.Add(new PostPackingCallback());
+
             return buildTasks;
         }
     }

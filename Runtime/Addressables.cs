@@ -10,6 +10,7 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.SceneManagement;
+using System.Collections;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -53,15 +54,21 @@ namespace UnityEngine.AddressableAssets
             Type = type;
         }
 
-        ///<inheritdoc/>
+        ///<inheritdoc cref="InvalidKeyException"/>
         public InvalidKeyException() {}
+
         ///<inheritdoc/>
         public InvalidKeyException(string message) : base(message) {}
+
         ///<inheritdoc/>
         public InvalidKeyException(string message, Exception innerException) : base(message, innerException) {}
+
         ///<inheritdoc/>
         protected InvalidKeyException(SerializationInfo message, StreamingContext context) : base(message, context) {}
-        ///<inheritdoc/>
+
+        /// <summary>
+        /// Stores information about the exception.
+        /// </summary>
         public override string Message
         {
             get
@@ -93,6 +100,9 @@ namespace UnityEngine.AddressableAssets
                 return m_AddressablesInstance;
             }
         }
+        /// <summary>
+        /// Stores the ResourceManager associated with this Addressables instance.
+        /// </summary>
         public static ResourceManager ResourceManager { get { return m_Addressables.ResourceManager; } }
         internal static AddressablesImpl Instance { get { return m_Addressables; } }
 
@@ -119,6 +129,8 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Used to resolve a string using addressables config values
         /// </summary>
+        /// <param name="id">The internal id to resolve.</param>
+        /// <returns>Returns the string that the internal id represents.</returns>
         public static string ResolveInternalId(string id)
         {
             return m_Addressables.ResolveInternalId(id);
@@ -135,7 +147,7 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Enumerates the supported modes of merging the results of requests.
+        /// Options for merging the results of requests.
         /// If keys (A, B) mapped to results ([1,2,4],[3,4,5])...
         ///  - UseFirst (or None) takes the results from the first key
         ///  -- [1,2,4]
@@ -146,9 +158,21 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public enum MergeMode
         {
+            /// <summary>
+            /// Use to indicate that no merge should occur. The first set of results will be used.
+            /// </summary>
             None = 0,
+            /// <summary>
+            /// Use to indicate that the merge should take the first set of results.
+            /// </summary>
             UseFirst = 0,
+            /// <summary>
+            /// Use to indicate that the merge should take the union of the results.
+            /// </summary>
             Union,
+            /// <summary>
+            /// Use to indicate that the merge should take the intersection of the results.
+            /// </summary>
             Intersection
         }
 
@@ -275,7 +299,8 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Debug.LogException wrapper method.
         /// </summary>
-        /// <param name="msg">The msg to log</param>
+        /// <param name="op">The operation handle.</param>
+        /// <param name="ex">The exception.</param>
         public static void LogException(AsyncOperationHandle op, Exception ex)
         {
             m_Addressables.LogException(op, ex);
@@ -363,7 +388,9 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load a single asset
         /// </summary>
+        /// <typeparam name="TObject">The type of the asset.</typeparam>
         /// <param name="location">The location of the asset.</param>
+        /// <returns>Returns the load operation.</returns>
         //[Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetAsync(*)", true)]
         [Obsolete]
         public static AsyncOperationHandle<TObject> LoadAsset<TObject>(IResourceLocation location)
@@ -374,7 +401,9 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load a single asset
         /// </summary>
+        /// <typeparam name="TObject">The type of the asset.</typeparam>
         /// <param name="key">The key of the location of the asset.</param>
+        /// <returns>Returns the load operation.</returns>
         //[Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetAsync(*)", true)]
         [Obsolete]
         public static AsyncOperationHandle<TObject> LoadAsset<TObject>(object key)
@@ -386,7 +415,9 @@ namespace UnityEngine.AddressableAssets
         /// Load a single asset
         /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
+        /// <typeparam name="TObject">The type of the asset.</typeparam>
         /// <param name="location">The location of the asset.</param>
+        /// <returns>Returns the load operation.</returns>
         public static AsyncOperationHandle<TObject> LoadAssetAsync<TObject>(IResourceLocation location)
         {
             return m_Addressables.LoadAssetAsync<TObject>(location);
@@ -396,7 +427,9 @@ namespace UnityEngine.AddressableAssets
         /// Load a single asset
         /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
+        /// <typeparam name="TObject">The type of the asset.</typeparam>
         /// <param name="key">The key of the location of the asset.</param>
+        /// <returns>Returns the load operation.</returns>
         public static AsyncOperationHandle<TObject> LoadAssetAsync<TObject>(object key)
         {
             return m_Addressables.LoadAssetAsync<TObject>(key);
@@ -420,12 +453,28 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads the resource locations specified by the keys.
         /// The method will always return success, with a valid IList of results. If nothing matches keys, IList will be empty
+        /// See the [LoadResourceLocations](../manual/LoadResourceLocations.html) documentation for more details.
         /// </summary>
         /// <param name="keys">The set of keys to use.</param>
         /// <param name="mode">The mode for merging the results of the found locations.</param>
         /// <param name="type">A type restriction for the lookup.  Only locations of the provided type (or derived type) will be returned.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete]
         public static AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(IList<object> keys, MergeMode mode, Type type = null)
+        {
+            return m_Addressables.LoadResourceLocationsAsync(keys, mode, type);
+        }
+
+        /// <summary>
+        /// Loads the resource locations specified by the keys.
+        /// The method will always return success, with a valid IList of results. If nothing matches keys, IList will be empty
+        /// See the [LoadResourceLocations](../manual/LoadResourceLocations.html) documentation for more details.
+        /// </summary>
+        /// <param name="keys">The set of keys to use.</param>
+        /// <param name="mode">The mode for merging the results of the found locations.</param>
+        /// <param name="type">A type restriction for the lookup.  Only locations of the provided type (or derived type) will be returned.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(IEnumerable keys, MergeMode mode, Type type = null)
         {
             return m_Addressables.LoadResourceLocationsAsync(keys, mode, type);
         }
@@ -447,6 +496,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Request the locations for a given key.
         /// The method will always return success, with a valid IList of results. If nothing matches key, IList will be empty
+        /// See the [LoadResourceLocations](../manual/LoadResourceLocations.html) documentation for more details.
         /// </summary>
         /// <param name="key">The key for the locations.</param>
         /// <param name="type">A type restriction for the lookup.  Only locations of the provided type (or derived type) will be returned.</param>
@@ -459,6 +509,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load multiple assets
         /// </summary>
+        /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="locations">The locations of the assets.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <returns>The operation handle for the request.</returns>
@@ -474,6 +525,7 @@ namespace UnityEngine.AddressableAssets
         /// If any fail, all successful loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.
         /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
+        /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="locations">The locations of the assets.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <returns>The operation handle for the request.</returns>
@@ -486,6 +538,7 @@ namespace UnityEngine.AddressableAssets
         /// Load multiple assets, based on list of locations provided.
         /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
+        /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="locations">The locations of the assets.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <param name="releaseDependenciesOnFailure">
@@ -504,6 +557,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load mutliple assets
         /// </summary>
+        /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="keys">List of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
@@ -523,11 +577,31 @@ namespace UnityEngine.AddressableAssets
         /// .Result will be null, and .Status will be Failed.
         /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
+        /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="keys">List of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete]
         public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<object> keys, Action<TObject> callback, MergeMode mode)
+        {
+            return m_Addressables.LoadAssetsAsync(keys, callback, mode, true);
+        }
+
+        /// <summary>
+        /// Load multiple assets.
+        /// Each key in the provided list will be translated into a list of locations.  Those many lists will be combined
+        /// down to one based on the provided MergeMode.
+        /// If any locations from the final list fail, all successful loads and dependencies will be released.  The returned
+        /// .Result will be null, and .Status will be Failed.
+        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// </summary>
+        /// <typeparam name="TObject">The type of the assets.</typeparam>
+        /// <param name="keys">List of keys for the locations.</param>
+        /// <param name="callback">Callback Action that is called per load operation.</param>
+        /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IEnumerable keys, Action<TObject> callback, MergeMode mode)
         {
             return m_Addressables.LoadAssetsAsync(keys, callback, mode, true);
         }
@@ -538,7 +612,7 @@ namespace UnityEngine.AddressableAssets
         /// down to one based on the provided MergeMode.
         /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
-        /// <param name="keys">List of keys for the locations.</param>
+        /// <param name="keys">IEnumerable set of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
         /// <param name="releaseDependenciesOnFailure">
@@ -549,7 +623,30 @@ namespace UnityEngine.AddressableAssets
         /// When true, op does not need to be released if anything fails, when false, it must always be released.
         /// </param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete]
         public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<object> keys, Action<TObject> callback, MergeMode mode, bool releaseDependenciesOnFailure)
+        {
+            return m_Addressables.LoadAssetsAsync(keys, callback, mode, releaseDependenciesOnFailure);
+        }
+        
+        /// <summary>
+        /// Load multiple assets.
+        /// Each key in the provided list will be translated into a list of locations.  Those many lists will be combined
+        /// down to one based on the provided MergeMode.
+        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// </summary>
+        /// <param name="keys">IEnumerable set of keys for the locations.</param>
+        /// <param name="callback">Callback Action that is called per load operation.</param>
+        /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
+        /// <param name="releaseDependenciesOnFailure">
+        /// If all matching locations succeed, this parameter is ignored.
+        /// When true, if any matching location fails, all loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.
+        /// When false, if any matching location fails, the returned .Result will be an IList of size equal to the number of locations attempted.  Any failed location will
+        /// correlate to a null in the IList, while successful loads will correlate to a TObject in the list. The .Status will still be Failed.
+        /// When true, op does not need to be released if anything fails, when false, it must always be released.
+        /// </param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IEnumerable keys, Action<TObject> callback, MergeMode mode, bool releaseDependenciesOnFailure)
         {
             return m_Addressables.LoadAssetsAsync(keys, callback, mode, releaseDependenciesOnFailure);
         }
@@ -558,6 +655,7 @@ namespace UnityEngine.AddressableAssets
         /// Load mutliple assets
         /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
+        /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="key">Key for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <returns>The operation handle for the request.</returns>
@@ -573,6 +671,7 @@ namespace UnityEngine.AddressableAssets
         /// If any fail, all successful loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.
         /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
+        /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="key">Key for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation (per loaded asset).</param>
         /// <returns>The operation handle for the request.</returns>
@@ -585,6 +684,7 @@ namespace UnityEngine.AddressableAssets
         /// Load all assets that match the provided key.
         /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
         /// </summary>
+        /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="key">Key for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation (per loaded asset).</param>
         /// <param name="releaseDependenciesOnFailure">
@@ -686,6 +786,17 @@ namespace UnityEngine.AddressableAssets
         {
             return m_Addressables.GetDownloadSizeAsync(key);
         }
+        /// <summary>
+        /// Determines the required download size, dependencies included, for the specified <paramref name="key"/>.
+        /// Cached assets require no download and thus their download size will be 0.  The Result of the operation
+        /// is the download size in bytes.
+        /// </summary>
+        /// <returns>The operation handle for the request.</returns>
+        /// <param name="key">The key of the asset(s) to get the download size of.</param>
+        public static AsyncOperationHandle<long> GetDownloadSizeAsync(string key)
+        {
+            return m_Addressables.GetDownloadSizeAsync((object)key);
+        }
 
         /// <summary>
         /// Determines the required download size, dependencies included, for the specified <paramref name="keys"/>.
@@ -694,7 +805,20 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <returns>The operation handle for the request.</returns>
         /// <param name="keys">The keys of the asset(s) to get the download size of.</param>
+        [Obsolete]
         public static AsyncOperationHandle<long> GetDownloadSizeAsync(IList<object> keys)
+        {
+            return m_Addressables.GetDownloadSizeAsync(keys);
+        }
+
+        /// <summary>
+        /// Determines the required download size, dependencies included, for the specified <paramref name="keys"/>.
+        /// Cached assets require no download and thus their download size will be 0.  The Result of the operation
+        /// is the download size in bytes.
+        /// </summary>
+        /// <returns>The operation handle for the request.</returns>
+        /// <param name="keys">The keys of the asset(s) to get the download size of.</param>
+        public static AsyncOperationHandle<long> GetDownloadSizeAsync(IEnumerable keys)
         {
             return m_Addressables.GetDownloadSizeAsync(keys);
         }
@@ -743,7 +867,20 @@ namespace UnityEngine.AddressableAssets
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
         /// <param name="autoReleaseHandle">Automatically releases the handle on completion</param>
         /// <returns>The AsyncOperationHandle for the dependency load.</returns>
+        [Obsolete]
         public static AsyncOperationHandle DownloadDependenciesAsync(IList<object> keys, MergeMode mode, bool autoReleaseHandle = false)
+        {
+            return m_Addressables.DownloadDependenciesAsync(keys, mode, autoReleaseHandle);
+        }
+        /// <summary>
+        /// Downloads dependencies of assets marked with the specified labels or addresses.
+        /// See the [DownloadDependenciesAsync](../manual/DownloadDependenciesAsync.html) documentation for more details.
+        /// </summary>
+        /// <param name="keys">List of keys for the locations.</param>
+        /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
+        /// <param name="autoReleaseHandle">Automatically releases the handle on completion</param>
+        /// <returns>The AsyncOperationHandle for the dependency load.</returns>
+        public static AsyncOperationHandle DownloadDependenciesAsync(IEnumerable keys, MergeMode mode, bool autoReleaseHandle = false)
         {
             return m_Addressables.DownloadDependenciesAsync(keys, mode, autoReleaseHandle);
         }
@@ -773,9 +910,30 @@ namespace UnityEngine.AddressableAssets
         /// is initializing or updating.
         /// </summary>
         /// <param name="keys">The keys to clear the cache for.</param>
+        [Obsolete]
         public static void ClearDependencyCacheAsync(IList<object> keys)
         {
             m_Addressables.ClearDependencyCacheAsync(keys, true);
+        }
+        
+        /// <summary>
+        /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
+        /// is initializing or updating.
+        /// </summary>
+        /// <param name="keys">The keys to clear the cache for.</param>
+        public static void ClearDependencyCacheAsync(IEnumerable keys)
+        {
+            m_Addressables.ClearDependencyCacheAsync(keys, true);
+        }
+        
+        /// <summary>
+        /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
+        /// is initializing or updating.
+        /// </summary>
+        /// <param name="keys">The key to clear the cache for.</param>
+        public static void ClearDependencyCacheAsync(string key)
+        {
+            m_Addressables.ClearDependencyCacheAsync((object)key, true);
         }
 
         /// <summary>
@@ -809,9 +967,34 @@ namespace UnityEngine.AddressableAssets
         /// <param name="keys">The keys to clear the cache for.</param>
         /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
         /// <returns>The operation handle for the request.</returns>
+        [Obsolete]
         public static AsyncOperationHandle<bool> ClearDependencyCacheAsync(IList<object> keys, bool autoReleaseHandle)
         {
             return m_Addressables.ClearDependencyCacheAsync(keys, autoReleaseHandle);
+        }
+
+        /// <summary>
+        /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
+        /// is initializing or updating.
+        /// </summary>
+        /// <param name="keys">The keys to clear the cache for.</param>
+        /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<bool> ClearDependencyCacheAsync(IEnumerable keys, bool autoReleaseHandle)
+        {
+            return m_Addressables.ClearDependencyCacheAsync(keys, autoReleaseHandle);
+        }
+
+        /// <summary>
+        /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
+        /// is initializing or updating.
+        /// </summary>
+        /// <param name="keys">The keys to clear the cache for.</param>
+        /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<bool> ClearDependencyCacheAsync(string key, bool autoReleaseHandle)
+        {
+            return m_Addressables.ClearDependencyCacheAsync((object)key, autoReleaseHandle);
         }
 
         /// <summary>
@@ -1020,6 +1203,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load scene.
+        /// See the [LoadSceneAsync](../manual/LoadSceneAsync.html) documentation for more details.
         /// </summary>
         /// <param name="key">The key of the location of the scene to load.</param>
         /// <param name="loadMode">Scene load mode.</param>
@@ -1033,6 +1217,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load scene.
+        /// See the [LoadSceneAsync](../manual/LoadSceneAsync.html) documentation for more details.
         /// </summary>
         /// <param name="location">The location of the scene to load.</param>
         /// <param name="loadMode">Scene load mode.</param>

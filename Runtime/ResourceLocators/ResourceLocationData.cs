@@ -55,6 +55,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// <param name="keys">Array of keys for the location.  This must contain at least one item.</param>
         /// <param name="id">The internal id.</param>
         /// <param name="provider">The provider id.</param>
+        /// <param name="t">The resource object type.</param>
         /// <param name="dependencies">Optional array of dependencies.</param>
         public ResourceLocationData(string[] keys, string id, Type provider, Type t, string[] dependencies = null)
         {

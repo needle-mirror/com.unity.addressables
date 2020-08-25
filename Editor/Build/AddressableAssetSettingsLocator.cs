@@ -177,6 +177,26 @@ namespace UnityEditor.AddressableAssets.Settings
 
             if (locations.Count == 0)
             {
+                keyStr = AssetDatabase.GUIDToAssetPath(key as string);
+                if (!string.IsNullOrEmpty(keyStr))
+                {
+                    int slash = keyStr.LastIndexOf('/');
+                    while (slash > 0)
+                    {
+                        keyStr = keyStr.Substring(0, slash);
+                        var parentFolderKey = AssetDatabase.AssetPathToGUID(keyStr);
+                        if (!string.IsNullOrEmpty(parentFolderKey) && m_keyToEntries.ContainsKey(parentFolderKey))
+                        {
+                            locations.Add(new ResourceLocationBase(key as string, AssetDatabase.GUIDToAssetPath(key as string), typeof(AssetDatabaseProvider).FullName, type));
+                            break;
+                        }
+                        slash = keyStr.LastIndexOf('/');
+                    }
+                }
+            }
+
+            if (locations.Count == 0)
+            {
                 locations = null;
                 m_Cache.Add(cacheKey, locations);
                 return false;

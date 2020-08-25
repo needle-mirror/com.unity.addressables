@@ -69,7 +69,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (target == null)
                 {
                     guid = SetSingleAsset(property, null, null);
-                    if(property.serializedObject.targetObjects.Length > 1)
+                    if (property.serializedObject.targetObjects.Length > 1)
                         return SetMainAssets(property, null, null, fieldInfo);
                     return true;
                 }
@@ -98,7 +98,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
 
                 guid = SetSingleAsset(property, target, subObject);
-                
+
                 var success = true;
                 if (property.serializedObject.targetObjects.Length > 1)
                 {
@@ -142,17 +142,17 @@ namespace UnityEditor.AddressableAssets.GUI
             return guid;
         }
 
-        internal bool SetMainAssets(SerializedProperty property, Object asset, Object subObject ,FieldInfo propertyField)
+        internal bool SetMainAssets(SerializedProperty property, Object asset, Object subObject , FieldInfo propertyField)
         {
             var allsuccess = true;
             foreach (var targetObj in property.serializedObject.targetObjects)
             {
                 var serializeObjectMulti = new SerializedObject(targetObj);
-                SerializedProperty sp = serializeObjectMulti.FindProperty(property.name);
+                SerializedProperty sp = serializeObjectMulti.FindProperty(property.propertyPath);
                 string labelText = m_label.text;
                 var assetRefObject =
                     sp.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
-                if (assetRefObject != null )
+                if (assetRefObject != null)
                 {
                     Undo.RecordObject(targetObj, "Assign Asset Reference");
                     var success = assetRefObject.SetEditorAsset(asset);
@@ -482,7 +482,7 @@ namespace UnityEditor.AddressableAssets.GUI
             var objNames = new string[subAssets.Count];
             bool multipleSubassets = false;
             var selIndex = 0;
-            
+
             // Get currently selected subasset
             for (int i = 0; i < subAssets.Count; i++)
             {
@@ -491,7 +491,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (objName.EndsWith("(Clone)"))
                     objName = objName.Replace("(Clone)", "");
                 objNames[i] = objName;
-                
+
                 // Check if targetObjects have multiple different selected
                 if (!multipleSubassets)
                     multipleSubassets = CheckTargetObjectsSubassetsAreDifferent(property, objName, i, ref selIndex);
@@ -500,20 +500,20 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             // Do custom popup with scroll to pick subasset
-            var subassetPopup = new SubassetPopup(selIndex,objNames,subAssets,property,this);
-            
+            var subassetPopup = new SubassetPopup(selIndex, objNames, subAssets, property, this);
+
             bool isPickerPressed = Event.current.type == EventType.MouseDown && Event.current.button == 0 && pickerRect.Contains(Event.current.mousePosition);
             if (isPickerPressed)
-            { 
+            {
                 PopupWindow.Show(objRect, subassetPopup);
             }
-            
+
             // Show selected name
             GUIContent nameSelected = new GUIContent("--");
             if (!multipleSubassets)
                 nameSelected.text = objNames[subassetPopup.SelectedIndex];
             UnityEngine.GUI.Box(objRect, nameSelected, EditorStyles.objectField);
-            
+
 #if UNITY_2019_1_OR_NEWER
             // Draw picker arrow
             DrawCaret(pickerRect);
@@ -521,13 +521,12 @@ namespace UnityEditor.AddressableAssets.GUI
             return assetDropDownRect;
         }
 
-        private bool CheckTargetObjectsSubassetsAreDifferent(SerializedProperty property, string objName, int currentIndex,ref int selIndex)
+        private bool CheckTargetObjectsSubassetsAreDifferent(SerializedProperty property, string objName, int currentIndex, ref int selIndex)
         {
-            
             foreach (var targetObject in property.serializedObject.targetObjects)
             {
                 var serializeObjectMulti = new SerializedObject(targetObject);
-                var sp = serializeObjectMulti.FindProperty(property.name);
+                var sp = serializeObjectMulti.FindProperty(property.propertyPath);
                 string labelText = m_label.text;
                 var assetRefObject =
                     sp.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
@@ -545,20 +544,21 @@ namespace UnityEditor.AddressableAssets.GUI
             return false;
         }
 
-        internal bool SetSubAssets(SerializedProperty property,Object subAsset, FieldInfo propertyField)
+        internal bool SetSubAssets(SerializedProperty property, Object subAsset, FieldInfo propertyField)
         {
             bool valueChanged = false;
             string spriteName = null;
-            if (subAsset != null){
+            if (subAsset != null)
+            {
                 spriteName = subAsset.name;
                 if (spriteName.EndsWith("(Clone)"))
                     spriteName = spriteName.Replace("(Clone)", "");
             }
-            
+
             foreach (var t in property.serializedObject.targetObjects)
             {
                 var serializeObjectMulti = new SerializedObject(t);
-                var sp = serializeObjectMulti.FindProperty(property.name);
+                var sp = serializeObjectMulti.FindProperty(property.propertyPath);
                 string labelText = m_label.text;
                 var assetRefObject =
                     sp.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
@@ -584,11 +584,12 @@ namespace UnityEditor.AddressableAssets.GUI
             var nameToUse = m_AssetName;
             string labelText = m_label.text;
             var currentRef = property.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
-            if(property.serializedObject.targetObjects.Length > 1){
+            if (property.serializedObject.targetObjects.Length > 1)
+            {
                 foreach (var t in property.serializedObject.targetObjects)
                 {
                     var serializeObjectMulti = new SerializedObject(t);
-                    var sp = serializeObjectMulti.FindProperty(property.name);
+                    var sp = serializeObjectMulti.FindProperty(property.propertyPath);
                     var assetRefObject =
                         sp.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
                     if (assetRefObject.AssetGUID != currentRef.AssetGUID)
@@ -664,10 +665,10 @@ namespace UnityEditor.AddressableAssets.GUI
         private AssetReferenceDrawer m_drawer;
         private Vector2 m_scrollPosition;
 
-        internal SubassetPopup(int selIndex,string[] objNames, List<Object> subAssets, SerializedProperty property, AssetReferenceDrawer drawer)
-        { 
+        internal SubassetPopup(int selIndex, string[] objNames, List<Object> subAssets, SerializedProperty property, AssetReferenceDrawer drawer)
+        {
             SelectedIndex = selIndex;
-            m_objNames =objNames;
+            m_objNames = objNames;
             m_property = property;
             m_drawer = drawer;
             m_subAssets = subAssets;
@@ -678,15 +679,15 @@ namespace UnityEditor.AddressableAssets.GUI
             var buttonStyle = new GUIStyle();
             buttonStyle.fontStyle = FontStyle.Normal;
             buttonStyle.fontSize = 12;
-            buttonStyle.contentOffset = new Vector2(10,0);
+            buttonStyle.contentOffset = new Vector2(10, 0);
             buttonStyle.normal.textColor = Color.white;
-            
+
             EditorGUILayout.BeginVertical();
-            m_scrollPosition = EditorGUILayout.BeginScrollView(m_scrollPosition, GUILayout.Width(rect.width),GUILayout.Height(rect.height));
+            m_scrollPosition = EditorGUILayout.BeginScrollView(m_scrollPosition, GUILayout.Width(rect.width), GUILayout.Height(rect.height));
 
             for (int i = 0; i < m_objNames.Length; i++)
             {
-                if (GUILayout.Button(m_objNames[i],buttonStyle))
+                if (GUILayout.Button(m_objNames[i], buttonStyle))
                 {
                     SelectedIndex = i;
                     if (!m_drawer.SetSubAssets(m_property, m_subAssets[SelectedIndex], m_drawer.fieldInfo))
@@ -893,8 +894,19 @@ namespace UnityEditor.AddressableAssets.GUI
         }
     }
 
+    /// <summary>
+    /// Used to manipulate data from a serialized property.
+    /// </summary>
     public static class SerializedPropertyExtensions
     {
+        /// <summary>
+        /// Used to extract the target object from a serialized property.
+        /// </summary>
+        /// <typeparam name="T">The type of the object to extract.</typeparam>
+        /// <param name="property">The property containing the object.</param>
+        /// <param name="field">The field data.</param>
+        /// <param name="label">The label name.</param>
+        /// <returns>Returns the target object type.</returns>
         public static T GetActualObjectForSerializedProperty<T>(this SerializedProperty property, FieldInfo field, ref string label)
         {
             try
@@ -1033,7 +1045,11 @@ namespace UnityEditor.AddressableAssets.GUI
     [AttributeUsage(AttributeTargets.Class)]
     public class AssetReferenceSurrogateAttribute : Attribute
     {
+        /// <summary>
+        /// The type of the attribute.
+        /// </summary>
         public Type TargetType;
+
         /// <summary>
         /// Construct a new AssetReferenceSurrogateAttribute.
         /// </summary>
@@ -1130,7 +1146,6 @@ namespace UnityEditor.AddressableAssets.GUI
         /// <summary>
         /// Finds surrogate class for an Assembly with a particular TargetType
         /// </summary>
-        /// <param name="assembly">Assembly for which the surrogate must be found</param>
         /// <param name="targetType">Target Type to search</param>
         /// <returns>Type of the surrogate found for the Assembly with a particular Target Type.</returns>
         public static Type GetSurrogate(Type targetType)

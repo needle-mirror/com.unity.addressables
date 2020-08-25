@@ -34,7 +34,7 @@ It may be preferable to manually initialize Addressables for debugging purposes.
 
 The `Result` of this operation is an `IResourceLocator`.  This object contains a list of Addressable keys and a method that can be used to gather the `IResourceLocation(s)` for a given key and asset type.
 
-Full API documentation can be found [here](../api/UnityEngine.AddressableAssets.Initialization.html).
+Full API documentation can be found [here](xref:UnityEngine.AddressableAssets.Initialization).
 
 #### InitializationObjects
 These are `ScriptableObjects` that can be added to an Addressable build to bootstrap some operation as part of Addressables initialization.  For example, the `CacheInitializationObject` is provided by default.  If one of these objects is created and added to the AddressableAssetSettings object, under Initialization Objects, it can be used to automatically setup `Cache` settings at runtime.

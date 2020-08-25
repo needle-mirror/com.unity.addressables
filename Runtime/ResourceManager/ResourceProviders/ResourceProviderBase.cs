@@ -13,7 +13,13 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     /// </summary>
     public abstract class ResourceProviderBase : IResourceProvider, IInitializableObject
     {
+        /// <summary>
+        /// The unique identifier of the provider.
+        /// </summary>
         protected string m_ProviderId;
+        /// <summary>
+        /// The extra behavior of the provider.
+        /// </summary>
         protected ProviderBehaviourFlags m_BehaviourFlags = ProviderBehaviourFlags.None;
 
         /// <inheritdoc/>
@@ -41,7 +47,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             return GetDefaultType(location).IsAssignableFrom(t);
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Converts information about the resource provider to a formatted string.
+        /// </summary>
+        /// <returns>Returns information about the resource provider.</returns>
         public override string ToString()
         {
             return ProviderId;
@@ -52,7 +61,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// </summary>
         /// <param name="location">The location of the object</param>
         /// <param name="obj">The object to release.</param>
-        /// <returns></returns>
         public virtual void Release(IResourceLocation location, object obj)
         {
         }

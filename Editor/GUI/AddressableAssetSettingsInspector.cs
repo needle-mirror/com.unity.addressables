@@ -141,7 +141,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         if(currentProfileIndex != m_CurrentProfileIndex)
                             m_QueuedChanges.Add(() => m_CurrentProfileIndex = currentProfileIndex);
                     }
-                    currentProfileIndex = EditorGUILayout.Popup(m_ProfileInUse, m_CurrentProfileIndex, profileNames.ToArray());
+                    currentProfileIndex = EditorGUILayout.Popup(m_ProfileInUse, currentProfileIndex, profileNames.ToArray());
                     if(currentProfileIndex != m_CurrentProfileIndex)
                         m_QueuedChanges.Add(() => m_CurrentProfileIndex = currentProfileIndex);
                     

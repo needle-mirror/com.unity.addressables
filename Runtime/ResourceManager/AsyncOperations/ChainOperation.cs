@@ -65,6 +65,10 @@ namespace UnityEngine.ResourceManagement
         {
             get
             {
+                DownloadStatus downloadStatus = GetDownloadStatus(new HashSet<object>());
+                if (!downloadStatus.IsDone && downloadStatus.DownloadedBytes == 0)
+                    return 0.0f;
+
                 float total = 0f;
                 int numberOfOps = 2;
 
@@ -143,6 +147,10 @@ namespace UnityEngine.ResourceManagement
         {
             get
             {
+                DownloadStatus downloadStatus = GetDownloadStatus(new HashSet<object>());
+                if (!downloadStatus.IsDone && downloadStatus.DownloadedBytes == 0)
+                    return 0.0f;
+
                 float total = 0f;
                 int numberOfOps = 2;
 

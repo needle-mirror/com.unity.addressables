@@ -147,6 +147,9 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Is a sub asset.  For example an asset in an addressable folder.
         /// </summary>
         public bool IsSubAsset { get; set; }
+        /// <summary>
+        /// Stores a reference to the parent entry. Only used if the asset is a sub asset.
+        /// </summary>
         public AddressableAssetEntry ParentEntry { get; set; }
         bool m_CheckedIsScene;
         bool m_IsScene;

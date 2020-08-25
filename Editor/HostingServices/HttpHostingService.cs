@@ -10,16 +10,22 @@ namespace UnityEditor.AddressableAssets.HostingServices
 {
     // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
     /// <summary>
-    /// HTTP implemenation of hosting service.
+    /// HTTP implementation of hosting service.
     /// </summary>
     public class HttpHostingService : BaseHostingService
     {
         /// <summary>
-        /// Enum helper for standard Http result codes
+        /// Options for standard Http result codes
         /// </summary>
         protected enum ResultCode
         {
+            /// <summary>
+            /// Use to indicate that the request succeeded.
+            /// </summary>
             Ok = 200,
+            /// <summary>
+            /// Use to indicate that the requested resource could not be found.
+            /// </summary>
             NotFound = 404
         }
 
@@ -112,7 +118,13 @@ namespace UnityEditor.AddressableAssets.HostingServices
             ConfigureHttpListener();
             MyHttpListener.Start();
             MyHttpListener.BeginGetContext(HandleRequest, null);
-            Log("Started. Listening on port {0}", HostingServicePort);
+
+            var count = HostingServiceContentRoots.Count;
+            Log("Started. Listening on port {0}. Hosting {1} folder{2}.", HostingServicePort, count, count > 1 ? "s": string.Empty);
+            foreach (var root in HostingServiceContentRoots)
+            {
+                Log("Hosting : {0}", root);
+            }
         }
 
         /// <inheritdoc/>
@@ -132,7 +144,12 @@ namespace UnityEditor.AddressableAssets.HostingServices
                 if (newPort != HostingServicePort)
                 {
                     if (IsPortAvailable(newPort))
+                    {
                         ResetListenPort(newPort);
+                        var settings = AddressableAssetSettingsDefaultObject.Settings;
+                        if (settings != null)
+                            settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, false, true);
+                    }
                     else
                         LogError("Cannot listen on port {0}; port is in use", newPort);
                 }
@@ -270,9 +287,9 @@ namespace UnityEditor.AddressableAssets.HostingServices
         }
 
         /// <summary>
-        /// Sets the status code to 404 on the given <see cref="HttpListenerContext"/> object
+        /// Sets the status code to 404 on the given <c>HttpListenerContext</c> object.
         /// </summary>
-        /// <param name="context"></param>
+        /// <param name="context">The object to modify.</param>
         protected virtual void Return404(HttpListenerContext context)
         {
             context.Response.StatusCode = 404;

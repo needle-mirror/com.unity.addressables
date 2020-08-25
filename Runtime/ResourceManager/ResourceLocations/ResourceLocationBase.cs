@@ -81,6 +81,7 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
         /// <param name="name">The name of the location.  This is usually set to the primary key, or "address" of the location.</param>
         /// <param name="id">The internal id of the location.  This is used by the IResourceProvider to identify the object to provide.  For example this may contain the file path or url of an asset.</param>
         /// <param name="providerId">The provider id.  This is set to the FullName of the type of the provder class.</param>
+        /// <param name="t">The type of the object to provide.</param>
         /// <param name="dependencies">Locations for the dependencies of this location.</param>
         public ResourceLocationBase(string name, string id, string providerId, Type t, params IResourceLocation[] dependencies)
         {

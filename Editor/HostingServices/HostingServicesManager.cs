@@ -301,7 +301,6 @@ namespace UnityEditor.AddressableAssets.HostingServices
             }
         }
 
-        /// <inheritdoc/>
         /// <summary> Ensure object is ready for serialization, and calls <see cref="IHostingService.OnBeforeSerialize"/> methods
         /// on all managed <see cref="IHostingService"/> instances
         /// </summary>
@@ -320,7 +319,6 @@ namespace UnityEditor.AddressableAssets.HostingServices
                 m_RegisteredServiceTypeRefs.Add(TypeToClassRef(type));
         }
 
-        /// <inheritdoc/>
         /// <summary> Ensure object is ready for serialization, and calls <see cref="IHostingService.OnBeforeSerialize"/> methods
         /// on all managed <see cref="IHostingService"/> instances
         /// </summary>

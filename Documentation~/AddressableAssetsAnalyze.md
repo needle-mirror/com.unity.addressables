@@ -11,7 +11,7 @@ The Analyze window displays a list of Analyze rules, along with the following op
 * Fix Selected Rules
 
 ### The analyze operation
-The analyze operation is the information-gathering step of the rule. Running this action on a rule or set of rules gathers data about the build, dependency maps, and more. Each rule is responsible for gathering the desired data and reporting it back as a list of [`AnalyzeResult`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.AnalyzeResult.html) objects.
+The analyze operation is the information-gathering step of the rule. Running this action on a rule or set of rules gathers data about the build, dependency maps, and more. Each rule is responsible for gathering the desired data and reporting it back as a list of [`AnalyzeResult`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.AnalyzeResult) objects.
 
 No action should be taken to modify any data or the state of the Project during the analyze step. Based on the data gathered in this step, the [fix](#the-fix-operation) operation may be the appropriate course of action. Some rules, however, only contain an analyze step, as no reasonably appropriate and universal action can be taken based on the information gathered. [Check Scene to Addressable Duplicate Dependencies](#check-scene-to-addressable-duplicate-dependencies) and [Check Resources to Addressable Duplicate Dependencies](#check-resources-to-addressable-duplicate-dependencies) are examples of such rules.
 
@@ -28,7 +28,7 @@ For **Fixable Rules**, you may choose to run the fix operation. This uses data g
 ## Provided Analyze rules
 ### Fixable rules
 #### Check Duplicate Bundle Dependencies
-This rule checks for potentially duplicated assets, by scanning all groups with [`BundledAssetGroupSchemas`](../api/UnityEditor.AddressableAssets.Settings.GroupSchemas.BundledAssetGroupSchema.html?q=BundledAssetGroupSchemas) and projecting the asset group layout. This essentially requires triggering a full build, so this check is time-consuming and performance-intensive.  
+This rule checks for potentially duplicated assets, by scanning all groups with [`BundledAssetGroupSchemas`](xref:UnityEditor.AddressableAssets.Settings.GroupSchemas.BundledAssetGroupSchema) and projecting the asset group layout. This essentially requires triggering a full build, so this check is time-consuming and performance-intensive.  
 
 **Issues**: Duplicated assets result from assets in different groups sharing dependencies, for example two Prefabs that share a material existing in different Addressable groups. That material (and any of its dependencies) would be pulled into both groups containing the Prefabs. To prevent this, the material must be marked as Addressable, either with one of the Prefabs, or in its own space, thereby putting the material and its dependencies in a separate Addressable group.  
 
@@ -69,23 +69,23 @@ Data gathered by this rule does not indicate any particular issues.  It is purel
 Each unique Project may require additional Analyze rules beyond what comes pre-packaged. The Addressable Assets System allows you to create your own custom rule classes. 
 
 ### AnalyzeRule objects
-Create a new child class of the [`AnalyzeRule`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.html) class, overriding the following properties: 
+Create a new child class of the [`AnalyzeRule`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule) class, overriding the following properties: 
 
-* [`CanFix`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.html#UnityEditor_AddressableAssets_Build_AnalyzeRules_AnalyzeRule_CanFix) tells Analyze if the rule is deemed fixable or not.
-* [`ruleName`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.html#UnityEditor_AddressableAssets_Build_AnalyzeRules_AnalyzeRule_ruleName) is the display name you'll see for this rule in the **Analyze window**.
+* [`CanFix`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.CanFix) tells Analyze if the rule is deemed fixable or not.
+* [`ruleName`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.ruleName) is the display name you'll see for this rule in the **Analyze window**.
 
 You'll also need to override the following methods, which are detailed below: 
 
-* [`List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.html?q=refreshanalysis#UnityEditor_AddressableAssets_Build_AnalyzeRules_AnalyzeRule_RefreshAnalysis_UnityEditor_AddressableAssets_Settings_AddressableAssetSettings_)
-* [`void FixIssues(AddressableAssetSettings settings)`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.html?q=refreshanalysis#UnityEditor_AddressableAssets_Build_AnalyzeRules_AnalyzeRule_FixIssues_UnityEditor_AddressableAssets_Settings_AddressableAssetSettings_)
-* [`void ClearAnalysis()`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.html?q=refreshanalysis#UnityEditor_AddressableAssets_Build_AnalyzeRules_AnalyzeRule_ClearAnalysis)
+* [`List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.RefreshAnalysis(UnityEditor.AddressableAssets.Settings.AddressableAssetSettings))
+* [`void FixIssues(AddressableAssetSettings settings)`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.FixIssues(UnityEditor.AddressableAssets.Settings.AddressableAssetSettings))
+* [`void ClearAnalysis()`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.ClearAnalysis)
 
 **Note**: If your rule is designated unfixable, you don't have to override the `FixIssues` method.
 
 #### RefreshAnalysis
-This is your analyze operation. In this method, perform any calculations you'd like and cache any data you might need for a potential fix. The return value is a `List<AnalyzeResult>` list. After you'd gathered your data, create a new [`AnalyzeResult`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.AnalyzeResult.html) for each entry in your analysis, containing the data as a string for the first parameter and a [`MessageType`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.AnalyzeResult.html?q=messagetype#UnityEditor_AddressableAssets_Build_AnalyzeRules_AnalyzeRule_AnalyzeResult_severity) for the second (to optionally designate the message type as a warning or error). Return the list of objects you create.
+This is your analyze operation. In this method, perform any calculations you'd like and cache any data you might need for a potential fix. The return value is a `List<AnalyzeResult>` list. After you'd gathered your data, create a new [`AnalyzeResult`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.AnalyzeResult) for each entry in your analysis, containing the data as a string for the first parameter and a [`MessageType`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.AnalyzeResult.severity) for the second (to optionally designate the message type as a warning or error). Return the list of objects you create.
 
-If you need to make child elements in the `TreeView` for a particular [`AnalyzeResult`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.AnalyzeResult.html) object, you can delineate the parent item and any children with [`kDelimiter`](../api/UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.html?q=kdelimiter#UnityEditor_AddressableAssets_Build_AnalyzeRules_AnalyzeRule_kDelimiter). Include the delimiter between the parent and child items.
+If you need to make child elements in the `TreeView` for a particular [`AnalyzeResult`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.AnalyzeResult) object, you can delineate the parent item and any children with [`kDelimiter`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.kDelimiter). Include the delimiter between the parent and child items.
 
 #### FixIssues
 This is your fix operation. If there is an appropriate action to take in response to the analyze step, execute it here.

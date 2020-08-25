@@ -39,12 +39,13 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             return m_Operation;
         }
 
-        /// <inheritdoc/>
+        ///<inheritdoc cref="Scene"/>
         public override int GetHashCode()
         {
             return Scene.GetHashCode();
         }
 
+        /// <inheritdoc cref="Scene"/>
         public override bool Equals(object obj)
         {
             if (!(obj is SceneInstance))

@@ -10,12 +10,12 @@ To migrate from this approach, follow these steps:
 
 1. Replace your direct references to objects with asset references (for example, `public GameObject directRefMember;` becomes `public AssetReference AssetRefMember;`).
 2. Drag assets onto the appropriate component’s Inspector, as you would for a direct reference.
-3. If you'd like to load an asset based on an object rather than a string name, instantiate it directly from the [`AssetReference`](../api/UnityEngine.AddressableAssets.AssetReference.html) object you created in your setup (for example, `AssetRefMember.LoadAssetAsync<GameObject>();` or `AssetRefMember.InstantiateAsync(pos, rot);`).
+3. If you'd like to load an asset based on an object rather than a string name, instantiate it directly from the [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) object you created in your setup (for example, `AssetRefMember.LoadAssetAsync<GameObject>();` or `AssetRefMember.InstantiateAsync(pos, rot);`).
 
 **Note**: The Addressable Asset system loads assets asynchronously. When you update your direct references to asset references, you must also update your code to operate asynchronously.
 
 ### The Resource folders method
-When you mark an asset in a `Resources` folder as Addressable, the system automatically moves the asset from the `Resources` folder to a new folder in your project named `Resources_moved`. The default address for a moved asset is the old path, omitting the folder name. For example, your loading code might change from `Resources.LoadAsync<GameObject>("desert/tank.prefab");` to [`Addressables.LoadAssetAsync<GameObject>("desert/tank.prefab");`](../api/UnityEngine.AddressableAssets.Addressables.html#UnityEngine_AddressableAssets_Addressables_LoadAssetsAsync__1_System_Collections_Generic_IList_UnityEngine_ResourceManagement_ResourceLocations_IResourceLocation__System_Action___0__).
+When you mark an asset in a `Resources` folder as Addressable, the system automatically moves the asset from the `Resources` folder to a new folder in your project named `Resources_moved`. The default address for a moved asset is the old path, omitting the folder name. For example, your loading code might change from `Resources.LoadAsync<GameObject>("desert/tank.prefab");` to [`Addressables.LoadAssetAsync<GameObject>("desert/tank.prefab");`](xref:UnityEngine.AddressableAssets.Addressables.LoadAssetsAsync``1(System.Collections.Generic.IList{UnityEngine.ResourceManagement.ResourceLocations.IResourceLocation},System.Action{``0})).
 
 **Note**: Some functionality of the [Resources](https://docs.unity3d.com/ScriptReference/Resources.html "Resources") class may not be supported directly after modifying your project to use Addressable Assets.
 

@@ -21,7 +21,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.Data
                 return m_OnRecordEvent(e);
             return false;
         }
-        
+
         public bool ProcessEvent(DiagnosticEvent diagnosticEvent, int sessionId)
         {
             var session = GetPlayerSession(sessionId, true);

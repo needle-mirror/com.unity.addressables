@@ -94,6 +94,21 @@ namespace UnityEditor.AddressableAssets.Build
         }
     }
 
+    /// <summary>
+    /// Cached state of asset bundles.
+    /// </summary>
+    [Serializable]
+    public class CachedBundleState
+    {
+        /// <summary>
+        /// The name of the cached asset states bundle file.
+        /// </summary>
+        public string bundleFileId;
+        /// <summary>
+        /// The cached bundle state data.
+        /// </summary>
+        public object data;
+    }
 
     /// <summary>
     /// Data stored with each build that is used to generated content updates.
@@ -124,6 +139,12 @@ namespace UnityEditor.AddressableAssets.Build
         /// </summary>
         [SerializeField]
         public string remoteCatalogLoadPath;
+
+        /// <summary>
+        /// Information about asset bundles created for the build.
+        /// </summary>
+        [SerializeField]
+        public CachedBundleState[] cachedBundles;
     }
 
     /// <summary>
@@ -296,6 +317,14 @@ namespace UnityEditor.AddressableAssets.Build
                     if (ccEntry != null && ccEntry.Keys != null && ccEntry.Keys.Count > 1 && (ccEntry.Keys[1] as string) != null && !key1ToCCEntries.ContainsKey(ccEntry.Keys[1] as string))
                         key1ToCCEntries[ccEntry.Keys[1] as string] = ccEntry;
 
+                var cachedBundleInfos = new List<CachedBundleState>();
+                foreach (ContentCatalogDataEntry ccEntry in locations)
+                {
+                    if (typeof(IAssetBundleResource).IsAssignableFrom(ccEntry.ResourceType))
+                        cachedBundleInfos.Add(new CachedBundleState() { bundleFileId = ccEntry.InternalId, data = ccEntry.Data });
+                }
+
+
                 IList<CachedAssetState> cachedInfos = new List<CachedAssetState>();
                 foreach (var assetData in dependencyData.AssetInfo)
                 {
@@ -326,7 +355,8 @@ namespace UnityEditor.AddressableAssets.Build
                     cachedInfos = cachedInfos.ToArray(),
                     playerVersion = playerVersion,
                     editorVersion = Application.unityVersion,
-                    remoteCatalogLoadPath = remoteCatalogPath
+                    remoteCatalogLoadPath = remoteCatalogPath,
+                    cachedBundles = cachedBundleInfos.ToArray()
                 };
                 var formatter = new BinaryFormatter();
                 if (File.Exists(path))

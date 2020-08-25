@@ -64,6 +64,7 @@ namespace UnityEngine.ResourceManagement.Util
         /// <summary>
         /// Release an object.
         /// </summary>
+        /// <param name="typeHash">The hash code of the type.</param>
         /// <param name="obj">The object to release.</param>
         void Release(int typeHash, object obj);
     }
@@ -255,7 +256,10 @@ namespace UnityEngine.ResourceManagement.Util
 
         Type m_CachedType;
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Converts information about the serialized type to a formatted string.
+        /// </summary>
+        /// <returns>Returns information about the serialized type.</returns>
         public override string ToString()
         {
             return Value == null ? "<none>" : Value.Name;
@@ -341,7 +345,11 @@ namespace UnityEngine.ResourceManagement.Util
         public string Data { get { return m_Data; } }
 #pragma warning restore 0649
 
-        /// <inheritdoc/>
+
+        /// <summary>
+        /// Converts information about the initialization data to a formatted string.
+        /// </summary>
+        /// <returns>Returns information about the initialization data.</returns>
         public override string ToString()
         {
             return string.Format("ObjectInitializationData: id={0}, type={1}", m_Id, m_ObjectType);
@@ -350,6 +358,7 @@ namespace UnityEngine.ResourceManagement.Util
         /// <summary>
         /// Create an instance of the defined object.  Initialize will be called on it with the id and data if it implements the IInitializableObject interface.
         /// </summary>
+        /// <typeparam name="TObject">The instance type.</typeparam>
         /// <param name="idOverride">Optional id to assign to the created object.  This only applies to objects that inherit from IInitializableObject.</param>
         /// <returns>Constructed object.  This object will already be initialized with its serialized data and id.</returns>
         public TObject CreateInstance<TObject>(string idOverride = null)

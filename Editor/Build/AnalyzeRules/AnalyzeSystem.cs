@@ -18,16 +18,19 @@ namespace UnityEditor.AddressableAssets.Build
         /// Method used to register any custom AnalyzeRules with the AnalyzeSystem.  This replaces calling into the AnalyzeWindow
         ///  directly to remove logic from the GUI.  The recommended pattern is to create
         /// your rules like so:
+        /// <code>
         ///   class MyRule : AnalyzeRule {}
         ///   [InitializeOnLoad]
         ///   class RegisterMyRule
         ///   {
         ///       static RegisterMyRule()
         ///       {
-        ///           AnalyzeSystem.RegisterNewRule<MyRule>();
+        ///           AnalyzeSystem.RegisterNewRule&lt;MyRule&gt;();
         ///       }
         ///   }
+        /// </code>
         /// </summary>
+        /// <typeparam name="TRule">The rule type.</typeparam>
         public static void RegisterNewRule<TRule>() where TRule : AnalyzeRule, new()
         {
             foreach (var rule in Rules)

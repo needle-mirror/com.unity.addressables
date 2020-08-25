@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -42,6 +43,50 @@ namespace UnityEditor.AddressableAssets.Tests
             var cacheData = ContentUpdateScript.LoadContentState(tempPath);
             Assert.NotNull(cacheData);
             Settings.RemoveGroup(group);
+        }
+        
+        [Test]
+        public void ContentState_WithDisabledGroups_DoesNotInclude_EntriesFromGroup()
+        {
+            var group = Settings.CreateGroup("RemoteStuff", false, false, false, null);
+            var schema = group.AddSchema<BundledAssetGroupSchema>();
+            schema.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kRemoteBuildPath);
+            schema.LoadPath.SetVariableByName(Settings, AddressableAssetSettings.kRemoteLoadPath);
+            schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
+            group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
+
+            Settings.CreateOrMoveEntry(m_AssetGUID, group);
+
+            var group2 = Settings.CreateGroup("LocalStuff", false, false, false, null);
+            var schema2 = group2.AddSchema<BundledAssetGroupSchema>();
+            schema2.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kRemoteBuildPath);
+            schema2.LoadPath.SetVariableByName(Settings, AddressableAssetSettings.kRemoteLoadPath);
+            schema2.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
+            group2.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
+            Settings.CreateOrMoveEntry(m_SceneGuids[0], group2);
+
+
+            var context = new AddressablesDataBuilderInput(Settings);
+
+            var op = Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+
+            Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
+            var cacheData = ContentUpdateScript.LoadContentState(tempPath);
+            Assert.NotNull(cacheData);
+            Assert.NotNull(cacheData.cachedInfos.FirstOrDefault(s => s.asset.guid.ToString() == m_AssetGUID));
+
+            schema.IncludeInBuild = false;
+            context = new AddressablesDataBuilderInput(Settings);
+            op = Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+            Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
+            tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
+            cacheData = ContentUpdateScript.LoadContentState(tempPath);
+            Assert.NotNull(cacheData);
+            Assert.IsNull(cacheData.cachedInfos.FirstOrDefault(s => s.asset.guid.ToString() == m_AssetGUID));
+
+            Settings.RemoveGroup(group);
+            Settings.RemoveGroup(group2);
         }
 
         [Test]
@@ -192,8 +237,16 @@ namespace UnityEditor.AddressableAssets.Tests
             AssetDatabase.DeleteAsset(dynamicAssetPath);
         }
 
+        static IResourceLocator GetLocatorFromCatalog(IEnumerable<string> paths)
+        {
+            foreach (var p in paths)
+                if (p.EndsWith("catalog.json"))
+                    return JsonUtility.FromJson<ContentCatalogData>(File.ReadAllText(p)).CreateLocator();
+            return null;
+        }
+
         [Test]
-        public void BuildContentUpdate()
+        public void WhenContentUpdated_NewCatalogRetains_OldCatalogBundleLoadData()
         {
             var group = Settings.CreateGroup("LocalStuff3", false, false, false, null);
             Settings.BuildRemoteCatalog = true;
@@ -205,17 +258,49 @@ namespace UnityEditor.AddressableAssets.Tests
             schema.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalBuildPath);
             schema.LoadPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalLoadPath);
             schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
+            schema.UseAssetBundleCrc = true;
+            schema.UseAssetBundleCache = true;
             group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
             Settings.CreateOrMoveEntry(m_AssetGUID, group);
             var context = new AddressablesDataBuilderInput(Settings);
 
             var op = Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
-
             Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
+            var origLocator = GetLocatorFromCatalog(op.FileRegistry.GetFilePaths());
+            Assert.NotNull(origLocator);
+
             var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
+            var contentState = ContentUpdateScript.LoadContentState(tempPath);
+            Assert.NotNull(contentState);
+            Assert.NotNull(contentState.cachedBundles);
+            Assert.AreEqual(1, contentState.cachedBundles.Length);
             var buildOp = ContentUpdateScript.BuildContentUpdate(Settings, tempPath);
             Assert.IsNotNull(buildOp);
             Assert.IsTrue(string.IsNullOrEmpty(buildOp.Error));
+
+            var updatedLocator = GetLocatorFromCatalog(buildOp.FileRegistry.GetFilePaths());
+            Assert.IsNotNull(updatedLocator);
+
+            foreach (var k in updatedLocator.Keys)
+            {
+                if (origLocator.Locate(k, typeof(IAssetBundleResource), out var origLocs))
+                {
+                    Assert.IsTrue(updatedLocator.Locate(k, typeof(IAssetBundleResource), out var updatedLocs));
+                    Assert.AreEqual(1, origLocs.Count);
+                    Assert.AreEqual(1, updatedLocs.Count);
+                    var oLoc = origLocs[0];
+                    var uLoc = updatedLocs[0];
+                    Assert.NotNull(oLoc.Data);
+                    Assert.NotNull(uLoc.Data);
+                    var oData = oLoc.Data as AssetBundleRequestOptions;
+                    var uData = uLoc.Data as AssetBundleRequestOptions;
+                    Assert.NotNull(oData);
+                    Assert.NotNull(uData);
+                    Assert.AreEqual(oData.Hash, uData.Hash);
+                    Assert.AreEqual(oData.Crc, uData.Crc);
+                }
+            }
+
             Settings.RemoveGroup(group);
         }
 
@@ -267,6 +352,8 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void BuildContentUpdate_DoesNotDeleteBuiltData()
         {
+            var oldSetting = Settings.BuildRemoteCatalog;
+            Settings.BuildRemoteCatalog = true;
             var group = Settings.CreateGroup("LocalStuff3", false, false, false, null);
             var schema = group.AddSchema<BundledAssetGroupSchema>();
             schema.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalBuildPath);
@@ -282,6 +369,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
             ContentUpdateScript.BuildContentUpdate(Settings, tempPath);
             Assert.IsTrue(Directory.Exists(Addressables.BuildPath));
+            Settings.BuildRemoteCatalog = oldSetting;
         }
 
         [Test]

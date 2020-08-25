@@ -208,11 +208,12 @@ namespace UnityEditor.AddressableAssets.GUI
             var ruleContainers = GatherAllInheritRuleContainers(baseViewItem);
             foreach (var ruleContainer in ruleContainers)
             {
-                if (ruleContainer != null && AnalyzeSystem.AnalyzeData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
-                {
-                    EditorUtility.DisplayProgressBar("Calculating Results for " + ruleContainer.displayName, "", (index / ruleContainers.Count) % 100);
+                if(ruleContainer == null)
+                    continue;
+
+                EditorUtility.DisplayProgressBar("Calculating Analyze Results...", ruleContainer.displayName, (index / (float)ruleContainers.Count));
+                if (AnalyzeSystem.AnalyzeData.Data.ContainsKey(ruleContainer.analyzeRule.ruleName))
                     BuildResults(ruleContainer, AnalyzeSystem.AnalyzeData.Data[ruleContainer.analyzeRule.ruleName]);
-                }
 
                 index++;
             }
@@ -270,13 +271,14 @@ namespace UnityEditor.AddressableAssets.GUI
 
             //Build results tree
             index = 0;
+            int updateFrequency = hashToTreeViewItems.Keys.Count / 10;
             foreach (var hash in hashToTreeViewItems.Keys)
             {
-                EditorUtility.DisplayProgressBar("Building Results Tree.", hashToTreeViewItems[hash].displayName, (index / hashToTreeViewItems.Keys.Count) % 100);
-
                 TreeViewItem item;
                 if (hashToTreeViewItems.TryGetValue(hash, out item))
                 {
+                    if(index % updateFrequency == 0)
+                        EditorUtility.DisplayProgressBar("Building Results Tree...", item.displayName, (index / hashToTreeViewItems.Keys.Count));
                     if ((item as AnalyzeResultsTreeViewItem) != null && hashToTreeViewItems.ContainsKey((item as AnalyzeResultsTreeViewItem).parentHash))
                     {
                         var parent = hashToTreeViewItems[(item as AnalyzeResultsTreeViewItem).parentHash];

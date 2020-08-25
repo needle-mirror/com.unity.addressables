@@ -9,7 +9,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 {
     class EventGraphListView : TreeView
     {
-        class DataStreamEntry : TreeViewItem
+        internal class DataStreamEntry : TreeViewItem
         {
             public GUIContent Content { get; private set; }
             public EventDataSet Entry { get; private set; }
@@ -19,6 +19,8 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                 Content = new GUIContent(dataSet.DisplayName);
             }
         }
+        
+        HashSet<int> m_HiddenEvents = new HashSet<int>();
         Dictionary<int, bool> m_MaximizedState = new Dictionary<int, bool>();
         Func<string, bool> m_FilterFunc;
         IComparer<EventDataSet> m_DataSetComparer;
@@ -53,6 +55,8 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             columnIndexForTreeFoldouts = 1;
         }
 
+        internal bool HasHiddenEvents => m_HiddenEvents.Count > 0;
+
         protected override TreeViewItem BuildRoot()
         {
             var rootDS = m_GetRootDataSetAction();
@@ -70,7 +74,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             List<EventDataSet> entries = new List<EventDataSet>();
             foreach (var e in root.Entry.Children)
             {
-                if (!e.HasDataAfterFrame(visibleStartTime))
+                if (!e.HasDataAfterFrame(visibleStartTime) || m_HiddenEvents.Contains(e.ObjectId))
                     continue;
                 if (m_FilterFunc(e.Graph))
                     entries.Add(e);
@@ -87,6 +91,29 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             }
 
             return root;
+        }
+        
+        internal void UnhideAllHiddenEvents()
+        {
+            m_HiddenEvents.Clear();
+            Reload();
+        }
+
+        protected override void ContextClicked()
+        {
+            var selectedEventIds = GetSelection();
+            GenericMenu menu = new GenericMenu();
+            
+            menu.AddItem(new GUIContent("Hide Selected Event(s)"), false, HideSelectedEvents, selectedEventIds);
+            menu.ShowAsContext();
+        }
+        
+        void HideSelectedEvents(object context)
+        {
+            var selectedEventIds = (IList<int>)context;
+            if (selectedEventIds != null && selectedEventIds.Count > 0)
+                m_HiddenEvents.UnionWith(selectedEventIds);
+            Reload();
         }
 
         protected override float GetCustomRowHeight(int row, TreeViewItem item)
