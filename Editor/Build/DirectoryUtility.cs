@@ -1,4 +1,5 @@
 using System.IO;
+using UnityEditor;
 using UnityEngine;
 
 internal static class DirectoryUtility
@@ -9,7 +10,14 @@ internal static class DirectoryUtility
             return;
 
         if (!onlyIfEmpty || (onlyIfEmpty && Directory.GetFiles(directoryPath).Length == 0 && Directory.GetDirectories(directoryPath).Length == 0))
-            Directory.Delete(directoryPath, recursiveDelete);
+        {
+            // check if the folder is valid in the AssetDatabase before deleting through standard file system
+            string relativePath = directoryPath.Replace(Application.dataPath, "Assets");
+            if (AssetDatabase.IsValidFolder(relativePath))
+                AssetDatabase.DeleteAsset(relativePath);
+            else
+                Directory.Delete(directoryPath, recursiveDelete);
+        }
     }
 
     internal static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)

@@ -97,6 +97,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             aaContext.runtimeData.ProfileEvents = ProjectConfigData.postProfilerEvents;
             aaContext.runtimeData.LogResourceManagerExceptions = aaSettings.buildSettings.LogResourceManagerExceptions;
             aaContext.runtimeData.ProfileEvents = ProjectConfigData.postProfilerEvents;
+            aaContext.runtimeData.MaxConcurrentWebRequests = aaSettings.MaxConcurrentWebRequests;
             aaContext.runtimeData.CatalogLocations.Add(new ResourceLocationData(
                 new[] { ResourceManagerRuntimeData.kCatalogAddress },
                 string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"),

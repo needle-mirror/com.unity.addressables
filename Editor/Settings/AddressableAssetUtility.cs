@@ -18,17 +18,23 @@ namespace UnityEditor.AddressableAssets.Settings
             return path.Replace('\\', '/').ToLower().Contains("/resources/");
         }
 
-        internal static bool GetPathAndGUIDFromTarget(Object t, out string path, ref string guid, out Type mainAssetType)
+        internal static bool GetPathAndGUIDFromTarget(Object target, out string path, out string guid, out Type mainAssetType)
         {
             mainAssetType = null;
-            path = AssetDatabase.GetAssetOrScenePath(t);
+            guid = string.Empty;
+            path = string.Empty;
+            if (target == null)
+                return false;
+            path = AssetDatabase.GetAssetOrScenePath(target);
             if (!IsPathValidForEntry(path))
                 return false;
             guid = AssetDatabase.AssetPathToGUID(path);
             if (string.IsNullOrEmpty(guid))
                 return false;
             mainAssetType = AssetDatabase.GetMainAssetTypeAtPath(path);
-            if (mainAssetType != t.GetType() && !typeof(AssetImporter).IsAssignableFrom(t.GetType()))
+            if (mainAssetType == null)
+                return false;
+            if (mainAssetType != target.GetType() && !typeof(AssetImporter).IsAssignableFrom(target.GetType()))
                 return false;
             return true;
         }
@@ -38,28 +44,36 @@ namespace UnityEditor.AddressableAssets.Settings
             if (string.IsNullOrEmpty(path))
                 return false;
             path = path.ToLower();
+            if (!path.StartsWith("assets") && !IsPathValidPackageAsset(path))
+                return false;
             if (path == CommonStrings.UnityEditorResourcePath ||
                 path == CommonStrings.UnityDefaultResourcePath ||
                 path == CommonStrings.UnityBuiltInExtraPath)
                 return false;
-            var ext = Path.GetExtension(path);
+            string ext = Path.GetExtension(path);
             if (ext == ".cs" || ext == ".js" || ext == ".boo" || ext == ".exe" || ext == ".dll" || ext == ".meta")
                 return false;
             return true;
         }
 
-        internal static bool IsPathAndTypeValidForCatalogEntry(string path)
+        internal static bool IsPathValidPackageAsset(string path)
         {
-            if (!IsPathValidForEntry(path))
-                return false;
-            return MapEditorTypeToRuntimeType(AssetDatabase.GetMainAssetTypeAtPath(path), false) != null;
-        }
+            string convertPath = path.ToLower().Replace("\\", "/");
+            string[] splitPath = convertPath.Split('/');
 
-        internal static bool IsPathAndTypeValidForAddressableEntry(string path)
-        {
-            if (!IsPathValidForEntry(path))
+            if (splitPath.Length < 3)
                 return false;
-            return MapEditorTypeToRuntimeType(AssetDatabase.GetMainAssetTypeAtPath(path), true) != null;
+            if (splitPath[0] != "packages")
+                return false;
+            if (splitPath[1].StartsWith("com.unity."))
+                return false;
+            if (splitPath.Length == 3)
+            {
+                string ext = Path.GetExtension(splitPath[2]);
+                if (ext == ".json" || ext == ".asmdef")
+                    return false;
+            }
+            return true;
         }
 
         static HashSet<Type> validTypes = new HashSet<Type>();
@@ -203,28 +217,25 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        internal static bool SafeMoveResourcesToGroup(AddressableAssetSettings settings, AddressableAssetGroup targetGroup, List<string> paths)
+        internal static bool SafeMoveResourcesToGroup(AddressableAssetSettings settings, AddressableAssetGroup targetGroup, List<string> paths, List<string> guids, bool showDialog = true)
         {
-            var guids = new List<string>();
-            foreach (var p in paths)
+            if (targetGroup == null)
             {
-                guids.Add(AssetDatabase.AssetPathToGUID(p));
+                Debug.LogWarning("No valid group to move Resources to");
+                return false;
             }
-            return SafeMoveResourcesToGroup(settings, targetGroup, paths, guids);
-        }
 
-        internal static bool SafeMoveResourcesToGroup(AddressableAssetSettings settings, AddressableAssetGroup targetGroup, List<string> paths, List<string> guids)
-        {
-            if (guids == null || guids.Count == 0 || paths == null || guids.Count != paths.Count)
+            if (paths == null || paths.Count == 0)
             {
                 Debug.LogWarning("No valid Resources found to move");
                 return false;
             }
 
-            if (targetGroup == null)
+            if (guids == null)
             {
-                Debug.LogWarning("No valid group to move Resources to");
-                return false;
+                guids = new List<string>();
+                foreach (var p in paths)
+                    guids.Add(AssetDatabase.AssetPathToGUID(p));
             }
 
             Dictionary<string, string> guidToNewPath = new Dictionary<string, string>();
@@ -242,7 +253,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 message += newName + "\n";
             }
             message += "\nAre you sure you want to proceed?";
-            if (EditorUtility.DisplayDialog("Move From Resources", message, "Yes", "No"))
+            if (!showDialog || EditorUtility.DisplayDialog("Move From Resources", message, "Yes", "No"))
             {
                 settings.MoveAssetsFromResources(guidToNewPath, targetGroup);
                 return true;

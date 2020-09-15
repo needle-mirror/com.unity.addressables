@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
 using UnityEditor.SceneManagement;
+using UnityEditor.U2D;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -77,6 +79,82 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void CreateCatalogEntries_EditorTypesShouldBeStripped()
+        {
+            var e = Settings.DefaultGroup.GetAssetEntry(m_guid);
+            var entries = new List<ContentCatalogDataEntry>();
+            var providerTypes = new HashSet<Type>();
+            var savedType = e.m_cachedMainAssetType;
+            e.m_cachedMainAssetType = typeof(UnityEditor.AssetImporter);
+            e.CreateCatalogEntries(entries, false, "doesntMatter", null, null, providerTypes);
+            e.m_cachedMainAssetType = savedType;
+            Assert.AreEqual(0, entries.Count);
+        }
+
+        [Test]
+        public void MainAsset_WhenEntryIsForSubAsset_ShouldReturnMainAsset()
+        {
+            var mainAssetEntry = Settings.DefaultGroup.GetAssetEntry(m_guid);
+            var entries = new List<AddressableAssetEntry>();
+            Settings.DefaultGroup.GatherAllAssets(entries, true, true, true);
+
+            var subAssetEntry = entries.FirstOrDefault(e => e.IsSubAsset);
+            Assert.NotNull(subAssetEntry);
+            Assert.AreEqual(mainAssetEntry.MainAsset, subAssetEntry.MainAsset);
+        }
+
+        [Test]
+        public void TargetAsset_WhenEntryIsForMainAsset_ShouldReturnMainAsset()
+        {
+            var entry = Settings.DefaultGroup.GetAssetEntry(m_guid);
+            Assert.AreEqual(entry.MainAsset, entry.TargetAsset);
+        }
+
+        [Test]
+        public void TargetAsset_WhenMainAssetIsSpriteAtlas_ShouldReturnSprite()
+        {
+            var atlasPath = CreateSpriteAtlasWithSprite();
+            var guid = AssetDatabase.AssetPathToGUID(atlasPath);
+            Settings.CreateOrMoveEntry(guid, Settings.DefaultGroup);
+            AssetDatabase.ImportAsset(atlasPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(atlasPath);
+            var sprites = new Sprite[atlas.spriteCount];
+            atlas.GetSprites(sprites);
+
+            var mainAssetEntry = Settings.DefaultGroup.GetAssetEntry(guid);
+            var entries = new List<AddressableAssetEntry>();
+            mainAssetEntry.GatherAllAssets(entries, false, true, true);
+
+            // Assert
+            Assert.AreEqual(sprites.Length, entries.Count);
+            foreach (var entry in entries)
+            {
+                Assert.IsTrue(sprites.Any(s => s.name == entry.TargetAsset.name));
+                Assert.IsTrue(entry.TargetAsset is Sprite);
+            }
+
+            // Cleanup
+            Settings.RemoveAssetEntry(guid);
+            File.Delete(atlasPath);
+        }
+
+        [Test]
+        public void TargetAsset_WhenEntryIsForSubAsset_ShouldReturnSubObject()
+        {
+            var mainAssetEntry = Settings.DefaultGroup.GetAssetEntry(m_guid);
+            var entries = new List<AddressableAssetEntry>();
+            Settings.DefaultGroup.GatherAllAssets(entries, false, true, true);
+            var subObjects = AssetDatabase.LoadAllAssetRepresentationsAtPath(mainAssetEntry.AssetPath);
+            Assert.AreEqual(subObjects.Length, entries.Count);
+            foreach (var entry in entries)
+            {
+                Assert.IsTrue(subObjects.Contains(entry.TargetAsset));
+            }
+        }
+
+        [Test]
         public void WhenClassReferencedByAddressableAssetEntryIsReloaded_CachedMainAssetTypeIsReset()
         {
             // Setup
@@ -98,6 +176,134 @@ namespace UnityEditor.AddressableAssets.Tests
 
             // Cleanup
             AssetDatabase.DeleteAsset(path);
+        }
+
+        [Test]
+        public void GatherAllAssets_WhenResourcesExist_RecurseAllIsFalse_ReturnsEntriesForValidFilesAndTopFoldersOnly()
+        {
+            using (new HideResourceFoldersScope())
+            {
+                var resourcePath = GetAssetPath("Resources");
+                var subFolderPath = resourcePath + "/Subfolder";
+                Directory.CreateDirectory(subFolderPath);
+
+                var r1GUID = CreateAsset(resourcePath + "/testResource1.prefab", "testResource1");
+                var r2GUID = CreateAsset(subFolderPath + "/testResource2.prefab", "testResource2");
+
+                var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+                var resourceEntry = Settings.CreateOrMoveEntry(AddressableAssetEntry.ResourcesName, group, false);
+
+                var entries = new List<AddressableAssetEntry>();
+                resourceEntry.GatherAllAssets(entries, false, false, true);
+
+                // Assert
+                var subFolderGUID = AssetDatabase.AssetPathToGUID(subFolderPath);
+                Assert.AreEqual(2, entries.Count);
+                Assert.IsTrue(entries.Any(e => e.guid == r1GUID));
+                Assert.IsFalse(entries.Any(e => e.guid == r2GUID));
+                Assert.IsTrue(entries.Any(e => e.guid == subFolderGUID));
+
+                // Cleanup
+                Directory.Delete(resourcePath, true);
+            }
+        }
+
+        [Test]
+        public void GatherAllAssets_WhenResourcesExist_RecurseAllIsTrue_ReturnsEntriesRecursivelyForValidFilesOnly()
+        {
+            using (new HideResourceFoldersScope())
+            {
+                var resourcePath = GetAssetPath("Resources");
+                var subFolderPath = resourcePath + "/Subfolder";
+                Directory.CreateDirectory(subFolderPath);
+
+                var r1GUID = CreateAsset(resourcePath + "/testResource1.prefab", "testResource1");
+                var r2GUID = CreateAsset(subFolderPath + "/testResource2.prefab", "testResource2");
+
+                var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+                var resourceEntry = Settings.CreateOrMoveEntry(AddressableAssetEntry.ResourcesName, group, false);
+
+                var entries = new List<AddressableAssetEntry>();
+                resourceEntry.GatherAllAssets(entries, false, true, true);
+
+                // Assert
+                var subFolderGUID = AssetDatabase.AssetPathToGUID(subFolderPath);
+                Assert.AreEqual(2, entries.Count);
+                Assert.IsTrue(entries.Any(e => e.guid == r1GUID));
+                Assert.IsTrue(entries.Any(e => e.guid == r2GUID));
+                Assert.IsFalse(entries.Any(e => e.guid == subFolderGUID));
+
+                // Cleanup
+                Directory.Delete(resourcePath, true);
+            }
+        }
+
+        [Test]
+        public void GatherAllAssets_WhenNonEmptyAddressableFolderExist_RecurseAllIsFalse_ReturnsEntriesForValidFilesAndTopFoldersOnly()
+        {
+            var folderAssetPath = GetAssetPath("folderAsset");
+            var prefabPath1 = folderAssetPath + "/testAsset1_gatherAllAssets.prefab";
+            var subFolderPath = folderAssetPath + "/Subfolder";
+            var prefabPath2 = subFolderPath + "/testAsset2_gatherAllAssets.prefab";
+            Directory.CreateDirectory(subFolderPath);
+
+            var a1GUID = CreateAsset(prefabPath1, Path.GetFileNameWithoutExtension(prefabPath1));
+            var a2GUID = CreateAsset(prefabPath2, Path.GetFileNameWithoutExtension(prefabPath2));
+
+            AssetDatabase.ImportAsset(folderAssetPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+            var folderAssetGUID = AssetDatabase.AssetPathToGUID(folderAssetPath);
+            var folderAssetEntry = Settings.CreateOrMoveEntry(folderAssetGUID, m_testGroup, false);
+
+            var entries = new List<AddressableAssetEntry>();
+            folderAssetEntry.GatherAllAssets(entries, false, false, true);
+
+            // Assert
+            var subFolderGUID = AssetDatabase.AssetPathToGUID(subFolderPath);
+            Assert.AreEqual(2, entries.Count);
+            Assert.IsTrue(entries.Any(e => e.guid == a1GUID));
+            Assert.IsFalse(entries.Any(e => e.guid == a2GUID));
+            Assert.IsTrue(entries.Any(e => e.guid == subFolderGUID));
+            Assert.IsFalse(entries.Any(e => e.guid == folderAssetGUID));
+
+            // Cleanup
+            Settings.RemoveAssetEntry(folderAssetPath);
+            Directory.Delete(folderAssetPath, true);
+        }
+
+        [Test]
+        public void GatherAllAssets_WhenNonEmptyAddressableFolderExist_RecurseAllIsTrue_ReturnsEntriesRecursivelyForValidFilesOnly()
+        {
+            var folderAssetPath = GetAssetPath("folderAsset");
+            var prefabPath1 = folderAssetPath + "/testAsset1_gatherAllAssets.prefab";
+            var subFolderPath = folderAssetPath + "/Subfolder";
+            var prefabPath2 = subFolderPath + "/testAsset2_gatherAllAssets.prefab";
+            Directory.CreateDirectory(subFolderPath);
+
+            var a1GUID = CreateAsset(prefabPath1, Path.GetFileNameWithoutExtension(prefabPath1));
+            var a2GUID = CreateAsset(prefabPath2, Path.GetFileNameWithoutExtension(prefabPath2));
+
+            AssetDatabase.ImportAsset(folderAssetPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+            var folderAssetGUID = AssetDatabase.AssetPathToGUID(folderAssetPath);
+            var folderAssetEntry = Settings.CreateOrMoveEntry(folderAssetGUID, m_testGroup, false);
+
+            var entries = new List<AddressableAssetEntry>();
+            folderAssetEntry.GatherAllAssets(entries, false, true, true);
+
+            // Assert
+            var subFolderGUID = AssetDatabase.AssetPathToGUID(subFolderPath);
+            Assert.AreEqual(2, entries.Count);
+            Assert.IsTrue(entries.Any(e => e.guid == a1GUID));
+            Assert.IsTrue(entries.Any(e => e.guid == a2GUID));
+            Assert.IsFalse(entries.Any(e => e.guid == folderAssetGUID));
+            Assert.IsFalse(entries.Any(e => e.guid == subFolderGUID));
+
+            // Cleanup
+            Settings.RemoveAssetEntry(folderAssetPath);
+            Directory.Delete(folderAssetPath, true);
         }
 
         [Test]
@@ -355,6 +561,41 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             AddressableAssetEntry entry = new AddressableAssetEntry("", "Entry", null, false);
             Assert.DoesNotThrow(() => entry.SetAddress("[Entry]"));
+        }
+
+        string CreateSpriteAtlasWithSprite()
+        {
+            // create a Sprite atlas, + sprite
+            var spriteAtlasPath = GetAssetPath("testAtlas.spriteatlas");
+            SpriteAtlas spriteAtlas = new SpriteAtlas();
+            AssetDatabase.CreateAsset(spriteAtlas, spriteAtlasPath);
+
+            Texture2D texture = Texture2D.whiteTexture;
+            byte[] data = texture.EncodeToPNG();
+            var texturePath = GetAssetPath("testTexture.png");
+            File.WriteAllBytes(texturePath, data);
+            AssetDatabase.ImportAsset(texturePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+
+            TextureImporter importer = TextureImporter.GetAtPath(texturePath) as TextureImporter;
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.SaveAndReimport();
+
+            SpriteAtlasExtensions.Add(spriteAtlas, new[] { AssetDatabase.LoadAssetAtPath<Texture>(texturePath) });
+            SpriteAtlasUtility.PackAtlases(new SpriteAtlas[] { spriteAtlas }, EditorUserBuildSettings.activeBuildTarget, false);
+
+            return spriteAtlasPath;
+        }
+
+        string CreateAsset(string assetPath, string objectName)
+        {
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = objectName;
+            //this is to ensure that bundles are different for every run.
+            go.transform.localPosition = UnityEngine.Random.onUnitSphere;
+            PrefabUtility.SaveAsPrefabAsset(go, assetPath);
+            UnityEngine.Object.DestroyImmediate(go, false);
+            return AssetDatabase.AssetPathToGUID(assetPath);
         }
     }
 }

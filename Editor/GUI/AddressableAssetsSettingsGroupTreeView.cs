@@ -1225,11 +1225,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
                         bool canMarkNonResources = true;
                         if (resourcePaths.Count > 0)
-                        {
-                            canMarkNonResources =
-                                AddressableAssetUtility.SafeMoveResourcesToGroup(m_Editor.settings, parent,
-                                    resourcePaths);
-                        }
+                            canMarkNonResources = AddressableAssetUtility.SafeMoveResourcesToGroup(m_Editor.settings, parent, resourcePaths, null);
 
                         if (canMarkNonResources)
                         {

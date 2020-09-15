@@ -1,10 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.Initialization;
-using UnityEngine.ResourceManagement.AsyncOperations;
 
 namespace UnityEngine.ResourceManagement.AsyncOperations
 {
@@ -26,6 +26,33 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             get { return "InitializationObjectsOperation"; }
         }
 
+        internal bool LogRuntimeWarnings(string pathToBuildLogs)
+        {
+            if (!File.Exists(pathToBuildLogs))
+                return false;
+
+            PackedPlayModeBuildLogs runtimeBuildLogs = JsonUtility.FromJson<PackedPlayModeBuildLogs>(File.ReadAllText(pathToBuildLogs));
+            bool messageLogged = false;
+            foreach (var log in runtimeBuildLogs.RuntimeBuildLogs)
+            {
+                messageLogged = true;
+                switch (log.Type)
+                {
+                    case LogType.Warning:
+                        Addressables.LogWarning(log.Message);
+                        break;
+                    case LogType.Error:
+                        Addressables.LogError(log.Message);
+                        break;
+                    case LogType.Log:
+                        Addressables.Log(log.Message);
+                        break;
+                }
+            }
+
+            return messageLogged;
+        }
+
         protected override void Execute()
         {
             var rtd = m_RtdOp.Result;
@@ -35,6 +62,10 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 Complete(true, true, "");
                 return;
             }
+
+            string buildLogsPath = m_Addressables.ResolveInternalId(PlayerPrefs.GetString(Addressables.kAddressablesRuntimeBuildLogPath));
+            if (LogRuntimeWarnings(buildLogsPath))
+                File.Delete(buildLogsPath);
 
             List<AsyncOperationHandle> initOperations = new List<AsyncOperationHandle>();
             foreach (var i in rtd.InitializationObjects)

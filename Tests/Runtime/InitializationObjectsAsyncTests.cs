@@ -58,7 +58,7 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
         int endCount = Resources.FindObjectsOfTypeAll<MonoBehaviourCallbackHooks>().Length;
 
         //Assert
-        Assert.AreEqual(startCount + 1, endCount);
+        Assert.AreEqual(startCount, endCount);
     }
 
 #if UNITY_EDITOR

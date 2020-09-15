@@ -377,7 +377,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             // A bundle requires an actual asset
             var tempFolderName = "TempCatalogFolder";
-            var tempFolderPath = Path.Combine(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, tempFolderName);
+
+            var configFolder = AddressableAssetSettingsDefaultObject.kDefaultConfigFolder;
+            if (builderInput.AddressableSettings != null && builderInput.AddressableSettings.IsPersisted)
+                configFolder = builderInput.AddressableSettings.ConfigFolder;
+
+            var tempFolderPath = Path.Combine(configFolder, tempFolderName);
             var tempFilePath = Path.Combine(tempFolderPath, Path.GetFileName(filepath).Replace(".bundle", ".json"));
             if (!WriteFile(tempFilePath, jsonText, builderInput.Registry))
             {
@@ -829,7 +834,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         RedirectLimit = schema.RedirectLimit,
                         RetryCount = schema.RetryCount,
                         Timeout = schema.Timeout,
-                        BundleName = Path.GetFileName(info.FileName),
+                        BundleName = Path.GetFileNameWithoutExtension(info.FileName),
                         BundleSize = GetFileSize(info.FileName)
                     };
                     dataEntry.Data = requestOptions;

@@ -1657,8 +1657,12 @@ namespace AddressableAssetsIntegrationTests
             versions.Clear();
 
             string key = "lockey";
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+            ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)));
+            location.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName
+            };
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
@@ -1691,12 +1695,20 @@ namespace AddressableAssetsIntegrationTests
 
             string key = "lockey_withdeps";
 
-            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+            ResourceLocationBase depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
+            depLocation.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = depBundleName
+            };
 
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+            ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)),
                 depLocation);
+            (location.Dependencies[0] as ResourceLocationBase).Data = location.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName
+            };
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
@@ -1734,9 +1746,12 @@ namespace AddressableAssetsIntegrationTests
             versions.Clear();
 
             string key = "lockey_forlocationtest";
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+            ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
-
+            (location.Dependencies[0] as ResourceLocationBase).Data = location.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName
+            };
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
             yield return m_Addressables.ClearDependencyCacheAsync(location, true);
@@ -1767,12 +1782,20 @@ namespace AddressableAssetsIntegrationTests
 
             string key = "lockey_withdeps_forlocationtest";
 
-            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+            ResourceLocationBase depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
+            (depLocation.Dependencies[0] as ResourceLocationBase).Data = depLocation.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = depBundleName
+            };
 
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+            ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)),
                 depLocation);
+            (location.Dependencies[0] as ResourceLocationBase).Data = location.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName
+            };
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
@@ -1809,8 +1832,12 @@ namespace AddressableAssetsIntegrationTests
             versions.Clear();
 
             string key = "lockey_forlocationlisttest";
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+            ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
+            (location.Dependencies[0] as ResourceLocationBase).Data = location.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName
+            };
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
@@ -1843,12 +1870,20 @@ namespace AddressableAssetsIntegrationTests
 
             string key = "lockey_withdeps_forlocationlisttest";
 
-            IResourceLocation depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+            ResourceLocationBase depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
+            (depLocation.Dependencies[0] as ResourceLocationBase).Data = depLocation.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = depBundleName
+            };
 
-            IResourceLocation location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+            ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)),
                 depLocation);
+            (location.Dependencies[0] as ResourceLocationBase).Data = location.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName
+            };
 
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
@@ -1993,6 +2028,13 @@ namespace AddressableAssetsIntegrationTests
             Assert.Ignore("Caching not enabled.");
             yield return null;
 #endif
+        }
+
+        [UnityTest]
+        public IEnumerator WebRequestQueue_GetsSetOnInitialization_FromRuntimeData()
+        {
+            yield return Init();
+            Assert.AreEqual(AddressablesTestUtility.kMaxWebRequestCount, WebRequestQueue.s_MaxRequest);
         }
 
         string CreateFakeCachedBundle(string bundleName, string hash)

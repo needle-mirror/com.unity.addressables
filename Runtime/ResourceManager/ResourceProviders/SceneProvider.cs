@@ -67,6 +67,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 }
                 m_Inst = InternalLoadScene(m_Location, loadingFromBundle, m_LoadMode, m_ActivateOnLoad, m_Priority);
                 ((IUpdateReceiver)this).Update(0.0f);
+                if(!IsDone)
+                    m_ResourceManager.AddUpdateReceiver(this);
             }
 
             internal SceneInstance InternalLoadScene(IResourceLocation location, bool loadingFromBundle, LoadSceneMode loadMode, bool activateOnLoad, int priority)
@@ -129,7 +131,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             void IUpdateReceiver.Update(float unscaledDeltaTime)
             {
                 if (m_Inst.m_Operation.isDone || (!m_ActivateOnLoad && m_Inst.m_Operation.progress == .9f))
+                {
+                    m_ResourceManager.RemoveUpdateReciever(this);
                     Complete(m_Inst, true, null);
+                }
             }
         }
 
@@ -162,9 +167,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
             private void UnloadSceneCompleted(AsyncOperation obj)
             {
+                Complete(m_Instance, true, "");
                 if (m_sceneLoadHandle.IsValid())
                     m_sceneLoadHandle.Release();
-                Complete(m_Instance, true, "");
             }
 
             protected override float Progress

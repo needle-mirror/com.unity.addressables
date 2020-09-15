@@ -62,6 +62,15 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
 #endif
+        [Test]
+        public void AssetReference_SetMainAsset_ResetsSubAsset()
+        {
+            var guid = AssetDatabase.AssetPathToGUID(m_ScriptableObjectPath);
+            AssetReference typeReference = new AssetReference(guid);
+            typeReference.SubObjectName = "sub";
+            typeReference.SetEditorAsset(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(AssetDatabase.GUIDToAssetPath(m_AssetGUID.ToString())));
+            Assert.IsNull(typeReference.SubObjectName);
+        }
 
         [Test]
         public void AssetReferenceEditorAssetForSubObject_DifferentType()

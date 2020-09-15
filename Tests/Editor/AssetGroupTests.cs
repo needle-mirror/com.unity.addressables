@@ -100,6 +100,23 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void SupportsPeriodInName()
+        {
+            //Setup
+            var group = Settings.CreateGroup("name1", false, false, false, new List<AddressableAssetGroupSchema>());
+
+            //Test
+            string testName = group.Name = "test1.test";
+
+            //Assert
+            Assert.AreEqual(group.name, group.Name);
+            Assert.AreEqual(testName, group.Name);
+
+            //Cleanup
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
         public void CannotSetInvalidGroupAsDefault()
         {
             AddressableAssetGroup group1 = Settings.CreateGroup("group1", false, true, true, null, new Type[] {});

@@ -4,14 +4,25 @@ using UnityEngine.ResourceManagement.Util;
 
 internal class MonoBehaviourCallbackHooks : ComponentSingleton<MonoBehaviourCallbackHooks>
 {
-    public event Action<float> OnUpdateDelegate;
+    internal Action<float> m_OnUpdateDelegate;
+    public event Action<float> OnUpdateDelegate
+    {
+        add
+        {
+            m_OnUpdateDelegate += value;
+        }
+
+        remove
+        {
+            m_OnUpdateDelegate -= value;
+        }
+    }
 
     protected override string GetGameObjectName() => "ResourceManagerCallbacks";
 
     // Update is called once per frame
-    void Update()
+    internal void Update()
     {
-        if (OnUpdateDelegate != null)
-            OnUpdateDelegate(Time.unscaledDeltaTime);
+        m_OnUpdateDelegate?.Invoke(Time.unscaledDeltaTime);
     }
 }

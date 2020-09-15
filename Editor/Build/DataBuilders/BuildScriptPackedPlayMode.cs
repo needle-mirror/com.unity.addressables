@@ -47,6 +47,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             var timer = new System.Diagnostics.Stopwatch();
             timer.Start();
             var settingsPath = Addressables.BuildPath + "/settings.json";
+            var buildLogsPath = Addressables.BuildPath + "/buildLogs.json";
             if (!File.Exists(settingsPath))
             {
                 IDataBuilderResult resE = new AddressablesPlayModeBuildResult() { Error = "Player content must be built before entering play mode with packed data.  This can be done from the Addressables window in the Build->Build Player Content menu command." };
@@ -59,16 +60,27 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 return (TResult)resE;
             }
 
+            PackedPlayModeBuildLogs buildLogs = new PackedPlayModeBuildLogs();
             BuildTarget dataBuildTarget = BuildTarget.NoTarget;
             if (!Enum.TryParse(rtd.BuildTarget, out dataBuildTarget))
-                Debug.LogWarningFormat("Unable to parse build target from initialization data: '{0}'.", rtd.BuildTarget);
+            {
+                buildLogs.RuntimeBuildLogs.Add(new PackedPlayModeBuildLogs.RuntimeBuildLog(LogType.Warning,
+                    $"Unable to parse build target from initialization data: '{rtd.BuildTarget}'."));
+            }
 
-            if (BuildPipeline.GetBuildTargetGroup(dataBuildTarget) != BuildTargetGroup.Standalone)
-                Debug.LogWarningFormat("Asset bundles built with build target {0} may not be compatible with running in the Editor.", dataBuildTarget);
+            else if (BuildPipeline.GetBuildTargetGroup(dataBuildTarget) != BuildTargetGroup.Standalone)
+            {
+                buildLogs.RuntimeBuildLogs.Add(new PackedPlayModeBuildLogs.RuntimeBuildLog(LogType.Warning,
+                    $"Asset bundles built with build target {dataBuildTarget} may not be compatible with running in the Editor."));
+            }
+
+            if(buildLogs.RuntimeBuildLogs.Count > 0)
+                File.WriteAllText(buildLogsPath, JsonUtility.ToJson(buildLogs));
 
             //TODO: detect if the data that does exist is out of date..
             var runtimeSettingsPath = "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/settings.json";
             PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath, runtimeSettingsPath);
+            PlayerPrefs.SetString(Addressables.kAddressablesRuntimeBuildLogPath, buildLogsPath);
             IDataBuilderResult res = new AddressablesPlayModeBuildResult() { OutputPath = settingsPath, Duration = timer.Elapsed.TotalSeconds };
             m_DataBuilt = true;
             return (TResult)res;

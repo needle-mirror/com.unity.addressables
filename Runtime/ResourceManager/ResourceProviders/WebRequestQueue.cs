@@ -33,7 +33,7 @@ namespace UnityEngine.ResourceManagement
 
     internal static class WebRequestQueue
     {
-        private static int s_MaxRequest = 500;
+        internal static int s_MaxRequest = 500;
         internal static Queue<WebRequestQueueOperation> s_QueuedOperations = new Queue<WebRequestQueueOperation>();
         internal static List<UnityWebRequestAsyncOperation> s_ActiveRequests = new List<UnityWebRequestAsyncOperation>();
         public static void SetMaxConcurrentRequests(int maxRequests)

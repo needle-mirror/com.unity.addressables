@@ -53,13 +53,6 @@ This rule detects any assets or asset dependencies that are shared between the S
 
 **Resolution**: It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any. One example of a possible manual fix is to pull the built-in Scene(s) with duplicated references out of Build Settings and make it an Addressable Scene.
 
-#### Check Sprite Atlas to Addressable Duplicate Dependencies
-Given an Addressable sprite atlas this rule will detect if any sprites in the atlas have been marked Addressable anywhere else.
-
-**Issues**: These duplications means sprite data will be duplicated in multiple areas in the Addressable build.
-
-**Resolution** It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any.  One example of a possible manual fix would be to remove the duplicated sprite from Addressables and have your assets reference a sprite from your Addressable sprite atlas instead of the sprite directly.
-
 #### Build Bundle Layout
 This rule will show how assets explicitly marked as Addressable will be laid out in the Addressable build.  Given these explicit assets, we also show what assets are implicitly referenced by, and therefore will be pulled into, the build.
 

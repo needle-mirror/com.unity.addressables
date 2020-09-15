@@ -8,6 +8,7 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.ResourceProviders;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -69,6 +70,11 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             Assert.IsTrue(locator.Locate(key, type, out var locations));
             Assert.IsNotNull(locations);
+            if (type != null)
+            {
+                foreach (var l in locations)
+                    Assert.AreEqual(l.ResourceType, type);
+            }
             Assert.AreEqual(expectedInternalIds.Length, locations.Count);
             foreach (var e in expectedInternalIds)
                 Assert.NotNull(locations.FirstOrDefault(s => s.InternalId == e), $"Locations do not contain entry with internal id of {e}");
@@ -136,6 +142,16 @@ namespace UnityEditor.AddressableAssets.Tests
                 GetPath("TestFolder/asset1"),
                 GetPath("asset1")
             );
+        }
+
+        [Test]
+        public void WhenLocatorWithAssetsInMarkedFolder_LocateWithAssetReferenceSucceeds()
+        {
+            CreateFolder("TestFolder1/TestFolder2", new string[] { "asset1.asset", "asset2.asset", "asset3.asset" });
+            var folderGUID = AssetDatabase.AssetPathToGUID(GetPath("TestFolder1"));
+            m_Settings.CreateOrMoveEntry(folderGUID, m_Settings.DefaultGroup).address = "TF1";
+            var assetRef = m_Settings.CreateAssetReference(AssetDatabase.AssetPathToGUID(GetPath("TestFolder1/TestFolder2/asset1.asset")));
+            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), assetRef.RuntimeKey, null, GetPath("TestFolder1/TestFolder2/asset1.asset"));
         }
 
         [Test]
@@ -220,7 +236,7 @@ namespace UnityEditor.AddressableAssets.Tests
             CreateAndAddScenesToEditorBuildSettings("testScene", 3);
             var locator = new AddressableAssetSettingsLocator(m_Settings);
             for (int i = 0; i < 3; i++)
-                AssertLocateResult(locator, i, null, GetPath($"testScene{i}.unity"));
+                AssertLocateResult(locator, i, typeof(SceneInstance), GetPath($"testScene{i}.unity"));
         }
 
         [Test]
@@ -229,7 +245,7 @@ namespace UnityEditor.AddressableAssets.Tests
             CreateAndAddScenesToEditorBuildSettings("testScene", 3);
             var locator = new AddressableAssetSettingsLocator(m_Settings);
             for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
-                AssertLocateResult(locator, EditorBuildSettings.scenes[i].guid.ToString(), null, GetPath($"testScene{i}.unity"));
+                AssertLocateResult(locator, EditorBuildSettings.scenes[i].guid.ToString(), typeof(SceneInstance), GetPath($"testScene{i}.unity"));
         }
 
         [Test]
@@ -238,7 +254,40 @@ namespace UnityEditor.AddressableAssets.Tests
             CreateAndAddScenesToEditorBuildSettings("testScene", 3);
             var locator = new AddressableAssetSettingsLocator(m_Settings);
             for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
-                AssertLocateResult(locator, $"testScene{i}", null, GetPath($"testScene{i}.unity"));
+                AssertLocateResult(locator, $"testScene{i}", typeof(SceneInstance), GetPath($"testScene{i}.unity"));
+        }
+
+        [Test]
+        public void LocateWithSceneInstanceType_DoesNotReturnNonSceneLocations()
+        {
+            CreateAndAddScenesToEditorBuildSettings("test", 1);
+            var guid = CreateAsset("test0", GetPath("asset1.asset"));
+            m_Settings.CreateOrMoveEntry(guid, m_Settings.DefaultGroup).address = "test0";
+            var locator = new AddressableAssetSettingsLocator(m_Settings);
+            Assert.IsTrue(locator.Locate("test0", typeof(SceneInstance), out var locations));
+            Assert.AreEqual(1, locations.Count);
+            Assert.AreEqual(typeof(SceneInstance), locations[0].ResourceType);
+        }
+
+        [Test]
+        public void LocateWithNonSceneInstanceType_DoesNotReturnSceneLocations()
+        {
+            CreateAndAddScenesToEditorBuildSettings("test", 1);
+            var guid = CreateAsset("test0", GetPath("asset1.asset"));
+            m_Settings.CreateOrMoveEntry(guid, m_Settings.DefaultGroup).address = "test0";
+            var locator = new AddressableAssetSettingsLocator(m_Settings);
+            Assert.IsTrue(locator.Locate("test0", typeof(UnityEngine.AddressableAssets.Tests.TestObject), out var locations));
+            Assert.AreEqual(1, locations.Count);
+            Assert.AreEqual(typeof(UnityEngine.AddressableAssets.Tests.TestObject), locations[0].ResourceType);
+        }
+
+        [Test]
+        public void WhenLocatorWithScenesInSceneList_LocateWithISceneInstanceType_ReturnsLocationForScene()
+        {
+            CreateAndAddScenesToEditorBuildSettings("testScene", 3);
+            var locator = new AddressableAssetSettingsLocator(m_Settings);
+            for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
+                AssertLocateResult(locator, $"testScene{i}", typeof(SceneInstance), GetPath($"testScene{i}.unity"));
         }
 
         public void RunResourcesTestWithAsset(bool IncludeResourcesFolders)

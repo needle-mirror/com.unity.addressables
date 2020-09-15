@@ -38,6 +38,7 @@ static class AddressablesTestUtility
     static public string GetPrefabAlternatingLabel(string suffix, int index) { return string.Format("prefabs_{0}{1}", ((index % 2) == 0) ? "even" : "odd", suffix); }
     static public string GetPrefabUniqueLabel(string suffix, int index) { return string.Format("prefab_{0}{1}", index, suffix); }
     public const int kPrefabCount = 10;
+    public const int kMaxWebRequestCount = 5;
 
     static public void Setup(string testType, string pathFormat, string suffix)
     {
@@ -50,6 +51,7 @@ static class AddressablesTestUtility
         Directory.CreateDirectory(RootFolder);
 
         var settings = AddressableAssetSettings.Create(RootFolder + "/Settings", "AddressableAssetSettings.Tests", false, true);
+        settings.MaxConcurrentWebRequests = kMaxWebRequestCount;
         var group = settings.FindGroup("TestStuff" + suffix);
 
         if (group == null)

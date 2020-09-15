@@ -96,7 +96,7 @@ namespace UnityEditor.AddressableAssets.Build
                 playerBuildVersion);
         }
 
-        void SetAllValues(AddressableAssetSettings settings, BuildTargetGroup buildTargetGroup, BuildTarget buildTarget, string playerBuildVersion)
+        internal void SetAllValues(AddressableAssetSettings settings, BuildTargetGroup buildTargetGroup, BuildTarget buildTarget, string playerBuildVersion)
         {
             AddressableSettings = settings;
 

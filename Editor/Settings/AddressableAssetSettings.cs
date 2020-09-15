@@ -1257,7 +1257,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        private static AddressableAssetGroup CreateBuiltInData(AddressableAssetSettings aa)
+        internal static AddressableAssetGroup CreateBuiltInData(AddressableAssetSettings aa)
         {
             var playerData = aa.CreateGroup(PlayerDataGroupName, false, true, false, null, typeof(PlayerDataGroupSchema));
             var resourceEntry = aa.CreateOrMoveEntry(AddressableAssetEntry.ResourcesName, playerData);

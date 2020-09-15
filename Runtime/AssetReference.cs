@@ -569,6 +569,7 @@ namespace UnityEngine.AddressableAssets
 
             if (m_CachedAsset != value)
             {
+                m_SubObjectName = null;
                 var path = AssetDatabase.GetAssetOrScenePath(value);
                 if (string.IsNullOrEmpty(path))
                 {

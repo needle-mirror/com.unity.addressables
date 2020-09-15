@@ -4,6 +4,27 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.16.1] - 2020-09-15
+- Fixed bug where some files would not be created in the right folder if the user moved its addressables config folder elsewhere
+- Fixed determanism issue where bundles could have different names after Editor restart
+- Added a blurb to the documentation explaining you have to pack an atlas before the sub objects will show up in the groups window
+- Added "addressable" checkbox when viewing package assets in the Inspector.
+- Fixed issue where GatherAllAssets would not retrieve assets located in package resources folders.
+- Fixed issue where temporary StreamingAssets folder are recreated due to un-deleted meta files during a player build
+- added Equals implementation for typeless AsyncOperationHandle
+- When AssetReference MainAsset changed, reset SubObject
+- resource manager callback leak fixes
+- Packed Playmode build logs regarding BuildTargets now show up in PlayMode
+- Additional Fast Mode optimizations
+- Fixed issue where a released operation was not properly cleaned-up
+- Fixed issue where renaming an AssetGroup with a name that contained a period led to unusual renaming behavior.
+- Removed Analyze Rule "Check Sprite Atlas To...".  This check was not actually valid.  See "SpriteAtlas dependencies" section of "Memory Management" page in Addressables documentation for more information. 
+- UnloadSceneAsync calls that attempt to unload a scene that is still currently loading are now chained with the load operation and will complete after the load is finished.
+- The MaxConcurrentWebRequests exposed on the AddressableAssetSettings object now gets set during runtime initialization
+- Fix performance issues drawing AssetReferences with subassets caused by earlier changes to AssetReferenceDrawer
+- Fixed bug where Addressables.ClearDepenendcyCache wasn't clearing the cache.
+- AssetReferenceUILabelRestriction attribute now works properly on references in nested classes
+
 ## [1.15.1] - 2020-08-25
 - Change to not allow the same AssetReference to LoadAssetAsync or LoadSceneAsync twice if current handle is valid, instead log an error with note about how to get the valid handle
 - Fixed issue where disabled asset groups data would be included in the addressables_content_state.bin file for the build.

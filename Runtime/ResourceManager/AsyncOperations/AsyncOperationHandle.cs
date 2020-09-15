@@ -137,7 +137,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// Provide equality for this struct.
         /// </summary>
         /// <param name="other">The operation to compare to.</param>
-        /// <returns></returns>
+        /// <returns>True if the the operation handles reference the same AsyncOperation and the version is the same.</returns>
         public bool Equals(AsyncOperationHandle<TObject> other)
         {
             return m_Version == other.m_Version && m_InternalOp == other.m_InternalOp;
@@ -327,6 +327,16 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         public AsyncOperationHandle<T> Convert<T>()
         {
             return new AsyncOperationHandle<T>(InternalOp, m_Version, m_LocationName);
+        }
+
+        /// <summary>
+        /// Provide equality for this struct.
+        /// </summary>
+        /// <param name="other">The operation to compare to.</param>
+        /// <returns>True if the the operation handles reference the same AsyncOperation and the version is the same.</returns>
+        public bool Equals(AsyncOperationHandle other)
+        {
+            return m_Version == other.m_Version && m_InternalOp == other.m_InternalOp;
         }
 
         /// <summary>

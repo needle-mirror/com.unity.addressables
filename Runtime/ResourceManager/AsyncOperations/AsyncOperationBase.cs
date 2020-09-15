@@ -34,6 +34,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         bool IsDone { get; }
         Action<IAsyncOperation> OnDestroy { set; }
         void GetDependencies(List<AsyncOperationHandle> deps);
+        bool IsRunning { get; }
 
         event Action<AsyncOperationHandle> CompletedTypeless;
         event Action<AsyncOperationHandle> Destroyed;
@@ -106,6 +107,11 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         Action<AsyncOperationHandle> m_dependencyCompleteAction;
 
         /// <summary>
+        /// True if the current op has begun but hasn't yet reached completion.  False otherwise.
+        /// </summary>
+        public bool IsRunning { get;  internal set; }
+
+        /// <summary>
         /// Basic constructor for AsyncOperationBase.
         /// </summary>
         protected AsyncOperationBase()
@@ -159,12 +165,6 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                     m_DestroyedAction.Clear();
                 }
 
-                if (m_OnDestroyAction != null)
-                {
-                    m_OnDestroyAction(this);
-                    m_OnDestroyAction = null;
-                }
-
                 Destroy();
                 Result = default(TObject);
                 m_referenceCount = 1;
@@ -172,6 +172,12 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 m_Error = null;
                 m_Version++;
                 m_RM = null;
+
+                if (m_OnDestroyAction != null)
+                {
+                    m_OnDestroyAction(this);
+                    m_OnDestroyAction = null;
+                }
             }
         }
 
@@ -451,12 +457,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 InvokeCompletionEvent();
                 DecrementReferenceCount();
             }
+            IsRunning = false;
         }
 
         internal void Start(ResourceManager rm, AsyncOperationHandle dependency, DelegateList<float> updateCallbacks)
         {
             m_RM = rm;
-
+            IsRunning = true;
             if (m_RM != null && m_RM.postProfilerEvents)
             {
                 m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationCreate));

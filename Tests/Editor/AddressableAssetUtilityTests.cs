@@ -12,6 +12,91 @@ namespace UnityEditor.AddressableAssets.Tests
 {
     public class AddressableAssetUtilityTests : AddressableAssetTestBase
     {
+        static string CreateTestPrefabAsset(string assetPath, string objectName)
+        {
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = objectName;
+            PrefabUtility.SaveAsPrefabAsset(go, assetPath);
+            UnityEngine.Object.DestroyImmediate(go, false);
+            return AssetDatabase.AssetPathToGUID(assetPath);
+        }
+
+        [Test]
+        public void GetPathAndGUIDFromTarget_FromPrefabAsset_ReturnsCorrectPathGUIDType()
+        {
+            var expectedGUID = CreateTestPrefabAsset(GetAssetPath("prefab1.prefab"), "prefab1");
+            var expectedPath = AssetDatabase.GUIDToAssetPath(expectedGUID);
+            var obj = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(expectedPath);
+            Assert.IsTrue(AddressableAssetUtility.GetPathAndGUIDFromTarget(obj, out var actualPath, out var actualGUID, out var actualType));
+            Assert.AreEqual(expectedPath, actualPath);
+            Assert.AreEqual(expectedGUID, actualGUID);
+            Assert.AreEqual(typeof(GameObject), actualType);
+            AssetDatabase.DeleteAsset(expectedPath);
+        }
+
+        [Test]
+        public void GetPathAndGUIDFromTarget_FromPrefabObject_Fails()
+        {
+            var obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Assert.IsFalse(AddressableAssetUtility.GetPathAndGUIDFromTarget(obj, out var actualPath, out var actualGUID, out var actualType));
+            Assert.IsEmpty(actualPath);
+            Assert.IsEmpty(actualGUID);
+            Assert.IsEmpty(actualGUID);
+            Assert.IsNull(actualType);
+        }
+
+        [Test]
+        public void GetPathAndGUIDFromTarget_FromNullObject_Fails()
+        {
+            Assert.IsFalse(AddressableAssetUtility.GetPathAndGUIDFromTarget(null, out var actualPath, out var actualGUID, out var actualType));
+            Assert.IsEmpty(actualPath);
+            Assert.IsEmpty(actualGUID);
+            Assert.IsEmpty(actualGUID);
+            Assert.IsNull(actualType);
+        }
+
+        public class TestBaseClass { }
+        [System.ComponentModel.DisplayName("TestSubClass_DisplayName")]
+        public class TestSubClass : TestBaseClass { }
+        public abstract class TestAbstractSubClass : TestBaseClass { }
+
+        [Test]
+        public void GetTypesGeneric_ReturnsOnly_NonAbstractSubTypes()
+        {
+            var types = AddressableAssetUtility.GetTypes<TestBaseClass>();
+            Assert.AreEqual(1, types.Count);
+            Assert.AreEqual(types[0], typeof(TestSubClass));
+        }
+
+        [Test]
+        public void GetTypes_ReturnsOnly_NonAbstractSubTypes()
+        {
+            var types = AddressableAssetUtility.GetTypes(typeof(TestBaseClass));
+            Assert.AreEqual(1, types.Count);
+            Assert.AreEqual(types[0], typeof(TestSubClass));
+        }
+
+        [Test]
+        public void GetCachedTypeDisplayName_WithNoAttribute_ReturnsTypeName()
+        {
+            var name = AddressableAssetUtility.GetCachedTypeDisplayName(typeof(TestBaseClass));
+            Assert.AreEqual(typeof(TestBaseClass).Name, name);
+        }
+
+        [Test]
+        public void GetCachedTypeDisplayName_WithAttribute_ReturnsAttributeValue()
+        {
+            var subName = AddressableAssetUtility.GetCachedTypeDisplayName(typeof(TestSubClass));
+            Assert.AreEqual("TestSubClass_DisplayName", subName);
+        }
+
+        [Test]
+        public void GetCachedTypeDisplayName_WithNullType_ReturnsNONE()
+        {
+            var subName = AddressableAssetUtility.GetCachedTypeDisplayName(null);
+            Assert.AreEqual("<none>", subName);
+        }
+
         [Test]
         public void IsInResourcesProperlyHandlesCase()
         {
@@ -49,26 +134,52 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void IsPathValidBlocksBadExtensions()
         {
-            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("file.cs"));
-            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("file.js"));
-            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("file.boo"));
-            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("file.exe"));
-            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("file.dll"));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Assets/file.cs"));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Assets/file.js"));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Assets/file.boo"));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Assets/file.exe"));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Assets/file.dll"));
         }
 
         [Test]
         public void IsPathValidAllowsBasicTypes()
         {
-            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.asset"));
-            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.png"));
-            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.bin"));
-            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.txt"));
-            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.prefab"));
-            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.mat"));
-            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.wav"));
-            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.jpg"));
-            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.avi"));
-            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("file.controller"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Assets/file.asset"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Assets/file.png"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Assets/file.bin"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Assets/file.txt"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Assets/file.prefab"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Assets/file.mat"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Assets/file.wav"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Assets/file.jpg"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Assets/file.avi"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Assets/file.controller"));
+        }
+
+        [Test]
+        public void WhenPathIsInUnityAuthoredPackage_IsPathValidForEntry_ReturnsFalse()
+        {
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Packages/com.unity.demo/file.asset"));
+        }
+
+        [Test]
+        public void WhenPathIsPackageImportFile_IsPathValidForEntry_ReturnsFalse()
+        {
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Packages/com.company.demo/package.json"));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Packages/com.company.demo/package.asmdef"));
+        }
+
+        public void WhenPathIsNotPackageImportFile_IsPathValidForEntry_ReturnsTrue()
+        {
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Packages/com.company.demo/folder/package.json"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Packages/com.company.demo/folder/package.asmdef"));
+        }
+
+        [Test]
+        public void WhenAssetIsNotInPackageFolder_IsPathValidPackageAsset_ReturnsFalse()
+        {
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidPackageAsset("Assets/file.asset"));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidPackageAsset("Packages/com.company.demo"));
         }
 
         [Test]
@@ -140,6 +251,27 @@ namespace UnityEditor.AddressableAssets.Tests
                 var lastGroupIndex = AddressableAssetSettingsDefaultObject.Settings.groups.Count - 1;
                 AddressableAssetSettingsDefaultObject.Settings.RemoveGroup(AddressableAssetSettingsDefaultObject.Settings.groups[lastGroupIndex]);
             }
+        }
+
+        [Test]
+        public void SafeMoveResourcesToGroup_ResourcesMovedToNewFolderAndGroup()
+        {
+            var folderPath = AssetDatabase.GUIDToAssetPath(AssetDatabase.CreateFolder(ConfigFolder, "Resources"));
+            var g1 = CreateTestPrefabAsset(folderPath + "/p1.prefab", "p1");
+            var g2 = CreateTestPrefabAsset(folderPath + "/p2.prefab", "p2");
+            Assert.AreEqual(0, Settings.DefaultGroup.entries.Count);
+            var result = AddressableAssetUtility.SafeMoveResourcesToGroup(Settings, Settings.DefaultGroup, new List<string> { AssetDatabase.GUIDToAssetPath(g1), AssetDatabase.GUIDToAssetPath(g2) }, null, false);
+            Assert.IsTrue(result);
+            Assert.AreEqual(2, Settings.DefaultGroup.entries.Count);
+            var ap = $"{ConfigFolder}_Resources_moved";
+            Assert.IsTrue(AssetDatabase.IsValidFolder($"{ConfigFolder}/Resources_moved"));
+        }
+
+        [Test]
+        public void SafeMoveResourcesToGroup_WithInvalidParameters_Fails()
+        {
+            Assert.IsFalse(AddressableAssetUtility.SafeMoveResourcesToGroup(Settings, null, null, null, false));
+            Assert.IsFalse(AddressableAssetUtility.SafeMoveResourcesToGroup(Settings, Settings.DefaultGroup, null, null, false));
         }
     }
 }

@@ -39,9 +39,6 @@ The Addressables Asset System needs to build your content into files that can be
 
 **Important**: Marking package assets as Addressable requires Unity version 2020.2.0a9 or later.
 
-### Marking package assets as Addressable
-Currently, assets in a package cannot be marked as Addressable in the Inspector. You can only mark an asset as Addressable using the **Addressables Groups** window. 
-
 ### Creating Addressable Groups in packages 
 Create a group in the **Addressables Groups** window. When you are done modifying the group, save the project. Move the group asset and its respective schema assets into your package.
 
@@ -110,6 +107,8 @@ The names available within an asset are visible in the main Addressables group e
 In addition, you can use an [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) to access the sub-object of an asset.  See notes in the below section. 
 
 For `SpriteAtlas` objects specifically, be sure that the **Include In Build** is enabled on the `SpriteAtlas` object.  If **Include in Build** is disabled, then the `SpriteAtlas` cannot be built in any form, including the content build done by Addressables.
+
+When viewing a `SpriteAtlas` in the Addressable Groups window, ensure the `SpriteAtlas` has been packed if you intend to view the sub-objects in the Window.  This can be done by clicking Pack Preview in the inspector of the `SpriteAtlas` object.  If the `SpriteAtlas` is packed and you still cannot see the sub-objects, check the "Show Sprite and Subobject Addresses" option is enabled; it is located in the Tools menu of the Addressable Group window.
 
 ### Using the AssetReference class
 The [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) class provides a way to access Addressable Assets without needing to know their addresses. To access an Addressable Asset using the `AssetReference` class:

@@ -183,6 +183,11 @@ namespace UnityEngine.AddressableAssets
         const string k_AddressablesLogConditional = "ADDRESSABLES_LOG_ALL";
 
         /// <summary>
+        /// The name of the PlayerPrefs value used to set the path to check for build logs that need to be shown in the runtime.
+        /// </summary>
+        public const string kAddressablesRuntimeBuildLogPath = "AddressablesRuntimeBuildLog";
+
+        /// <summary>
         /// The subfolder used by the Addressables system for its initialization data.
         /// </summary>
         public static string StreamingAssetsSubFolder { get { return m_Addressables.StreamingAssetsSubFolder; } }

@@ -25,10 +25,27 @@ namespace UnityEngine.ResourceManagement.Util
             {
                 if (s_Instance == null)
                 {
-                    s_Instance = FindObjectOfType<T>() ?? CreateNewSingleton();
+                    s_Instance = FindInstance() ?? CreateNewSingleton();
                 }
                 return s_Instance;
             }
+        }
+
+
+
+        static T FindInstance()
+        {
+#if UNITY_EDITOR
+            foreach (T cb in Resources.FindObjectsOfTypeAll(typeof(T)))
+            {
+                var go = cb.gameObject;
+                if (!EditorUtility.IsPersistent(go.transform.root.gameObject) && !(go.hideFlags == HideFlags.NotEditable || go.hideFlags == HideFlags.HideAndDontSave))
+                    return cb;
+            }
+            return null;
+#else
+            return FindObjectOfType<T>();
+#endif
         }
 
         /// <summary>

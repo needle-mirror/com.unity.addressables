@@ -45,6 +45,109 @@ namespace UnityEditor.AddressableAssets.Tests
             }
             Assert.IsTrue(builderCount > 0);
         }
+        
+        [Test]
+        public void CopiedStreamingAssetAreCorrectlyDeleted_DirectoriesWithoutImport()
+        {
+            var context = new AddressablesDataBuilderInput(Settings);
+
+            int builderCount = 0;
+            for (int i = 0; i < Settings.DataBuilders.Count; i++)
+            {
+                var builder = Settings.DataBuilders[i] as IDataBuilder;
+                if (builder.CanBuildData<AddressablesPlayerBuildResult>())
+                {
+                    builderCount++;
+                    
+                    // confirm that StreamingAssets does not exists before the test
+                    Assert.IsFalse(Directory.Exists("Assets/StreamingAssets"));
+                    builder.BuildData<AddressablesPlayerBuildResult>(context);
+
+                    Assert.IsTrue(Directory.Exists(Addressables.BuildPath));
+                    AddressablesPlayerBuildProcessor.CopyTemporaryPlayerBuildData();
+                    builder.ClearCachedData();
+
+                    Assert.IsTrue(Directory.Exists(Addressables.PlayerBuildDataPath));
+                    AddressablesPlayerBuildProcessor.CleanTemporaryPlayerBuildData();
+                    Assert.IsFalse(Directory.Exists(Addressables.PlayerBuildDataPath));
+                    Assert.IsFalse(Directory.Exists("Assets/StreamingAssets"));
+                }
+            }
+            Assert.IsTrue(builderCount > 0);
+        }
+        
+        [Test]
+        public void CopiedStreamingAssetAreCorrectlyDeleted_MetaFilesWithImport()
+        {
+            var context = new AddressablesDataBuilderInput(Settings);
+
+            int builderCount = 0;
+            for (int i = 0; i < Settings.DataBuilders.Count; i++)
+            {
+                var builder = Settings.DataBuilders[i] as IDataBuilder;
+                if (builder.CanBuildData<AddressablesPlayerBuildResult>())
+                {
+                    builderCount++;
+                    
+                    // confirm that StreamingAssets does not exists before the test
+                    Assert.IsFalse(Directory.Exists("Assets/StreamingAssets"));
+                    builder.BuildData<AddressablesPlayerBuildResult>(context);
+
+                    Assert.IsTrue(Directory.Exists(Addressables.BuildPath));
+                    AddressablesPlayerBuildProcessor.CopyTemporaryPlayerBuildData();
+                    builder.ClearCachedData();
+                    
+                    // confirm that PlayerBuildDataPath is imported to AssetDatabase
+                    AssetDatabase.Refresh();
+                    Assert.IsTrue(Directory.Exists(Addressables.PlayerBuildDataPath));
+                    Assert.IsTrue(File.Exists(Addressables.PlayerBuildDataPath + ".meta"));
+                    string relativePath = Addressables.PlayerBuildDataPath.Replace(Application.dataPath, "Assets");
+                    Assert.IsTrue(AssetDatabase.IsValidFolder(relativePath), "Copied StreamingAssets folder was not importer as expected");
+
+                    AddressablesPlayerBuildProcessor.CleanTemporaryPlayerBuildData();
+                    Assert.IsFalse(Directory.Exists(Addressables.PlayerBuildDataPath));
+                    Assert.IsFalse(Directory.Exists("Assets/StreamingAssets"));
+                }
+            }
+            Assert.IsTrue(builderCount > 0);
+        }
+        
+        [Test]
+        public void CopiedStreamingAssetAreCorrectlyDeleted_WithExistingFiles()
+        {
+            var context = new AddressablesDataBuilderInput(Settings);
+
+            int builderCount = 0;
+            for (int i = 0; i < Settings.DataBuilders.Count; i++)
+            {
+                var builder = Settings.DataBuilders[i] as IDataBuilder;
+                if (builder.CanBuildData<AddressablesPlayerBuildResult>())
+                {
+                    builderCount++;
+                    
+                    // confirm that StreamingAssets does not exists before the test
+                    Assert.IsFalse(Directory.Exists("Assets/StreamingAssets"));
+                    // create StreamingAssets and an extra folder as existing content
+                    AssetDatabase.CreateFolder("Assets", "StreamingAssets");
+                    AssetDatabase.CreateFolder("Assets/StreamingAssets", "extraFolder");
+                    
+                    builder.BuildData<AddressablesPlayerBuildResult>(context);
+
+                    Assert.IsTrue(Directory.Exists(Addressables.BuildPath));
+                    AddressablesPlayerBuildProcessor.CopyTemporaryPlayerBuildData();
+                    builder.ClearCachedData();
+
+                    Assert.IsTrue(Directory.Exists(Addressables.PlayerBuildDataPath));
+                    AddressablesPlayerBuildProcessor.CleanTemporaryPlayerBuildData();
+                    Assert.IsFalse(Directory.Exists(Addressables.PlayerBuildDataPath));
+                    Assert.IsTrue(Directory.Exists("Assets/StreamingAssets"));
+                    Assert.IsTrue(Directory.Exists("Assets/StreamingAssets/extraFolder"));
+                    
+                    AssetDatabase.DeleteAsset("Assets/StreamingAssets");
+                }
+            }
+            Assert.IsTrue(builderCount > 0);
+        }
 
         [Test]
         public void BuildCompleteCallbackGetsCalled()

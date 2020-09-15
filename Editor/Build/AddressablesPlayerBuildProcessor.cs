@@ -25,22 +25,24 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
     }
 
     [InitializeOnLoadMethod]
-    static void CleanTemporaryPlayerBuildData()
+    internal static void CleanTemporaryPlayerBuildData()
     {
-        string addressablesStreamingAssets = Path.Combine(Application.streamingAssetsPath, Addressables.StreamingAssetsSubFolder);
-        if (Directory.Exists(addressablesStreamingAssets))
+        if (Directory.Exists(Addressables.PlayerBuildDataPath))
         {
-            Debug.Log(string.Format("Deleting Addressables data from {0}.", addressablesStreamingAssets));
-            Directory.Delete(addressablesStreamingAssets, true);
-            AssetDatabase.Refresh();
+            Debug.Log(string.Format("Deleting Addressables data from {0}.", Addressables.PlayerBuildDataPath));
+            DirectoryUtility.DeleteDirectory(Addressables.PlayerBuildDataPath, false);
             //Will delete the directory only if it's empty
             DirectoryUtility.DeleteDirectory(Application.streamingAssetsPath);
-            AssetDatabase.Refresh();
         }
     }
 
     /// <inheritdoc />
     public void OnPreprocessBuild(BuildReport report)
+    {
+        CopyTemporaryPlayerBuildData();
+    }
+
+    internal static void CopyTemporaryPlayerBuildData()
     {
         if (Directory.Exists(Addressables.BuildPath))
         {

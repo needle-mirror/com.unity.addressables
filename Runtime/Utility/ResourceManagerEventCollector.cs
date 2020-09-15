@@ -98,7 +98,8 @@ namespace UnityEngine.AddressableAssets.Utility
         public void Dispose()
         {
             m_ResourceManager?.UnregisterDiagnosticCallback(OnResourceManagerDiagnosticEvent);
-            GameObject.DestroyImmediate(DiagnosticEventCollectorSingleton.Instance);
+            if (DiagnosticEventCollectorSingleton.Exists)
+                DiagnosticEventCollectorSingleton.DestroySingleton();
         }
     }
 }

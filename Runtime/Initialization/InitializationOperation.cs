@@ -81,6 +81,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             var rtd = m_rtdOp.Result;
             
             m_Addressables.ResourceManager.postProfilerEvents = rtd.ProfileEvents;
+            WebRequestQueue.SetMaxConcurrentRequests(rtd.MaxConcurrentWebRequests);
 
             m_Addressables.Release(m_rtdOp);
             if (rtd.CertificateHandlerType != null)

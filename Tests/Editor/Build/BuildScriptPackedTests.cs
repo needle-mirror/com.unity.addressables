@@ -31,15 +31,11 @@ namespace UnityEditor.AddressableAssets.Tests
         private AddressableAssetsBuildContext m_BuildContext;
         private BuildScriptPackedMode m_BuildScript;
         private AssetBundle m_AssetBundle;
-        private EditorBuildSettingsScene[] m_ScenesBkp;
 
         protected override bool PersistSettings => false;
 
         private AddressableAssetSettings m_PersistedSettings = null;
         protected new AddressableAssetSettings Settings => m_PersistedSettings != null ? m_PersistedSettings : base.Settings;
-
-        //hard coded since this valu is used in static attribute properties
-        private const string k_SchemaTestFolder = "Assets/BuildScriptPackedTests_Tests/SchemaTests";
 
         [SetUp]
         protected void Setup()
@@ -48,9 +44,6 @@ namespace UnityEditor.AddressableAssets.Tests
             m_BuildScript = ScriptableObject.CreateInstance<BuildScriptPackedMode>();
             m_BuildScript.InitializeBuildContext(m_BuilderInput, out m_BuildContext);
             m_RuntimeData = m_BuildContext.runtimeData;
-
-            m_ScenesBkp = EditorBuildSettings.scenes;
-            EditorBuildSettings.scenes = new EditorBuildSettingsScene[0];
         }
 
         [TearDown]
@@ -63,13 +56,6 @@ namespace UnityEditor.AddressableAssets.Tests
             m_AssetBundle = null;
             Object.DestroyImmediate(m_PersistedSettings, true);
             m_PersistedSettings = null;
-            EditorBuildSettings.scenes = m_ScenesBkp;
-            AssetDatabase.Refresh();
-
-            if (Directory.Exists(k_SchemaTestFolder))
-                Directory.Delete(k_SchemaTestFolder, true);
-
-            AssetDatabase.Refresh();
         }
 
         [Test]
@@ -91,73 +77,6 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Assert.IsTrue(buildScript.CanBuildData<AddressableAssetBuildResult>());
             Assert.IsTrue(buildScript.CanBuildData<AddressablesPlayerBuildResult>());
-        }
-
-        [Test]
-        public void ProcessPlayerDataSchema_Scenes_IncludeBuildSettingsScenesIsFalse_ShouldNotGenerateLocationsOrProviders()
-        {
-            using (new HideResourceFoldersScope())
-            {
-                CreateBuiltInTestScene(k_SchemaTestFolder + "/TestScenes/testScene.unity");
-
-                var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-                var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
-                bool includeBuildSettingsScenes = schema.IncludeBuildSettingsScenes;
-                schema.IncludeBuildSettingsScenes = false;
-
-                var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
-                Assert.True(string.IsNullOrEmpty(errorStr));
-
-                var actualLocations = m_BuildContext.locations;
-                Assert.AreEqual(0, actualLocations.Count);
-
-                var expectedProviderCount = 0;
-                var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
-                Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
-
-                schema.IncludeBuildSettingsScenes = includeBuildSettingsScenes;
-            }
-        }
-
-        private static IEnumerable<object[]> PlayerDataGroupSchema_SceneCases()
-        {
-            string sc1 = k_SchemaTestFolder + "/TestScenes/testScene.unity";
-            string sc2 = k_SchemaTestFolder + "/OtherFolder/testScene2.unity";
-
-            yield return new object[] { new string[] {} };
-            yield return new object[] { new string[] { sc1 } };
-            yield return new object[] { new string[] { sc1, sc2 } };
-            //yield return new object[] { new string[] { sc1, sc1 }};
-        }
-
-        [Test, TestCaseSource(nameof(PlayerDataGroupSchema_SceneCases))]
-        public void ProcessPlayerDataSchema_Scenes_ShouldGenerateCorrectLocationsAndProviders(string[] scenePaths)
-        {
-            using (new HideResourceFoldersScope())
-            {
-                foreach (string path in scenePaths)
-                    CreateBuiltInTestScene(path);
-
-                var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-                var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
-                bool includeBuildSettingsScenes = schema.IncludeBuildSettingsScenes;
-                schema.IncludeBuildSettingsScenes = true;
-
-                var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
-                Assert.True(string.IsNullOrEmpty(errorStr));
-
-                var actualLocations = m_BuildContext.locations;
-                var expectedLocationIds =
-                    scenePaths.Distinct().Select(s => s.Replace(".unity", "").Replace("Assets/", ""));
-                Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
-                Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
-
-                var expectedProviderCount = 0;
-                var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
-                Assert.AreEqual(expectedProviderCount, actualProviderIds.Length);
-
-                schema.IncludeBuildSettingsScenes = includeBuildSettingsScenes;
-            }
         }
 
         [Test]
@@ -199,78 +118,6 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Assert.AreEqual(bundleCatalogEntryInternalId, entry1.BundleFileId);
             Assert.IsNull(entry2.BundleFileId);
-        }
-
-        [Test]
-        public void ProcessPlayerDataSchema_Resources_IncludeResourcesFoldersIsFalse_ShouldNotGenerateLocationsOrProviders()
-        {
-            CreateTestResourceAsset(k_SchemaTestFolder + "/Resources/testResource1.prefab");
-
-            var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
-            schema.IncludeResourcesFolders = false;
-
-            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
-            Assert.True(string.IsNullOrEmpty(errorStr));
-
-            var actualLocations = m_BuildContext.locations;
-            var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
-
-            Assert.AreEqual(0, actualLocations.Count);
-            Assert.AreEqual(0, actualProviderIds.Count());
-        }
-
-        private static IEnumerable<object[]> PlayerDataGroupSchema_ResourcesCases()
-        {
-            string res1 = k_SchemaTestFolder + "/Resources/testResource1.prefab";
-            string res2 = k_SchemaTestFolder + "/OtherFolder/Resources/testResource2.prefab";
-            //string res3 = k_SchemaTestFolder + "/Resources/Resources/testResource3.prefab";
-            //string res4 = k_SchemaTestFolder + "/Resources/SubFolder/Resources/testResource4.prefab";
-
-            yield return new object[] { new string[] {} };
-            yield return new object[] { new string[] { res1 } };
-            yield return new object[] { new string[] { res1, res2 } };
-            yield return new object[] { new string[] { res1, res1 } };
-            //yield return new object[] { new string[] { res1, res2, res3 }};
-            //yield return new object[] { new string[] { res1, res2, res3, res4 } };
-        }
-
-        [Test, TestCaseSource(nameof(PlayerDataGroupSchema_ResourcesCases))]
-        public void ProcessPlayerDataSchema_Resources_ShouldGenerateCorrectLocationsAndProviders(string[] resourcesPaths)
-        {
-            using (new HideResourceFoldersScope())
-            {
-                foreach (string path in resourcesPaths)
-                    CreateTestResourceAsset(path);
-
-                var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-                var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
-                bool includeResourceFolders = schema.IncludeResourcesFolders;
-                schema.IncludeResourcesFolders = true;
-
-                var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
-                Assert.True(string.IsNullOrEmpty(errorStr));
-
-                var actualLocations = m_BuildContext.locations;
-                var actualProviderIds = m_BuildScript.ResourceProviderData.Select(r => r.Id).ToArray();
-
-                var expectedLocationIds =
-                    resourcesPaths.Distinct().Select(s => Path.GetFileName(s).Replace(".prefab", ""));
-                Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
-                Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
-
-                if (resourcesPaths.Any())
-                {
-                    Assert.AreEqual(1, actualProviderIds.Length);
-                    Assert.True(actualProviderIds.Contains(typeof(LegacyResourcesProvider).FullName));
-                }
-                else
-                {
-                    Assert.AreEqual(0, actualProviderIds.Length);
-                }
-
-                schema.IncludeResourcesFolders = includeResourceFolders;
-            }
         }
 
         [Test]
@@ -413,7 +260,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(1, assets.Length);
             Assert.AreEqual(jsonText, assets.First().text);
         }
-       
 
         [Test]
         public void CreateCatalogFiles_BundleLocalCatalog_BuildRemoteCatalog_ShouldCreateCatalogBundleAndRemoteJsonCatalog()
@@ -471,49 +317,202 @@ namespace UnityEditor.AddressableAssets.Tests
             File.Delete(registryRemoteCatalogPath);
             File.Delete(registryRemoteHashPath);
         }
+    }
 
-        private void CreateBuiltInTestScene(string scenePath)
+    class ProcessPlayerDataSchemaTests : EditorAddressableAssetsTestFixture
+    {
+        AddressablesDataBuilderInput m_BuilderInput;
+        BuildScriptPackedMode m_BuildScript;
+        AddressableAssetsBuildContext m_BuildContext;
+        EditorBuildSettingsScene[] m_ScenesBkp;
+
+        const string k_SchemaTestFolderPath = TempPath + "/SchemaTests";
+
+        [SetUp]
+        protected void PlayerDataSchemaTestsSetup()
         {
-            var dir = Path.GetDirectoryName(scenePath);
-            if (!Directory.Exists(dir))
-            {
-                Directory.CreateDirectory(dir);
-                AssetDatabase.ImportAsset(dir, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-                AssetDatabase.Refresh();
-            }
+            m_BuilderInput = new AddressablesDataBuilderInput(m_Settings);
+            m_BuildScript = ScriptableObject.CreateInstance<BuildScriptPackedMode>();
+            m_BuildScript.InitializeBuildContext(m_BuilderInput, out m_BuildContext);
 
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
-            EditorSceneManager.SaveScene(scene, scenePath);
-
-            //Clear out the active scene so it doesn't affect tests
-            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
-
-            var newBuildSettingsScene = new EditorBuildSettingsScene(scenePath, true);
-
-            var builtInScenes = EditorBuildSettings.scenes;
-            var list = new List<EditorBuildSettingsScene>(builtInScenes);
-            list.Add(newBuildSettingsScene);
-            EditorBuildSettings.scenes = list.ToArray();
+            m_ScenesBkp = EditorBuildSettings.scenes;
+            EditorBuildSettings.scenes = new EditorBuildSettingsScene[0];
         }
 
-        private void CreateTestResourceAsset(string resourceAssetPath)
+        [TearDown]
+        protected void PlayerDataSchemaTestsTearDown()
         {
-            var dir = Path.GetDirectoryName(resourceAssetPath);
-            if (!Directory.Exists(dir))
+            Object.DestroyImmediate(m_BuildScript);
+            EditorBuildSettings.scenes = m_ScenesBkp;
+        }
+
+        [Test]
+        public void ProcessPlayerDataSchema_WhenIncludeBuildSettingsScenesIsFalse_ShouldNotGenerateAnySceneLocations()
+        {
+            var scenePath = k_SchemaTestFolderPath + "/testScene.unity";
+            Directory.CreateDirectory(Path.GetDirectoryName(scenePath));
+            CreateScene(scenePath, Path.GetFileNameWithoutExtension(scenePath));
+
+            var scenes = EditorBuildSettings.scenes;
+            Assert.AreEqual(1, scenes.Length);
+
+            var group = m_Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+            bool includeBuildSettingsScenes = schema.IncludeBuildSettingsScenes;
+            schema.IncludeBuildSettingsScenes = false;
+
+            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+            Assert.True(string.IsNullOrEmpty(errorStr));
+
+            var actualLocations = m_BuildContext.locations.Where(l => l.ResourceType == typeof(SceneInstance)).ToList();
+            Assert.AreEqual(0, actualLocations.Count);
+
+            // TODO : Assert for existence of SceneProvider (not exposed)
+
+            schema.IncludeBuildSettingsScenes = includeBuildSettingsScenes;
+        }
+
+        [Test]
+        public void ProcessPlayerDataSchema_WhenNoBuildSettingsScenesAreIncluded_ShouldNotGenerateAnySceneLocations()
+        {
+            var group = m_Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+            bool includeBuildSettingsScenes = schema.IncludeBuildSettingsScenes;
+            schema.IncludeBuildSettingsScenes = true;
+
+            var scenes = EditorBuildSettings.scenes;
+            Assert.AreEqual(0, scenes.Length);
+
+            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+            Assert.True(string.IsNullOrEmpty(errorStr));
+
+            var actualLocations = m_BuildContext.locations.Where(l => l.ResourceType == typeof(SceneInstance)).ToList();
+            Assert.AreEqual(0 , actualLocations.Count);
+
+            // TODO : Assert for existence of SceneProvider (not exposed)
+
+            schema.IncludeBuildSettingsScenes = includeBuildSettingsScenes;
+        }
+
+        [Test]
+        public void ProcessPlayerDataSchema_WhenMultipleBuildSettingsScenesAreIncluded_ShouldGenerateCorrectLocations()
+        {
+            var scenePaths = new[]
             {
-                Directory.CreateDirectory(dir);
-                AssetDatabase.ImportAsset(dir, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-                AssetDatabase.Refresh();
+                k_SchemaTestFolderPath + "/testScene.unity",
+                k_SchemaTestFolderPath + "/OtherFolder/testScene2.unity"
+            };
+            foreach (string scenePath in scenePaths)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(scenePath));
+                CreateScene(scenePath, Path.GetFileNameWithoutExtension(scenePath));
             }
 
-            GameObject testResourceObject = new GameObject(Path.GetFileName(resourceAssetPath));
-#if UNITY_2018_3_OR_NEWER
-            PrefabUtility.SaveAsPrefabAsset(testResourceObject, resourceAssetPath);
-#else
-            PrefabUtility.CreatePrefab(k_ResourceAssetPath, testResourceObject);
-#endif
-            AssetDatabase.ImportAsset(resourceAssetPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-            AssetDatabase.Refresh();
+            var group = m_Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+            bool includeBuildSettingsScenes = schema.IncludeBuildSettingsScenes;
+            schema.IncludeBuildSettingsScenes = true;
+
+            var scenes = EditorBuildSettings.scenes;
+            Assert.AreEqual(2, scenes.Length);
+
+            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+            Assert.True(string.IsNullOrEmpty(errorStr));
+
+            var actualLocations = m_BuildContext.locations.Where(l => l.ResourceType == typeof(SceneInstance)).ToList();
+
+            var expectedLocationIds = scenePaths.Select(s => s.Replace(".unity", "").Replace("Assets/", ""));
+            Assert.AreEqual(expectedLocationIds.Count(), actualLocations.Count);
+            Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
+
+            // TODO : Assert for existence of SceneProvider (not exposed)
+
+            schema.IncludeBuildSettingsScenes = includeBuildSettingsScenes;
+        }
+
+        [Test]
+        public void ProcessPlayerDataSchema_WhenIncludeResourcesFoldersIsFalse_ShouldNotGenerateAnyResourceLocationsOrProviders()
+        {
+            var assetPath = k_SchemaTestFolderPath + "/Resources/testResource1.prefab";
+            Directory.CreateDirectory(Path.GetDirectoryName(assetPath));
+            CreateAsset(assetPath, Path.GetFileNameWithoutExtension(assetPath));
+            Assert.IsTrue(File.Exists(assetPath));
+
+            var group = m_Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+            schema.IncludeResourcesFolders = false;
+
+            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+            Assert.True(string.IsNullOrEmpty(errorStr));
+
+            var actualLocations = m_BuildContext.locations.Where(
+                l => l.ResourceType == typeof(GameObject) && l.Provider == typeof(LegacyResourcesProvider).FullName).ToList();
+            Assert.AreEqual(0, actualLocations.Count);
+
+            var actualProviders = m_BuildScript.ResourceProviderData.Where(rpd => rpd.ObjectType.ClassName == typeof(LegacyResourcesProvider).FullName).ToList();
+            Assert.AreEqual(0, actualProviders.Count);
+        }
+
+        [Test]
+        public void ProcessPlayerDataSchema_WhenNoResourcesAreIncluded_ShouldNotGenerateAnyResourceLocationsOrProviders()
+        {
+            using (new HideResourceFoldersScope())
+            {
+                var resourceFolder = k_SchemaTestFolderPath + "/Resources";
+                Directory.CreateDirectory(resourceFolder);
+
+                var group = m_Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+                var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+                schema.IncludeResourcesFolders = true;
+
+                var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+                Assert.True(string.IsNullOrEmpty(errorStr));
+
+                var actualLocations = m_BuildContext.locations.Where(
+                        l => l.ResourceType == typeof(GameObject) &&
+                             l.Provider == typeof(LegacyResourcesProvider).FullName)
+                    .ToList();
+                Assert.AreEqual(0, actualLocations.Count);
+
+                var actualProviders = m_BuildScript.ResourceProviderData
+                    .Where(rpd => rpd.ObjectType.ClassName == typeof(LegacyResourcesProvider).FullName).ToList();
+                Assert.AreEqual(0, actualProviders.Count);
+            }
+        }
+
+        [Test]
+        public void ProcessPlayerDataSchema_WhenMultipleResourcesAreIncluded_ShouldGenerateCorrectResourceLocationsAndProviders()
+        {
+            var resourcesPaths = new[]
+            {
+                k_SchemaTestFolderPath + "/Resources/testResource1.prefab",
+                k_SchemaTestFolderPath + "/OtherFolder/Resources/testResource2.prefab"
+            };
+            foreach (string resourcePath in resourcesPaths)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(resourcePath));
+                CreateAsset(resourcePath, Path.GetFileNameWithoutExtension(resourcePath));
+                Assert.IsTrue(File.Exists(resourcePath));
+            }
+
+            var group = m_Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+            bool includeResourceFolders = schema.IncludeResourcesFolders;
+            schema.IncludeResourcesFolders = true;
+
+            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+            Assert.True(string.IsNullOrEmpty(errorStr));
+
+            var actualLocations = m_BuildContext.locations.Where(
+                l => l.ResourceType == typeof(GameObject) && l.Provider == typeof(LegacyResourcesProvider).FullName).ToList();
+            var expectedLocationIds = resourcesPaths.Distinct().Select(s => Path.GetFileName(s).Replace(".prefab", "")).ToList();
+            Assert.AreEqual(expectedLocationIds.Count, actualLocations.Count);
+            Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
+
+            var actualProviders = m_BuildScript.ResourceProviderData.Where(rpd => rpd.ObjectType.ClassName == typeof(LegacyResourcesProvider).FullName).ToList();
+            Assert.AreEqual(1, actualProviders.Count);
+
+            schema.IncludeResourcesFolders = includeResourceFolders;
         }
     }
 
@@ -523,7 +522,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             group = m_Settings.CreateGroup(groupName, false, false, false, null, typeof(BundledAssetGroupSchema));
             entries = new List<AddressableAssetEntry>();
-            for(int i = 0; i < assetEntryCount; i++)
+            for (int i = 0; i < assetEntryCount; i++)
             {
                 AddressableAssetEntry e = new AddressableAssetEntry($"111{i}", $"addr{i}", group, false);
                 e.m_cachedAssetPath = $"DummyPath{i}";
@@ -533,7 +532,7 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        public void PrepGroupBundlePacking_WhenEntriesDontExpand_AllAssetEntriesAreReturned([Values]BundledAssetGroupSchema.BundlePackingMode mode)
+        public void PrepGroupBundlePacking_WhenEntriesDontExpand_AllAssetEntriesAreReturned([Values] BundledAssetGroupSchema.BundlePackingMode mode)
         {
             int entryCount = 2;
             CreateGroupWithAssets("PrepGroup1", entryCount, out AddressableAssetGroup group, out List<AddressableAssetEntry> entries);
@@ -544,12 +543,11 @@ namespace UnityEditor.AddressableAssets.Tests
             CollectionAssert.AreEquivalent(retEntries, entries);
         }
 
-
         [Test]
         public void PrepGroupBundlePacking_PackSeperate_GroupChangeDoesntAffectOtherAssetsBuildInput()
         {
             CreateGroupWithAssets("PrepGroup", 2, out AddressableAssetGroup group, out List<AddressableAssetEntry> entries);
-            
+
             List<AssetBundleBuild> buildInputDefs = new List<AssetBundleBuild>();
             BuildScriptPackedMode.PrepGroupBundlePacking(group, buildInputDefs, BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
 

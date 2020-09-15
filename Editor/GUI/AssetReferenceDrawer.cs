@@ -30,6 +30,7 @@ namespace UnityEditor.AddressableAssets.GUI
         internal AssetReference m_AssetRefObject;
         internal GUIContent m_label;
         internal bool m_ReferencesSame = true;
+        SubassetPopup m_SubassetPopup;
         List<AssetReferenceUIRestrictionSurrogate> m_Restrictions = null;
 
 #if UNITY_2019_1_OR_NEWER
@@ -104,7 +105,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     success = SetMainAssets(property, target, subObject, fieldInfo);
                 }
-
+                
                 return success;
             }
             catch (Exception e)
@@ -492,26 +493,30 @@ namespace UnityEditor.AddressableAssets.GUI
                     objName = objName.Replace("(Clone)", "");
                 objNames[i] = objName;
 
-                // Check if targetObjects have multiple different selected
-                if (!multipleSubassets)
-                    multipleSubassets = CheckTargetObjectsSubassetsAreDifferent(property, objName, i, ref selIndex);
-                else
-                    break;
+                if (m_AssetRefObject.SubObjectName == objName)
+                    selIndex = i;
             }
+            
+            // Check if targetObjects have multiple different selected
+            if (property.serializedObject.targetObjects.Length > 1)
+                multipleSubassets = CheckTargetObjectsSubassetsAreDifferent(property, m_AssetRefObject.SubObjectName);
 
             // Do custom popup with scroll to pick subasset
-            var subassetPopup = new SubassetPopup(selIndex, objNames, subAssets, property, this);
+            if (m_SubassetPopup == null || m_SubassetPopup.SelectedIndex != selIndex || m_SubassetPopup.m_property != property)
+            {
+                m_SubassetPopup = new SubassetPopup(selIndex, objNames, subAssets, property, this);
+            }
 
             bool isPickerPressed = Event.current.type == EventType.MouseDown && Event.current.button == 0 && pickerRect.Contains(Event.current.mousePosition);
             if (isPickerPressed)
             {
-                PopupWindow.Show(objRect, subassetPopup);
+                PopupWindow.Show(objRect, m_SubassetPopup);
             }
 
             // Show selected name
             GUIContent nameSelected = new GUIContent("--");
             if (!multipleSubassets)
-                nameSelected.text = objNames[subassetPopup.SelectedIndex];
+                nameSelected.text = objNames[m_SubassetPopup.SelectedIndex];
             UnityEngine.GUI.Box(objRect, nameSelected, EditorStyles.objectField);
 
 #if UNITY_2019_1_OR_NEWER
@@ -521,7 +526,7 @@ namespace UnityEditor.AddressableAssets.GUI
             return assetDropDownRect;
         }
 
-        private bool CheckTargetObjectsSubassetsAreDifferent(SerializedProperty property, string objName, int currentIndex, ref int selIndex)
+        private bool CheckTargetObjectsSubassetsAreDifferent(SerializedProperty property, string objName)
         {
             foreach (var targetObject in property.serializedObject.targetObjects)
             {
@@ -530,14 +535,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 string labelText = m_label.text;
                 var assetRefObject =
                     sp.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
-                if (assetRefObject.SubObjectName == objName)
+                if (assetRefObject.SubObjectName != objName)
                 {
-                    if (selIndex == 0)
-                        selIndex = currentIndex;
-                    else if (selIndex != currentIndex)
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
 
@@ -617,10 +617,17 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 var t = o.GetType();
 
-                string propertyName = property.name;
-                int i = property.propertyPath.IndexOf('.');
-                if (i > 0)
-                    propertyName = property.propertyPath.Substring(0, i);
+                // We need to look into sub types, if any.
+                string[] pathParts = property.propertyPath.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < pathParts.Length - 1; i++)
+                {
+                    FieldInfo info = t.GetField(pathParts[i], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (info != null)
+                    {
+                        t = info.FieldType;
+                    }
+                }
+                string propertyName = pathParts.LastOrDefault();
                 var f = t.GetField(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 if (f != null)
                 {
@@ -654,12 +661,10 @@ namespace UnityEditor.AddressableAssets.GUI
         }
     }
 
-    class AddressableAsset {};
-
     class SubassetPopup : PopupWindowContent
     {
         internal int SelectedIndex = 0;
-        private SerializedProperty m_property;
+        internal SerializedProperty m_property;
         private string[] m_objNames;
         private List<Object> m_subAssets;
         private AssetReferenceDrawer m_drawer;
@@ -684,7 +689,6 @@ namespace UnityEditor.AddressableAssets.GUI
 
             EditorGUILayout.BeginVertical();
             m_scrollPosition = EditorGUILayout.BeginScrollView(m_scrollPosition, GUILayout.Width(rect.width), GUILayout.Height(rect.height));
-
             for (int i = 0; i < m_objNames.Length; i++)
             {
                 if (GUILayout.Button(m_objNames[i], buttonStyle))

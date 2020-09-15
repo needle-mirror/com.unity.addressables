@@ -41,7 +41,19 @@ namespace UnityEditor.AddressableAssets.Build
             Rules.Add(new TRule());
         }
 
-        internal static string AnalyzeRuleDataFolder => AddressableAssetSettingsDefaultObject.kDefaultConfigFolder + "/AnalyzeData";
+        internal static string AnalyzeRuleDataFolder
+        {
+            get
+            {
+                var settings = AddressableAssetSettingsDefaultObject.Settings;
+                var path = AddressableAssetSettingsDefaultObject.kDefaultConfigFolder;
+                if (settings != null && settings.IsPersisted)
+                    path = settings.ConfigFolder;
+
+                return path + "/AnalyzeData";
+            }
+        }
+
         internal static string AnalyzeRuleDataName => "AnalyzeRuleData.asset";
         internal static string AnalyzeRuleDataPath => AnalyzeRuleDataFolder + "/" + AnalyzeRuleDataName;
         internal static AddressableAssetSettings Settings => AddressableAssetSettingsDefaultObject.Settings;

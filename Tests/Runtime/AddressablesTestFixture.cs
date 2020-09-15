@@ -2,6 +2,7 @@ using NUnit.Framework;
 using System.Collections;
 using System.IO;
 #if UNITY_EDITOR
+using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
@@ -13,6 +14,10 @@ using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
 using System;
 using UnityEngine;
+using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.SceneManagement;
+
+using Object = UnityEngine.Object;
 
 public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanup
 {
@@ -88,7 +93,7 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
 #if UNITY_EDITOR
         string path = Path.Combine("Assets", "gen");
         if (Directory.Exists(path))
-            Directory.Delete(path, true);
+            AssetDatabase.DeleteAsset(path);
 #endif
     }
 
@@ -149,5 +154,39 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
         {
             return string.Format("{0}Library/com.unity.addressables/settings_{1}.json", "file://{UnityEngine.Application.dataPath}/../", m_UniqueTestName);
         }
+    }
+
+    internal static string CreateAssetPath(string rootFolder, string key, string extension)
+    {
+        return Path.Combine(rootFolder, String.Concat(key, extension));
+    }
+
+#if UNITY_EDITOR
+    internal static string CreateScene(string assetPath)
+    {
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Additive);
+        EditorSceneManager.SaveScene(scene, assetPath);
+        return AssetDatabase.AssetPathToGUID(scene.path);
+    }
+
+    internal static string CreatePrefab(string assetPath)
+    {
+        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        PrefabUtility.SaveAsPrefabAsset(go, assetPath);
+        Object.DestroyImmediate(go, false);
+        return AssetDatabase.AssetPathToGUID(assetPath);
+    }
+#endif
+
+    internal static IEnumerator UnloadSceneFromHandler(AsyncOperationHandle<SceneInstance> op, AddressablesImpl addressables)
+    {
+        string sceneName = op.Result.Scene.name;
+        Assert.IsNotNull(sceneName);
+        var unloadOp = addressables.UnloadSceneAsync(op, false);
+        yield return unloadOp;
+        Assert.AreEqual(AsyncOperationStatus.Succeeded, unloadOp.Status);
+        Assert.IsFalse(unloadOp.Result.Scene.isLoaded);
+        addressables.Release(unloadOp);
+        Assert.IsNull(SceneManager.GetSceneByName(sceneName).name);
     }
 }

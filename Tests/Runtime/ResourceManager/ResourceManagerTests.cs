@@ -81,6 +81,20 @@ namespace UnityEngine.ResourceManagement.Tests
         }
 
         [Test]
+        public void WhenMultipleIUpdateReceivers_AddedToResourceManager_MonoBehaviorCallbackHooksDelegateList_DoesNotGrow()
+        {
+            var prevCBHooks = m_ResourceManager.CallbackHooksEnabled;
+            m_ResourceManager.CallbackHooksEnabled = true;
+            var startingCBCount = MonoBehaviourCallbackHooks.Instance.m_OnUpdateDelegate == null ? 0 : MonoBehaviourCallbackHooks.Instance.m_OnUpdateDelegate.GetInvocationList().Length;
+            m_ResourceManager.AddUpdateReceiver(new TestUpdateReceiverThatRemovesSelfDuringUpdate() { rm = m_ResourceManager, removeSelf = true });
+            Assert.AreEqual(startingCBCount + 1, MonoBehaviourCallbackHooks.Instance.m_OnUpdateDelegate.GetInvocationList().Length);
+            m_ResourceManager.AddUpdateReceiver(new TestUpdateReceiverThatRemovesSelfDuringUpdate() { rm = m_ResourceManager, removeSelf = true });
+            Assert.AreEqual(startingCBCount + 1, MonoBehaviourCallbackHooks.Instance.m_OnUpdateDelegate.GetInvocationList().Length);
+            MonoBehaviourCallbackHooks.Instance.Update();
+            m_ResourceManager.CallbackHooksEnabled = prevCBHooks;
+        }
+
+        [Test]
         public void WhenIUpdateReceiverRemovesSelfDuringCallback_ListIsMaintained()
         {
             var ur1 = new TestUpdateReceiverThatRemovesSelfDuringUpdate() { rm = m_ResourceManager, removeSelf = false };

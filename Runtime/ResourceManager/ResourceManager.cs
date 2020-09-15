@@ -239,10 +239,12 @@ namespace UnityEngine.ResourceManagement
                 RemoveUpdateReciever(updateReceiver);
         }
 
+        bool m_RegisteredForCallbacks = false;
         internal void RegisterForCallbacks()
         {
-            if (CallbackHooksEnabled)
+            if (CallbackHooksEnabled && !m_RegisteredForCallbacks)
             {
+                m_RegisteredForCallbacks = true;
                 MonoBehaviourCallbackHooks.Instance.OnUpdateDelegate += Update;
             }
         }
@@ -942,8 +944,11 @@ namespace UnityEngine.ResourceManagement
         /// </summary>
         public void Dispose()
         {
-            if (MonoBehaviourCallbackHooks.Exists)
+            if (MonoBehaviourCallbackHooks.Exists && m_RegisteredForCallbacks)
+            {
                 MonoBehaviourCallbackHooks.Instance.OnUpdateDelegate -= Update;
+                m_RegisteredForCallbacks = false;
+            }
         }
     }
 }
