@@ -364,8 +364,9 @@ namespace UnityEngine.ResourceManagement
         /// </summary>
         /// <returns>An async operation.</returns>
         /// <param name="location">Location to load.</param>
+        /// <param name="releaseDependenciesOnFailure">When true, if the operation fails, dependencies will be released.</param>
         /// <typeparam name="TObject">Object type to load.</typeparam>
-        private AsyncOperationHandle ProvideResource(IResourceLocation location, Type desiredType = null)
+        private AsyncOperationHandle ProvideResource(IResourceLocation location, Type desiredType = null, bool releaseDependenciesOnFailure = true)
         {
             if (location == null)
                 throw new ArgumentNullException("location");
@@ -374,7 +375,10 @@ namespace UnityEngine.ResourceManagement
             {
                 provider = GetResourceProvider(desiredType, location);
                 if (provider == null)
-                    return CreateCompletedOperation<object>(null, new UnknownResourceProviderException(location).Message);
+                {
+                    var message = new UnknownResourceProviderException(location).Message;
+                    return CreateCompletedOperationInternal<object>(null, string.IsNullOrEmpty(message), message, releaseDependenciesOnFailure);
+                }
                 desiredType = provider.GetDefaultType(location);
             }
 
@@ -394,12 +398,12 @@ namespace UnityEngine.ResourceManagement
             // Calculate the hash of the dependencies
             int depHash = location.DependencyHashCode;
             var depOp = location.HasDependencies ?
-                ProvideResourceGroupCached(location.Dependencies, depHash, null, null) :
+                ProvideResourceGroupCached(location.Dependencies, depHash, null, null, releaseDependenciesOnFailure) :
                 default(AsyncOperationHandle<IList<AsyncOperationHandle>>);
             if (provider == null)
                 provider = GetResourceProvider(desiredType, location);
 
-            ((IGenericProviderOperation)op).Init(this, provider, location, depOp);
+            ((IGenericProviderOperation)op).Init(this, provider, location, depOp, releaseDependenciesOnFailure);
 
             var handle = StartOperation(op, depOp);
             handle.LocationName = location.ToString();
@@ -448,12 +452,14 @@ namespace UnityEngine.ResourceManagement
         {
             bool m_Success;
             string m_ErrorMsg;
+            bool m_ReleaseDependenciesOnFailure;
             public CompletedOperation() {}
-            public void Init(TObject result, bool success, string errorMsg)
+            public void Init(TObject result, bool success, string errorMsg, bool releaseDependenciesOnFailure = true)
             {
                 Result = result;
                 m_Success = success;
                 m_ErrorMsg = errorMsg;
+                m_ReleaseDependenciesOnFailure = releaseDependenciesOnFailure;
             }
 
             protected override string DebugName
@@ -463,7 +469,7 @@ namespace UnityEngine.ResourceManagement
 
             protected override void Execute()
             {
-                Complete(Result, m_Success, m_ErrorMsg);
+                Complete(Result, m_Success, m_ErrorMsg, m_ReleaseDependenciesOnFailure);
             }
         }
 
@@ -539,13 +545,13 @@ namespace UnityEngine.ResourceManagement
         /// <returns>The operation handle used for the completed operation.</returns>
         public AsyncOperationHandle<TObject> CreateCompletedOperation<TObject>(TObject result, string errorMsg)
         {
-            return CreateCompletedOperation(result, string.IsNullOrEmpty(errorMsg), errorMsg);
+            return CreateCompletedOperationInternal(result, string.IsNullOrEmpty(errorMsg), errorMsg);
         }
 
-        internal AsyncOperationHandle<TObject> CreateCompletedOperation<TObject>(TObject result, bool success, string errorMsg)
+        internal AsyncOperationHandle<TObject> CreateCompletedOperationInternal<TObject>(TObject result, bool success, string errorMsg, bool releaseDependenciesOnFailure = true)
         {
             var cop = CreateOperation<CompletedOperation<TObject>>(typeof(CompletedOperation<TObject>), typeof(CompletedOperation<TObject>).GetHashCode(), 0, null);
-            cop.Init(result, success, errorMsg);
+            cop.Init(result, success, errorMsg, releaseDependenciesOnFailure);
             return StartOperation(cop, default(AsyncOperationHandle));
         }
 
@@ -618,7 +624,7 @@ namespace UnityEngine.ResourceManagement
                 op = CreateOperation<GroupOperation>(typeof(GroupOperation), s_GroupOperationTypeHash, groupHash, m_ReleaseOpCached);
                 var ops = new List<AsyncOperationHandle>(locations.Count);
                 foreach (var loc in locations)
-                    ops.Add(ProvideResource(loc, desiredType));
+                    ops.Add(ProvideResource(loc, desiredType, releaseDependenciesOnFailure));
 
                 op.Init(ops, releaseDependenciesOnFailure);
 
@@ -679,7 +685,7 @@ namespace UnityEngine.ResourceManagement
                 callbackGeneric = (x) => callback((TObject)(x.Result));
             }
             var typelessHandle = ProvideResourceGroupCached(locations, CalculateLocationsHash(locations, typeof(TObject)), typeof(TObject), callbackGeneric, releaseDependenciesOnFailure);
-            var chainOp = CreateChainOperation<IList<TObject>>(typelessHandle, (resultHandle) =>
+            var chainOp = CreateChainOperationInternal<IList<TObject>>(typelessHandle, (resultHandle) =>
             {
                 AsyncOperationHandle<IList<AsyncOperationHandle>> handleToHandles = resultHandle.Convert<IList<AsyncOperationHandle>>();
 
@@ -718,8 +724,8 @@ namespace UnityEngine.ResourceManagement
                     }
                 }
 
-                return CreateCompletedOperation<IList<TObject>>(list, string.IsNullOrEmpty(errorMessage), errorMessage);
-            });
+                return CreateCompletedOperationInternal<IList<TObject>>(list, string.IsNullOrEmpty(errorMessage), errorMessage, releaseDependenciesOnFailure);
+            }, releaseDependenciesOnFailure);
 
             // chain operation holds the dependency
             typelessHandle.Release();
@@ -737,7 +743,7 @@ namespace UnityEngine.ResourceManagement
         public AsyncOperationHandle<TObject> CreateChainOperation<TObject, TObjectDependency>(AsyncOperationHandle<TObjectDependency> dependentOp, Func<AsyncOperationHandle<TObjectDependency>, AsyncOperationHandle<TObject>> callback)
         {
             var op = CreateOperation<ChainOperation<TObject, TObjectDependency>>(typeof(ChainOperation<TObject, TObjectDependency>), typeof(ChainOperation<TObject, TObjectDependency>).GetHashCode(), 0, null);
-            op.Init(dependentOp, callback);
+            op.Init(dependentOp, callback, true);
             return StartOperation(op, dependentOp);
         }
 
@@ -751,7 +757,36 @@ namespace UnityEngine.ResourceManagement
         public AsyncOperationHandle<TObject> CreateChainOperation<TObject>(AsyncOperationHandle dependentOp, Func<AsyncOperationHandle, AsyncOperationHandle<TObject>> callback)
         {
             var cOp = new ChainOperationTypelessDepedency<TObject>();
-            cOp.Init(dependentOp, callback);
+            cOp.Init(dependentOp, callback, true);
+            return StartOperation(cOp, dependentOp);
+        }
+
+        /// <summary>
+        /// Create a chain operation to handle dependencies.
+        /// </summary>
+        /// <typeparam name="TObject">The type of operation handle to return.</typeparam>
+        /// <typeparam name="TObjectDependency">The type of the dependency operation.</typeparam>
+        /// <param name="dependentOp">The dependency operation.</param>
+        /// <param name="callback">The callback method that will create the dependent operation from the dependency operation.</param>
+        /// <returns>The operation handle.</returns>
+        internal AsyncOperationHandle<TObject> CreateChainOperationInternal<TObject, TObjectDependency>(AsyncOperationHandle<TObjectDependency> dependentOp, Func<AsyncOperationHandle<TObjectDependency>, AsyncOperationHandle<TObject>> callback, bool releaseDependenciesOnFailure = true)
+        {
+            var op = CreateOperation<ChainOperation<TObject, TObjectDependency>>(typeof(ChainOperation<TObject, TObjectDependency>), typeof(ChainOperation<TObject, TObjectDependency>).GetHashCode(), 0, null);
+            op.Init(dependentOp, callback, releaseDependenciesOnFailure);
+            return StartOperation(op, dependentOp);
+        }
+
+        /// <summary>
+        /// Create a chain operation to handle dependencies.
+        /// </summary>
+        /// <typeparam name="TObject">The type of operation handle to return.</typeparam>
+        /// <param name="dependentOp">The dependency operation.</param>
+        /// <param name="callback">The callback method that will create the dependent operation from the dependency operation.</param>
+        /// <returns>The operation handle.</returns>
+        internal AsyncOperationHandle<TObject> CreateChainOperationInternal<TObject>(AsyncOperationHandle dependentOp, Func<AsyncOperationHandle, AsyncOperationHandle<TObject>> callback, bool releaseDependenciesOnFailure = true)
+        {
+            var cOp = new ChainOperationTypelessDepedency<TObject>();
+            cOp.Init(dependentOp, callback, releaseDependenciesOnFailure);
             return StartOperation(cOp, dependentOp);
         }
 

@@ -49,7 +49,7 @@ namespace UnityEditor.AddressableAssets.GUI
         int m_CurrentProfileIndex = -1;
 
         List<Action> m_QueuedChanges = new List<Action>();
-        
+
         void OnEnable()
         {
             m_AasTarget = target as AddressableAssetSettings;
@@ -110,6 +110,10 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Profile In Use", "This is the active profile that will be used to evaluate all profile variables during a build and when entering play mode.");
         GUIContent m_MaxConcurrentWebRequests =
             new GUIContent("Max Concurrent Web Requests", "Limits the number of concurrent web requests.  If more requests are made, they will be queued until some requests complete.");
+        GUIContent m_groupHierarchyView =
+            new GUIContent("Group Hierarchy with Dashes", "If enabled, group names are parsed as if a '-' represented a child in hierarchy.  So a group called 'a-b-c' would be displayed as if it were in a folder called 'b' that lived in a folder called 'a'.  In this mode, only groups without '-' can be rearranged within the groups window.");
+        GUIContent m_IgnoreUnsupportedFilesInBuild =
+            new GUIContent("Ignore Invalid/Unsupported Files in Build", "If enabled, files that cannot be built will be ignored.");
 
         public override void OnInspectorGUI()
         {
@@ -138,13 +142,13 @@ namespace UnityEditor.AddressableAssets.GUI
                     if (AddressableAssetSettingsDefaultObject.Settings.profileSettings.profiles[m_CurrentProfileIndex].id != AddressableAssetSettingsDefaultObject.Settings.activeProfileId)
                     {
                         currentProfileIndex =  profileNames.IndexOf(AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileName(AddressableAssetSettingsDefaultObject.Settings.activeProfileId));
-                        if(currentProfileIndex != m_CurrentProfileIndex)
+                        if (currentProfileIndex != m_CurrentProfileIndex)
                             m_QueuedChanges.Add(() => m_CurrentProfileIndex = currentProfileIndex);
                     }
                     currentProfileIndex = EditorGUILayout.Popup(m_ProfileInUse, currentProfileIndex, profileNames.ToArray());
-                    if(currentProfileIndex != m_CurrentProfileIndex)
+                    if (currentProfileIndex != m_CurrentProfileIndex)
                         m_QueuedChanges.Add(() => m_CurrentProfileIndex = currentProfileIndex);
-                    
+
                     AddressableAssetSettingsDefaultObject.Settings.activeProfileId = AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileId(profileNames[currentProfileIndex]);
 
                     EditorGUILayout.BeginHorizontal();
@@ -169,13 +173,13 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (disableCatalogOnStartup != m_AasTarget.DisableCatalogUpdateOnStartup)
                     m_QueuedChanges.Add(() => m_AasTarget.DisableCatalogUpdateOnStartup = disableCatalogOnStartup);
                 string overridePlayerVersion = EditorGUILayout.TextField(m_OverridePlayerVersion, m_AasTarget.OverridePlayerVersion);
-                if(overridePlayerVersion!= m_AasTarget.OverridePlayerVersion)
+                if (overridePlayerVersion != m_AasTarget.OverridePlayerVersion)
                     m_QueuedChanges.Add(() => m_AasTarget.OverridePlayerVersion = overridePlayerVersion);
                 bool bundleLocalCatalog = EditorGUILayout.Toggle(m_BundleLocalCatalog, m_AasTarget.BundleLocalCatalog);
                 if (bundleLocalCatalog != m_AasTarget.BundleLocalCatalog)
                     m_QueuedChanges.Add(() => m_AasTarget.BundleLocalCatalog = bundleLocalCatalog);
                 bool buildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
-                if(buildRemoteCatalog !=m_AasTarget.BuildRemoteCatalog)
+                if (buildRemoteCatalog != m_AasTarget.BuildRemoteCatalog)
                     m_QueuedChanges.Add(() => m_AasTarget.BuildRemoteCatalog = buildRemoteCatalog);
                 if ((m_AasTarget.RemoteCatalogBuildPath != null && m_AasTarget.RemoteCatalogLoadPath != null) // these will never actually be null, as the accessor initializes them.
                     && (buildRemoteCatalog))
@@ -191,18 +195,21 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 ProjectConfigData.postProfilerEvents = EditorGUILayout.Toggle(m_SendProfilerEvents, ProjectConfigData.postProfilerEvents);
                 bool logResourceManagerExceptions = EditorGUILayout.Toggle(m_LogRuntimeExceptions, m_AasTarget.buildSettings.LogResourceManagerExceptions);
-                if(logResourceManagerExceptions != m_AasTarget.buildSettings.LogResourceManagerExceptions)
+                if (logResourceManagerExceptions != m_AasTarget.buildSettings.LogResourceManagerExceptions)
                     m_QueuedChanges.Add(() => m_AasTarget.buildSettings.LogResourceManagerExceptions = logResourceManagerExceptions);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("m_CertificateHandlerType"), m_CertificateHandlerType);
                 bool uniqueBundleIds = EditorGUILayout.Toggle(m_UniqueBundles, m_AasTarget.UniqueBundleIds);
-                if(uniqueBundleIds != m_AasTarget.UniqueBundleIds)
+                if (uniqueBundleIds != m_AasTarget.UniqueBundleIds)
                     m_QueuedChanges.Add(() => m_AasTarget.UniqueBundleIds = uniqueBundleIds);
                 bool contiguousBundles = EditorGUILayout.Toggle(m_ContiguousBundles, m_AasTarget.ContiguousBundles);
-                if(contiguousBundles != m_AasTarget.ContiguousBundles)
+                if (contiguousBundles != m_AasTarget.ContiguousBundles)
                     m_QueuedChanges.Add(() => m_AasTarget.ContiguousBundles = contiguousBundles);
                 var maxWebReqs = EditorGUILayout.IntSlider(m_MaxConcurrentWebRequests, m_AasTarget.MaxConcurrentWebRequests, 1, 1024);
                 if (maxWebReqs != m_AasTarget.MaxConcurrentWebRequests)
                     m_QueuedChanges.Add(() => m_AasTarget.MaxConcurrentWebRequests = maxWebReqs);
+
+                ProjectConfigData.showGroupsAsHierarchy = EditorGUILayout.Toggle(m_groupHierarchyView, ProjectConfigData.showGroupsAsHierarchy);
+                ProjectConfigData.ignoreUnsupportedFilesInBuild = EditorGUILayout.Toggle(m_IgnoreUnsupportedFilesInBuild, ProjectConfigData.ignoreUnsupportedFilesInBuild);
             }
 
             GUILayout.Space(6);

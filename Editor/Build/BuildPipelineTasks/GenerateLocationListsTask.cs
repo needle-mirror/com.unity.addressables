@@ -68,6 +68,8 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 aaContext.providerTypes = output.ProviderTypes;
             else
                 aaContext.providerTypes.UnionWith(output.ProviderTypes);
+            aaContext.bundleToExpandedBundleDependencies = output.BundleToExpandedBundleDependencies;
+            aaContext.bundleToImmediateBundleDependencies = output.BundleToImmediateBundleDependencies;
 
             return ReturnCode.Success;
         }
@@ -90,6 +92,8 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             public List<ContentCatalogDataEntry> Locations;
             public Dictionary<AddressableAssetGroup, List<string>> AssetGroupToBundles;
             public HashSet<Type> ProviderTypes;
+            public Dictionary<string, List<string>> BundleToImmediateBundleDependencies;
+            public Dictionary<string, List<string>> BundleToExpandedBundleDependencies;
         }
 
         static AddressableAssetGroup GetGroupFromBundle(string bundleName, Dictionary<string, string> bundleToAssetGroupGUID , AddressableAssetSettings settings)
@@ -201,7 +205,12 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                             if (entry.guid.Length > 0 && entry.address.Contains("[") && entry.address.Contains("]"))
                                 throw new Exception($"Address '{entry.address}' cannot contain '[ ]'.");
                             if (entry.MainAssetType == typeof(DefaultAsset) && !AssetDatabase.IsValidFolder(entry.AssetPath))
-                                throw new Exception($"Cannot recognize file type for entry located at '{entry.AssetPath}'. Asset import failed or using an unsupported file type.");
+                            {
+                                if (ProjectConfigData.ignoreUnsupportedFilesInBuild)
+                                    Debug.LogWarning($"Cannot recognize file type for entry located at '{entry.AssetPath}'. Asset location will be ignored.");
+                                else
+                                    throw new Exception($"Cannot recognize file type for entry located at '{entry.AssetPath}'. Asset import failed for using an unsupported file type.");
+                            }
                             entry.CreateCatalogEntriesInternal(locations, true, assetProvider, bEntry.ExpandedDependencies.Select(x => x.BundleName), null, input.AssetToAssetInfo, providerTypes);
                         }
                     }
@@ -216,6 +225,8 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             output.Locations = locations;
             output.ProviderTypes = providerTypes;
             output.AssetGroupToBundles = assetGroupToBundles;
+            output.BundleToImmediateBundleDependencies = bundleToEntry.Values.ToDictionary(x => x.BundleName, x => x.Dependencies.Select(y => y.BundleName).ToList());
+            output.BundleToExpandedBundleDependencies = bundleToEntry.Values.ToDictionary(x => x.BundleName, x => x.ExpandedDependencies.Where(y => !x.Dependencies.Contains(y)).Select(y => y.BundleName).ToList());
             return output;
         }
 

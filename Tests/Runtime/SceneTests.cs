@@ -87,6 +87,17 @@ namespace SceneTests
         }
 
         [UnityTest]
+        public IEnumerator AddressablesImpl_LoadSceneAsync_FailsLoadNonexistent()
+        {
+            LogAssert.ignoreFailingMessages = true;
+            var op = m_Addressables.LoadSceneAsync("testkey");
+            yield return op;
+            
+            Assert.AreEqual(AsyncOperationStatus.Failed,op.Status);
+            Assert.IsTrue(op.OperationException.Message.Contains("InvalidKey"));
+        }
+
+        [UnityTest]
         public IEnumerator PercentComplete_NeverHasDecreasedValue_WhenLoadingScene()
         {
             //Setup
@@ -259,6 +270,39 @@ namespace SceneTests
 
             Assert.AreEqual(0, m_Addressables.m_SceneInstances.Count);
             impl.ResourceManager.Dispose();
+        }
+        
+        [UnityTest]
+        public IEnumerator SceneTests_UnloadSceneAsync_CanUnloadBaseHandle()
+        {
+            AddressablesImpl impl = new AddressablesImpl(new DefaultAllocationStrategy());
+            var op = m_Addressables.LoadSceneWithChain(impl.InitializeAsync(), sceneKeys[0], LoadSceneMode.Additive);
+            yield return op;
+            
+            Assert.AreEqual(1, m_Addressables.m_SceneInstances.Count);
+            bool autoReleaseHandle = false;
+            op = impl.UnloadSceneAsync((AsyncOperationHandle)op,autoReleaseHandle);
+            yield return op;
+
+            Assert.AreEqual(AsyncOperationStatus.Succeeded,op.Status);
+            op.Release();
+            yield return op;
+            
+            Assert.AreEqual(0, m_Addressables.m_SceneInstances.Count);
+        }
+        
+        [UnityTest]
+        public IEnumerator SceneTests_UnloadSceneAsync_CanUnloadFromSceneInstance()
+        {
+            AddressablesImpl impl = new AddressablesImpl(new DefaultAllocationStrategy());
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            yield return op;
+            
+            Assert.AreEqual(1, m_Addressables.m_SceneInstances.Count);
+            var sceneInst = op.m_InternalOp.Result; 
+            yield return m_Addressables.UnloadSceneAsync(sceneInst);
+
+            Assert.AreEqual(0, m_Addressables.m_SceneInstances.Count);
         }
     }
 

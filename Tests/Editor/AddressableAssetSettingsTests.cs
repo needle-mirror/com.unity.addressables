@@ -66,6 +66,20 @@ namespace UnityEditor.AddressableAssets.Tests
 
             public string Description { get; }
         }
+        
+        public void SetupEntries(ref List<AddressableAssetEntry> entries, int numEntries)
+        {
+            var testObject = new GameObject("TestObjectSetLabel");
+#if UNITY_2018_3_OR_NEWER
+            PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/testasset.prefab");
+#else
+            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
+#endif
+            var testAssetGUID = AssetDatabase.AssetPathToGUID(ConfigFolder + "/testasset.prefab");
+            entries.Add(Settings.CreateOrMoveEntry(m_AssetGUID, Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName)));
+            for(int i = 0; i <= numEntries; i++)
+                entries.Add(Settings.CreateOrMoveEntry(testAssetGUID, Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName)));
+        }
 
         [Test]
         public void HasDefaultInitialGroups()
@@ -931,33 +945,70 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(1024, Settings.MaxConcurrentWebRequests);
         }
 
-        [Test]
-        public void AddressableAssetSettings_SetLabelValueForEntries_CanSet()
+        [TestCase(1)]
+        [TestCase(5)]
+        public void AddressableAssetSettings_SetLabelValueForEntries_CanSet(int numEntries)
         {
             // Setup
             List<AddressableAssetEntry> entries = new List<AddressableAssetEntry>();
-            var testObject = new GameObject("TestObjectSetLabel");
             var newLabel = "testSetLabelValueForEntries";
-#if UNITY_2018_3_OR_NEWER
-            PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/testasset.prefab");
-#else
-            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
-#endif
-            var testAssetGUID = AssetDatabase.AssetPathToGUID(ConfigFolder + "/testasset.prefab");
-            entries.Add(Settings.CreateOrMoveEntry(m_AssetGUID, Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName)));
-            entries.Add(Settings.CreateOrMoveEntry(testAssetGUID, Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName)));
+            SetupEntries(ref entries, numEntries);            
             var prevDC = EditorUtility.GetDirtyCount(Settings);
 
             // Test
             Settings.SetLabelValueForEntries(entries, newLabel, true, true);
-            Assert.IsTrue(entries[0].labels.Contains(newLabel));
-            Assert.IsTrue(entries[1].labels.Contains(newLabel));
+            foreach(var e in entries)
+                Assert.IsTrue(e.labels.Contains(newLabel));
             Assert.AreEqual(prevDC + 2, EditorUtility.GetDirtyCount(Settings));
 
             // Cleanup
             Settings.RemoveLabel(newLabel);
         }
 
+        [TestCase(1,2)]
+        [TestCase(5,8)]
+        public void AddressableAssetSettings_RemoveLabel_RemoveLabelShouldRemoveDeletedLabelFromEntries(int numEntries, int numLabels)
+        {
+            // Setup
+            List<AddressableAssetEntry> entries = new List<AddressableAssetEntry>();
+            SetupEntries(ref entries, numEntries);
+            List<string> testLabels = new List<string>();
+            for(int i = 1; i <= numLabels; i++)
+            {
+                var newLabel = "testSetLabelValueForEntries" + i;
+                testLabels.Add(newLabel);
+                Settings.SetLabelValueForEntries(entries, newLabel, true, true);
+            }
+
+            // Test
+            // Remove half the labels
+            for(int i = 0; i < numLabels / 2; i++)
+                Settings.RemoveLabel(testLabels[i]);
+            
+            foreach(var e in entries)
+                foreach(var l in testLabels)
+                    Assert.IsTrue(e.labels.Contains(l));
+            
+            // Check that each of the first half of labels were removed
+            foreach (var e in entries)
+            {
+                e.CreateKeyList();
+                for (int i = 0; i < numLabels; i++)
+                {
+                    if (i < numLabels / 2)
+                        Assert.IsFalse(e.labels.Contains(testLabels[i]));
+                    else
+                        Assert.IsTrue(e.labels.Contains(testLabels[i]));
+                }
+            }
+            
+            // Cleanup
+            for(int i = numLabels/2; i < numLabels ; i++)
+            {
+                Settings.RemoveLabel(testLabels[i]);
+            }
+        }
+        
         [Test]
         public void AddressableAssetSettings_HashChanges_WhenGroupIsAdded()
         {

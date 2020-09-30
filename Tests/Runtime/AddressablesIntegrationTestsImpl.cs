@@ -27,21 +27,6 @@ namespace AddressableAssetsIntegrationTests
 {
     internal abstract partial class AddressablesIntegrationTests : IPrebuildSetup
     {
-        internal class IgnoreFailingLogMessage : IDisposable
-        {
-            private bool m_SavedIgnoreFailingMessagesFlag;
-            public IgnoreFailingLogMessage()
-            {
-                m_SavedIgnoreFailingMessagesFlag = LogAssert.ignoreFailingMessages;
-                LogAssert.ignoreFailingMessages = true;
-            }
-            public void Dispose()
-            {
-                LogAssert.ignoreFailingMessages = m_SavedIgnoreFailingMessagesFlag;
-            }
-        }
-
-
         [UnityTest]
         public IEnumerator AsyncCache_IsCleaned_OnFailedOperation()
         {
@@ -92,7 +77,11 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
 
             //Test
-            var op = m_Addressables.LoadAssetAsync<MeshRenderer>("test0BASE");
+            AsyncOperationHandle<MeshRenderer> op = new AsyncOperationHandle<MeshRenderer>();
+            using (new IgnoreFailingLogMessage())
+            {
+                op = m_Addressables.LoadAssetAsync<MeshRenderer>("test0BASE");
+            }
             yield return op;
             Assert.IsNull(op.Result);
         }
@@ -105,7 +94,11 @@ namespace AddressableAssetsIntegrationTests
 
             //Test
             AsyncOperationHandle handle = default(AsyncOperationHandle);
-            handle = m_Addressables.LoadAssetAsync<GameObject>("noSuchLabel");
+            using (new IgnoreFailingLogMessage())
+            {
+                handle = m_Addressables.LoadAssetAsync<GameObject>("noSuchLabel");
+            }
+
             Assert.AreEqual("Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown., Key=noSuchLabel, Type=UnityEngine.GameObject", handle.OperationException.Message);
             yield return handle;
 
@@ -1004,7 +997,12 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
             List<object> keys = new List<object>() { "INVALID1", "INVALID2" };
-            AsyncOperationHandle<IList<GameObject>> gop = m_Addressables.LoadAssetsAsync<GameObject>(keys, null, Addressables.MergeMode.Intersection, true);
+            AsyncOperationHandle<IList<GameObject>> gop = new AsyncOperationHandle<IList<GameObject>>();
+            using (new IgnoreFailingLogMessage())
+            { 
+                gop = m_Addressables.LoadAssetsAsync<GameObject>(keys, null, Addressables.MergeMode.Intersection, true);
+            }
+
             while (!gop.IsDone)
                 yield return null;
             Assert.IsTrue(gop.IsDone);
@@ -1071,8 +1069,12 @@ namespace AddressableAssetsIntegrationTests
         {
             yield return Init();
             string label = AddressablesTestUtility.GetPrefabUniqueLabel("BASE", 0);
-            AsyncOperationHandle<Texture> op = m_Addressables.LoadAssetAsync<Texture>(label);
-            yield return op;
+            AsyncOperationHandle<Texture> op = new AsyncOperationHandle<Texture>();
+            using (new IgnoreFailingLogMessage())
+            {
+                op = m_Addressables.LoadAssetAsync<Texture>(label);
+                yield return op;
+            }
             Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
             Assert.IsNull(op.Result);
             op.Release();
@@ -1082,7 +1084,11 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator LoadAsset_WhenEntryDoesNotExist_OperationFails()
         {
             yield return Init();
-            AsyncOperationHandle<GameObject> op = m_Addressables.LoadAssetAsync<GameObject>("unknownlabel");
+            AsyncOperationHandle<GameObject> op = new AsyncOperationHandle<GameObject>();
+            using (new IgnoreFailingLogMessage())
+            {
+                op = m_Addressables.LoadAssetAsync<GameObject>("unknownlabel");
+            }
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
             Assert.IsTrue(op.Result == null);
@@ -1223,6 +1229,7 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        [Ignore("Unstable: https://jira.unity3d.com/browse/ADDR-1518")]
         public IEnumerator AssetReference_HandleIsInvalidated_WhenReleasingLoadOperation()
         {
             yield return Init();
@@ -1282,6 +1289,20 @@ namespace AddressableAssetsIntegrationTests
             Assert.IsNotNull(assetRefHandle.Result);
             m_Addressables.Release(assetRefHandle);
             handle.Release();
+        }
+        
+        [UnityTest]
+        public IEnumerator AddressablesIntegration_LoadAssetAsync_CanLoadAssetReferenceObjectList()
+        {
+            yield return Init();
+
+            var assetRefHandle = m_Addressables.LoadAssetAsync<Object[]>("assetWithSubObjects");
+            yield return assetRefHandle;
+            Assert.IsNotNull(assetRefHandle.Result);
+            Assert.AreEqual(assetRefHandle.Result.Length, 2);
+            Assert.AreEqual(assetRefHandle.Result[0].name, "assetWithSubObjects");
+            Assert.AreEqual(assetRefHandle.Result[1].name, "sub-shown");
+            m_Addressables.Release(assetRefHandle);
         }
 
         [UnityTest]
@@ -1637,6 +1658,18 @@ namespace AddressableAssetsIntegrationTests
             return null;
         }
 
+        private void SetupBundleForCacheDependencyClearTests(string bundleName, string depName, string hash, string key,out ResourceLocationBase location)
+        {
+
+            CreateFakeCachedBundle(bundleName, hash);
+            location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+                new ResourceLocationBase(depName, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
+            (location.Dependencies[0] as ResourceLocationBase).Data = location.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName
+            };
+        }
+        
         [UnityTest]
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForKey()
         {
@@ -1648,22 +1681,15 @@ namespace AddressableAssetsIntegrationTests
 
             string hash = "123456789";
             string bundleName = $"test_{hash}";
-
-            CreateFakeCachedBundle(bundleName, hash);
+            string key = "lockey_key";
 
             List<Hash128> versions = new List<Hash128>();
+            ResourceLocationBase location = null;
+            SetupBundleForCacheDependencyClearTests( bundleName,"bundle", hash, key, out location);
+            
             Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(1, versions.Count);
             versions.Clear();
-
-            string key = "lockey";
-            ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
-                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(object)));
-            location.Data = new AssetBundleRequestOptions()
-            {
-                BundleName = bundleName
-            };
-
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
             yield return m_Addressables.ClearDependencyCacheAsync((object)key, true);
@@ -1686,76 +1712,35 @@ namespace AddressableAssetsIntegrationTests
 
             string hash = "123456789";
             string bundleName = $"test_{hash}";
-
+            
             string depHash = "97564231";
             string depBundleName = $"test_{depHash}";
+            ResourceLocationBase depLocation = null;
+            
+            string key = "lockey_deps_key";
 
+            SetupBundleForCacheDependencyClearTests(depBundleName, "test", depHash, "depKey", out depLocation);
             CreateFakeCachedBundle(bundleName, hash);
-            CreateFakeCachedBundle(depBundleName, depHash);
 
-            string key = "lockey_withdeps";
-
-            ResourceLocationBase depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
-                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
-            depLocation.Data = new AssetBundleRequestOptions()
-            {
-                BundleName = depBundleName
-            };
-
-            ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
-                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)),
+            ResourceLocationBase location = new ResourceLocationBase(key, bundleName,
+                typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName,
+                    typeof(IAssetBundleResource)),
                 depLocation);
             (location.Dependencies[0] as ResourceLocationBase).Data = location.Data = new AssetBundleRequestOptions()
             {
                 BundleName = bundleName
             };
 
-            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() {location});
 
-            yield return m_Addressables.ClearDependencyCacheAsync((object)key, true);
+            yield return m_Addressables.ClearDependencyCacheAsync((object) key, true);
 
             List<Hash128> versions = new List<Hash128>();
             Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(0, versions.Count);
             versions.Clear();
             Caching.GetCachedVersions(depBundleName, versions);
-            Assert.AreEqual(0, versions.Count);
-#else
-            Assert.Ignore("Caching not enabled.");
-            yield return null;
-#endif
-        }
-
-        [UnityTest]
-        public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForLocation()
-        {
-            yield return Init();
-            var rlm = GetRLM(m_Addressables);
-            if (rlm == null)
-                yield break;
-#if ENABLE_CACHING
-
-            string hash = "123456789";
-            string bundleName = $"test_{hash}";
-
-            CreateFakeCachedBundle(bundleName, hash);
-
-            List<Hash128> versions = new List<Hash128>();
-            Caching.GetCachedVersions(bundleName, versions);
-            Assert.AreEqual(1, versions.Count);
-            versions.Clear();
-
-            string key = "lockey_forlocationtest";
-            ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
-                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
-            (location.Dependencies[0] as ResourceLocationBase).Data = location.Data = new AssetBundleRequestOptions()
-            {
-                BundleName = bundleName
-            };
-            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
-
-            yield return m_Addressables.ClearDependencyCacheAsync(location, true);
-            Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(0, versions.Count);
 #else
             Assert.Ignore("Caching not enabled.");
@@ -1773,21 +1758,14 @@ namespace AddressableAssetsIntegrationTests
 #if ENABLE_CACHING
             string hash = "123456789";
             string bundleName = $"test_{hash}";
-
+            string key = "lockey_deps_location";
+            
             string depHash = "97564231";
             string depBundleName = $"test_{depHash}";
+            ResourceLocationBase depLocation = null;
 
+            SetupBundleForCacheDependencyClearTests(depBundleName, "test", depHash, "depKey", out depLocation);
             CreateFakeCachedBundle(bundleName, hash);
-            CreateFakeCachedBundle(depBundleName, depHash);
-
-            string key = "lockey_withdeps_forlocationtest";
-
-            ResourceLocationBase depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
-                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
-            (depLocation.Dependencies[0] as ResourceLocationBase).Data = depLocation.Data = new AssetBundleRequestOptions()
-            {
-                BundleName = depBundleName
-            };
 
             ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)),
@@ -1823,25 +1801,50 @@ namespace AddressableAssetsIntegrationTests
 #if ENABLE_CACHING
             string hash = "123456789";
             string bundleName = $"test_{hash}";
-
-            CreateFakeCachedBundle(bundleName, hash);
-
+            string key = "lockey_location_list";
+            ResourceLocationBase location = null;
+            SetupBundleForCacheDependencyClearTests(bundleName, "bundle", hash, key, out location);
+            
             List<Hash128> versions = new List<Hash128>();
             Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(1, versions.Count);
             versions.Clear();
 
-            string key = "lockey_forlocationlisttest";
-            ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
-                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
-            (location.Dependencies[0] as ResourceLocationBase).Data = location.Data = new AssetBundleRequestOptions()
-            {
-                BundleName = bundleName
-            };
-
             rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
             yield return m_Addressables.ClearDependencyCacheAsync(new List<IResourceLocation>() { location }, true);
+            Caching.GetCachedVersions(bundleName, versions);
+            Assert.AreEqual(0, versions.Count);
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
+#endif
+        }
+        
+        [UnityTest]
+        public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForKeyList()
+        {
+            yield return Init();
+            var rlm = GetRLM(m_Addressables);
+            if (rlm == null)
+                yield break;
+#if ENABLE_CACHING
+
+            string hash = "123456789";
+            string bundleName = $"test_{hash}";
+            string key = "lockey_key_list";
+            ResourceLocationBase location =null;
+            
+            SetupBundleForCacheDependencyClearTests(bundleName, "bundle", hash, key, out location);
+
+            List<Hash128> versions = new List<Hash128>();
+            Caching.GetCachedVersions(bundleName, versions);
+            Assert.AreEqual(1, versions.Count);
+            versions.Clear();
+            
+            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+            
+            yield return m_Addressables.ClearDependencyCacheAsync(new List<object>() { (object)key }, true);
             Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(0, versions.Count);
 #else
@@ -1861,22 +1864,15 @@ namespace AddressableAssetsIntegrationTests
 
             string hash = "123456789";
             string bundleName = $"test_{hash}";
+            string key = "lockey_deps_location_list";
 
             string depHash = "97564231";
             string depBundleName = $"test_{depHash}";
+            ResourceLocationBase depLocation = null;
 
+            SetupBundleForCacheDependencyClearTests(depBundleName, "test", depHash, "depKey", out depLocation);
+            
             CreateFakeCachedBundle(bundleName, hash);
-            CreateFakeCachedBundle(depBundleName, depHash);
-
-            string key = "lockey_withdeps_forlocationlisttest";
-
-            ResourceLocationBase depLocation = new ResourceLocationBase("depKey", depBundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
-                new ResourceLocationBase("test", "test", typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)));
-            (depLocation.Dependencies[0] as ResourceLocationBase).Data = depLocation.Data = new AssetBundleRequestOptions()
-            {
-                BundleName = depBundleName
-            };
-
             ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
                 new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)),
                 depLocation);
@@ -1894,6 +1890,48 @@ namespace AddressableAssetsIntegrationTests
             Assert.AreEqual(0, versions.Count);
             versions.Clear();
             Caching.GetCachedVersions(depBundleName, versions);
+            Assert.AreEqual(0, versions.Count);
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
+#endif
+        }
+        
+        [UnityTest]
+        public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForKeyListWithDependencies()
+        {
+            yield return Init();
+            var rlm = GetRLM(m_Addressables);
+            if (rlm == null)
+                yield break;
+#if ENABLE_CACHING
+
+            string hash = "123456789";
+            string bundleName = $"test_{hash}";
+            string key = "lockey_deps_key_list";
+
+            string depHash = "97564231";
+            string depBundleName = $"test_{depHash}";
+            ResourceLocationBase depLocation = null;
+
+            SetupBundleForCacheDependencyClearTests(depBundleName, "test", depHash, "depKey", out depLocation);
+            
+            CreateFakeCachedBundle(bundleName, hash);
+            ResourceLocationBase location = new ResourceLocationBase(key, bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource),
+                new ResourceLocationBase("bundle", bundleName, typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource)),
+                depLocation);
+            (location.Dependencies[0] as ResourceLocationBase).Data = location.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName
+            };
+
+            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
+
+
+            yield return m_Addressables.ClearDependencyCacheAsync(new List<object>() { key }, true);
+
+            List<Hash128> versions = new List<Hash128>();
+            Caching.GetCachedVersions(bundleName, versions);
             Assert.AreEqual(0, versions.Count);
 #else
             Assert.Ignore("Caching not enabled.");
@@ -2039,6 +2077,7 @@ namespace AddressableAssetsIntegrationTests
 
         string CreateFakeCachedBundle(string bundleName, string hash)
         {
+#if ENABLE_CACHING
             string fakeCachePath = string.Format("{0}/{1}/{2}", Caching.currentCacheForWriting.path, bundleName, hash);
             Directory.CreateDirectory(fakeCachePath);
             var dataFile = File.Create(Path.Combine(fakeCachePath, "__data"));
@@ -2055,6 +2094,9 @@ __data");
             infoFile.Dispose();
 
             return fakeCachePath;
+#else
+            return null;
+#endif
         }
     }
 }

@@ -9,7 +9,9 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 #endif
 using UnityEngine.AddressableAssets.Initialization;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.TestTools;
 
 namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
@@ -159,7 +161,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
         {
             Assert.Throws(exceptionType, () => new ContentCatalogProvider.InternalOp.BundledCatalog(path));
         }
-
+        
         [UnityTest]
         [Ignore("https://jira.unity3d.com/browse/ADDR-1451")]
         public IEnumerator BundledCatalog_LoadCatalogFromBundle_InvalidBundleFileFormat_ShouldFail()
@@ -252,6 +254,12 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 
             Assert.AreEqual(2, timesCalled);
             Assert.IsTrue(bundledCatalog.OpIsSuccess);
+        }
+        
+        [Test]
+        public void ContentCatalogProvider_InternalOp_LoadCatalog_InvalidId_Throws()
+        {
+            Assert.Throws<NullReferenceException>(() => new ContentCatalogProvider.InternalOp().LoadCatalog("fakeId", false,false));
         }
     }
 }

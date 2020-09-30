@@ -36,6 +36,8 @@ By default, Addressable Assets only logs warnings and errors. You can enable det
 
 You can also disable exceptions by unchecking the **Log Runtime Exceptions** option in the [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) object Inspector. You can implement the [`ResourceManager.ExceptionHandler`](xref:UnityEngine.ResourceManagement.ResourceManager.ExceptionHandler) property with your own exception handler if desired, but this should be done after Addressables finishes runtime initialization (see below).
 
+Enable the [build layout report](DiagnosticTools.md#build-layout-report) to get information and statistics about your content builds. You can use this report to help verify that your builds are creating your bundles as you expect.
+
 ## Initialization objects
 You can attach objects to the Addressable Assets settings and pass them to the initialization process at runtime. The [`CacheInitializationSettings`](xref:UnityEditor.AddressableAssets.Settings.CacheInitializationSettings) object controls Unity's caching API at runtime. To create your own initialization object, create a ScriptableObject that implements the [`IObjectInitializationDataProvider`](xref:UnityEngine.ResourceManagement.Util.IObjectInitializationDataProvider) interface. This is the Editor component of the system responsible for creating the [`ObjectInitializationData`](xref:UnityEngine.ResourceManagement.Util.ObjectInitializationData) that is serialized with the runtime data.
 
@@ -71,7 +73,7 @@ Unity recommends structuring your game content into two categories:
 
 In this structure, content marked as `Cannot Change Post Release` ships with the application (or downloads soon after install), and resides in very few large bundles. Content marked as `Can Change Post Release` resides online, ideally in smaller bundles to minimize the amount of data needed for each update. One of the goals of the Addressable Assets System is to make this structure easy to work with and modify without having to change your scripts. 
 
-However, the Addressable Assets System can also accommodate situations that require changes to the content marked as `Cannot Change Post Release`, when you don't want to publish a whole new application build.  
+However, the Addressable Assets System can also accommodate situations that require changes to the content marked as `Cannot Change Post Release`, when you don't want to publish a whole new application build.  Modified assets and their dependencies (and dependents) will be duplicated in new bundles that will be used instead of the shipped content.  This can result in a much smaller update than replacing the entire bundle or rebuilding the game.  Once a build has been made, it is important to NOT change the state of a group from "Cannot Change Post Release" to "Can Change Post Release" or vice versa until an entirely new build is made.  If the groups change after a full content build but before a content update, Addressables will not be able to generate the correct changes needed for the update.
 
 Note that in cases that do not allow remote updates (such as many of the current video-game consoles, or games without a server), you should make a complete and fresh build every time.
 
@@ -201,3 +203,18 @@ Note that the example above has the following implications:
 3. If the user has already cached the `Static_Remote` bundle, they only need to download the updated asset (in this instance, `AssetL` via `content_update_group`). This is ideal in this case. If the user has not cached the bundle, they must download both the new `AssetL` via `content_update_group` and the now-defunct `AssetL` via the untouched `Remote_Static` bundle. Regardless of the initial cache state, at some point the user will have the defunct `AssetL` on their device, cached indefinitely despite never being accessed. 
 
 The best setup for your remote content will depend on your specific use case.
+
+### Multiple Projects
+Some users find it beneficial to split their project into multiple Unity projects, such as isolating the artwork from the code to lessen import times.
+
+In order to take advantage of this multiple project setup you'll need to utilize [`Addressables.LoadContentCatalogAsync(...)`](LoadContentCatalogAsync.html) to load the content catalogs of your seperate projects in your main project.
+
+A general multi-project workflow is as follows:
+1. Create your main project (Project A) and ancillary project(s) (Project(s) B, C, etc.).
+2. Add Addressables in each project and setup the desired Addressable Asset Entries.
+3. Build your Addressable Player Content for each project.
+4. In your main project, before attempting to load assets from the other projects, load the desired content catalogs from the other projects using `Addressables.LoadContentCatalogAsync(...)`
+5. Use Addressables as normal.
+
+Note: Ensure that the content catalogs and Asset Bundles of the other projects are reachable by the main project.  Setup any required hosting services beforehand.
+

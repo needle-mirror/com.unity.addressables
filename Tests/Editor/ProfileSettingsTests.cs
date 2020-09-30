@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.GUI;
 using UnityEditor.AddressableAssets.Settings;
@@ -44,7 +46,7 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        public void CreateValuePropogtesValue()
+        public void CreateValuePropagatesValue()
         {
             //Arrange
             Assert.IsNotNull(Settings.profileSettings);
@@ -119,7 +121,8 @@ namespace UnityEditor.AddressableAssets.Tests
 
 
             //Assert
-            Assert.AreEqual(badIdName, AddressableAssetProfileSettings.ProfileIdData.Evaluate(Settings.profileSettings, Settings.activeProfileId, badIdName));
+            string baseValue = Settings.profileSettings.GetValueById(Settings.activeProfileId, badIdName);
+            Assert.AreEqual(badIdName, Settings.profileSettings.EvaluateString(Settings.activeProfileId, baseValue));
         }
 
         [Test]
@@ -338,6 +341,34 @@ namespace UnityEditor.AddressableAssets.Tests
 
             //Assert
             Assert.AreNotEqual(currEntry.ProfileName, newName);
+        }
+
+        [Test]
+        public void CustomValuesWithDeprecatedFormatAreStripped()
+        {
+            Assert.IsNotNull(Settings.profileSettings);
+            Settings.activeProfileId = null;
+            Settings.profileSettings.Reset();
+
+            Settings.profileSettings.CreateValue(AddressableAssetProfileSettings.customEntryString, "/Assets/ShouldBeStripped");
+
+            var tmp = Settings.profileSettings.m_ProfileVersion;
+            Settings.profileSettings.m_ProfileVersion = 0;
+            var names = Settings.profileSettings.profileEntryNames.Select(e => e.ProfileName).ToList();
+            Settings.profileSettings.m_ProfileVersion = tmp;
+
+            Assert.False(names.Contains(AddressableAssetProfileSettings.customEntryString));
+        }
+
+        [Test]
+        public void GenerateUniqueName_AlwaysReturnUniqueNames()
+        {
+            int count = 5;
+            var list = new List<string>(count);
+            for (int i = 0; i < count; i++)
+                list.Add(AddressableAssetProfileSettings.GenerateUniqueName("base", list));
+
+            Assert.AreEqual(count, list.Distinct().Count());
         }
     }
 }

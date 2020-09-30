@@ -219,6 +219,7 @@ namespace UnityEditor.AddressableAssets.GUI
             Undo.RecordObject(m_Window.settings, "Profile renamed");
 
             bool renameSuccessful = m_Window.settings.profileSettings.RenameProfile(profile, args.newName);
+            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(m_Window.settings, true);
 
             if (renameSuccessful) Reload();
         }
@@ -237,6 +238,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 var item = selectedNodes.First();
                 string activeProfileId = m_TreeIndexToBuildProfileMap[item.id].id;
                 m_Window.settings.activeProfileId = activeProfileId;
+                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(m_Window.settings);
             }
         }
 
@@ -250,6 +252,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     Undo.RecordObject(m_Window.settings, "Profile Deleted");
                     m_Window.settings.profileSettings.RemoveProfile(prof.id);
+                    AddressableAssetUtility.OpenAssetIfUsingVCIntegration(m_Window.settings);
                     AssetDatabase.SaveAssets();
                 }
             }

@@ -103,7 +103,7 @@ namespace UnityEngine.AddressableAssets
 
         internal int SceneOperationCount { get { return m_SceneInstances.Count; } }
         internal int TrackedHandleCount { get { return m_resultToHandle.Count; } }
-        bool hasStartedInitialization = false;
+        internal bool hasStartedInitialization = false;
         public AddressablesImpl(IAllocationStrategy alloc)
         {
             m_ResourceManager = new ResourceManager(alloc);

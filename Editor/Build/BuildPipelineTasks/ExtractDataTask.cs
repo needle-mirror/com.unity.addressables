@@ -39,6 +39,9 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
         [InjectContext(ContextUsage.In)]
         IBuildCache m_BuildCache;
+
+        [InjectContext(ContextUsage.In)]
+        internal IBuildContext m_BuildContext;
 #pragma warning restore 649
 
         /// <summary>

@@ -15,11 +15,15 @@ public class AddressableBuildTaskTestBase
     [SetUp]
     public void Setup()
     {
-        if (Directory.Exists(TempPath))
-            Directory.Delete(TempPath, true);
-        Directory.CreateDirectory(TempPath);
+        using (new IgnoreFailingLogMessage())
+        {
+            if (AssetDatabase.IsValidFolder(TempPath))
+                AssetDatabase.DeleteAsset(TempPath);
+            Directory.CreateDirectory(TempPath);
 
-        m_Settings = AddressableAssetSettings.Create(Path.Combine(TempPath, "Settings"), "AddressableAssetSettings.Tests", false, true);
+            m_Settings = AddressableAssetSettings.Create(Path.Combine(TempPath, "Settings"),
+                "AddressableAssetSettings.Tests", false, true);
+        }
     }
 
     [TearDown]

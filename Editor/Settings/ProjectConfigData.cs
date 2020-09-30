@@ -28,6 +28,12 @@ namespace UnityEditor.AddressableAssets.Settings
             internal int activePlayModeIndex = 0;
             [SerializeField]
             internal bool hideSubObjectsInGroupView = false;
+            [SerializeField]
+            internal bool showGroupsAsHierarchy = false;
+            [SerializeField]
+            internal bool generateBuildLayout = false;
+            [SerializeField]
+            internal bool ignoreUnsupportedFilesInBuild = false;
         }
 
         static ConfigSaveData s_Data;
@@ -44,6 +50,42 @@ namespace UnityEditor.AddressableAssets.Settings
                 ValidateData();
                 s_Data.hideSubObjectsInGroupView = !value;
                 SaveData();
+            }
+        }
+
+        public static bool generateBuildLayout
+        {
+            get
+            {
+                ValidateData();
+                return s_Data.generateBuildLayout;
+            }
+            set
+            {
+                ValidateData();
+                if (s_Data.generateBuildLayout != value)
+                {
+                    s_Data.generateBuildLayout = value;
+                    SaveData();
+                }
+            }
+        }
+
+        public static bool ignoreUnsupportedFilesInBuild
+        {
+            get
+            {
+                ValidateData();
+                return s_Data.ignoreUnsupportedFilesInBuild;
+            }
+            set
+            {
+                ValidateData();
+                if (s_Data.ignoreUnsupportedFilesInBuild != value)
+                {
+                    s_Data.ignoreUnsupportedFilesInBuild = value;
+                    SaveData();
+                }
             }
         }
 
@@ -115,6 +157,20 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 ValidateData();
                 s_Data.hierarchicalSearchInternal = value;
+                SaveData();
+            }
+        }
+        public static bool showGroupsAsHierarchy
+        {
+            get
+            {
+                ValidateData();
+                return s_Data.showGroupsAsHierarchy;
+            }
+            set
+            {
+                ValidateData();
+                s_Data.showGroupsAsHierarchy = value;
                 SaveData();
             }
         }

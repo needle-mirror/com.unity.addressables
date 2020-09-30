@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor.Build.Content;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -13,10 +12,65 @@ namespace UnityEditor.AddressableAssets.Settings
     internal class AddressableAssetSettingsLocator : IResourceLocator
     {
         public string LocatorId { get; private set; }
-        public IEnumerable<object> Keys => m_keyToEntries.Keys;
         public Dictionary<object, List<AddressableAssetEntry>> m_keyToEntries;
         public Dictionary<CacheKey, IList<IResourceLocation>> m_Cache;
         public AddressableAssetTree m_AddressableAssetTree;
+        HashSet<object> m_Keys = null;
+        AddressableAssetSettings m_Settings;
+        
+        public IEnumerable<object> Keys
+        {
+            get
+            {
+                
+                if (m_Keys == null)
+                {
+                    var visitedFolders = new HashSet<string>();
+                    using (new AddressablesFileEnumerationScope(m_AddressableAssetTree))
+                    {
+                        m_Keys = new HashSet<object>();
+                        foreach (var kvp in m_keyToEntries)
+                        {
+                            var hasNonFolder = false;
+                            foreach (var e in kvp.Value)
+                            {
+                                if (AssetDatabase.IsValidFolder(e.AssetPath))
+                                {
+                                    if (!visitedFolders.Contains(e.AssetPath))
+                                    {
+                                        foreach (var f in EnumerateAddressableFolder(e.AssetPath, m_Settings, true))
+                                        {
+                                            m_Keys.Add(f.Replace(e.AssetPath, e.address));
+                                            m_Keys.Add(AssetDatabase.AssetPathToGUID(f));
+                                        }
+                                        visitedFolders.Add(e.AssetPath);
+                                    }
+                                    foreach (var l in e.labels)
+                                        m_Keys.Add(l);
+                                }
+                                else
+                                {
+                                    hasNonFolder = true;
+                                }
+                            }
+                            if (hasNonFolder)
+                                m_Keys.Add(kvp.Key);
+                        }
+                        if (m_includeResourcesFolders)
+                        {
+                            var resourcesEntry = m_Settings.FindAssetEntry(AddressableAssetEntry.ResourcesName);
+                            resourcesEntry.GatherResourcesEntries(null, true, entry => 
+                            {
+                                m_Keys.Add(entry.address);
+                                m_Keys.Add(entry.guid);
+                                return false;
+                            });
+                        }
+                    }
+                }
+                return m_Keys;
+            }
+        }
         public struct CacheKey : IEquatable<CacheKey>
         {
             public object m_key;
@@ -34,13 +88,14 @@ namespace UnityEditor.AddressableAssets.Settings
         bool m_includeResourcesFolders = false;
         public AddressableAssetSettingsLocator(AddressableAssetSettings settings)
         {
-            m_AddressableAssetTree = AddressablesFileEnumeration.BuildAddressableTree(settings);
-            LocatorId = settings.name;
+            m_Settings = settings;
+            LocatorId = m_Settings.name;
+            m_AddressableAssetTree = BuildAddressableTree(m_Settings);
             m_Cache = new Dictionary<CacheKey, IList<IResourceLocation>>();
-            m_keyToEntries = new Dictionary<object, List<AddressableAssetEntry>>(settings.labelTable.labelNames.Count);
+            m_keyToEntries = new Dictionary<object, List<AddressableAssetEntry>>(m_Settings.labelTable.labelNames.Count);
             using (new AddressablesFileEnumerationScope(m_AddressableAssetTree))
             {
-                foreach (AddressableAssetGroup g in settings.groups)
+                foreach (AddressableAssetGroup g in m_Settings.groups)
                 {
                     foreach (AddressableAssetEntry e in g.entries)
                     {

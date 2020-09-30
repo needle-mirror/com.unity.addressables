@@ -59,7 +59,6 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal virtual bool HasSettings() { return false; }
 
-
         [NonSerialized]
         AddressableAssetGroup m_ParentGroup;
         /// <summary>
@@ -239,10 +238,20 @@ namespace UnityEditor.AddressableAssets.Settings
                     keys.Add(index);
             }
 
-            if (labels != null)
+            if (labels != null && labels.Count > 0)
             {
+                var labelsToRemove = new HashSet<string>();
+                var currentLabels = parentGroup.Settings.GetLabels();
                 foreach (var l in labels)
-                    keys.Add(l);
+                {
+                    if (currentLabels.Contains(l))
+                        keys.Add(l);
+                    else
+                        labelsToRemove.Add(l);
+                }
+
+                foreach (var l in labelsToRemove)
+                    labels.Remove(l);
             }
             return keys;
         }
@@ -599,7 +608,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        void GatherResourcesEntries(List<AddressableAssetEntry> assets, bool recurseAll, Func<AddressableAssetEntry, bool> entryFilter)
+        internal void GatherResourcesEntries(List<AddressableAssetEntry> assets, bool recurseAll, Func<AddressableAssetEntry, bool> entryFilter)
         {
             var settings = parentGroup.Settings;
             var pd = parentGroup.GetSchema<GroupSchemas.PlayerDataGroupSchema>();
@@ -614,6 +623,7 @@ namespace UnityEditor.AddressableAssets.Settings
                             var g = AssetDatabase.AssetPathToGUID(file);
                             var addr = GetResourcesPath(file);
                             var entry = settings.CreateSubEntryIfUnique(g, addr, this);
+
                             if (entry != null) //TODO - it's probably really bad if this is ever null. need some error detection
                             {
                                 entry.IsInResources = true;

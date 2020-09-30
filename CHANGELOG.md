@@ -4,6 +4,28 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.16.6] - 2020-09-30
+- Group hierarchy support in groups window by detecting '-' in group name
+  - This can be turned on & off in the addressable asset settings inspector: Group Hierarchy with Dashes
+  - This only affects the visual display, groups are still stored in the main settings object in a flat list
+  - The group name is unaffected.  If you name a group "x-y-z" that will be it's name, but, with the option on, it will display as if it was in a folder called "y" that was inside a folder called "x"
+- Fixed fast mode resource locator Keys property to expand all possible keys when accessed.  For large projects with many addressable entries and folders, this property may be slow when called for the first time.
+- Group hierarchy support
+- Added detailed build layout feature. See documentation for details.
+- Fixed issue where assets in Resources weren't show full key in Groups window
+- Fixed issue where loading Addressables from a different project was throwing errors.
+- Fixed WriteSerializedFiles profile event timings when using the detailed build log
+- Selecting multiple Resources and checking "addressable" now display a single popup
+- Fixed CreateArrayResult wouldn't work with classes derived from Object, only the base class, so not for ScriptableObject. Also added test
+- Fixed exceptions not handled while loading ContentCatalog
+- Fixed issue where passing false into releaseDependenciesOnFailure was still releasing dependencies on failure
+- Fixed issue where failed operations could over release their dependencies.
+- Changes to an AssetReference rendered by AssetReferenceDrawer now register as a GUI change
+- Added a checkbox in settings to ignore invalid/unsupported files during build
+- empty folders are cleaned-up when moving multiple resources fails
+- fixed bug where an error would occur when moving resources for paths without extensions
+- Fixed issue where AddressableAsset files locked by version control couldn't be modified.
+
 ## [1.16.1] - 2020-09-15
 - Fixed bug where some files would not be created in the right folder if the user moved its addressables config folder elsewhere
 - Fixed determanism issue where bundles could have different names after Editor restart

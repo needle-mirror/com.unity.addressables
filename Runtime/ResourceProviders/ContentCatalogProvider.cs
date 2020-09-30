@@ -91,9 +91,23 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                 Addressables.LogFormat("Addressables - Using content catalog from {0}.", idToLoad);
 
                 bool isLocalCatalog = idToLoad.Equals(GetTransformedInternalId(m_ProviderInterface.Location));
-                if (isLocalCatalogInBundle && isLocalCatalog)
+
+                LoadCatalog(idToLoad, isLocalCatalogInBundle, isLocalCatalog);
+            }
+
+            /// <summary>
+            /// Clear all content catalog data.
+            /// </summary>
+            public void Release()
+            {
+                m_ContentCatalogData?.CleanData();
+            }
+
+            internal void LoadCatalog(string idToLoad,bool isLocalCatalogInBundle, bool isLocalCatalog)
+            {
+                try
                 {
-                    try
+                    if (isLocalCatalogInBundle && isLocalCatalog)
                     {
                         var bc = new BundledCatalog(idToLoad);
                         bc.OnLoaded += ccd =>
@@ -103,29 +117,23 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                         };
                         bc.LoadCatalogFromBundleAsync();
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        m_ProviderInterface.Complete<ContentCatalogData>(null, false, ex);
+                        IResourceLocation location = new ResourceLocationBase(idToLoad, idToLoad,
+                            typeof(JsonAssetProvider).FullName, typeof(ContentCatalogData));
+                        m_ProviderInterface.ResourceManager.ProvideResource<ContentCatalogData>(location).Completed +=
+                            op =>
+                            {
+                                m_ContentCatalogData = op.Result;
+                                m_ProviderInterface.ResourceManager.Release(op);
+                                OnCatalogLoaded(m_ContentCatalogData);
+                            };
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    IResourceLocation location = new ResourceLocationBase(idToLoad, idToLoad, typeof(JsonAssetProvider).FullName, typeof(ContentCatalogData));
-                    providerInterface.ResourceManager.ProvideResource<ContentCatalogData>(location).Completed += op =>
-                    {
-                        m_ContentCatalogData = op.Result;
-                        m_ProviderInterface.ResourceManager.Release(op);
-                        OnCatalogLoaded(m_ContentCatalogData);
-                    };
+                    m_ProviderInterface.Complete<ContentCatalogData>(null, false, ex);
                 }
-            }
-
-            /// <summary>
-            /// Clear all content catalog data.
-            /// </summary>
-            public void Release()
-            {
-                m_ContentCatalogData?.CleanData();
             }
 
             internal class BundledCatalog

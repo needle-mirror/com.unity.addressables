@@ -483,36 +483,43 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void ProcessPlayerDataSchema_WhenMultipleResourcesAreIncluded_ShouldGenerateCorrectResourceLocationsAndProviders()
         {
-            var resourcesPaths = new[]
+            using (new HideResourceFoldersScope())
             {
-                k_SchemaTestFolderPath + "/Resources/testResource1.prefab",
-                k_SchemaTestFolderPath + "/OtherFolder/Resources/testResource2.prefab"
-            };
-            foreach (string resourcePath in resourcesPaths)
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(resourcePath));
-                CreateAsset(resourcePath, Path.GetFileNameWithoutExtension(resourcePath));
-                Assert.IsTrue(File.Exists(resourcePath));
+                var resourcesPaths = new[]
+                {
+                    k_SchemaTestFolderPath + "/Resources/testResource1.prefab",
+                    k_SchemaTestFolderPath + "/OtherFolder/Resources/testResource2.prefab"
+                };
+                foreach (string resourcePath in resourcesPaths)
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(resourcePath));
+                    CreateAsset(resourcePath, Path.GetFileNameWithoutExtension(resourcePath));
+                    Assert.IsTrue(File.Exists(resourcePath));
+                }
+
+                var group = m_Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+                var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
+                bool includeResourceFolders = schema.IncludeResourcesFolders;
+                schema.IncludeResourcesFolders = true;
+
+                var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
+                Assert.True(string.IsNullOrEmpty(errorStr));
+
+                var actualLocations = m_BuildContext.locations.Where(
+                        l => l.ResourceType == typeof(GameObject) &&
+                             l.Provider == typeof(LegacyResourcesProvider).FullName)
+                    .ToList();
+                var expectedLocationIds = resourcesPaths.Distinct()
+                    .Select(s => Path.GetFileName(s).Replace(".prefab", "")).ToList();
+                Assert.AreEqual(expectedLocationIds.Count, actualLocations.Count);
+                Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
+
+                var actualProviders = m_BuildScript.ResourceProviderData
+                    .Where(rpd => rpd.ObjectType.ClassName == typeof(LegacyResourcesProvider).FullName).ToList();
+                Assert.AreEqual(1, actualProviders.Count);
+
+                schema.IncludeResourcesFolders = includeResourceFolders;
             }
-
-            var group = m_Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-            var schema = group.GetSchema(typeof(PlayerDataGroupSchema)) as PlayerDataGroupSchema;
-            bool includeResourceFolders = schema.IncludeResourcesFolders;
-            schema.IncludeResourcesFolders = true;
-
-            var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
-            Assert.True(string.IsNullOrEmpty(errorStr));
-
-            var actualLocations = m_BuildContext.locations.Where(
-                l => l.ResourceType == typeof(GameObject) && l.Provider == typeof(LegacyResourcesProvider).FullName).ToList();
-            var expectedLocationIds = resourcesPaths.Distinct().Select(s => Path.GetFileName(s).Replace(".prefab", "")).ToList();
-            Assert.AreEqual(expectedLocationIds.Count, actualLocations.Count);
-            Assert.AreEqual(expectedLocationIds, actualLocations.Select(l => l.InternalId));
-
-            var actualProviders = m_BuildScript.ResourceProviderData.Where(rpd => rpd.ObjectType.ClassName == typeof(LegacyResourcesProvider).FullName).ToList();
-            Assert.AreEqual(1, actualProviders.Count);
-
-            schema.IncludeResourcesFolders = includeResourceFolders;
         }
     }
 

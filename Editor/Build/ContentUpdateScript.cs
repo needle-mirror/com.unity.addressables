@@ -269,6 +269,14 @@ namespace UnityEditor.AddressableAssets.Build
                 stream.Close();
                 stream.Dispose();
                 return true;
+            } 
+            catch(UnauthorizedAccessException uae)
+            {
+                if (AddressableAssetUtility.IsUsingVCIntegration())
+                    Debug.LogErrorFormat("Cannot access the file {0}. This may be due to a version control lock.", path);
+                else
+                    Debug.LogException(uae);
+                return false;
             }
             catch (Exception e)
             {
@@ -370,6 +378,14 @@ namespace UnityEditor.AddressableAssets.Build
                 stream.Close();
                 stream.Dispose();
                 return true;
+            }
+            catch(UnauthorizedAccessException uae)
+            {
+                if (AddressableAssetUtility.IsUsingVCIntegration())
+                    Debug.LogErrorFormat("Cannot access the file {0}. Is it checked out?", path);
+                else
+                    Debug.LogException(uae);
+                return false;
             }
             catch (Exception e)
             {

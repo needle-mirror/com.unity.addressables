@@ -522,7 +522,7 @@ namespace UnityEngine.ResourceManagement.Util
             int length = 0;
             foreach (var asset in allAssets)
             {
-                if (asset.GetType() == elementType)
+                if (elementType.IsAssignableFrom(asset.GetType()))
                     length++;
             }
             var array = Array.CreateInstance(elementType, length);

@@ -121,6 +121,22 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             m_CreatedProviderIds = new HashSet<string>();
         }
 
+        struct SBPSettingsOverwriterScope : IDisposable
+        {
+            bool m_PrevSlimResults;
+            public SBPSettingsOverwriterScope(bool forceFullWriteResults)
+            {
+                m_PrevSlimResults = ScriptableBuildPipeline.slimWriteResults;
+                if (forceFullWriteResults)
+                    ScriptableBuildPipeline.slimWriteResults = false;
+            }
+
+            public void Dispose()
+            {
+                ScriptableBuildPipeline.slimWriteResults = m_PrevSlimResults;
+            }
+        }
+
         /// <summary>
         /// The method that does the actual building after all the groups have been processed.
         /// </summary>
@@ -150,12 +166,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     buildTargetGroup,
                     aaContext.Settings.buildSettings.bundleBuildPath);
 
-                var builtinShaderBundleName = aaContext.Settings.DefaultGroup.Guid + "_unitybuiltinshaders.bundle";
+                var builtinShaderBundleName = Hash128.Compute(GetProjectName()) + "_unitybuiltinshaders.bundle";
                 var buildTasks = RuntimeDataBuildTasks(builtinShaderBundleName);
                 buildTasks.Add(extractData);
 
                 IBundleBuildResults results;
                 using (m_Log.ScopedStep(LogLevel.Info, "ContentPipeline.BuildAssetBundles"))
+                using (new SBPSettingsOverwriterScope(ProjectConfigData.generateBuildLayout)) // build layout generation requires full SBP write results
                 {
                     var exitCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(m_AllBundleInputDefs), out results, buildTasks, aaContext, m_Log);
 
@@ -165,6 +182,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
                 var groups = aaContext.Settings.groups.Where(g => g != null);
 
+                var bundleRenameMap = new Dictionary<string, string>();
                 using (m_Log.ScopedStep(LogLevel.Info, "PostProcessBundles"))
                 using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
                 {
@@ -187,15 +205,36 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                                 outputBundles.Add(b >= 0 ? m_OutputAssetBundleNames[b] : buildBundles[i]);
                             }
 
-                            PostProcessBundles(assetGroup, buildBundles, outputBundles, results, extractData.WriteData, aaContext.runtimeData, aaContext.locations, builderInput.Registry, primaryKeyToCatalogEntry);
+                            PostProcessBundles(assetGroup, buildBundles, outputBundles, results, aaContext.runtimeData, aaContext.locations, builderInput.Registry, primaryKeyToCatalogEntry, bundleRenameMap);
                         }
                     }
+                }
+
+                // We need to have the bundleRename map which is calculated in PostProcessBundles. It would be nice to move that process
+                // to a build task, but there are lots of dependencies and it is messy to move.
+                if (ProjectConfigData.generateBuildLayout)
+                {
+                    List<IBuildTask> tasks = new List<IBuildTask>();
+                    var buildLayoutTask = new BuildLayoutGenerationTask();
+                    buildLayoutTask.m_BundleNameRemap = bundleRenameMap;
+                    tasks.Add(buildLayoutTask);
+                    BuildTasksRunner.Run(tasks, extractData.m_BuildContext);
                 }
 
                 ProcessCatalogEntriesForBuild(aaContext, m_Log, groups, builderInput, extractData.WriteData, carryOverCachedState, m_BundleToInternalId);
 
                 foreach (var r in results.WriteResults)
-                    m_Linker.AddTypes(r.Value.includedTypes);
+                {
+                    var resultValue = r.Value;
+                    m_Linker.AddTypes(resultValue.includedTypes);
+#if UNITY_2021_1_OR_NEWER
+                    // Uncomment once PR 113067 lands in trunk.
+                    //m_Linker.AddSerializedClass(resultValue.includedSerializeReferenceFQN);
+#else
+                    if (resultValue.GetType().GetProperty("includedSerializeReferenceFQN") != null)
+                        m_Linker.AddSerializedClass((string[])resultValue.GetType().GetProperty("includedSerializeReferenceFQN").GetValue(resultValue));
+#endif
+                }
             }
 
             var contentCatalog = new ContentCatalogData(aaContext.locations, ResourceManagerRuntimeData.kCatalogAddress);
@@ -238,7 +277,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             WriteFile(settingsPath, JsonUtility.ToJson(aaContext.runtimeData), builderInput.Registry);
 
             var opResult = AddressableAssetBuildResult.CreateResult<TResult>(settingsPath, aaContext.locations.Count);
-            if (extractData.BuildCache != null)
+            if (extractData.BuildCache != null && builderInput.PreviousContentState == null)
             {
                 var allEntries = new List<AddressableAssetEntry>();
                 aaContext.Settings.GetAllAssets(allEntries, false, FilterGroupForContentState);
@@ -366,6 +405,11 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 dependencyHashes));
 
             return true;
+        }
+
+        string GetProjectName()
+        {
+            return new DirectoryInfo(Path.GetDirectoryName(Application.dataPath)).Name;
         }
 
         internal ReturnCode CreateCatalogBundle(string filepath, string jsonText, AddressablesDataBuilderInput builderInput)
@@ -748,6 +792,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return dependencyHashes;
         }
 
+        // Tests can set this flag to prevent player script compilation. This is the most expensive part of small builds
+        // and isn't needed for most tests.
+        internal static bool s_SkipCompilePlayerScripts = false;
+
         static IList<IBuildTask> RuntimeDataBuildTasks(string builtinShaderBundleName)
         {
             var buildTasks = new List<IBuildTask>();
@@ -757,7 +805,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             buildTasks.Add(new RebuildSpriteAtlasCache());
 
             // Player Scripts
-            buildTasks.Add(new BuildPlayerScripts());
+            if (!s_SkipCompilePlayerScripts)
+                buildTasks.Add(new BuildPlayerScripts());
             buildTasks.Add(new PostScriptsCallback());
 
             // Dependency
@@ -810,7 +859,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
         }
 
-        void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> buildBundles, List<string> outputBundles, IBundleBuildResults buildResult, IWriteData writeData, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry, Dictionary<string, ContentCatalogDataEntry> primaryKeyToCatalogEntry)
+        void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> buildBundles, List<string> outputBundles, IBundleBuildResults buildResult, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry, Dictionary<string, ContentCatalogDataEntry> primaryKeyToCatalogEntry, Dictionary<string, string> bundleRenameMap)
         {
             var schema = assetGroup.GetSchema<BundledAssetGroupSchema>();
             if (schema == null)
@@ -863,7 +912,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
                 var targetPath = Path.Combine(path, outputBundles[i]);
                 var srcPath = Path.Combine(assetGroup.Settings.buildSettings.bundleBuildPath, buildBundles[i]);
-
+                bundleRenameMap.Add(buildBundles[i], outputBundles[i]);
                 CopyFileWithTimestampIfDifferent(srcPath, targetPath, m_Log);
 
                 registry.AddFile(targetPath);

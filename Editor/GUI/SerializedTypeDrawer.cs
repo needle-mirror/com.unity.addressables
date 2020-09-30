@@ -50,6 +50,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         ValueChanged = true
                     });
                 EditorUtility.SetDirty(m_Property.serializedObject.targetObject);
+                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(m_Property.serializedObject.targetObject);
             }
 
             EditorGUI.EndProperty();

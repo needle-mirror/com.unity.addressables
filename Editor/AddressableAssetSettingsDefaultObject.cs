@@ -123,6 +123,7 @@ namespace UnityEditor.AddressableAssets
                             so.SetSettingsObject(s_DefaultSettingsObject);
                             AssetDatabase.CreateAsset(so, kDefaultConfigFolder + "/DefaultObject.asset");
                             EditorUtility.SetDirty(so);
+                            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(so, kDefaultConfigFolder + "/DefaultObject.asset");
                             AssetDatabase.SaveAssets();
                             EditorBuildSettings.AddConfigObject(kDefaultConfigObjectName, so, true);
                         }
@@ -153,6 +154,7 @@ namespace UnityEditor.AddressableAssets
                 }
                 so.SetSettingsObject(s_DefaultSettingsObject);
                 EditorUtility.SetDirty(so);
+                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(so, kDefaultConfigFolder + "/DefaultObject.asset");
                 AssetDatabase.SaveAssets();
             }
         }

@@ -5,6 +5,7 @@ using System.IO;
 using System.Reflection;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Utilities;
+using UnityEditor.VersionControl;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Settings
@@ -282,6 +283,55 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             return result;
+        }
+        
+        internal static bool IsUsingVCIntegration()
+        {
+            return Provider.isActive && Provider.enabled;
+        }
+
+        private static bool DisplayDialogueForEditingLockedFile(string path)
+        {
+            return EditorUtility.DisplayDialog("Attemping to edit locked file",
+                "File " + path + " is locked. Check out?", "Yes", "No");
+        }
+
+        private static bool MakeAssetEditable(Object target, string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return false;
+#if UNITY_2019_4_OR_NEWER
+            if(!AssetDatabase.IsOpenForEdit(target))
+                return AssetDatabase.MakeEditable(path);
+#else
+            Asset asset = Provider.GetAssetByPath(path);
+            if (asset != null && !Provider.IsOpenForEdit(asset))
+            {
+                Task task = Provider.Checkout(asset, CheckoutMode.Asset);
+                task.Wait();
+                return task.success;
+            }
+#endif
+            return false;
+        }
+
+         internal static bool OpenAssetIfUsingVCIntegration(Object target, bool exitGUI = false)
+         {
+            if (target == null)
+                return false;
+            return OpenAssetIfUsingVCIntegration(target, AssetDatabase.GetAssetOrScenePath(target), exitGUI);
+         }
+
+        internal static bool OpenAssetIfUsingVCIntegration(Object target, string path, bool exitGUI = false)
+        {
+            bool openedAsset = false;
+            if (string.IsNullOrEmpty(path) || !IsUsingVCIntegration())
+                return openedAsset;
+            if (DisplayDialogueForEditingLockedFile(path))
+                openedAsset = MakeAssetEditable(target, path);
+            if (exitGUI)
+                GUIUtility.ExitGUI();
+            return openedAsset;
         }
     }
 }

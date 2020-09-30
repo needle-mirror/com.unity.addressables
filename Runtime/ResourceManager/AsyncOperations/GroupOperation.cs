@@ -33,6 +33,14 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             deps.AddRange(Result);
         }
 
+        internal override void ReleaseDependencies()
+        {
+            for (int i = 0; i < Result.Count; i++)
+                if (Result[i].IsValid())
+                    Result[i].Release();
+            Result.Clear();
+        }
+
         internal override DownloadStatus GetDownloadStatus(HashSet<object> visited)
         {
             var status = new DownloadStatus() { IsDone = IsDone };
@@ -142,10 +150,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         protected override void Destroy()
         {
-            for (int i = 0; i < Result.Count; i++)
-                if (Result[i].IsValid())
-                    Result[i].Release();
-            Result.Clear();
+            ReleaseDependencies();
         }
 
         protected override float Progress

@@ -126,35 +126,9 @@ namespace UnityEditor.AddressableAssets.Settings
                 m_ProfileParent = ps;
             }
 
-            int IndexOfVarId(string variableId)
-            {
-                if (string.IsNullOrEmpty(variableId))
-                    return -1;
-
-                for (int i = 0; i < values.Count; i++)
-                    if (values[i].id == variableId)
-                        return i;
-                return -1;
-            }
-
-            int IndexOfVarName(string name)
-            {
-                if (m_ProfileParent == null)
-                    return -1;
-
-                var currId = m_ProfileParent.GetVariableId(name);
-                if (string.IsNullOrEmpty(currId))
-                    return -1;
-
-                for (int i = 0; i < values.Count; i++)
-                    if (values[i].id == currId)
-                        return i;
-                return -1;
-            }
-
             internal string GetValueById(string variableId)
             {
-                var i = IndexOfVarId(variableId);
+                var i = values.FindIndex(v => v.id == variableId);
                 if (i >= 0)
                     return values[i].value;
 
@@ -167,25 +141,9 @@ namespace UnityEditor.AddressableAssets.Settings
 
             internal void SetValueById(string variableId, string val)
             {
-                var i = IndexOfVarId(variableId);
+                var i = values.FindIndex(v => v.id == variableId);
                 if (i >= 0)
                     values[i].value = val;
-            }
-
-            internal void ReplaceVariableValueSubString(string searchStr, string replacementStr)
-            {
-                foreach (var v in values)
-                    v.value = v.value.Replace(searchStr, replacementStr);
-            }
-
-            internal bool IsValueInheritedByName(string variableName)
-            {
-                return IndexOfVarName(variableName) >= 0;
-            }
-
-            internal bool IsValueInheritedById(string variableId)
-            {
-                return IndexOfVarId(variableId) >= 0;
             }
         }
 
@@ -231,7 +189,11 @@ namespace UnityEditor.AddressableAssets.Settings
                 m_Name = newName;
 
                 foreach (var p in ps.profiles)
-                    p.ReplaceVariableValueSubString(currRefStr, newRefStr);
+                {
+                    foreach (var v in p.values)
+                        v.value = v.value.Replace(currRefStr, newRefStr);
+                }
+
                 ps.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, null, false);
                 ProfileWindow.MarkForReload();
             }
@@ -247,27 +209,13 @@ namespace UnityEditor.AddressableAssets.Settings
                 m_Name = entryName;
                 m_InlineUsage = inline;
             }
-
-            internal string Evaluate(AddressableAssetProfileSettings ps, string profileId)
-            {
-                if (InlineUsage)
-                    return ps.EvaluateString(profileId, Id);
-
-                return Evaluate(ps, profileId, Id);
-            }
-
-            internal static string Evaluate(AddressableAssetProfileSettings ps, string profileId, string idString)
-            {
-                string baseValue = ps.GetValueById(profileId, idString);
-                return ps.EvaluateString(profileId, baseValue);
-            }
         }
         [FormerlySerializedAs("m_profileEntryNames")]
         [SerializeField]
         List<ProfileIdData> m_ProfileEntryNames = new List<ProfileIdData>();
         [FormerlySerializedAs("m_profileVersion")]
         [SerializeField]
-        int m_ProfileVersion;
+        internal int m_ProfileVersion;
         const int k_CurrentProfileVersion = 1;
         internal List<ProfileIdData> profileEntryNames
         {
@@ -306,22 +254,12 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal ProfileIdData GetProfileDataById(string id)
         {
-            foreach (var data in profileEntryNames)
-            {
-                if (id == data.Id)
-                    return data;
-            }
-            return null;
+            return profileEntryNames.Find(p => p.Id == id);
         }
 
         internal ProfileIdData GetProfileDataByName(string name)
         {
-            foreach (var data in profileEntryNames)
-            {
-                if (name == data.ProfileName)
-                    return data;
-            }
-            return null;
+            return profileEntryNames.Find(p => p.ProfileName == name);
         }
 
         /// <summary>
@@ -641,16 +579,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal string GetUniqueProfileName(string name)
         {
-            var newName = name;
-            int counter = 1;
-            while (counter < 100)
-            {
-                if (GetProfileByName(newName) == null)
-                    return newName;
-                newName = name + counter;
-                counter++;
-            }
-            return string.Empty;
+            return GenerateUniqueName(name, m_Profiles.Select(p => p.profileName));
         }
 
         internal BuildProfile GetProfile(string profileId)
@@ -697,16 +626,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal string GetUniqueProfileEntryName(string name)
         {
-            var newName = name;
-            int counter = 1;
-            while (counter < 100)
-            {
-                if (string.IsNullOrEmpty(GetVariableId(newName)))
-                    return newName;
-                newName = name + counter;
-                counter++;
-            }
-            return string.Empty;
+            return GenerateUniqueName(name, profileEntryNames.Select(p => p.ProfileName));
         }
 
         /// <summary>
@@ -779,12 +699,19 @@ namespace UnityEditor.AddressableAssets.Settings
             return GetValueById(profileId, GetVariableId(varName));
         }
 
-        internal bool IsValueInheritedById(string profileId, string variableId)
+        internal static string GenerateUniqueName(string baseName, IEnumerable<string> enumerable)
         {
-            var p = GetProfile(profileId);
-            if (p == null)
-                return false;
-            return p.IsValueInheritedById(variableId);
+            var set = new HashSet<string>(enumerable);
+            int counter = 1;
+            var newName = baseName;
+            while (set.Contains(newName))
+            {
+                newName = baseName + counter;
+                counter++;
+                if (counter == int.MaxValue)
+                    throw new OverflowException();
+            }
+            return newName;
         }
     }
 }

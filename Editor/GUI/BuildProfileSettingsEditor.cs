@@ -21,7 +21,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (!custom)
             {
                 currentIndex = displayNames.IndexOf(data.ProfileName);
-                toolTip = data.Evaluate(settings.profileSettings, settings.activeProfileId);
+                toolTip = Evaluate(settings, data);
             }
             displayNames.Add(AddressableAssetProfileSettings.customEntryString);
 
@@ -61,7 +61,7 @@ namespace UnityEditor.AddressableAssets.GUI
             AddressableAssetProfileSettings.ProfileIdData data = settings.profileSettings.GetProfileDataById(currentId);
             if (data != null)
             {
-                var val = data.Evaluate(settings.profileSettings, settings.activeProfileId);
+                var val = Evaluate(settings, data);
                 var h = EditorStyles.helpBox.CalcHeight(new GUIContent(val), EditorGUIUtility.currentViewWidth - EditorGUIUtility.labelWidth - 16);
                 return height + h;
             }
@@ -92,7 +92,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (!custom)
                 {
                     currentIndex = displayNames.IndexOf(data.ProfileName);
-                    toolTip = data.Evaluate(settings.profileSettings, settings.activeProfileId);
+                    toolTip = Evaluate(settings, data);
                 }
             }
 
@@ -132,6 +132,15 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             return result;
+        }
+
+        static string Evaluate(AddressableAssetSettings settings, AddressableAssetProfileSettings.ProfileIdData data)
+        {
+            if (data.InlineUsage)
+                return settings.profileSettings.EvaluateString(settings.activeProfileId, data.Id);
+
+            string baseValue = settings.profileSettings.GetValueById(settings.activeProfileId, data.Id);
+            return settings.profileSettings.EvaluateString(settings.activeProfileId, baseValue);
         }
     }
 }

@@ -50,6 +50,7 @@ namespace UnityEditor.AddressableAssets.GUI
         void OnRemoveLabel(ReorderableList list)
         {
             m_Settings.RemoveLabel(m_Settings.labelTable.labelNames[list.index]);
+            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(m_Settings);
         }
 
         void OnAddLabel(Rect buttonRect, ReorderableList list)
@@ -104,7 +105,10 @@ namespace UnityEditor.AddressableAssets.GUI
                     else if (name.Contains("[") && name.Contains("]"))
                         Debug.LogErrorFormat("Label name '{0}' cannot contain '[ ]'.", name);
                     else
+                    {
                         settings.AddLabel(name);
+                        AddressableAssetUtility.OpenAssetIfUsingVCIntegration(settings);
+                    }
 
                     editorWindow.Close();
                 }

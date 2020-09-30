@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -9,10 +10,12 @@ internal static class DirectoryUtility
         if (!Directory.Exists(directoryPath))
             return;
 
-        if (!onlyIfEmpty || (onlyIfEmpty && Directory.GetFiles(directoryPath).Length == 0 && Directory.GetDirectories(directoryPath).Length == 0))
+        bool isEmpty = !Directory.EnumerateFiles(directoryPath, "*", SearchOption.AllDirectories).Any()
+            && !Directory.EnumerateDirectories(directoryPath, "*", SearchOption.AllDirectories).Any();
+        if (!onlyIfEmpty || isEmpty)
         {
             // check if the folder is valid in the AssetDatabase before deleting through standard file system
-            string relativePath = directoryPath.Replace(Application.dataPath, "Assets");
+            string relativePath = directoryPath.Replace("\\", "/").Replace(Application.dataPath, "Assets");
             if (AssetDatabase.IsValidFolder(relativePath))
                 AssetDatabase.DeleteAsset(relativePath);
             else

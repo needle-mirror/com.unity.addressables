@@ -119,7 +119,7 @@ namespace UnityEngine.ResourceManagement.Tests
             bool exceptionHandlerCalled = false;
             ResourceManager.ExceptionHandler += (h, ex) => exceptionHandlerCalled = true;
 
-            var op = m_RM.CreateCompletedOperation<int>(1, true, "An exception occured.");
+            var op = m_RM.CreateCompletedOperationInternal<int>(1, true, "An exception occured.");
 
             var status = AsyncOperationStatus.None;
             op.Completed += (x) => status = x.Status;
@@ -245,7 +245,7 @@ namespace UnityEngine.ResourceManagement.Tests
         {
             var depOp = m_RM.CreateOperation<ManualDownloadPercentCompleteOperation>(typeof(ManualDownloadPercentCompleteOperation), 1, 0, null);
             depOp.Start(m_RM, default, null);
-            var chainOp = m_RM.CreateChainOperation<object>(new AsyncOperationHandle(depOp), s => m_RM.CreateCompletedOperation<object>(null, true, null));
+            var chainOp = m_RM.CreateChainOperation<object>(new AsyncOperationHandle(depOp), s => m_RM.CreateCompletedOperationInternal<object>(null, true, null));
 
             AssertExpectedDownloadStatus(chainOp.GetDownloadStatus(), 0, 1024, 0f);
             depOp.m_bytesDownloaded = 512;

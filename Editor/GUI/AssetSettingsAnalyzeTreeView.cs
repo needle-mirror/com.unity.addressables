@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
@@ -71,6 +72,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 Reload();
                 UpdateSelections(GetSelection());
             });
+            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(AnalyzeSystem.AnalyzeData);
         }
 
         public void FixAllSelectedRules()
@@ -84,6 +86,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 Reload();
                 UpdateSelections(GetSelection());
             });
+            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(AnalyzeSystem.AnalyzeData);
         }
 
         public void ClearAllSelectedRules()
@@ -96,6 +99,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 Reload();
                 UpdateSelections(GetSelection());
             });
+            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(AnalyzeSystem.AnalyzeData);
         }
 
         public void RevertAllSelectedRules()

@@ -1,3 +1,4 @@
+#if UNITY_2020_1_OR_NEWER
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -55,12 +56,22 @@ namespace UnityEditor.AddressableAssets.Tests
             return AssetDatabase.AssetPathToGUID(path);
         }
 
-        string CreateFolder(string folderName, string[] assetNames)
+        string CreateScene(string path)
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            EditorSceneManager.SaveScene(scene, path);
+            return AssetDatabase.AssetPathToGUID(path);
+        }
+
+        string CreateFolder(string folderName, string[] assetNames, HashSet<object> guids = null)
         {
             var path = GetPath(folderName);
             Directory.CreateDirectory(path);
             foreach (var a in assetNames)
-                CreateAsset(a, Path.Combine(path, a));
+            {
+                var guid = a.EndsWith(".unity") ? CreateScene(Path.Combine(path, a)) : CreateAsset(a, Path.Combine(path, a));
+                guids?.Add(guid);
+            }
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
             AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
             return AssetDatabase.AssetPathToGUID(path);
@@ -216,7 +227,7 @@ namespace UnityEditor.AddressableAssets.Tests
             AssertLocateResult(locator, "TF2/TestSubFolder2/asset1.asset", null, GetPath("TestFolder/TestSubFolder1/TestSubFolder2/asset1.asset"));
         }
 
-        void CreateAndAddScenesToEditorBuildSettings(string scenePrefix, int count)
+        void CreateAndAddScenesToEditorBuildSettings(string scenePrefix, int count, HashSet<object> guids = null)
         {
             var sceneList = new List<EditorBuildSettingsScene>();
             for (int i = 0; i < count; i++)
@@ -225,6 +236,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, i == 0 ? NewSceneMode.Single : NewSceneMode.Additive);
                 EditorSceneManager.SaveScene(scene, path);
                 var guid = AssetDatabase.AssetPathToGUID(path);
+                guids?.Add(guid);
                 sceneList.Add(new EditorBuildSettingsScene(path, true));
             }
             EditorBuildSettings.scenes = sceneList.ToArray();
@@ -320,5 +332,93 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             RunResourcesTestWithAsset(false);
         }
+
+        static HashSet<object> ExpectedKeys = new HashSet<object>(new object[] 
+        {
+            "TestScene0",   //scene name in build settings
+            0,              //index if TestScene0
+            "TestScene1",
+            1,
+            "TestScene2",
+            2,
+            //assets in a folder with an address
+            "AssetAddress", 
+            "AssetLabel",
+            "TF/asset2.asset",
+            "TF/asset3.asset",
+            //scenes in a folder
+            "TF/TestSubFolder2/scene1.unity",
+            "TF/TestSubFolder2/scene2.unity",
+            "TF/TestSubFolder2/scene3.unity",
+            //label applied to folder
+            "FolderLabel1",
+            //assets in subfolder without address
+            "TestFolder/TestSubFolder1/asset1.asset",
+            "TestFolder/TestSubFolder1/asset2.asset",
+            "TestFolder/TestSubFolder1/asset3.asset",
+            //assets in resource in subfolder with address
+            "TestFolder/TestSubFolder1/Resources/asset1.asset",
+            "TestFolder/TestSubFolder1/Resources/asset2.asset",
+            "TestFolder/TestSubFolder1/Resources/asset3.asset",
+            //resources keys
+            "asset1",
+            "asset2",
+            "asset3",
+        });
+
+        [Test]
+        public void Locator_KeysProperty_Contains_Expected_Keys()
+        {
+            using (new HideResourceFoldersScope())
+            {
+                var folderGUID1 = CreateFolder("TestFolder",
+                    new string[] {"asset1.asset", "asset2.asset", "asset3.asset"}, ExpectedKeys);
+                var folderGUID2 = CreateFolder("TestFolder/TestSubFolder1",
+                    new string[] {"asset1.asset", "asset2.asset", "asset3.asset"}, ExpectedKeys);
+                var folderGUID3 = CreateFolder("TestFolder/TestSubFolder1/Resources",
+                    new string[] {"asset1.asset", "asset2.asset", "asset3.asset"}, ExpectedKeys);
+                var folderGUID4 = CreateFolder("TestFolder/TestSubFolder2",
+                    new string[] {"scene1.unity", "scene2.unity", "scene3.unity"}, ExpectedKeys);
+                CreateAndAddScenesToEditorBuildSettings("TestScene", 3, ExpectedKeys);
+                var assetInFolder = m_Settings.CreateOrMoveEntry(
+                    AssetDatabase.AssetPathToGUID(GetPath("TestFolder/asset1.asset")), m_Settings.DefaultGroup);
+                assetInFolder.address = "AssetAddress";
+                assetInFolder.SetLabel("AssetLabel", true, true, true);
+                var tf = m_Settings.CreateOrMoveEntry(folderGUID1, m_Settings.DefaultGroup);
+                tf.address = "TF";
+                tf.SetLabel("FolderLabel1", true, true, true);
+                var tf2 = m_Settings.CreateOrMoveEntry(folderGUID2, m_Settings.DefaultGroup);
+                tf2.address = "TestFolder/TestSubFolder1";
+                var locator = new AddressableAssetSettingsLocator(m_Settings);
+                if (ExpectedKeys.Count != locator.Keys.Count())
+                {
+                    Debug.Log("GENERATED");
+                    int i = 0;
+                    foreach (var k in locator.Keys)
+                    {
+                        Debug.Log($"[{i}] {k}");
+                        i++;
+                    }
+
+                    Debug.Log("EXPECTED");
+                    i = 0;
+                    foreach (var k in ExpectedKeys)
+                    {
+                        Debug.Log($"[{i}] {k}");
+                        i++;
+                    }
+                }
+
+                Assert.AreEqual(ExpectedKeys.Count, locator.Keys.Count());
+                int index = 0;
+                foreach (var k in locator.Keys)
+                {
+                    Assert.IsTrue(ExpectedKeys.Contains(k), $"Cannot find key {k}, index={index} in expected keys");
+                    index++;
+                }
+            }
+        }
     }
 }
+
+#endif

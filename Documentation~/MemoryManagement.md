@@ -62,7 +62,7 @@ The information displayed in the Event Viewer is related to the [build script](A
 
 When using the Event Viewer, avoid the **Use Asset Database** built script because it does not account for any shared dependencies among the Assets. Use the **Simulate Groups** script or the **Use Existing Build** script instead, but the latter is better suited for the Event Viewer because it gives a more accurate monitoring of the ref-counts.
 
-# Connecting the Event Viewer to a standalone player	
+### Connecting the Event Viewer to a standalone player	
 To connect the Event Viewer to a standalone player, go into the build menu, select the platform you wish to use, and ensure that **Development Build** and **Autoconnect Profiler** are both enabled. Next, open the Unity Profiler by selecting **Window** > **Analysis** > **Profiler** and select the platform you wish to build for on the top toolbar. Finally, select **Build and Run** in the Build Settings window and the Event Viewer will automatically connect to and display events for the standalone player selected.
 
 ## When is memory cleared?
@@ -73,6 +73,29 @@ An Asset no longer being referenced (indicated by the end of a blue section in t
 * If you release `tree`, it's ref-count becomes zero, and the blue bar goes away. 
 
 In this example, the `tree` asset is not actually unloaded at this point. You can load an AssetBundle, or its partial contents, but you cannot partially unload an AssetBundle. No asset in `stuff` unloads until the AssetBundle itself is completely unloaded. The exception to this rule is the engine interface [`Resources.UnloadUnusedAssets`](https://docs.unity3d.com/ScriptReference/Resources.UnloadUnusedAssets.html). Executing this method in the above scenario causes `tree` to unload. Because the Addressables system cannot be aware of these events, the profiler graph only reflects the Addressables ref-counts (not exactly what memory holds). Note that if you choose to use `Resources.UnloadUnusedAssets`, it is a very slow operation, and should only be called on a screen that won't show any hitches (such as a loading screen).
+
+## AssetBundle Memory Overhead
+When deciding how to organize your Addressable groups and AssetBundles, you may want to consider the runtime memory usage of each AssetBundle. Many small AssetBundles can give greater granularity for unloading, but can come at the cost of some runtime memory overhead. This section describes the various types of AssetBundle memory overhead.
+
+### Serialized File Overhead
+
+When Unity loads an AssetBundle, it allocates an internal buffer for each serialized file in the AssetBundle. This buffer persists for the lifetime of the AssetBundle. A non-scene AssetBundle contains one serialized file, but a scene AssetBundle can contain up to two serialized files for each scene in the bundle. The buffer sizes are optimized per platform. Switch, Playstation, and Windows RT use 128k buffers. All other platforms use 14k buffers. You can use the [Build Layout Report](DiagnosticTools.md#build-layout-report) to determine how many serialized files are in an AssetBundle.
+
+Each serialized file also contains a TypeTree for each object type within the file. The TypeTree describes the data layout of each object type and allows you to load objects that are deserialized slightly differently from how they were serialized. All the TypeTrees are loaded when the AssetBundle is loaded and held in memory for the lifetime of the AssetBundle. The memory overhead associated with TypeTrees scales with the number of unique types in the serialized file and the complexity of those types. Although you can choose to ship AssetBundles without TypeTrees, be aware that even engine version patches can slightly change the serialization format and could result in undefined behavior when you use a newer runtime to load assets serialized with an older format; Unity recommends always shipping AssetBundles with TypeTree information, which is the default behavior.
+
+When you put objects of the same type in more than one AssetBundle, the type information for those objects is duplicated in the TypeTree of each AssetBundle. This duplication of type information is more noticeable when you use many small AssetBundles. You can test the impact that TypeTrees have on the size of your AssetBundles by building them with and without TypeTrees disabled and comparing the sizes. If after measuring, you find the duplicate TypeTree memory overhead to be unacceptable, you can avoid it by packing your objects of the same types in the same AssetBundles.
+
+### AssetBundle Object
+
+The AssetBundle object itself has two main sources of runtime memory overhead: the table of contents, and the preload table. While the size of an AssetBundle on disk is not the same as its size at runtime, you can use the disk size to approximate the memory overhead. This information is located in the [Build Layout Report](DiagnosticTools.md#build-layout-report).
+
+The table of contents is a map within the bundle that allows you to look up each explicitly included asset by name. It scales linearly with the number of assets and the length of the string names by which they are mapped.
+
+The preload table is a list of all the objects that a loadable asset references. This data is needed so Unity can load all those referenced objects when you load an asset from the AssetBundle. For example, a prefab would have a preload entry for each component as well as any other assets it may reference (materials, textures, etc). Each preload entry is 64 bits and can reference objects in other AssetBundles.
+
+As an example, consider a situation in which you are adding two Assets to an AssetBundle  (`PrefabA` and `PrefabB`) and both of these prefabs reference a third prefab  (`PrefabC`), which is large and contains several components and references to other assets. This AssetBundle has two preload tables, one for `PrefabA` and one for `PrefabB`. Those tables contain entries for all the objects of their respective prefab, but also entries for all the objects in `PrefabC` and any objects referenced by `PrefabC`. Thus the information required to load `PrefabC` ends up duplicated in both `PrefabA` and `PrefabB`. This will happen whether or not `PrefabC` is explicitly added to an AssetBundle.
+
+Depending on how you organize your assets, the preload tables in AssetBundles could become quite large and contain many duplicate entries. This is especially true if you had several loadable assets that all reference a complex asset, such as `PrefabC` in the situation above. If you determine that the memory overhead from the preload table is a problem, you can structure your loadable assets so that they have fewer complex loading dependencies.
 
 ## AssetBundle dependencies	
 Loading an Addressable Asset loads all the AssetBundle dependencies and keeps them loaded until you call [`Addressables.Release`](xref:UnityEngine.AddressableAssets.Addressables.Release``1(``0)) on the handle returned from the loading method.	
@@ -111,14 +134,14 @@ The three textures in Example 1 are put into a SpriteAtlas.  That atlas is not A
 Addressable Sprite Example 3:
 The SpriteAtlas from Example 2 is marked as Addressable in its own AssetBundle.  At this point there are four AssetBundles created.  If you are using a 2020.x or newer version of Unity, this builds as you would expect.  The three AssetBundles with the sprites are each be only a few KB and have a dependency on this fourth SpriteAtlas AssetBundle, which is be about 1500KB.  If you are using 2019.x or older, the texture itself may end up elsewhere.  The three sprite AssetBundles still depend on the SpriteAtlas AssetBundle. However, the SpriteAtlas AssetBundle may only contain meta data, and the texture may be with one of the other sprites.
 
-Addressable Material With Sprite Dependency Example 1:
-Instead of three Addressable textures, there are three Addressable materials. Each material depends on its own texture (about 500KB). Building the three materials seperately results, as expected, in three AssetBundles of about 500KB each.
+Addressable Prefab With Sprite Dependency Example 1:
+Instead of three Addressable textures, there are three Addressable sprite prefabs. Each prefab depends on its own sprite (about 500KB). Building the three prefabs seperately results, as expected, in three AssetBundles of about 500KB each.
 
-Addressable Material With Sprite Dependency Example 2
-Taking the materials and texture from the previous example, all three textures are added to a SpriteAtlas, and that atlas is not marked as Addressable.  In this scenario, the SpriteAtlas texture is duplicated.  All three AssetBundles are approximately 1500KB. This is expected based on the general rules about duplication of dependencies, but goes against the behavior seen in "Addressable Sprite Example 2".
+Addressable Prefab With Sprite Dependency Example 2
+Taking the prefabs and textures from the previous example, all three textures are added to a SpriteAtlas, and that atlas is not marked as Addressable.  In this scenario, the SpriteAtlas texture is duplicated.  All three AssetBundles are approximately 1500KB. This is expected based on the general rules about duplication of dependencies, but goes against the behavior seen in "Addressable Sprite Example 2".
 
-Addressable Material With Sprite Dependency Example 2
-Taking the materials, texture, and SpriteAtlas form the above example, the SpriteAtlas is also marked as Addressable.  Conforming to the rules of explicit inclusion, the SpriteAtlas texture is included only in the AssetBundle containing the SpriteAtlas.  The AssetBundles with materials references this fourth AssetBundle as a dependency.
+Addressable Prefab With Sprite Dependency Example 2
+Taking the prefabs, textures, and SpriteAtlas form the above example, the SpriteAtlas is also marked as Addressable.  Conforming to the rules of explicit inclusion, the SpriteAtlas texture is included only in the AssetBundle containing the SpriteAtlas.  The AssetBundles with prefabs reference this fourth AssetBundle as a dependency.
 
 
 

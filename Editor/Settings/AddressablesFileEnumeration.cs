@@ -122,15 +122,14 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             paths = new HashSet<string>();
             bool hasAddrFolder = false;
-
             foreach (AddressableAssetGroup group in settings.groups)
             {
                 if (group == null)
                     continue;
                 foreach (AddressableAssetEntry entry in group.entries)
                 {
-                    string convertedPath = entry.AssetPath.Replace('\\', '/');
-                    if (Directory.Exists(convertedPath))
+                    string convertedPath = entry.AssetPath;
+                    if (!hasAddrFolder && AssetDatabase.IsValidFolder(convertedPath))
                         hasAddrFolder = true;
                     paths.Add(convertedPath);
                 }

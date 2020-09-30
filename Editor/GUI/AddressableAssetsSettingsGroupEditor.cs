@@ -337,6 +337,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var n = context as string;
             AddressableAssetSettingsDefaultObject.Settings.activeProfileId = AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileId(n);
+            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(AddressableAssetSettingsDefaultObject.Settings);
         }
 
         bool m_ModificationRegistered;

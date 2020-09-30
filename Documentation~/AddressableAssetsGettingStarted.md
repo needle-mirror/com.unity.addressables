@@ -35,6 +35,8 @@ The Addressables Asset System needs to build your content into files that can be
 * To build content in the Editor, open the **Addressables Groups** window, then select **Build** > **New Build** > **Default Build Script**.
 * To build content using the API, use [`AddressableAssetSettings.BuildPlayerContent()`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.BuildPlayerContent).
 
+See [Build layout report](DiagnosticTools.md#build-layout-report) for information on how to generate a report about the layout of your built content.
+
 ## Assets in Packages
 
 **Important**: Marking package assets as Addressable requires Unity version 2020.2.0a9 or later.

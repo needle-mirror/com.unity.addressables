@@ -120,6 +120,33 @@ namespace AddressableAssetsIntegrationTests
             m_StartingTrackedHandleCount = m_Addressables.TrackedHandleCount;
             m_StartingInstanceCount = m_Addressables.ResourceManager.InstanceOperationCount;
         }
+        
+        IEnumerator InitWithoutInitializeAsync()
+        {
+            if (!initializationComplete || TypeName != currentInitType)
+            {
+                if (m_Addressables == null)
+                    m_Addressables = new AddressablesImpl(new LRUCacheAllocationStrategy(1000, 1000, 100, 10));
+
+                currentInitType = TypeName;
+
+                yield return this;
+
+                for (int i = 0; i < 3; i++)
+                {
+                    var locator = new DynamicResourceLocator(m_Addressables);
+                    m_Addressables.AddResourceLocator(locator);
+                }
+                initializationComplete = true;
+
+                m_PrevHandler = ResourceManager.ExceptionHandler;
+                ResourceManager.ExceptionHandler = null;
+            }
+            m_Addressables.ResourceManager.ClearDiagnosticCallbacks();
+            m_StartingOpCount = m_Addressables.ResourceManager.OperationCacheCount;
+            m_StartingTrackedHandleCount = m_Addressables.TrackedHandleCount;
+            m_StartingInstanceCount = m_Addressables.ResourceManager.InstanceOperationCount;
+        }
 
         private void ResetAddressables()
         {

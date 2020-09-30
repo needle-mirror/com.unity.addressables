@@ -99,6 +99,8 @@ namespace UnityEditor.AddressableAssets.Settings
                         //this isn't a valid asset, which means it wasn't persisted, so just set the object name to the desired display name.
                         name = m_GroupName;
                     }
+                    
+
                     SetDirty(AddressableAssetSettings.ModificationEvent.GroupRenamed, this, true, true);
                 }
             }

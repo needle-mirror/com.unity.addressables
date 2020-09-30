@@ -433,15 +433,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             if (m_Status == AsyncOperationStatus.Failed)
             {
                 if (releaseDependenciesOnFailure)
-                {
-                    List<AsyncOperationHandle> deps = new List<AsyncOperationHandle>();
-                    GetDependencies(deps);
-                    foreach (var depOp in deps)
-                    {
-                        if (depOp.Status == AsyncOperationStatus.Succeeded)
-                            depOp.Release();
-                    }
-                }
+                    ReleaseDependencies();
 
                 if (m_RM != null && m_RM.postProfilerEvents)
                     m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationFail, 0, errorMsg));
@@ -551,6 +543,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             Start(rm, dependency, updateCallbacks);
         }
+
+        internal virtual void ReleaseDependencies() { }
 
         /// <inheritdoc/>
         DownloadStatus IAsyncOperation.GetDownloadStatus(HashSet<object> visited)

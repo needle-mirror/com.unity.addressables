@@ -3,7 +3,7 @@
 - `AsyncOperationHandle<IResourceLocator> Addressables.InitializeAsync()`
 
 #### Returns
-`AsyncOperationHandle<IResourceLocator>`: The AsyncOperationHandle for the `InitializationOperation`.  Do not release this `AsyncOperationHandle`.
+`AsyncOperationHandle<IResourceLocator>`: The AsyncOperationHandle for the `InitializationOperation`.  This handle is automatically released after it completes.  
 
 #### Description
 Initializing Addressables is a preliminary operation that has the responsibility of setting up the runtime data for Addressables.  Addressables.InitializeAsync creates and executes an InitializationOperation operation.  This operation does the following:
@@ -12,7 +12,7 @@ Initializing Addressables is a preliminary operation that has the responsibility
 - Executes `InitializationObjects` operations that were added to the Addressables build. 
 - Loads the `ContentCatalog`.  Optionally checks for updates to the `ContentCatalog`.  By default this check is turned on.
 
-You can manually initialize Addressables, though it is not required, by calling `Addressables.InitializeAsync()`.  This returns an `AsyncOperationHandle`.  Do not release this handle while using Addressables.
+You can manually initialize Addressables, though it is not required, by calling `Addressables.InitializeAsync()`. 
 
 If Addressables is not manually initialized, by default Addressables checks that initialization has occurred.  If the initial call, such as a `LoadAsset` request, detects that initialization has not occured then an `InitilizationOperation` is kicked off automatically.  The LoadAsset operation is chained behind the initialization operation and executes automatically afterwards.
 
@@ -32,7 +32,9 @@ Manual initialization can have performance benefits on your initial load.  If yo
 
 It may be preferable to manually initialize Addressables for debugging purposes.  Lazy-initialization through a chain operation can muddle errors and make the root of the problem unclear.  Manual initialization keeps that process separate which can help narrow down any issues.  
 
-The `Result` of this operation is an `IResourceLocator`.  This object contains a list of Addressable keys and a method that can be used to gather the `IResourceLocation(s)` for a given key and asset type.
+The `Result` of this operation is an `IResourceLocator`.  This object contains a list of Addressable keys and a method that can be used to gather the `IResourceLocation(s)` for a given key and asset type.  
+
+Access to the `Result` or `Status` is only available in a `Completed` callback.  If a yield return is used instead, the Addressables will have auto-released the handle by the time access is attempted. 
 
 Full API documentation can be found [here](xref:UnityEngine.AddressableAssets.Initialization).
 

@@ -17,6 +17,7 @@ using UnityEngine.ResourceManagement.ResourceProviders.Simulation;
 using UnityEngine.ResourceManagement.Util;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 
 namespace UnityEditor.AddressableAssets.Build.DataBuilders
 {
@@ -330,15 +331,29 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         static string OutputLibraryPathForAsset(string a)
         {
             var guid = AssetDatabase.AssetPathToGUID(a);
-#if UNITY_2019_3_OR_NEWER
+            var legacyPath = string.Format("Library/metadata/{0}{1}/{2}", guid[0], guid[1], guid);
+#if UNITY_2020_2_OR_NEWER
             var hash = Experimental.AssetDatabaseExperimental.GetArtifactHash(guid);
             if (Experimental.AssetDatabaseExperimental.GetArtifactPaths(hash, out var paths))
                 return Path.GetFullPath(paths[0]);
-            return string.Format("Library/metadata/{0}{1}/{2}", guid[0], guid[1], guid);
-
-#else
-            return string.Format("Library/metadata/{0}{1}/{2}", guid[0], guid[1], guid);
+            else
+                legacyPath = String.Empty; // legacy path is never valid in 2020.2+
+#elif UNITY_2019_3_OR_NEWER
+            if (IsAssetDatabaseV2Enabled()) // AssetDatabase V2 is optional in 2019.3 and 2019.4
+            {
+                var hash = Experimental.AssetDatabaseExperimental.GetArtifactHash(guid);
+                if (Experimental.AssetDatabaseExperimental.GetArtifactPaths(hash, out var paths))
+                    return Path.GetFullPath(paths[0]);
+            }
 #endif
+            return legacyPath;
+        }
+
+        static bool IsAssetDatabaseV2Enabled()
+        {
+            // method is internal
+            var methodInfo = typeof(AssetDatabase).GetMethod("IsV2Enabled", BindingFlags.Static | BindingFlags.NonPublic);
+            return methodInfo != null && (bool)methodInfo.Invoke(null, null);
         }
 
         static long ComputeSize(string a)
@@ -349,39 +364,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 return 1024 * 1024;
             }
             return new FileInfo(path).Length;
-        }
-
-        static void GenerateBuildInputDefinitions(List<AddressableAssetEntry> allEntries, List<AssetBundleBuild> buildInputDefs, string groupName, string address)
-        {
-            var scenes = new List<AddressableAssetEntry>();
-            var assets = new List<AddressableAssetEntry>();
-            foreach (var e in allEntries)
-            {
-                if (e.IsScene)
-                    scenes.Add(e);
-                else
-                    assets.Add(e);
-            }
-
-            if (assets.Count > 0)
-                buildInputDefs.Add(GenerateBuildInputDefinition(assets, groupName + "_assets_" + address + ".bundle"));
-            if (scenes.Count > 0)
-                buildInputDefs.Add(GenerateBuildInputDefinition(scenes, groupName + "_scenes_" + address + ".bundle"));
-        }
-
-        static AssetBundleBuild GenerateBuildInputDefinition(List<AddressableAssetEntry> assets, string name)
-        {
-            var assetsInputDef = new AssetBundleBuild();
-            assetsInputDef.assetBundleName = name.ToLower().Replace(" ", "").Replace('\\', '/').Replace("//", "/");
-            var assetIds = new List<string>(assets.Count);
-            foreach (var a in assets)
-            {
-                assetIds.Add(a.GetAssetLoadPath(true));
-            }
-
-            assetsInputDef.assetNames = assetIds.ToArray();
-            assetsInputDef.addressableNames = new string[0];
-            return assetsInputDef;
         }
 
         static IList<IBuildTask> RuntimeDataBuildTasks(bool compileScripts, string builtinShaderBundleName)
