@@ -1,3 +1,6 @@
+---
+uid: addressables-api-load-asset-async
+---
 # Addressables.LoadAsset(s)Async
 ### Addressables.LoadAssetAsync
 - `static AsyncOperationHandle<TObject> LoadAssetAsync<TObject>(object key)`
@@ -20,9 +23,9 @@ The internal operation of the `AsyncOperationHandle` returned will have a refere
 
 If there are multiple request calls for the same asset, then the reference count for the underlying internal operation increases, and the cached load operation is not used. This means that all newly-created handles need to ensure they are properly released in order to unload the AssetBundles.
 
-Note that there is also the option to load an asset with the helper function `LoadAssetAsync` in the [`AssetReference`](../api/UnityEngine.AddressableAssets.AssetReference.html) (for example `AssetRefMember.LoadAssetAsync<GameObject>()`) but it has more restrictions to reference count. When called, it caches the handle in the `AssetReference` of the load if successful.  Due to the cached handle, this load cannot be called again to load or increase the reference count. If the second call was simply an attempt to access the result, you can use `myAssetReference.Asset`.  If the second call was an attempt to increase the reference count, you must call directly into addressables, with `Addressables.LoadAssetAsync(myAssetReference)`
+Note that there is also the option to load an asset with the helper function `LoadAssetAsync` in the [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference.LoadAssetAsync*) class (for example `AssetRefMember.LoadAssetAsync<GameObject>()`) but it has more restrictions to reference count. When called, it caches the handle in the `AssetReference` of the load if successful.  Due to the cached handle, this load cannot be called again to load or increase the reference count. If the second call was simply an attempt to access the result, you can use `myAssetReference.Asset`.  If the second call was an attempt to increase the reference count, you must call directly into addressables, with `Addressables.LoadAssetAsync(myAssetReference)`
 
-If there are any issues during the excecution of these operations, an Exception is generated and returned in the operations `OperationException`. That exception is also logged as an error by default. If you would like to see the exceptions when they happen, process them, and choose how to handle them, see [`ResourceManager.ExceptionHandler`](ExceptionHandler).
+If there are any issues during the excecution of these operations, an Exception is generated and returned in the operations `OperationException`. That exception is also logged as an error by default. If you would like to see the exceptions when they happen, process them, and choose how to handle them, see [`ResourceManager.ExceptionHandler`](ExceptionHandler.md).
 
 #### Code Sample
 ```
@@ -96,7 +99,7 @@ MergeMode.Union - Takes results of each key and collects items that matched any 
 MergeMode.Intersection - Takes results of each key, and collects items that matched every key.
 ```
 
-If there are any issues during the excecution of these operations, an Exception is generated and returned in the operations `OperationException`. That exception is also logged as an error by default. If you would like to see the exceptions when they happen, process them, and choose how to handle them, see [`ResourceManager.ExceptionHandler`](ExceptionHandler).
+If there are any issues during the excecution of these operations, an Exception is generated and returned in the operations `OperationException`. That exception is also logged as an error by default. If you would like to see the exceptions when they happen, process them, and choose how to handle them, see [`ResourceManager.ExceptionHandler`](ExceptionHandler.md).
 
 #### Code Sample
 ```

@@ -22,6 +22,10 @@ namespace UnityEditor.AddressableAssets
         /// The name of the default config object
         /// </summary>
         public const string kDefaultConfigObjectName = "com.unity.addressableassets";
+        /// <summary>
+        /// The path to the Library folder for storing Addressables data
+        /// </summary>
+        internal const string kAddressablesLibraryPath = "Library/com.unity.addressables";
 
         /// <summary>
         /// Default path for addressable asset settings assets.

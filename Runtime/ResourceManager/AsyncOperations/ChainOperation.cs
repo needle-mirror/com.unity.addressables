@@ -21,7 +21,8 @@ namespace UnityEngine.ResourceManagement
 
         protected override void GetDependencies(List<AsyncOperationHandle> deps)
         {
-            deps.Add(m_DepOp);
+            if(m_DepOp.IsValid())
+                deps.Add(m_DepOp);
         }
 
         public void Init(AsyncOperationHandle<TObjectDependency> dependentOp, Func<AsyncOperationHandle<TObjectDependency>, AsyncOperationHandle<TObject>> callback, bool releaseDependenciesOnFailure)
@@ -112,7 +113,8 @@ namespace UnityEngine.ResourceManagement
 
         protected override void GetDependencies(List<AsyncOperationHandle> deps)
         {
-            deps.Add(m_DepOp);
+            if(m_DepOp.IsValid())
+                deps.Add(m_DepOp);
         }
 
         public void Init(AsyncOperationHandle dependentOp, Func<AsyncOperationHandle, AsyncOperationHandle<TObject>> callback, bool releaseDependenciesOnFailure)

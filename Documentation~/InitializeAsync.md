@@ -1,3 +1,6 @@
+---
+uid: addressables-api-initialize-async
+---
 # Addressables.InitializeAsync
 #### API
 - `AsyncOperationHandle<IResourceLocator> Addressables.InitializeAsync()`

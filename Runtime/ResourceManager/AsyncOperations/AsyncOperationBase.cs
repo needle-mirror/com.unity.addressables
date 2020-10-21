@@ -90,7 +90,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         AsyncOperationStatus m_Status;
         Exception m_Error;
         internal ResourceManager m_RM;
-        int m_Version;
+        internal int m_Version;
         internal int Version { get { return m_Version; } }
 
         DelegateList<AsyncOperationHandle> m_CompletedAction;

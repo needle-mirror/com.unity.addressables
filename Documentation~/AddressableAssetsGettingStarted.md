@@ -1,3 +1,6 @@
+---
+uid: addressables-getting-started
+---
 # Getting started
 ## Installing the Addressable Assets package
 
@@ -108,9 +111,9 @@ To load a single sub-object in an asset, you could do this:
 The names available within an asset are visible in the main Addressables group editor window. 
 In addition, you can use an [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) to access the sub-object of an asset.  See notes in the below section. 
 
-For `SpriteAtlas` objects specifically, be sure that the **Include In Build** is enabled on the `SpriteAtlas` object.  If **Include in Build** is disabled, then the `SpriteAtlas` cannot be built in any form, including the content build done by Addressables.
+For [SpriteAtlas](xref:class-SpriteAtlas) objects specifically, note that the atlas inspector has a checkbox for **Include In Build**. This option does not determine whether the atlas itself is built into AssetBundles, rather it determines how items reference it. When you enable **Include in Build**, all dependency linkages remain intact. Thus, if you have an Addressable prefab sprite that is dependent on an atlas, the atlas will be pulled into an AssetBundle.  Similarly, if you explicilty mark the atlas as Addressable, the prefab will list the atlas bundle as a dependency, and things are hooked up properly at load time. If you disable **Include In Build**, the linkage is not preserved. When you load an Addressable prefab that is dependent on the atlas, the atlas will be requested, and you must load and manage the connection manually using [SpriteAtlasManager.atlasRequested](https://docs.unity3d.com/ScriptReference/U2D.SpriteAtlasManager-atlasRequested.html). In this scenario, you can still mark the atlas as Addressable to access each sprite manually. 
 
-When viewing a `SpriteAtlas` in the Addressable Groups window, ensure the `SpriteAtlas` has been packed if you intend to view the sub-objects in the Window.  This can be done by clicking Pack Preview in the inspector of the `SpriteAtlas` object.  If the `SpriteAtlas` is packed and you still cannot see the sub-objects, check the "Show Sprite and Subobject Addresses" option is enabled; it is located in the Tools menu of the Addressable Group window.
+When viewing a [SpriteAtlas](xref:class-SpriteAtlas) in the **Addressables Groups** window, ensure the [SpriteAtlas](xref:class-SpriteAtlas) has been packed if you intend to view the sub-objects in the Window. This can be done by clicking **Pack Preview** in the inspector of the [SpriteAtlas](xref:class-SpriteAtlas) object. If the [SpriteAtlas](xref:class-SpriteAtlas) is packed and you still cannot see the sub-objects, check the **Show Sprite and Subobject Addresses** option is enabled; it is located in the **Tools** menu of the **Addressables Groups** window.
 
 ### Using the AssetReference class
 The [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) class provides a way to access Addressable Assets without needing to know their addresses. To access an Addressable Asset using the `AssetReference` class:
@@ -183,7 +186,7 @@ After running a build where you have multiple Scenes in an Addressable Assets gr
 * Under `Packed Assets` in the **Project** window, the group's Bundle Mode is set to **Pack Together**.
 * The Scenes in that group all have the same asset label, and the Bundle Mode is set to **Pack Together By Label**.
 
-If you modify even one of these grouped Scenes then perform a [content update build](AddressableAssetsDevelopmentCycle.md#building-for-content-updates), all the interdependent Scenes will move together into a new Content Update group.
+If you modify even one of these grouped Scenes then perform a [content update build](ContentUpdateWorkflow.md#building-for-content-updates), all the interdependent Scenes will move together into a new Content Update group.
 
 ### Loading Content Catalogs
 Content Catalogs are the data stores Addressables uses to look up an asset's physical location based on the key(s) provided to the system.  By default, Addressables builds the local content catalog for local Addressable Groups.  If the Build Remote Catalogs option is turned on under the AddressableAssetSettings, then one additional catalog is built to store locations for remote Addressable Groups.  Ultimately Addressables only uses one of these catalogs.  If a remote catalog is built and it has a different hash than the local catalog, it is downloaded, cached, and used in place of the built-in local catalog.

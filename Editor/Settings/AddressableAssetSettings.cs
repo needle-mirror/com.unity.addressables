@@ -1854,7 +1854,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         /// <summary>
         /// Runs the active player data build script to create runtime data.
-        /// See the [BuildPlayerContent](../manual/BuildPlayerContent.html) documentation for more details.
+        /// See the [BuildPlayerContent](xref:addressables-api-build-player-content) documentation for more details.
         /// </summary>
         public static void BuildPlayerContent()
         {

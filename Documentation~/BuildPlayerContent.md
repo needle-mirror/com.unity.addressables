@@ -1,3 +1,6 @@
+---
+uid: addressables-api-build-player-content
+---
 # AddressableAssetSettings.BuildPlayerContent
 #### API
 - `static void BuildPlayerContent()`

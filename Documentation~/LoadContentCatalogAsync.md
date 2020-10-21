@@ -1,3 +1,6 @@
+---
+uid: addressables-api-load-content-catalog-async
+---
 # Addressables.LoadContentCatalogAsync
 #### API
 - `static AsyncOperationHandle<IResourceLocator> LoadContentCatalogAsync(string catalogPath, string providerSuffix = null)`
@@ -22,7 +25,7 @@ Once the secondary catalog is loaded, you can use the keys built into that catal
 
 Once a secondary catalog is downloaded, it is cached locally if a corresponding `.hash` file is located alongside the catalog's `.json` file.  The API looks for a `.hash` file of the same name as the catalog in the same directory as the catalog itself.  The `.hash` file contains the current hash of the content catalog.  If no `.hash` file can be found, the remote catalog is downloaded on all future requests.  Otherwise, when loading the remote catalog on subsequent application starts, the local hash of the catalog is compared against the hash of the remote catalog at the given location. If a different hash is detected, the remote catalog is downloaded, cached, and used. If the remote and local hash match, or if there is no internet connection, the cached catalog is used.
 
-If you need to update catalogs (either primary or secondary) during runtime, refer to the [UpdateCatalogs](UpdateCatalogs.html) documentation.
+If you need to update catalogs (either primary or secondary) during runtime, refer to the [UpdateCatalogs](UpdateCatalogs.md) documentation.
 
 The `providerSuffix` parameter can be used to ensure unique IDs for the resource providers loaded from a given catalog.  The `string` passed in will be appended to all provider IDs.  
 

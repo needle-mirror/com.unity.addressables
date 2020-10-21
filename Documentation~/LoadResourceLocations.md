@@ -1,3 +1,6 @@
+---
+uid: addressables-api-load-resource-locations-async
+---
 # Addressables.LoadResourceLocationsAsync
 #### API
 - `static AsyncOperationHandle<IList<IResourceLocation>> LoadResourceLocationsAsync(object key, Type type = null)`

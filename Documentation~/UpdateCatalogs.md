@@ -1,3 +1,6 @@
+---
+uid: addressables-api-update-catalogs
+---
 # Addressables.UpdateCatalogs
 #### API
 - `static AsyncOperationHandle<List<IResourceLocator>> UpdateCatalogs(IEnumerable<string> catalogs = null, bool autoReleaseHandle = true)`
@@ -5,7 +8,7 @@
 #### Returns
 `AsyncOperationHandle<List<IResourceLocator>>`: A list of the `IResourceLocators` loaded from the updated catalogs.
 
-Like with the [`LoadContentCatalogAsync`](LoadContentCatalogAsync.html) API, no further action is needed to use the new content catalogs.  The handle can be safely released after completion.
+Like with the [`LoadContentCatalogAsync`](LoadContentCatalogAsync.md) API, no further action is needed to use the new content catalogs.  The handle can be safely released after completion.
 
 #### Description
 `Addressables.UpdateCatalogs` is used to update the content catalog at runtime.  When `UpdateCatalogs` is called, all `Addressables` requests, such as asset loading and instantiation, are blocked until the `UpdateCatalogs` operation is complete.

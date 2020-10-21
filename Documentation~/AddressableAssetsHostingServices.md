@@ -1,4 +1,6 @@
-
+---
+uid: addressables-asset-hosting-services
+---
 # Asset Hosting Services
 ## Overview
 Hosting Services provide an integrated facility for using Addressable Assets configuration data to serve packed content to local or network-connected application builds from within the Unity Editor. Hosting Services are designed to improve iteration velocity when testing packed content, and can also be used to serve content to connected clients on local and remote networks.

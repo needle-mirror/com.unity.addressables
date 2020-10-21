@@ -65,6 +65,8 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
         [SerializeField]
         BundleCompressionMode m_Compression = BundleCompressionMode.LZ4;
+        
+        List<Action> m_QueuedChanges = new List<Action>();
 
         /// <summary>
         /// Gets the build compression settings for bundles in this group.
@@ -462,6 +464,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <inheritdoc/>
         public override void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
         {
+            m_QueuedChanges.Clear();
             var so = new SerializedObject(this);
             SerializedProperty prop;
 
@@ -484,27 +487,43 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             {
                 // BuildPath
                 prop = so.FindProperty("m_BuildPath");
+                var prevBuildPath = m_BuildPath.Id;
                 ShowMixedValue(prop, otherSchemas, typeof(ProfileValueReference), "m_BuildPath");
 
                 EditorGUI.BeginChangeCheck();
                 EditorGUILayout.PropertyField(prop, true);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    // Workaround to EditorGUILayout.PropertyField Undo bug
+                    var newBuildPath = m_BuildPath.Id;
+                    m_BuildPath.Id = prevBuildPath;
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaBuildPath" + name);
+                    m_BuildPath.Id = newBuildPath;
                     foreach (var schema in otherBundledSchemas)
-                        schema.m_BuildPath.Id = BuildPath.Id;
+                    {
+                        m_QueuedChanges.Add(() => schema.m_BuildPath.Id = BuildPath.Id);
+                    }
                 }
                 EditorGUI.showMixedValue = false;
 
                 // LoadPath
                 prop = so.FindProperty("m_LoadPath");
+                var prevLoadPath = m_LoadPath.Id;
                 ShowMixedValue(prop, otherSchemas, typeof(ProfileValueReference), "m_LoadPath");
 
                 EditorGUI.BeginChangeCheck();
                 EditorGUILayout.PropertyField(prop, true);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    // Workaround to EditorGUILayout.PropertyField Undo bug
+                    var newLoadPath = m_LoadPath.Id;
+                    m_LoadPath.Id = prevLoadPath;
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaLoadPath" + name);
+                    m_LoadPath.Id = newLoadPath;
                     foreach (var schema in otherBundledSchemas)
-                        schema.m_LoadPath.Id = LoadPath.Id;
+                    {
+                        m_QueuedChanges.Add(() => schema.m_LoadPath.Id = LoadPath.Id);
+                    }
                 }
                 EditorGUI.showMixedValue = false;
             }
@@ -527,9 +546,12 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 BundleCompressionMode newCompression = (BundleCompressionMode)EditorGUILayout.EnumPopup(prop.displayName, Compression);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaCompression" + name);
                     Compression = newCompression;
                     foreach (var schema in otherBundledSchemas)
-                        schema.Compression = Compression;
+                    {
+                        m_QueuedChanges.Add(() => schema.Compression = Compression);
+                    }
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -540,9 +562,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 bool newIncludeInBuild = (bool)EditorGUILayout.Toggle(prop.displayName, IncludeInBuild);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaIncludeInBuild" + name);
                     IncludeInBuild = newIncludeInBuild;
                     foreach (var schema in otherBundledSchemas)
-                        schema.IncludeInBuild = IncludeInBuild;
+                        m_QueuedChanges.Add(() => schema.IncludeInBuild = IncludeInBuild);
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -553,9 +576,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 bool newForceUniqueProvider = (bool)EditorGUILayout.Toggle(prop.displayName, ForceUniqueProvider);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaForceUniqueProvider" + name);
                     ForceUniqueProvider = newForceUniqueProvider;
                     foreach (var schema in otherBundledSchemas)
-                        schema.ForceUniqueProvider = ForceUniqueProvider;
+                        m_QueuedChanges.Add(() => schema.ForceUniqueProvider = ForceUniqueProvider);
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -566,9 +590,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 bool newUseAssetBundleCache = (bool)EditorGUILayout.Toggle(prop.displayName, UseAssetBundleCache);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaUseAssetBundleCache" + name);
                     UseAssetBundleCache = newUseAssetBundleCache;
                     foreach (var schema in otherBundledSchemas)
-                        schema.UseAssetBundleCache = UseAssetBundleCache;
+                        m_QueuedChanges.Add(() => schema.UseAssetBundleCache = UseAssetBundleCache);
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -579,9 +604,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 bool newUseAssetBundleCrc = (bool)EditorGUILayout.Toggle(prop.displayName, UseAssetBundleCrc);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaUseAssetBundleCrc" + name);
                     UseAssetBundleCrc = newUseAssetBundleCrc;
                     foreach (var schema in otherBundledSchemas)
-                        schema.UseAssetBundleCrc = UseAssetBundleCrc;
+                        m_QueuedChanges.Add(() => schema.UseAssetBundleCrc = UseAssetBundleCrc);
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -592,9 +618,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 bool newUseAssetBundleCrcForCache = (bool)EditorGUILayout.Toggle(prop.displayName, UseAssetBundleCrcForCachedBundles);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaUseAssetBundleCrcForCachedBundles" + name);
                     UseAssetBundleCrcForCachedBundles = newUseAssetBundleCrcForCache;
                     foreach (var schema in otherBundledSchemas)
-                        schema.UseAssetBundleCrcForCachedBundles = UseAssetBundleCrcForCachedBundles;
+                        m_QueuedChanges.Add(() => schema.UseAssetBundleCrcForCachedBundles = UseAssetBundleCrcForCachedBundles);
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -605,9 +632,11 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 int newTimeout = (int)EditorGUILayout.IntField(prop.displayName, Timeout);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaTimeout" + name);
                     Timeout = newTimeout;
                     foreach (var schema in otherBundledSchemas)
-                        schema.Timeout = Timeout;
+                        m_QueuedChanges.Add(() => schema.Timeout = Timeout);
+
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -618,9 +647,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 bool newChunkedTransfer = (bool)EditorGUILayout.Toggle(prop.displayName, ChunkedTransfer);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaChunkedTransfer" + name);
                     ChunkedTransfer = newChunkedTransfer;
                     foreach (var schema in otherBundledSchemas)
-                        schema.ChunkedTransfer = ChunkedTransfer;
+                        m_QueuedChanges.Add(() => schema.ChunkedTransfer = ChunkedTransfer);
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -631,9 +661,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 int newRedirectLimit = (int)EditorGUILayout.IntField(prop.displayName, RedirectLimit);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaRedirectLimit" + name);
                     RedirectLimit = newRedirectLimit;
                     foreach (var schema in otherBundledSchemas)
-                        schema.RedirectLimit = RedirectLimit;
+                        m_QueuedChanges.Add(() => schema.RedirectLimit = RedirectLimit);
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -644,9 +675,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 int newRetryCount = (int)EditorGUILayout.IntField(prop.displayName, RetryCount);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaRetryCount" + name);
                     RetryCount = newRetryCount;
                     foreach (var schema in otherBundledSchemas)
-                        schema.RetryCount = RetryCount;
+                        m_QueuedChanges.Add(() => schema.RetryCount = RetryCount);
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -657,9 +689,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 BundlePackingMode newBundleMode = (BundlePackingMode)EditorGUILayout.EnumPopup(prop.displayName, BundleMode);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaBundleMode" + name);
                     BundleMode = newBundleMode;
                     foreach (var schema in otherBundledSchemas)
-                        schema.BundleMode = BundleMode;
+                        m_QueuedChanges.Add(() => schema.BundleMode = BundleMode);
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -670,10 +703,11 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 EditorGUILayout.PropertyField(prop, true);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaBundleNaming" + name);
                     BundleNamingStyle newNamingStyle = (BundleNamingStyle)prop.enumValueIndex;
                     BundleNaming = newNamingStyle;
                     foreach (var schema in otherBundledSchemas)
-                        schema.BundleNaming = BundleNaming;
+                        m_QueuedChanges.Add(() => schema.BundleNaming = BundleNaming);
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -685,8 +719,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 EditorGUILayout.PropertyField(prop, m_AssetProviderContent, true);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaAssetProviderType" + name);
                     foreach (var schema in otherBundledSchemas)
-                        schema.m_BundledAssetProviderType = BundledAssetProviderType;
+                        m_QueuedChanges.Add(() => schema.m_BundledAssetProviderType = BundledAssetProviderType);
                 }
                 EditorGUI.showMixedValue = false;
 
@@ -698,14 +733,33 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 EditorGUILayout.PropertyField(prop, m_BundleProviderContent, true);
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(this,"BundledAssetGroupSchemaAssetBundleProviderType" + name);
                     foreach (var schema in otherBundledSchemas)
-                        schema.m_AssetBundleProviderType = AssetBundleProviderType;
+                        m_QueuedChanges.Add(() => schema.m_AssetBundleProviderType = AssetBundleProviderType);
                 }
 
                 EditorGUI.showMixedValue = false;
             }
+            if (m_QueuedChanges.Count > 0)
+            {
+                ProcessOtherSelectedBundledAssetGroupSchemasChanges(otherBundledSchemas);
+            }
 
             so.ApplyModifiedProperties();
+            Undo.CollapseUndoOperations(Undo.GetCurrentGroup());
+        }
+
+        internal void ProcessOtherSelectedBundledAssetGroupSchemasChanges(List<BundledAssetGroupSchema> otherBundledSchemas)
+        {
+            Undo.SetCurrentGroupName("bundledAssetGroupSchemasUndos");
+            foreach (var schema in otherBundledSchemas)
+            {
+                Undo.RecordObject(schema, "BundledAssetGroupSchema" + schema.name);
+            }
+            foreach (var change in m_QueuedChanges)
+                change.Invoke();
+            foreach (var schema in otherBundledSchemas)
+                schema.SetDirty(true);
         }
     }
 }

@@ -1,3 +1,6 @@
+---
+uid: addressables-api-transform-internal-id
+---
 # TransformInternalId
 #### Returns
 `string` A transformation of a given location to a potentially different location used at runtime.

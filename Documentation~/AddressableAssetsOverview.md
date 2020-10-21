@@ -1,3 +1,6 @@
+---
+uid: addressables-overview
+---
 # Addressable Assets overview
 The Addressable Assets System consists of two packages:
 

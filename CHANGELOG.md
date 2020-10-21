@@ -4,13 +4,19 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.16.7] - 2020-10-21
+- Fixed issue where InvalidHandle errors were getting thrown if an operation failed with releaseDependenciesOnFailure turned on.
+- Fixed group build and load paths not being saved when editing multiple groups at once
+- Changed Analyze Result data to be cached in the Library.  Result data was previously stored in Assets/AddressableAssetsData/AnalyzeData/AnalyzeRuleData.asset.  It is now stored in Library/com.unity/addressables/AnalyzeData/AnalyzeRuleData.json.  If detected, the Assets - version of the Analyze data will be automatically cleaned up.
+- Fixed line in AsyncOperationHandle documentation that told the wrong API for acquiring a handle
+- Moved the content update documents to their own page.  Expanded and clarified information on the update process
+
 ## [1.16.6] - 2020-09-30
 - Group hierarchy support in groups window by detecting '-' in group name
   - This can be turned on & off in the addressable asset settings inspector: Group Hierarchy with Dashes
   - This only affects the visual display, groups are still stored in the main settings object in a flat list
   - The group name is unaffected.  If you name a group "x-y-z" that will be it's name, but, with the option on, it will display as if it was in a folder called "y" that was inside a folder called "x"
 - Fixed fast mode resource locator Keys property to expand all possible keys when accessed.  For large projects with many addressable entries and folders, this property may be slow when called for the first time.
-- Group hierarchy support
 - Added detailed build layout feature. See documentation for details.
 - Fixed issue where assets in Resources weren't show full key in Groups window
 - Fixed issue where loading Addressables from a different project was throwing errors.

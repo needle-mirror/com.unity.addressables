@@ -1,3 +1,6 @@
+---
+uid: addressables-profiles
+---
 # Addressable Assets Profiles
 The Addessable Assets Profile system allows you to create a set of string variables that more easily enables you to change how your content is built into bundles. These variables can be used to determine whether your content is local to device or on a remote server.
 

@@ -1,3 +1,6 @@
+---
+uid: addressables-migration
+---
 # Upgrading to the Addressables system
 This article details how to modify your existing project to take advantage of Addressable Assets. There are three traditional methods for referencing assets:
 

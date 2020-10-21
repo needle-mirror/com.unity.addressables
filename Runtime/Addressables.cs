@@ -138,7 +138,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Functor to transform internal ids before being used by the providers.
-        /// See the [TransformInternalId](../manual/TransformInternalId.html) documentation for more details.
+        /// See the [TransformInternalId](xref:addressables-api-transform-internal-id) documentation for more details.
         /// </summary>
         static public Func<IResourceLocation, string> InternalIdTransformFunc
         {
@@ -334,7 +334,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Initialize Addressables system.  Addressables will be initialized on the first API call if this is not called explicitly.
-        /// See the [InitializeAsync](../manual/InitializeAsync.html) documentation for more details.
+        /// See the [InitializeAsync](xref:addressables-api-initialize-async) documentation for more details.
         /// </summary>
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<IResourceLocator> InitializeAsync()
@@ -359,7 +359,7 @@ namespace UnityEngine.AddressableAssets
         /// Additively load catalogs from runtime data.  In order for content catalog caching to work properly the catalog json file
         /// should have a .hash file associated with the catalog.  This hash file will be used to determine if the catalog
         /// needs to be updated or not.  If no .hash file is provided, the catalog will be loaded from the specified path every time.
-        /// See the [LoadContentCatalogAsync](../manual/LoadContentCatalogAsync.html) documentation for more details.
+        /// See the [LoadContentCatalogAsync](xref:addressables-api-load-content-catalog-async) documentation for more details.
         /// </summary>
         /// <param name="catalogPath">The path to the runtime data.</param>
         /// <param name="providerSuffix">This value, if not null or empty, will be appended to all provider ids loaded from this data.</param>
@@ -373,7 +373,7 @@ namespace UnityEngine.AddressableAssets
         /// Additively load catalogs from runtime data.  In order for content catalog caching to work properly the catalog json file
         /// should have a .hash file associated with the catalog.  This hash file will be used to determine if the catalog
         /// needs to be updated or not.  If no .hash file is provided, the catalog will be loaded from the specified path every time.
-        /// See the [LoadContentCatalogAsync](../manual/LoadContentCatalogAsync.html) documentation for more details.
+        /// See the [LoadContentCatalogAsync](xref:addressables-api-load-content-catalog-async) documentation for more details.
         /// </summary>
         /// <param name="catalogPath">The path to the runtime data.</param>
         /// <param name="autoReleaseHandle">If true, the async operation handle will be automatically released on completion.</param>
@@ -418,7 +418,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load a single asset
-        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <typeparam name="TObject">The type of the asset.</typeparam>
         /// <param name="location">The location of the asset.</param>
@@ -430,7 +430,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load a single asset
-        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <typeparam name="TObject">The type of the asset.</typeparam>
         /// <param name="key">The key of the location of the asset.</param>
@@ -458,7 +458,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads the resource locations specified by the keys.
         /// The method will always return success, with a valid IList of results. If nothing matches keys, IList will be empty
-        /// See the [LoadResourceLocations](../manual/LoadResourceLocations.html) documentation for more details.
+        /// See the [LoadResourceLocations](xref:addressables-api-load-resource-locations-async) documentation for more details.
         /// </summary>
         /// <param name="keys">The set of keys to use.</param>
         /// <param name="mode">The mode for merging the results of the found locations.</param>
@@ -473,7 +473,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads the resource locations specified by the keys.
         /// The method will always return success, with a valid IList of results. If nothing matches keys, IList will be empty
-        /// See the [LoadResourceLocations](../manual/LoadResourceLocations.html) documentation for more details.
+        /// See the [LoadResourceLocations](xref:addressables-api-load-resource-locations-async) documentation for more details.
         /// </summary>
         /// <param name="keys">The set of keys to use.</param>
         /// <param name="mode">The mode for merging the results of the found locations.</param>
@@ -501,7 +501,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Request the locations for a given key.
         /// The method will always return success, with a valid IList of results. If nothing matches key, IList will be empty
-        /// See the [LoadResourceLocations](../manual/LoadResourceLocations.html) documentation for more details.
+        /// See the [LoadResourceLocations](xref:addressables-api-load-resource-locations-async) documentation for more details.
         /// </summary>
         /// <param name="key">The key for the locations.</param>
         /// <param name="type">A type restriction for the lookup.  Only locations of the provided type (or derived type) will be returned.</param>
@@ -528,7 +528,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load multiple assets, based on list of locations provided.
         /// If any fail, all successful loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.
-        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="locations">The locations of the assets.</param>
@@ -541,7 +541,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load multiple assets, based on list of locations provided.
-        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="locations">The locations of the assets.</param>
@@ -580,7 +580,7 @@ namespace UnityEngine.AddressableAssets
         /// down to one based on the provided MergeMode.
         /// If any locations from the final list fail, all successful loads and dependencies will be released.  The returned
         /// .Result will be null, and .Status will be Failed.
-        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="keys">List of keys for the locations.</param>
@@ -599,7 +599,7 @@ namespace UnityEngine.AddressableAssets
         /// down to one based on the provided MergeMode.
         /// If any locations from the final list fail, all successful loads and dependencies will be released.  The returned
         /// .Result will be null, and .Status will be Failed.
-        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="keys">List of keys for the locations.</param>
@@ -615,7 +615,7 @@ namespace UnityEngine.AddressableAssets
         /// Load multiple assets.
         /// Each key in the provided list will be translated into a list of locations.  Those many lists will be combined
         /// down to one based on the provided MergeMode.
-        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <param name="keys">IEnumerable set of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
@@ -633,12 +633,12 @@ namespace UnityEngine.AddressableAssets
         {
             return m_Addressables.LoadAssetsAsync(keys, callback, mode, releaseDependenciesOnFailure);
         }
-        
+
         /// <summary>
         /// Load multiple assets.
         /// Each key in the provided list will be translated into a list of locations.  Those many lists will be combined
         /// down to one based on the provided MergeMode.
-        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <param name="keys">IEnumerable set of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
@@ -658,13 +658,13 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load mutliple assets
-        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="key">Key for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <returns>The operation handle for the request.</returns>
-        //[Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> LoadAssetsAsync(*)", true)]
+        //[Obsolete("We have added Async to the name of all async methods (UnityUpgradable) -> LoadAssetsAsync(*)", true)]
         [Obsolete]
         public static AsyncOperationHandle<IList<TObject>> LoadAssets<TObject>(object key, Action<TObject> callback)
         {
@@ -674,7 +674,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load all assets that match the provided key.
         /// If any fail, all successful loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.
-        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="key">Key for the locations.</param>
@@ -687,7 +687,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load all assets that match the provided key.
-        /// See the [Loading Addressable Assets](../manual/LoadingAddressableAssets.html) documentation for more details.
+        /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="key">Key for the locations.</param>
@@ -842,7 +842,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Downloads dependencies of assets marked with the specified label or address.
-        /// See the [DownloadDependenciesAsync](../manual/DownloadDependenciesAsync.html) documentation for more details.
+        /// See the [DownloadDependenciesAsync](xref:addressables-api-download-dependencies-async) documentation for more details.
         /// </summary>
         /// <param name="key">The key of the asset(s) to load dependencies for.</param>
         /// <param name="autoReleaseHandle">Automatically releases the handle on completion</param>
@@ -854,7 +854,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Downloads dependencies of assets at given locations.
-        /// See the [DownloadDependenciesAsync](../manual/DownloadDependenciesAsync.html) documentation for more details.
+        /// See the [DownloadDependenciesAsync](xref:addressables-api-download-dependencies-async) documentation for more details.
         /// </summary>
         /// <param name="locations">The locations of the assets.</param>
         /// <param name="autoReleaseHandle">Automatically releases the handle on completion</param>
@@ -866,7 +866,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Downloads dependencies of assets marked with the specified labels or addresses.
-        /// See the [DownloadDependenciesAsync](../manual/DownloadDependenciesAsync.html) documentation for more details.
+        /// See the [DownloadDependenciesAsync](xref:addressables-api-download-dependencies-async) documentation for more details.
         /// </summary>
         /// <param name="keys">List of keys for the locations.</param>
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
@@ -879,7 +879,7 @@ namespace UnityEngine.AddressableAssets
         }
         /// <summary>
         /// Downloads dependencies of assets marked with the specified labels or addresses.
-        /// See the [DownloadDependenciesAsync](../manual/DownloadDependenciesAsync.html) documentation for more details.
+        /// See the [DownloadDependenciesAsync](xref:addressables-api-download-dependencies-async) documentation for more details.
         /// </summary>
         /// <param name="keys">List of keys for the locations.</param>
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
@@ -1094,7 +1094,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
+        /// See the [InstantiateAsync](xref:addressables-api-instantiate-async) documentation for more details.
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>
         /// <param name="parent">Parent transform for instantiated object.</param>
@@ -1108,7 +1108,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
+        /// See the [InstantiateAsync](xref:addressables-api-instantiate-async) documentation for more details.
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>
         /// <param name="position">The position of the instantiated object.</param>
@@ -1123,7 +1123,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
+        /// See the [InstantiateAsync](xref:addressables-api-instantiate-async) documentation for more details.
         /// </summary>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
         /// <param name="parent">Parent transform for instantiated object.</param>
@@ -1137,7 +1137,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
+        /// See the [InstantiateAsync](xref:addressables-api-instantiate-async) documentation for more details.
         /// </summary>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
         /// <param name="position">The position of the instantiated object.</param>
@@ -1152,7 +1152,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
+        /// See the [InstantiateAsync](xref:addressables-api-instantiate-async) documentation for more details.
         /// </summary>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
         /// <param name="instantiateParameters">Parameters for instantiation.</param>
@@ -1165,7 +1165,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// See the [InstantiateAsync](../manual/InstantiateAsync.html) documentation for more details.
+        /// See the [InstantiateAsync](xref:addressables-api-instantiate-async) documentation for more details.
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>
         /// <param name="instantiateParameters">Parameters for instantiation.</param>
@@ -1208,7 +1208,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load scene.
-        /// See the [LoadSceneAsync](../manual/LoadSceneAsync.html) documentation for more details.
+        /// See the [LoadSceneAsync](xref:addressables-api-load-scene-async) documentation for more details.
         /// </summary>
         /// <param name="key">The key of the location of the scene to load.</param>
         /// <param name="loadMode">Scene load mode.</param>
@@ -1222,7 +1222,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Load scene.
-        /// See the [LoadSceneAsync](../manual/LoadSceneAsync.html) documentation for more details.
+        /// See the [LoadSceneAsync](xref:addressables-api-load-scene-async) documentation for more details.
         /// </summary>
         /// <param name="location">The location of the scene to load.</param>
         /// <param name="loadMode">Scene load mode.</param>
@@ -1318,7 +1318,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Update the specified catalogs.
-        /// See the [UpdateCatalogs](../manual/UpdateCatalogs.html) documentation for more details.
+        /// See the [UpdateCatalogs](xref:addressables-api-update-catalogs) documentation for more details.
         /// </summary>
         /// <param name="catalogs">The set of catalogs to update.  If null, all catalogs that have an available update will be updated.</param>
         /// <param name="autoReleaseHandle">If true, the handle will automatically be released when the operation completes.</param>

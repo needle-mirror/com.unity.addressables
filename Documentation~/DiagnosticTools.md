@@ -1,3 +1,6 @@
+---
+uid: addressables-diagnostic-tools
+---
 # Diagnostic tools
 
 ## Build layout report

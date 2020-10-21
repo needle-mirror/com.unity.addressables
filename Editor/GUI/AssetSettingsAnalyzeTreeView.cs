@@ -72,7 +72,6 @@ namespace UnityEditor.AddressableAssets.GUI
                 Reload();
                 UpdateSelections(GetSelection());
             });
-            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(AnalyzeSystem.AnalyzeData);
         }
 
         public void FixAllSelectedRules()
@@ -86,7 +85,6 @@ namespace UnityEditor.AddressableAssets.GUI
                 Reload();
                 UpdateSelections(GetSelection());
             });
-            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(AnalyzeSystem.AnalyzeData);
         }
 
         public void ClearAllSelectedRules()
@@ -99,7 +97,6 @@ namespace UnityEditor.AddressableAssets.GUI
                 Reload();
                 UpdateSelections(GetSelection());
             });
-            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(AnalyzeSystem.AnalyzeData);
         }
 
         public void RevertAllSelectedRules()
@@ -304,7 +301,7 @@ namespace UnityEditor.AddressableAssets.GUI
             foreach (var node in allTreeViewItems)
                 (node as AnalyzeTreeViewItemBase)?.AddIssueCountToName();
 
-            EditorUtility.SetDirty(AnalyzeSystem.AnalyzeData);
+            AnalyzeSystem.SerializeData();
         }
 
         protected override void RowGUI(RowGUIArgs args)

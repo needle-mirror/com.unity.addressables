@@ -116,13 +116,13 @@ namespace UnityEngine.ResourceManagement
 
         /// <summary>
         /// Global exception handler.  This will be called whenever an IAsyncOperation.OperationException is set to a non-null value.
-        /// See the [ResourceManager.ExceptionHandler](../manual/ExceptionHandler.html) documentation for more details.
+        /// See the [ResourceManager.ExceptionHandler](xref:addressables-api-exception-handler) documentation for more details.
         /// </summary>
         public static Action<AsyncOperationHandle, Exception> ExceptionHandler { get; set; }
 
         /// <summary>
         /// Functor to transform internal ids before being used by the providers.
-        /// See the [TransformInternalId](../manual/TransformInternalId.html) documentation for more details.
+        /// See the [TransformInternalId](xref:addressables-api-transform-internal-id) documentation for more details.
         /// </summary>
         public Func<IResourceLocation, string> InternalIdTransformFunc { get; set; }
 

@@ -1,5 +1,8 @@
+---
+uid: addressables-async-operation-handling
+---
 # Async operation handling
-Several methods from the [`Addressables`](xref:UnityEngine.AddressableAssets.Addressables) API return an [`AsyncOperationHandle`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle`1) struct. The main purpose of this handle is to allow access to the status and result of an operation. The result of the operation is valid until you call [`Addressables.Release`](xref:UnityEngine.AddressableAssets.Addressables.Release(UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle)) or [`Addressables.ReleaseInstance`](xref:UnityEngine.AddressableAssets.Addressables.ReleaseInstance(UnityEngine.GameObject)) with the operation (for more information on releasing assets, see documentation on [memory management](MemoryManagement.md).
+Several methods from the [`Addressables`](xref:UnityEngine.AddressableAssets.Addressables) API return an [`AsyncOperationHandle`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle) struct. The main purpose of this handle is to allow access to the status and result of an operation. The result of the operation is valid until you call [`Addressables.Release`](xref:UnityEngine.AddressableAssets.Addressables.Release(UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle)) or [`Addressables.ReleaseInstance`](xref:UnityEngine.AddressableAssets.Addressables.ReleaseInstance(UnityEngine.GameObject)) with the operation (for more information on releasing assets, see documentation on [memory management](MemoryManagement.md).
 
 When the operation completes, the [`AsyncOperationHandle.Status`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle) property is either [`AsyncOperationStatus.Succeeded`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus) or [`AsyncOperationStatus.Failed`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus). If successful, you can access the result through the `AsyncOperationHandle.Result` property.
 
@@ -40,7 +43,7 @@ void Start() {
 }
 ```
 
-[`AsyncOperationHandle`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle`1) implements [`IEnumerator`](../api/UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.html#UnityEngine_ResourceManagement_AsyncOperations_AsyncOperationHandle_System_Collections_IEnumerator_Current) so it can be yielded in coroutines:
+[`AsyncOperationHandle`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle`1) implements [`IEnumerator`](xref:System.Collections.IEnumerator) so it can be yielded in coroutines:
 
 ```
 public IEnumerator Start() {
@@ -76,5 +79,5 @@ Note: If you mark a GameObject in an Addressable loaded scene as `DontDestroyOnL
 
 If you find yourself in that scenario there are a couple options at your disposal.
 - Make the GameObject you want to be `DontDestroyOnLoad` a single Addressable prefab.  Instantiate the prefab when you need it and then mark it as `DontDestroyOnLoad`.
-- Before unloading the Scene that contained the GameObject you mark as `DontDestroyOnLoad`, call `AsyncOperationHandle.Acquire()` on the Scene load handle.  This increases the reference count on the Scene, and keeps it and its dependencies loaded until `Release` is called on the acquired handle.
+- Before unloading the Scene that contained the GameObject you mark as `DontDestroyOnLoad`, call `Addressables.ResourceManager.Acquire(AsyncOperationHandle)` and pass in the Scene load handle.  This increases the reference count on the Scene, and keeps it and its dependencies loaded until `Release` is called on the acquired handle.
 

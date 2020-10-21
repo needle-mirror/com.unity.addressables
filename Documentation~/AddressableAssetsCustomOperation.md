@@ -1,3 +1,6 @@
+---
+uid: addressables-custom-operations
+---
 # Custom operations
 The [`IResourceProvider`](xref:UnityEngine.ResourceManagement.ResourceProviders.IResourceProvider) API allows you to extend the loading process by defining locations and dependencies in a data-driven manner. 
 

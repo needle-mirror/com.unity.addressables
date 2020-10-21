@@ -1,3 +1,6 @@
+---
+uid: addressables-api-instantiate-async
+---
 # Addressables.InstantiateAsync
 #### API
 - `static AsyncOperationHandle<GameObject> InstantiateAsync(IResourceLocation location, Transform parent = null, bool instantiateInWorldSpace = false, bool trackHandle = true)`
@@ -36,7 +39,7 @@ IEnumerator Start()
 
 The downside to using this API is that it incurs overhead that can be mitigated by handing instantiation manually.
 
-Should you decide to synchronously instantiate a `GameObject` manually, you'll need to use the [`LoadAssetAsync`](LoadingAddressableAssets.html) API to first load the required assets and dependencies.  With the loaded `GameObject`, you can manually instantiate the `Result` like so:
+Should you decide to synchronously instantiate a `GameObject` manually, you'll need to use the [`LoadAssetAsync`](LoadingAddressableAssets.md) API to first load the required assets and dependencies.  With the loaded `GameObject`, you can manually instantiate the `Result` like so:
 ```
 public IEnumerator Start()
 {
@@ -50,9 +53,9 @@ public IEnumerator Start()
 ```
 This has the added benefit of being able to keep the load operation handle in memory and instantiating the `Result` as often as needed without incuring additional unwanted overhead.  One downside is it's be possible to release the load handle too early and unload all the data needed by any currently instantiated prefabs.
 
-If there are any issues during the excecution of these operations, an Exception is generated and returned in the operations `OperationException`. That exception is also logged as an error by default. If you would like to see the exceptions when they happen, process them, and choose how to handle them, see [`ResourceManager.ExceptionHandler`](ExceptionHandler).
+If there are any issues during the excecution of these operations, an Exception is generated and returned in the operations `OperationException`. That exception is also logged as an error by default. If you would like to see the exceptions when they happen, process them, and choose how to handle them, see [`ResourceManager.ExceptionHandler`](ExceptionHandler.md).
 
-Either use of instantiation can benefit from information found in the [Memory Management](MemoryManagement.html) manual page.
+Either use of instantiation can benefit from information found in the [Memory Management](MemoryManagement.md) manual page.
 
 #### Code Sample
 ```

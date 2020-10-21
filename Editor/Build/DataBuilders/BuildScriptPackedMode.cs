@@ -228,8 +228,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     var resultValue = r.Value;
                     m_Linker.AddTypes(resultValue.includedTypes);
 #if UNITY_2021_1_OR_NEWER
-                    // Uncomment once PR 113067 lands in trunk.
-                    //m_Linker.AddSerializedClass(resultValue.includedSerializeReferenceFQN);
+                    m_Linker.AddSerializedClass(resultValue.includedSerializeReferenceFQN);
 #else
                     if (resultValue.GetType().GetProperty("includedSerializeReferenceFQN") != null)
                         m_Linker.AddSerializedClass((string[])resultValue.GetType().GetProperty("includedSerializeReferenceFQN").GetValue(resultValue));

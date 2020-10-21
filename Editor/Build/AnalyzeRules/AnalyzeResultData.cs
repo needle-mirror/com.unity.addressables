@@ -4,11 +4,25 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
+    [Obsolete("This has been made obsolete and is no longer functional.  Analyze result data is handled internally.")]
+    public class AnalyzeResultData : ScriptableObject, ISerializationCallbackReceiver
+    {
+        public void OnAfterDeserialize()
+        {
+            //Do nothing
+        }
+
+        public void OnBeforeSerialize()
+        {
+            //Do nothing
+        }
+    }
+
     /// <summary>
     /// Represents the data acquired after analyzing Addressable assets.
     /// </summary>
     [Serializable]
-    public class AnalyzeResultData : ScriptableObject, ISerializationCallbackReceiver
+    internal class AddressablesAnalyzeResultData : ISerializationCallbackReceiver
     {
         [Serializable]
         private class RuleToResults

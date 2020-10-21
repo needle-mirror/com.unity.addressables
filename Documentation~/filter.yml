@@ -1,10 +1,15 @@
-apiRules:
-- exclude:
+apiRules: 
+  - exclude: 
       uidRegex: Tests$
+  - exclude: 
+      uidRegex: .*Test.*
+  - exclude: 
+      uidRegex: .*HideResourceFoldersScope.*
+  - exclude: 
+      uidRegex: .*IgnoreFailingLogMessage.*
+  - exclude: 
       type: Namespace
-- exclude:
       uidRegex: GUI$
+  - exclude: 
       type: Namespace
-- exclude:
       uidRegex: Unity.*\.Tests\..*$
-      type: Namespace

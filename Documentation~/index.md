@@ -1,3 +1,6 @@
+---
+uid: addressables-home
+---
 # Unity Addressable Asset system
 
 The Addressable Asset system provides an easy way to load assets by “address”. It handles asset management overhead by simplifying content pack creation and deployment.

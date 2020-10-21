@@ -1,3 +1,6 @@
+---
+uid: addressables-memory-management
+---
 # Memory management
 ## Mirroring load and unload
 When working with Addressable Assets, the primary way to ensure proper memory management is to mirror your load and unload calls correctly. How you do so depends on your Asset types and load methods. In all cases, however, the release method can either take the loaded Asset, or an operation handle returned by the load. For example, during Scene creation (described below) the load returns a [`AsyncOperationHandle<SceneInstance>`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle), which you can release via this returned handle, or by keeping up with the `handle.Result` (in this case, a [`SceneInstance`](xref:UnityEngine.ResourceManagement.ResourceProviders.SceneInstance)).
@@ -11,7 +14,7 @@ This loads the Asset into memory without instantiating it. Every time the load c
 
 To unload the Asset, use the [`Addressables.Release`](xref:UnityEngine.AddressableAssets.Addressables.Release``1(``0)) method, which decrements the ref-count. When a given Asset's ref-count is zero, that Asset is ready to be unloaded, and decrements the ref-count of any dependencies. 
 
-**Note**: The Asset may or may not be unloaded immediately, contingent on existing dependencies. For more information, read the section on [when memory is cleared](#when-is-memory-cleared?).
+**Note**: The Asset may or may not be unloaded immediately, contingent on existing dependencies. For more information, read the section on [when memory is cleared](#when-is-memory-cleared).
 
 ### Scene loading
 To load a Scene, use [`Addressables.LoadSceneAsync`](xref:UnityEngine.AddressableAssets.AssetReference.LoadSceneAsync(UnityEngine.SceneManagement.LoadSceneMode,System.Boolean,System.Int32)). You can use this method to load a Scene in `Single` mode, which closes all open Scenes, or in `Additive` mode (for more information, see documentation on [Scene mode loading](https://docs.unity3d.com/ScriptReference/SceneManagement.LoadSceneMode.html).  
@@ -46,7 +49,7 @@ The following information is available in the Event Viewer:
 * A blue background indicates that an Asset is currently loaded.
 * The green part of the graph indicates an Asset's current ref-count.
 
-Note that the Event Viewer is only concerned with ref-counts, not memory consumption (see section on [clearing memory](#when-is-memory-cleared?), below, for more information).
+Note that the Event Viewer is only concerned with ref-counts, not memory consumption (see section on [clearing memory](#when-is-memory-cleared), below, for more information).
 
 Listed under the Assets column, you will see a row for each of the following, per frame:
 

@@ -1,3 +1,6 @@
+---
+uid: addressables-api-load-scene-async
+---
 # Addressables.LoadSceneAsync
 #### API
 - `AsyncOperationHandle<SceneInstance> LoadSceneAsync(object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)`
