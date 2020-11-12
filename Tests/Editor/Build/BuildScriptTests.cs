@@ -386,6 +386,7 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        [Ignore("ADDR-1606, LogAssert message no longer throws as of 2020.2b11")]
         public void WhenFileTypeIsInvalid_AndContentCatalogsAreCreated_BuildFails()
         {
             var context = new AddressablesDataBuilderInput(Settings);

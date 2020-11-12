@@ -202,8 +202,25 @@ namespace UnityEngine.AddressableAssets.Initialization
 
         public static AsyncOperationHandle<IResourceLocator> LoadContentCatalog(AddressablesImpl addressables, IResourceLocation loc, string providerSuffix)
         {
-            var loadOp = addressables.LoadAssetAsync<ContentCatalogData>(loc);
-            var chainOp = addressables.ResourceManager.CreateChainOperation(loadOp, res => OnCatalogDataLoaded(addressables, res, providerSuffix));
+            Type provType = typeof(ProviderOperation<ContentCatalogData>);
+            var catalogOp = addressables.ResourceManager.CreateOperation<ProviderOperation<ContentCatalogData>>( provType, provType.GetHashCode(), 0, null );
+
+            IResourceProvider catalogProvider = null;
+            foreach( IResourceProvider provider in addressables.ResourceManager.ResourceProviders )
+            {
+                if( provider is ContentCatalogProvider )
+                {
+                    catalogProvider = provider;
+                    break;
+                }
+            }
+
+            var dependencies = addressables.ResourceManager.CreateGroupOperation<string>( loc.Dependencies, true );
+            catalogOp.Init( addressables.ResourceManager, catalogProvider, loc, dependencies, true );
+            var catalogHandle = addressables.ResourceManager.StartOperation( catalogOp, dependencies );
+            dependencies.Release();
+            
+            var chainOp = addressables.ResourceManager.CreateChainOperation(catalogHandle, res => OnCatalogDataLoaded(addressables, res, providerSuffix));
             return chainOp;
         }
 

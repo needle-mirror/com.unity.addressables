@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.AddressableAssets;
 using Debug = UnityEngine.Debug;
+using static UnityEditor.AddressableAssets.Settings.AddressablesFileEnumeration;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
@@ -98,9 +99,11 @@ namespace UnityEditor.AddressableAssets.GUI
         protected override TreeViewItem BuildRoot()
         {
             var root = new TreeViewItem(-1, -1);
-            foreach (var group in m_Editor.settings.groups)
-                AddGroupChildrenBuild(group, root);
-
+            using (new AddressablesFileEnumerationScope(BuildAddressableTree(m_Editor.settings)))
+            {
+                foreach (var group in m_Editor.settings.groups)
+                    AddGroupChildrenBuild(group, root);
+            }
             return root;
         }
 

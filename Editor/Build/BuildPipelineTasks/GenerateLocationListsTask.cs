@@ -123,6 +123,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             public HashSet<BundleEntry> ExpandedDependencies;
             public List<GUID> Assets = new List<GUID>();
             public AddressableAssetGroup Group;
+            public HashSet<string> AssetInternalIds = new HashSet<string>();
         }
 
         static private void ExpandDependencies(BundleEntry entry)
@@ -198,6 +199,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 foreach (BundleEntry bEntry in bundleToEntry.Values)
                 {
                     string assetProvider = GetAssetProviderName(bEntry.Group);
+                    var schema = bEntry.Group.GetSchema<BundledAssetGroupSchema>();
                     foreach (GUID assetGUID in bEntry.Assets)
                     {
                         if (guidToEntry.TryGetValue(assetGUID.ToString(), out AddressableAssetEntry entry))
@@ -211,7 +213,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                                 else
                                     throw new Exception($"Cannot recognize file type for entry located at '{entry.AssetPath}'. Asset import failed for using an unsupported file type.");
                             }
-                            entry.CreateCatalogEntriesInternal(locations, true, assetProvider, bEntry.ExpandedDependencies.Select(x => x.BundleName), null, input.AssetToAssetInfo, providerTypes);
+                            entry.CreateCatalogEntriesInternal(locations, true, assetProvider, bEntry.ExpandedDependencies.Select(x => x.BundleName), null, input.AssetToAssetInfo, providerTypes, schema.IncludeAddressInCatalog, schema.IncludeGUIDInCatalog, schema.IncludeLabelsInCatalog, bEntry.AssetInternalIds);
                         }
                     }
                 }

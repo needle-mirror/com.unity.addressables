@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace UnityEngine.AddressableAssets.Utility
 {
-    static class SerializationUtilities
+    internal static class SerializationUtilities
     {
         internal enum ObjectType
         {
@@ -33,7 +33,18 @@ namespace UnityEngine.AddressableAssets.Utility
             data[offset + 3] = (byte)((val >> 24) & 0xFF);
             return offset + 4;
         }
+        /*
+        internal static ushort ReadUInt16FromByteArray(byte[] data, int offset)
+        {
+            return (ushort)(data[offset] | (data[offset + 1] << 8));
+        }
 
+        internal static int WriteUInt16ToByteArray(byte[] data, ushort val, int offset)
+        {
+            data[offset] = (byte)(val & 0xFF);
+            data[offset + 1] = (byte)((val >> 8) & 0xFF);
+            return offset + 2;
+        }*/
         /// <summary>
         /// Deserializes an object from an array at a specified index.  Supported types are ASCIIString, UnicodeString, UInt16, UInt32, Int32, Hash128, JsonObject
         /// </summary>

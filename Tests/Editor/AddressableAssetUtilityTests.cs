@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Utilities;
 using UnityEngine;
 using UnityEngine.Audio;
@@ -272,6 +273,24 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             Assert.IsFalse(AddressableAssetUtility.SafeMoveResourcesToGroup(Settings, null, null, null, false));
             Assert.IsFalse(AddressableAssetUtility.SafeMoveResourcesToGroup(Settings, Settings.DefaultGroup, null, null, false));
+        }
+
+
+        HashSet<string> otherInternaIds = new HashSet<string>(new string[] { "a", "ab", "abc" });
+
+        [TestCase(BundledAssetGroupSchema.AssetNamingMode.FullPath, "Assets/blah/something.asset", "", "Assets/blah/something.asset")]
+        [TestCase(BundledAssetGroupSchema.AssetNamingMode.Filename, "Assets/blah/something.asset", "", "something.asset")]
+        [TestCase(BundledAssetGroupSchema.AssetNamingMode.GUID, "Assets/blah/something.asset", "guidstring", "guidstring")]
+        [TestCase(BundledAssetGroupSchema.AssetNamingMode.Dynamic, "Assets/blah/something.asset", "guidstring", "g")]
+        [TestCase(BundledAssetGroupSchema.AssetNamingMode.Dynamic, "Assets/blah/something.asset", "abcd_guidstring", "abcd")]
+        [Test]
+        public void BundledAssetGroupSchema_GetAssetLoadPath_Returns_ExpectedId(int imode, string assetPath, string guid, string expectedId)
+        {
+            var mode = (BundledAssetGroupSchema.AssetNamingMode)imode;
+            var bas = Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>();
+            bas.InternalIdNamingMode = mode;
+            var actualId  = bas.GetAssetLoadPath(assetPath, otherInternaIds, s => guid);
+            Assert.AreEqual(expectedId, actualId);
         }
     }
 }

@@ -162,16 +162,6 @@ namespace UnityEngine.ResourceManagement.Tests
             handle.Destroyed -= oph => {};
             Assert.False(op.DestroyedEventHasListeners);
 
-            Action<AsyncOperationHandle> dummy = oph => {};
-            Assert.False(op.CompletedTypelessEventHasListeners);
-
-            handle.CompletedTypeless += dummy;
-            Assert.True(op.CompletedTypelessEventHasListeners);
-
-            handle.CompletedTypeless -= dummy;
-            handle.CompletedTypeless -= dummy;
-            Assert.False(op.CompletedTypelessEventHasListeners);
-
             handle.Release();
         }
 
@@ -286,6 +276,27 @@ namespace UnityEngine.ResourceManagement.Tests
             o.CompleteNow();
             AssertExpectedDownloadStatus(gOp.GetDownloadStatus(), 1024, 1024, 1f);
             m_RM.Release(gOp);
+        }
+
+        class TestOp : AsyncOperationBase<int>
+        {
+            protected override void Execute()
+            {
+                InvokeCompletionEvent();
+            }
+        }
+
+        [Test] 
+        public void CompletionEvents_AreInvoked_InOrderAdded()
+        {
+            var op = new TestOp();
+            int count = 0;
+            op.Completed += o => { Assert.AreEqual(0, count); count++; };
+            op.CompletedTypeless += o => { Assert.AreEqual(1, count); count++; };
+            op.Completed += o => { Assert.AreEqual(2, count); count++; };
+            op.CompletedTypeless += o => { Assert.AreEqual(3, count); count++; };
+            op.Start(null, default, null);
+            op.Complete(1, true, null);
         }
     }
 }

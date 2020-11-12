@@ -276,7 +276,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 #if ENABLE_CACHING
                 if (!string.IsNullOrEmpty(m_Options.Hash))
                 {
-                    CachedAssetBundle cab = new CachedAssetBundle(m_Options.BundleName, Hash128.Compute(m_Options.Hash));
+                    CachedAssetBundle cab = new CachedAssetBundle(m_Options.BundleName, Hash128.Parse(m_Options.Hash));
                     if (Caching.IsVersionCached(cab))
                     {
                         message = string.Format("Web request {0} failed to load from cache with error '{1}'. The cached AssetBundle will be cleared from the cache and re-downloaded. Retrying...", webReq.url, webReq.error);

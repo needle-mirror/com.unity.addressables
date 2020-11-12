@@ -69,3 +69,91 @@ IEnumerator Start()
     Addressables.Release(handle);
 }
 ```
+
+#### Sub-Objects
+Sub-Objects are a special case.  Locations for Sub-Objects are generated at runtime to keep bloat out of the content catalogs and improve runtime performance, such as entering Play Mode while using the Use Asset Database Playmode script.  This has implications when calling `LoadResourceLocationsAsync` with a Sub-Object key.  If the system is not aware of the desired Type then IResourceLocations is generated for each `Type` of Sub-Object detected.  If an AssetReference with a Sub-Object selection is not set, the system generates IResourceLocations for each Type of detected Sub-Object with the Address of the main object.
+
+For the following examples lets assume we have an FBX asset marked as Addressable that has a Mesh Sub-Object.
+
+##### When passing a string Key:
+```
+IEnumerator Start()
+{
+    AsyncOperationHandle<IList<IResourceLocation>> handle = Addressables.LoadResourceLocationsAsync("myFBXObject");
+	yield return handle;
+	
+	//This result contains 3 IResourceLocations.  One with Type GameObject, one with Type Mesh, and one with Type Material.  Since the string Key has no Type information we generate all possible IResourceLocations to match the request.
+	IList<IResourceLocation> result = handle.Result;
+	
+	//...
+	
+	Addressables.Release(handle);
+}
+```
+
+```
+IEnumerator Start()
+{
+    AsyncOperationHandle<IList<IResourceLocation>> handle = Addressables.LoadResourceLocationsAsync("myFBXObject[Mesh]");
+	yield return handle;
+	
+	//This result contains 3 IResourceLocations.  One with Type GameObject, one with Type Mesh, and one with Type Material.  Since the string Key has no Type information we generate all possible IResourceLocations to match the request.
+	IList<IResourceLocation> result = handle.Result;
+	
+	//...
+	
+	Addressables.Release(handle);
+}
+```
+
+```
+IEnumerator Start()
+{
+    AsyncOperationHandle<IList<IResourceLocation>> handle = Addressables.LoadResourceLocationsAsync("myFBXObject[Mesh]", typeof(Mesh));
+	yield return handle;
+	
+	//This result contains 1 IResourceLocation.  Since the Type parameter has a value passed in we can create the IResourceLocation.
+	IList<IResourceLocation> result = handle.Result;
+	
+	//...
+	
+	Addressables.Release(handle);
+}
+```
+
+##### When using an AssetReference:
+```
+//An AssetReference set to point to the Mesh Sub-Object of a FBX asset
+public AssetReference myFBXMeshReference;
+
+IEnumerator Start()
+{
+    AsyncOperationHandle<IList<IResourceLocation>> handle = Addressables.LoadResourceLocationsAsync(myFBXMeshReference);
+	yield return handle;
+	
+	//This result contains 1 IResourceLocation.  Since the AssetReference contains Type information about the Sub-Object, we can generate the appropriate IResourceLocation.
+	IList<IResourceLocation> result = handle.Result;
+	
+	//...
+	
+	Addressables.Release(handle);
+}
+```
+
+```
+//An AssetReference that is not set to point at a Sub-Object
+public AssetReference myFBXReference;
+
+IEnumerator Start()
+{
+    AsyncOperationHandle<IList<IResourceLocation>> handle = Addressables.LoadResourceLocationsAsync(myFBXReference);
+	yield return handle;
+	
+	//This result contains 3 IResourceLocation.  Since the AssetReference Sub-Object is not set we generate all possible IResourceLocations with the detected Sub-Object Types.
+	IList<IResourceLocation> result = handle.Result;
+	
+	//...
+	
+	Addressables.Release(handle);
+}
+```

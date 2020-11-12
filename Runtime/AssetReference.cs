@@ -237,6 +237,8 @@ namespace UnityEngine.AddressableAssets
         string m_AssetGUID = "";
         [SerializeField]
         string m_SubObjectName;
+        [SerializeField]
+        string m_SubObjectType = null;
 
         AsyncOperationHandle m_Operation;
         /// <summary>
@@ -275,8 +277,15 @@ namespace UnityEngine.AddressableAssets
         /// Stores the name of the sub object.
         /// </summary>
         public virtual string SubObjectName { get { return m_SubObjectName; } set { m_SubObjectName = value; } }
-
-
+        internal virtual Type SubOjbectType
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(m_SubObjectName) && m_SubObjectType != null)
+                    return Type.GetType(m_SubObjectType);
+                return null;
+            }
+        }
         /// <summary>
         /// Returns the state of the internal operation.
         /// </summary>
@@ -329,14 +338,27 @@ namespace UnityEngine.AddressableAssets
 
 #if UNITY_EDITOR
         Object m_CachedAsset;
+        string m_CachedGUID = "";
 
         /// <summary>
         /// Cached Editor Asset.
         /// </summary>
         protected Object CachedAsset
         {
-            get { return m_CachedAsset; }
-            set { m_CachedAsset = value; }
+            get 
+            {
+                if (m_CachedGUID != m_AssetGUID)
+                {
+                    m_CachedAsset = null;
+                    m_CachedGUID = "";
+                }
+                return m_CachedAsset; 
+            }
+            set 
+            { 
+                m_CachedAsset = value;
+                m_CachedGUID = m_AssetGUID;
+            }
         }
 #endif
         /// <summary>
@@ -346,7 +368,7 @@ namespace UnityEngine.AddressableAssets
         public override string ToString()
         {
 #if UNITY_EDITOR
-            return "[" + m_AssetGUID + "]" + m_CachedAsset;
+            return "[" + m_AssetGUID + "]" + CachedAsset;
 #else
             return "[" + m_AssetGUID + "]";
 #endif
@@ -542,11 +564,11 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
-                if (m_CachedAsset != null || string.IsNullOrEmpty(m_AssetGUID))
-                    return m_CachedAsset;
+                if (CachedAsset != null || string.IsNullOrEmpty(m_AssetGUID))
+                    return CachedAsset;
                 var assetPath = AssetDatabase.GUIDToAssetPath(m_AssetGUID);
                 var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
-                return (m_CachedAsset = AssetDatabase.LoadAssetAtPath(assetPath, mainType));
+                return (CachedAsset = AssetDatabase.LoadAssetAtPath(assetPath, mainType));
             }
         }
         /// <summary>
@@ -561,13 +583,13 @@ namespace UnityEngine.AddressableAssets
         {
             if (value == null)
             {
-                m_CachedAsset = null;
+                CachedAsset = null;
                 m_AssetGUID = string.Empty;
                 m_SubObjectName = null;
                 return true;
             }
 
-            if (m_CachedAsset != value)
+            if (CachedAsset != value)
             {
                 m_SubObjectName = null;
                 var path = AssetDatabase.GetAssetOrScenePath(value);
@@ -585,7 +607,7 @@ namespace UnityEngine.AddressableAssets
                 {
                     m_AssetGUID = AssetDatabase.AssetPathToGUID(path);
                     var mainAsset = AssetDatabase.LoadMainAssetAtPath(path);
-                    m_CachedAsset = mainAsset;
+                    CachedAsset = mainAsset;
                     if (value != mainAsset)
                         SetEditorSubObject(value);
                 }
@@ -626,9 +648,10 @@ namespace UnityEngine.AddressableAssets
             var subAssets = AssetDatabase.LoadAllAssetRepresentationsAtPath(AssetDatabase.GUIDToAssetPath(m_AssetGUID));
             foreach (var s in subAssets)
             {
-                if (s.name == value.name)
+                if (s.name == value.name && s.GetType() == value.GetType())
                 {
-                    m_SubObjectName = value.name;
+                    m_SubObjectName = s.name;
+                    m_SubObjectType = s.GetType().AssemblyQualifiedName;
                     return true;
                 }
             }

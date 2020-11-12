@@ -114,9 +114,28 @@ static class AddressablesTestUtility
         };
 
         string hasBehaviorPath = RootFolder + "/AssetReferenceBehavior.prefab";
+        
+        //AssetDatabase.StopAssetEditing();
+
+        ScriptableObject assetWithDifferentTypedSubAssets = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
+        AssetDatabase.CreateAsset(assetWithDifferentTypedSubAssets, $"{RootFolder}/assetWithDifferentTypedSubAssets.asset");
+
+        Material mat = new Material(Shader.Find("Transparent/Diffuse"));
+        Mesh mesh = new Mesh();
+        AssetDatabase.AddObjectToAsset(mat, assetWithDifferentTypedSubAssets);
+        AssetDatabase.AddObjectToAsset(mesh, assetWithDifferentTypedSubAssets);
+
+        AssetDatabase.ImportAsset($"{RootFolder}/assetWithDifferentTypedSubAssets.asset", ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+        var assetWithDifferentTypedSubObjectsGUID = AssetDatabase.AssetPathToGUID($"{RootFolder}/assetWithDifferentTypedSubAssets.asset");
+        var multiTypedSubAssetsEntry = settings.CreateOrMoveEntry(assetWithDifferentTypedSubObjectsGUID, settings.DefaultGroup);
+        multiTypedSubAssetsEntry.address = "assetWithDifferentTypedSubAssets";
+        aRefTestBehavior.ReferenceWithMultiTypedSubObject = settings.CreateAssetReference(multiTypedSubAssetsEntry.guid);
+        aRefTestBehavior.ReferenceWithMultiTypedSubObjectSubReference = settings.CreateAssetReference(multiTypedSubAssetsEntry.guid);
+        aRefTestBehavior.ReferenceWithMultiTypedSubObjectSubReference.SetEditorSubObject(mat);
+
         PrefabUtility.SaveAsPrefabAsset(go, hasBehaviorPath);
         settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(hasBehaviorPath), group, false, false);
-        //AssetDatabase.StopAssetEditing();
+
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 

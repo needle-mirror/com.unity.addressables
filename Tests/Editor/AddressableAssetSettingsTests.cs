@@ -959,7 +959,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.SetLabelValueForEntries(entries, newLabel, true, true);
             foreach(var e in entries)
                 Assert.IsTrue(e.labels.Contains(newLabel));
-            Assert.AreEqual(prevDC + 2, EditorUtility.GetDirtyCount(Settings));
+            Assert.AreEqual(prevDC + 1, EditorUtility.GetDirtyCount(Settings));
 
             // Cleanup
             Settings.RemoveLabel(newLabel);

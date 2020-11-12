@@ -46,6 +46,40 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void CreateKeyList_Returns_ExpectedKeys()
+        {
+            var e = Settings.DefaultGroup.GetAssetEntry(m_guid);
+            e.SetAddress("address");
+            e.SetLabel("label", true, true, true);
+            CollectionAssert.AreEqual(new string[] { "address", m_guid, "label" }, e.CreateKeyList(true, true, true));
+            CollectionAssert.AreEqual(new string[] { m_guid, "label" }, e.CreateKeyList(false, true, true));
+            CollectionAssert.AreEqual(new string[] { "address", "label" }, e.CreateKeyList(true, false, true));
+            CollectionAssert.AreEqual(new string[] { "address", "label" }, e.CreateKeyList(true, false, true));
+            CollectionAssert.AreEqual(new string[] {"label" }, e.CreateKeyList(false, false, true));
+            CollectionAssert.AreEqual(new string[] { "address" }, e.CreateKeyList(true, false, false));
+            CollectionAssert.AreEqual(new string[] { m_guid }, e.CreateKeyList(false, true, false));
+        }
+
+        [Test]
+        public void GetAssetLoadPath_Returns_ExpectedPath()
+        {
+            var schema = Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>();
+            var e = Settings.DefaultGroup.GetAssetEntry(m_guid);
+            schema.InternalIdNamingMode = BundledAssetGroupSchema.AssetNamingMode.FullPath;
+            Assert.AreEqual(e.AssetPath, e.GetAssetLoadPath(true, null));
+            schema.InternalIdNamingMode = BundledAssetGroupSchema.AssetNamingMode.Filename;
+            Assert.AreEqual(Path.GetFileName(e.AssetPath), e.GetAssetLoadPath(true, null));
+            schema.InternalIdNamingMode = BundledAssetGroupSchema.AssetNamingMode.GUID;
+            Assert.AreEqual(m_guid, e.GetAssetLoadPath(true, null));
+            schema.InternalIdNamingMode = BundledAssetGroupSchema.AssetNamingMode.Dynamic;
+            Assert.AreEqual(m_guid, e.GetAssetLoadPath(true, null));
+            Assert.AreEqual(m_guid.Substring(0, 1), e.GetAssetLoadPath(true, new HashSet<string>()));
+            var hs = new HashSet<string>();
+            hs.Add(m_guid.Substring(0, 1));
+            Assert.AreEqual(m_guid.Substring(0, 2), e.GetAssetLoadPath(true, hs));
+        }
+
+        [Test]
         public void CreateCatalogEntries_WhenObjectHasMultipleSubObjectWithSameType_OnlyOneSubEntryIsCreated()
         {
             var e = Settings.DefaultGroup.GetAssetEntry(m_guid);
@@ -485,6 +519,37 @@ namespace UnityEditor.AddressableAssets.Tests
             Directory.Delete(testAssetFolder, true);
             Settings.RemoveAssetEntry(guid, false);
             Settings.RemoveAssetEntry(collectionGuid, false);
+        }
+        
+        [Test]
+        public void GatherResourcesEntries_GathersAllResourceEntries_IncludingLowercase()
+        {
+            var resourcePath = GetAssetPath("Resources");
+            string testAssetFolder = GetAssetPath("TestFolder");
+            var subFolderPath = testAssetFolder + "/resources";
+            Directory.CreateDirectory(subFolderPath);
+            if(!Directory.Exists(resourcePath))
+                Directory.CreateDirectory(resourcePath);
+
+            var r1GUID = CreateAsset(resourcePath + "/testResourceupper.prefab", "testResourceupper");
+            var r2GUID = CreateAsset(subFolderPath + "/testResourcelower.prefab", "testResourcelower");
+
+            var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+            var resourceEntry = Settings.CreateOrMoveEntry(AddressableAssetEntry.ResourcesName, group, false);
+
+            var entries = new List<AddressableAssetEntry>();
+            resourceEntry.GatherResourcesEntries(entries, true, null);
+
+            // Assert
+            Assert.IsTrue(entries.Any(e => e.guid == r1GUID));
+            Assert.IsTrue(entries.Any(e => e.guid == r2GUID));
+
+            // Cleanup
+            Directory.Delete(resourcePath, true);
+            Directory.Delete(subFolderPath, true);
+            Settings.RemoveAssetEntry(r1GUID);
+            Settings.RemoveAssetEntry(r2GUID);
+            Settings.RemoveAssetEntry(AddressableAssetEntry.ResourcesName);
         }
 
         [Test]

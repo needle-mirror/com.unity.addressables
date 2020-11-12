@@ -44,7 +44,7 @@ namespace UnityEngine.AddressableAssets
             return false;
         }
 
-        void CreateDynamicLocations(Type type, IList<IResourceLocation> locations, string locName, string subKey, IResourceLocation mainLoc)
+        internal void CreateDynamicLocations(Type type, IList<IResourceLocation> locations, string locName, string subKey, IResourceLocation mainLoc)
         {
             if (type == typeof(Sprite) && mainLoc.ResourceType == typeof(U2D.SpriteAtlas))
             {
@@ -53,9 +53,9 @@ namespace UnityEngine.AddressableAssets
             else
             {
                 if (mainLoc.HasDependencies)
-                    locations.Add(new ResourceLocationBase(locName, $"{mainLoc.InternalId}[{subKey}]", mainLoc.ProviderId, type, mainLoc.Dependencies.ToArray()));
+                    locations.Add(new ResourceLocationBase(locName, $"{mainLoc.InternalId}[{subKey}]", mainLoc.ProviderId, mainLoc.ResourceType, mainLoc.Dependencies.ToArray()));
                 else
-                    locations.Add(new ResourceLocationBase(locName, $"{mainLoc.InternalId}[{subKey}]", mainLoc.ProviderId, type));
+                    locations.Add(new ResourceLocationBase(locName, $"{mainLoc.InternalId}[{subKey}]", mainLoc.ProviderId, mainLoc.ResourceType));
             }
         }
     }

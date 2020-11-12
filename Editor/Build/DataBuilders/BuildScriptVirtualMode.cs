@@ -232,7 +232,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 }
             }
 
-            var contentCatalog = new ContentCatalogData(aaContext.locations, ResourceManagerRuntimeData.kCatalogAddress);
+            var contentCatalog = new ContentCatalogData(ResourceManagerRuntimeData.kCatalogAddress);
+            contentCatalog.SetData(aaContext.locations, aaContext.Settings.OptimizeCatalogSize);
+
             contentCatalog.ResourceProviderData.AddRange(m_ResourceProviderData);
             foreach (var t in aaContext.providerTypes)
                 contentCatalog.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(t));

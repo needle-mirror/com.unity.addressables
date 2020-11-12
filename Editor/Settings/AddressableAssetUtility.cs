@@ -5,6 +5,8 @@ using System.IO;
 using System.Reflection;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Utilities;
+using UnityEditor.PackageManager;
+using UnityEditor.PackageManager.Requests;
 using UnityEditor.VersionControl;
 using UnityEngine;
 
@@ -39,22 +41,18 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             return true;
         }
-
+        static HashSet<string> excludedExtensions = new HashSet<string>(new string[] { ".cs", ".js", ".boo", ".exe", ".dll", ".meta" });
         internal static bool IsPathValidForEntry(string path)
         {
             if (string.IsNullOrEmpty(path))
                 return false;
-            path = path.ToLower();
-            if (!path.StartsWith("assets") && !IsPathValidPackageAsset(path))
+            if (!path.StartsWith("assets", StringComparison.OrdinalIgnoreCase) && !IsPathValidPackageAsset(path))
                 return false;
             if (path == CommonStrings.UnityEditorResourcePath ||
                 path == CommonStrings.UnityDefaultResourcePath ||
                 path == CommonStrings.UnityBuiltInExtraPath)
                 return false;
-            string ext = Path.GetExtension(path);
-            if (ext == ".cs" || ext == ".js" || ext == ".boo" || ext == ".exe" || ext == ".dll" || ext == ".meta")
-                return false;
-            return true;
+            return !excludedExtensions.Contains(Path.GetExtension(path));
         }
 
         internal static bool IsPathValidPackageAsset(string path)
@@ -66,7 +64,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             if (splitPath[0] != "packages")
                 return false;
-            if (splitPath[1].StartsWith("com.unity."))
+            if (splitPath[1].StartsWith("com.unity.", StringComparison.Ordinal))
                 return false;
             if (splitPath.Length == 3)
             {
@@ -332,6 +330,25 @@ namespace UnityEditor.AddressableAssets.Settings
             if (exitGUI)
                 GUIUtility.ExitGUI();
             return openedAsset;
+        }
+
+        internal static List<PackageManager.PackageInfo> GetUserPackages()
+        {
+            ListRequest req = Client.List();
+            while (!req.IsCompleted) {}
+
+            var packages = new List<PackageManager.PackageInfo>();
+            if (req.Status == StatusCode.Success)
+            {
+                PackageCollection collection = req.Result;
+                foreach (PackageManager.PackageInfo package in collection)
+                {
+                    if (package.name.StartsWith("com.unity."))
+                        continue;
+                    packages.Add(package);
+                }
+            }
+            return packages;
         }
     }
 }

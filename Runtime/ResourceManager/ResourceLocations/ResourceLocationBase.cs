@@ -95,7 +95,7 @@ namespace UnityEngine.ResourceManagement.ResourceLocations
             m_Id = id;
             m_ProviderId = providerId;
             m_Dependencies = new List<IResourceLocation>(dependencies);
-            m_Type = t;
+            m_Type = t == null ? typeof(object) : t;
             ComputeDependencyHash();
         }
 

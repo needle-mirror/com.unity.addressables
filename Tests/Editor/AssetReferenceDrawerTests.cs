@@ -124,6 +124,23 @@ namespace UnityEditor.AddressableAssets.Tests
             }
         }
 
+        class TestAssetReference : AssetReference
+        {
+            internal TestAssetReference(string guid) : base(guid) { }
+
+            internal Object CachedAssetProperty
+            {
+                get
+                {
+                    return CachedAsset;
+                }
+                set
+                {
+                    CachedAsset = value;
+                }
+            }
+        }
+
         public SerializedProperty SetupForSetObjectTests()
         {
             // Setup Original AssetReference to not be null
@@ -522,6 +539,18 @@ namespace UnityEditor.AddressableAssets.Tests
             m_AssetReferenceDrawer.SetObject(property, null, out guid);
             Assert.AreEqual(null, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName);
             Assert.AreEqual(string.Empty, m_AssetReferenceDrawer.m_AssetRefObject.AssetGUID);
+        }
+
+        [Test]
+        public void AssetReference_WhenCachedGUIDIsNotEqualToAssetGUID_CachedAssetIsNull()
+        {
+            // Setup
+            string guid = "8888888888888888888";
+            var assetRef = new TestAssetReference(guid);
+            assetRef.CachedAssetProperty = new Object();
+
+            // Test
+            Assert.IsTrue(assetRef.CachedAssetProperty == null);
         }
 
 #if UNITY_2019_2_OR_NEWER

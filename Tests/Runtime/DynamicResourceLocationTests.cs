@@ -4,6 +4,7 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.U2D;
 using System;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.TestTools;
 
 namespace UnityEngine.AddressableAssets.DynamicResourceLocators
@@ -69,6 +70,52 @@ namespace UnityEngine.AddressableAssets.DynamicResourceLocators
             Assert.AreEqual(2, locs.Count);
             foreach (var l in locs)
                 Assert.AreEqual(typeof(GameObject), l.ResourceType);
+        }
+
+        [Test]
+        public void CreateDynamicLocations_CreatesLocationsWithResourceTypes()
+        {
+            //Setup
+            DynamicResourceLocator locator = new DynamicResourceLocator(m_Addressables);
+            List<IResourceLocation> locations = new List<IResourceLocation>();
+            IResourceLocation location = new ResourceLocationBase("test", "test", typeof(BundledAssetProvider).FullName, typeof(GameObject));
+
+            //Test
+            locator.CreateDynamicLocations(null, locations, "test", "test", location);
+
+            //Assert
+            Assert.AreEqual(typeof(GameObject), locations[0].ResourceType);
+        }
+
+        [Test]
+        public void CreateDynamicLocations_WithDepdencies_CreatesLocationsWithResourceTypes()
+        {
+            //Setup
+            DynamicResourceLocator locator = new DynamicResourceLocator(m_Addressables);
+            List<IResourceLocation> locations = new List<IResourceLocation>();
+            IResourceLocation depLocation = new ResourceLocationBase("dep1", "dep1", typeof(BundledAssetProvider).FullName, typeof(Texture2D));
+            IResourceLocation location = new ResourceLocationBase("test", "test", typeof(BundledAssetProvider).FullName, typeof(GameObject), depLocation);
+
+            //Test
+            locator.CreateDynamicLocations(null, locations, "test", "test", location);
+
+            //Assert
+            Assert.AreEqual(typeof(GameObject), locations[0].ResourceType);
+        }
+
+        [Test]
+        public void CreateDynamicLocations_WithSpriteAtlas_CreatesLocationsSpriteResourceTypes()
+        {
+            //Setup
+            DynamicResourceLocator locator = new DynamicResourceLocator(m_Addressables);
+            List<IResourceLocation> locations = new List<IResourceLocation>();
+            IResourceLocation location = new ResourceLocationBase("test", "test", typeof(BundledAssetProvider).FullName, typeof(U2D.SpriteAtlas));
+
+            //Test
+            locator.CreateDynamicLocations(typeof(Sprite), locations, "test", "test", location);
+
+            //Assert
+            Assert.AreEqual(typeof(Sprite), locations[0].ResourceType);
         }
 
         [Test]

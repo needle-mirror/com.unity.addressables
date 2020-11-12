@@ -345,30 +345,35 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             if (AddressableAssetSettingsDefaultObject.Settings == null)
                 return;
-            AddressableAssetSettingsDefaultObject.Settings.OnModification += OnSettingsModification;
-            m_ModificationRegistered = true;
+            if (!m_ModificationRegistered)
+            {
+                AddressableAssetSettingsDefaultObject.Settings.OnModification += OnSettingsModification;
+                m_ModificationRegistered = true;
+            }
         }
 
         public void OnDisable()
         {
             if (AddressableAssetSettingsDefaultObject.Settings == null)
                 return;
-            AddressableAssetSettingsDefaultObject.Settings.OnModification -= OnSettingsModification;
-            m_ModificationRegistered = false;
+            if (m_ModificationRegistered)
+            {
+                AddressableAssetSettingsDefaultObject.Settings.OnModification -= OnSettingsModification;
+                m_ModificationRegistered = false;
+            }
         }
 
         public bool OnGUI(Rect pos)
         {
             if (settings == null)
                 return false;
-
-            if (!m_ModificationRegistered)
+				
+			if (!m_ModificationRegistered)
             {
                 m_ModificationRegistered = true;
                 settings.OnModification -= OnSettingsModification; //just in case...
                 settings.OnModification += OnSettingsModification;
             }
-
 
             if (m_EntryTree == null)
             {
