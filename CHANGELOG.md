@@ -4,10 +4,7 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [1.16.12] - 2020-12-02
-- ...
-
-## [1.16.11] - 2020-11-18
+## [1.16.13] - 2020-11-18
 - Added option to invert the display of CheckBundleDupeDependencies Analyze rule
 - Fix GatherEntryLocations for scenes when parameter type is null
 - Added some API docs for RuntimeBuildLog and AnalyzeResultData that were missing.
