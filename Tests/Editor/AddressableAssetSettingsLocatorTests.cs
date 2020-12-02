@@ -1,15 +1,23 @@
 #if UNITY_2020_1_OR_NEWER
 using NUnit.Framework;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using UnityEditor.AddressableAssets.Build;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
+using UnityEngine.TestTools;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -280,6 +288,18 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(1, locations.Count);
             Assert.AreEqual(typeof(SceneInstance), locations[0].ResourceType);
         }
+        
+        [Test]
+        public void LocateWithSceneInstanceType_ReturnsLocationsWhenTypeNull()
+        {
+            CreateAndAddScenesToEditorBuildSettings("test", 1);
+            var guid = CreateAsset("test0", GetPath("asset1.asset"));
+            m_Settings.CreateOrMoveEntry(guid, m_Settings.DefaultGroup).address = "test0";
+            var locator = new AddressableAssetSettingsLocator(m_Settings);
+            Assert.IsTrue(locator.Locate("test0", null, out var locations));
+            Assert.AreEqual(2, locations.Count);
+            Assert.AreEqual(typeof(SceneInstance), locations[0].ResourceType);
+        }
 
         [Test]
         public void LocateWithNonSceneInstanceType_DoesNotReturnSceneLocations()
@@ -366,29 +386,92 @@ namespace UnityEditor.AddressableAssets.Tests
             "asset3",
         });
 
+        void SetupLocatorAssets()
+        {
+            var folderGUID1 = CreateFolder("TestFolder",
+                new string[] { "asset1.asset", "asset2.asset", "asset3.asset" }, ExpectedKeys);
+            var folderGUID2 = CreateFolder("TestFolder/TestSubFolder1",
+                new string[] { "asset1.asset", "asset2.asset", "asset3.asset" }, ExpectedKeys);
+            var folderGUID3 = CreateFolder("TestFolder/TestSubFolder1/Resources",
+                new string[] { "asset1.asset", "asset2.asset", "asset3.asset" }, ExpectedKeys);
+            var folderGUID4 = CreateFolder("TestFolder/TestSubFolder2",
+                new string[] { "scene1.unity", "scene2.unity", "scene3.unity" }, ExpectedKeys);
+            CreateAndAddScenesToEditorBuildSettings("TestScene", 3, ExpectedKeys);
+            var assetInFolder = m_Settings.CreateOrMoveEntry(
+                AssetDatabase.AssetPathToGUID(GetPath("TestFolder/asset1.asset")), m_Settings.DefaultGroup);
+            assetInFolder.address = "AssetAddress";
+            assetInFolder.SetLabel("AssetLabel", true, true, true);
+            var tf = m_Settings.CreateOrMoveEntry(folderGUID1, m_Settings.DefaultGroup);
+            tf.address = "TF";
+            tf.SetLabel("FolderLabel1", true, true, true);
+            var tf2 = m_Settings.CreateOrMoveEntry(folderGUID2, m_Settings.DefaultGroup);
+            tf2.address = "TestFolder/TestSubFolder1";
+        }
+
+        [UnityTest]
+        public IEnumerator Locator_KeysProperty_Contains_Expected_Keys_ForAllBuildScripts()
+        {
+            using (new HideResourceFoldersScope())
+            {
+                SetupLocatorAssets();
+
+                AddressablesDataBuilderInput input = new AddressablesDataBuilderInput(m_Settings);
+                input.Logger = new BuildLog();
+
+                var fastMode = ScriptableObject.CreateInstance<BuildScriptFastMode>();
+                var virtualMode = ScriptableObject.CreateInstance<BuildScriptVirtualMode>();
+                var packedMode = ScriptableObject.CreateInstance<BuildScriptPackedMode>();
+                var packedPlayMode = ScriptableObject.CreateInstance<BuildScriptPackedPlayMode>();
+
+                AddressablesImpl fastModeImpl = new AddressablesImpl(new DefaultAllocationStrategy());
+                fastModeImpl.AddResourceLocator(new AddressableAssetSettingsLocator(m_Settings));
+
+                var fastModeSettingsPath = fastMode.BuildData<AddressableAssetBuildResult>(input).OutputPath;
+                var virtualModeSettingsPath = virtualMode.BuildData<AddressableAssetBuildResult>(input).OutputPath;
+                var packedModeSettingsPath = packedMode.BuildData<AddressableAssetBuildResult>(input).OutputPath;
+                var packedPlayModeSettingsPath = packedPlayMode.BuildData<AddressableAssetBuildResult>(input).OutputPath;
+
+                AddressablesImpl fmImpl = new AddressablesImpl(new DefaultAllocationStrategy());
+                AddressablesImpl virtualImpl = new AddressablesImpl(new DefaultAllocationStrategy());
+                AddressablesImpl packedImpl = new AddressablesImpl(new DefaultAllocationStrategy());
+                AddressablesImpl packedPlayImpl = new AddressablesImpl(new DefaultAllocationStrategy());
+
+                fmImpl.AddResourceLocator(new AddressableAssetSettingsLocator(m_Settings));
+                virtualImpl.AddResourceLocator(new AddressableAssetSettingsLocator(m_Settings));
+                packedImpl.AddResourceLocator(new AddressableAssetSettingsLocator(m_Settings));
+                packedPlayImpl.AddResourceLocator(new AddressableAssetSettingsLocator(m_Settings));
+
+                var fastModeHandle = fmImpl.ResourceManager.StartOperation(new FastModeInitializationOperation(fmImpl, m_Settings), default(AsyncOperationHandle));
+                var virtualHandle = virtualImpl.InitializeAsync(virtualModeSettingsPath);
+                var packedHandle = packedImpl.InitializeAsync(packedModeSettingsPath);
+                var packedPlayHandle = packedPlayImpl.InitializeAsync(packedPlayModeSettingsPath);
+                while (!fastModeHandle.IsDone && !virtualHandle.IsDone && !packedHandle.IsDone &&
+                       !packedPlayHandle.IsDone)
+                    yield return null;
+
+                var fastModeKeys = fmImpl.ResourceLocators.First(l => l.GetType() == typeof(AddressableAssetSettingsLocator)).Keys;
+                var virtualModeKeys = virtualImpl.ResourceLocators.First(l => l.GetType() == typeof(AddressableAssetSettingsLocator)).Keys;
+                var packedModeKeys = packedImpl.ResourceLocators.First(l => l.GetType() == typeof(AddressableAssetSettingsLocator)).Keys;
+                var packedPlayKeys = packedPlayImpl.ResourceLocators.First(l => l.GetType() == typeof(AddressableAssetSettingsLocator)).Keys;
+
+                //Get our baseline
+                Assert.AreEqual(ExpectedKeys.Count, fastModeKeys.Count());
+                foreach(var key in fastModeKeys)
+                    Assert.IsTrue(ExpectedKeys.Contains(key));
+
+                //Transitive property to check other build scripts
+                CollectionAssert.AreEqual(fastModeKeys, virtualModeKeys);
+                CollectionAssert.AreEqual(fastModeKeys, packedPlayKeys);
+                CollectionAssert.AreEqual(fastModeKeys, packedModeKeys);
+            }
+        }
+
         [Test]
         public void Locator_KeysProperty_Contains_Expected_Keys()
         {
             using (new HideResourceFoldersScope())
             {
-                var folderGUID1 = CreateFolder("TestFolder",
-                    new string[] {"asset1.asset", "asset2.asset", "asset3.asset"}, ExpectedKeys);
-                var folderGUID2 = CreateFolder("TestFolder/TestSubFolder1",
-                    new string[] {"asset1.asset", "asset2.asset", "asset3.asset"}, ExpectedKeys);
-                var folderGUID3 = CreateFolder("TestFolder/TestSubFolder1/Resources",
-                    new string[] {"asset1.asset", "asset2.asset", "asset3.asset"}, ExpectedKeys);
-                var folderGUID4 = CreateFolder("TestFolder/TestSubFolder2",
-                    new string[] {"scene1.unity", "scene2.unity", "scene3.unity"}, ExpectedKeys);
-                CreateAndAddScenesToEditorBuildSettings("TestScene", 3, ExpectedKeys);
-                var assetInFolder = m_Settings.CreateOrMoveEntry(
-                    AssetDatabase.AssetPathToGUID(GetPath("TestFolder/asset1.asset")), m_Settings.DefaultGroup);
-                assetInFolder.address = "AssetAddress";
-                assetInFolder.SetLabel("AssetLabel", true, true, true);
-                var tf = m_Settings.CreateOrMoveEntry(folderGUID1, m_Settings.DefaultGroup);
-                tf.address = "TF";
-                tf.SetLabel("FolderLabel1", true, true, true);
-                var tf2 = m_Settings.CreateOrMoveEntry(folderGUID2, m_Settings.DefaultGroup);
-                tf2.address = "TestFolder/TestSubFolder1";
+                SetupLocatorAssets();
                 var locator = new AddressableAssetSettingsLocator(m_Settings);
                 if (ExpectedKeys.Count != locator.Keys.Count())
                 {

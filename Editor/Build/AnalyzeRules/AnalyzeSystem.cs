@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
+using UnityEditor.AddressableAssets.GUI;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -72,6 +73,8 @@ namespace UnityEditor.AddressableAssets.Build
         [SerializeField]
         private static AddressablesAnalyzeResultData m_AnalyzeData;
 
+        internal static AssetSettingsAnalyzeTreeView TreeView { get; set; }
+
         internal static AddressablesAnalyzeResultData AnalyzeData
         {
             get
@@ -114,9 +117,35 @@ namespace UnityEditor.AddressableAssets.Build
             }
         }
 
+        internal static void ReloadUI()
+        {
+            TreeView?.Reload();
+        }
+
         internal static void SerializeData()
         {
             File.WriteAllText(AnalyzeRuleDataPath, JsonUtility.ToJson(m_AnalyzeData));
+        }
+
+        internal static void SaveDataForRule(AnalyzeRule rule, object data)
+        {
+            string jsonData = JsonUtility.ToJson(data);
+            string path = $"{AnalyzeRuleDataFolder}/{rule.ruleName}Data.json";
+            File.WriteAllText(path, jsonData);
+        }
+
+        internal static T GetDataForRule<T>(AnalyzeRule rule)
+        {
+            string path = $"{AnalyzeRuleDataFolder}/{rule.ruleName}Data.json";
+            if (!File.Exists(path))
+                return default;
+            string fileRead = File.ReadAllText(path);
+            return JsonUtility.FromJson<T>(fileRead);
+        }
+
+        internal static void ReplaceAnalyzeData(AnalyzeRule rule, List<AnalyzeRule.AnalyzeResult> results)
+        {
+            m_AnalyzeData.Data[rule.ruleName] = results;
         }
 
         internal static List<AnalyzeRule.AnalyzeResult> RefreshAnalysis<TRule>() where TRule : AnalyzeRule

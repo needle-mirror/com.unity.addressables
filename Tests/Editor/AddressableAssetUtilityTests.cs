@@ -158,9 +158,9 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        public void WhenPathIsInUnityAuthoredPackage_IsPathValidForEntry_ReturnsFalse()
+        public void WhenPathIsInUnityAuthoredPackage_IsPathValidForEntry_ReturnsTrue()
         {
-            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Packages/com.unity.demo/file.asset"));
+            Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Packages/com.unity.demo/file.asset"));
         }
 
         [Test]

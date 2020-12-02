@@ -64,8 +64,6 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             if (splitPath[0] != "packages")
                 return false;
-            if (splitPath[1].StartsWith("com.unity.", StringComparison.Ordinal))
-                return false;
             if (splitPath.Length == 3)
             {
                 string ext = Path.GetExtension(splitPath[2]);

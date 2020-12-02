@@ -163,7 +163,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 {
                     if (e.IsScene)
                     {
-                        if (type == typeof(SceneInstance))
+                        if(type == null || type == typeof(SceneInstance) || AddressableAssetUtility.MapEditorTypeToRuntimeType(e.MainAssetType, false) == type )
                             locations.Add(new ResourceLocationBase(e.address, e.AssetPath, typeof(SceneProvider).FullName, typeof(SceneInstance)));
                     }
                     else if (type == null || type.IsAssignableFrom(e.MainAssetType))
@@ -206,13 +206,22 @@ namespace UnityEditor.AddressableAssets.Settings
 
                     if (type == null)
                     {
-                        ObjectIdentifier[] ids = ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(e.guid), EditorUserBuildSettings.activeBuildTarget);
-                        IEnumerable<Type> subObjectTypes = AddressableAssetEntry.GatherSubObjectTypes(ids, e.guid);
-
-                        if (subObjectTypes.Any())
+                        if (e.MainAssetType != typeof(SceneAsset))
                         {
-                            foreach (Type t in subObjectTypes)
-                                GatherEntryLocations(e, t, locations, m_AddressableAssetTree);
+                            ObjectIdentifier[] ids =
+                                ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(e.guid),
+                                    EditorUserBuildSettings.activeBuildTarget);
+                            IEnumerable<Type> subObjectTypes = AddressableAssetEntry.GatherSubObjectTypes(ids, e.guid);
+
+                            if (subObjectTypes.Any())
+                            {
+                                foreach (Type t in subObjectTypes)
+                                    GatherEntryLocations(e, t, locations, m_AddressableAssetTree);
+                            }
+                            else
+                            {
+                                GatherEntryLocations(e, null, locations, m_AddressableAssetTree);
+                            }
                         }
                         else
                         {

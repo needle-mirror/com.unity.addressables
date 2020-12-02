@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -15,20 +15,27 @@ namespace AddressableAssetsIntegrationTests
 {
     internal abstract partial class AddressablesIntegrationTests : IPrebuildSetup
     {
-        private static bool m_handlerCalled = false;
+        Action<AsyncOperationHandle, Exception> m_prevHandler;
+
+        [SetUp]
+        public void SetUp()
+        {
+            m_prevHandler = ResourceManager.ExceptionHandler;
+        }
 
         [TearDown]
         public void TestCleanup()
         {
             m_KeysHashSet.Clear();
-            if(Directory.Exists(kCatalogFolderPath))
+            if (Directory.Exists(kCatalogFolderPath))
                 Directory.Delete(kCatalogFolderPath, true);
             PostTearDownEvent = ResetAddressables;
+            ResourceManager.ExceptionHandler = m_prevHandler;
         }
 
         private void AssertDownloadDependencyBundlesAreValid(AsyncOperationHandle op)
         {
-            Assert.AreEqual(AsyncOperationStatus.Succeeded,op.Status);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.IsTrue(op.IsValid());
             var opList = (List<IAssetBundleResource>)op.Result;
             Assert.AreEqual(2, opList.Count);
@@ -41,28 +48,19 @@ namespace AddressableAssetsIntegrationTests
             }
         }
 
-        static public void CustomLogException(AsyncOperationHandle op, Exception ex)
-        {
-            m_handlerCalled = true;
-        }
-
-        static void ThrowFakeException()
-        {
-            ResourceManager.ExceptionHandler(new AsyncOperationHandle(), new Exception());
-        }
-        
         [UnityTest]
-        [Ignore("Causing instability in other tests.  https://jira.unity3d.com/browse/ADDR-1518")]
         public IEnumerator CustomExceptionHandler()
         {
             yield return Init();
-            
+
             var prevHandler = ResourceManager.ExceptionHandler;
             AssetReference ar = new AssetReference();
-            ResourceManager.ExceptionHandler = CustomLogException;
+            bool handlerCalled = false;
+            ResourceManager.ExceptionHandler = (handle, exception) => handlerCalled = true;
             var op = ar.InstantiateAsync();
-            ThrowFakeException();
-            Assert.IsTrue(m_handlerCalled);
+            yield return op;
+            Assert.IsTrue(op.IsDone);
+            Assert.IsTrue(handlerCalled);
             ResourceManager.ExceptionHandler = prevHandler;
         }
 
@@ -70,7 +68,7 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator AddressablesImpl_ChainOperation_DefaultReturnedWhenNotInit()
         {
             yield return Init();
-            
+
             AsyncOperationHandle testChainOperation = m_Addressables.ChainOperation;
             Assert.IsFalse(testChainOperation.IsValid());
         }
@@ -79,9 +77,9 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator AddressablesImpl_InitializeAsync_CanGetInitializationOp()
         {
             yield return Init();
-            
+
             var initialOp = m_Addressables.InitializeAsync();
-            Assert.AreEqual(AsyncOperationStatus.Succeeded,initialOp.Status);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, initialOp.Status);
             Assert.IsTrue(initialOp.IsValid());
 
             yield return initialOp;
@@ -94,13 +92,13 @@ namespace AddressableAssetsIntegrationTests
             m_Addressables = null;
             initializationComplete = false;
             yield return InitWithoutInitializeAsync();
-            
+
             m_Addressables.hasStartedInitialization = true;
             var initialOp = m_Addressables.InitializeAsync();
             yield return initialOp;
-            
+
             // Test
-            Assert.AreEqual(AsyncOperationStatus.Succeeded,initialOp.Status);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, initialOp.Status);
             Assert.IsTrue(initialOp.IsValid());
 
             // Cleanup
@@ -112,21 +110,21 @@ namespace AddressableAssetsIntegrationTests
         {
             // Setup
             yield return Init();
-            
-            if (TypeName =="BuildScriptFastMode")
+
+            if (TypeName == "BuildScriptFastMode")
             {
                 Assert.Ignore($"Skipping test {nameof(AddressablesImpl_LoadContentCatalogAsync_CanLoad)} for {TypeName}");
             }
-            
+
             var location = m_Addressables.m_ResourceLocators[0].CatalogLocation;
-            var op1 = m_Addressables.LoadContentCatalogAsync(location.InternalId,false);
+            var op1 = m_Addressables.LoadContentCatalogAsync(location.InternalId, false);
             yield return op1;
-            
+
             // Test
             Assert.IsTrue(op1.IsValid());
-            Assert.AreEqual(AsyncOperationStatus.Succeeded,op1.Status);
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op1.Status);
             Assert.NotNull(op1.Result);
-            
+
             // Cleanup
             op1.Release();
         }
@@ -135,9 +133,9 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator AddressablesImpl_LoadContentCatalogAsync_CanLoadReleaseHandle()
         {
             yield return Init();
-            
+
             // Setup
-            if (TypeName =="BuildScriptFastMode")
+            if (TypeName == "BuildScriptFastMode")
             {
                 Assert.Ignore($"Skipping test {nameof(AddressablesImpl_LoadContentCatalogAsync_CanLoadReleaseHandle)} for {TypeName}");
             }
@@ -145,7 +143,7 @@ namespace AddressableAssetsIntegrationTests
             var location = m_Addressables.m_ResourceLocators[0].CatalogLocation;
             var op1 = m_Addressables.LoadContentCatalogAsync(location.InternalId, true);
             yield return op1;
-            
+
             // Test
             Assert.IsFalse(op1.IsValid());
         }
@@ -155,12 +153,12 @@ namespace AddressableAssetsIntegrationTests
         {
             // Setup
             yield return Init();
-            
-            if (TypeName =="BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
+
+            if (TypeName == "BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
             {
                 Assert.Ignore($"Skipping test {nameof(AddressablesImpl_DownloadDependenciesAsync_CanDownloadDependenciesFromKey)} for {TypeName}");
             }
-            
+
             Caching.ClearCache();
             string label = AddressablesTestUtility.GetPrefabLabel("BASE");
             AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(label);
@@ -168,17 +166,17 @@ namespace AddressableAssetsIntegrationTests
 
             // Test
             AssertDownloadDependencyBundlesAreValid(op);
-            
+
             // Cleanup
-            op.Release();            
+            op.Release();
         }
-        
+
         [UnityTest]
         public IEnumerator AddressablesImpl_DownloadDependenciesAsync_CantDownloadWhenGetResourceLocFailsKey()
         {
             // Setup
             yield return Init();
-            
+
             string label = "badLabel";
             AsyncOperationHandle op = new AsyncOperationHandle();
             using (new IgnoreFailingLogMessage())
@@ -186,16 +184,16 @@ namespace AddressableAssetsIntegrationTests
                 op = m_Addressables.DownloadDependenciesAsync(label);
                 yield return op;
             }
-            
+
             // Test
-            Assert.AreEqual(AsyncOperationStatus.Failed,op.Status);
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
             Assert.IsTrue(op.OperationException.Message.Contains("InvalidKey"));
             Assert.IsNull(op.Result);
-            
+
             // Cleanup
             op.Release();
         }
-        
+
         [UnityTest]
         public IEnumerator AddressablesImpl_DownloadDependenciesAsync_CantDownloadWhenGetResourceLocFailsAutoReleasesKey()
         {
@@ -214,43 +212,43 @@ namespace AddressableAssetsIntegrationTests
             // Test
             Assert.IsFalse(op.IsValid());
         }
-        
+
         [UnityTest]
         public IEnumerator AddressablesImpl_DownloadDependenciesAsync_CanDoWithChainKey()
         {
             // Setup
-            if (TypeName =="BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
+            if (TypeName == "BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
             {
                 Assert.Ignore($"Skipping test {nameof(AddressablesImpl_DownloadDependenciesAsync_CanDoWithChainKey)} for {TypeName}");
             }
-            
+
             yield return Init();
 
             string label = AddressablesTestUtility.GetPrefabLabel("BASE");
             m_Addressables.hasStartedInitialization = false;
-            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(label,false);
+            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(label, false);
             m_Addressables.hasStartedInitialization = true;
             yield return op;
-            
+
             // Test
             var wrapOp = op.Convert<IList<IAssetBundleResource>>();
             AssertDownloadDependencyBundlesAreValid(wrapOp);
-            
+
             // Cleanup
             op.Release();
         }
-        
+
         [UnityTest]
         public IEnumerator AddressablesImpl_DownloadDependenciesAsync_CanDownloadDependenciesFromOpHandle()
         {
             // Setup
             yield return Init();
-            
-            if (TypeName =="BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
+
+            if (TypeName == "BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
             {
                 Assert.Ignore($"Skipping test {nameof(AddressablesImpl_DownloadDependenciesAsync_CanDownloadDependenciesFromOpHandle)} for {TypeName}");
             }
-            
+
             IList<IResourceLocation> locations;
             var ret = m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, typeof(GameObject), Addressables.MergeMode.Intersection, out locations);
 
@@ -260,19 +258,18 @@ namespace AddressableAssetsIntegrationTests
 
             // Test
             AssertDownloadDependencyBundlesAreValid(op);
-            
+
             // Cleanup
             op.Release();
         }
-        
 
         [UnityTest]
         public IEnumerator AddressablesImpl_DownloadDependenciesAsync_CanDoWithChainOpHandle()
         {
             // Setup
             yield return Init();
-            
-            if (TypeName =="BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
+
+            if (TypeName == "BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
             {
                 Assert.Ignore($"Skipping test {nameof(AddressablesImpl_DownloadDependenciesAsync_CanDoWithChainOpHandle)} for {TypeName}");
             }
@@ -282,14 +279,14 @@ namespace AddressableAssetsIntegrationTests
 
             Assert.IsTrue(ret);
             m_Addressables.hasStartedInitialization = false;
-            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(locations,false);
+            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(locations, false);
             m_Addressables.hasStartedInitialization = true;
             yield return op;
-            
+
             // Test
             var wrapOp = op.Convert<IList<IAssetBundleResource>>();
             AssertDownloadDependencyBundlesAreValid(wrapOp);
-            
+
             // Cleanup
             op.Release();
         }
@@ -299,31 +296,31 @@ namespace AddressableAssetsIntegrationTests
         {
             // Setup
             yield return Init();
-            
-            if (TypeName =="BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
+
+            if (TypeName == "BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
             {
                 Assert.Ignore($"Skipping test {nameof(AddressablesImpl_DownloadDependenciesAsync_CanDownloadDependenciesFromObjectList)} for {TypeName}");
             }
-            
+
             List<object> deps = new List<object>();
             deps.Add(AddressablesTestUtility.GetPrefabLabel("BASE"));
 
-            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(deps,Addressables.MergeMode.Intersection,false);
+            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(deps, Addressables.MergeMode.Intersection, false);
             yield return op;
 
             // Test
             AssertDownloadDependencyBundlesAreValid(op);
-            
+
             // Cleanup
             op.Release();
         }
-        
+
         [UnityTest]
         public IEnumerator AddressablesImpl_DownloadDependenciesAsync_CanDownloadDependenciesWithChainFromObjectList()
         {
             // Setup
             yield return Init();
-            if (TypeName =="BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
+            if (TypeName == "BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
             {
                 Assert.Ignore($"Skipping test {nameof(AddressablesImpl_DownloadDependenciesAsync_CanDownloadDependenciesWithChainFromObjectList)} for {TypeName}");
             }
@@ -332,18 +329,18 @@ namespace AddressableAssetsIntegrationTests
             deps.Add(AddressablesTestUtility.GetPrefabLabel("BASE"));
 
             m_Addressables.hasStartedInitialization = false;
-            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(deps,Addressables.MergeMode.Intersection,false);
+            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(deps, Addressables.MergeMode.Intersection, false);
             yield return op;
             m_Addressables.hasStartedInitialization = true;
-            
+
             // Test
             var wrapOp = op.Convert<IList<IAssetBundleResource>>();
             AssertDownloadDependencyBundlesAreValid(wrapOp);
-            
+
             // Cleanup
             op.Release();
         }
-        
+
         [UnityTest]
         public IEnumerator AddressablesImpl_DownloadDependenciesAsync_CantDownloadWhenGetResourceLocFailsObjectList()
         {
@@ -353,19 +350,19 @@ namespace AddressableAssetsIntegrationTests
             var deps = new List<object>();
             var provideHandle = new ProvideHandle(m_Addressables.ResourceManager, new ProviderOperation<AssetBundleResource>());
             provideHandle.GetDependencies(deps);
-            
+
             AsyncOperationHandle op = new AsyncOperationHandle();
             using (new IgnoreFailingLogMessage())
             {
-                op = m_Addressables.DownloadDependenciesAsync(deps,Addressables.MergeMode.Intersection,false);
+                op = m_Addressables.DownloadDependenciesAsync(deps, Addressables.MergeMode.Intersection, false);
                 yield return op;
             }
 
             // Test
-            Assert.AreEqual(AsyncOperationStatus.Failed,op.Status);
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
             Assert.IsTrue(op.OperationException.Message.Contains("InvalidKey"));
             Assert.IsNull(op.Result);
-            
+
             // Cleanup
             op.Release();
         }
@@ -391,6 +388,5 @@ namespace AddressableAssetsIntegrationTests
             // Test
             Assert.IsFalse(op.IsValid());
         }
-        
     }
 }

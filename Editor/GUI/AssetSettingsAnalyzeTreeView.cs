@@ -99,11 +99,6 @@ namespace UnityEditor.AddressableAssets.GUI
             });
         }
 
-        public void RevertAllSelectedRules()
-        {
-            //TODO
-        }
-
         public bool SelectionContainsFixableRule { get; private set; }
         public bool SelectionContainsRuleContainer { get; private set; }
 
@@ -155,8 +150,21 @@ namespace UnityEditor.AddressableAssets.GUI
                 else
                     menu.AddDisabledItem(new GUIContent("Fix Analyze Rule"));
 
-                //TODO
-                //menu.AddItem(new GUIContent("Revert Analyze Rule"), false, RevertAllSelectedRules);
+                IList<int> selectedIds = GetSelection();
+                if (selectedIds.Count == 1)
+                {
+                    AnalyzeRuleContainerTreeViewItem analyzeRuleContainer = FindItem(selectedIds[0], rootItem) as AnalyzeRuleContainerTreeViewItem;
+                    if (analyzeRuleContainer != null)
+                    {
+                        foreach (var customMenuItem in analyzeRuleContainer.analyzeRule.GetCustomContextMenuItems())
+                        {
+                            if(customMenuItem.MenuEnabled)
+                                menu.AddItem(new GUIContent(customMenuItem.MenuName), customMenuItem.ToggledOn, () => customMenuItem.MenuAction());
+                            else
+                                menu.AddDisabledItem(new GUIContent(customMenuItem.MenuName));
+                        }
+                    }
+                }
 
                 menu.ShowAsContext();
                 Repaint();
@@ -172,6 +180,8 @@ namespace UnityEditor.AddressableAssets.GUI
             string baseName = "Analyze Rules";
             string fixableRules = "Fixable Rules";
             string unfixableRules = "Unfixable Rules";
+
+            AnalyzeSystem.TreeView = this;
 
             AnalyzeRuleContainerTreeViewItem baseViewItem = new AnalyzeRuleContainerTreeViewItem(baseName.GetHashCode(), m_CurrentDepth, baseName);
             baseViewItem.children = new List<TreeViewItem>();

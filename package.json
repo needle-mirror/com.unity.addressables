@@ -1,7 +1,7 @@
 {
   "name": "com.unity.addressables",
   "displayName": "Addressables",
-  "version": "1.16.10",
+  "version": "1.16.12",
   "unity": "2018.4",
   "description": "The Addressable Asset System allows the developer to ask for an asset via its address. Once an asset (e.g. a prefab) is marked \"addressable\", it generates an address which can be called from anywhere. Wherever the asset resides (local or remote), the system will locate it and its dependencies, then return it.\n\nUse 'Window->Asset Management->Addressables' to begin working with the system.\n\nAddressables use asynchronous loading to support loading from any location with any collection of dependencies. Whether you have been using direct references, traditional asset bundles, or Resource folders, addressables provide a simpler way to make your game more dynamic. Addressables simultaneously opens up the world of asset bundles while managing all the complexity.\n\nFor usage samples, see github.com/Unity-Technologies/Addressables-Sample",
   "keywords": [
@@ -12,7 +12,7 @@
     "assetbundles"
   ],
   "dependencies": {
-    "com.unity.scriptablebuildpipeline": "1.14.1",
+    "com.unity.scriptablebuildpipeline": "1.15.0",
     "com.unity.modules.assetbundle": "1.0.0",
     "com.unity.modules.unitywebrequest": "1.0.0",
     "com.unity.modules.unitywebrequestassetbundle": "1.0.0"
@@ -20,9 +20,9 @@
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/Addressables.git",
     "type": "git",
-    "revision": "77a8e2e3bc47fd22d4f773d5b949d92bffda3036"
+    "revision": "5e701abc405eb6c86690891bffc4c0abb1244cae"
   },
   "upmCi": {
-    "footprint": "265c8a7c2b92b9fae98023d02fada514b985b093"
+    "footprint": "f736eb3cb6ffb2be6ae5b391738de27571396585"
   }
 }

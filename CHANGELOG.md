@@ -4,7 +4,18 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [1.16.10] - 2020-11-4
+## [1.16.12] - 2020-12-02
+- ...
+
+## [1.16.11] - 2020-11-18
+- Added option to invert the display of CheckBundleDupeDependencies Analyze rule
+- Fix GatherEntryLocations for scenes when parameter type is null
+- Added some API docs for RuntimeBuildLog and AnalyzeResultData that were missing.
+- Updated docs to explain the use of profile variables a little better.
+- Added ability to toggle Check Duplicate Bundle Dependencies analyze rule results to be arranged by Group or Asset
+- Allow assets that are inside a com.unity* package to be marked as addressable
+
+## [1.16.10] - 2020-11-04
 - Added internal naming option for the Bundled Asset Group Schema.  Instead of using the full path, there are options to use the asset guid or the hashcode of the guid.  These values are stable and wont change if the asset path changes, reducing the need to rebuild a bundle if paths change but contents do not.  The internal ids stored in the content catalog will generally be shorter than asset paths - 32 bytes for the full guid, 8 bytes for the guid hash. 
 - Added option to exclude sub catalog entries by file extension
 - Added options to exclude catalog entries for address, labels, and guids
@@ -13,7 +24,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added warning to build when an Addressable Group doesn't have any AddressableAssetGroupSchemas
 - Fixed issue where resource folder search was case sensitive for Mac and Linux
 - Fixed issue where warnings were getting logged incorrectly when marking an asset as Addressable using the checkbox in the inspector.
-- Add Yamato trigger for release testing & rework variables into metafile
 - Fixed issue where an AssetReference's cached asset is not reset when the underlying asset re-imports.
 - Fixed issue where we were still checking for CRC when a bundle was cached.
 - Fixed bug when using Play Mode Script "Use AssetDatabase (fastest)", and calling Addressables.LoadContentCatalogAsync would fail when it had not been cached.

@@ -104,7 +104,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"),
                 typeof(ContentCatalogProvider), typeof(ContentCatalogData)));
 #if UNITY_2019_3_OR_NEWER
-            aaContext.runtimeData.AddressablesVersion = PackageManager.PackageInfo.FindForAssembly(typeof(Addressables).Assembly).version;
+            aaContext.runtimeData.AddressablesVersion = PackageManager.PackageInfo.FindForAssembly(typeof(Addressables).Assembly)?.version;
 #endif
             m_CreatedProviderIds = new Dictionary<string, VirtualAssetBundleRuntimeData>();
             m_ResourceProviderData = new List<ObjectInitializationData>();

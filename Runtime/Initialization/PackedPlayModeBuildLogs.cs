@@ -21,6 +21,11 @@ public class PackedPlayModeBuildLogs
         /// </summary>
         public string Message;
 
+        /// <summary>
+        /// Create a container for build logs that need to be seen at runtime.
+        /// </summary>
+        /// <param name="type">The type of log.</param>
+        /// <param name="message">The message to be logged.</param>
         public RuntimeBuildLog(LogType type, string message)
         {
             Type = type;

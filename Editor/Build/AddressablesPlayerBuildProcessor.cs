@@ -18,7 +18,9 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
         get { return 1; }
     }
 
-    /// <summary>Removes temporary data created as part of a build.</summary>
+    /// <summary>
+    /// Removes temporary data created as part of a build.
+    /// </summary>
     public void OnPostprocessBuild(BuildReport report)
     {
         CleanTemporaryPlayerBuildData();
@@ -36,7 +38,9 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
         }
     }
 
-    /// <summary>Initializes temporary build data.</summary>
+    ///<summary>
+    /// Initializes temporary build data.
+    /// </summary>
     public void OnPreprocessBuild(BuildReport report)
     {
         CopyTemporaryPlayerBuildData();
