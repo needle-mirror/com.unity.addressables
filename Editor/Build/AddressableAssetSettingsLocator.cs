@@ -163,7 +163,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 {
                     if (e.IsScene)
                     {
-                        if(type == null || type == typeof(SceneInstance) || AddressableAssetUtility.MapEditorTypeToRuntimeType(e.MainAssetType, false) == type )
+                        if(type == null || type == typeof(object) || type == typeof(SceneInstance) || AddressableAssetUtility.MapEditorTypeToRuntimeType(e.MainAssetType, false) == type )
                             locations.Add(new ResourceLocationBase(e.address, e.AssetPath, typeof(SceneProvider).FullName, typeof(SceneInstance)));
                     }
                     else if (type == null || type.IsAssignableFrom(e.MainAssetType))

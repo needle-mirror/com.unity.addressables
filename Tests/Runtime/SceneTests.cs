@@ -304,6 +304,19 @@ namespace SceneTests
 
             Assert.AreEqual(0, m_Addressables.m_SceneInstances.Count);
         }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSize_DoesNotThrowInvalidKeyException_ForScene()
+        {
+#if ENABLE_CACHING
+            var dOp = m_Addressables.GetDownloadSizeAsync((object)sceneKeys[0]);
+            yield return dOp;
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, dOp.Status);
+#else
+            Assert.Ignore();
+            yield break;
+#endif
+        }
     }
 
 #if UNITY_EDITOR

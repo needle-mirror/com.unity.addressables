@@ -221,18 +221,19 @@ namespace UnityEditor.AddressableAssets.Tests
                 var subFolderPath = resourcePath + "/Subfolder";
                 Directory.CreateDirectory(subFolderPath);
 
-                var r1GUID = CreateAsset(resourcePath + "/testResource1.prefab", "testResource1");
-                var r2GUID = CreateAsset(subFolderPath + "/testResource2.prefab", "testResource2");
-
                 var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
                 var resourceEntry = Settings.CreateOrMoveEntry(AddressableAssetEntry.ResourcesName, group, false);
+                int builtInResourcesCount = ResourcesTestUtility.GetResourcesEntryCount(Settings, false);
+
+                var r1GUID = CreateAsset(resourcePath + "/testResource1.prefab", "testResource1");
+                var r2GUID = CreateAsset(subFolderPath + "/testResource2.prefab", "testResource2");
 
                 var entries = new List<AddressableAssetEntry>();
                 resourceEntry.GatherAllAssets(entries, false, false, true);
 
                 // Assert
                 var subFolderGUID = AssetDatabase.AssetPathToGUID(subFolderPath);
-                Assert.AreEqual(2, entries.Count);
+                Assert.AreEqual(2 + builtInResourcesCount, entries.Count);
                 Assert.IsTrue(entries.Any(e => e.guid == r1GUID));
                 Assert.IsFalse(entries.Any(e => e.guid == r2GUID));
                 Assert.IsTrue(entries.Any(e => e.guid == subFolderGUID));
@@ -251,18 +252,19 @@ namespace UnityEditor.AddressableAssets.Tests
                 var subFolderPath = resourcePath + "/Subfolder";
                 Directory.CreateDirectory(subFolderPath);
 
-                var r1GUID = CreateAsset(resourcePath + "/testResource1.prefab", "testResource1");
-                var r2GUID = CreateAsset(subFolderPath + "/testResource2.prefab", "testResource2");
-
                 var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
                 var resourceEntry = Settings.CreateOrMoveEntry(AddressableAssetEntry.ResourcesName, group, false);
+                int builtInResourcesCount = ResourcesTestUtility.GetResourcesEntryCount(Settings, true);
+
+                var r1GUID = CreateAsset(resourcePath + "/testResource1.prefab", "testResource1");
+                var r2GUID = CreateAsset(subFolderPath + "/testResource2.prefab", "testResource2");
 
                 var entries = new List<AddressableAssetEntry>();
                 resourceEntry.GatherAllAssets(entries, false, true, true);
 
                 // Assert
                 var subFolderGUID = AssetDatabase.AssetPathToGUID(subFolderPath);
-                Assert.AreEqual(2, entries.Count);
+                Assert.AreEqual(2 + builtInResourcesCount, entries.Count);
                 Assert.IsTrue(entries.Any(e => e.guid == r1GUID));
                 Assert.IsTrue(entries.Any(e => e.guid == r2GUID));
                 Assert.IsFalse(entries.Any(e => e.guid == subFolderGUID));

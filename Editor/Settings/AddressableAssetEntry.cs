@@ -694,7 +694,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 yield return path;
             }
 
-            List<PackageManager.PackageInfo> packages = AddressableAssetUtility.GetUserPackages();
+            List<PackageManager.PackageInfo> packages = AddressableAssetUtility.GetPackages();
             foreach (PackageManager.PackageInfo package in packages)
             {
                 foreach (string path in GetResourceDirectoriesatPath(package.assetPath))

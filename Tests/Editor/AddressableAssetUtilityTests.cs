@@ -47,6 +47,14 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void GetPackages_ReturnsUnityPackages()
+        {
+            var packages = AddressableAssetUtility.GetPackages();
+            var addressablesPackage = packages.FirstOrDefault(p => p.name == $"com.unity.addressables");
+            Assert.IsNotNull(addressablesPackage);
+        }
+
+        [Test]
         public void GetPathAndGUIDFromTarget_FromNullObject_Fails()
         {
             Assert.IsFalse(AddressableAssetUtility.GetPathAndGUIDFromTarget(null, out var actualPath, out var actualGUID, out var actualType));

@@ -330,7 +330,7 @@ namespace UnityEditor.AddressableAssets.Settings
             return openedAsset;
         }
 
-        internal static List<PackageManager.PackageInfo> GetUserPackages()
+        internal static List<PackageManager.PackageInfo> GetPackages()
         {
             ListRequest req = Client.List();
             while (!req.IsCompleted) {}
@@ -340,11 +340,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 PackageCollection collection = req.Result;
                 foreach (PackageManager.PackageInfo package in collection)
-                {
-                    if (package.name.StartsWith("com.unity."))
-                        continue;
                     packages.Add(package);
-                }
             }
             return packages;
         }

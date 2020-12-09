@@ -324,6 +324,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
         public void RunResourcesTestWithAsset(bool IncludeResourcesFolders)
         {
+            int builtInResourceCount = ResourcesTestUtility.GetResourcesEntryCount(m_Settings, true);
             var path = GetPath("Resources/test.asset");
             var dir = Path.GetDirectoryName(path);
             Directory.CreateDirectory(dir);
@@ -334,7 +335,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var res = locator.Locate("test", null, out var locations);
             Assert.AreEqual(res, IncludeResourcesFolders);
             if (IncludeResourcesFolders)
-                Assert.AreEqual(1, locations.Count);
+                Assert.AreEqual(1 + builtInResourceCount, locations.Count + builtInResourceCount);
             else
                 Assert.IsNull(locations);
             AssetDatabase.DeleteAsset(path);
@@ -454,6 +455,14 @@ namespace UnityEditor.AddressableAssets.Tests
                 var packedModeKeys = packedImpl.ResourceLocators.First(l => l.GetType() == typeof(AddressableAssetSettingsLocator)).Keys;
                 var packedPlayKeys = packedPlayImpl.ResourceLocators.First(l => l.GetType() == typeof(AddressableAssetSettingsLocator)).Keys;
 
+
+                var builtInPackageResourcesEntries = ResourcesTestUtility.GetResourcesEntries(m_Settings, true);
+                foreach (var key in builtInPackageResourcesEntries)
+                {
+                    ExpectedKeys.Add(key.guid);
+                    ExpectedKeys.Add(key.address);
+                }
+
                 //Get our baseline
                 Assert.AreEqual(ExpectedKeys.Count, fastModeKeys.Count());
                 foreach(var key in fastModeKeys)
@@ -490,6 +499,13 @@ namespace UnityEditor.AddressableAssets.Tests
                         Debug.Log($"[{i}] {k}");
                         i++;
                     }
+                }
+
+                var builtInPackageResourcesEntries = ResourcesTestUtility.GetResourcesEntries(m_Settings, true);
+                foreach (var key in builtInPackageResourcesEntries)
+                {
+                    ExpectedKeys.Add(key.guid);
+                    ExpectedKeys.Add(key.address);
                 }
 
                 Assert.AreEqual(ExpectedKeys.Count, locator.Keys.Count());

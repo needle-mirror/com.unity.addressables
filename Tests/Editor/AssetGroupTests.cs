@@ -181,6 +181,7 @@ namespace UnityEditor.AddressableAssets.Tests
             {
                 //Setup
                 string assetPath = "SubFolder/Cube.prefab";
+                int builtInPackagesResourcesCount = ResourcesTestUtility.GetResourcesEntryCount(Settings, true);
                 CreatePrefabInResourcesSubFolder(assetPath);
                 AddressableAssetEntryTreeView treeView = new AddressableAssetEntryTreeView(
                     new TreeViewState(), 
@@ -193,7 +194,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 treeView.RecurseEntryChildren(entry, treeViewItem, 0);
 
                 //Assert
-                Assert.AreEqual(1, treeViewItem.children.Count);
+                Assert.AreEqual(1 + builtInPackagesResourcesCount, treeViewItem.children.Count);
                 Assert.AreEqual(assetPath.Replace(".prefab", ""), treeViewItem.children[0].displayName);
 
                 //Cleanup

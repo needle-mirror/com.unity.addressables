@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.16.15] - 2020-12-09
+- Addressables link.xml should now have it's own folder.
+- Fixed an issue where InvalidKeyException was getting thrown when calling GetDownloadSizeAsync on scenes
+- Resources folders inside Unity packages now get added to the Built In Data group
+- Fixed issue where getting selected subasset would cause an error if any subassets' type was null
+
 ## [1.16.13] - 2020-11-18
 - Added option to invert the display of CheckBundleDupeDependencies Analyze rule
 - Fix GatherEntryLocations for scenes when parameter type is null

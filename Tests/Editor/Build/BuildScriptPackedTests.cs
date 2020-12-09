@@ -476,6 +476,7 @@ namespace UnityEditor.AddressableAssets.Tests
             using (new HideResourceFoldersScope())
             {
                 var resourceFolder = k_SchemaTestFolderPath + "/Resources";
+                int builtInPackagesResourceCount = ResourcesTestUtility.GetResourcesEntryCount(m_Settings, true);
                 Directory.CreateDirectory(resourceFolder);
 
                 var group = m_Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
@@ -493,7 +494,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
                 var actualProviders = m_BuildScript.ResourceProviderData
                     .Where(rpd => rpd.ObjectType.ClassName == typeof(LegacyResourcesProvider).FullName).ToList();
-                Assert.AreEqual(0, actualProviders.Count);
+                Assert.AreEqual(builtInPackagesResourceCount > 0 ? 1 : 0, actualProviders.Count);
             }
         }
 

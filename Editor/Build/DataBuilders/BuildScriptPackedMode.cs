@@ -273,7 +273,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
 
             m_Linker.AddTypes(typeof(Addressables));
-            m_Linker.Save(Addressables.BuildPath + "/link.xml");
+            Directory.CreateDirectory(Addressables.BuildPath + "/AddressablesLink/");
+            m_Linker.Save(Addressables.BuildPath + "/AddressablesLink/link.xml");
             var settingsPath = Addressables.BuildPath + "/" + builderInput.RuntimeSettingsFilename;
             WriteFile(settingsPath, JsonUtility.ToJson(aaContext.runtimeData), builderInput.Registry);
 
