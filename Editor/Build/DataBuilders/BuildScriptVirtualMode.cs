@@ -303,7 +303,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
 
             var bundleInputDefs = new List<AssetBundleBuild>();
-            List<AddressableAssetEntry> list = BuildScriptPackedMode.PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema.BundleMode);
+            List<AddressableAssetEntry> list = BuildScriptPackedMode.PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema);
             aaContext.assetEntries.AddRange(list);
             for (int i = 0; i < bundleInputDefs.Count; i++)
             {

@@ -408,7 +408,6 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        [Ignore("ADDR-1606, LogAssert message no longer throws as of 2020.2b11")]
         public void WhenFileTypeIsInvalid_AndContentCatalogsAreCreated_BuildFails()
         {
             var context = new AddressablesDataBuilderInput(Settings);
@@ -440,8 +439,8 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void WhenFileTypeIsInvalid_AndContentCatalogsAreCreated_IgnoreUnsupportedFilesInBuildIsSet_BuildSucceedWithWarning()
         {
-            bool oldValue = ProjectConfigData.ignoreUnsupportedFilesInBuild;
-            ProjectConfigData.ignoreUnsupportedFilesInBuild = true;
+            bool oldValue = Settings.IgnoreUnsupportedFilesInBuild;
+            Settings.IgnoreUnsupportedFilesInBuild = true;
 
             var context = new AddressablesDataBuilderInput(Settings);
 
@@ -477,7 +476,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Settings.RemoveAssetEntry(guid, false);
             AssetDatabase.DeleteAsset(path);
-            ProjectConfigData.ignoreUnsupportedFilesInBuild = oldValue;
+            Settings.IgnoreUnsupportedFilesInBuild = oldValue;
         }
     }
 }

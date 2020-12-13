@@ -92,6 +92,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// If false, the CRC will not be used when loading bundles from the cache.
         /// </summary>
         public bool UseCrcForCachedBundle { get { return m_UseCrcForCachedBundles; } set { m_UseCrcForCachedBundles = value; } }
+
+        [SerializeField]
+        bool m_ClearOtherCachedVersionsWhenLoaded;
+        /// <summary>
+        /// If false, the CRC will not be used when loading bundles from the cache.
+        /// </summary>
+        public bool ClearOtherCachedVersionsWhenLoaded { get { return m_ClearOtherCachedVersionsWhenLoaded; } set { m_ClearOtherCachedVersionsWhenLoaded = value; } }
+
         /// <summary>
         /// Computes the amount of data needed to be downloaded for this bundle.
         /// </summary>
@@ -264,6 +272,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             if (string.IsNullOrEmpty(webReq.error))
             {
                 m_downloadHandler = webReq.downloadHandler as DownloadHandlerAssetBundle;
+#if ENABLE_CACHING
+                if (!string.IsNullOrEmpty(m_Options.Hash) && m_Options.ClearOtherCachedVersionsWhenLoaded)
+                    Caching.ClearOtherCachedVersions(m_Options.BundleName, Hash128.Parse(m_Options.Hash));
+#endif
                 m_ProvideHandle.Complete(this, true, null);
             }
             else

@@ -208,7 +208,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                                 throw new Exception($"Address '{entry.address}' cannot contain '[ ]'.");
                             if (entry.MainAssetType == typeof(DefaultAsset) && !AssetDatabase.IsValidFolder(entry.AssetPath))
                             {
-                                if (ProjectConfigData.ignoreUnsupportedFilesInBuild)
+                                if (input.Settings.IgnoreUnsupportedFilesInBuild)
                                     Debug.LogWarning($"Cannot recognize file type for entry located at '{entry.AssetPath}'. Asset location will be ignored.");
                                 else
                                     throw new Exception($"Cannot recognize file type for entry located at '{entry.AssetPath}'. Asset import failed for using an unsupported file type.");

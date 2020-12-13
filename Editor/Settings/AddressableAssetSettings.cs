@@ -308,6 +308,9 @@ namespace UnityEditor.AddressableAssets.Settings
         bool m_DisableCatalogUpdateOnStart = false;
 
         [SerializeField]
+        bool m_IgnoreUnsupportedFilesInBuild = false;
+
+        [SerializeField]
         bool m_UniqueBundleIds = false;
 
         [SerializeField]
@@ -381,6 +384,15 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get { return m_DisableCatalogUpdateOnStart; }
             set { m_DisableCatalogUpdateOnStart = value; }
+        }
+
+        /// <summary>
+        /// Whether unsupported files during build should be ignored or treated as an error.
+        /// </summary>
+        internal bool IgnoreUnsupportedFilesInBuild
+        {
+            get { return m_IgnoreUnsupportedFilesInBuild; }
+            set { m_IgnoreUnsupportedFilesInBuild = value; }
         }
 
         [SerializeField]
@@ -920,7 +932,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="postEvent">Send modification event.</param>
         public void AddLabel(string label, bool postEvent = true)
         {
-            if(m_LabelTable.AddLabelName(label))
+            if (m_LabelTable.AddLabelName(label))
                 SetDirty(ModificationEvent.LabelAdded, label, postEvent, true);
         }
 

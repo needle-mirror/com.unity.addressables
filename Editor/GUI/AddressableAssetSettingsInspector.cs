@@ -215,7 +215,10 @@ namespace UnityEditor.AddressableAssets.GUI
                     m_QueuedChanges.Add(() => m_AasTarget.MaxConcurrentWebRequests = maxWebReqs);
 
                 ProjectConfigData.showGroupsAsHierarchy = EditorGUILayout.Toggle(m_groupHierarchyView, ProjectConfigData.showGroupsAsHierarchy);
-                ProjectConfigData.ignoreUnsupportedFilesInBuild = EditorGUILayout.Toggle(m_IgnoreUnsupportedFilesInBuild, ProjectConfigData.ignoreUnsupportedFilesInBuild);
+
+                bool ignoreUnsupportedFilesInBuild = EditorGUILayout.Toggle(m_IgnoreUnsupportedFilesInBuild, m_AasTarget.IgnoreUnsupportedFilesInBuild);
+                if (ignoreUnsupportedFilesInBuild != m_AasTarget.IgnoreUnsupportedFilesInBuild)
+                    m_QueuedChanges.Add(() => m_AasTarget.IgnoreUnsupportedFilesInBuild = ignoreUnsupportedFilesInBuild);
             }
 
             GUILayout.Space(6);

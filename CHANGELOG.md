@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.17.0-preview] - 2020-12-13
+- Added option to clear other cahced versions of asset bundles when a new version has been loaded.
+- Added options for internal naming of asset bundles.  This will allow for deterministic naming to avoid unintended diffs for content updates.
+- The "Ignore Invalid/Unsupported Files" option is now saved in the settings
+- Fixed issue where Filename only bundle naming schemas were overwriting old bundles prematurely in content update.
+
 ## [1.16.15] - 2020-12-09
 - Addressables link.xml should now have it's own folder.
 - Fixed an issue where InvalidKeyException was getting thrown when calling GetDownloadSizeAsync on scenes

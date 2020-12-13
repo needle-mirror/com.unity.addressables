@@ -161,7 +161,6 @@ namespace UnityEngine.ResourceManagement
         Action<IAsyncOperation> m_ReleaseInstanceOp;
         static int s_GroupOperationTypeHash = typeof(GroupOperation).GetHashCode();
         static int s_InstanceOperationTypeHash = typeof(InstanceOperation).GetHashCode();
-
         /// <summary>
         /// Add an update reveiver.
         /// </summary>

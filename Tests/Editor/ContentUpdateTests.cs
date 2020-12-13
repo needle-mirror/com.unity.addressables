@@ -44,7 +44,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.NotNull(cacheData);
             Settings.RemoveGroup(group);
         }
-        
+
         [Test]
         public void ContentState_WithDisabledGroups_DoesNotInclude_EntriesFromGroup()
         {
@@ -391,7 +391,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 scene1
             };
 
-            ContentUpdateScript.AddAllDependentScenesFromModifiedEnteries(modifedEnteries);
+            ContentUpdateScript.AddAllDependentScenesFromModifiedEntries(modifedEnteries);
 
             Assert.AreEqual(3, modifedEnteries.Count);
             Assert.AreEqual(scene1, modifedEnteries[0]);
@@ -423,7 +423,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 scene1
             };
 
-            ContentUpdateScript.AddAllDependentScenesFromModifiedEnteries(modifedEnteries);
+            ContentUpdateScript.AddAllDependentScenesFromModifiedEntries(modifedEnteries);
 
             Assert.AreEqual(2, modifedEnteries.Count);
             Assert.AreEqual(scene1, modifedEnteries[0]);
@@ -451,7 +451,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 scene1
             };
 
-            ContentUpdateScript.AddAllDependentScenesFromModifiedEnteries(modifedEnteries);
+            ContentUpdateScript.AddAllDependentScenesFromModifiedEntries(modifedEnteries);
 
             Assert.AreEqual(1, modifedEnteries.Count);
             Assert.AreEqual(scene1, modifedEnteries[0]);
