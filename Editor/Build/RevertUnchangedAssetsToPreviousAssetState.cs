@@ -19,7 +19,7 @@ using static UnityEditor.AddressableAssets.Build.ContentUpdateScript;
 /// RevertUnchangedAssetsToPreviousAssetState uses the asset state from the previous build to determine if any assets
 /// need to use their previous settings or use the newly build data.
 /// </summary>
-internal class RevertUnchangedAssetsToPreviousAssetState
+public class RevertUnchangedAssetsToPreviousAssetState
 {
     internal struct AssetEntryRevertOperation
     {
@@ -30,7 +30,13 @@ internal class RevertUnchangedAssetsToPreviousAssetState
         public string PreviousBuildPath;
     }
 
-    internal static ReturnCode Run(IAddressableAssetsBuildContext aaBuildContext, ContentUpdateContext updateContext)
+    /// <summary>
+    /// Reverts asset entries to their previous state if not modified by the new build. 
+    /// </summary>
+    /// <param name="aaBuildContext">The new build data.</param>
+    /// <param name="updateContext">The cached build data.</param>
+    /// <returns>Returns the success ReturnCode if the content update succeeds.</returns>
+    public static ReturnCode Run(IAddressableAssetsBuildContext aaBuildContext, ContentUpdateContext updateContext)
     {
         var aaContext = aaBuildContext as AddressableAssetsBuildContext;
         var groups = aaContext.Settings.groups.Where(group => group != null && group.HasSchema<BundledAssetGroupSchema>());

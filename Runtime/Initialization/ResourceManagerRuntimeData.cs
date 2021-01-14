@@ -109,7 +109,7 @@ namespace UnityEngine.AddressableAssets.Initialization
         /// <summary>
         /// The current active version of the Addressables package.
         /// </summary>
-        internal string AddressablesVersion
+        public string AddressablesVersion
         {
             get
             {

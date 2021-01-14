@@ -17,8 +17,8 @@ namespace UnityEditor.AddressableAssets.Tests
         public void TestSetup()
         {
             Directory.CreateDirectory(k_TreeViewTestFolderPath);
-            ProjectConfigData.hierarchicalSearch = false;
-            ProjectConfigData.showGroupsAsHierarchy = false;
+            ProjectConfigData.HierarchicalSearch = false;
+            ProjectConfigData.ShowGroupsAsHierarchy = false;
         }
 
         [Test]
@@ -42,7 +42,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var nameWithDashes = "group-name-with-dashes";
             var group = CreateGroup(nameWithDashes);
 
-            ProjectConfigData.showGroupsAsHierarchy = true;
+            ProjectConfigData.ShowGroupsAsHierarchy = true;
             var tree = CreateExpandedTree();
 
             var parts = nameWithDashes.Split('-');
@@ -132,7 +132,7 @@ namespace UnityEditor.AddressableAssets.Tests
             MakeAddressable(m_Settings.DefaultGroup, CreateAsset(k_TreeViewTestFolderPath + "/testAsset2.prefab"));
 
             var tree = CreateExpandedTree();
-            ProjectConfigData.hierarchicalSearch = false;
+            ProjectConfigData.HierarchicalSearch = false;
             var result = tree.Search(searchStr);
 
             Assert.AreEqual(1, result.Count);
@@ -147,7 +147,7 @@ namespace UnityEditor.AddressableAssets.Tests
             MakeAddressable(m_Settings.DefaultGroup, CreateAsset(k_TreeViewTestFolderPath + "/testAsset2.prefab"));
 
             var tree = CreateExpandedTree();
-            ProjectConfigData.hierarchicalSearch = false;
+            ProjectConfigData.HierarchicalSearch = false;
             var result = tree.Search(searchStr);
 
             Assert.AreEqual(1, result.Count);
@@ -162,7 +162,7 @@ namespace UnityEditor.AddressableAssets.Tests
             MakeAddressable(group, CreateAsset(k_TreeViewTestFolderPath + "/testAsset1.prefab"));
 
             var tree = CreateExpandedTree();
-            ProjectConfigData.hierarchicalSearch = false;
+            ProjectConfigData.HierarchicalSearch = false;
             var result = tree.Search(searchStr);
 
             Assert.AreEqual(1, result.Count);
@@ -178,7 +178,7 @@ namespace UnityEditor.AddressableAssets.Tests
             m_Settings.SetLabelValueForEntries(new List<AddressableAssetEntry>(){entry}, "label-" + searchStr, true, true);
 
             var tree = CreateExpandedTree();
-            ProjectConfigData.hierarchicalSearch = false;
+            ProjectConfigData.HierarchicalSearch = false;
             var result = tree.Search(searchStr);
 
             Assert.AreEqual(1, result.Count);
@@ -192,7 +192,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var entry = MakeAddressable(m_Settings.DefaultGroup, CreateAsset(k_TreeViewTestFolderPath + "/testAsset1.prefab"), "testAsset1-" + searchStr);
             MakeAddressable(m_Settings.DefaultGroup, CreateAsset(k_TreeViewTestFolderPath + "/testAsset2.prefab"));
 
-            ProjectConfigData.hierarchicalSearch = true;
+            ProjectConfigData.HierarchicalSearch = true;
             var tree = CreateExpandedTree();
             var result = tree.Search(searchStr);
 
@@ -208,7 +208,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var entry = MakeAddressable(m_Settings.DefaultGroup, CreateAsset(k_TreeViewTestFolderPath + $"/testAsset1-{searchStr}.prefab"));
             MakeAddressable(m_Settings.DefaultGroup, CreateAsset(k_TreeViewTestFolderPath + "/testAsset2.prefab"));
 
-            ProjectConfigData.hierarchicalSearch = true;
+            ProjectConfigData.HierarchicalSearch = true;
             var tree = CreateExpandedTree();
             var result = tree.Search(searchStr);
 
@@ -226,7 +226,7 @@ namespace UnityEditor.AddressableAssets.Tests
             MakeAddressable(group, CreateAsset(k_TreeViewTestFolderPath + "/testAsset1.prefab"));
             MakeAddressable(group, CreateAsset(k_TreeViewTestFolderPath + "/testAsset2.prefab"));
 
-            ProjectConfigData.hierarchicalSearch = true;
+            ProjectConfigData.HierarchicalSearch = true;
             var tree = CreateExpandedTree();
             var result = tree.Search(searchStr);
 
@@ -244,7 +244,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var entry = MakeAddressable(m_Settings.DefaultGroup, CreateAsset(k_TreeViewTestFolderPath + "/testPrefab2.prefab"));
             m_Settings.SetLabelValueForEntries(new List<AddressableAssetEntry>(){entry}, "label-" + searchStr, true, true);
 
-            ProjectConfigData.hierarchicalSearch = true;
+            ProjectConfigData.HierarchicalSearch = true;
             var tree = CreateExpandedTree();
             var result = tree.Search(searchStr);
 
@@ -254,7 +254,6 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        [Ignore("ADDR-1649, complete hierarchy isn't returned when an item matches.")]
         public void Search_Hierarchical_WithGroupHierarchyEnabled_WhenAssetFilePathMatches_ReturnsMatchingAssetsAndHierarchy()
         {
             var nameWithDashes = "group-name-with-dashes";
@@ -263,8 +262,8 @@ namespace UnityEditor.AddressableAssets.Tests
             var entry = MakeAddressable(group, CreateAsset(k_TreeViewTestFolderPath + "/testAsset1.prefab"), searchStr);
             MakeAddressable(group, CreateAsset(k_TreeViewTestFolderPath + "/testPrefab2.prefab"));
 
-            ProjectConfigData.hierarchicalSearch = true;
-            ProjectConfigData.showGroupsAsHierarchy = true;
+            ProjectConfigData.HierarchicalSearch = true;
+            ProjectConfigData.ShowGroupsAsHierarchy = true;
             var tree = CreateExpandedTree();
             var result = tree.Search(searchStr);
 
@@ -275,7 +274,7 @@ namespace UnityEditor.AddressableAssets.Tests
             {
                 Assert.NotNull(result.FirstOrDefault(c => c.displayName == parts[i]));
             }
-            // Last child is the complete name of the group
+            // Last child is the full name of the group
             Assert.NotNull(result.FirstOrDefault(c => c.displayName == nameWithDashes));
         }
 

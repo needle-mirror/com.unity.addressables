@@ -32,6 +32,7 @@ namespace UnityEditor.AddressableAssets.GUI
         internal bool m_ReferencesSame = true;
         SubassetPopup m_SubassetPopup;
         List<AssetReferenceUIRestrictionSurrogate> m_Restrictions = null;
+        SerializedProperty m_AssetReferenceProperty;
 
 #if UNITY_2019_1_OR_NEWER
         private Texture2D m_CaretTexture = null;
@@ -180,6 +181,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 return;
             }
 
+            m_AssetReferenceProperty = property;
             string labelText = label.text;
             m_AssetRefObject = property.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
             if (labelText != label.text || string.IsNullOrEmpty(label.text))
@@ -198,6 +200,32 @@ namespace UnityEditor.AddressableAssets.GUI
             string guid = m_AssetRefObject.AssetGUID;
             var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
 
+            var isNotAddressable = ApplySelectionChanges(property, aaSettings, ref guid);
+
+            assetDropDownRect = EditorGUI.PrefixLabel(position, label);
+            var nameToUse = GetNameForAsset(property, isNotAddressable, fieldInfo);
+            if (m_AssetRefObject.editorAsset != null)
+            {
+                var subAssets = GetSubAssetsList();
+
+                if (subAssets.Count > 1 && m_ReferencesSame)
+                {
+                    assetDropDownRect = DrawSubAssetsControl(property, subAssets);
+                }
+            }
+
+            bool isDragging = Event.current.type == EventType.DragUpdated && position.Contains(Event.current.mousePosition);
+            bool isDropping = Event.current.type == EventType.DragPerform && position.Contains(Event.current.mousePosition);
+
+            DrawControl(property, isDragging, isDropping, nameToUse, isNotAddressable, guid);
+
+            HandleDragAndDrop(property, isDragging, isDropping, guid);
+
+            EditorGUI.EndProperty();
+        }
+
+        bool ApplySelectionChanges(SerializedProperty property, AddressableAssetSettings aaSettings, ref string guid)
+        {
             var checkToForceAddressable = string.Empty;
             if (!string.IsNullOrEmpty(newGuid) && newGuidPropertyPath == property.propertyPath)
             {
@@ -256,28 +284,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
             }
 
-            assetDropDownRect = EditorGUI.PrefixLabel(position, label);
-            var nameToUse = GetNameForAsset(property, isNotAddressable, fieldInfo);
-            if (m_AssetRefObject.editorAsset != null)
-            {
-                var subAssets = GetSubAssetsList();
-
-                if (subAssets.Count > 1 && m_ReferencesSame)
-                {
-                    assetDropDownRect = DrawSubAssetsControl(property, subAssets);
-                }
-            }
-
-            bool isDragging = Event.current.type == EventType.DragUpdated && position.Contains(Event.current.mousePosition);
-            bool isDropping = Event.current.type == EventType.DragPerform && position.Contains(Event.current.mousePosition);
-
-            DrawControl(property, isDragging, isDropping, nameToUse, isNotAddressable, guid);
-
-            HandleDragAndDrop(property, isDragging, isDropping, guid);
-
-            EditorGUI.EndProperty();
+            return isNotAddressable;
         }
-        
+
         internal List<Object> GetSubAssetsList()
         {
             var subAssets = new List<Object>();
@@ -488,7 +497,7 @@ namespace UnityEditor.AddressableAssets.GUI
             // Check if targetObjects have multiple different selected
             if (property.serializedObject.targetObjects.Length > 1)
                 multipleSubassets = CheckTargetObjectsSubassetsAreDifferent(property, m_AssetRefObject.SubObjectName, fieldInfo);
-            
+
             bool isPickerPressed = Event.current.type == EventType.MouseDown && Event.current.button == 0 && pickerRect.Contains(Event.current.mousePosition);
             if (isPickerPressed)
             {
@@ -518,7 +527,7 @@ namespace UnityEditor.AddressableAssets.GUI
 #endif
             return assetDropDownRect;
         }
-        
+
         internal void GetSelectedSubassetIndex(List<Object> subAssets, out int selIndex, out string[] objNames)
         {
             objNames = new string[subAssets.Count];
@@ -607,15 +616,37 @@ namespace UnityEditor.AddressableAssets.GUI
             return valueChanged;
         }
 
-        static void SetDirty(Object obj)
+        void SetDirty(Object obj)
         {
             UnityEngine.GUI.changed = true; // To support EditorGUI.BeginChangeCheck() / EditorGUI.EndChangeCheck()
 
+            TriggerOnValidate();
             EditorUtility.SetDirty(obj);
             AddressableAssetUtility.OpenAssetIfUsingVCIntegration(obj);
             var comp = obj as Component;
             if (comp != null && comp.gameObject != null && comp.gameObject.activeInHierarchy)
                 EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
+        }
+
+        /*
+         * The AssetReference class is not a Unity.Object or a base type so a lot of SerializedProperty's
+         * functionalities doesn't work, because type-checking is done in the API to check whether an operation
+         * can be executed or not. In the engine, one of the way changes are detected is when a new value is set
+         * through the class' value setters (see MarkPropertyModified() in SerializedProperty.cpp). So in order to
+         * trigger a change, we modify a sub-property instead.
+         */
+        void TriggerOnValidate()
+        {
+            if (m_AssetReferenceProperty != null)
+            {
+                m_AssetReferenceProperty.serializedObject.ApplyModifiedProperties();
+                m_AssetReferenceProperty.serializedObject.Update();
+
+                // This is actually what triggers the OnValidate() method.
+                // Since 'm_EditorAssetChanged' is of a recognized type and is a sub-property of AssetReference, both
+                // are flagged as changed and OnValidate() is called.
+                m_AssetReferenceProperty.FindPropertyRelative("m_EditorAssetChanged").boolValue = false;
+            }
         }
 
         internal string GetNameForAsset(SerializedProperty property, bool isNotAddressable, FieldInfo propertyField)

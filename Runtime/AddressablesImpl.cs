@@ -440,9 +440,13 @@ namespace UnityEngine.AddressableAssets
             if (!string.IsNullOrEmpty(hashFilePath))
             {
                 string cacheHashFilePath = ResolveInternalId(kCacheDataFolder + Path.GetFileName(hashFilePath));
-
-                catalogLoc.Dependencies.Add(new ResourceLocationBase(hashFilePath, hashFilePath, typeof(TextDataProvider).FullName, typeof(string)));
-                catalogLoc.Dependencies.Add(new ResourceLocationBase(cacheHashFilePath, cacheHashFilePath, typeof(TextDataProvider).FullName, typeof(string)));
+                
+                var hashResourceLocation = new ResourceLocationBase(hashFilePath, hashFilePath, typeof(TextDataProvider).FullName, typeof(string));
+                hashResourceLocation.Data = new ProviderLoadRequestOptions() {IgnoreFailures = true};
+                catalogLoc.Dependencies.Add(hashResourceLocation);
+                var cacheResourceLocation = new ResourceLocationBase(cacheHashFilePath, cacheHashFilePath, typeof(TextDataProvider).FullName, typeof(string));
+                cacheResourceLocation.Data = new ProviderLoadRequestOptions() {IgnoreFailures = true};
+                catalogLoc.Dependencies.Add(cacheResourceLocation);
             }
 
             return catalogLoc;

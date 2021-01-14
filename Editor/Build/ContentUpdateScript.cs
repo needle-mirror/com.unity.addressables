@@ -152,14 +152,44 @@ namespace UnityEditor.AddressableAssets.Build
     /// </summary>
     public static class ContentUpdateScript
     {
-        internal struct ContentUpdateContext
+        /// <summary>
+        /// Contains build information used for updating assets. 
+        /// </summary>
+        public struct ContentUpdateContext
         {
+            /// <summary>
+            /// The mapping of an asset's guid to its cached asset state.
+            /// </summary>
             public Dictionary<string, CachedAssetState> GuidToPreviousAssetStateMap;
+            
+            /// <summary>
+            /// The mapping of an asset's or bundle's internal id to its catalog entry.
+            /// </summary>
             public Dictionary<string, ContentCatalogDataEntry> IdToCatalogDataEntryMap;
+            
+            /// <summary>
+            /// The mapping of a bundle's name to its internal bundle id.
+            /// </summary>
             public Dictionary<string, string> BundleToInternalBundleIdMap;
+            
+            /// <summary>
+            /// Stores the asset bundle write information.
+            /// </summary>
             public IBundleWriteData WriteData;
+            
+            /// <summary>
+            /// Stores the cached build data.
+            /// </summary>
             public AddressablesContentState ContentState;
+            
+            /// <summary>
+            /// Stores the paths of the files created during a build.
+            /// </summary>
             public FileRegistry Registry;
+            
+            /// <summary>
+            /// The list of asset state information gathered from the previous build.
+            /// </summary>
             public List<CachedAssetState> PreviousAssetStateCarryOver;
         }
 

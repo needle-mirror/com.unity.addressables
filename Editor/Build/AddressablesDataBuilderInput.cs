@@ -103,7 +103,7 @@ namespace UnityEditor.AddressableAssets.Build
             TargetGroup = buildTargetGroup;
             Target = buildTarget;
             PlayerVersion = playerBuildVersion;
-            ProfilerEventsEnabled = ProjectConfigData.postProfilerEvents;
+            ProfilerEventsEnabled = ProjectConfigData.PostProfilerEvents;
             Registry = new FileRegistry();
             PreviousContentState = null;
         }

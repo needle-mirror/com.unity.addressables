@@ -18,10 +18,10 @@ namespace DiagnosticEventCollectorIntegrationTests
 #if UNITY_EDITOR
         protected override void RunBuilder(AddressableAssetSettings settings)
         {
-            bool oldState = ProjectConfigData.postProfilerEvents;
-            ProjectConfigData.postProfilerEvents = PostProfilerEvents();
+            bool oldState = ProjectConfigData.PostProfilerEvents;
+            ProjectConfigData.PostProfilerEvents = PostProfilerEvents();
             base.RunBuilder(settings);
-            ProjectConfigData.postProfilerEvents = oldState;
+            ProjectConfigData.PostProfilerEvents = oldState;
         }
 
 #endif

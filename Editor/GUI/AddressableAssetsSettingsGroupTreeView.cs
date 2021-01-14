@@ -138,7 +138,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         internal IList<TreeViewItem> Search(string search)
         {
-            if (ProjectConfigData.hierarchicalSearch)
+            if (ProjectConfigData.HierarchicalSearch)
             {
                 customSearchString = search;
                 Reload();
@@ -158,14 +158,21 @@ namespace UnityEditor.AddressableAssets.GUI
 
             m_SearchedEntries.Clear();
             return rows.OfType<AssetEntryTreeViewItem>()
-                .Where(row => ProjectConfigData.hierarchicalSearch
+                .Where(row => ProjectConfigData.HierarchicalSearch
                     ? SearchHierarchical(row, customSearchString)
                     : DoesItemMatchSearch(row, searchString))
                 .Cast<TreeViewItem>()
                 .ToList();
         }
 
-        protected bool SearchHierarchical(TreeViewItem item, string search)
+        /*
+         * Hierarchical search requirements :
+         * An item is kept if :
+         * - it matches
+         * - an ancestor matches
+         * - at least one descendant matches
+         */
+        bool SearchHierarchical(TreeViewItem item, string search, bool? ancestorMatching = null)
         {
             var aeItem = item as AssetEntryTreeViewItem;
             if (aeItem == null || search == null)
@@ -174,30 +181,43 @@ namespace UnityEditor.AddressableAssets.GUI
             if (m_SearchedEntries.ContainsKey(aeItem))
                 return m_SearchedEntries[aeItem];
 
-            bool isMatching = DoesItemMatchSearch(aeItem, search) || IsInMatchingGroup(aeItem);
-            m_SearchedEntries.Add(aeItem, isMatching);
+            if (ancestorMatching == null)
+                ancestorMatching = DoesAncestorMatch(aeItem, search);
 
-            if ((!isMatching || aeItem.IsGroup) && aeItem.children != null)
+            bool isMatching = false;
+            if (!ancestorMatching.Value)
+                isMatching = DoesItemMatchSearch(aeItem, search);
+
+            bool descendantMatching = false;
+            if (!ancestorMatching.Value && !isMatching && aeItem.hasChildren)
             {
-                foreach (var c in aeItem.children)
+                foreach (var child in aeItem.children)
                 {
-                    if (SearchHierarchical(c, search))
-                        return true;
+                    descendantMatching = SearchHierarchical(child, search, false);
+                    if (descendantMatching)
+                        break;
                 }
             }
 
-            return isMatching;
+            bool keep = isMatching || ancestorMatching.Value || descendantMatching;
+            m_SearchedEntries.Add(aeItem, keep);
+            return keep;
         }
 
-        private bool IsInMatchingGroup(AssetEntryTreeViewItem aeItem)
+        private bool DoesAncestorMatch(TreeViewItem aeItem, string search)
         {
-            AssetEntryTreeViewItem current = aeItem;
-            while (current != null && !current.IsGroup)
+            if (aeItem == null)
+                return false;
+
+            var ancestor = aeItem.parent as AssetEntryTreeViewItem;
+            bool isMatching = DoesItemMatchSearch(ancestor, search);
+            while (ancestor != null && !isMatching)
             {
-                current = current.parent as AssetEntryTreeViewItem;
+                ancestor = ancestor.parent as AssetEntryTreeViewItem;
+                isMatching = DoesItemMatchSearch(ancestor, search);
             }
 
-            return current != null && current.IsGroup && m_SearchedEntries.ContainsKey(current) && m_SearchedEntries[current];
+            return isMatching;
         }
 
         internal void ClearSearch()
@@ -331,7 +351,7 @@ namespace UnityEditor.AddressableAssets.GUI
             int depth = 0;
 
             AssetEntryTreeViewItem groupItem = null;
-            if (ProjectConfigData.showGroupsAsHierarchy)
+            if (ProjectConfigData.ShowGroupsAsHierarchy)
             {
                 //// dash in name imitates hiearchy.
                 TreeViewItem newRoot = root;
@@ -401,7 +421,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             item.checkedForChildren = true;
             var subAssets = new List<AddressableAssetEntry>();
-            entry.GatherAllAssets(subAssets, false, entry.IsInResources, ProjectConfigData.showSubObjectsInGroupView);
+            entry.GatherAllAssets(subAssets, false, entry.IsInResources, ProjectConfigData.ShowSubObjectsInGroupView);
             if (subAssets.Count > 0)
             {
                 foreach (var e in subAssets)
@@ -751,6 +771,19 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
+        void HandleCustomContextMenuItemGroups(object context)
+        {
+            var d = context as Tuple<string, List<AssetEntryTreeViewItem>>;
+            AddressableAssetSettings.InvokeAssetGroupCommand(d.Item1, d.Item2.Select(s => s.group));
+        }
+
+
+        void HandleCustomContextMenuItemEntries(object context)
+        {
+            var d = context as Tuple<string, List<AssetEntryTreeViewItem>>;
+            AddressableAssetSettings.InvokeAssetEntryCommand(d.Item1, d.Item2.Select(s => s.entry));
+        }
+
         protected override void ContextClickedItem(int id)
         {
             List<AssetEntryTreeViewItem> selectedNodes = new List<AssetEntryTreeViewItem>();
@@ -819,13 +852,16 @@ namespace UnityEditor.AddressableAssets.GUI
                     var group = selectedNodes.First().group;
                     if (!group.IsDefaultGroup())
                         menu.AddItem(new GUIContent("Remove Group(s)"), false, RemoveGroup, selectedNodes);
-
+                    menu.AddItem(new GUIContent("Simplify Addressable Names"), false, SimplifyAddresses, selectedNodes);
                     if (selectedNodes.Count == 1)
                     {
                         if (!group.IsDefaultGroup() && group.CanBeSetAsDefault())
                             menu.AddItem(new GUIContent("Set as Default"), false, SetGroupAsDefault, selectedNodes);
                         menu.AddItem(new GUIContent("Inspect Group Settings"), false, GoToGroupAsset, selectedNodes);
                     }
+                    foreach (var i in AddressableAssetSettings.CustomAssetGroupCommands)
+                        menu.AddItem(new GUIContent(i), false, HandleCustomContextMenuItemGroups, new Tuple<string, List<AssetEntryTreeViewItem>>(i, selectedNodes));
+                    
                 }
                 else if (isEntry)
                 {
@@ -845,6 +881,8 @@ namespace UnityEditor.AddressableAssets.GUI
                     menu.AddItem(new GUIContent("Remove Addressables"), false, RemoveEntry, selectedNodes);
                     menu.AddItem(new GUIContent("Simplify Addressable Names"), false, SimplifyAddresses, selectedNodes);
                     menu.AddItem(new GUIContent("Export Addressables"), false, CreateExternalEntryCollection, selectedNodes);
+                    foreach (var i in AddressableAssetSettings.CustomAssetEntryCommands)
+                        menu.AddItem(new GUIContent(i), false, HandleCustomContextMenuItemEntries, new Tuple<string, List<AssetEntryTreeViewItem>>(i, selectedNodes));
                 }
                 else
                     menu.AddItem(new GUIContent("Clear missing references."), false, RemoveMissingReferences);
@@ -1042,9 +1080,21 @@ namespace UnityEditor.AddressableAssets.GUI
             HashSet<AddressableAssetGroup> modifiedGroups = new HashSet<AddressableAssetGroup>();
             foreach (var item in selectedNodes)
             {
-                item.entry.SetAddress(Path.GetFileNameWithoutExtension(item.entry.address), false);
-                entries.Add(item.entry);
-                modifiedGroups.Add(item.entry.parentGroup);
+                if (item.IsGroup)
+                {
+                    foreach (var e in item.group.entries)
+                    {
+                        e.SetAddress(Path.GetFileNameWithoutExtension(e.address), false);
+                        entries.Add(e);
+                    }
+                    modifiedGroups.Add(item.group);
+                }
+                else
+                {
+                    item.entry.SetAddress(Path.GetFileNameWithoutExtension(item.entry.address), false);
+                    entries.Add(item.entry);
+                    modifiedGroups.Add(item.entry.parentGroup);
+                }
             }
             foreach (var g in modifiedGroups)
             {

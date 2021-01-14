@@ -113,7 +113,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <summary>
         /// Options for internal id of assets in bundles.
         /// </summary>
-        internal enum AssetNamingMode
+        public enum AssetNamingMode
         {
             /// <summary>
             /// Use to identify assets by their full path.
@@ -143,7 +143,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <summary>
         /// If enabled, addresses are included in the content catalog.  This is required if assets are to be loaded via their main address.
         /// </summary>
-        internal bool IncludeAddressInCatalog
+        public bool IncludeAddressInCatalog
         {
             get => m_IncludeAddressInCatalog;
             set
@@ -159,7 +159,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <summary>
         /// If enabled, guids are included in content catalogs.  This is required if assets are to be loaded via AssetReference.
         /// </summary>
-        internal bool IncludeGUIDInCatalog
+        public bool IncludeGUIDInCatalog
         {
             get => m_IncludeGUIDInCatalog;
             set
@@ -175,7 +175,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <summary>
         /// If enabled, labels are included in the content catalogs.  This is required if labels are used at runtime load load assets.
         /// </summary>
-        internal bool IncludeLabelsInCatalog
+        public bool IncludeLabelsInCatalog
         {
             get => m_IncludeLabelsInCatalog;
             set
@@ -191,7 +191,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <summary>
         /// Internal Id mode for assets in bundles.
         /// </summary>
-        internal AssetNamingMode InternalIdNamingMode
+        public AssetNamingMode InternalIdNamingMode
         {
             get { return m_InternalIdNamingMode; }
             set { m_InternalIdNamingMode = value; SetDirty(true); }

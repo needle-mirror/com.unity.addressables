@@ -94,7 +94,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
         void RegisterEventHandler(bool reg)
         {
-            if (ProjectConfigData.postProfilerEvents)
+            if (ProjectConfigData.PostProfilerEvents)
                 DiagnosticEventCollectorSingleton.RegisterEventHandler(OnEditorPlayModeEvent, reg, true);
         }
 
@@ -414,7 +414,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             if (m_GraphListMchs != null && m_GraphListMchs.columns.Length > 2)
             {
                 string warningText = string.Empty;
-                if (!ProjectConfigData.postProfilerEvents)
+                if (!ProjectConfigData.PostProfilerEvents)
                     warningText = "Warning: 'Send Profiler events' must be enabled in your Addressable Asset settings to view profile data. Changes to 'Send Profiler Events' will be applied on the following build.";
                 m_GraphListMchs.columns[2].headerContent.text = warningText;
             }

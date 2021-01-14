@@ -68,7 +68,7 @@ namespace UnityEditor.AddressableAssets
         {
             GUILayout.Label(Properties.buildSettings, EditorStyles.boldLabel);
 
-            ProjectConfigData.generateBuildLayout = EditorGUILayout.Toggle(Properties.buildLayoutReport, ProjectConfigData.generateBuildLayout);
+            ProjectConfigData.GenerateBuildLayout = EditorGUILayout.Toggle(Properties.buildLayoutReport, ProjectConfigData.GenerateBuildLayout);
 
             GUILayout.Space(15);
         }

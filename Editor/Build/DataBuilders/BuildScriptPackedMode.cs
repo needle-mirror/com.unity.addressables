@@ -172,7 +172,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
                 IBundleBuildResults results;
                 using (m_Log.ScopedStep(LogLevel.Info, "ContentPipeline.BuildAssetBundles"))
-                using (new SBPSettingsOverwriterScope(ProjectConfigData.generateBuildLayout)) // build layout generation requires full SBP write results
+                using (new SBPSettingsOverwriterScope(ProjectConfigData.GenerateBuildLayout)) // build layout generation requires full SBP write results
                 {
                     var exitCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(m_AllBundleInputDefs), out results, buildTasks, aaContext, m_Log);
 
@@ -213,7 +213,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
                 // We need to have the bundleRename map which is calculated in PostProcessBundles. It would be nice to move that process
                 // to a build task, but there are lots of dependencies and it is messy to move.
-                if (ProjectConfigData.generateBuildLayout)
+                if (ProjectConfigData.GenerateBuildLayout)
                 {
                     List<IBuildTask> tasks = new List<IBuildTask>();
                     var buildLayoutTask = new BuildLayoutGenerationTask();
@@ -798,16 +798,20 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 dependencyHashes[(int)ContentCatalogProvider.DependencyHashIndex.Cache] = ResourceManagerRuntimeData.kCatalogAddress + "CacheHash";
 
                 var remoteHashLoadPath = remoteLoadFolder + versionedFileName + ".hash";
-                locations.Add(new ResourceLocationData(
-                    new[] { dependencyHashes[(int)ContentCatalogProvider.DependencyHashIndex.Remote] },
+                var remoteHashLoadLocation = new ResourceLocationData(
+                    new[] {dependencyHashes[(int) ContentCatalogProvider.DependencyHashIndex.Remote]},
                     remoteHashLoadPath,
-                    typeof(TextDataProvider), typeof(string)));
+                    typeof(TextDataProvider), typeof(string));
+                remoteHashLoadLocation.Data = new ProviderLoadRequestOptions() {IgnoreFailures = true};
+                locations.Add(remoteHashLoadLocation);
 
                 var cacheLoadPath = "{UnityEngine.Application.persistentDataPath}/com.unity.addressables" + versionedFileName + ".hash";
-                locations.Add(new ResourceLocationData(
-                    new[] { dependencyHashes[(int)ContentCatalogProvider.DependencyHashIndex.Cache] },
+                var cacheLoadLocation = new ResourceLocationData(
+                    new[] {dependencyHashes[(int) ContentCatalogProvider.DependencyHashIndex.Cache]},
                     cacheLoadPath,
-                    typeof(TextDataProvider), typeof(string)));
+                    typeof(TextDataProvider), typeof(string));
+                cacheLoadLocation.Data = new ProviderLoadRequestOptions() {IgnoreFailures = true};
+                locations.Add(cacheLoadLocation);
             }
 
             return dependencyHashes;

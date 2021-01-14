@@ -34,6 +34,11 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         [SerializedTypeRestrictionAttribute(type = typeof(ISceneProvider))]
         public SerializedType sceneProviderType = new SerializedType() { Value = typeof(SceneProvider) };
 
+        /// <summary>
+        /// Stores the logged information of all the build tasks.
+        /// </summary>
+        public IBuildLogger Log { get { return m_Log; } }
+
         [NonSerialized]
         internal IBuildLogger m_Log;
 

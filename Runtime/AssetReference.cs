@@ -345,17 +345,17 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         protected Object CachedAsset
         {
-            get 
+            get
             {
                 if (m_CachedGUID != m_AssetGUID)
                 {
                     m_CachedAsset = null;
                     m_CachedGUID = "";
                 }
-                return m_CachedAsset; 
+                return m_CachedAsset;
             }
-            set 
-            { 
+            set
+            {
                 m_CachedAsset = value;
                 m_CachedGUID = m_AssetGUID;
             }
@@ -557,6 +557,11 @@ namespace UnityEngine.AddressableAssets
 
 #if UNITY_EDITOR
 
+        [SerializeField]
+        #pragma warning disable CS0414
+        bool m_EditorAssetChanged;
+        #pragma warning restore CS0414
+        
         /// <summary>
         /// Used by the editor to represent the main asset referenced.
         /// </summary>
@@ -586,6 +591,7 @@ namespace UnityEngine.AddressableAssets
                 CachedAsset = null;
                 m_AssetGUID = string.Empty;
                 m_SubObjectName = null;
+                m_EditorAssetChanged = true;
                 return true;
             }
 
@@ -613,6 +619,7 @@ namespace UnityEngine.AddressableAssets
                 }
             }
 
+            m_EditorAssetChanged = true;
             return true;
         }
 
@@ -626,6 +633,7 @@ namespace UnityEngine.AddressableAssets
             if (value == null)
             {
                 m_SubObjectName = null;
+                m_EditorAssetChanged = true;
                 return true;
             }
 
@@ -642,6 +650,7 @@ namespace UnityEngine.AddressableAssets
                     return false;
                 }
                 m_SubObjectName = spriteName;
+                m_EditorAssetChanged = true;
                 return true;
             }
 
@@ -652,6 +661,7 @@ namespace UnityEngine.AddressableAssets
                 {
                     m_SubObjectName = s.name;
                     m_SubObjectType = s.GetType().AssemblyQualifiedName;
+                    m_EditorAssetChanged = true;
                     return true;
                 }
             }

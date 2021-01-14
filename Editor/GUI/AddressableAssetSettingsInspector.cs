@@ -199,7 +199,7 @@ namespace UnityEditor.AddressableAssets.GUI
             m_GeneralFoldout = EditorGUILayout.Foldout(m_GeneralFoldout, "General");
             if (m_GeneralFoldout)
             {
-                ProjectConfigData.postProfilerEvents = EditorGUILayout.Toggle(m_SendProfilerEvents, ProjectConfigData.postProfilerEvents);
+                ProjectConfigData.PostProfilerEvents = EditorGUILayout.Toggle(m_SendProfilerEvents, ProjectConfigData.PostProfilerEvents);
                 bool logResourceManagerExceptions = EditorGUILayout.Toggle(m_LogRuntimeExceptions, m_AasTarget.buildSettings.LogResourceManagerExceptions);
                 if (logResourceManagerExceptions != m_AasTarget.buildSettings.LogResourceManagerExceptions)
                     m_QueuedChanges.Add(() => m_AasTarget.buildSettings.LogResourceManagerExceptions = logResourceManagerExceptions);
@@ -214,7 +214,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (maxWebReqs != m_AasTarget.MaxConcurrentWebRequests)
                     m_QueuedChanges.Add(() => m_AasTarget.MaxConcurrentWebRequests = maxWebReqs);
 
-                ProjectConfigData.showGroupsAsHierarchy = EditorGUILayout.Toggle(m_groupHierarchyView, ProjectConfigData.showGroupsAsHierarchy);
+                ProjectConfigData.ShowGroupsAsHierarchy = EditorGUILayout.Toggle(m_groupHierarchyView, ProjectConfigData.ShowGroupsAsHierarchy);
 
                 bool ignoreUnsupportedFilesInBuild = EditorGUILayout.Toggle(m_IgnoreUnsupportedFilesInBuild, m_AasTarget.IgnoreUnsupportedFilesInBuild);
                 if (ignoreUnsupportedFilesInBuild != m_AasTarget.IgnoreUnsupportedFilesInBuild)

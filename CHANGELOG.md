@@ -4,6 +4,49 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.17.2-preview] - 2021-01-14
+- Add silent fail option to providers to get rid of error when cache not found as expected 
+- Hierarchy now fully displayed in search results when 'show groups as hierarchy' and 'hierarchical search' options are enabled
+- OnValidate is now called when an AssetReference changes
+- Fixed bugs in Use Asset Database play mode related to multiple folders with matching addresses
+- Made the following APIs public:
+  - ResourceManager.CreateChainOperation
+  - AddressablesAnalyzeResultData
+  - AddressableAssetSettings.OptimizeCatalogSize
+  - BundledAssetGroupSchema.AssetNamingMode
+  - BundledAssetGroupSchema.IncludeAddressInCatalog
+  - BundledAssetGroupSchema.IncludeGUIDInCatalog
+  - BundledAssetGroupSchema.IncludeLabelsInCatalog
+  - BundledAssetGroupSchema.InternalIdNamingMode
+  - BuildScriptBase.Log
+  - ResourceManagerRuntimeData.AddressablesVersion
+  - ProjectConfigData
+    - ProjectConfigData.ShowSubObjectsInGroupView
+    - ProjectConfigData.GenerateBuildLayout
+    - ProjectConfigData.ActivePlayModeIndex
+    - ProjectConfigData.PostProfilerEvents
+    - ProjectConfigData.LocalLoadSpeed
+    - ProjectConfigData.RemoteLoadSpeed
+    - ProjectConfigData.HierarchicalSearch
+    - ProjectConfigData.ShowGroupsAsHierarchy
+  - BuildLayoutGenerationTask
+  - BuildLayoutGenerationTask.BundleNameRemap
+  - ExtractDataTask.BuildContext
+  - ContentCatalogData.SetData(IList<ContentCatalogDataEntry> data, bool optimizeSize)
+  - ContentCatalogData(string id) constructor
+  - ContentUpdateContext
+    - ContentUpdateContext.GuidToPreviousAssetStateMap
+    - ContentUpdateContext.IdToCatalogDataEntryMap
+    - ContentUpdateContext.BundleToInternalBundleIdMap
+    - ContentUpdateContext.WriteData
+    - ContentUpdateContext.ContentState
+    - ContentUpdateContext.Registry
+    - ContentUpdateContext.PreviousAssetStateCarryOver
+  - RevertUnchangedAssetsToPreviousAssetState
+    - RevertUnchangedAssetsToPreviousAssetState.Run
+  - AddressableAssetEntry.GetAssetLoadPath(bool isBundled, HashSet<string> otherLoadPaths)
+  - AddressableAssetSettings.IgnoreUnsupportedFilesInBuild
+
 ## [1.17.0-preview] - 2020-12-13
 - Added option to clear other cahced versions of asset bundles when a new version has been loaded.
 - Added options for internal naming of asset bundles.  This will allow for deterministic naming to avoid unintended diffs for content updates.

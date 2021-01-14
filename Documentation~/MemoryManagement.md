@@ -77,6 +77,13 @@ An Asset no longer being referenced (indicated by the end of a blue section in t
 
 In this example, the `tree` asset is not actually unloaded at this point. You can load an AssetBundle, or its partial contents, but you cannot partially unload an AssetBundle. No asset in `stuff` unloads until the AssetBundle itself is completely unloaded. The exception to this rule is the engine interface [`Resources.UnloadUnusedAssets`](https://docs.unity3d.com/ScriptReference/Resources.UnloadUnusedAssets.html). Executing this method in the above scenario causes `tree` to unload. Because the Addressables system cannot be aware of these events, the profiler graph only reflects the Addressables ref-counts (not exactly what memory holds). Note that if you choose to use `Resources.UnloadUnusedAssets`, it is a very slow operation, and should only be called on a screen that won't show any hitches (such as a loading screen).
 
+### Delaying Unload
+In addition to ensuring items are cleared from memory quickly enough (as discussed above), it's important to ensure items are not churning in and out of memory too often.  Specifically, loading an item, releasing it, then quickly reloading it. If it is the only item in a bundle, or at least the last released item, then we will unload the AssetBundle the moment the release comes through. This means there will be a full unload, and then an immediate reload. A common example of this is with shared dependencies. 
+
+For example, say you have two materials, `boat` and `plane` that share a texture, `cammo`, which has been pulled into its own AssetBundle. Level 1 uses `boat` and level 2 uses `plane`. As you exit level 1 you release the `boat`, and immediately load `plane`. During the release, we will unload texture `cammo`. Then the subsequent load will immediately reload it.
+
+For this specific example, the easiest solution is to build a wrapper around Addressables that delays Release calls. That works here because it's known "release and reload" are likely to happen in a very short timeframe (level transitions).  Depending on your scenario, the solution may need to be more or less complex. 
+
 ## AssetBundle Memory Overhead
 When deciding how to organize your Addressable groups and AssetBundles, you may want to consider the runtime memory usage of each AssetBundle. Many small AssetBundles can give greater granularity for unloading, but can come at the cost of some runtime memory overhead. This section describes the various types of AssetBundle memory overhead.
 
@@ -129,7 +136,7 @@ Two materials, matA and matB, are Addressable and both have direct dependencies 
 SpriteAtlases complicate the dependency calculation a bit, and merit a more thorough set of examples.
 
 Addressable Sprite Example 1:
-Three textures exist and are marked as Addressable in three separate groups.  Each texture builds to about 500KB.  During the build, they are built into three spearate AssetBundles, each AssetBundle only containing the given sprite meta data and texture.  Each AssetBundle is be about 500KB and none of these AssetBundles have dependencies.  
+Three textures exist and are marked as Addressable in three separate groups.  Each texture builds to about 500KB.  During the build, they are built into three separate AssetBundles, each AssetBundle only containing the given sprite meta data and texture.  Each AssetBundle is be about 500KB and none of these AssetBundles have dependencies.  
 
 Addressable Sprite Example 2:
 The three textures in Example 1 are put into a SpriteAtlas.  That atlas is not Addressable.  One of the AssetBundles generated contains that atlas texture and is about 1500KB.  The other two AssetBundles only contain Sprite metadata (a few KB), and list the atlas AssetBundle as a dependency.  Which AssetBundle contains the texture is deterministic in that it is the same through rebuilds, but is not something that can be set by the user.  This is the key portion that goes against the standard duplication of dependencies.  The sprites are dependent on the SpriteAtlas texture to load, and yet that texture is not built into all three AssetBundles, but is instead built only into one.
@@ -138,7 +145,7 @@ Addressable Sprite Example 3:
 The SpriteAtlas from Example 2 is marked as Addressable in its own AssetBundle.  At this point there are four AssetBundles created.  If you are using a 2020.x or newer version of Unity, this builds as you would expect.  The three AssetBundles with the sprites are each be only a few KB and have a dependency on this fourth SpriteAtlas AssetBundle, which is be about 1500KB.  If you are using 2019.x or older, the texture itself may end up elsewhere.  The three sprite AssetBundles still depend on the SpriteAtlas AssetBundle. However, the SpriteAtlas AssetBundle may only contain meta data, and the texture may be with one of the other sprites.
 
 Addressable Prefab With Sprite Dependency Example 1:
-Instead of three Addressable textures, there are three Addressable sprite prefabs. Each prefab depends on its own sprite (about 500KB). Building the three prefabs seperately results, as expected, in three AssetBundles of about 500KB each.
+Instead of three Addressable textures, there are three Addressable sprite prefabs. Each prefab depends on its own sprite (about 500KB). Building the three prefabs separately results, as expected, in three AssetBundles of about 500KB each.
 
 Addressable Prefab With Sprite Dependency Example 2
 Taking the prefabs and textures from the previous example, all three textures are added to a SpriteAtlas, and that atlas is not marked as Addressable.  In this scenario, the SpriteAtlas texture is duplicated.  All three AssetBundles are approximately 1500KB. This is expected based on the general rules about duplication of dependencies, but goes against the behavior seen in "Addressable Sprite Example 2".

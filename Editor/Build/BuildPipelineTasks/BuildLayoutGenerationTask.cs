@@ -14,7 +14,10 @@ using UnityEditor.Build.Pipeline.Interfaces;
 
 namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 {
-    internal class BuildLayoutGenerationTask : IBuildTask
+    /// <summary>
+    /// The BuildTask used to generate the bundle layout.
+    /// </summary>
+    public class BuildLayoutGenerationTask : IBuildTask
     {
         const int k_Version = 1;
 
@@ -24,6 +27,11 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         /// The GenerateLocationListsTask version.
         /// </summary>
         public int Version { get { return k_Version; } }
+
+        /// <summary>
+        /// The mapping of the old to new bundle names. 
+        /// </summary>
+        public Dictionary<string, string> BundleNameRemap { get { return m_BundleNameRemap; } }
 
 #pragma warning disable 649
         [InjectContext(ContextUsage.In)]

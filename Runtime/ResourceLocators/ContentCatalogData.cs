@@ -372,7 +372,11 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             SetData(entries, false);
         }
 
-        internal ContentCatalogData(string id)
+        /// <summary>
+        /// Creates a new ContentCatalogData object with the specified locator id.
+        /// </summary>
+        /// <param name="id">The id of the locator.</param>
+        public ContentCatalogData(string id)
         {
             m_LocatorId = id;
         }
@@ -441,15 +445,20 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         }
 
         /// <summary>
-        /// Set the data before serialization
+        /// Sets the catalog data before serialization.
         /// </summary>
-        /// <param name="data">The list of </param>
+        /// <param name="data">The list of catalog entries.</param>
         public void SetData(IList<ContentCatalogDataEntry> data)
         {
             SetData(data, false);
         }
         
-        internal void SetData(IList<ContentCatalogDataEntry> data, bool optimizeSize)
+        /// <summary>
+        /// Sets the catalog data before serialization.
+        /// </summary>
+        /// <param name="data">The list of catalog entries.</param>
+        /// <param name="optimizeSize">Whether to optimize the catalog size by extracting common internal id prefixes.</param>
+        public void SetData(IList<ContentCatalogDataEntry> data, bool optimizeSize)
         {
             if (data == null)
                 return;

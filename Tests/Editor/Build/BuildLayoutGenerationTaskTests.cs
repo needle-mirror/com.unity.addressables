@@ -38,9 +38,9 @@ public class BuildLayoutGenerationTaskTests
         TempPath = kTempPath + (ExecCount++).ToString();
         if (File.Exists(BuildLayoutGenerationTask.kLayoutTextFile))
             File.Delete(BuildLayoutGenerationTask.kLayoutTextFile);
-        m_PrevGenerateBuildLayout = ProjectConfigData.generateBuildLayout;
+        m_PrevGenerateBuildLayout = ProjectConfigData.GenerateBuildLayout;
         BuildScriptPackedMode.s_SkipCompilePlayerScripts = true;
-        ProjectConfigData.generateBuildLayout = true;
+        ProjectConfigData.GenerateBuildLayout = true;
         if (Directory.Exists(TempPath))
             Directory.Delete(TempPath, true);
         Directory.CreateDirectory(TempPath);
@@ -52,7 +52,7 @@ public class BuildLayoutGenerationTaskTests
     public void Teardown()
     {
         BuildScriptPackedMode.s_SkipCompilePlayerScripts = false;
-        ProjectConfigData.generateBuildLayout = m_PrevGenerateBuildLayout;
+        ProjectConfigData.GenerateBuildLayout = m_PrevGenerateBuildLayout;
         // Many of the tests keep recreating assets in the same path, so we need to unload them completely so they don't get reused by the next test
         AssetDatabase.DeleteAsset(AssetDatabase.GetAssetPath(m_Settings));
         Resources.UnloadAsset(m_Settings);
@@ -300,7 +300,7 @@ public class BuildLayoutGenerationTaskTests
     [Test]
     public void WhenBuildLayoutIsDisabled_BuildLayoutIsNotGenerated()
     {
-        ProjectConfigData.generateBuildLayout = false;
+        ProjectConfigData.GenerateBuildLayout = false;
         CreateAddressablePrefab("p1", CreateGroup("Group1"));
         BuildAndExtractLayout();
         FileAssert.DoesNotExist(BuildLayoutGenerationTask.kLayoutTextFile);

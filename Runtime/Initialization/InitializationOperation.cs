@@ -46,10 +46,8 @@ namespace UnityEngine.AddressableAssets.Initialization
         internal static AsyncOperationHandle<IResourceLocator> CreateInitializationOperation(AddressablesImpl aa, string playerSettingsLocation, string providerSuffix)
         {
             var jp = new JsonAssetProvider();
-            jp.IgnoreFailures = true;
             aa.ResourceManager.ResourceProviders.Add(jp);
             var tdp = new TextDataProvider();
-            tdp.IgnoreFailures = true;
             aa.ResourceManager.ResourceProviders.Add(tdp);
             aa.ResourceManager.ResourceProviders.Add(new ContentCatalogProvider(aa.ResourceManager));
 

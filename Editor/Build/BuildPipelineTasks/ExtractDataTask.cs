@@ -30,6 +30,11 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         /// </summary>
         public IBuildCache BuildCache { get { return m_BuildCache; } }
 
+        /// <summary>
+        /// The build context of the task.
+        /// </summary>
+        public IBuildContext BuildContext { get { return m_BuildContext; } }
+
 #pragma warning disable 649
         [InjectContext(ContextUsage.In)]
         IDependencyData m_DependencyData;

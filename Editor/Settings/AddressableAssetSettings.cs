@@ -353,7 +353,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <summary>
         /// Enables size optimization of content catalogs.  This may increase the cpu usage of loading the catalog.
         /// </summary>
-        internal bool OptimizeCatalogSize
+        public bool OptimizeCatalogSize
         {
             get { return m_OptimizeCatalogSize; }
             set { m_OptimizeCatalogSize = value; }
@@ -389,7 +389,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <summary>
         /// Whether unsupported files during build should be ignored or treated as an error.
         /// </summary>
-        internal bool IgnoreUnsupportedFilesInBuild
+        public bool IgnoreUnsupportedFilesInBuild
         {
             get { return m_IgnoreUnsupportedFilesInBuild; }
             set { m_IgnoreUnsupportedFilesInBuild = value; }
@@ -877,7 +877,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-                return GetDataBuilder(ProjectConfigData.activePlayModeIndex);
+                return GetDataBuilder(ProjectConfigData.ActivePlayModeIndex);
             }
         }
 
@@ -907,11 +907,11 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-                return ProjectConfigData.activePlayModeIndex;
+                return ProjectConfigData.ActivePlayModeIndex;
             }
             set
             {
-                ProjectConfigData.activePlayModeIndex = value;
+                ProjectConfigData.ActivePlayModeIndex = value;
                 SetDirty(ModificationEvent.ActivePlayModeScriptChanged, ActivePlayModeDataBuilder, true, false);
             }
         }
@@ -1968,5 +1968,160 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             return addressables.ResourceManager.StartOperation(new FastModeInitializationOperation(addressables, this), default);
         }
+
+        static Dictionary<string, Action<IEnumerable<AddressableAssetEntry>>> s_CustomAssetEntryCommands = new Dictionary<string, Action<IEnumerable<AddressableAssetEntry>>>();
+        /// <summary>
+        /// Register a custom command to process asset entries.  These commands will be shown in the context menu of the groups window.
+        /// </summary>
+        /// <param name="cmdId">The id of the command.  This will be used for the display name of the context menu item.</param>
+        /// <param name="cmdFunc">The command handler function.</param>
+        /// <returns>Returns true if the command was registered.</returns>
+        public static bool RegisterCustomAssetEntryCommand(string cmdId, Action<IEnumerable<AddressableAssetEntry>> cmdFunc)
+        {
+            if (string.IsNullOrEmpty(cmdId))
+            {
+                Debug.LogError("RegisterCustomAssetEntryCommand - invalid command id.");
+                return false;
+            }
+            if (cmdFunc == null)
+            {
+                Debug.LogError($"RegisterCustomAssetEntryCommand - command functor for id '{cmdId}'.");
+                return false;
+            }
+            s_CustomAssetEntryCommands[cmdId] = cmdFunc;
+            return true;
+        }
+
+        /// <summary>
+        /// Removes a registered custom entry command.
+        /// </summary>
+        /// <param name="cmdId">The command id.</param>
+        /// <returns>Returns true if the command was removed.</returns>
+        public static bool UnregisterCustomAssetEntryCommand(string cmdId)
+        {
+            if (string.IsNullOrEmpty(cmdId))
+            {
+                Debug.LogError("UnregisterCustomAssetEntryCommand - invalid command id.");
+                return false;
+            }
+
+            if (!s_CustomAssetEntryCommands.Remove(cmdId))
+            {
+                Debug.LogError($"UnregisterCustomAssetEntryCommand - command id '{cmdId}' is not registered.");
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Invoke a registered command for a set of entries.
+        /// </summary>
+        /// <param name="cmdId">The id of the command.</param>
+        /// <param name="entries">The entries to run the command on.</param>
+        /// <returns>Returns true if the command was executed without exceptions.</returns>
+        public static bool InvokeAssetEntryCommand(string cmdId, IEnumerable<AddressableAssetEntry> entries)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(cmdId) || !s_CustomAssetEntryCommands.ContainsKey(cmdId))
+                {
+                    Debug.LogError($"Asset Entry Command '{cmdId}' not found.  Ensure that it is registered by calling RegisterCustomAssetEntryCommand.");
+                    return false;
+                }
+                if (entries == null)
+                {
+                    Debug.LogError($"Asset Entry Command '{cmdId}' called with null entry collection.");
+                    return false;
+                }
+                s_CustomAssetEntryCommands[cmdId](entries);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Encountered exception when running Asset Entry Command '{cmdId}': {e.Message}");
+                return false;
+            }
+        }
+        /// <summary>
+        /// The ids of the registered commands.
+        /// </summary>
+        public static IEnumerable<string> CustomAssetEntryCommands => s_CustomAssetEntryCommands.Keys;
+
+        static Dictionary<string, Action<IEnumerable<AddressableAssetGroup>>> s_CustomAssetGroupCommands = new Dictionary<string, Action<IEnumerable<AddressableAssetGroup>>>();
+        /// <summary>
+        /// Register a custom command to process asset groups.  These commands will be shown in the context menu of the groups window.
+        /// </summary>
+        /// <param name="cmdId">The id of the command.  This will be used for the display name of the context menu item.</param>
+        /// <param name="cmdFunc">The command handler function.</param>
+        /// <returns>Returns true if the command was registered.</returns>
+        public static bool RegisterCustomAssetGroupCommand(string cmdId, Action<IEnumerable<AddressableAssetGroup>> cmdFunc)
+        {
+            if (string.IsNullOrEmpty(cmdId))
+            {
+                Debug.LogError("RegisterCustomAssetGroupCommand - invalid command id.");
+                return false;
+            }
+            if (cmdFunc == null)
+            {
+                Debug.LogError($"RegisterCustomAssetGroupCommand - command functor for id '{cmdId}'.");
+                return false;
+            }
+            s_CustomAssetGroupCommands[cmdId] = cmdFunc;
+            return true;
+        }
+
+        /// <summary>
+        /// Removes a registered custom group command.
+        /// </summary>
+        /// <param name="cmdId">The command id.</param>
+        /// <returns>Returns true if the command was removed.</returns>
+        public static bool UnregisterCustomAssetGroupCommand(string cmdId)
+        {
+            if (string.IsNullOrEmpty(cmdId))
+            {
+                Debug.LogError("UnregisterCustomAssetGroupCommand - invalid command id.");
+                return false;
+            }
+            if (!s_CustomAssetGroupCommands.Remove(cmdId))
+            {
+                Debug.LogError($"UnregisterCustomAssetGroupCommand - command id '{cmdId}' is not registered.");
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Invoke a registered command for a set of groups.
+        /// </summary>
+        /// <param name="cmdId">The id of the command.</param>
+        /// <param name="entries">The groups to run the command on.</param>
+        /// <returns>Returns true if the command was invoked successfully.</returns>
+        public static bool InvokeAssetGroupCommand(string cmdId, IEnumerable<AddressableAssetGroup> groups)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(cmdId) || !s_CustomAssetGroupCommands.ContainsKey(cmdId))
+                {
+                    Debug.LogError($"Asset Group Command '{cmdId}' not found.  Ensure that it is registered by calling RegisterCustomAssetGroupCommand.");
+                    return false;
+                }
+                if (groups == null)
+                {
+                    Debug.LogError($"Asset Group Command '{cmdId}' called with null group collection.");
+                    return false;
+                }
+                s_CustomAssetGroupCommands[cmdId](groups);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Encountered exception when running Asset Group Command '{cmdId}': {e.Message}");
+                return false;
+            }
+        }
+        /// <summary>
+        /// The ids of the registered commands.
+        /// </summary>
+        public static IEnumerable<string> CustomAssetGroupCommands => s_CustomAssetGroupCommands.Keys;
     }
 }

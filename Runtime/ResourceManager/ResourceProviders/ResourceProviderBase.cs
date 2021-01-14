@@ -109,4 +109,22 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
         }
     }
+
+    /// <summary>
+    /// Contains options for provider load requests
+    /// </summary>
+    [Serializable]
+    internal class ProviderLoadRequestOptions
+    {
+        [SerializeField] bool m_IgnoreFailures = false;
+
+        /// <summary>
+        /// IgnoreFailures for provider load requests
+        /// </summary>
+        internal bool IgnoreFailures
+        {
+            get { return m_IgnoreFailures; }
+            set { m_IgnoreFailures = value; }
+        }
+    }
 }

@@ -25,17 +25,20 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             TextDataProvider m_Provider;
             UnityWebRequestAsyncOperation m_RequestOperation;
             WebRequestQueueOperation m_RequestQueueOperation;
-            bool m_IgnoreFailures;
             ProvideHandle m_PI;
+            bool m_IgnoreFailures;
 
             private float GetPercentComplete() { return m_RequestOperation != null ? m_RequestOperation.progress : 0.0f; }
-
+            
             public void Start(ProvideHandle provideHandle, TextDataProvider rawProvider, bool ignoreFailures)
             {
                 m_PI = provideHandle;
                 provideHandle.SetProgressCallback(GetPercentComplete);
                 m_Provider = rawProvider;
-                m_IgnoreFailures = ignoreFailures;
+                if ((m_PI.Location.Data as ProviderLoadRequestOptions) != null)
+                    m_IgnoreFailures = (m_PI.Location.Data as ProviderLoadRequestOptions).IgnoreFailures;
+                else
+                    m_IgnoreFailures = ignoreFailures;
                 var path = m_PI.ResourceManager.TransformInternalId(m_PI.Location);
                 if (File.Exists(path))
                 {
@@ -44,7 +47,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                         path = @"\\?\" + path;
 #endif
                     var text = File.ReadAllText(path);
-                    object result = m_Provider.Convert(m_PI.Type, text);
+                    object result = ConvertText(text);
                     m_PI.Complete(result, result != null, result == null ? new Exception($"Unable to load asset of type {m_PI.Type} from location {m_PI.Location}.") : null);
                 }
                 else if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
@@ -72,11 +75,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 {
                     Exception exception = null;
                     //Don't log errors when loading from the persistentDataPath since these files are expected to not exist until created
-                    if (!m_IgnoreFailures)
+                    if (m_IgnoreFailures)
                     {
-                        exception = new Exception(string.Format("Invalid path in " + nameof(TextDataProvider) + " : '{0}'.", path));
+                        m_PI.Complete<object>(null, true, exception);
                     }
-                    m_PI.Complete<object>(null, m_IgnoreFailures, exception);
+                    else{
+                        exception = new Exception(string.Format("Invalid path in " + nameof(TextDataProvider) + " : '{0}'.", path));
+                        m_PI.Complete<object>(null, false, exception);
+                    }
                 }
             }
 
@@ -89,7 +95,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 {
                     var webReq = webOp.webRequest;
                     if (string.IsNullOrEmpty(webReq.error))
-                        result = m_Provider.Convert(m_PI.Type, webReq.downloadHandler.text);
+                        result = ConvertText(webReq.downloadHandler.text);
                     else
                         exception = new Exception(string.Format(nameof(TextDataProvider) + " unable to load from url {0}, result='{1}'.", webReq.url, webReq.error));
                 }
@@ -97,8 +103,21 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 {
                     exception = new Exception(nameof(TextDataProvider) + " unable to load from unknown url.");
                 }
-
                 m_PI.Complete(result, result != null || m_IgnoreFailures, exception);
+            }
+
+            private object ConvertText(string text)
+            {
+                try
+                {
+                    return m_Provider.Convert(m_PI.Type, text);
+                } 
+                catch (Exception e)
+                {
+                    if (!m_IgnoreFailures)
+                        Debug.LogException(e);
+                    return null;
+                }
             }
         }
 

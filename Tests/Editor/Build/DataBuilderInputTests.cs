@@ -38,17 +38,17 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void BuildInput_ReadsProfilerEventState()
         {
-            var oldState = ProjectConfigData.postProfilerEvents;
-            ProjectConfigData.postProfilerEvents = true;
+            var oldState = ProjectConfigData.PostProfilerEvents;
+            ProjectConfigData.PostProfilerEvents = true;
             var input = new AddressablesDataBuilderInput(Settings);
             Assert.AreEqual(true, input.ProfilerEventsEnabled);
 
-            ProjectConfigData.postProfilerEvents = false;
+            ProjectConfigData.PostProfilerEvents = false;
             input = new AddressablesDataBuilderInput(Settings);
             Assert.AreEqual(false, input.ProfilerEventsEnabled);
 
 
-            ProjectConfigData.postProfilerEvents = oldState;
+            ProjectConfigData.PostProfilerEvents = oldState;
         }
 
         [Test]

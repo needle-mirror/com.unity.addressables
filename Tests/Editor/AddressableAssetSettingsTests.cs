@@ -1025,5 +1025,160 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
 #endif
+
+        [Test]
+        public void CustomEntryCommand_WhenRegistered_InvokeIsCalled()
+        {
+            string notSet = null;
+            AddressableAssetSettings.RegisterCustomAssetEntryCommand("cmd1", s => notSet = "set");
+            Assert.IsTrue(AddressableAssetSettings.InvokeAssetEntryCommand("cmd1", new AddressableAssetEntry[] { }));
+            Assert.AreEqual("set", notSet);
+            AddressableAssetSettings.UnregisterCustomAssetEntryCommand("cmd1");
+        }
+
+        [Test]
+        public void CustomEntryCommand_WhenCommandThrows_InvokeDoesNotThrow()
+        {
+            AddressableAssetSettings.RegisterCustomAssetEntryCommand("cmd1", s => throw new Exception());
+            Assert.DoesNotThrow(() =>
+            {
+                LogAssert.Expect(LogType.Error, $"Encountered exception when running Asset Entry Command 'cmd1': Exception of type 'System.Exception' was thrown.");
+                Assert.IsFalse(AddressableAssetSettings.InvokeAssetEntryCommand("cmd1", new AddressableAssetEntry[] { }));
+            });
+            AddressableAssetSettings.UnregisterCustomAssetEntryCommand("cmd1");
+        }
+
+        [Test]
+        public void CustomEntryCommand_WhenCommandHasNullEntries_ReturnsFalseAndLogsError()
+        {
+            AddressableAssetSettings.RegisterCustomAssetEntryCommand("cmd1", s => { });
+            Assert.DoesNotThrow(() =>
+            {
+                LogAssert.Expect(LogType.Error, $"Asset Entry Command 'cmd1' called with null entry collection.");
+                Assert.IsFalse(AddressableAssetSettings.InvokeAssetEntryCommand("cmd1", null));
+            });
+            AddressableAssetSettings.UnregisterCustomAssetEntryCommand("cmd1");
+        }
+
+        [Test]
+        public void CustomEntryCommand_WhenCommandDoesNotExist_ReturnsFalseAndLogsError()
+        {
+            Assert.DoesNotThrow(() =>
+            {
+                LogAssert.Expect(LogType.Error, $"Asset Entry Command 'cmd' not found.  Ensure that it is registered by calling RegisterCustomAssetEntryCommand.");
+                Assert.IsFalse(AddressableAssetSettings.InvokeAssetEntryCommand("cmd", new AddressableAssetEntry[] { }));
+            });
+        }
+
+        [Test]
+        public void CustomEntryCommand_RegisterWithValidIdAndFunc_Succeeds()
+        {
+            AddressableAssetSettings.RegisterCustomAssetEntryCommand("cmd1", s => { });
+            CollectionAssert.Contains(AddressableAssetSettings.CustomAssetEntryCommands, "cmd1");
+            AddressableAssetSettings.UnregisterCustomAssetEntryCommand("cmd1");
+        }
+
+        [Test]
+        public void CustomEntryCommand_UnregisterWithInvalidIdParameters_Fails()
+        {
+            LogAssert.Expect(LogType.Error, "UnregisterCustomAssetEntryCommand - invalid command id.");
+            Assert.IsFalse(AddressableAssetSettings.UnregisterCustomAssetEntryCommand(""));
+            LogAssert.Expect(LogType.Error, "UnregisterCustomAssetEntryCommand - invalid command id.");
+            Assert.IsFalse(AddressableAssetSettings.UnregisterCustomAssetEntryCommand(null));
+            LogAssert.Expect(LogType.Error, $"UnregisterCustomAssetEntryCommand - command id 'doesntexist' is not registered.");
+            Assert.IsFalse(AddressableAssetSettings.UnregisterCustomAssetEntryCommand("doesntexist"));
+            CollectionAssert.IsEmpty(AddressableAssetSettings.CustomAssetEntryCommands);
+        }
+
+        [Test]
+        public void CustomEntryCommand_RegisterWithInvalidParameters_Fails()
+        {
+            LogAssert.Expect(LogType.Error, "RegisterCustomAssetEntryCommand - invalid command id.");
+            Assert.IsFalse(AddressableAssetSettings.RegisterCustomAssetEntryCommand("", s => { }));
+            LogAssert.Expect(LogType.Error, "RegisterCustomAssetEntryCommand - invalid command id.");
+            Assert.IsFalse(AddressableAssetSettings.RegisterCustomAssetEntryCommand(null, s => { }));
+            LogAssert.Expect(LogType.Error, $"RegisterCustomAssetEntryCommand - command functor for id 'valid'.");
+            Assert.IsFalse(AddressableAssetSettings.RegisterCustomAssetEntryCommand("valid", null));
+            CollectionAssert.IsEmpty(AddressableAssetSettings.CustomAssetEntryCommands);
+        }
+
+        [Test]
+        public void CustomGroupCommand_WhenRegistered_InvokeIsCalled()
+        {
+            string notSet = null;
+            AddressableAssetSettings.RegisterCustomAssetGroupCommand("cmd1", s => notSet = "set");
+            AddressableAssetSettings.InvokeAssetGroupCommand("cmd1", new AddressableAssetGroup[] { });
+            Assert.AreEqual("set", notSet);
+            AddressableAssetSettings.UnregisterCustomAssetGroupCommand("cmd1");
+        }
+
+        [Test]
+        public void CustomGroupCommand_RegisterWithValidIdAndFunc_Succeeds()
+        {
+            AddressableAssetSettings.RegisterCustomAssetGroupCommand("cmd1", s => { });
+            CollectionAssert.Contains(AddressableAssetSettings.CustomAssetGroupCommands, "cmd1");
+            AddressableAssetSettings.UnregisterCustomAssetGroupCommand("cmd1");
+        }
+
+        [Test]
+        public void CustomGroupCommand_UnregisterWithInvalidIdParameters_Fails()
+        {
+            LogAssert.Expect(LogType.Error, "UnregisterCustomAssetGroupCommand - invalid command id.");
+            Assert.IsFalse(AddressableAssetSettings.UnregisterCustomAssetGroupCommand(""));
+            LogAssert.Expect(LogType.Error, "UnregisterCustomAssetGroupCommand - invalid command id.");
+            Assert.IsFalse(AddressableAssetSettings.UnregisterCustomAssetGroupCommand(null));
+            LogAssert.Expect(LogType.Error, $"UnregisterCustomAssetGroupCommand - command id 'doesntexist' is not registered.");
+            Assert.IsFalse(AddressableAssetSettings.UnregisterCustomAssetGroupCommand("doesntexist"));
+            CollectionAssert.IsEmpty(AddressableAssetSettings.CustomAssetGroupCommands);
+        }
+
+        [Test]
+        public void CustomGroupCommand_RegisterWithInvalidParameters_Fails()
+        {
+            LogAssert.Expect(LogType.Error, "RegisterCustomAssetGroupCommand - invalid command id.");
+            Assert.IsFalse(AddressableAssetSettings.RegisterCustomAssetGroupCommand("", s => { }));
+            LogAssert.Expect(LogType.Error, "RegisterCustomAssetGroupCommand - invalid command id.");
+            Assert.IsFalse(AddressableAssetSettings.RegisterCustomAssetGroupCommand(null, s => { }));
+            LogAssert.Expect(LogType.Error, $"RegisterCustomAssetGroupCommand - command functor for id 'valid'.");
+            Assert.IsFalse(AddressableAssetSettings.RegisterCustomAssetGroupCommand("valid", null));
+            CollectionAssert.IsEmpty(AddressableAssetSettings.CustomAssetGroupCommands);
+        }
+
+
+        [Test]
+        public void CustomGroupCommand_WhenCommandThrows_InvokeDoesNotThrow()
+        {
+            AddressableAssetSettings.RegisterCustomAssetGroupCommand("cmd1", s => throw new Exception());
+            Assert.DoesNotThrow(() =>
+            {
+                LogAssert.Expect(LogType.Error, $"Encountered exception when running Asset Group Command 'cmd1': Exception of type 'System.Exception' was thrown.");
+                Assert.IsFalse(AddressableAssetSettings.InvokeAssetGroupCommand("cmd1", new AddressableAssetGroup[] { }));
+            });
+            AddressableAssetSettings.UnregisterCustomAssetGroupCommand("cmd1");
+        }
+
+        [Test]
+        public void CustomGroupCommand_WhenCommandHasNullGroups_ReturnsFalseAndLogsError()
+        {
+            AddressableAssetSettings.RegisterCustomAssetGroupCommand("cmd1", s => { });
+            Assert.DoesNotThrow(() =>
+            {
+                LogAssert.Expect(LogType.Error, $"Asset Group Command 'cmd1' called with null group collection.");
+                Assert.IsFalse(AddressableAssetSettings.InvokeAssetGroupCommand("cmd1", null));
+            });
+            AddressableAssetSettings.UnregisterCustomAssetGroupCommand("cmd1");
+        }
+
+        [Test]
+        public void CustomGroupCommand_WhenCommandDoesNotExist_ReturnsFalseAndLogsError()
+        {
+            Assert.DoesNotThrow(() =>
+            {
+                LogAssert.Expect(LogType.Error, $"Asset Group Command 'cmd' not found.  Ensure that it is registered by calling RegisterCustomAssetGroupCommand.");
+                Assert.IsFalse(AddressableAssetSettings.InvokeAssetGroupCommand("cmd", new AddressableAssetGroup[] { }));
+            });
+        }
+
+
     }
 }

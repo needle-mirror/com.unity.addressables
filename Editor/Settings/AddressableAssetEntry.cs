@@ -419,8 +419,9 @@ namespace UnityEditor.AddressableAssets.Settings
         /// The asset load path.  This is used to determine the internal id of resource locations.
         /// </summary>
         /// <param name="isBundled">True if the asset will be contained in an asset bundle.</param>
+        /// <param name="otherLoadPaths">The internal ids of the asset, typically shortened versions of the asset's GUID.</param>
         /// <returns>Return the runtime path that should be used to load this entry.</returns>
-        internal string GetAssetLoadPath(bool isBundled, HashSet<string> otherLoadPaths)
+        public string GetAssetLoadPath(bool isBundled, HashSet<string> otherLoadPaths)
         {
             if (!IsScene)
             {

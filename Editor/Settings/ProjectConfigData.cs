@@ -7,7 +7,10 @@ using UnityEngine.Serialization;
 
 namespace UnityEditor.AddressableAssets.Settings
 {
-    class ProjectConfigData
+    /// <summary>
+    /// The project configuration settings for addressables.
+    /// </summary>
+    public class ProjectConfigData
     {
         [Serializable]
         class ConfigSaveData
@@ -36,7 +39,10 @@ namespace UnityEditor.AddressableAssets.Settings
 
         static ConfigSaveData s_Data;
 
-        public static bool showSubObjectsInGroupView
+        /// <summary>
+        /// Whether to display sub objects in the Addressables Groups window. 
+        /// </summary>
+        public static bool ShowSubObjectsInGroupView
         {
             get
             {
@@ -51,7 +57,10 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        public static bool generateBuildLayout
+        /// <summary>
+        /// Whether to generate the bundle build layout report.
+        /// </summary>
+        public static bool GenerateBuildLayout
         {
             get
             {
@@ -69,7 +78,10 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        public static int activePlayModeIndex
+        /// <summary>
+        /// The active play mode data builder index.
+        /// </summary>
+        public static int ActivePlayModeIndex
         {
             get
             {
@@ -84,7 +96,10 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        public static bool postProfilerEvents
+        /// <summary>
+        /// Whether to post profiler events in the ResourceManager profiler window.
+        /// </summary>
+        public static bool PostProfilerEvents
         {
             get
             {
@@ -98,7 +113,11 @@ namespace UnityEditor.AddressableAssets.Settings
                 SaveData();
             }
         }
-        public static long localLoadSpeed
+
+        /// <summary>
+        /// The local bundle loading speed used in the Simulate Groups (advanced) playmode.
+        /// </summary>
+        public static long LocalLoadSpeed
         {
             get
             {
@@ -112,7 +131,11 @@ namespace UnityEditor.AddressableAssets.Settings
                 SaveData();
             }
         }
-        public static long remoteLoadSpeed
+        
+        /// <summary>
+        /// The remote bundle loading speed used in the Simulate Groups (advanced) playmode.
+        /// </summary>
+        public static long RemoteLoadSpeed
         {
             get
             {
@@ -126,7 +149,11 @@ namespace UnityEditor.AddressableAssets.Settings
                 SaveData();
             }
         }
-        public static bool hierarchicalSearch
+
+        /// <summary>
+        /// Whether to allow searching for assets parsed hierarchally in the Addressables Groups window.  
+        /// </summary>
+        public static bool HierarchicalSearch
         {
             get
             {
@@ -140,7 +167,11 @@ namespace UnityEditor.AddressableAssets.Settings
                 SaveData();
             }
         }
-        public static bool showGroupsAsHierarchy
+
+        /// <summary>
+        /// Whether to display groups names parsed hierarchally in the Addressables Groups window. 
+        /// </summary>
+        public static bool ShowGroupsAsHierarchy
         {
             get
             {

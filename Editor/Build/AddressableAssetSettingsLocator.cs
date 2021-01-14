@@ -272,9 +272,12 @@ namespace UnityEditor.AddressableAssets.Settings
                         keyPath = keyPath.Substring(0, slash);
                         if (m_keyToEntries.TryGetValue(keyPath, out var entry))
                         {
-                            var internalId = GetInternalIdFromFolderEntry(keyStr, entry[0]);
-                            if (!string.IsNullOrEmpty(internalId) && !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(internalId)))
-                                locations.Add(new ResourceLocationBase(keyStr, internalId, typeof(AssetDatabaseProvider).FullName, type));
+                            foreach (var e in entry)
+                            {
+                                var internalId = GetInternalIdFromFolderEntry(keyStr, e);
+                                if (!string.IsNullOrEmpty(internalId) && !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(internalId)))
+                                    locations.Add(new ResourceLocationBase(keyStr, internalId, typeof(AssetDatabaseProvider).FullName, type));
+                            }
                             break;
                         }
                         slash = keyPath.LastIndexOf('/');
@@ -304,11 +307,13 @@ namespace UnityEditor.AddressableAssets.Settings
         string GetInternalIdFromFolderEntry(string keyStr, AddressableAssetEntry entry)
         {
             var entryPath = entry.AssetPath;
-            if(keyStr.StartsWith(entry.address + "/"))
-                return keyStr.Replace(entry.address, entryPath);
-            foreach(var l in entry.labels)
+            if (keyStr.StartsWith(entry.address + "/"))
+                return entryPath + keyStr.Substring(entry.address.Length);
+            foreach (var l in entry.labels)
+            {
                 if (keyStr.StartsWith(l + "/"))
-                    return keyStr.Replace(l, entryPath);
+                    return entryPath + keyStr.Substring(l.Length);
+            }
             return string.Empty;
         }
     }

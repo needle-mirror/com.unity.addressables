@@ -14,6 +14,7 @@ Dangers of too many bundles:
 * Each bundle has memory overhead.  Details are [on the memory management page](MemoryManagement.md#assetbundle-memory-overhead). This is tied to a number of factors, outlined on that page, but the short version is that this overhead can be significant.  If you anticipate 100's or even 1000's of bundles loaded in memory at once, this could mean a noticeable amount of memory eaten up.
 * There are concurrency limits for downloading bundles.  If you have 1000's of bundles you need all at once, they cannot not all be downloaded at the same time.  Some number will be downloaded, and as they finish, more will trigger. In practice this is a fairly minor concern, so minor that you'll often be gated by the total size of your download, rather than how many bundles it's broken into.
 * Bundle information can bloat the catalog.  To be able to download or load catalogs, we store string-based information about your bundles.  1000's of bundles worth of data can greatly increase the size of the catalog.
+* Greater likelihood of duplicated assets. Say two materials are marked as Addressable and each depend on the same texture. If they are in the same bundle, then the texture is pulled in once, and referenced by both. If they are in separate bundles, and the texture is not itself Addressable, then it will be duplicated. You then either need to mark the texture as Addressable, accept the duplication, or put the materials in the same bundle. 
 
 Dangers of too few bundles:
 * The UnityWebRequest (which we use to download) does not resume failed downloads.  So if a large bundle downloading and your user loses connection, the download is started over once they regain connection. 
@@ -36,7 +37,7 @@ Currently there are two optimizations available.
 2. Disable built-in scenes and Resources.  Addressables provides the ability to load content from Resources and from the built-in scenes list. By default this feature is on, which can bloat the catalog if you do not need this feature.  To disable it, select the "Built In Data" group within the Groups window (**Window** > **Asset Management** > **Addressables** > **Groups**). From the settings for that group, you can uncheck "Include Resources Folders" and "Include Build Settings Scenes". Unchecking these option only removes the references to those asset types from the Addressables catalog.  The content itself is still built into the player you create, and you can still load them via legacy API. 
 
 ### What is addressables_content_state?
-After every content build of addressables, we produce an addressables_content_state.bin file, which is saved to the `Assets/AddressableAssetsData/<Platform>/` folder of your Unity project.
+After every content build of Addressables, we produce an addressables_content_state.bin file, which is saved to the `Assets/AddressableAssetsData/<Platform>/` folder of your Unity project.
 This file is critical to our [content update workflow](ContentUpdateWorkflow.md). If you are not doing any content updates, you can completely ignore this file.
 If you are planning to do content updates, you will need the version of this file produced for the previous release. We recommend checking it into version control and creating a branch each time you release a player build.  More information is available on our [content update workflow page](ContentUpdateWorkflow.md).
 
@@ -46,5 +47,59 @@ As your project grows larger, keep an eye on the following aspects of your asset
 * Sub assets affecting UI performance. There is no hard limit here, but if you have many assets, and those assets have many sub-assets, it may be best to turn off sub-asset display. This option only affects how the data is displayed in the Groups window, and does not affect what you can and cannot load at runtime.  The option is available in the groups window under **Tools** > **Show Sprite and Subobject Addresses**.  Disabling this will make the UI more responsive.
 * Group hierarchy display.  Another UI-only option to help with scale is **Group Hierarchy with Dashes**.  This is available within the inspector of the top level settings. With this enabled, groups that contain dashes '-' in their names will display as if the dashes represented folder hierarchy. This does not affect the actual group name, or the way things are built.  For example, two groups called "x-y-z" and "x-y-w" would display as if inside a folder called "x", there was a folder called "y".  Inside that folder were two groups, called "x-y-z" and "x-y-w". This will not really affect UI responsiveness, but simply makes it easier to browse a large collection of groups. 
 * Bundle layout at scale.  For more information about how best to set up your layout, see the earlier question: [_Is it better to have many small bundles or a few bigger ones_](AddressablesFAQ.md#Is-it-better-t-have-many-small-bundles-or-a-few-bigger-ones)
+
+### Is it possible to retrieve the address of an asset or reference at runtime?
+In the most general case, loaded assets no longer have a tie to their address or `IResourceLocation`. There are ways, however, to get the properly associated `IResourceLocation` and use that to read the field PrimaryKey. The PrimaryKey field will be set to the assets's address unless "Include Address In Catalog" is disabled for the group this object came from. In that case, the PrimaryKey will be the next item in the list of keys (probably a GUID, but possibly a Label or empty string). 
+
+#### Examples
+
+Retrieving an address of an AssetReference. This can be done by looking up the Location associated with that reference, and getting the PrimaryKey:
+
+```
+var op = Addressables.LoadResourceLocationsAsync(MyRef1);
+yield return op;
+if (op.Status == AsyncOperationStatus.Succeeded &&
+	op.Result != null &&
+	op.Result.Count > 0)
+{
+	Debug.Log("address is: " + op.Result[0].PrimaryKey);
+}
+```
+
+Loading multiple assets by label, but associating each with their address. Here, again LoadResourceLocationsAsync is needed:
+
+```
+Dictionary<string, GameObject> _preloadedObjects = new Dictionary<string, GameObject>();
+private IEnumerator PreloadHazards()
+{
+	//find all the locations with label "SpaceHazards"
+	var loadResourceLocationsHandle = Addressables.LoadResourceLocationsAsync("SpaceHazards", typeof(GameObject));
+	if( !loadResourceLocationsHandle.IsDone )
+		yield return loadResourceLocationsHandle;
+	
+	//start each location loading
+	List<AsyncOperationHandle> opList = new List<AsyncOperationHandle>();
+	foreach (IResourceLocation location in loadResourceLocationsHandle.Result)
+	{
+		AsyncOperationHandle<GameObject> loadAssetHandle = Addressables.LoadAssetAsync<GameObject>(location);
+		loadAssetHandle.Completed += obj => { _preloadedObjects.Add(location.PrimaryKey, obj.Result); };
+		opList.Add(loadAssetHandle);
+	}
+	
+	//create a GroupOperation to wait on all the above loads at once. 
+	var groupOp = Addressables.ResourceManager.CreateGenericGroupOperation(opList);
+	if( !groupOp.IsDone )
+		yield return groupOp;
+	
+	Addressables.Release(loadResourceLocationsHandle);
+
+	//take a gander at our results.
+	foreach (var item in _preloadedObjects)
+	{
+		Debug.Log(item.Key + " - " + item.Value.name);
+	}
+}
+```
+
 
 
