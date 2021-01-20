@@ -4,6 +4,9 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.16.16] - 2021-01-20
+- Updated dependency versions for testcase fix
+
 ## [1.16.15] - 2020-12-09
 - Addressables link.xml should now have it's own folder.
 - Fixed an issue where InvalidKeyException was getting thrown when calling GetDownloadSizeAsync on scenes

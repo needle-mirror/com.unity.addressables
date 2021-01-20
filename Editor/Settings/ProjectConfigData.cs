@@ -32,8 +32,6 @@ namespace UnityEditor.AddressableAssets.Settings
             internal bool showGroupsAsHierarchy = false;
             [SerializeField]
             internal bool generateBuildLayout = false;
-            [SerializeField]
-            internal bool ignoreUnsupportedFilesInBuild = false;
         }
 
         static ConfigSaveData s_Data;
@@ -66,24 +64,6 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (s_Data.generateBuildLayout != value)
                 {
                     s_Data.generateBuildLayout = value;
-                    SaveData();
-                }
-            }
-        }
-
-        public static bool ignoreUnsupportedFilesInBuild
-        {
-            get
-            {
-                ValidateData();
-                return s_Data.ignoreUnsupportedFilesInBuild;
-            }
-            set
-            {
-                ValidateData();
-                if (s_Data.ignoreUnsupportedFilesInBuild != value)
-                {
-                    s_Data.ignoreUnsupportedFilesInBuild = value;
                     SaveData();
                 }
             }

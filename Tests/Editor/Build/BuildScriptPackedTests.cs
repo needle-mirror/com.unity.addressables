@@ -138,6 +138,85 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void SetAssetEntriesBundleFileIdToCatalogEntryBundleFileId_SetsBundleFileIdToBundleNameOnly_WhenGroupSchemaNamingIsSetToFilename()
+        {
+            //Setup
+            GUID entry1Guid = GUID.Generate();
+            string bundleFile = "bundle";
+            string internalBundleName = "bundlepath";
+            string finalBundleName = "finalBundlePath";
+            string bundleCatalogEntryInternalIdHashed = "catalogentrybundlefileid_1234567890.bundle";
+            string bundleCatalogEntryInternalIdUnHashed = "catalogentrybundlefileid.bundle";
+
+            AddressableAssetEntry entry1 = new AddressableAssetEntry(entry1Guid.ToString(), "123", null, false);
+            AddressableAssetGroup group = Settings.CreateGroup("testGroup", false, false, false,
+                new List<AddressableAssetGroupSchema>(), typeof(BundledAssetGroupSchema));
+            group.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.NoHash;
+            group.AddAssetEntry(entry1, false);
+
+            ICollection<AddressableAssetEntry> entries = new List<AddressableAssetEntry>()
+            {
+                entry1
+            };
+
+            Dictionary<string, string> bundleToIdMap = new Dictionary<string, string>()
+            {
+                {internalBundleName, finalBundleName}
+            };
+
+            IBundleWriteData writeData = new BundleWriteData();
+            writeData.AssetToFiles.Add(entry1Guid, new List<string>() { bundleFile });
+            writeData.FileToBundle.Add(bundleFile, internalBundleName);
+
+            Dictionary<string, ContentCatalogDataEntry> catalogMap = new Dictionary<string, ContentCatalogDataEntry>()
+            {
+                {
+                    finalBundleName,
+                    new ContentCatalogDataEntry(typeof(IAssetBundleResource), bundleCatalogEntryInternalIdHashed,
+                        typeof(AssetBundleProvider).FullName, new[] {"catalogentry"})
+                }
+            };
+
+            //Test
+            BuildScriptPackedMode.SetAssetEntriesBundleFileIdToCatalogEntryBundleFileId(entries, bundleToIdMap, writeData, catalogMap);
+
+            //Assert
+            Assert.AreEqual(bundleCatalogEntryInternalIdUnHashed, entry1.BundleFileId);
+
+            //Cleanup
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
+        public void AddPostCatalogUpdates_AddsCallbackToUpdateBundleLocation_WhenNamingSchemaIsSetToFilenameOnly()
+        {
+            //Setup
+            AddressableAssetGroup group = Settings.CreateGroup("TestAddPostCatalogUpdate", false, false, false,
+                new List<AddressableAssetGroupSchema>(), typeof(BundledAssetGroupSchema));
+            group.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.NoHash;
+            List<Action> callbacks = new List<Action>();
+            string targetBundlePathHashed = "testbundle_123456.bundle";
+            string targetBundlePathUnHashed = "testbundle.bundle";
+            ContentCatalogDataEntry dataEntry = new ContentCatalogDataEntry(typeof(ContentCatalogData), targetBundlePathHashed, typeof(BundledAssetProvider).FullName, new List<object>());
+            m_BuildScript.AddPostCatalogUpdatesInternal(group, callbacks, dataEntry, targetBundlePathHashed);
+
+            //Assert setup
+            Assert.AreEqual(1, callbacks.Count);
+            Assert.AreEqual(targetBundlePathHashed, dataEntry.InternalId);
+
+            //Test
+            callbacks[0].Invoke();
+
+            //Assert
+            Assert.AreEqual(targetBundlePathUnHashed, dataEntry.InternalId);
+
+            //Cleanup
+            Settings.RemoveGroup(group);
+
+
+        }
+
+        [Test]
         public void ErrorCheckBundleSettings_FindsNoProblemsInDefaultScema()
         {
             var group = Settings.CreateGroup("PackedTest", false, false, false, null, typeof(BundledAssetGroupSchema));

@@ -183,6 +183,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 var groups = aaContext.Settings.groups.Where(g => g != null);
 
                 var bundleRenameMap = new Dictionary<string, string>();
+                var postCatalogUpdateCallbacks = new List<Action>();
                 using (m_Log.ScopedStep(LogLevel.Info, "PostProcessBundles"))
                 using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
                 {
@@ -205,7 +206,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                                 outputBundles.Add(b >= 0 ? m_OutputAssetBundleNames[b] : buildBundles[i]);
                             }
 
-                            PostProcessBundles(assetGroup, buildBundles, outputBundles, results, aaContext.runtimeData, aaContext.locations, builderInput.Registry, primaryKeyToCatalogEntry, bundleRenameMap);
+                            PostProcessBundles(assetGroup, buildBundles, outputBundles, results, aaContext.runtimeData, aaContext.locations, builderInput.Registry, primaryKeyToCatalogEntry, bundleRenameMap, postCatalogUpdateCallbacks);
                         }
                     }
                 }
@@ -222,6 +223,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 }
 
                 ProcessCatalogEntriesForBuild(aaContext, m_Log, groups, builderInput, extractData.WriteData, carryOverCachedState, m_BundleToInternalId);
+                foreach (var postUpdateCatalogCallback in postCatalogUpdateCallbacks)
+                    postUpdateCatalogCallback.Invoke();
 
                 foreach (var r in results.WriteResults)
                 {
@@ -282,7 +285,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             if (extractData.BuildCache != null && builderInput.PreviousContentState == null)
             {
                 var allEntries = new List<AddressableAssetEntry>();
-                aaContext.Settings.GetAllAssets(allEntries, false, FilterGroupForContentState);
+                aaContext.Settings.GetAllAssets(allEntries, false, ContentUpdateScript.GroupFilter);
                 var remoteCatalogLoadPath = aaContext.Settings.BuildRemoteCatalog ? aaContext.Settings.RemoteCatalogLoadPath.GetValue(aaContext.Settings) : string.Empty;
                 if (ContentUpdateScript.SaveContentState(aaContext.locations, tempPath, allEntries, extractData.DependencyData, playerBuildVersion, remoteCatalogLoadPath, carryOverCachedState))
                 {
@@ -300,17 +303,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
 
             return opResult;
-        }
-
-        private static bool FilterGroupForContentState(AddressableAssetGroup g)
-        {
-            if (g == null)
-                return false;
-            if (!g.HasSchema<ContentUpdateGroupSchema>() || !g.GetSchema<ContentUpdateGroupSchema>().StaticContent)
-                return false;
-            if (!g.HasSchema<BundledAssetGroupSchema>() || !g.GetSchema<BundledAssetGroupSchema>().IncludeInBuild)
-                return false;
-            return true;
         }
 
         private static void ProcessCatalogEntriesForBuild(AddressableAssetsBuildContext aaContext, IBuildLogger log,
@@ -493,10 +485,25 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     string fullBundleName = writeData.FileToBundle[file];
                     string convertedLocation = bundleNameToInternalBundleIdMap[fullBundleName];
 
-                    if (locationIdToCatalogEntryMap.TryGetValue(convertedLocation, out ContentCatalogDataEntry catalogEntry))
+                    if (locationIdToCatalogEntryMap.TryGetValue(convertedLocation,
+                        out ContentCatalogDataEntry catalogEntry))
+                    {
                         loc.BundleFileId = catalogEntry.InternalId;
+
+                        //This is where we strip out the temporary hash added to the bundle name for Content Update for the AssetEntry
+                        if(loc.parentGroup?.GetSchema<BundledAssetGroupSchema>()?.BundleNaming ==
+                          BundledAssetGroupSchema.BundleNamingStyle.NoHash)
+                        {
+                            loc.BundleFileId = StripHashFromBundleLocation(loc.BundleFileId);
+                        }
+                    }
                 }
             }
+        }
+
+        static string StripHashFromBundleLocation(string hashedBundleLocation)
+        {
+            return hashedBundleLocation.Remove(hashedBundleLocation.LastIndexOf("_")) + ".bundle";
         }
 
         /// <inheritdoc />
@@ -860,7 +867,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
         }
 
-        void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> buildBundles, List<string> outputBundles, IBundleBuildResults buildResult, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry, Dictionary<string, ContentCatalogDataEntry> primaryKeyToCatalogEntry, Dictionary<string, string> bundleRenameMap)
+        void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> buildBundles, List<string> outputBundles, IBundleBuildResults buildResult, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry, Dictionary<string, ContentCatalogDataEntry> primaryKeyToCatalogEntry, Dictionary<string, string> bundleRenameMap, List<Action> postCatalogUpdateCallbacks)
         {
             var schema = assetGroup.GetSchema<BundledAssetGroupSchema>();
             if (schema == null)
@@ -916,7 +923,32 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 bundleRenameMap.Add(buildBundles[i], outputBundles[i]);
                 CopyFileWithTimestampIfDifferent(srcPath, targetPath, m_Log);
 
+                AddPostCatalogUpdatesInternal(assetGroup, postCatalogUpdateCallbacks, dataEntry, targetPath);
+
                 registry.AddFile(targetPath);
+            }
+        }
+
+        internal void AddPostCatalogUpdatesInternal(AddressableAssetGroup assetGroup, List<Action> postCatalogUpdates, ContentCatalogDataEntry dataEntry, string targetBundlePath)
+        {
+            if (assetGroup.GetSchema<BundledAssetGroupSchema>()?.BundleNaming ==
+                BundledAssetGroupSchema.BundleNamingStyle.NoHash)
+            {
+                postCatalogUpdates.Add(() =>
+                {
+                    //This is where we strip out the temporary hash for the final bundle location and filename
+                    string bundleNameWithoutHash = StripHashFromBundleLocation(targetBundlePath);
+                    if (File.Exists(targetBundlePath))
+                    {
+                        if (File.Exists(bundleNameWithoutHash))
+                            File.Delete(bundleNameWithoutHash);
+                        File.Move(targetBundlePath, bundleNameWithoutHash);
+                    }
+
+                    if (dataEntry != null)
+                        dataEntry.InternalId = bundleNameWithoutHash;
+
+                });
             }
         }
 
@@ -932,7 +964,15 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             string groupName = assetGroup.Name.Replace(" ", "").Replace('\\', '/').Replace("//", "/").ToLower();
             assetBundleName = groupName + "_" + assetBundleName;
-            return BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), assetBundleName);
+            string bundleNameWithHashing = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), assetBundleName);
+            //For no hash, we need the hash temporarily for content update purposes.  This will be stripped later on.
+            if (assetGroup.GetSchema<BundledAssetGroupSchema>()?.BundleNaming ==
+                BundledAssetGroupSchema.BundleNamingStyle.NoHash)
+            {
+                bundleNameWithHashing = bundleNameWithHashing.Replace(".bundle", "_" + info.Hash.ToString() + ".bundle");
+            }
+
+            return bundleNameWithHashing;
         }
 
         static void ReplaceDependencyKeys(string from, string to, List<ContentCatalogDataEntry> locations)

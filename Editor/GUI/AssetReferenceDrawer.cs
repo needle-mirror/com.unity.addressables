@@ -260,18 +260,7 @@ namespace UnityEditor.AddressableAssets.GUI
             var nameToUse = GetNameForAsset(property, isNotAddressable, fieldInfo);
             if (m_AssetRefObject.editorAsset != null)
             {
-                var subAssets = new List<Object>();
-                subAssets.Add(null);
-                var assetPath = AssetDatabase.GUIDToAssetPath(m_AssetRefObject.AssetGUID);
-                subAssets.AddRange(AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
-                var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
-                if (mainType == typeof(SpriteAtlas))
-                {
-                    var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(assetPath);
-                    var sprites = new Sprite[atlas.spriteCount];
-                    atlas.GetSprites(sprites);
-                    subAssets.AddRange(sprites);
-                }
+                var subAssets = GetSubAssetsList();
 
                 if (subAssets.Count > 1 && m_ReferencesSame)
                 {
@@ -287,6 +276,24 @@ namespace UnityEditor.AddressableAssets.GUI
             HandleDragAndDrop(property, isDragging, isDropping, guid);
 
             EditorGUI.EndProperty();
+        }
+        
+        internal List<Object> GetSubAssetsList()
+        {
+            var subAssets = new List<Object>();
+            subAssets.Add(null);
+            var assetPath = AssetDatabase.GUIDToAssetPath(m_AssetRefObject.AssetGUID);
+            subAssets.AddRange(AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
+            var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
+            if (mainType == typeof(SpriteAtlas))
+            {
+                var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(assetPath);
+                var sprites = new Sprite[atlas.spriteCount];
+                atlas.GetSprites(sprites);
+                subAssets.AddRange(sprites);
+            }
+
+            return subAssets;
         }
 
         private void DrawControl(SerializedProperty property, bool isDragging, bool isDropping, string nameToUse, bool isNotAddressable, string guid)
@@ -480,9 +487,8 @@ namespace UnityEditor.AddressableAssets.GUI
 
             // Check if targetObjects have multiple different selected
             if (property.serializedObject.targetObjects.Length > 1)
-                multipleSubassets = CheckTargetObjectsSubassetsAreDifferent(property, m_AssetRefObject.SubObjectName);
-
-
+                multipleSubassets = CheckTargetObjectsSubassetsAreDifferent(property, m_AssetRefObject.SubObjectName, fieldInfo);
+            
             bool isPickerPressed = Event.current.type == EventType.MouseDown && Event.current.button == 0 && pickerRect.Contains(Event.current.mousePosition);
             if (isPickerPressed)
             {
@@ -549,18 +555,20 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        private bool CheckTargetObjectsSubassetsAreDifferent(SerializedProperty property, string objName)
+        internal bool CheckTargetObjectsSubassetsAreDifferent(SerializedProperty property, string objName, FieldInfo propertyField)
         {
             foreach (var targetObject in property.serializedObject.targetObjects)
             {
                 var serializeObjectMulti = new SerializedObject(targetObject);
                 var sp = serializeObjectMulti.FindProperty(property.propertyPath);
                 string labelText = m_label.text;
-                var assetRefObject =
-                    sp.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
-                if (assetRefObject.SubObjectName != objName)
+                var assetRefObject = sp.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
+                if (assetRefObject != null && assetRefObject.SubObjectName != null)
                 {
-                    return true;
+                    if (assetRefObject.SubObjectName != objName)
+                    {
+                        return true;
+                    }
                 }
             }
 

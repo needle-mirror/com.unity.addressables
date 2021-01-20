@@ -29,7 +29,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         SearchField m_SearchField;
         const int k_SearchHeight = 20;
-        internal AddressableAssetSettings settings { get { return AddressableAssetSettingsDefaultObject.Settings; } }
+        internal AddressableAssetSettings settings;
 
         bool m_ResizingVerticalSplitter;
         Rect m_VerticalSplitterRect = new Rect(0, 0, 10, k_SplitterWidth);
@@ -40,6 +40,7 @@ namespace UnityEditor.AddressableAssets.GUI
         public AddressableAssetsSettingsGroupEditor(AddressableAssetsWindow w)
         {
             window = w;
+            settings = AddressableAssetSettingsDefaultObject.Settings;
             m_VerticalSplitterPercent = 0.8f;
             OnEnable();
         }
@@ -226,15 +227,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     var searchString = m_SearchField.OnGUI(searchRect, baseSearch, m_SearchStyles[0], m_SearchStyles[1], m_SearchStyles[2]);
                     if (baseSearch != searchString)
                     {
-                        if (ProjectConfigData.hierarchicalSearch)
-                        {
-                            m_EntryTree.customSearchString = searchString;
-                            Reload();
-                        }
-                        else
-                        {
-                            m_EntryTree.searchString = searchString;
-                        }
+                        m_EntryTree?.Search(searchString);
                     }
                 }
             }
@@ -367,8 +360,8 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             if (settings == null)
                 return false;
-				
-			if (!m_ModificationRegistered)
+
+            if (!m_ModificationRegistered)
             {
                 m_ModificationRegistered = true;
                 settings.OnModification -= OnSettingsModification; //just in case...

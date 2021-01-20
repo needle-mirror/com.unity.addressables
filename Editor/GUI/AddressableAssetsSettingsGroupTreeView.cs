@@ -35,6 +35,13 @@ namespace UnityEditor.AddressableAssets.GUI
             ColumnId.Path,
             ColumnId.Labels
         };
+
+        internal AddressableAssetEntryTreeView(AddressableAssetSettings settings)
+            : this(new TreeViewState(), CreateDefaultMultiColumnHeaderState(), new AddressableAssetsSettingsGroupEditor(ScriptableObject.CreateInstance<AddressableAssetsWindow>()))
+        {
+            m_Editor.settings = settings;
+        }
+
         public AddressableAssetEntryTreeView(TreeViewState state, MultiColumnHeaderState mchs, AddressableAssetsSettingsGroupEditor ed) : base(state, new MultiColumnHeader(mchs))
         {
             showBorder = true;
@@ -44,6 +51,8 @@ namespace UnityEditor.AddressableAssets.GUI
 
             BuiltinSceneCache.sceneListChanged += OnScenesChanged;
         }
+
+        internal TreeViewItem Root => rootItem;
 
         void OnScenesChanged()
         {
@@ -123,6 +132,21 @@ namespace UnityEditor.AddressableAssets.GUI
 
             SortChildren(root);
             return base.BuildRows(root);
+        }
+
+        internal IList<TreeViewItem> Search(string search)
+        {
+            if (ProjectConfigData.hierarchicalSearch)
+            {
+                customSearchString = search;
+                Reload();
+            }
+            else
+            {
+                searchString = search;
+            }
+
+            return GetRows();
         }
 
         protected IList<TreeViewItem> Search(IList<TreeViewItem> rows)
@@ -311,7 +335,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 TreeViewItem newRoot = root;
                 var parts = group.Name.Split('-');
                 string partialRestore = "";
-                for(int index = 0; index < parts.Length-1; index++)
+                for (int index = 0; index < parts.Length - 1; index++)
                 {
                     TreeViewItem folderItem = null;
                     partialRestore += parts[index];
@@ -324,7 +348,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     depth++;
                     newRoot = folderItem;
                 }
-                
+
                 groupItem = new AssetEntryTreeViewItem(group, depth);
                 newRoot.AddChild(groupItem);
             }
@@ -338,7 +362,7 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 foreach (var entry in group.entries)
                 {
-                    AddAndRecurseEntriesBuild(entry, groupItem, depth+1, IsExpanded(groupItem.id));
+                    AddAndRecurseEntriesBuild(entry, groupItem, depth + 1, IsExpanded(groupItem.id));
                 }
             }
         }
@@ -1416,7 +1440,6 @@ namespace UnityEditor.AddressableAssets.GUI
                 base.displayName = value;
             }
         }
-        
     }
 
 

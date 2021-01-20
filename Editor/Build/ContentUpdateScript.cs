@@ -269,8 +269,8 @@ namespace UnityEditor.AddressableAssets.Build
                 stream.Close();
                 stream.Dispose();
                 return true;
-            } 
-            catch(UnauthorizedAccessException uae)
+            }
+            catch (UnauthorizedAccessException uae)
             {
                 if (AddressableAssetUtility.IsUsingVCIntegration())
                     Debug.LogErrorFormat("Cannot access the file {0}. This may be due to a version control lock.", path);
@@ -379,7 +379,7 @@ namespace UnityEditor.AddressableAssets.Build
                 stream.Dispose();
                 return true;
             }
-            catch(UnauthorizedAccessException uae)
+            catch (UnauthorizedAccessException uae)
             {
                 if (AddressableAssetUtility.IsUsingVCIntegration())
                     Debug.LogErrorFormat("Cannot access the file {0}. Is it checked out?", path);
@@ -759,6 +759,17 @@ namespace UnityEditor.AddressableAssets.Build
             schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
             contentGroup.AddSchema<ContentUpdateGroupSchema>().StaticContent = false;
             settings.MoveEntries(items, contentGroup);
+        }
+
+        internal static bool GroupFilter(AddressableAssetGroup g)
+        {
+            if (g == null)
+                return false;
+            if (!g.HasSchema<ContentUpdateGroupSchema>() || !g.GetSchema<ContentUpdateGroupSchema>().StaticContent)
+                return false;
+            if (!g.HasSchema<BundledAssetGroupSchema>() || !g.GetSchema<BundledAssetGroupSchema>().IncludeInBuild)
+                return false;
+            return true;
         }
     }
 }
