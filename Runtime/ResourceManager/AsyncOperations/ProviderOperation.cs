@@ -18,8 +18,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         void SetProgressCallback(Func<float> callback);
         void ProviderCompleted<T>(T result, bool status, Exception e);
         Type RequestedType { get; }
-
         void SetDownloadProgressCallback(Func<DownloadStatus> callback);
+        void SetWaitForCompletionCallback(Func<bool> callback);
     }
 
     internal class ProviderOperation<TObject> : AsyncOperationBase<TObject>, IGenericProviderOperation, ICachable
@@ -29,6 +29,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         private Action<int, IList<object>> m_GetDepCallback;
         private Func<float> m_GetProgressCallback;
         private Func<DownloadStatus> m_GetDownloadProgressCallback;
+        private Func<bool> m_WaitForCompletionCallback;
         private DownloadStatus m_DownloadStatus;
         private IResourceProvider m_Provider;
         internal AsyncOperationHandle<IList<AsyncOperationHandle>> m_DepOp;
@@ -45,6 +46,24 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_GetDownloadProgressCallback = callback;
             if (m_GetDownloadProgressCallback != null)
                 m_DownloadStatus = m_GetDownloadProgressCallback();
+        }
+        public void SetWaitForCompletionCallback(Func<bool> callback)
+        {
+            m_WaitForCompletionCallback = callback;
+        }
+
+        internal override bool InvokeWaitForCompletion()
+        {
+            if (IsDone)
+                return true;
+            if (m_DepOp.IsValid() && !m_DepOp.IsDone)
+                m_DepOp.WaitForCompletion();
+            if (m_WaitForCompletionCallback == null)
+                return false;
+            m_RM?.Update(Time.deltaTime);
+            if (!HasExecuted)
+                InvokeExecute();
+            return m_WaitForCompletionCallback.Invoke();
         }
 
         internal override DownloadStatus GetDownloadStatus(HashSet<object> visited)
@@ -224,6 +243,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_Provider = provider;
             m_Location = location;
             m_ReleaseDependenciesOnFailure = true;
+            SetWaitForCompletionCallback(WaitForCompletionHandler);
         }
 
         public void Init(ResourceManager rm, IResourceProvider provider, IResourceLocation location, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp, bool releaseDependenciesOnFailure)
@@ -236,6 +256,20 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_Provider = provider;
             m_Location = location;
             m_ReleaseDependenciesOnFailure = releaseDependenciesOnFailure;
+            SetWaitForCompletionCallback(WaitForCompletionHandler);
+        }
+
+        bool WaitForCompletionHandler()
+        {
+            if (IsDone)
+                return true;
+
+            if (!m_DepOp.IsDone)
+                m_DepOp.WaitForCompletion();
+            if (!HasExecuted)
+                InvokeExecute();
+
+            return IsDone;
         }
 
         protected override void Destroy()

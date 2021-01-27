@@ -110,6 +110,16 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             InternalOp.SetDownloadProgressCallback(callback);
         }
 
+
+        /// <summary>
+        /// Set the func for handling a request to wait for the completion of the operation
+        /// </summary>
+        /// <param name="callback">The callback function.</param>
+        public void SetWaitForCompletionCallback(Func<bool> callback)
+        {
+            InternalOp.SetWaitForCompletionCallback(callback);
+        }
+
         /// <summary>
         /// Called to complete the operation.
         /// </summary>

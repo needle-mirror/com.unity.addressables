@@ -375,7 +375,7 @@ namespace AddressableAssetsIntegrationTests
 
             Assert.AreEqual(2, loc.Dependencies.Count);
             Assert.AreEqual(catalogHashPath, remoteLocation.ToString());
-            Assert.AreEqual(m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + catalogHashPath), cacheLocation.ToString());
+            Assert.AreEqual(m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + catalogHashPath.GetHashCode() + catalogHashPath.Substring(catalogHashPath.LastIndexOf("."))), cacheLocation.ToString());
         }
 
         [UnityTest]
@@ -521,8 +521,9 @@ namespace AddressableAssetsIntegrationTests
 
             var op1 = m_Addressables.LoadContentCatalogAsync(fullRemotePath, false);
             yield return op1;
-
-            string cachedDataPath = m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + Path.GetFileName(kCatalogRemotePath));
+            
+            string fullRemoteHashPath = fullRemotePath.Replace(".json", ".hash");
+            string cachedDataPath = m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + fullRemoteHashPath.GetHashCode() + fullRemoteHashPath.Substring(fullRemoteHashPath.LastIndexOf(".")));
             string cachedHashPath = cachedDataPath.Replace(".json", ".hash");
             Assert.IsTrue(File.Exists(cachedDataPath));
             Assert.IsTrue(File.Exists(cachedHashPath));
@@ -532,6 +533,77 @@ namespace AddressableAssetsIntegrationTests
             Directory.Delete(kCatalogFolderPath, true);
             File.Delete(cachedDataPath);
             File.Delete(cachedHashPath);
+        }
+        
+        [UnityTest]
+        public IEnumerator LoadingContentCatalog_CachesCatalogData_ForTwoCatalogsWithSameName()
+        {
+            yield return Init();
+            
+            string fullRemotePath = Path.Combine(kCatalogFolderPath, kCatalogRemotePath);
+            string fullRemotePathTwo = Path.Combine(kCatalogFolderPath, "secondCatalog", kCatalogRemotePath);
+            Directory.CreateDirectory(kCatalogFolderPath);
+            Directory.CreateDirectory(Path.Combine(kCatalogFolderPath, "secondCatalog"));
+            if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
+            {
+#if UNITY_EDITOR
+                ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>{
+                    new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new []{"key"})
+                }, "test_catalog");
+                File.WriteAllText(fullRemotePath, JsonUtility.ToJson(data));
+                File.WriteAllText(fullRemotePathTwo, JsonUtility.ToJson(data));
+#else
+                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalog_CachesCatalogData_IfValidHashFound)} due to missing CatalogLocation.");
+                yield break;
+#endif
+            }
+            else
+            {
+                string baseCatalogPath = m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId;
+                if (baseCatalogPath.StartsWith("file://"))
+                    baseCatalogPath = new Uri(m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId).AbsolutePath;
+                File.Copy(baseCatalogPath, fullRemotePath);
+            }
+            
+#if UNITY_EDITOR
+            ContentCatalogData catalogData = new ContentCatalogData(new List<ContentCatalogDataEntry>{
+                new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new []{"key"})
+            }, "test_catalog");
+            File.WriteAllText(fullRemotePathTwo, JsonUtility.ToJson(catalogData));
+            
+            WriteHashFileForCatalog(fullRemotePath, "123");
+            WriteHashFileForCatalog(fullRemotePathTwo, "123");
+#else
+                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalog_CachesCatalogData_IfValidHashFound)} due to missing CatalogLocation.");
+                yield break;
+#endif
+            
+            var op1 = m_Addressables.LoadContentCatalogAsync(fullRemotePath, false);
+            yield return op1;
+            
+            var op2 = m_Addressables.LoadContentCatalogAsync(fullRemotePathTwo, false);
+            yield return op2;
+            
+            string fullRemoteHashPath = fullRemotePath.Replace(".json", ".hash");
+            string fullRemoteHashPathTwo = fullRemotePathTwo.Replace(".json", ".hash");
+            string cachedDataPath = m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + fullRemoteHashPath.GetHashCode() + fullRemoteHashPath.Substring(fullRemoteHashPath.LastIndexOf(".")));
+            string cachedDataPathTwo = m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + fullRemoteHashPathTwo.GetHashCode() + fullRemoteHashPathTwo.Substring(fullRemoteHashPathTwo.LastIndexOf(".")));
+            string cachedHashPath = cachedDataPath.Replace(".json", ".hash");
+            string cachedHashPathTwo = cachedDataPathTwo.Replace(".json", ".hash");
+            Assert.IsTrue(File.Exists(cachedDataPath));
+            Assert.IsTrue(File.Exists(cachedDataPathTwo));
+            Assert.IsTrue(File.Exists(cachedHashPath));
+            Assert.IsTrue(File.Exists(cachedHashPathTwo));
+            Assert.AreEqual("123", File.ReadAllText(cachedHashPath));
+            Assert.AreEqual("123", File.ReadAllText(cachedHashPathTwo));
+
+            m_Addressables.Release(op1);
+            m_Addressables.Release(op2);
+            Directory.Delete(kCatalogFolderPath, true);
+            File.Delete(cachedDataPath);
+            File.Delete(cachedHashPath);
+            File.Delete(cachedDataPathTwo);
+            File.Delete(cachedHashPathTwo);
         }
         
         [UnityTest]
@@ -666,7 +738,8 @@ namespace AddressableAssetsIntegrationTests
 
             Directory.CreateDirectory(kCatalogFolderPath);
             string fullRemotePath = Path.Combine(kCatalogFolderPath, kCatalogRemotePath);
-            string cachedDataPath = m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + Path.GetFileName(kCatalogRemotePath));
+            string fullRemoteHashPath = fullRemotePath.Replace(".json", ".hash");
+            string cachedDataPath = m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + fullRemoteHashPath.GetHashCode() + fullRemoteHashPath.Substring(fullRemoteHashPath.LastIndexOf(".")));
             string cachedHashPath = cachedDataPath.Replace(".json", ".hash");
             string remoteHashPath = WriteHashFileForCatalog(fullRemotePath, "123");
 
@@ -678,7 +751,7 @@ namespace AddressableAssetsIntegrationTests
             var op1 = m_Addressables.LoadContentCatalogAsync(fullRemotePath, false);
             yield return op1;
             m_Addressables.Release(op1);
-
+            
             Assert.IsTrue(File.Exists(cachedDataPath));
             Assert.IsTrue(File.Exists(cachedHashPath));
             Assert.AreEqual("123", File.ReadAllText(cachedHashPath));

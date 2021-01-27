@@ -67,8 +67,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             public void Start(ProvideHandle provideHandle, VirtualAssetBundle bundle)
             {
                 m_PI = provideHandle;
+                provideHandle.SetWaitForCompletionCallback(WaitForCompletionHandler);
                 m_RequestOperation = bundle.LoadAssetAsync(m_PI, m_PI.Location);
                 m_RequestOperation.Completed += RequestOperation_Completed;
+            }
+
+            private bool WaitForCompletionHandler()
+            {
+                return m_RequestOperation.WaitForCompletion();
             }
 
             private void RequestOperation_Completed(VBAsyncOperation<object> obj)

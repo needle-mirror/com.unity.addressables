@@ -152,6 +152,21 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             return m_InternalOp == null ? 0 : m_InternalOp.GetHashCode() * 17 + m_Version;
         }
 
+        /// <summary>
+        /// Synchronously complete the async operation.
+        /// </summary>
+        /// <returns>The result of the operation or null.</returns>
+        public TObject WaitForCompletion()
+        {
+            if(IsValid())
+                InternalOp.WaitForCompletion();
+
+            if(IsValid())
+                return Result;
+
+            return default(TObject);
+        }
+
         AsyncOperationBase<TObject> InternalOp
         {
             get
@@ -497,5 +512,18 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// Overload for <see cref="IEnumerator.Reset"/>.
         /// </summary>
         void IEnumerator.Reset() {}
+
+        /// <summary>
+        /// Synchronously complete the async operation.
+        /// </summary>
+        /// <returns>The result of the operation or null.</returns>
+        public object WaitForCompletion()
+        {
+            if (IsValid())
+                InternalOp.WaitForCompletion();
+            if(IsValid())
+                return Result;
+            return null;
+        }
     }
 }

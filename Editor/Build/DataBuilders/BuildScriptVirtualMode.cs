@@ -19,6 +19,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
+#if UNITY_2019_3_OR_NEWER
+using UnityEditor.Experimental;
+#endif
+
 namespace UnityEditor.AddressableAssets.Build.DataBuilders
 {
     /// <summary>
@@ -334,12 +338,18 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             var guid = AssetDatabase.AssetPathToGUID(a);
             var legacyPath = string.Format("Library/metadata/{0}{1}/{2}", guid[0], guid[1], guid);
-#if UNITY_2020_2_OR_NEWER
+#if UNITY_2020_2_OR_NEWER            
+            var artifactID = Experimental.AssetDatabaseExperimental.ProduceArtifact(new ArtifactKey(new GUID(guid)));
+            if (Experimental.AssetDatabaseExperimental.GetArtifactPaths(artifactID, out var paths))
+                return Path.GetFullPath(paths[0]);
+            else
+                legacyPath = String.Empty;
+#elif UNITY_2020_1_OR_NEWER
             var hash = Experimental.AssetDatabaseExperimental.GetArtifactHash(guid);
             if (Experimental.AssetDatabaseExperimental.GetArtifactPaths(hash, out var paths))
                 return Path.GetFullPath(paths[0]);
             else
-                legacyPath = String.Empty; // legacy path is never valid in 2020.2+
+                legacyPath = String.Empty; // legacy path is never valid in 2020.1+
 #elif UNITY_2019_3_OR_NEWER
             if (IsAssetDatabaseV2Enabled()) // AssetDatabase V2 is optional in 2019.3 and 2019.4
             {

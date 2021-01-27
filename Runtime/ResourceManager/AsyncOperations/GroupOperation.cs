@@ -29,6 +29,26 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             Result = new List<AsyncOperationHandle>();
         }
 
+        internal override bool InvokeWaitForCompletion()
+        {
+            //If Result is null then we've auto released and need to return
+            if (IsDone || Result == null)
+                return true;
+
+            foreach (var r in Result)
+            {
+                r.WaitForCompletion();
+                if (Result == null)
+                    return true;
+            }
+
+            m_RM?.Update(Time.deltaTime);
+            if (!IsDone && Result != null)
+                Execute();
+            m_RM?.Update(Time.deltaTime);
+            return IsDone;
+        }
+
         int ICachable.Hash { get; set; }
 
         internal IList<AsyncOperationHandle> GetDependentOps()

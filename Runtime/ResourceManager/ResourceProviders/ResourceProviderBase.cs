@@ -100,6 +100,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_CallBack = callback;
             }
 
+            internal override bool InvokeWaitForCompletion()
+            {
+                m_RM?.Update(Time.deltaTime);
+                if (!HasExecuted)
+                    InvokeExecute();
+                return true;
+            }
+
             protected override void Execute()
             {
                 if (m_CallBack != null)

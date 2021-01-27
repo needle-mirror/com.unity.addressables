@@ -466,6 +466,14 @@ namespace UnityEngine.ResourceManagement
                 get { return "CompletedOperation";}
             }
 
+            internal override bool InvokeWaitForCompletion()
+            {
+                m_RM?.Update(Time.deltaTime);
+                if (!HasExecuted)
+                    InvokeExecute();
+                return true;
+            }
+
             protected override void Execute()
             {
                 Complete(Result, m_Success, m_ErrorMsg, m_ReleaseDependenciesOnFailure);
@@ -862,6 +870,18 @@ namespace UnityEngine.ResourceManagement
                 {
                     return m_dependency.PercentComplete;
                 }
+            }
+
+            internal override bool InvokeWaitForCompletion()
+            {
+                if (m_dependency.IsValid() && !m_dependency.IsDone)
+                    m_dependency.WaitForCompletion();
+
+                m_RM?.Update(Time.deltaTime);
+                if (m_instance == null && !HasExecuted)
+                    InvokeExecute();
+
+                return m_instance != null;
             }
 
             protected override void Execute()

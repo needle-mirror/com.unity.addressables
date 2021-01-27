@@ -37,6 +37,30 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
     }
 
     [Test]
+    [Timeout(3000)]
+    public void InitializationObjects_CompletesSyncWhenNoObjectsPresent()
+    {
+        if (m_RuntimeSettingsPath.StartsWith("GUID:"))
+        {
+            Assert.Ignore($"{nameof(InitializationObjects_CompletesWhenNoObjectsPresent)} skipped due to not having a runtime settings asset (Fast mode does not create this).");
+        }
+        InitalizationObjectsOperation op = new InitalizationObjectsOperation();
+        op.Completed += obj =>
+        {
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, obj.Status);
+            Assert.IsTrue(obj.Result);
+        };
+        var runtimeDataLocation = new ResourceLocationBase("RuntimeData", m_RuntimeSettingsPath, typeof(JsonAssetProvider).FullName, typeof(ResourceManagerRuntimeData));
+        var rtdOp = m_Addressables.ResourceManager.ProvideResource<ResourceManagerRuntimeData>(runtimeDataLocation);
+
+        op.Init(rtdOp, m_Addressables);
+
+        var handle = m_Addressables.ResourceManager.StartOperation(op, rtdOp);
+        handle.WaitForCompletion();
+        Assert.IsTrue(handle.IsDone);
+    }
+
+    [Test]
     public void InitializationObjects_OperationRegistersForCallbacks()
     {
         if (m_RuntimeSettingsPath.StartsWith("GUID:"))
@@ -90,6 +114,35 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
 
         var handle = m_Addressables.ResourceManager.StartOperation(op, rtdOp);
         yield return handle;
+    }
+
+    [Test]
+    [Timeout(5000)]
+    public void InitializationObjects_CompletesSyncWhenObjectsPresent()
+    {
+        if (m_RuntimeSettingsPath.StartsWith("GUID:"))
+        {
+            Assert.Ignore($"{nameof(InitializationObjects_CompletesWhenObjectsPresent)} skipped due to not having a runtime settings asset (Fast mode does not create this).");
+        }
+        InitalizationObjectsOperation op = new InitalizationObjectsOperation();
+        op.Completed += obj =>
+        {
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, obj.Status);
+            Assert.IsTrue(obj.Result);
+        };
+        var runtimeDataLocation = new ResourceLocationBase("RuntimeData", m_RuntimeSettingsPath, typeof(JsonAssetProvider).FullName, typeof(ResourceManagerRuntimeData));
+        var rtdOp = m_Addressables.ResourceManager.ProvideResource<ResourceManagerRuntimeData>(runtimeDataLocation);
+        rtdOp.Completed += obj =>
+        {
+            ObjectInitializationData opData = ObjectInitializationData.CreateSerializedInitializationData<FakeInitializationObject>("fake", "fake");
+            obj.Result.InitializationObjects.Add(opData);
+        };
+
+        op.Init(rtdOp, m_Addressables);
+
+        var handle = m_Addressables.ResourceManager.StartOperation(op, rtdOp);
+        handle.WaitForCompletion();
+        Assert.IsTrue(handle.IsDone);
     }
 
 #endif

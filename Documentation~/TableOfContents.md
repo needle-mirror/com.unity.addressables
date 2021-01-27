@@ -69,4 +69,5 @@
 		* [Minimize catlog size](AddressablesFAQ.md#Are-there-ways-to-miminize-the-catalog-size)
 		* [Addressables content state](AddressablesFAQ.md#What-is-addressables_content_state)
 		* [Scale implications](AddressablesFAQ.md#What-are-possible-scale-implications)
+	* [Synchronous Addressables](SynchronousAddressables.md)
 		

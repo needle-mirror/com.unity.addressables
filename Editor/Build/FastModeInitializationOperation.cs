@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
@@ -31,6 +32,14 @@ namespace UnityEditor.AddressableAssets.Settings
                     return b as T;
             }
             return null;
+        }
+
+        internal override bool InvokeWaitForCompletion()
+        {
+            m_RM?.Update(Time.deltaTime);
+            if(!HasExecuted)
+                InvokeExecute();
+            return IsDone;
         }
 
         protected override void Execute()

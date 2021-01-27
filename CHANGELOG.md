@@ -4,6 +4,15 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.17.4-preview] - 2021-01-27
+- Removed unnecessary logging when deleting temporary Addressables build data.
+- Added WaitForCompletion() on AsyncOperationHandles.  This allows async operation to be executed synchronously
+- Alphanumeric sorting in the group window can be enabled through a setting in the editor preferences
+- Change to set IgnoreFailures with LoadOptions.IgnoreFailures stored in the IResourceLocation.Data if not null
+- Fixed issue when loading legacy Resources from Addressables using the guid when playmode is set to AssetDatabase.
+- Fixed some compile warnings on 2020.2
+- Change to use full path for name of cached catalog.
+
 ## [1.17.2-preview] - 2021-01-14
 - Add silent fail option to providers to get rid of error when cache not found as expected 
 - Hierarchy now fully displayed in search results when 'show groups as hierarchy' and 'hierarchical search' options are enabled

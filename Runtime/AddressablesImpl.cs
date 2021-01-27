@@ -430,6 +430,7 @@ namespace UnityEngine.AddressableAssets
 #else
                 RuntimePath + "/settings.json";
 #endif
+
             return InitializeAsync(ResolveInternalId(settingsPath));
         }
 
@@ -439,8 +440,8 @@ namespace UnityEngine.AddressableAssets
 
             if (!string.IsNullOrEmpty(hashFilePath))
             {
-                string cacheHashFilePath = ResolveInternalId(kCacheDataFolder + Path.GetFileName(hashFilePath));
-                
+                string cacheHashFilePath = ResolveInternalId(kCacheDataFolder + hashFilePath.GetHashCode() + hashFilePath.Substring(hashFilePath.LastIndexOf(".")));
+
                 var hashResourceLocation = new ResourceLocationBase(hashFilePath, hashFilePath, typeof(TextDataProvider).FullName, typeof(string));
                 hashResourceLocation.Data = new ProviderLoadRequestOptions() {IgnoreFailures = true};
                 catalogLoc.Dependencies.Add(hashResourceLocation);
@@ -549,6 +550,14 @@ namespace UnityEngine.AddressableAssets
                 m_Addressables = aa;
             }
 
+            internal override bool InvokeWaitForCompletion()
+            {
+                m_RM?.Update(Time.deltaTime);
+                if (!HasExecuted)
+                    InvokeExecute();
+                return true;
+            }
+
             protected override void Execute()
             {
                 m_Addressables.GetResourceLocations(m_Keys, m_ResourceType, out m_locations);
@@ -581,6 +590,14 @@ namespace UnityEngine.AddressableAssets
                 if (m_locations == null)
                     m_locations = new List<IResourceLocation>();
                 Complete(m_locations, true, string.Empty);
+            }
+
+            internal override bool InvokeWaitForCompletion()
+            {
+                m_RM?.Update(Time.deltaTime);
+                if (!HasExecuted)
+                    InvokeExecute();
+                return true;
             }
         }
 

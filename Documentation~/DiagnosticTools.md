@@ -12,7 +12,7 @@ The build layout report provides detailed information and statistics about your 
 * Explanation of non-explicit Assets that were pulled into AssetBundles
 * AssetBundle dependencies
 
-Because compiling the report increases build time, the build layout report is disabled by default. You can enable the report in the Addressables section of the [Preferences window](xref:Preferences). Once enabled, the report is created whenever you build Addressables content. You can find the report in your project folder at `Library/com.unity.addressables/buildlayout.txt`.
+Because compiling the report increases build time, the build layout report is disabled by default. You can enable the report in the Addressables section of the [Preferences window](https://docs.unity3d.com/Manual/Preferences.html). Once enabled, the report is created whenever you build Addressables content. You can find the report in your project folder at `Library/com.unity.addressables/buildlayout.txt`.
 
 See [Building your Addressable content](AddressableAssetsGettingStarted.md#building-your-addressable-content) for more information about building content.
 

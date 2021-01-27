@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.IO;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 
@@ -77,10 +78,13 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
             string m_LocalHashValue;
             ProvideHandle m_ProviderInterface;
             internal ContentCatalogData m_ContentCatalogData;
+            AsyncOperationHandle<ContentCatalogData> m_ContentCatalogDataLoadOp;
+            private BundledCatalog m_BundledCatalog;
 
             public void Start(ProvideHandle providerInterface, bool disableCatalogUpdateOnStart, bool isLocalCatalogInBundle)
             {
                 m_ProviderInterface = providerInterface;
+                m_ProviderInterface.SetWaitForCompletionCallback(WaitForCompletionCallback);
                 m_LocalDataPath = null;
                 m_RemoteHashValue = null;
 
@@ -93,6 +97,29 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                 bool isLocalCatalog = idToLoad.Equals(GetTransformedInternalId(m_ProviderInterface.Location));
 
                 LoadCatalog(idToLoad, isLocalCatalogInBundle, isLocalCatalog);
+            }
+
+            bool WaitForCompletionCallback()
+            {
+                if (m_ContentCatalogData != null)
+                    return true;
+                bool ccComplete;
+                if (m_BundledCatalog != null)
+                {
+                    ccComplete = m_BundledCatalog.WaitForCompletion();
+                }
+                else
+                {
+                    ccComplete = m_ContentCatalogDataLoadOp.IsDone;
+                    if (!ccComplete)
+                        m_ContentCatalogDataLoadOp.WaitForCompletion();
+                }
+
+                //content catalog op needs the Update to be pumped so we can invoke completion callbacks
+                if (ccComplete && m_ContentCatalogData == null)
+                    m_ProviderInterface.ResourceManager.Update(Time.deltaTime);
+
+                return ccComplete;
             }
 
             /// <summary>
@@ -109,31 +136,33 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                 {
                     if (isLocalCatalogInBundle && isLocalCatalog)
                     {
-                        var bc = new BundledCatalog(idToLoad);
-                        bc.OnLoaded += ccd =>
+                        m_BundledCatalog = new BundledCatalog(idToLoad);
+                        m_BundledCatalog.OnLoaded += ccd =>
                         {
                             m_ContentCatalogData = ccd;
                             OnCatalogLoaded(ccd);
                         };
-                        bc.LoadCatalogFromBundleAsync();
+                        m_BundledCatalog.LoadCatalogFromBundleAsync();
                     }
                     else
                     {
                         IResourceLocation location = new ResourceLocationBase(idToLoad, idToLoad,
                             typeof(JsonAssetProvider).FullName, typeof(ContentCatalogData));
-                        m_ProviderInterface.ResourceManager.ProvideResource<ContentCatalogData>(location).Completed +=
-                            op =>
-                            {
-                                m_ContentCatalogData = op.Result;
-                                m_ProviderInterface.ResourceManager.Release(op);
-                                OnCatalogLoaded(m_ContentCatalogData);
-                            };
+                        m_ContentCatalogDataLoadOp = m_ProviderInterface.ResourceManager.ProvideResource<ContentCatalogData>(location);
+                        m_ContentCatalogDataLoadOp.Completed += CatalogLoadOpCompleteCallback;
                     }
                 }
                 catch (Exception ex)
                 {
                     m_ProviderInterface.Complete<ContentCatalogData>(null, false, ex);
                 }
+            }
+
+            void CatalogLoadOpCompleteCallback(AsyncOperationHandle<ContentCatalogData> op)
+            {
+                m_ContentCatalogData = op.Result;
+                m_ProviderInterface.ResourceManager.Release(op);
+                OnCatalogLoaded(m_ContentCatalogData);
             }
 
             internal class BundledCatalog
@@ -188,35 +217,44 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                     m_LoadBundleRequest = AssetBundle.LoadFromFileAsync(m_BundlePath);
                     m_LoadBundleRequest.completed += loadOp =>
                     {
-                        //Debug.Log($"m_LoadBundleRequest.completed frame : {Time.frameCount}");
                         if (loadOp is AssetBundleCreateRequest createRequest && createRequest.assetBundle != null)
                         {
                             m_CatalogAssetBundle = createRequest.assetBundle;
                             m_LoadTextAssetRequest = m_CatalogAssetBundle.LoadAllAssetsAsync<TextAsset>();
-                            m_LoadTextAssetRequest.completed += op =>
-                            {
-                                //Debug.Log($"m_LoadTextAssetRequest.completed frame : {Time.frameCount}");
-                                if (op is AssetBundleRequest loadRequest
-                                    && loadRequest.asset is TextAsset textAsset
-                                    && textAsset.text != null)
-                                {
-                                    m_CatalogData = JsonUtility.FromJson<ContentCatalogData>(textAsset.text);
-                                    OnLoaded?.Invoke(m_CatalogData);
-                                }
-                                else
-                                {
-                                    Addressables.LogError($"No catalog text assets where found in bundle {m_BundlePath}");
-                                }
-                                Unload();
-                                m_OpInProgress = false;
-                            };
-                        }
+                            if (m_LoadTextAssetRequest.isDone)
+                                LoadTextAssetRequestComplete(m_LoadTextAssetRequest);
+                            m_LoadTextAssetRequest.completed += LoadTextAssetRequestComplete;
+                        } 
                         else
                         {
                             Addressables.LogError($"Unable to load dependent bundle from location : {m_BundlePath}");
                             m_OpInProgress = false;
                         }
                     };
+                }
+                void LoadTextAssetRequestComplete(AsyncOperation op)
+                {
+                    if (op is AssetBundleRequest loadRequest
+                        && loadRequest.asset is TextAsset textAsset
+                        && textAsset.text != null)
+                    {
+                        m_CatalogData = JsonUtility.FromJson<ContentCatalogData>(textAsset.text);
+                        OnLoaded?.Invoke(m_CatalogData);
+                    }
+                    else
+                    {
+                        Addressables.LogError($"No catalog text assets where found in bundle {m_BundlePath}");
+                    }
+                    Unload();
+                    m_OpInProgress = false;
+                }
+
+                public bool WaitForCompletion()
+                {
+                    if (m_LoadBundleRequest.assetBundle == null)
+                        return false;
+
+                    return m_LoadTextAssetRequest.asset != null || m_LoadTextAssetRequest.allAssets != null;
                 }
             }
 

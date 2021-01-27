@@ -283,14 +283,30 @@ namespace UnityEditor.AddressableAssets.Settings
                         slash = keyPath.LastIndexOf('/');
                     }
                 }
-            }
-
-            //check resources folders
-            if (m_includeResourcesFolders)
-            {
-                UnityEngine.Object obj = Resources.Load(keyStr, type == null ? typeof(UnityEngine.Object) : type);
-                if (obj != null)
-                    locations.Add(new ResourceLocationBase(keyStr, keyStr, typeof(LegacyResourcesProvider).FullName, type));
+                
+                //check resources folders
+                if (m_includeResourcesFolders)
+                {
+	                string resPath = keyStr;
+	                UnityEngine.Object obj = Resources.Load(resPath, type == null ? typeof(UnityEngine.Object) : type);
+	                if (obj == null && keyStr.Length == 32)
+	                {
+		                resPath = AssetDatabase.GUIDToAssetPath(keyStr);
+		                if (!string.IsNullOrEmpty(resPath))
+		                {
+			                int index = resPath.IndexOf("Resources/", StringComparison.Ordinal);
+			                if (index >= 0)
+			                {
+				                int start = index + 10;
+				                int length = resPath.Length - (start + System.IO.Path.GetExtension(resPath).Length);
+				                resPath = resPath.Substring(index + 10, length);
+				                obj = Resources.Load(resPath, type == null ? typeof(UnityEngine.Object) : type);
+			                }
+		                }
+	                }
+	                if (obj != null)
+		                locations.Add(new ResourceLocationBase(keyStr, resPath, typeof(LegacyResourcesProvider).FullName, type));
+                }
             }
 
             if (locations.Count == 0)

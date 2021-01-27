@@ -43,14 +43,21 @@ namespace UnityEngine.ResourceManagement
             s_MaxRequest = maxRequests;
         }
 
+        public static bool ShouldQueueNextRequest => s_ActiveRequests.Count >= s_MaxRequest;
+
         public static WebRequestQueueOperation QueueRequest(UnityWebRequest request)
         {
             WebRequestQueueOperation queueOperation = new WebRequestQueueOperation(request);
             if (s_ActiveRequests.Count < s_MaxRequest)
             {
                 var webRequestAsyncOp = request.SendWebRequest();
-                webRequestAsyncOp.completed += OnWebAsyncOpComplete;
                 s_ActiveRequests.Add(webRequestAsyncOp);
+
+                if (webRequestAsyncOp.isDone)
+                    OnWebAsyncOpComplete(webRequestAsyncOp);
+                else
+                    webRequestAsyncOp.completed += OnWebAsyncOpComplete;
+
                 queueOperation.Complete(webRequestAsyncOp);
             }
             else

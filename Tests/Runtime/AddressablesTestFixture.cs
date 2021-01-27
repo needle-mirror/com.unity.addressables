@@ -38,6 +38,11 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
         Packed
     }
     protected virtual TestBuildScriptMode BuildScriptMode { get; }
+    
+    protected string GetGeneratedAssetsPath()
+    {
+	    return Path.Combine("Assets", "gen", m_UniqueTestName);
+    }
 
     [UnitySetUp]
     public IEnumerator RuntimeSetup()
@@ -72,7 +77,7 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
 
         var activeScenePath = EditorSceneManager.GetActiveScene().path;
 
-        string rootFolder = Path.Combine("Assets", "gen", m_UniqueTestName);
+        string rootFolder = GetGeneratedAssetsPath();
         if (Directory.Exists(rootFolder))
             Directory.Delete(rootFolder, true);
         Directory.CreateDirectory(rootFolder);

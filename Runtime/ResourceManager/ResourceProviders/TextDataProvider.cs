@@ -27,12 +27,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             WebRequestQueueOperation m_RequestQueueOperation;
             ProvideHandle m_PI;
             bool m_IgnoreFailures;
+            private bool m_Complete = false;
 
             private float GetPercentComplete() { return m_RequestOperation != null ? m_RequestOperation.progress : 0.0f; }
             
             public void Start(ProvideHandle provideHandle, TextDataProvider rawProvider, bool ignoreFailures)
             {
                 m_PI = provideHandle;
+                m_PI.SetWaitForCompletionCallback(WaitForCompletionHandler);
                 provideHandle.SetProgressCallback(GetPercentComplete);
                 m_Provider = rawProvider;
                 if ((m_PI.Location.Data as ProviderLoadRequestOptions) != null)
@@ -49,6 +51,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     var text = File.ReadAllText(path);
                     object result = ConvertText(text);
                     m_PI.Complete(result, result != null, result == null ? new Exception($"Unable to load asset of type {m_PI.Type} from location {m_PI.Location}.") : null);
+                    m_Complete = true;
                 }
                 else if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
                 {
@@ -78,16 +81,38 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     if (m_IgnoreFailures)
                     {
                         m_PI.Complete<object>(null, true, exception);
+                        m_Complete = true;
                     }
-                    else{
+                    else
+                    {
                         exception = new Exception(string.Format("Invalid path in " + nameof(TextDataProvider) + " : '{0}'.", path));
                         m_PI.Complete<object>(null, false, exception);
+                        m_Complete = true;
                     }
                 }
             }
 
+            bool WaitForCompletionHandler()
+            {
+                if (m_Complete)
+                    return true;
+
+                if (m_RequestOperation != null)
+                {
+                    if(m_RequestOperation.isDone && !m_Complete)
+                        RequestOperation_completed(m_RequestOperation);
+                    else if (!m_RequestOperation.isDone)
+                        return false;
+                }
+
+                return m_Complete;
+            }
+
             private void RequestOperation_completed(AsyncOperation op)
             {
+                if (m_Complete)
+                    return;
+
                 var webOp = op as UnityWebRequestAsyncOperation;
                 object result = null;
                 Exception exception = null;
@@ -104,6 +129,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     exception = new Exception(nameof(TextDataProvider) + " unable to load from unknown url.");
                 }
                 m_PI.Complete(result, result != null || m_IgnoreFailures, exception);
+                m_Complete = true;
             }
 
             private object ConvertText(string text)

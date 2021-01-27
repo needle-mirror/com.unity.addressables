@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using UnityEngine.Networking;
-using UnityEngine.ResourceManagement.AsyncOperations;
-using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEngine.ResourceManagement.ResourceProviders
@@ -19,12 +16,12 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             AssetBundleRequest m_RequestOperation;
             ProvideHandle m_ProvideHandle;
             string subObjectName = null;
-            internal static AssetBundle LoadBundleFromDependecies(IList<object> results)
+            internal static IAssetBundleResource LoadBundleFromDependecies(IList<object> results)
             {
                 if (results == null || results.Count == 0)
                     return null;
 
-                AssetBundle bundle = null;
+                IAssetBundleResource bundle = null;
                 bool firstBundleWrapper = true;
                 for (int i = 0; i < results.Count; i++)
                 {
@@ -32,9 +29,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     if (abWrapper != null)
                     {
                         //only use the first asset bundle, even if it is invalid
-                        var b = abWrapper.GetAssetBundle();
+                        abWrapper.GetAssetBundle();
                         if (firstBundleWrapper)
-                            bundle = b;
+                            bundle = abWrapper;
                         firstBundleWrapper = false;
                     }
                 }
@@ -44,41 +41,65 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             public void Start(ProvideHandle provideHandle)
             {
                 provideHandle.SetProgressCallback(ProgressCallback);
+                provideHandle.SetWaitForCompletionCallback(WaitForCompletionHandler);
                 subObjectName = null;
                 m_ProvideHandle = provideHandle;
                 m_RequestOperation = null;
                 List<object> deps = new List<object>(); // TODO: garbage. need to pass actual count and reuse the list
                 m_ProvideHandle.GetDependencies(deps);
-                AssetBundle bundle = LoadBundleFromDependecies(deps);
-                if (bundle == null)
+                var bundleResource = LoadBundleFromDependecies(deps);
+                if (bundleResource == null)
                 {
                     m_ProvideHandle.Complete<AssetBundle>(null, false, new Exception("Unable to load dependent bundle from location " + m_ProvideHandle.Location));
                 }
                 else
                 {
-                    var assetPath = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
-                    if (m_ProvideHandle.Type.IsArray)
+                    var bundle = bundleResource.GetAssetBundle();
+                    if (bundle == null)
                     {
-                        m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetElementType());
-                    }
-                    else if (m_ProvideHandle.Type.IsGenericType && typeof(IList<>) == m_ProvideHandle.Type.GetGenericTypeDefinition())
-                    {
-                        m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetGenericArguments()[0]);
+                        m_ProvideHandle.Complete<AssetBundle>(null, false, new Exception("Unable to load dependent bundle from location " + m_ProvideHandle.Location));
                     }
                     else
                     {
-                        if (ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
+                        var assetPath = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
+                        if (m_ProvideHandle.Type.IsArray)
                         {
-                            subObjectName = subKey;
-                            m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(mainPath, m_ProvideHandle.Type);
+                            m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetElementType());
+                        }
+                        else if (m_ProvideHandle.Type.IsGenericType && typeof(IList<>) == m_ProvideHandle.Type.GetGenericTypeDefinition())
+                        {
+                            m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetGenericArguments()[0]);
                         }
                         else
                         {
-                            m_RequestOperation = bundle.LoadAssetAsync(assetPath, m_ProvideHandle.Type);
+                            if (ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
+                            {
+                                subObjectName = subKey;
+                                m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(mainPath, m_ProvideHandle.Type);
+                            }
+                            else
+                            {
+                                m_RequestOperation = bundle.LoadAssetAsync(assetPath, m_ProvideHandle.Type);
+                            }
+                        }
+                        if (m_RequestOperation != null)
+                        {
+                            if (m_RequestOperation.isDone)
+                                ActionComplete(m_RequestOperation);
+                            else
+                                m_RequestOperation.completed += ActionComplete;
                         }
                     }
-                    m_RequestOperation.completed += ActionComplete;
                 }
+            }
+
+            private bool WaitForCompletionHandler()
+            {
+                if (m_RequestOperation == null)
+                    return false;
+                if (m_RequestOperation.isDone)
+                    return true;
+                return m_RequestOperation.asset != null;
             }
 
             private void ActionComplete(AsyncOperation obj)

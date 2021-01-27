@@ -41,6 +41,22 @@ namespace UnityEngine.AddressableAssets
             return m_Addressables.ResourceManager.StartOperation(this, m_DepOp);
         }
 
+        internal override bool InvokeWaitForCompletion()
+        {
+            if (IsDone)
+                return true;
+            if (m_DepOp.IsValid() && !m_DepOp.IsDone)
+                m_DepOp.WaitForCompletion();
+
+            m_RM?.Update(Time.deltaTime);
+
+            if (!HasExecuted)
+                InvokeExecute();
+
+            m_RM?.Update(Time.deltaTime);
+            return IsDone;
+        }
+
         protected override void Destroy()
         {
             m_Addressables.Release(m_DepOp);

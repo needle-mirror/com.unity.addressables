@@ -78,7 +78,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
             {
                 m_Provider = provider;
                 m_PI = provideHandle;
-
+                m_PI.SetWaitForCompletionCallback(WaitForCompletionHandler);
                 m_RequestOperation = m_Provider.LoadAsync(m_PI.Location);
                 m_PI.SetProgressCallback(GetPercentComplete);
                 m_PI.SetDownloadProgressCallbacks(GetDownloadStatus);
@@ -87,6 +87,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
                     object result = (bundleOp.Result != null && m_PI.Type.IsAssignableFrom(bundleOp.Result.GetType())) ? bundleOp.Result : null;
                     m_PI.Complete(result, (result != null && bundleOp.OperationException == null), bundleOp.OperationException);
                 };
+            }
+
+            private bool WaitForCompletionHandler()
+            {
+                return m_RequestOperation.WaitForCompletion();
             }
         }
 

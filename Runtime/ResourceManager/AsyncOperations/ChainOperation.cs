@@ -33,10 +33,32 @@ namespace UnityEngine.ResourceManagement
             m_ReleaseDependenciesOnFailure = releaseDependenciesOnFailure;
         }
 
+        internal override bool InvokeWaitForCompletion()
+        {
+            if (IsDone)
+                return true;
+
+            if (!m_DepOp.IsDone)
+                m_DepOp.WaitForCompletion();
+
+            m_RM?.Update(Time.deltaTime);
+
+            if (!HasExecuted)
+                InvokeExecute();
+
+            if (!m_WrappedOp.IsValid())
+                return m_WrappedOp.IsDone;
+            m_WrappedOp.WaitForCompletion();
+            return m_WrappedOp.IsDone;
+        }
+
         protected override void Execute()
         {
             m_WrappedOp = m_Callback(m_DepOp);
-            m_WrappedOp.Completed += m_CachedOnWrappedCompleted;
+            if(!m_WrappedOp.IsDone)
+                m_WrappedOp.Completed += m_CachedOnWrappedCompleted;
+            else
+                OnWrappedCompleted(m_WrappedOp);
             m_Callback = null;
         }
 
@@ -125,10 +147,32 @@ namespace UnityEngine.ResourceManagement
             m_ReleaseDependenciesOnFailure = releaseDependenciesOnFailure;
         }
 
+        internal override bool InvokeWaitForCompletion()
+        {
+            if (IsDone)
+                return true;
+
+            if (!m_DepOp.IsDone)
+                m_DepOp.WaitForCompletion();
+
+            m_RM?.Update(Time.deltaTime);
+
+            if (!HasExecuted)
+                InvokeExecute();
+
+            if (!m_WrappedOp.IsValid())
+                return m_WrappedOp.IsDone;
+            m_WrappedOp.WaitForCompletion();
+            return m_WrappedOp.IsDone;
+        }
+
         protected override void Execute()
         {
             m_WrappedOp = m_Callback(m_DepOp);
-            m_WrappedOp.Completed += m_CachedOnWrappedCompleted;
+            if (m_WrappedOp.IsDone)
+                m_CachedOnWrappedCompleted(m_WrappedOp);
+            else
+                m_WrappedOp.Completed += m_CachedOnWrappedCompleted;
             m_Callback = null;
         }
 

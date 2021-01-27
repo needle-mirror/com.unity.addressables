@@ -44,6 +44,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         void Start(ResourceManager rm, AsyncOperationHandle dependency, DelegateList<float> updateCallbacks);
 
         AsyncOperationHandle Handle { get; }
+
+        void WaitForCompletion();
     }
 
     /// <summary>
@@ -103,6 +105,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         internal Action<IAsyncOperation> OnDestroy { set { m_OnDestroyAction = value; } }
         internal int ReferenceCount { get { return m_referenceCount; } }
         Action<AsyncOperationHandle> m_dependencyCompleteAction;
+        protected bool HasExecuted = false;
 
         /// <summary>
         /// True if the current op has begun but hasn't yet reached completion.  False otherwise.
@@ -141,6 +144,16 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             if (m_RM != null && m_RM.postProfilerEvents)
                 m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount));
         }
+
+        /// <summary>
+        /// Synchronously complete the async operation.
+        /// </summary>
+        public void WaitForCompletion()
+        {
+            while (!InvokeWaitForCompletion()) { }
+        }
+
+        internal virtual bool InvokeWaitForCompletion(){ return IsDone; }
 
         internal void DecrementReferenceCount()
         {
@@ -404,6 +417,9 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// <param name="releaseDependenciesOnFailure">When true, failed operations will release any dependencies that succeeded.</param>
         public void Complete(TObject result, bool success, string errorMsg, bool releaseDependenciesOnFailure)
         {
+            if (IsDone)
+                return;
+
             IUpdateReceiver upOp = this as IUpdateReceiver;
             if (m_UpdateCallbacks != null && upOp != null)
                 m_UpdateCallbacks.Remove(m_UpdateCallback);
@@ -460,15 +476,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 InvokeExecute();
         }
 
-        private void InvokeExecute()
+        internal void InvokeExecute()
         {
-            //     m_IsExecuting = true;
             Execute();
+            HasExecuted = true;
             IUpdateReceiver upOp = this as IUpdateReceiver;
             if (upOp != null)
                 m_UpdateCallbacks.Add(m_UpdateCallback);
-
-            //   m_IsExecuting = false;
         }
 
         event Action<AsyncOperationHandle> IAsyncOperation.CompletedTypeless
@@ -490,57 +504,48 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             }
         }
 
-        int IAsyncOperation.Version { get { return Version; } }
+        int IAsyncOperation.Version  => Version;
 
-        int IAsyncOperation.ReferenceCount { get { return ReferenceCount; } }
+        int IAsyncOperation.ReferenceCount => ReferenceCount;
 
-        float IAsyncOperation.PercentComplete { get { return PercentComplete; } }
+        float IAsyncOperation.PercentComplete => PercentComplete;
 
-        AsyncOperationStatus IAsyncOperation.Status { get { return Status; } }
+        AsyncOperationStatus IAsyncOperation.Status => Status;
 
-        Exception IAsyncOperation.OperationException { get { return OperationException; } }
+        Exception IAsyncOperation.OperationException => OperationException;
 
-        bool IAsyncOperation.IsDone { get { return IsDone; } }
+        bool IAsyncOperation.IsDone => IsDone;
 
-        AsyncOperationHandle IAsyncOperation.Handle { get { return Handle; } }
+        AsyncOperationHandle IAsyncOperation.Handle => Handle;
 
         Action<IAsyncOperation> IAsyncOperation.OnDestroy { set { OnDestroy = value; } }
 
-        string IAsyncOperation.DebugName { get { return DebugName; } }
+        string IAsyncOperation.DebugName => DebugName;
 
         /// <inheritdoc/>
-        object IAsyncOperation.GetResultAsObject()
-        {
-            return Result;
-        }
+        object IAsyncOperation.GetResultAsObject() => Result;
 
         Type IAsyncOperation.ResultType { get { return typeof(TObject); } }
 
         /// <inheritdoc/>
-        void IAsyncOperation.GetDependencies(List<AsyncOperationHandle> deps) { GetDependencies(deps); }
+        void IAsyncOperation.GetDependencies(List<AsyncOperationHandle> deps) => GetDependencies(deps); 
 
         /// <inheritdoc/>
-        void IAsyncOperation.DecrementReferenceCount() { DecrementReferenceCount(); }
+        void IAsyncOperation.DecrementReferenceCount() => DecrementReferenceCount();
 
         /// <inheritdoc/>
-        void IAsyncOperation.IncrementReferenceCount() { IncrementReferenceCount(); }
+        void IAsyncOperation.IncrementReferenceCount() => IncrementReferenceCount();
 
         /// <inheritdoc/>
-        void IAsyncOperation.InvokeCompletionEvent() { InvokeCompletionEvent(); }
+        void IAsyncOperation.InvokeCompletionEvent() => InvokeCompletionEvent(); 
 
         /// <inheritdoc/>
-        void IAsyncOperation.Start(ResourceManager rm, AsyncOperationHandle dependency, DelegateList<float> updateCallbacks)
-        {
-            Start(rm, dependency, updateCallbacks);
-        }
+        void IAsyncOperation.Start(ResourceManager rm, AsyncOperationHandle dependency, DelegateList<float> updateCallbacks) => Start(rm, dependency, updateCallbacks);
 
         internal virtual void ReleaseDependencies() { }
 
         /// <inheritdoc/>
-        DownloadStatus IAsyncOperation.GetDownloadStatus(HashSet<object> visited)
-        {
-            return GetDownloadStatus(visited);
-        }
+        DownloadStatus IAsyncOperation.GetDownloadStatus(HashSet<object> visited) => GetDownloadStatus(visited);
 
         internal virtual DownloadStatus GetDownloadStatus(HashSet<object> visited)
         {

@@ -11,12 +11,14 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
+using ResourceManager = UnityEngine.ResourceManagement.ResourceManager;
 
 namespace UnityEngine.AddressableAssets.Initialization
 {
     internal class InitializationOperation : AsyncOperationBase<IResourceLocator>
     {
         AsyncOperationHandle<ResourceManagerRuntimeData> m_rtdOp;
+        AsyncOperationHandle<IResourceLocator> m_loadCatalogOp;
         string m_ProviderSuffix;
         AddressablesImpl m_Addressables;
         ResourceManagerDiagnostics m_Diagnostics;
@@ -62,6 +64,28 @@ namespace UnityEngine.AddressableAssets.Initialization
             var groupOpHandle = aa.ResourceManager.StartOperation(initOp.m_InitGroupOps, initOp.m_rtdOp);
 
             return aa.ResourceManager.StartOperation<IResourceLocator>(initOp, groupOpHandle);
+        }
+
+        internal override bool InvokeWaitForCompletion()
+        {
+            if (IsDone)
+                return true;
+
+            if (m_rtdOp.IsValid() && !m_rtdOp.IsDone)
+                m_rtdOp.WaitForCompletion();
+
+            m_RM?.Update(Time.deltaTime);
+
+            if (!HasExecuted)
+                InvokeExecute();
+
+            if (m_loadCatalogOp.IsValid() && !m_loadCatalogOp.IsDone)
+            {
+                m_loadCatalogOp.WaitForCompletion();
+                m_RM?.Update(Time.deltaTime); //We need completion callbacks to get triggered.
+            }
+
+            return m_rtdOp.IsDone && m_loadCatalogOp.IsDone;
         }
 
         protected override void Execute()
@@ -122,7 +146,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             else
             {
                 Addressables.LogFormat("Addressables - loading content catalogs, {0} found.", catalogs.Count);
-                LoadContentCatalogInternal(catalogs, 0, locMap);
+                m_loadCatalogOp = LoadContentCatalogInternal(catalogs, 0, locMap);
             }
         }
 
@@ -228,36 +252,43 @@ namespace UnityEngine.AddressableAssets.Initialization
         }
 
         //Attempts to load each catalog in order, stopping at first success.
-        void LoadContentCatalogInternal(IList<IResourceLocation> catalogs, int index, ResourceLocationMap locMap)
+        AsyncOperationHandle<IResourceLocator> LoadContentCatalogInternal(IList<IResourceLocation> catalogs, int index, ResourceLocationMap locMap)
         {
             Addressables.LogFormat("Addressables - loading content catalog from {0}.", m_Addressables.ResourceManager.TransformInternalId(catalogs[index]));
-            LoadContentCatalog(catalogs[index], m_ProviderSuffix).Completed += op =>
+            var loadOp = LoadContentCatalog(catalogs[index], m_ProviderSuffix);
+            if(loadOp.IsDone)
+                LoadOpComplete(loadOp, catalogs, locMap, index);
+            else
+                loadOp.Completed += op => LoadOpComplete(op, catalogs, locMap, index);
+            return loadOp;
+        }
+
+        void LoadOpComplete(AsyncOperationHandle<IResourceLocator> op, IList<IResourceLocation> catalogs, ResourceLocationMap locMap, int index)
+        {
+            if (op.Result != null)
             {
-                if (op.Result != null)
+                m_Addressables.RemoveResourceLocator(locMap);
+                Result = op.Result;
+                Complete(Result, true, string.Empty);
+                m_Addressables.Release(op);
+                Addressables.Log("Addressables - initialization complete.");
+            }
+            else
+            {
+                Addressables.LogFormat("Addressables - failed to load content catalog from {0}.", op);
+                if (index + 1 >= catalogs.Count)
                 {
+                    Addressables.LogWarningFormat("Addressables - initialization failed.", op);
                     m_Addressables.RemoveResourceLocator(locMap);
-                    Result = op.Result;
-                    Complete(Result, true, string.Empty);
+                    Complete(Result, false, op.OperationException != null ? op.OperationException.Message : "LoadContentCatalogInternal");
                     m_Addressables.Release(op);
-                    Addressables.Log("Addressables - initialization complete.");
                 }
                 else
                 {
-                    Addressables.LogFormat("Addressables - failed to load content catalog from {0}.", op);
-                    if (index + 1 >= catalogs.Count)
-                    {
-                        Addressables.LogWarningFormat("Addressables - initialization failed.", op);
-                        m_Addressables.RemoveResourceLocator(locMap);
-                        Complete(Result, false, op.OperationException != null ? op.OperationException.Message : "LoadContentCatalogInternal");
-                        m_Addressables.Release(op);
-                    }
-                    else
-                    {
-                        LoadContentCatalogInternal(catalogs, index + 1, locMap);
-                        m_Addressables.Release(op);
-                    }
+                    m_loadCatalogOp = LoadContentCatalogInternal(catalogs, index + 1, locMap);
+                    m_Addressables.Release(op);
                 }
-            };
+            }
         }
     }
 }

@@ -45,18 +45,29 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         class InternalOp
         {
             ProvideHandle m_ProvideHandle;
+            bool m_Loaded;
             public void Start(ProvideHandle provideHandle, float loadDelay)
             {
+                m_Loaded = false;
                 m_ProvideHandle = provideHandle;
+                m_ProvideHandle.SetWaitForCompletionCallback(WaitForCompletionHandler);
                 if (loadDelay < 0)
                     LoadImmediate();
                 else
                     DelayedActionManager.AddAction((Action)LoadImmediate, loadDelay);
             }
 
+            private bool WaitForCompletionHandler()
+            {
+                LoadImmediate();
+                return true;
+            }
 
             void LoadImmediate()
             {
+                if (m_Loaded)
+                    return;
+                m_Loaded = true;
                 string assetPath = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
                 object result = null;
                 if (m_ProvideHandle.Type.IsArray)

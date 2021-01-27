@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -241,7 +242,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 return;
             foreach (var child in root.children)
             {
-                if (child != null)
+                if (child != null && IsExpanded(child.id))
                     SortHierarchical(child.children);
             }
         }
@@ -292,7 +293,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
             foreach (var child in children)
             {
-                if (child != null)
+                if (child != null && IsExpanded(child.id))
                     SortHierarchical(child.children);
             }
         }
@@ -777,7 +778,6 @@ namespace UnityEditor.AddressableAssets.GUI
             AddressableAssetSettings.InvokeAssetGroupCommand(d.Item1, d.Item2.Select(s => s.group));
         }
 
-
         void HandleCustomContextMenuItemEntries(object context)
         {
             var d = context as Tuple<string, List<AssetEntryTreeViewItem>>;
@@ -861,7 +861,6 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                     foreach (var i in AddressableAssetSettings.CustomAssetGroupCommands)
                         menu.AddItem(new GUIContent(i), false, HandleCustomContextMenuItemGroups, new Tuple<string, List<AssetEntryTreeViewItem>>(i, selectedNodes));
-                    
                 }
                 else if (isEntry)
                 {
@@ -1494,51 +1493,26 @@ namespace UnityEditor.AddressableAssets.GUI
         }
     }
 
-
-    //TODO - ideally need to get rid of this
     static class MyExtensionMethods
     {
-        public static IOrderedEnumerable<T> Order<T, TKey>(this IEnumerable<T> source, Func<T, TKey> selector, bool ascending)
+        // Find digits in a string
+        static Regex s_Regex = new Regex(@"\d+", RegexOptions.Compiled);
+
+        public static IEnumerable<T> Order<T>(this IEnumerable<T> items, Func<T, string> selector, bool ascending)
         {
-            if (ascending)
+            if (EditorPrefs.HasKey("AllowAlphaNumericHierarchy") && EditorPrefs.GetBool("AllowAlphaNumericHierarchy"))
             {
-                return source.OrderBy(selector);
+                // Find the length of the longest number in the string
+                int maxDigits = items
+                    .SelectMany(i => s_Regex.Matches(selector(i)).Cast<Match>().Select(digitChunk => (int?)digitChunk.Value.Length))
+                    .Max() ?? 0;
+
+                // in the evaluator, pad numbers with zeros so they all have the same length
+                var tempSelector = selector;
+                selector = i => s_Regex.Replace(tempSelector(i), match => match.Value.PadLeft(maxDigits, '0'));
             }
 
-            return source.OrderByDescending(selector);
-        }
-
-        public static IOrderedEnumerable<T> ThenBy<T, TKey>(this IOrderedEnumerable<T> source, Func<T, TKey> selector, bool ascending)
-        {
-            if (ascending)
-            {
-                return source.ThenBy(selector);
-            }
-
-            return source.ThenByDescending(selector);
-        }
-
-        internal static void DrawOutline(Rect rect, float size)
-        {
-            Color color = new Color(0.6f, 0.6f, 0.6f, 1.333f);
-            if (EditorGUIUtility.isProSkin)
-            {
-                color.r = 0.12f;
-                color.g = 0.12f;
-                color.b = 0.12f;
-            }
-
-            if (Event.current.type != EventType.Repaint)
-                return;
-
-            Color orgColor = UnityEngine.GUI.color;
-            UnityEngine.GUI.color = UnityEngine.GUI.color * color;
-            UnityEngine.GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, size), EditorGUIUtility.whiteTexture);
-            UnityEngine.GUI.DrawTexture(new Rect(rect.x, rect.yMax - size, rect.width, size), EditorGUIUtility.whiteTexture);
-            UnityEngine.GUI.DrawTexture(new Rect(rect.x, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
-            UnityEngine.GUI.DrawTexture(new Rect(rect.xMax - size, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
-
-            UnityEngine.GUI.color = orgColor;
+            return ascending ? items.OrderBy(selector) : items.OrderByDescending(selector);
         }
     }
 }
