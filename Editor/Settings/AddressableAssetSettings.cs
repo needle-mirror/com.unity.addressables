@@ -396,6 +396,29 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         [SerializeField]
+        ShaderBundleNaming m_ShaderBundleNaming = ShaderBundleNaming.ProjectName;
+        /// <summary>
+        /// Sets the naming convention used for the Unity built in shader bundle at build time.
+        /// The recommended setting is Project Name.
+        /// </summary>
+        public ShaderBundleNaming ShaderBundleNaming
+        {
+            get { return m_ShaderBundleNaming; }
+            set { m_ShaderBundleNaming = value; }
+        }
+
+        [SerializeField]
+        string m_ShaderBundleCustomNaming = "";
+        /// <summary>
+        /// Custom Unity built in shader bundle prefix that is used if AddressableAssetSettings.ShaderBundleNaming is set to ShaderBundleNaming.Custom.
+        /// </summary>
+        public string ShaderBundleCustomNaming
+        {
+            get { return m_ShaderBundleCustomNaming; }
+            set { m_ShaderBundleCustomNaming = value; }
+        }
+
+        [SerializeField]
         ProfileValueReference m_RemoteCatalogBuildPath;
         /// <summary>
         /// The path to place a copy of the content catalog for online retrieval.  To do any content updates
@@ -436,6 +459,21 @@ namespace UnityEditor.AddressableAssets.Settings
             set { m_RemoteCatalogLoadPath = value; }
         }
 
+        [SerializeField] private string m_ContentStateBuildPath = "";
+        internal string ContentStateBuildPath
+        {
+	        get { return m_ContentStateBuildPath; }
+	        set { m_ContentStateBuildPath = value;  }
+        }
+
+        internal string GetContentStateBuildPath()
+        {
+	        string p = ConfigFolder;
+	        if (!string.IsNullOrEmpty(m_ContentStateBuildPath)) 
+		        p = m_ContentStateBuildPath;
+            p = Path.Combine(p, PlatformMappingService.GetPlatform().ToString());
+	        return p;
+        }
 
         /// <summary>
         /// Hash of the current settings.  This value is recomputed if anything changes.
@@ -1034,16 +1072,21 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="postEvent">Send modifcation event.</param>
         /// <returns>True if the entry was found and removed.</returns>
         public bool RemoveAssetEntry(string guid, bool postEvent = true)
+	        => RemoveAssetEntry(FindAssetEntry(guid), postEvent);
+
+        /// <summary>
+        /// Remove an asset entry.
+        /// </summary>
+        /// <param name="entry">The entry to remove.</param>
+        /// <param name="postEvent">Send modifcation event.</param>
+        /// <returns>True if the entry was found and removed.</returns>
+        internal bool RemoveAssetEntry(AddressableAssetEntry entry, bool postEvent = true)
         {
-            var entry = FindAssetEntry(guid);
-            if (entry != null)
-            {
-                if (entry.parentGroup != null)
-                    entry.parentGroup.RemoveAssetEntry(entry, postEvent);
-                SetDirty(ModificationEvent.EntryRemoved, entry, postEvent, false);
-                return true;
-            }
-            return false;
+	        if (entry == null)
+		        return false;
+	        if (entry.parentGroup != null)
+		        entry.parentGroup.RemoveAssetEntry(entry, postEvent);
+	        return true;
         }
 
         void OnEnable()

@@ -204,6 +204,11 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         /// <summary>
         /// The progress of the internal operation.
+        /// This is evenly weighted between all sub-operations. For example, a LoadAssetAsync call could potentially
+        /// be chained with InitializeAsync and have multiple dependent operations that download and load content.
+        /// In that scenario, PercentComplete would reflect how far the overal operation was, and would not accurately
+        /// represent just percent downloaded or percent loaded into memory.
+        /// For accurate download percentages, use GetDownloadStatus(). 
         /// </summary>
         public float PercentComplete
         {
@@ -431,6 +436,11 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         /// <summary>
         /// The progress of the internal operation.
+        /// This is evenly weighted between all sub-operations. For example, a LoadAssetAsync call could potentially
+        /// be chained with InitializeAsync and have multiple dependent operations that download and load content.
+        /// In that scenario, PercentComplete would reflect how far the overal operation was, and would not accurately
+        /// represent just percent downloaded or percent loaded into memory.
+        /// For accurate download percentages, use GetDownloadStatus(). 
         /// </summary>
         public float PercentComplete
         {

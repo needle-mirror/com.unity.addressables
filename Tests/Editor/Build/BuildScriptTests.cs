@@ -352,6 +352,25 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.RemoveGroup(group);
         }
 
+        // ADDR-1755
+        [Test]
+        public void WhenBundleLocalCatalogEnabled_BuildScriptPacked_DoesNotCreatePerformanceLogReport()
+        {
+            string logPath = $"Library/com.unity.addressables/aa/{PlatformMappingService.GetPlatform()}/buildlogtep.json";
+            bool bundleLocalCatalog = Settings.BundleLocalCatalog;
+            Settings.BundleLocalCatalog = true;
+
+            var context = new AddressablesDataBuilderInput(Settings);
+            BuildScriptBase db = (BuildScriptBase)Settings.DataBuilders.Find(x => x.GetType() == typeof(BuildScriptPackedMode));
+            
+            Assert.IsFalse(File.Exists(logPath)); // make sure file does not exist before build 
+
+            var res = db.BuildData<AddressablesPlayerBuildResult>(context);
+            Assert.IsFalse(File.Exists(logPath));
+
+            Settings.BundleLocalCatalog = bundleLocalCatalog;
+        }
+
         [Test]
         public void Build_WithDeletedAsset_Succeeds()
         {

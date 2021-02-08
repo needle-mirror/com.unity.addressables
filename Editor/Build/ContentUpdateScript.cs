@@ -381,7 +381,7 @@ namespace UnityEditor.AddressableAssets.Build
 
             return cachedInfos;
         }
-
+        
         /// <summary>
         /// Gets the path of the cache data from a selected build.
         /// </summary>
@@ -389,11 +389,10 @@ namespace UnityEditor.AddressableAssets.Build
         /// <returns></returns>
         public static string GetContentStateDataPath(bool browse)
         {
-            var assetPath = AddressableAssetSettingsDefaultObject.kDefaultConfigFolder;
-            if (AddressableAssetSettingsDefaultObject.Settings != null)
-                assetPath = AddressableAssetSettingsDefaultObject.Settings.ConfigFolder;
-            assetPath = Path.Combine(assetPath, PlatformMappingService.GetPlatform().ToString());
-
+            string assetPath = AddressableAssetSettingsDefaultObject.Settings != null ?
+                AddressableAssetSettingsDefaultObject.Settings.GetContentStateBuildPath() :
+                Path.Combine(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, PlatformMappingService.GetPlatform().ToString());
+            
             if (browse)
             {
                 if (string.IsNullOrEmpty(assetPath))
@@ -407,7 +406,23 @@ namespace UnityEditor.AddressableAssets.Build
                 return assetPath;
             }
 
-            Directory.CreateDirectory(assetPath);
+            if (AddressableAssetSettingsDefaultObject.Settings != null)
+            {
+                try
+                {
+                    Directory.CreateDirectory(assetPath);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError(e.Message + "\nCheck \"Content State Build Path\" in Addressables settings. Falling back to config folder location.");
+                    assetPath = Path.Combine(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder,
+                        PlatformMappingService.GetPlatform().ToString());
+                    Directory.CreateDirectory(assetPath);
+                }
+            }
+            else
+                Directory.CreateDirectory(assetPath);
+            
             var path = Path.Combine(assetPath, "addressables_content_state.bin");
             return path;
         }

@@ -116,6 +116,12 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Group Hierarchy with Dashes", "If enabled, group names are parsed as if a '-' represented a child in hierarchy.  So a group called 'a-b-c' would be displayed as if it were in a folder called 'b' that lived in a folder called 'a'.  In this mode, only groups without '-' can be rearranged within the groups window.");
         GUIContent m_IgnoreUnsupportedFilesInBuild =
             new GUIContent("Ignore Invalid/Unsupported Files in Build", "If enabled, files that cannot be built will be ignored.");
+        GUIContent m_ContentStateFileBuildPath =
+	        new GUIContent("Content State Build Path", "The path for saving the addressables_content_state.bin file. If empty, this will be the settings config folder.");
+        GUIContent m_ShaderBundleNaming =
+            new GUIContent("Shader Bundle Naming Prefix", "This setting determines how the Unity built in shader bundle will be named during the build.  The recommended setting is Project Name.");
+        GUIContent m_ShaderBundleCustomNaming =
+            new GUIContent("Shader Bundle Custom Prefix", "Custom prefix for Unity built in shader bundle.");
 
         public override void OnInspectorGUI()
         {
@@ -219,6 +225,21 @@ namespace UnityEditor.AddressableAssets.GUI
                 bool ignoreUnsupportedFilesInBuild = EditorGUILayout.Toggle(m_IgnoreUnsupportedFilesInBuild, m_AasTarget.IgnoreUnsupportedFilesInBuild);
                 if (ignoreUnsupportedFilesInBuild != m_AasTarget.IgnoreUnsupportedFilesInBuild)
                     m_QueuedChanges.Add(() => m_AasTarget.IgnoreUnsupportedFilesInBuild = ignoreUnsupportedFilesInBuild);
+                string contentStateBuildPath = EditorGUILayout.TextField(m_ContentStateFileBuildPath, m_AasTarget.ContentStateBuildPath);
+                if (contentStateBuildPath != m_AasTarget.ContentStateBuildPath)
+	                m_QueuedChanges.Add(() => m_AasTarget.ContentStateBuildPath = contentStateBuildPath);
+
+                ShaderBundleNaming bundleNaming = (ShaderBundleNaming) EditorGUILayout.Popup(m_ShaderBundleNaming,
+                    (int) m_AasTarget.ShaderBundleNaming, new[] { "Project Name Hash (Legacy)", "Default Group GUID", "Custom" });
+                if(bundleNaming != m_AasTarget.ShaderBundleNaming)
+                    m_QueuedChanges.Add(() => m_AasTarget.ShaderBundleNaming = bundleNaming);
+
+                if (bundleNaming == ShaderBundleNaming.Custom)
+                {
+                    string customShaderBundleName = EditorGUILayout.TextField(m_ShaderBundleCustomNaming, m_AasTarget.ShaderBundleCustomNaming);
+                    if (customShaderBundleName != m_AasTarget.ShaderBundleCustomNaming)
+                        m_QueuedChanges.Add(() => m_AasTarget.ShaderBundleCustomNaming = customShaderBundleName);
+                }
             }
 
             GUILayout.Space(6);

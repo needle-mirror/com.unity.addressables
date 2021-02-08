@@ -40,6 +40,14 @@ namespace UnityEditor.AddressableAssets.GUI
 
         internal List<AssetReferenceUIRestrictionSurrogate> Restrictions => m_Restrictions;
 
+        bool ValidateAsset(Object obj)
+        {
+            return m_AssetRefObject != null
+                && m_AssetRefObject.ValidateAsset(obj)
+                && m_Restrictions != null
+                && m_Restrictions.All(r => r.ValidateAsset(obj));
+        }
+        
         /// <summary>
         /// Validates that the referenced asset allowable for this asset reference.
         /// </summary>
@@ -81,10 +89,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     var atlasEntries = new List<AddressableAssetEntry>();
                     AddressableAssetSettingsDefaultObject.Settings.GetAllAssets(atlasEntries, false, null, e => AssetDatabase.GetMainAssetTypeAtPath(e.AssetPath) == typeof(SpriteAtlas));
-                    var spriteName = target.name;
-                    if (spriteName.EndsWith("(Clone)"))
-                        spriteName = spriteName.Replace("(Clone)", "");
-
+                    var spriteName = FormatName(target.name);
                     foreach (var a in atlasEntries)
                     {
                         var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(a.AssetPath);
@@ -97,6 +102,12 @@ namespace UnityEditor.AddressableAssets.GUI
                         target = atlas;
                         break;
                     }
+                }
+                
+                if (subObject == null && AssetDatabase.IsSubAsset(target))
+                {
+                    subObject = target;
+                    target = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GetAssetPath(target));
                 }
 
                 guid = SetSingleAsset(property, target, subObject);
@@ -204,11 +215,17 @@ namespace UnityEditor.AddressableAssets.GUI
 
             assetDropDownRect = EditorGUI.PrefixLabel(position, label);
             var nameToUse = GetNameForAsset(property, isNotAddressable, fieldInfo);
-            if (m_AssetRefObject.editorAsset != null)
+            if (m_AssetRefObject.editorAsset != null && m_ReferencesSame)
             {
-                var subAssets = GetSubAssetsList();
+                List<Object> subAssets = null;
+                bool hasSubAssets = !string.IsNullOrEmpty(m_AssetRefObject.SubObjectName);
+                if (!hasSubAssets)
+                {
+                    subAssets = GetSubAssetsList();
+                    hasSubAssets = subAssets.Count > 1;
+                }
 
-                if (subAssets.Count > 1 && m_ReferencesSame)
+                if (hasSubAssets)
                 {
                     assetDropDownRect = DrawSubAssetsControl(property, subAssets);
                 }
@@ -234,7 +251,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     SetObject(property, null, out guid);
                     newGuid = string.Empty;
                 }
-                else
+                else if (guid != newGuid)
                 {
                     if (SetObject(property, AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(newGuid)), out guid))
                     {
@@ -292,17 +309,39 @@ namespace UnityEditor.AddressableAssets.GUI
             var subAssets = new List<Object>();
             subAssets.Add(null);
             var assetPath = AssetDatabase.GUIDToAssetPath(m_AssetRefObject.AssetGUID);
-            subAssets.AddRange(AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath));
+            
+            var repr = AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
+            if (repr.Any())
+            {
+                var subtype = m_AssetRefObject.SubOjbectType ?? GetGenericTypeFromAssetReference();
+                if (subtype != null) 
+                    repr = repr.Where(o => subtype.IsInstanceOfType(o)).OrderBy(s => s.name).ToArray();
+            }
+            subAssets.AddRange(repr);
+            
             var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
             if (mainType == typeof(SpriteAtlas))
             {
                 var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(assetPath);
                 var sprites = new Sprite[atlas.spriteCount];
                 atlas.GetSprites(sprites);
-                subAssets.AddRange(sprites);
+                subAssets.AddRange(sprites.OrderBy(s => s.name));
             }
 
             return subAssets;
+        }
+
+        Type GetGenericTypeFromAssetReference()
+        {
+            var type = m_AssetRefObject?.GetType();
+            while (type != null)
+            {
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(AssetReferenceT<>))
+                    return type.GenericTypeArguments[0];
+                type = type.BaseType;
+            }
+
+            return null;
         }
 
         private void DrawControl(SerializedProperty property, bool isDragging, bool isDropping, string nameToUse, bool isNotAddressable, string guid)
@@ -406,6 +445,11 @@ namespace UnityEditor.AddressableAssets.GUI
                                 rejectedDrag = true;
                         }
                     }
+                    else if (DragAndDrop.objectReferences != null && DragAndDrop.objectReferences.Length == 1 && AssetDatabase.IsSubAsset(DragAndDrop.objectReferences[0]))
+                    {
+                        if(!ValidateAsset(DragAndDrop.objectReferences[0]))
+                            rejectedDrag = true;
+                    }
                     else
                     {
                         if (DragAndDrop.paths.Length != 1)
@@ -491,9 +535,6 @@ namespace UnityEditor.AddressableAssets.GUI
             pickerRect.x = objRect.xMax - pickerWidth;
             bool multipleSubassets = false;
 
-            // Get currently selected subasset
-            GetSelectedSubassetIndex(subAssets, out var selIndex, out var objNames);
-
             // Check if targetObjects have multiple different selected
             if (property.serializedObject.targetObjects.Length > 1)
                 multipleSubassets = CheckTargetObjectsSubassetsAreDifferent(property, m_AssetRefObject.SubObjectName, fieldInfo);
@@ -504,7 +545,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 // Do custom popup with scroll to pick subasset
                 if (m_SubassetPopup == null || m_SubassetPopup.m_property != property)
                 {
-                    m_SubassetPopup = new SubassetPopup(selIndex, objNames, subAssets, property, this);
+                    m_SubassetPopup = CreateSubAssetPopup(property, subAssets ?? GetSubAssetsList());
                 }
 
                 PopupWindow.Show(objRect, m_SubassetPopup);
@@ -518,7 +559,7 @@ namespace UnityEditor.AddressableAssets.GUI
             // Show selected name
             GUIContent nameSelected = new GUIContent("--");
             if (!multipleSubassets)
-                nameSelected.text = objNames[selIndex];
+                nameSelected.text = FormatName(m_AssetRefObject.SubObjectName);
             UnityEngine.GUI.Box(objRect, nameSelected, EditorStyles.objectField);
 
 #if UNITY_2019_1_OR_NEWER
@@ -530,38 +571,18 @@ namespace UnityEditor.AddressableAssets.GUI
 
         internal void GetSelectedSubassetIndex(List<Object> subAssets, out int selIndex, out string[] objNames)
         {
-            objNames = new string[subAssets.Count];
-            selIndex = 0;
-
-            // Get currently selected subasset
-            for (int i = 0; i < subAssets.Count; i++)
-            {
-                var subAsset = subAssets[i];
-                var objName = subAsset == null ? "<none>" : subAsset.name;
-                if (objName.EndsWith("(Clone)"))
-                    objName = objName.Replace("(Clone)", "");
-                objNames[i] = subAsset == null ? objName : $"{objName}:{subAsset.GetType()}";
-
-                if (subAsset == null)
-                {
-                    selIndex = i;
-                }
-                else if (m_AssetRefObject.SubObjectName == objName)
-                {
-                    if (m_AssetRefObject.SubOjbectType != null)
-                    {
-                        if (subAsset.GetType().AssemblyQualifiedName ==
-                            m_AssetRefObject.SubOjbectType.AssemblyQualifiedName)
-                        {
-                            selIndex = i;
-                        }
-                    }
-                    else
-                    {
-                        selIndex = i;
-                    }
-                }
-            }
+            var subAssetNames = subAssets.Select(sa => sa == null ? "<none>" : $"{FormatName(sa.name)}:{sa.GetType()}").ToList();
+            objNames = subAssetNames.ToArray();
+            
+            selIndex = subAssetNames.IndexOf($"{m_AssetRefObject.SubObjectName}:{m_AssetRefObject.SubOjbectType}");
+            if (selIndex == -1)
+                selIndex = 0;
+        }
+        
+        SubassetPopup CreateSubAssetPopup(SerializedProperty property, List<Object> subAssets)
+        {
+            GetSelectedSubassetIndex(subAssets, out int selIndex, out string[] objNames);
+            return new SubassetPopup(selIndex, objNames, subAssets, property, this);
         }
 
         internal bool CheckTargetObjectsSubassetsAreDifferent(SerializedProperty property, string objName, FieldInfo propertyField)
@@ -590,9 +611,7 @@ namespace UnityEditor.AddressableAssets.GUI
             string spriteName = null;
             if (subAsset != null && subAsset.GetType() == typeof(Sprite))
             {
-                spriteName = subAsset.name;
-                if (spriteName.EndsWith("(Clone)"))
-                    spriteName = spriteName.Replace("(Clone)", "");
+                spriteName = FormatName(subAsset.name);
             }
 
             foreach (var t in property.serializedObject.targetObjects)
@@ -676,6 +695,14 @@ namespace UnityEditor.AddressableAssets.GUI
             return nameToUse;
         }
 
+        string FormatName(string name)
+        {
+            var formatted = string.IsNullOrEmpty(name) ? "<none>" : name;
+            if (formatted.EndsWith("(Clone)"))
+                formatted = formatted.Replace("(Clone)", "");
+            return formatted;
+        }
+        
         internal void GatherFilters(SerializedProperty property)
         {
             if (m_Restrictions != null)

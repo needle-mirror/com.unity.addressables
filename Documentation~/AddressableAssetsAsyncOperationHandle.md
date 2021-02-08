@@ -2,7 +2,7 @@
 uid: addressables-async-operation-handling
 ---
 # Async operation handling
-Several methods from the [`Addressables`](xref:UnityEngine.AddressableAssets.Addressables) API return an [`AsyncOperationHandle`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle) struct. The main purpose of this handle is to allow access to the status and result of an operation. The result of the operation is valid until you call [`Addressables.Release`](xref:UnityEngine.AddressableAssets.Addressables.Release(UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle)) or [`Addressables.ReleaseInstance`](xref:UnityEngine.AddressableAssets.Addressables.ReleaseInstance(UnityEngine.GameObject)) with the operation (for more information on releasing assets, see documentation on [memory management](MemoryManagement.md).
+Several methods from the [`Addressables`](xref:UnityEngine.AddressableAssets.Addressables) API return an [`AsyncOperationHandle`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle) struct. The main purpose of this handle is to allow access to the status and result of an operation. The result of the operation is valid until you call [`Addressables.Release`](xref:UnityEngine.AddressableAssets.Addressables.Release(UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle)) or [`Addressables.ReleaseInstance`](xref:UnityEngine.AddressableAssets.Addressables.ReleaseInstance(UnityEngine.GameObject)) with the operation (for more information on releasing assets, see documentation on [memory management](MemoryManagement.md)).
 
 When the operation completes, the [`AsyncOperationHandle.Status`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle) property is either [`AsyncOperationStatus.Succeeded`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus) or [`AsyncOperationStatus.Failed`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus). If successful, you can access the result through the `AsyncOperationHandle.Result` property.
 
@@ -25,6 +25,15 @@ AsyncOperationHandle<Texture2D> textureHandle2 = nonGenericHandle.Convert<Textur
 // This will throw and exception because Texture2D is required:
 AsyncOperationHandle<Texture> textureHandle3 = nonGenericHandle.Convert<Texture>();
 ```
+
+### PercentComplete vs. GetDownloadStatus
+AsyncOperationHandle has two methods that can reflect the progress of the operation.
+[`GetDownloadStatus()`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.GetDownloadStatus) will return a `DownloadStatus` struct. This contains information about how many bytes have been downloaded, and how many are needed.  The DownloadStatus.Percent is a helper method that represents the percentage of bytes downloaded. 
+[`PercentComplete`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.PercentComplete) on the other hand, will return an equally-weighted aggregate percentage of all sub-operations. This percent complete is useful to get a sense of progress, but it may not accurately reflect what you would expect depending on the makeup of your operations.
+
+One example would be a call to `Addressables.DownloadDependenciesAsync`, where 5 asset bundles needed downloading. Here `GetDownloadStatus()` would inform you of the progress towards to total number of bytes needed, while `PercentComplete` would have each of the 5 downloads representing 20% of the total, regardless of their size.
+
+In another example, `LoadAssetAsync()` is called, and one bundle needs downloading before an asset can be loaded from it. Here, the download could represent 50% of `PercentComplete`, and the actual load into memory could represent the other 50%. In this instance, `GetDownloadStatus()` would represent the download need, and would reach 100% before the operation finished, as the operation had more to do after downloading.
 
 ### AsyncOperationHandle use case examples
 Register a listener for completion events using the [`AsyncOperationHandle.Completed`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.Completed) callback:
@@ -81,7 +90,7 @@ When loading an Addressable Scene, all the dependencies for your GameObjects in 
 
 Note: If you mark a GameObject in an Addressable loaded scene as `DontDestroyOnLoad` or move it to another loaded Scene and then unload your original Scene, all dependencies for your GameObject are still unloaded.
 
-If you find yourself in that scenario there are a couple options at your disposal.
+If you find yourself in that scenario there are a couple options at your disposal:
 - Make the GameObject you want to be `DontDestroyOnLoad` a single Addressable prefab.  Instantiate the prefab when you need it and then mark it as `DontDestroyOnLoad`.
 - Before unloading the Scene that contained the GameObject you mark as `DontDestroyOnLoad`, call `Addressables.ResourceManager.Acquire(AsyncOperationHandle)` and pass in the Scene load handle.  This increases the reference count on the Scene, and keeps it and its dependencies loaded until `Release` is called on the acquired handle.
 

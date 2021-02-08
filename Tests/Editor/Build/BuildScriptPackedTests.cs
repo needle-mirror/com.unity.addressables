@@ -60,6 +60,43 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        [TestCase(ShaderBundleNaming.ProjectName, "")]
+        [TestCase(ShaderBundleNaming.DefaultGroupGuid, "")]
+        [TestCase(ShaderBundleNaming.Custom, "custom name")]
+        public void ShaderBundleNaming_GeneratesCorrectShaderBundlePrefix(ShaderBundleNaming shaderBundleNaming, string customName)
+        {
+            //Setup
+            string savedCustomName = m_BuildContext.Settings.ShaderBundleCustomNaming;
+            ShaderBundleNaming savedBundleNaming = m_BuildContext.Settings.ShaderBundleNaming;
+            m_BuildContext.Settings.ShaderBundleCustomNaming = customName;
+            m_BuildContext.Settings.ShaderBundleNaming = shaderBundleNaming;
+            string expectedValue = "";
+            switch (shaderBundleNaming)
+            {
+                case ShaderBundleNaming.ProjectName:
+                    expectedValue = Hash128.Compute(m_BuildScript.GetProjectName()).ToString();
+                    break;
+                case ShaderBundleNaming.DefaultGroupGuid:
+                    expectedValue = m_BuildContext.Settings.DefaultGroup.Guid;
+                    break;
+                case ShaderBundleNaming.Custom:
+                    expectedValue = customName;
+                    break;
+            }
+
+            //Test
+            string bundleName = m_BuildScript.GetBuiltInShaderBundleName(m_BuildContext);
+
+            //Assert
+            Assert.AreEqual(expectedValue, bundleName);
+
+            //Cleanup
+            m_BuildContext.Settings.ShaderBundleCustomNaming = savedCustomName;
+            m_BuildContext.Settings.ShaderBundleNaming = savedBundleNaming;
+
+        }
+
+        [Test]
         public void SettingsWithMaxConcurrentWebRequests_InitializeBuildContext_SetsMaxConcurrentWebRequestsInRuntimeData()
         {
             Settings.MaxConcurrentWebRequests = 23;
@@ -196,20 +233,21 @@ namespace UnityEditor.AddressableAssets.Tests
                 new List<AddressableAssetGroupSchema>(), typeof(BundledAssetGroupSchema));
             group.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.NoHash;
             List<Action> callbacks = new List<Action>();
-            string targetBundlePathHashed = "testbundle_123456.bundle";
-            string targetBundlePathUnHashed = "testbundle.bundle";
-            ContentCatalogDataEntry dataEntry = new ContentCatalogDataEntry(typeof(ContentCatalogData), targetBundlePathHashed, typeof(BundledAssetProvider).FullName, new List<object>());
+            string targetBundlePathHashed = "LocalPathToFile/testbundle_123456.bundle";
+            string targetBundleInternalIdHashed = "{runtime_val}/testbundle_123456.bundle";
+            string targetBundleInternalIdUnHashed = "{runtime_val}/testbundle.bundle";
+            ContentCatalogDataEntry dataEntry = new ContentCatalogDataEntry(typeof(ContentCatalogData), targetBundleInternalIdHashed, typeof(BundledAssetProvider).FullName, new List<object>());
             m_BuildScript.AddPostCatalogUpdatesInternal(group, callbacks, dataEntry, targetBundlePathHashed);
 
             //Assert setup
             Assert.AreEqual(1, callbacks.Count);
-            Assert.AreEqual(targetBundlePathHashed, dataEntry.InternalId);
+            Assert.AreEqual(targetBundleInternalIdHashed, dataEntry.InternalId);
 
             //Test
             callbacks[0].Invoke();
 
             //Assert
-            Assert.AreEqual(targetBundlePathUnHashed, dataEntry.InternalId);
+            Assert.AreEqual(targetBundleInternalIdUnHashed, dataEntry.InternalId);
 
             //Cleanup
             Settings.RemoveGroup(group);

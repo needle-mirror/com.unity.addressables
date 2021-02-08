@@ -44,12 +44,16 @@ namespace UnityEditor.AddressableAssets.GUI
 
             if (!create)
             {
-                targetInfos.ForEach(ti =>
-                {
-                    AddressableAssetGroup group = aaSettings.FindAssetEntry(ti.Guid).parentGroup;
-                    aaSettings.RemoveAssetEntry(ti.Guid);
-                    AddressableAssetUtility.OpenAssetIfUsingVCIntegration(group);
-                });
+	            List<AddressableAssetEntry> removedEntries = new List<AddressableAssetEntry>(targetInfos.Count);
+	            for (int i = 0; i < targetInfos.Count; ++i)
+	            {
+		            AddressableAssetEntry e = aaSettings.FindAssetEntry(targetInfos[i].Guid);
+		            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(e.parentGroup);
+		            removedEntries.Add(e);
+		            aaSettings.RemoveAssetEntry(removedEntries[i], false);
+	            }
+	            if (removedEntries.Count > 0)
+					aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, removedEntries, true, false);
             }
             else
             {

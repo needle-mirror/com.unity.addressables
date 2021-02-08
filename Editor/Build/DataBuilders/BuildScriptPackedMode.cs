@@ -137,6 +137,25 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
         }
 
+        internal string GetBuiltInShaderBundleName(AddressableAssetsBuildContext aaContext)
+        {
+            string value = "";
+            switch (aaContext.Settings.ShaderBundleNaming)
+            {
+                case ShaderBundleNaming.DefaultGroupGuid:
+                    value = aaContext.Settings.DefaultGroup.Guid;
+                    break;
+                case ShaderBundleNaming.ProjectName:
+                    value = Hash128.Compute(GetProjectName()).ToString();
+                    break;
+                case ShaderBundleNaming.Custom:
+                    value = aaContext.Settings.ShaderBundleCustomNaming;
+                    break;
+            }
+
+            return value;
+        }
+
         /// <summary>
         /// The method that does the actual building after all the groups have been processed.
         /// </summary>
@@ -166,7 +185,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     buildTargetGroup,
                     aaContext.Settings.buildSettings.bundleBuildPath);
 
-                var builtinShaderBundleName = Hash128.Compute(GetProjectName()) + "_unitybuiltinshaders.bundle";
+                var builtinShaderBundleName = GetBuiltInShaderBundleName(aaContext) + "_unitybuiltinshaders.bundle";
                 var buildTasks = RuntimeDataBuildTasks(builtinShaderBundleName);
                 buildTasks.Add(extractData);
 
@@ -401,7 +420,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return true;
         }
 
-        string GetProjectName()
+        internal string GetProjectName()
         {
             return new DirectoryInfo(Path.GetDirectoryName(Application.dataPath)).Name;
         }
@@ -449,7 +468,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             };
 
             var buildParams = new BundleBuildParameters(builderInput.Target, builderInput.TargetGroup, Path.GetDirectoryName(filepath));
-            var retCode = ContentPipeline.BuildAssetBundles(buildParams, bundleBuildContent, out IBundleBuildResults result, buildTasks);
+            var retCode = ContentPipeline.BuildAssetBundles(buildParams, bundleBuildContent, out IBundleBuildResults result, buildTasks, m_Log);
 
             if (Directory.Exists(tempFolderPath))
             {
@@ -959,7 +978,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     }
 
                     if (dataEntry != null)
-                        dataEntry.InternalId = bundleNameWithoutHash;
+                        dataEntry.InternalId = StripHashFromBundleLocation(dataEntry.InternalId);
 
                 });
             }

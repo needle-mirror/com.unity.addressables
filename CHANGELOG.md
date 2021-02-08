@@ -4,6 +4,16 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.17.5-preview] - 2021-02-08
+- Fixed performance issue when disabling "Addressable" for multiple Assets in the Inspector.
+- Added option to set the build path of addressables_content_state.bin file.
+- The buildlogtep.json file is not generated when building the catalog bundle.
+- Fixed invalid handle exception getting thrown when static AssetReferences were used with domain reload turned off
+- Fixed catalog using invalid load path for Groups built with "bundle naming mode" "Filename".
+- Added option to set custom prefix on the unitybuiltinshader AssetBundle
+- Added documentation explaining how dependencies affect Content Update
+- Sub-assets with arbitrary main type can now be assigned to an asset reference if types match
+
 ## [1.17.4-preview] - 2021-01-27
 - Removed unnecessary logging when deleting temporary Addressables build data.
 - Added WaitForCompletion() on AsyncOperationHandles.  This allows async operation to be executed synchronously
@@ -61,6 +71,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added options for internal naming of asset bundles.  This will allow for deterministic naming to avoid unintended diffs for content updates.
 - The "Ignore Invalid/Unsupported Files" option is now saved in the settings
 - Fixed issue where Filename only bundle naming schemas were overwriting old bundles prematurely in content update.
+
+## [1.16.16] - 2021-01-20
+- Updated dependency versions for testcase fix
 
 ## [1.16.15] - 2020-12-09
 - Addressables link.xml should now have it's own folder.

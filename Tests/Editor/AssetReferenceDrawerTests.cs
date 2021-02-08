@@ -16,8 +16,21 @@ using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
+    [TestFixture]
     public class AssetReferenceDrawerTestsFixture : AddressableAssetTestBase
     {
+        protected string m_fbxAssetPath;
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            if (File.Exists(m_fbxAssetPath))
+            {
+                AssetDatabase.DeleteAsset(m_fbxAssetPath);
+                AssetDatabase.Refresh();
+            }
+        }
+
         internal AssetReferenceDrawer m_AssetReferenceDrawer { get; set; }
         internal List<Object> _subAssets;
         internal SerializedProperty _property;
@@ -129,7 +142,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
         internal class TestAssetReference : AssetReference
         {
-            internal TestAssetReference(string guid) : base(guid) { }
+            internal TestAssetReference(string guid) : base(guid) {}
 
             internal Object CachedAssetProperty
             {
@@ -316,7 +329,8 @@ namespace UnityEditor.AddressableAssets.Tests
             return newAtlas;
         }
 
-        public void SetUpForSubassetPerformanceTests(int numAtlasObjects, int numReferences, int selectedId){
+        public void SetUpForSubassetPerformanceTests(int numAtlasObjects, int numReferences, int selectedId)
+        {
             // Drawer Setup
             m_AssetReferenceDrawer = new AssetReferenceDrawer();
             _subAssets = new List<Object>();
@@ -339,7 +353,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
         public void SetObjectForPerformanceTests()
         {
-            m_AssetReferenceDrawer.SetObject(_property,_atlas,out string guid);
+            m_AssetReferenceDrawer.SetObject(_property, _atlas, out string guid);
         }
 
         public void SetMainAssetsForPerformanceTests()
@@ -354,7 +368,7 @@ namespace UnityEditor.AddressableAssets.Tests
             FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.GetNameForAsset(_property, false, propertyFieldInfo);
         }
-        
+
         public void GetSubAssetsListForPerformanceTests()
         {
             m_AssetReferenceDrawer.GetSubAssetsList();
@@ -364,7 +378,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             m_AssetReferenceDrawer.GetSelectedSubassetIndex(_subAssets, out var selIndex, out var objNames);
         }
-        
+
         public void CheckTargetObjectsSubassetsAreDifferentForPerformanceTests()
         {
             FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
@@ -374,7 +388,6 @@ namespace UnityEditor.AddressableAssets.Tests
 
     public class AssetReferenceDrawerTests : AssetReferenceDrawerTestsFixture
     {
-
         [Test]
         public void CanRestrictLabel()
         {
@@ -589,6 +602,53 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(m_AssetGUID, m_AssetReferenceDrawer.m_AssetRefObject.AssetGUID);
             Assert.AreEqual(m_AssetGUID, guid);
             Assert.AreEqual(testObject.name, m_AssetReferenceDrawer.m_AssetRefObject.editorAsset.name);
+        }
+
+        [Test]
+        public void SetObject_WhenTargetIsSubAsset_IsSetAsSubObject()
+        {
+            // Prepare test fbx
+            m_fbxAssetPath = GetAssetPath("testFBX.fbx");
+            if (!File.Exists(m_fbxAssetPath))
+            {
+                string fbxResourcePath = null;
+                var repoRoot = Directory.GetParent(Application.dataPath).Parent?.FullName;
+                if (!string.IsNullOrEmpty(repoRoot))
+                    fbxResourcePath = Path.Combine(repoRoot, "Projects", "TestsResources", "testFBX.fbx");
+
+                if (string.IsNullOrEmpty(fbxResourcePath) || !File.Exists(fbxResourcePath))
+                    Assert.Ignore($"Unable to find required FBX file to run this test. Ignoring.");
+
+                File.Copy(fbxResourcePath, m_fbxAssetPath, true);
+                AssetDatabase.Refresh();
+            }
+
+            Assert.IsTrue(File.Exists(m_fbxAssetPath));
+            var fbxAsset = AssetDatabase.LoadAssetAtPath<Object>(m_fbxAssetPath);
+            var meshSubAsset = AssetDatabase.LoadAllAssetRepresentationsAtPath(m_fbxAssetPath).First(o => o is Mesh);
+            AssetDatabase.TryGetGUIDAndLocalFileIdentifier(fbxAsset, out string fbxAssetGuid, out long _);
+            Assert.IsFalse(string.IsNullOrEmpty(fbxAssetGuid));
+
+            // Setup property
+            var ar = new AssetReferenceT<Mesh>("");
+            var obj = ScriptableObject.CreateInstance<TestObjectWithRef>();
+            obj.Reference = ar;
+            var so = new SerializedObject(obj);
+            var property = so.FindProperty("Reference");
+
+            // Test
+            string guid;
+            m_AssetReferenceDrawer = new AssetReferenceDrawer();
+            m_AssetReferenceDrawer.GatherFilters(property);
+            m_AssetReferenceDrawer.m_AssetRefObject = ar;
+            var success = m_AssetReferenceDrawer.SetObject(property, meshSubAsset, out guid);
+
+            // Assert
+            Assert.IsTrue(success);
+            Assert.AreEqual(fbxAssetGuid, guid);
+            Assert.AreEqual(fbxAsset.name, m_AssetReferenceDrawer.m_AssetRefObject.editorAsset.name);
+            Assert.AreEqual(meshSubAsset.name, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName);
+            Assert.AreEqual(meshSubAsset.GetType(), m_AssetReferenceDrawer.m_AssetRefObject.SubOjbectType);
         }
 
         [Test]

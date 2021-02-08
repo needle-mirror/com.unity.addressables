@@ -182,3 +182,51 @@ Note that the example above has the following implications:
 3. If the user has already cached the `Static_Remote` bundle, they only need to download the updated asset (in this instance, `AssetL` via `content_update_group`). This is ideal in this case. If the user has not cached the bundle, they must download both the new `AssetL` via `content_update_group` and the now-defunct `AssetL` via the untouched `Remote_Static` bundle. Regardless of the initial cache state, at some point the user will have the defunct `AssetL` on their device, cached indefinitely despite never being accessed. 
 
 The best setup for your remote content will depend on your specific use case.
+
+## How Content Update Handles Dependencies
+Directly changing an asset is not the only way to have it flagged as needing to be rebuilt as part of a content update.  Changing an assets dependencies is a less obvious factor that gets taken into account when building an update.
+
+Lets take part of the example above:
+| **`Local_Static`** |
+|:---------|
+| `AssetA` |
+| `AssetB` |
+| `AssetC` |
+
+but now let us assume more information about a few of the assets.  Let's say we have a dependency chain that looks like this:
+`AssetA depends on Dependency1 which depends on Dependency2`
+`AssetB depends on Dependency2`
+`AssetC depends on Dependency3`
+Where all three dependencies are a mix of Addressable and non-Addressable assets.
+
+Now, if only `Dependency1` is changed and Check For Content Update Restriction is run, the resulting project structure looks like:
+| **`Local_Static`** | **`content_update_group`**  |
+|:---------|:---------|
+||`AssetA` |
+| `AssetB` ||
+| `AssetC` ||
+If only `Dependency2` is changed:
+| **`Local_Static`** | **`content_update_group`**  |
+|:---------|:---------|
+||`AssetA` |
+||`AssetB`|
+| `AssetC` ||
+Finally, if only `Dependency3` is changed:
+| **`Local_Static`** | **`content_update_group`**  |
+|:---------|:---------|
+|`AssetA` ||
+|`AssetB`||
+||`AssetC`|
+
+This is because when a dependency is changed the entire dependency tree needs to be rebuilt.  
+Let's take a look at one more example with the following dependency tree.
+`AssetA depends on AssetB which depends on Dependency2`
+`AssetB depends on Dependency2`
+`AssetC depends on Dependency3`
+Now, if `Dependency2` is changed, the project strucutue looks like:
+| **`Local_Static`** | **`content_update_group`**  |
+|:---------|:---------|
+||`AssetA` |
+||`AssetB`|
+| `AssetC` ||
+because `AssetA` relies on `AssetB` and `AssetB` relies on `Dependency2`.  Since the entire chain needs to be rebuilt both `AssetA` and `AssetB` will get put into the **`content_update_group`**.

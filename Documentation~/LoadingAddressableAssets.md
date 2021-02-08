@@ -14,10 +14,10 @@ Loads a single Addressable Asset.
 
 `Addressables.LoadAssetAsync` uses the key of an Addressable object or direct ResourceLocations to load an Addressable asset of a specified type.  The loaded asset can be accessed through the Result property of the `AsyncOperationHandle` returned by the function.
 This API does the following:
-1) Gathers all dependencies for the given key or resource location.  The key version of the API incurs an additional step to lookup the first IResourceLocation that matches the provided key.
-2) Downloads any remote AssetBundles that are required.
-3) Loads the AssetBundles into memory.
-4) Populates the `Result` property with the requested object.
+1. Gathers all dependencies for the given key or resource location.  The key version of the API incurs an additional step to lookup the first IResourceLocation that matches the provided key.
+2. Downloads any remote AssetBundles that are required.
+3. Loads the AssetBundles into memory.
+4. Populates the `Result` property with the requested object.
 
 The internal operation of the `AsyncOperationHandle` returned will have a reference count of 1 by default.  This handle will need to be manually released in order to decrease the reference count and unload the AssetBundles in memory.
 

@@ -62,7 +62,10 @@ Either use of instantiation can benefit from information found in the [Memory Ma
 public IEnumerator Start()
 {
     AsyncOperationHandle<GameObject> handle = Addressables.InstantiateAsync("prefabKey");
-    yield return handle;
+	//note that this may be done instantly, but if you yield return, it guarantees a miminum one frame delay.
+	// The same is true for the .Completed callback, even if done, it will not callback that frame. 
+	if(!handle.IsDone) 
+		yield return handle;
     
     //...
 }

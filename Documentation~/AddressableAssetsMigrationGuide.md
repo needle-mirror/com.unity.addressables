@@ -14,6 +14,7 @@ To migrate from this approach, follow these steps:
 1. Replace your direct references to objects with asset references (for example, `public GameObject directRefMember;` becomes `public AssetReference AssetRefMember;`).
 2. Drag assets onto the appropriate component’s Inspector, as you would for a direct reference.
 3. If you'd like to load an asset based on an object rather than a string name, instantiate it directly from the [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) object you created in your setup (for example, `AssetRefMember.LoadAssetAsync<GameObject>();` or `AssetRefMember.InstantiateAsync(pos, rot);`).
+4. When the Asset is not needed anymore, it must be unloaded with the [`Addressables.Release`](xref:UnityEngine.AddressableAssets.Addressables.Release``1(``0)) method. See [Mirroring load and unload](MemoryManagement.md#mirroring-load-and-unload) for details.
 
 **Note**: The Addressable Asset system loads assets asynchronously. When you update your direct references to asset references, you must also update your code to operate asynchronously.
 
