@@ -7,6 +7,7 @@ using NUnit.Framework;
 using System.Collections;
 using System;
 using System.Linq;
+using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -66,6 +67,21 @@ namespace AddressableAssetsIntegrationTests
         //we must wait for Addressables initialization to complete since we are clearing out all of its data for the tests.
         public bool initializationComplete;
         string currentInitType = null;
+
+        string m_RuntimeSettingsPath
+        {
+            get
+            {
+                var runtimeSettingsPath = m_Addressables.RuntimePath + "/settingsBASE.json";
+#if UNITY_EDITOR
+
+                runtimeSettingsPath = GetRuntimePath(currentInitType, "BASE");
+#endif
+                runtimeSettingsPath = m_Addressables.ResolveInternalId(runtimeSettingsPath);
+                return runtimeSettingsPath;
+            }
+        }
+
         IEnumerator Init()
         {
             if (!initializationComplete || TypeName != currentInitType)
@@ -76,14 +92,7 @@ namespace AddressableAssetsIntegrationTests
                 if (TypeName != currentInitType)
                 {
                     currentInitType = TypeName;
-
-                    var runtimeSettingsPath = m_Addressables.RuntimePath + "/settingsBASE.json";
-#if UNITY_EDITOR
-
-                    runtimeSettingsPath = GetRuntimePath(currentInitType, "BASE");
-#endif
-                    runtimeSettingsPath = m_Addressables.ResolveInternalId(runtimeSettingsPath);
-                    yield return m_Addressables.InitializeAsync(runtimeSettingsPath, "BASE", false);
+                    yield return m_Addressables.InitializeAsync(m_RuntimeSettingsPath, "BASE", false);
 
                     foreach (var locator in m_Addressables.ResourceLocators)
                     {
@@ -153,6 +162,16 @@ namespace AddressableAssetsIntegrationTests
             m_Addressables = null;
             currentInitType = null;
             initializationComplete = false;
+        }
+
+        internal class DumbUpdateOperation : AsyncOperationBase<List<IResourceLocator>>
+        {
+            protected override void Execute() { }
+
+            public void CallComplete()
+            {
+                Complete(new List<IResourceLocator>(), true, string.Empty);
+            }
         }
     }
 

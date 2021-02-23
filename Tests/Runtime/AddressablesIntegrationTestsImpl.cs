@@ -2286,6 +2286,135 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator Autorelease_False_ClearDependencyCache_WithChainOperation_DoesNotThrowInvalidHandleError()
+        {
+            yield return Init();
+            //This is to make sure we use the ShouldChainRequest
+            var dumbUpdate = new DumbUpdateOperation();
+            m_Addressables.m_ActiveUpdateOperation = new AsyncOperationHandle<List<IResourceLocator>>(dumbUpdate);
+
+            var clearCache = m_Addressables.ClearDependencyCacheAsync("NotARealKey", false);
+            dumbUpdate.CallComplete();
+            yield return clearCache;
+            Assert.IsTrue(clearCache.IsValid());
+            m_Addressables.Release(clearCache);
+            Assert.IsFalse(clearCache.IsValid());
+        }
+
+        [UnityTest]
+        public IEnumerator Autorelease_True_ClearDependencyCache_WithChainOperation_DoesNotThrowInvalidHandleError()
+        {
+            yield return Init();
+            //This is to make sure we use the ShouldChainRequest
+            var dumbUpdate = new DumbUpdateOperation();
+            m_Addressables.m_ActiveUpdateOperation = new AsyncOperationHandle<List<IResourceLocator>>(dumbUpdate);
+
+            var clearCache = m_Addressables.ClearDependencyCacheAsync("NotARealKey", true);
+            dumbUpdate.CallComplete();
+            yield return clearCache;
+            Assert.IsFalse(clearCache.IsValid());
+        }
+
+        [UnityTest]
+        public IEnumerator Autorelease_False_ClearDependencyCacheList_WithChainOperation_DoesNotThrowInvalidHandleError()
+        {
+            yield return Init();
+            //This is to make sure we use the ShouldChainRequest
+            var dumbUpdate = new DumbUpdateOperation();
+            m_Addressables.m_ActiveUpdateOperation = new AsyncOperationHandle<List<IResourceLocator>>(dumbUpdate);
+
+            var clearCache = m_Addressables.ClearDependencyCacheAsync(new List<object> { "NotARealKey" }, false);
+            dumbUpdate.CallComplete();
+            yield return clearCache;
+            Assert.IsTrue(clearCache.IsValid());
+            m_Addressables.Release(clearCache);
+            Assert.IsFalse(clearCache.IsValid());
+        }
+
+        [UnityTest]
+        public IEnumerator Autorelease_True_ClearDependencyCacheList_WithChainOperation_DoesNotThrowInvalidHandleError()
+        {
+            yield return Init();
+            //This is to make sure we use the ShouldChainRequest
+            var dumbUpdate = new DumbUpdateOperation();
+            m_Addressables.m_ActiveUpdateOperation = new AsyncOperationHandle<List<IResourceLocator>>(dumbUpdate);
+
+            var clearCache = m_Addressables.ClearDependencyCacheAsync(new List<object> { "NotARealKey" }, true);
+            dumbUpdate.CallComplete();
+            yield return clearCache;
+            Assert.IsFalse(clearCache.IsValid());
+        }
+
+        public IEnumerator Autorelease_False_ClearDependencyCacheObject_WithChainOperation_DoesNotThrowInvalidHandleError()
+        {
+            yield return Init();
+            //This is to make sure we use the ShouldChainRequest
+            var dumbUpdate = new DumbUpdateOperation();
+            m_Addressables.m_ActiveUpdateOperation = new AsyncOperationHandle<List<IResourceLocator>>(dumbUpdate);
+
+            var clearCache = m_Addressables.ClearDependencyCacheAsync((object)"NotARealKey", false);
+            dumbUpdate.CallComplete();
+            yield return clearCache;
+            Assert.IsTrue(clearCache.IsValid());
+            m_Addressables.Release(clearCache);
+            Assert.IsFalse(clearCache.IsValid());
+        }
+
+        [UnityTest]
+        public IEnumerator Autorelease_True_ClearDependencyCacheObject_WithChainOperation_DoesNotThrowInvalidHandleError()
+        {
+            yield return Init();
+            //This is to make sure we use the ShouldChainRequest
+            var dumbUpdate = new DumbUpdateOperation();
+            m_Addressables.m_ActiveUpdateOperation = new AsyncOperationHandle<List<IResourceLocator>>(dumbUpdate);
+
+            var clearCache = m_Addressables.ClearDependencyCacheAsync((object)"NotARealKey", true);
+            dumbUpdate.CallComplete();
+            yield return clearCache;
+            Assert.IsFalse(clearCache.IsValid());
+        }
+
+        [UnityTest]
+        public IEnumerator Autorelease_False_ClearDependencyCacheListIResourceLocs_WithChainOperation_DoesNotThrowInvalidHandleError()
+        {
+            yield return Init();
+            //This is to make sure we use the ShouldChainRequest
+            var dumbUpdate = new DumbUpdateOperation();
+            m_Addressables.m_ActiveUpdateOperation = new AsyncOperationHandle<List<IResourceLocator>>(dumbUpdate);
+
+            List<IResourceLocation> locations = new List<IResourceLocation>()
+            {
+                new ResourceLocationBase("NotARealKey", "NotARealKey", typeof(BundledAssetProvider).FullName,
+                    typeof(ResourceLocationBase))
+            };
+            var clearCache = m_Addressables.ClearDependencyCacheAsync(locations, false);
+            dumbUpdate.CallComplete();
+            yield return clearCache;
+            Assert.IsTrue(clearCache.IsValid());
+            m_Addressables.Release(clearCache);
+            Assert.IsFalse(clearCache.IsValid());
+        }
+
+        [UnityTest]
+        public IEnumerator Autorelease_True_ClearDependencyCacheListIResourceLocs_WithChainOperation_DoesNotThrowInvalidHandleError()
+        {
+            yield return Init();
+            //This is to make sure we use the ShouldChainRequest
+            var dumbUpdate = new DumbUpdateOperation();
+            m_Addressables.m_ActiveUpdateOperation = new AsyncOperationHandle<List<IResourceLocator>>(dumbUpdate); 
+
+            List<IResourceLocation> locations = new List<IResourceLocation>()
+            {
+                new ResourceLocationBase("NotARealKey", "NotARealKey", typeof(BundledAssetProvider).FullName,
+                    typeof(ResourceLocationBase))
+            };
+            var clearCache = m_Addressables.ClearDependencyCacheAsync(locations, true);
+            dumbUpdate.CallComplete();
+            yield return clearCache;
+            Assert.IsFalse(clearCache.IsValid());
+        }
+
+        [UnityTest]
         public IEnumerator AssetBundleRequestOptions_ComputesCorrectSize_WhenLocationDoesNotMatchBundleName_WithHash()
         {
 #if ENABLE_CACHING

@@ -4,9 +4,12 @@ uid: addressables-api-build-player-content
 # AddressableAssetSettings.BuildPlayerContent
 #### API
 - `static void BuildPlayerContent()`
+- `static void BuildPlayerContent(out AddressablesPlayerBuildResult result)`
 
 #### Description
 `AddressableAssetSettings.BuildPlayerContent()` is used to build relevant `Addressables` data into `AssetBundles` and the corresponding `ContentCatalog`.  It can be used in custom scripts used to assist in continuous integration/deployment.
+
+To check for success, use `BuildPlayerContent(out AddressablesPlayerBuildResult result)`. `result.Error` will contain any error message returned if the Addressables build failed. If `string.IsNullOrEmpty(result.Error)` is true, the build was successful.
 
 There are a few pieces of information that `BuildPlayerContent` takes into consideration when performing the build: the `AddressablesDefaultSettingsObject`, `ActivePlayerDataBuilder`, and the `content_state.bin`.
 

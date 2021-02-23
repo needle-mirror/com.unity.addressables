@@ -92,7 +92,7 @@ namespace UnityEngine.AddressableAssets
         internal List<ResourceLocatorInfo> m_ResourceLocators = new List<ResourceLocatorInfo>();
         AsyncOperationHandle<IResourceLocator> m_InitializationOperation;
         AsyncOperationHandle<List<string>> m_ActiveCheckUpdateOperation;
-        AsyncOperationHandle<List<IResourceLocator>> m_ActiveUpdateOperation;
+        internal AsyncOperationHandle<List<IResourceLocator>> m_ActiveUpdateOperation;
 
 
         Action<AsyncOperationHandle> m_OnHandleCompleteAction;
@@ -911,23 +911,40 @@ namespace UnityEngine.AddressableAssets
             return result;
         }
 
+        internal void AutoReleaseHandleOnCompletion(AsyncOperationHandle handle)
+        {
+            handle.Completed += op => Release(op);
+        }
+
         public AsyncOperationHandle<bool> ClearDependencyCacheAsync(object key, bool autoReleaseHandle)
         {
             if (ShouldChainRequest)
-                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(key, autoReleaseHandle));
+            {
+                var chainOp = ResourceManager.CreateChainOperation(ChainOperation,
+                    op => ClearDependencyCacheAsync(key, autoReleaseHandle));
+                if (autoReleaseHandle)
+                    AutoReleaseHandleOnCompletion(chainOp);
+                return chainOp;
+            }
 
             bool result = ClearDependencyCacheForKey(key);
 
             var completedOp = ResourceManager.CreateCompletedOperation(result, result ? String.Empty : "Unable to clear the cache.  AssetBundle's may still be loaded for the given key.");
             if (autoReleaseHandle)
-                Release(completedOp);
+                AutoReleaseHandleOnCompletion(completedOp);
             return completedOp;
         }
 
         public AsyncOperationHandle<bool> ClearDependencyCacheAsync(IList<IResourceLocation> locations, bool autoReleaseHandle)
         {
             if (ShouldChainRequest)
-                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(locations, autoReleaseHandle));
+            {
+                var chainOp = ResourceManager.CreateChainOperation(ChainOperation,
+                    op => ClearDependencyCacheAsync(locations, autoReleaseHandle));
+                if (autoReleaseHandle)
+                    AutoReleaseHandleOnCompletion(chainOp);
+                return chainOp;
+            }
 
             bool result = true;
             foreach (var location in locations)
@@ -935,14 +952,20 @@ namespace UnityEngine.AddressableAssets
 
             var completedOp = ResourceManager.CreateCompletedOperation(result, result ? String.Empty : "Unable to clear the cache.  AssetBundle's may still be loaded for the given key(s).");
             if (autoReleaseHandle)
-                Release(completedOp);
+                AutoReleaseHandleOnCompletion(completedOp);
             return completedOp;
         }
 
         public AsyncOperationHandle<bool> ClearDependencyCacheAsync(IEnumerable keys, bool autoReleaseHandle)
         {
             if (ShouldChainRequest)
-                return ResourceManager.CreateChainOperation(ChainOperation, op => ClearDependencyCacheAsync(keys, autoReleaseHandle));
+            {
+                var chainOp = ResourceManager.CreateChainOperation(ChainOperation,
+                    op => ClearDependencyCacheAsync(keys, autoReleaseHandle));
+                if (autoReleaseHandle)
+                    AutoReleaseHandleOnCompletion(chainOp);
+                return chainOp;
+            }
 
             bool result = true;
             foreach (var key in keys)
@@ -950,7 +973,7 @@ namespace UnityEngine.AddressableAssets
 
             var completedOp = ResourceManager.CreateCompletedOperation(result, result ? String.Empty : "Unable to clear the cache.  AssetBundle's may still be loaded for the given key(s).");
             if (autoReleaseHandle)
-                Release(completedOp);
+                AutoReleaseHandleOnCompletion(completedOp);
             return completedOp;
         }
 

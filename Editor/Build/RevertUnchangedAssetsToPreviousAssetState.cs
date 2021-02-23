@@ -111,10 +111,8 @@ public class RevertUnchangedAssetsToPreviousAssetState
             {
                 //Logging this as a warning because users may choose to delete their bundles on disk which will trigger this state.
                 Addressables.LogWarning($"CachedAssetState found for {entry.AssetPath} but the previous bundle at {previousBundlePath} cannot be found. " +
-                    $"The modified assets will not be able to use the previously built bundle which will result in new bundles being created " +
-                    $"for these static content groups.  This will point the Content Catalog to local bundles that do not exist on currently " +
-                    $"deployed versions of an application.");
-                continue;
+                    $"This will not affect loading the bundle in previously built players, but loading the missing bundle in Play Mode using the play mode script " +
+                    $"\"Use Existing Build (requires built groups)\" will fail.");
             }
 
             string builtBundlePath = contentUpdateContext.BundleToInternalBundleIdMap[fullInternalBundleName].Replace(loadPath, buildPath);

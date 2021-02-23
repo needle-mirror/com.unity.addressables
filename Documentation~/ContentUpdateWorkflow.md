@@ -68,13 +68,13 @@ When loading AssetBundles into memory, Unity enforces that two bundles cannot be
 To make this work, one of two things must happen.  One option is to unload all your Addressables content prior to updating the catalog.  This ensures new bundles with old names will not cause conflicts in memory.  The second option is to ensure that your updated AssetBundles have unique internal identifiers.  This would allow you to load new bundles, while the old are still in memory.  We have an option to enable this second option.  Turn on "Unique Bundle IDs" within the [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) Inspector.  The downside of this option is that it requires bundles to be rebuilt up the dependency chain.  Meaning if you changed a material in one group, by default only the material's bundle would be rebuilt.  With "Unique Bundle IDs" on, any Asset that references that material would also need rebuilding.
 
 ## Identifying changed assets
-If you have modified Assets in any `Cannot Change Post Release` groups, you'll need to run the **Check for Content Update Restrictions** command (step 5 above). This will take any modified Asset out of the `Cannot Change Post Release` groups and move them to a new group. To generate the new Asset groups:
+If you have modified Assets in any `Cannot Change Post Release` groups, you'll need to run the **Check for Content Update Restrictions** command (step 5 above). This will take any modified Asset, all of its dependencies, and all other Assets that depend on the modified Asset out of the `Cannot Change Post Release` groups and move them to a new group. To generate the new Asset groups:
 
 1. Open the **Addressables Groups** window in the Unity Editor (**Window** > **Asset Management** > **Addressables** > **Groups**).
 2. In the **Addressables Groups** window, select **Tools** on the top menu bar, then **Check for Content Update Restrictions**.
 3. In the **Build Data File** dialog that opens, select the _addressables_content_state.bin_ file (by default, this is located in the `Assets/AddressableAssetsData/\<platform\>` Project directory, where `\<platform\>` is your target platform).
 
-This data is used to determine which Assets or dependencies have been modified since the application was last built. The system moves these Assets to a new group in preparation for the content update build. 
+This data is used to determine which Assets or dependencies have been modified since the application was last built. The system moves these Assets, their dependencies, and all other Assets that depend on the modified Assets to a new group in preparation for the content update build. 
 
 **Note**: This command will do nothing if all your changes are confined to `Can Change Post Release` groups.  
 
@@ -97,6 +97,8 @@ The system uses the content version string and location information from the `ad
 The system also builds AssetBundles for content that cannot change, but you do not need to upload them to the content hosting location, as no Addressables Asset entries reference them.
 
 Note that you should not change the build scripts between building a new player and making content updates (e.g., player code, addressables). This could cause unpredictable behavior in your application.
+
+Additionally if you delete the local content bundles created by your Addressables build from the Project Library folder, attempts to load Assets in those bundles fail when you run your game or application in the Editor and use the **Use Existing Build (requires built groups)** Play Mode script.
 
 ## Checking for content updates at runtime
 You can add a custom script to periodically check whether there are new Addressables content updates. Use the following function call to start the update:
@@ -223,7 +225,7 @@ Let's take a look at one more example with the following dependency tree.
 `AssetA depends on AssetB which depends on Dependency2`
 `AssetB depends on Dependency2`
 `AssetC depends on Dependency3`
-Now, if `Dependency2` is changed, the project strucutue looks like:
+Now, if `Dependency2` is changed, the project structure looks like:
 | **`Local_Static`** | **`content_update_group`**  |
 |:---------|:---------|
 ||`AssetA` |

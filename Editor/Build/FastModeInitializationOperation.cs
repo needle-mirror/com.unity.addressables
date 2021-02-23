@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
+using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
@@ -60,6 +61,8 @@ namespace UnityEditor.AddressableAssets.Settings
             m_addressables.ResourceManager.ResourceProviders.Add(new LegacyResourcesProvider());
             m_addressables.ResourceManager.ResourceProviders.Add(new AtlasSpriteProvider());
             m_addressables.ResourceManager.ResourceProviders.Add(new ContentCatalogProvider(m_addressables.ResourceManager));
+            WebRequestQueue.SetMaxConcurrentRequests(m_settings.MaxConcurrentWebRequests);
+
             if (m_settings.InitializationObjects.Count == 0)
             {
                 Complete(locator, true, null);

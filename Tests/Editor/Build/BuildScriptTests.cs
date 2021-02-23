@@ -180,19 +180,49 @@ namespace UnityEditor.AddressableAssets.Tests
             LogAssert.ignoreFailingMessages = true;
             AddressableAssetSettings oldSettings = AddressableAssetSettingsDefaultObject.Settings;
             AddressableAssetSettingsDefaultObject.Settings = Settings;
-
-            bool callbackCalled = false;
-            BuildScript.buildCompleted += (result) =>
+            
+            try
             {
-                callbackCalled = true;
-            };
-            AddressableAssetSettings.BuildPlayerContent();
-            Assert.IsTrue(callbackCalled);
+                bool callbackCalled = false;
+                BuildScript.buildCompleted += (result) =>
+                {
+                    callbackCalled = true;
+                };
+                AddressableAssetSettings.BuildPlayerContent();
+                Assert.IsTrue(callbackCalled);
+            }
+            finally
+            {
+                if (oldSettings != null)
+                {
+                    AddressableAssetSettingsDefaultObject.Settings = oldSettings;
+                    AddressableAssetSettings.BuildPlayerContent();
+                }
+                LogAssert.ignoreFailingMessages = false;
+            }
+        }
+        
+        [Test]
+        public void BuildCompleteWithResult()
+        {
+            LogAssert.ignoreFailingMessages = true;
+            AddressableAssetSettings oldSettings = AddressableAssetSettingsDefaultObject.Settings;
+            AddressableAssetSettingsDefaultObject.Settings = Settings;
 
-            if (oldSettings != null)
-                AddressableAssetSettingsDefaultObject.Settings = oldSettings;
-            AddressableAssetSettings.BuildPlayerContent();
-            LogAssert.ignoreFailingMessages = false;
+            try
+            {
+                AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult result);
+                Assert.IsTrue(string.IsNullOrEmpty(result.Error));
+            }
+            finally
+            {
+                if (oldSettings != null)
+                {
+                    AddressableAssetSettingsDefaultObject.Settings = oldSettings;
+                    AddressableAssetSettings.BuildPlayerContent();
+                }
+                LogAssert.ignoreFailingMessages = false;
+            }
         }
 
         [Test]
@@ -357,7 +387,10 @@ namespace UnityEditor.AddressableAssets.Tests
         public void WhenBundleLocalCatalogEnabled_BuildScriptPacked_DoesNotCreatePerformanceLogReport()
         {
             string logPath = $"Library/com.unity.addressables/aa/{PlatformMappingService.GetPlatform()}/buildlogtep.json";
-            bool bundleLocalCatalog = Settings.BundleLocalCatalog;
+
+            if (File.Exists(logPath))
+                File.Delete(logPath);
+
             Settings.BundleLocalCatalog = true;
 
             var context = new AddressablesDataBuilderInput(Settings);
@@ -367,8 +400,6 @@ namespace UnityEditor.AddressableAssets.Tests
 
             var res = db.BuildData<AddressablesPlayerBuildResult>(context);
             Assert.IsFalse(File.Exists(logPath));
-
-            Settings.BundleLocalCatalog = bundleLocalCatalog;
         }
 
         [Test]

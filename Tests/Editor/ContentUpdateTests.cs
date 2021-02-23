@@ -694,7 +694,7 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        public void DetermineRequiredAssetEntryUpdates_WithMissingPreviousBundle_LogsWarningAndTakesNoAction()
+        public void DetermineRequiredAssetEntryUpdates_WithMissingPreviousBundle_LogsWarningAndReturnsRevertOperation()
         {
             var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
             string contentUpdateTestGroupGuid = group.Guid;
@@ -708,12 +708,10 @@ namespace UnityEditor.AddressableAssets.Tests
                 k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
 
             var ops = RevertUnchangedAssetsToPreviousAssetState.DetermineRequiredAssetEntryUpdates(group, context);
-
             LogAssert.Expect(LogType.Warning, $"CachedAssetState found for {assetEntry.AssetPath} but the previous bundle at {k_ContentUpdateTestCachedBundlePath} cannot be found. " +
-                $"The modified assets will not be able to use the previously built bundle which will result in new bundles being created " +
-                $"for these static content groups.  This will point the Content Catalog to local bundles that do not exist on currently " +
-                $"deployed versions of an application.");
-            Assert.IsTrue(ops.Count == 0);
+                $"This will not affect loading the bundle in previously built players, but loading the missing bundle in Play Mode using the play mode script " +
+                $"\"Use Existing Build (requires built groups)\" will fail.");
+            Assert.IsTrue(ops.Count == 1);
 
             Settings.RemoveGroup(group);
         }

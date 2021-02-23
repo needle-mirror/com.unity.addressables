@@ -1300,19 +1300,17 @@ namespace UnityEditor.AddressableAssets.GUI
                             else
                             {
                                 var entries = new List<AddressableAssetEntry>();
-                                var modifiedGroups = new HashSet<AddressableAssetGroup>();
+                                HashSet<AddressableAssetGroup> modifiedGroups = new HashSet<AddressableAssetGroup>();
+                                modifiedGroups.Add(parent);
                                 foreach (var node in draggedNodes)
                                 {
-                                    var e = m_Editor.settings.CreateOrMoveEntry(node.entry.guid, parent, false, false);
-                                    entries.Add(e);
-                                    modifiedGroups.Add(e.parentGroup);
+                                    modifiedGroups.Add(node.entry.parentGroup);
+	                                m_Editor.settings.MoveEntry(node.entry, parent, false, false);
+	                                entries.Add(node.entry);
                                 }
-                                foreach (var g in modifiedGroups)
-                                {
-                                    g.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, false, true);
-                                    AddressableAssetUtility.OpenAssetIfUsingVCIntegration(g);
-                                }
-                                m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, true, false);
+                                foreach (AddressableAssetGroup modifiedGroup in modifiedGroups)
+                                    AddressableAssetUtility.OpenAssetIfUsingVCIntegration(modifiedGroup);
+	                            m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, true, false);
                             }
                         }
                     }
@@ -1364,13 +1362,13 @@ namespace UnityEditor.AddressableAssets.GUI
                     if (parent != null)
                     {
                         var resourcePaths = new List<string>();
-                        var nonResourcePaths = new List<string>();
+                        var nonResourceGuids = new List<string>();
                         foreach (var p in DragAndDrop.paths)
                         {
                             if (AddressableAssetUtility.IsInResources(p))
                                 resourcePaths.Add(p);
                             else
-                                nonResourcePaths.Add(p);
+                                nonResourceGuids.Add(AssetDatabase.AssetPathToGUID(p));
                         }
 
                         bool canMarkNonResources = true;
@@ -1379,30 +1377,24 @@ namespace UnityEditor.AddressableAssets.GUI
 
                         if (canMarkNonResources)
                         {
-                            var entries = new List<AddressableAssetEntry>();
-                            var modifiedGroups = new HashSet<AddressableAssetGroup>();
-                            foreach (var p in nonResourcePaths)
-                            {
-                                var e = m_Editor.settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(p), parent,
-                                    false,
-                                    false);
-                                entries.Add(e);
-                                modifiedGroups.Add(e.parentGroup);
-                            }
+	                        if (nonResourceGuids.Count > 0)
+	                        {
+		                        var entriesMoved = new List<AddressableAssetEntry>();
+		                        var entriesCreated = new List<AddressableAssetEntry>();
+		                        m_Editor.settings.CreateOrMoveEntries(nonResourceGuids, parent, entriesCreated, entriesMoved, false, false);
 
-                            foreach (var g in modifiedGroups)
-                            {
-                                g.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, false, true);
-                                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(g);
-                            }
-                            m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries,
-                                true,
-                                false);
+		                        if (entriesMoved.Count > 0)
+			                        m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesMoved, true);
+		                        if (entriesCreated.Count > 0)
+			                        m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryAdded, entriesCreated, true);
+		                        
+		                        AddressableAssetUtility.OpenAssetIfUsingVCIntegration(parent);
+	                        }
 
-                            if (targetIsGroup)
-                            {
-                                SetExpanded(target.id, true);
-                            }
+	                        if (targetIsGroup)
+	                        {
+		                        SetExpanded(target.id, true);
+	                        }
                         }
                     }
                 }

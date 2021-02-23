@@ -98,6 +98,9 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 foreach (AddressableAssetGroup g in m_Settings.groups)
                 {
+                    if (g == null)
+                        continue;
+
                     foreach (AddressableAssetEntry e in g.entries)
                     {
                         if (e.guid == AddressableAssetEntry.EditorSceneListName)

@@ -4,6 +4,13 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.17.6-preview] - 2021-02-23
+- Fixed issue where OnGlobalModification events would be EntryMoved when adding new Entries instead of EntryAdded.
+- Fixed issue where a previously built player fails to load content after running Content Update with missing local bundles
+- Fixed bug where ClearDependencyCacheAsync was throwing invalid handle exceptions if auto releasing the handle
+- Fixed a bug when SerializeReference entries in link.xml for addressable was causing Unity linker to fail.
+- Added results out parameter to AddressableAssetSettings.BuildPlayerContent.
+
 ## [1.17.5-preview] - 2021-02-08
 - Fixed performance issue when disabling "Addressable" for multiple Assets in the Inspector.
 - Added option to set the build path of addressables_content_state.bin file.

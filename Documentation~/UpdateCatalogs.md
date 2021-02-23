@@ -21,6 +21,8 @@ The list of content catalogs with an available update can be aquired through `Ad
 
 `CheckForCatalogUpdates` iterates through each `ResourceLocator` currently being used by `Addressables` and return a list of `strings` that correlate to the content catalog IDs that have an available update.
 
+In order for a Catalog to be discoverable as updated. The AsyncOperationHandle used to load the original Catalog must first be released.
+
 It is safe to release the `AsyncOperationHandle` from `Addressables.CheckForCatalogUpdates` after completion, or let it automatically relase with the `autoReleaseHandle` parameter.  If you intend to use the `Result` of `CheckForCatalogUpdates` then store it as part of the `Completed` operation (see Code Sample below).
 
 #### Code Sample

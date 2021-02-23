@@ -57,32 +57,39 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             else
             {
+	            AddressableAssetGroup parentGroup = aaSettings.DefaultGroup;
                 var resourceTargets = targetInfos.Where(ti => AddressableAssetUtility.IsInResources(ti.Path));
                 if (resourceTargets.Any())
                 {
                     var resourcePaths = resourceTargets.Select(t => t.Path).ToList();
                     var resourceGuids = resourceTargets.Select(t => t.Guid).ToList();
-                    AddressableAssetUtility.SafeMoveResourcesToGroup(aaSettings, aaSettings.DefaultGroup, resourcePaths, resourceGuids);
+                    AddressableAssetUtility.SafeMoveResourcesToGroup(aaSettings, parentGroup, resourcePaths, resourceGuids);
                 }
-
-                var entriesAdded = new List<AddressableAssetEntry>();
-                var modifiedGroups = new HashSet<AddressableAssetGroup>();
+                
                 var otherTargetInfos = targetInfos.Except(resourceTargets);
+                List<string> otherTargetGuids = new List<string>(targetInfos.Count);
                 foreach (var info in otherTargetInfos)
-                {
-                    var e = aaSettings.CreateOrMoveEntry(info.Guid, aaSettings.DefaultGroup, false, false);
-                    entriesAdded.Add(e);
-                    modifiedGroups.Add(e.parentGroup);
-                }
+					otherTargetGuids.Add(info.Guid);
 
-                foreach (var g in modifiedGroups)
+                var entriesCreated = new List<AddressableAssetEntry>();
+                var entriesMoved = new List<AddressableAssetEntry>();
+                aaSettings.CreateOrMoveEntries(otherTargetGuids, parentGroup, entriesCreated, entriesMoved, false, false);
+                
+                bool openedInVC = false;
+                if (entriesMoved.Count > 0)
                 {
-                    g.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesAdded, false, true);
-                    AddressableAssetUtility.OpenAssetIfUsingVCIntegration(g);
+	                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(parentGroup);
+	                openedInVC = true;
+	                aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesMoved, true, false);
                 }
-
-                aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesAdded, true, false);
-            }
+            
+                if (entriesCreated.Count > 0)
+                {
+	                if (!openedInVC)
+		                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(parentGroup);
+	                aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryAdded, entriesCreated, true, false);
+	            } 
+	        }
         }
 
         static void OnPostHeaderGUI(Editor editor)

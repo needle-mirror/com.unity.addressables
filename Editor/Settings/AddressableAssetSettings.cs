@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -1567,7 +1568,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             targetParent.AddAssetEntry(entry, postEvent);
         }
-
+        
         /// <summary>
         /// Create a new entry, or if one exists in a different group, move it into the new group.
         /// </summary>
@@ -1588,23 +1589,66 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             else //create entry
             {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-
-                if (AddressableAssetUtility.IsPathValidForEntry(path))
-                {
-                    entry = CreateEntry(guid, path, targetParent, readOnly, postEvent);
-                }
-                else
-                {
-                    if (AssetDatabase.GetMainAssetTypeAtPath(path) != null && BuildUtility.IsEditorAssembly(AssetDatabase.GetMainAssetTypeAtPath(path).Assembly))
-                        return null;
-                    entry = CreateEntry(guid, guid, targetParent, true, postEvent);
-                }
-
-                targetParent.AddAssetEntry(entry, postEvent);
+	            entry = CreateAndAddEntryToGroup(guid, targetParent, readOnly, postEvent);
             }
 
             return entry;
+        }
+
+
+        /// <summary>
+        /// Create a new entries for each asset, or if one exists in a different group, move it into the targetParent group.
+        /// </summary>
+        /// <param name="guids">The asset guid's to move.</param>
+        /// <param name="targetParent">The group to add the entries to.</param>
+        /// <param name="createdEntries">List to add new entries to.</param>
+        /// <param name="movedEntries">List to add moved entries to.</param>
+        /// <param name="readOnly">Is the new entry read only.</param>
+        /// <param name="postEvent">Send modification event.</param>
+        /// <exception cref="ArgumentException"></exception>
+        internal void CreateOrMoveEntries(IEnumerable guids, AddressableAssetGroup targetParent, List<AddressableAssetEntry> createdEntries, List<AddressableAssetEntry> movedEntries, bool readOnly = false, bool postEvent = true)
+        {
+	        if (targetParent == null)
+		        throw new ArgumentException("targetParent must not be null");
+	        
+	        if (createdEntries == null)
+		        createdEntries = new List<AddressableAssetEntry>();
+	        if (movedEntries == null)
+		        movedEntries = new List<AddressableAssetEntry>();
+
+	        foreach (string guid in guids)
+	        {
+		        AddressableAssetEntry entry = FindAssetEntry(guid);
+		        if (entry != null)
+		        {
+			        MoveEntry(entry, targetParent, readOnly, postEvent);
+			        movedEntries.Add(entry);
+		        }
+		        else
+		        {
+			        createdEntries.Add(CreateAndAddEntryToGroup(guid, targetParent, readOnly, postEvent));
+		        }
+	        }
+        }
+
+        private AddressableAssetEntry CreateAndAddEntryToGroup(string guid, AddressableAssetGroup targetParent, bool readOnly = false, bool postEvent = true)
+        {
+	        AddressableAssetEntry entry = null;
+	        var path = AssetDatabase.GUIDToAssetPath(guid);
+
+	        if (AddressableAssetUtility.IsPathValidForEntry(path))
+	        {
+		        entry = CreateEntry(guid, path, targetParent, readOnly, postEvent);
+	        }
+	        else
+	        {
+		        if (AssetDatabase.GetMainAssetTypeAtPath(path) != null && BuildUtility.IsEditorAssembly(AssetDatabase.GetMainAssetTypeAtPath(path).Assembly))
+			        return null;
+		        entry = CreateEntry(guid, guid, targetParent, true, postEvent);
+	        }
+
+	        targetParent.AddAssetEntry(entry, postEvent);
+	        return entry;
         }
 
         internal AddressableAssetEntry CreateSubEntryIfUnique(string guid, string address, AddressableAssetEntry parentEntry)
@@ -1924,15 +1968,29 @@ namespace UnityEditor.AddressableAssets.Settings
         /// </summary>
         public static void BuildPlayerContent()
         {
+            BuildPlayerContent(out AddressablesPlayerBuildResult rst);
+        }
+        
+        /// <summary>
+        /// Runs the active player data build script to create runtime data.
+        /// See the [BuildPlayerContent](xref:addressables-api-build-player-content) documentation for more details.
+        /// </summary>
+        /// <param name="result">Results from running the active player data build script.</param>
+        public static void BuildPlayerContent(out AddressablesPlayerBuildResult result)
+        {
             var settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
             {
+                string error;
                 if (EditorApplication.isUpdating)
-                    Debug.LogError("Addressable Asset Settings does not exist.  EditorApplication.isUpdating was true.");
+                    error = "Addressable Asset Settings does not exist.  EditorApplication.isUpdating was true.";
                 else if (EditorApplication.isCompiling)
-                    Debug.LogError("Addressable Asset Settings does not exist.  EditorApplication.isCompiling was true.");
+                    error = "Addressable Asset Settings does not exist.  EditorApplication.isCompiling was true.";
                 else
-                    Debug.LogError("Addressable Asset Settings does not exist.  Failed to create.");
+                    error = "Addressable Asset Settings does not exist.  Failed to create.";
+                Debug.LogError(error);
+                result = new AddressablesPlayerBuildResult();
+                result.Error = error;
                 return;
             }
 
@@ -1943,10 +2001,10 @@ namespace UnityEditor.AddressableAssets.Settings
                 foreach (AddressableAssetEntry entry in group.entries)
                     entry.BundleFileId = null;
             }
-            settings.BuildPlayerContentImpl();
+            result = settings.BuildPlayerContentImpl();
         }
 
-        internal void BuildPlayerContentImpl()
+        internal AddressablesPlayerBuildResult BuildPlayerContentImpl()
         {
             if (Directory.Exists(Addressables.BuildPath))
             {
@@ -1968,6 +2026,7 @@ namespace UnityEditor.AddressableAssets.Settings
             if (BuildScript.buildCompleted != null)
                 BuildScript.buildCompleted(result);
             AssetDatabase.Refresh();
+            return result;
         }
 
         /// <summary>
