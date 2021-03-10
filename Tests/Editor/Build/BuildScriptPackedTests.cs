@@ -318,7 +318,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var group = Settings.CreateGroup("PackedTest", false, false, false, null, typeof(BundledAssetGroupSchema));
             var bundleToAssetGroup = new Dictionary<string, string>();
 
-            m_BuildScript.HandleDuplicateBundleNames(bundleBuilds, bundleToAssetGroup, group.Guid, out var uniqueNames);
+            List<string> uniqueNames = BuildScriptPackedMode.HandleDuplicateBundleNames(bundleBuilds, bundleToAssetGroup, group.Guid);
 
             var uniqueNamesInBundleBuilds = bundleBuilds.Select(b => b.assetBundleName).Distinct();
             Assert.AreEqual(bundleBuilds.Count, uniqueNames.Count());

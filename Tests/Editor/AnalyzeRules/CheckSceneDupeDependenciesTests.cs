@@ -37,6 +37,8 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             var meshPrefabWithMaterial = prefabWithMaterial.AddComponent<MeshRenderer>();
             meshPrefabWithMaterial.material = AssetDatabase.LoadAssetAtPath<Material>(k_CheckDupeMyMaterial);
 
+            prefabA.AddComponent<TestBehaviourWithReference>();
+
 #if UNITY_2018_3_OR_NEWER
             PrefabUtility.SaveAsPrefabAsset(prefabA, k_CheckDupePrefabA);
             PrefabUtility.SaveAsPrefabAsset(prefabB, k_CheckDupePrefabB);
@@ -113,6 +115,37 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             Assert.AreEqual(2, rule.m_ResourcesToDependencies[editorScene.path].Count);
             Assert.IsTrue(rule.m_ResourcesToDependencies[editorScene.path].Contains(new GUID(AssetDatabase.AssetPathToGUID(k_CheckDupeMyMaterial))));
             Assert.IsTrue(rule.m_ResourcesToDependencies[editorScene.path].Contains(new GUID(AssetDatabase.AssetPathToGUID(k_PrefabWithMaterialPath))));
+
+            //Cleanup
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+        }
+        
+        [Test]
+        public void CheckSceneDupe_SceneDependenciesDoNotIncludeScripts()
+        {
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+            GameObject go = AssetDatabase.LoadAssetAtPath<GameObject>(k_CheckDupePrefabA);
+            GameObject g = PrefabUtility.InstantiatePrefab(go, scene) as GameObject;
+            g.AddComponent<TestBehaviourWithReference>();
+            EditorSceneManager.SaveScene(scene, k_ScenePath);
+
+            var rule = new CheckSceneDupeDependencies();
+
+            EditorBuildSettingsScene editorScene = new EditorBuildSettingsScene(k_ScenePath, true);
+            rule.BuiltInResourcesToDependenciesMap(new string[] { editorScene.path });
+
+            Assert.IsTrue(rule.m_ResourcesToDependencies.ContainsKey(editorScene.path));
+            bool containsAnyScripts = false;
+            foreach ( GUID guid in rule.m_ResourcesToDependencies[editorScene.path])
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid.ToString());
+                if (path.EndsWith(".cs") || path.EndsWith(".dll"))
+                {
+                    containsAnyScripts = true;
+                    break;
+                }
+            }
+            Assert.IsFalse(containsAnyScripts, "Scripts were included as a duplciate dependency");
 
             //Cleanup
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);

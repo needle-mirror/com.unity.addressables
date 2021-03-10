@@ -47,6 +47,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             if (m_GetDownloadProgressCallback != null)
                 m_DownloadStatus = m_GetDownloadProgressCallback();
         }
+
         public void SetWaitForCompletionCallback(Func<bool> callback)
         {
             m_WaitForCompletionCallback = callback;
@@ -72,10 +73,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
             if (m_GetDownloadProgressCallback != null)
                 m_DownloadStatus = m_GetDownloadProgressCallback();
-            else if(IsDone)
-                m_DownloadStatus.DownloadedBytes = m_DownloadStatus.TotalBytes;
 
-            if (IsDone)
+            if (Status == AsyncOperationStatus.Succeeded)
                 m_DownloadStatus.DownloadedBytes = m_DownloadStatus.TotalBytes;
 
             return new DownloadStatus() { DownloadedBytes = m_DownloadStatus.DownloadedBytes + depDLS.DownloadedBytes, TotalBytes = m_DownloadStatus.TotalBytes + depDLS.TotalBytes, IsDone = IsDone };

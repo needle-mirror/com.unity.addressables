@@ -22,10 +22,6 @@ namespace UnityEditor.AddressableAssets
         /// The name of the default config object
         /// </summary>
         public const string kDefaultConfigObjectName = "com.unity.addressableassets";
-        /// <summary>
-        /// The path to the Library folder for storing Addressables data
-        /// </summary>
-        internal const string kAddressablesLibraryPath = "Library/com.unity.addressables";
 
         /// <summary>
         /// Default path for addressable asset settings assets.
@@ -110,7 +106,7 @@ namespace UnityEditor.AddressableAssets
         {
             get
             {
-                if (s_DefaultSettingsObject == null && !EditorApplication.isUpdating && !EditorApplication.isCompiling)
+                if (s_DefaultSettingsObject == null)
                 {
                     AddressableAssetSettingsDefaultObject so;
                     if (EditorBuildSettings.TryGetConfigObject(kDefaultConfigObjectName, out so))
@@ -127,7 +123,7 @@ namespace UnityEditor.AddressableAssets
                             so.SetSettingsObject(s_DefaultSettingsObject);
                             AssetDatabase.CreateAsset(so, kDefaultConfigFolder + "/DefaultObject.asset");
                             EditorUtility.SetDirty(so);
-                            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(so, kDefaultConfigFolder + "/DefaultObject.asset");
+                            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(kDefaultConfigFolder + "/DefaultObject.asset");
                             AssetDatabase.SaveAssets();
                             EditorBuildSettings.AddConfigObject(kDefaultConfigObjectName, so, true);
                         }
@@ -158,7 +154,7 @@ namespace UnityEditor.AddressableAssets
                 }
                 so.SetSettingsObject(s_DefaultSettingsObject);
                 EditorUtility.SetDirty(so);
-                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(so, kDefaultConfigFolder + "/DefaultObject.asset");
+                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(kDefaultConfigFolder + "/DefaultObject.asset");
                 AssetDatabase.SaveAssets();
             }
         }

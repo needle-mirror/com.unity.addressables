@@ -148,6 +148,7 @@ namespace UnityEditor.AddressableAssets.Tests
             AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "label", null, GetPath("asset1.asset"), GetPath("asset2.asset"));
         }
 
+#if !(UNITY_2021_2_OR_NEWER)
         [Test]
         public void WhenLocatorWithAssetsThatMatchAssetsInFolderAndResources_LocateAllMatches()
         {
@@ -162,6 +163,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 GetPath("asset1")
             );
         }
+#endif
 
         [Test]
         public void WhenLocatorWithAssetsInMarkedFolder_LocateWithAssetReferenceSucceeds()
@@ -239,9 +241,9 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void WhenLocatorWithAssetsInFolderWithSimilarNames_LocateWithAssetKeySucceeds()
         {
-            var folderGUID = CreateFolder("TestFolder", new string[] { "asset1", "asset", "asset1_more" });
+            var folderGUID = CreateFolder("TestFolder", new string[] { "asset1.asset", "asset.asset", "asset1_more.asset" });
             m_Settings.CreateOrMoveEntry(folderGUID, m_Settings.DefaultGroup).address = "TF";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1", null, GetPath("TestFolder/asset1"));
+            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1.asset", null, GetPath("TestFolder/asset1.asset"));
         }
 
         [Test]

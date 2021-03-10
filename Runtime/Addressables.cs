@@ -192,6 +192,9 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public static string StreamingAssetsSubFolder { get { return m_Addressables.StreamingAssetsSubFolder; } }
 
+
+        internal static string LibraryPath = "Library/com.unity.addressables/"; 
+        
         /// <summary>
         /// The path used by the Addressables system for its initialization data.
         /// </summary>

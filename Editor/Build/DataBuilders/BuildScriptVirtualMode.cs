@@ -65,7 +65,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             get
             {
                 if (string.IsNullOrEmpty(m_pathFormatStore))
-                    m_pathFormatStore = "{0}Library/com.unity.addressables/{1}_BuildScriptVirtualMode.json";
+                    m_pathFormatStore = "{0}" + Addressables.LibraryPath + "{1}_BuildScriptVirtualMode.json";
                 return m_pathFormatStore;
             }
             set { m_pathFormatStore = value; }

@@ -9,11 +9,13 @@ using UnityEngine.ResourceManagement.Util;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.TestTools;
+using UnityEngine.U2D;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.U2D;
 #endif
 
 static class AddressablesTestUtility
@@ -135,6 +137,8 @@ static class AddressablesTestUtility
 
         PrefabUtility.SaveAsPrefabAsset(go, hasBehaviorPath);
         settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(hasBehaviorPath), group, false, false);
+        
+        CreateFolderEntryAssets(RootFolder, settings, group);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
@@ -146,6 +150,58 @@ static class AddressablesTestUtility
     }
 
 #if UNITY_EDITOR
+	static void CreateFolderEntryAssets(string RootFolder, AddressableAssetSettings settings, AddressableAssetGroup group)
+	{
+		AssetDatabase.CreateFolder(RootFolder, "folderEntry");
+		string folderPath = RootFolder + "/folderEntry";
+
+		{
+			var texture = new Texture2D(32, 32);
+			var data = ImageConversion.EncodeToPNG(texture);
+			UnityEngine.Object.DestroyImmediate(texture);
+			AssetDatabase.GenerateUniqueAssetPath(RootFolder);
+			var spritePath = folderPath + "/spritesheet.png";
+			File.WriteAllBytes(spritePath, data);
+
+			AssetDatabase.ImportAsset(spritePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+
+			var spriteGuid = AssetDatabase.AssetPathToGUID(spritePath);
+			var importer = (TextureImporter)AssetImporter.GetAtPath(spritePath);
+			importer.textureType = TextureImporterType.Sprite;
+			importer.spriteImportMode = SpriteImportMode.Multiple;
+			importer.spritesheet = new SpriteMetaData[] { new SpriteMetaData() { name = "topleft", pivot = Vector2.zero, rect = new Rect(0, 0, 16, 16) },
+				new SpriteMetaData() { name = "botright", pivot = Vector2.zero, rect = new Rect(16, 16, 16, 16) }};
+			importer.SaveAndReimport();
+		}
+
+		{
+			var texture = new Texture2D(32, 32);
+			var data = ImageConversion.EncodeToPNG(texture);
+			UnityEngine.Object.DestroyImmediate(texture);
+
+			var spritePath = folderPath + "/sprite.png";
+			File.WriteAllBytes(spritePath, data);
+			AssetDatabase.ImportAsset(spritePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+
+			var spriteGuid = AssetDatabase.AssetPathToGUID(spritePath);
+			var importer = (TextureImporter) AssetImporter.GetAtPath(spritePath);
+			importer.textureType = TextureImporterType.Sprite;
+			importer.SaveAndReimport();
+
+			string atlasPath = folderPath + "/atlas.spriteatlas";
+			var sa = new SpriteAtlas();
+			AssetDatabase.CreateAsset(sa, atlasPath);
+			sa.Add(new UnityEngine.Object[]
+			{
+				AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(AssetDatabase.GUIDToAssetPath(spriteGuid))
+			});
+			SpriteAtlasUtility.PackAtlases(new SpriteAtlas[] {sa}, EditorUserBuildSettings.activeBuildTarget, false);
+		}
+
+		var folderEntry = settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(folderPath), group, false, false);
+		folderEntry.address = "folderEntry";
+	}
+	
     static string CreateAsset(string assetPath, string objectName)
     {
         GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -168,7 +224,7 @@ static class AddressablesTestUtility
             var b = db as IDataBuilder;
             if (b.GetType().Name != testType)
                 continue;
-            buildContext.PathFormat = "{0}Library/com.unity.addressables/{1}_" + testType + "_TEST_" + suffix + ".json";
+            buildContext.PathFormat = "{0}" + Addressables.LibraryPath + "{1}_" + testType + "_TEST_" + suffix + ".json";
             b.BuildData<AddressableAssetBuildResult>(buildContext);
             PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath + testType, PlayerPrefs.GetString(Addressables.kAddressablesRuntimeDataPath, ""));
         }

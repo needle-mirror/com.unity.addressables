@@ -9,7 +9,6 @@ using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -137,10 +136,16 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 string[] dependencies = AssetDatabase.GetDependencies(path);
 
                 if (!m_ResourcesToDependencies.ContainsKey(path))
-                    m_ResourcesToDependencies.Add(path, new List<GUID>());
-
-                m_ResourcesToDependencies[path].AddRange(from dependency in dependencies
-                    select new GUID(AssetDatabase.AssetPathToGUID(dependency)));
+                    m_ResourcesToDependencies.Add(path, new List<GUID>(dependencies.Length));
+                else
+                    m_ResourcesToDependencies[path].Capacity += dependencies.Length;
+                
+                foreach (string dependency in dependencies)
+                {
+                    if (dependency.EndsWith(".cs") || dependency.EndsWith(".dll"))
+                        continue;
+                    m_ResourcesToDependencies[path].Add(new GUID(AssetDatabase.AssetPathToGUID(dependency)));
+                }
             }
         }
 
@@ -204,12 +209,16 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 }
             }
         }
-
         internal AssetBundleBuild CreateUniqueBundle(AssetBundleBuild bid)
+        {
+            return CreateUniqueBundle(bid, m_BundleToAssetGroup);
+        }
+
+        internal static AssetBundleBuild CreateUniqueBundle(AssetBundleBuild bid, Dictionary<string, string> bundleToAssetGroup)
         {
             int count = 1;
             var newName = bid.assetBundleName;
-            while (m_BundleToAssetGroup.ContainsKey(newName) && count < 1000)
+            while (bundleToAssetGroup.ContainsKey(newName) && count < 1000)
                 newName = bid.assetBundleName.Replace(".bundle", string.Format("{0}.bundle", count++));
             return new AssetBundleBuild
             {

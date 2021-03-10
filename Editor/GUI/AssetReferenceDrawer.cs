@@ -27,6 +27,7 @@ namespace UnityEditor.AddressableAssets.GUI
         internal string m_AssetName;
         internal Rect assetDropDownRect;
         internal const string noAssetString = "None (AddressableAsset)";
+        internal const string forceAddressableString = "Make Addressable - ";
         internal AssetReference m_AssetRefObject;
         internal GUIContent m_label;
         internal bool m_ReferencesSame = true;
@@ -249,6 +250,11 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (newGuid == noAssetString)
                 {
                     SetObject(property, null, out guid);
+                    newGuid = string.Empty;
+                }
+                else if (newGuid == forceAddressableString)
+                {
+                    checkToForceAddressable = guid;
                     newGuid = string.Empty;
                 }
                 else if (guid != newGuid)
@@ -942,6 +948,8 @@ namespace UnityEditor.AddressableAssets.GUI
                     if (assetRefItem != null && !string.IsNullOrEmpty(assetRefItem.AssetPath))
                     {
                         m_Drawer.newGuid = assetRefItem.Guid;
+                        if (string.IsNullOrEmpty(m_Drawer.newGuid))
+                            m_Drawer.newGuid = assetRefItem.AssetPath;
                     }
                     else
                     {
@@ -985,7 +993,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     if (!string.IsNullOrEmpty(m_NonAddressedAsset))
                     {
                         var item = new AssetRefTreeViewItem(m_NonAddressedAsset.GetHashCode(), 0,
-                            "Make Addressable - " + m_NonAddressedAsset, string.Empty);
+                            AssetReferenceDrawer.forceAddressableString + m_NonAddressedAsset, AssetReferenceDrawer.forceAddressableString);
                         item.icon = m_WarningIcon;
                         root.AddChild(item);
                     }

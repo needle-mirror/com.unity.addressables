@@ -91,7 +91,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return t;
             }
 
-            if (t == typeof(DefaultAsset) && allowFolders)
+            if (t == typeof(DefaultAsset))
                 return typeof(DefaultAsset);
 
             //try to remap the editor type to a runtime type
@@ -286,24 +286,34 @@ namespace UnityEditor.AddressableAssets.Settings
             return Provider.isActive && Provider.enabled;
         }
 
-        private static bool DisplayDialogueForEditingLockedFile(string path)
+        internal static bool IsVCAssetOpenForEdit(string path)
         {
-            return EditorUtility.DisplayDialog("Attemping to edit locked file",
-                "File " + path + " is locked. Check out?", "Yes", "No");
+            AssetList VCAssets = GetVCAssets(path);
+            foreach(Asset vcAsset in VCAssets)
+            {
+                if (vcAsset.path == path)
+                    return Provider.IsOpenForEdit(vcAsset);
+            }
+            return false;
         }
 
-        private static bool MakeAssetEditable(Object target, string path)
+        internal static AssetList GetVCAssets(string path)
         {
-            if (string.IsNullOrEmpty(path))
-                return false;
+            Task op = Provider.Status(path);
+            op.Wait();
+            return op.assetList;
+        }
+                
+        private static bool MakeAssetEditable(Asset asset)
+        {
 #if UNITY_2019_4_OR_NEWER
-            if(!AssetDatabase.IsOpenForEdit(target))
-                return AssetDatabase.MakeEditable(path);
+            if(!AssetDatabase.IsOpenForEdit(asset.path))
+                return AssetDatabase.MakeEditable(asset.path);
 #else
-            Asset asset = Provider.GetAssetByPath(path);
-            if (asset != null && !Provider.IsOpenForEdit(asset))
+            if(!Provider.IsOpenForEdit(asset))
             {
-                Task task = Provider.Checkout(asset, CheckoutMode.Asset);
+                CheckoutMode mode = asset.isMeta ? CheckoutMode.Meta : CheckoutMode.Asset;
+                Task task = Provider.Checkout(asset, mode);
                 task.Wait();
                 return task.success;
             }
@@ -311,20 +321,42 @@ namespace UnityEditor.AddressableAssets.Settings
             return false;
         }
 
-         internal static bool OpenAssetIfUsingVCIntegration(Object target, bool exitGUI = false)
-         {
-            if (target == null)
-                return false;
-            return OpenAssetIfUsingVCIntegration(target, AssetDatabase.GetAssetOrScenePath(target), exitGUI);
-         }
-
-        internal static bool OpenAssetIfUsingVCIntegration(Object target, string path, bool exitGUI = false)
+        internal static bool OpenAssetIfUsingVCIntegration(Object target, bool exitGUI = false)
         {
-            bool openedAsset = false;
-            if (string.IsNullOrEmpty(path) || !IsUsingVCIntegration())
-                return openedAsset;
-            if (DisplayDialogueForEditingLockedFile(path))
-                openedAsset = MakeAssetEditable(target, path);
+            if (!IsUsingVCIntegration() || target == null)
+                return false;
+            return OpenAssetIfUsingVCIntegration(AssetDatabase.GetAssetOrScenePath(target), exitGUI);
+        }
+
+        internal static bool OpenAssetIfUsingVCIntegration(string path, bool exitGUI = false)
+        {
+            if (!IsUsingVCIntegration() || string.IsNullOrEmpty(path))
+                return false;
+            
+            AssetList assets = GetVCAssets(path);
+            var uneditableAssets = new List<Asset>();            
+            string message = "Check out file(s)?\n\n";
+            foreach(Asset asset in assets)
+            {
+                if(!Provider.IsOpenForEdit(asset))
+                {
+                    uneditableAssets.Add(asset);
+                    message += $"{asset.path}\n";
+                }
+            }
+
+            if (uneditableAssets.Count == 0)
+                return false;
+
+            bool openedAsset = true;
+            if (EditorUtility.DisplayDialog("Attempting to modify files that are uneditable", message, "Yes", "No"))
+            {
+                foreach(Asset asset in uneditableAssets)
+                {
+                    if (!MakeAssetEditable(asset))
+                        openedAsset = false;
+                }
+            }
             if (exitGUI)
                 GUIUtility.ExitGUI();
             return openedAsset;

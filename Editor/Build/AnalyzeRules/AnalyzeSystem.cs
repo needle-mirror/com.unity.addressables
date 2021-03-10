@@ -47,7 +47,7 @@ namespace UnityEditor.AddressableAssets.Build
         {
             get
             {
-                return $"{AddressableAssetSettingsDefaultObject.kAddressablesLibraryPath}/AnalyzeData";
+                return $"{Addressables.LibraryPath}/AnalyzeData";
             }
         }
 

@@ -216,19 +216,40 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 {
                     return System.Threading.Tasks.Task.FromResult(default(TObject));
                 }
+                System.Threading.WaitHandle waitHandle = null;
                 if (Status == AsyncOperationStatus.Succeeded)
                 {
+                    if (Handle.IsValid() && CompletedEventHasListeners)
+                    {
+                        waitHandle = WaitHandle;
+                        Task<TObject> t = System.Threading.Tasks.Task.Factory.StartNew((Func<object, TObject>) (o =>
+                        {
+                            var asyncOperation = o as AsyncOperationBase<TObject>;
+                            if (asyncOperation == null)
+                                return default(TObject);
+                            asyncOperation.IncrementReferenceCount();
+                            waitHandle.WaitOne();
+                            var result = (TObject)asyncOperation.Result;
+                            asyncOperation.DecrementReferenceCount();
+                            return result;
+                        }), this);
+                        return t;
+                    }
+                    
                     return System.Threading.Tasks.Task.FromResult(Result);
                 }
 
-                var handle = WaitHandle;
+                waitHandle = WaitHandle;
                 return System.Threading.Tasks.Task.Factory.StartNew((Func<object, TObject>)(o =>
                 {
                     var asyncOperation = o as AsyncOperationBase<TObject>;
                     if (asyncOperation == null)
                         return default(TObject);
-                    handle.WaitOne();
-                    return (TObject)asyncOperation.Result;
+                    asyncOperation.IncrementReferenceCount();
+                    waitHandle.WaitOne();
+                    var result = (TObject)asyncOperation.Result;
+                    asyncOperation.DecrementReferenceCount();
+                    return result;
                 }), this);
 #endif
             }
@@ -246,18 +267,39 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 {
                     return System.Threading.Tasks.Task.FromResult<object>(null);
                 }
+                System.Threading.WaitHandle waitHandle = null;
                 if (Status == AsyncOperationStatus.Succeeded)
                 {
+                    if (Handle.IsValid() && CompletedEventHasListeners)
+                    {
+                        waitHandle = WaitHandle;
+                        Task<object> t = System.Threading.Tasks.Task.Factory.StartNew<object>((Func<object, object>)(o =>
+                        {
+                            var asyncOperation = o as AsyncOperationBase<TObject>;
+                            if (asyncOperation == null)
+                                return default(object);
+                            asyncOperation.IncrementReferenceCount();
+                            waitHandle.WaitOne();
+                            var result = (object)asyncOperation.Result;
+                            asyncOperation.DecrementReferenceCount();
+                            return result;
+                        }), this);
+                        return t;
+                    }
                     return System.Threading.Tasks.Task.FromResult<object>(Result);
                 }
-                var handle = WaitHandle;
+
+                waitHandle = WaitHandle;
                 return System.Threading.Tasks.Task.Factory.StartNew<object>((Func<object, object>)(o =>
                 {
                     var asyncOperation = o as AsyncOperationBase<TObject>;
                     if (asyncOperation == null)
                         return default(object);
-                    handle.WaitOne();
-                    return (object)asyncOperation.Result;
+                    asyncOperation.IncrementReferenceCount();
+                    waitHandle.WaitOne();
+                    var result = (object)asyncOperation.Result;
+                    asyncOperation.DecrementReferenceCount();
+                    return result;
                 }), this);
 #endif
             }

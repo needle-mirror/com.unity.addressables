@@ -341,9 +341,10 @@ namespace UnityEditor.AddressableAssets.Tests
         public void Building_CreatesPerformanceReportWithMetaData()
         {
             Settings.BuildPlayerContentImpl();
-            string text = File.ReadAllText("Library/com.unity.addressables/AddressablesBuildTEP.json");
+            string path = Addressables.LibraryPath + "AddressablesBuildTEP.json";
+            FileAssert.Exists(path);
+            string text = File.ReadAllText(path);
             StringAssert.Contains("com.unity.addressables", text);
-            FileAssert.Exists("Library/com.unity.addressables/AddressablesBuildTEP.json");
         }
 
 #endif
@@ -386,7 +387,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void WhenBundleLocalCatalogEnabled_BuildScriptPacked_DoesNotCreatePerformanceLogReport()
         {
-            string logPath = $"Library/com.unity.addressables/aa/{PlatformMappingService.GetPlatform()}/buildlogtep.json";
+            string logPath = $"Library/com.unity.addressables/aa/{PlatformMappingService.GetPlatformPathSubFolder()}/buildlogtep.json";
 
             if (File.Exists(logPath))
                 File.Delete(logPath);

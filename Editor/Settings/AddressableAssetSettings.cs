@@ -472,7 +472,7 @@ namespace UnityEditor.AddressableAssets.Settings
 	        string p = ConfigFolder;
 	        if (!string.IsNullOrEmpty(m_ContentStateBuildPath)) 
 		        p = m_ContentStateBuildPath;
-            p = Path.Combine(p, PlatformMappingService.GetPlatform().ToString());
+            p = Path.Combine(p, PlatformMappingService.GetPlatformPathSubFolder());
 	        return p;
         }
 

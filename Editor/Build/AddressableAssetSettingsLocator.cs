@@ -6,19 +6,23 @@ using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.U2D;
 using static UnityEditor.AddressableAssets.Settings.AddressablesFileEnumeration;
 
 namespace UnityEditor.AddressableAssets.Settings
 {
     internal class AddressableAssetSettingsLocator : IResourceLocator
     {
+	    private static Type m_SpriteType = typeof(Sprite);
+	    private static Type m_SpriteAtlasType = typeof(SpriteAtlas);
+	    
         public string LocatorId { get; private set; }
         public Dictionary<object, List<AddressableAssetEntry>> m_keyToEntries;
         public Dictionary<CacheKey, IList<IResourceLocation>> m_Cache;
         public AddressableAssetTree m_AddressableAssetTree;
         HashSet<object> m_Keys = null;
         AddressableAssetSettings m_Settings;
-        
+
         public IEnumerable<object> Keys
         {
             get
@@ -258,7 +262,11 @@ namespace UnityEditor.AddressableAssets.Settings
 
                             if (m_keyToEntries.ContainsKey(parentFolderKey))
                             {
-                                locations.Add(new ResourceLocationBase(keyPath, AssetDatabase.GUIDToAssetPath(keyStr), typeof(AssetDatabaseProvider).FullName, type));
+	                            string keyAssetPath = AssetDatabase.GUIDToAssetPath(keyStr);
+	                            if (type == m_SpriteType && AssetDatabase.GetMainAssetTypeAtPath(keyAssetPath) == m_SpriteAtlasType)
+		                            locations.Add(new ResourceLocationBase(keyPath, keyAssetPath, typeof(AssetDatabaseProvider).FullName, m_SpriteAtlasType));
+	                            else
+									locations.Add(new ResourceLocationBase(keyPath, keyAssetPath, typeof(AssetDatabaseProvider).FullName, type));
                                 break;
                             }
                             slash = keyPath.LastIndexOf('/');
@@ -279,7 +287,12 @@ namespace UnityEditor.AddressableAssets.Settings
                             {
                                 var internalId = GetInternalIdFromFolderEntry(keyStr, e);
                                 if (!string.IsNullOrEmpty(internalId) && !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(internalId)))
-                                    locations.Add(new ResourceLocationBase(keyStr, internalId, typeof(AssetDatabaseProvider).FullName, type));
+                                {
+	                                if (type == m_SpriteType && AssetDatabase.GetMainAssetTypeAtPath(internalId) == m_SpriteAtlasType)
+		                                locations.Add(new ResourceLocationBase(keyStr, internalId, typeof(AssetDatabaseProvider).FullName, m_SpriteAtlasType));
+	                                else
+		                                locations.Add(new ResourceLocationBase(keyStr, internalId, typeof(AssetDatabaseProvider).FullName, type));
+                                }
                             }
                             break;
                         }

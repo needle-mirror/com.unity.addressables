@@ -37,7 +37,7 @@ namespace UnityEditor.AddressableAssets
         internal class Properties
         {
             public static readonly GUIContent buildSettings = EditorGUIUtility.TrTextContent("Build Settings");
-            public static readonly GUIContent buildLayoutReport = EditorGUIUtility.TrTextContent("Debug Build Layout", $"A debug build layout file will be generated as part of the build process. The file will put written to {BuildLayoutGenerationTask.kLayoutTextFile}");
+            public static readonly GUIContent buildLayoutReport = EditorGUIUtility.TrTextContent("Debug Build Layout", $"A debug build layout file will be generated as part of the build process. The file will put written to {BuildLayoutGenerationTask.m_LayoutTextFile}");
         }
 
         static AddressablesPreferences()

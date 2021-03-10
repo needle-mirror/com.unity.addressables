@@ -335,7 +335,7 @@ namespace UnityEditor.AddressableAssets.Build
             }
             catch (UnauthorizedAccessException uae)
             {
-                if (AddressableAssetUtility.IsUsingVCIntegration())
+                if (!AddressableAssetUtility.IsVCAssetOpenForEdit(path))
                     Debug.LogErrorFormat("Cannot access the file {0}. Is it checked out?", path);
                 else
                     Debug.LogException(uae);
@@ -391,7 +391,7 @@ namespace UnityEditor.AddressableAssets.Build
         {
             string assetPath = AddressableAssetSettingsDefaultObject.Settings != null ?
                 AddressableAssetSettingsDefaultObject.Settings.GetContentStateBuildPath() :
-                Path.Combine(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, PlatformMappingService.GetPlatform().ToString());
+                Path.Combine(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, PlatformMappingService.GetPlatformPathSubFolder());
             
             if (browse)
             {
@@ -416,7 +416,7 @@ namespace UnityEditor.AddressableAssets.Build
                 {
                     Debug.LogError(e.Message + "\nCheck \"Content State Build Path\" in Addressables settings. Falling back to config folder location.");
                     assetPath = Path.Combine(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder,
-                        PlatformMappingService.GetPlatform().ToString());
+                        PlatformMappingService.GetPlatformPathSubFolder());
                     Directory.CreateDirectory(assetPath);
                 }
             }
@@ -544,15 +544,8 @@ namespace UnityEditor.AddressableAssets.Build
             return retVal.ToList();
         }
 
-        internal static void GatherExplicitModifiedEntries(AddressableAssetSettings settings, string cacheDataPath, ref Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap)
+        internal static void GatherExplicitModifiedEntries(AddressableAssetSettings settings, ref Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap, AddressablesContentState cacheData)
         {
-            var cacheData = LoadContentState(cacheDataPath);
-            if (cacheData == null)
-            {
-                dependencyMap = null;
-                return;
-            }
-
             List<string> noBundledAssetGroupSchema = new List<string>();
             List<string> noStaticContent = new List<string>();
 
@@ -622,18 +615,71 @@ namespace UnityEditor.AddressableAssets.Build
         /// <returns>A dictionary mapping explicit changed entries to their dependencies.</returns>
         public static Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> GatherModifiedEntriesWithDependencies(AddressableAssetSettings settings, string cachePath)
         {
-            Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> modifiedData = new Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>>();
-            GatherExplicitModifiedEntries(settings, cachePath, ref modifiedData);
-            GetStaticContentDependenciesForEntries(settings, ref modifiedData);
+            var modifiedData = new Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>>();
+            AddressablesContentState cacheData = LoadContentState(cachePath);
+            if (cacheData == null)
+                return modifiedData;
+            
+            GatherExplicitModifiedEntries(settings, ref modifiedData, cacheData);
+            GetStaticContentDependenciesForEntries(settings, ref modifiedData, cacheData);
             return modifiedData;
         }
 
-        internal static void GetStaticContentDependenciesForEntries(AddressableAssetSettings settings, ref Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap)
+        internal static Dictionary<string, string> GetGroupGuidToCacheBundleNameMap(AddressablesContentState cacheData)
+        {
+            var bundleIdToCacheInfo = new Dictionary<string, string>();
+            foreach (CachedBundleState bundleInfo in cacheData.cachedBundles)
+            {
+                if (bundleInfo != null && bundleInfo.data is AssetBundleRequestOptions options)
+                    bundleIdToCacheInfo[bundleInfo.bundleFileId] = options.BundleName;
+            }
+
+            var groupGuidToCacheBundleName = new Dictionary<string, string>();
+            foreach (CachedAssetState cacheInfo in cacheData.cachedInfos)
+            {
+                if(cacheInfo != null && bundleIdToCacheInfo.TryGetValue(cacheInfo.bundleFileId, out string bundleName))
+                    groupGuidToCacheBundleName[cacheInfo.groupGuid] = bundleName;
+            }
+            return groupGuidToCacheBundleName;
+        }
+
+        internal static HashSet<string> GetGroupGuidsWithUnchangedBundleName(AddressableAssetSettings settings, Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap, AddressablesContentState cacheData)
+        {
+            var result = new HashSet<string>();
+            if (cacheData == null)
+                return result;
+
+            Dictionary<string, string> groupGuidToCacheBundleName = GetGroupGuidToCacheBundleNameMap(cacheData);
+
+            foreach (AddressableAssetGroup group in settings.groups)
+            {
+                if (group == null || !group.HasSchema<BundledAssetGroupSchema>())
+                    continue;
+
+                var schema = group.GetSchema<BundledAssetGroupSchema>();
+                List<AssetBundleBuild> bundleInputDefinitions = new List<AssetBundleBuild>();
+
+                BuildScriptPackedMode.PrepGroupBundlePacking(group, bundleInputDefinitions, schema, x => !dependencyMap.ContainsKey(x));
+                BuildScriptPackedMode.HandleDuplicateBundleNames(bundleInputDefinitions);
+
+                for (int i = 0; i < bundleInputDefinitions.Count; i++)
+                {
+                    string bundleName = Path.GetFileNameWithoutExtension(bundleInputDefinitions[i].assetBundleName);
+                    if (groupGuidToCacheBundleName.TryGetValue(group.Guid, out string cacheBundleName) && cacheBundleName == bundleName)
+                        result.Add(group.Guid);
+                }
+            }
+            return result;
+        }
+
+        internal static void GetStaticContentDependenciesForEntries(AddressableAssetSettings settings, ref Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap, AddressablesContentState cacheData = null)
         {
             Dictionary<AddressableAssetGroup, bool> groupHasStaticContentMap = new Dictionary<AddressableAssetGroup, bool>();
 
             if (dependencyMap == null)
                 return;
+            
+            HashSet<string> groupGuidsWithUnchangedBundleName = GetGroupGuidsWithUnchangedBundleName(settings, dependencyMap, cacheData);
 
             foreach (AddressableAssetEntry entry in dependencyMap.Keys)
             {
@@ -647,22 +693,25 @@ namespace UnityEditor.AddressableAssets.Build
                 {
                     string guid = AssetDatabase.AssetPathToGUID(dependency);
                     var depEntry = settings.FindAssetEntry(guid);
-                    if (depEntry != null)
+                    if (depEntry == null)
+                        continue;
+
+                    if (!groupHasStaticContentMap.TryGetValue(depEntry.parentGroup, out bool groupHasStaticContentEnabled))
                     {
-                        if (!groupHasStaticContentMap.TryGetValue(depEntry.parentGroup, out bool groupHasStaticContentEnabled))
-                        {
-                            groupHasStaticContentEnabled = depEntry.parentGroup.HasSchema<ContentUpdateGroupSchema>() &&
-                                depEntry.parentGroup.GetSchema<ContentUpdateGroupSchema>().StaticContent;
+                        groupHasStaticContentEnabled = depEntry.parentGroup.HasSchema<ContentUpdateGroupSchema>() &&
+                            depEntry.parentGroup.GetSchema<ContentUpdateGroupSchema>().StaticContent;
+                        
+                        if (groupGuidsWithUnchangedBundleName.Contains(depEntry.parentGroup.Guid))
+                            continue;
 
-                            groupHasStaticContentMap.Add(depEntry.parentGroup, groupHasStaticContentEnabled);
-                        }
+                        groupHasStaticContentMap.Add(depEntry.parentGroup, groupHasStaticContentEnabled);
+                    }
 
-                        if (!dependencyMap.ContainsKey(depEntry) && groupHasStaticContentEnabled)
-                        {
-                            if (!dependencyMap.ContainsKey(entry))
-                                dependencyMap.Add(entry, new List<AddressableAssetEntry>());
-                            dependencyMap[entry].Add(depEntry);
-                        }
+                    if (!dependencyMap.ContainsKey(depEntry) && groupHasStaticContentEnabled)
+                    {
+                        if (!dependencyMap.ContainsKey(entry))
+                            dependencyMap.Add(entry, new List<AddressableAssetEntry>());
+                        dependencyMap[entry].Add(depEntry);
                     }
                 }
             }

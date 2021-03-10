@@ -242,7 +242,7 @@ namespace UnityEditor.AddressableAssets.Tests
         public void DeletingAsset_DoesNotDeleteGroupWithSimilarName()
         {
             //Setup
-            const string groupName = "NewAsset";
+            const string groupName = "NewAsset.mat";
             string assetPath = GetAssetPath(groupName);
 
 

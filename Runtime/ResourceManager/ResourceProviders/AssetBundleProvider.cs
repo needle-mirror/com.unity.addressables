@@ -119,13 +119,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     return 0;
                 return BundleSize;
             }
-            else //If we don't have a hash, any cached version will do.
-            {
-                List<Hash128> versions = new List<Hash128>();
-                Caching.GetCachedVersions(BundleName, versions);
-                if (versions.Count > 0)
-                    return 0;
-            }
 #endif //ENABLE_CACHING
             return BundleSize;
         }
@@ -141,6 +134,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         internal AssetBundleRequestOptions m_Options;
         int m_Retries;
         long m_BytesToDownload;
+        long m_DownloadedBytes;
         bool m_Completed = false;
 
         internal UnityWebRequest CreateWebRequest(IResourceLocation loc)
@@ -188,11 +182,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             var status = new DownloadStatus() { TotalBytes = m_BytesToDownload, IsDone = PercentComplete() >= 1f };
             if (m_BytesToDownload > 0)
             {
-                if (m_WebRequestQueueOperation != null)
-                    status.DownloadedBytes = (long)(m_WebRequestQueueOperation.m_WebRequest.downloadedBytes);
-                else if (PercentComplete() >= 1.0f)
-                    status.DownloadedBytes = status.TotalBytes;
+                if (m_WebRequestQueueOperation != null && string.IsNullOrEmpty(m_WebRequestQueueOperation.m_WebRequest.error))
+                    m_DownloadedBytes = (long)(m_WebRequestQueueOperation.m_WebRequest.downloadedBytes);
             }
+
+            status.DownloadedBytes = m_DownloadedBytes;
             return status;
         }
 
@@ -243,8 +237,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 return false;
 
             //We don't want to wait for request op to complete if it's a LoadFromFileAsync. Only UWR will complete in a tight loop like this.
-            if(!(m_RequestOperation is AssetBundleCreateRequest))
-                while(!m_RequestOperation.isDone){}
+            if (!(m_RequestOperation is AssetBundleCreateRequest))
+                while (!m_RequestOperation.isDone) {}
 
             var assetBundle = GetAssetBundle();
             if (!m_Completed && assetBundle != null)
@@ -258,6 +252,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
         private void BeginOperation()
         {
+            m_DownloadedBytes = 0;
             string path = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
             if (File.Exists(path) || (Application.platform == RuntimePlatform.Android && path.StartsWith("jar:")))
             {

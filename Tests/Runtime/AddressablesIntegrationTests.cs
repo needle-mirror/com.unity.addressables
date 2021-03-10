@@ -29,8 +29,8 @@ namespace AddressableAssetsIntegrationTests
         protected abstract string TypeName { get; }
         protected virtual string PathFormat { get { return "Assets/{0}_AssetsToDelete_{1}"; } }
 
-        protected virtual string GetRuntimePath(string testType, string suffix) { return string.Format("{0}Library/com.unity.addressables/settings_{1}_TEST_{2}.json", "file://{UnityEngine.Application.dataPath}/../", testType, suffix); }
-        protected virtual string GetCatalogPath(string testType, string suffix) { return string.Format("{0}Library/com.unity.addressables/catalog_{1}_TEST_{2}.json", "file://{UnityEngine.Application.dataPath}/../", testType, suffix); }
+        protected virtual string GetRuntimePath(string testType, string suffix) { return string.Format("{0}" + Addressables.LibraryPath + "settings_{1}_TEST_{2}.json", "file://{UnityEngine.Application.dataPath}/../", testType, suffix); }
+        protected virtual string GetCatalogPath(string testType, string suffix) { return string.Format("{0}" + Addressables.LibraryPath + "catalog_{1}_TEST_{2}.json", "file://{UnityEngine.Application.dataPath}/../", testType, suffix); }
         protected virtual ILocationSizeData CreateLocationSizeData(string name, long size, uint crc, string hash) { return null; }
 
         private object AssetReferenceObjectKey { get { return m_PrefabKeysList.FirstOrDefault(s => s.ToString().Contains("AssetReferenceBehavior")); } }

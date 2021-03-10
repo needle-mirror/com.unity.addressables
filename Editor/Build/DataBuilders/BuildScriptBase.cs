@@ -92,7 +92,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
 
             if (builderInput.Logger == null && m_Log != null)
-                WriteBuildLog((BuildLog)m_Log, Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables");
+                WriteBuildLog((BuildLog)m_Log, Path.GetDirectoryName(Application.dataPath) + "/" + Addressables.LibraryPath);
 
             return result;
         }

@@ -36,8 +36,8 @@ public class BuildLayoutGenerationTaskTests
     public void Setup()
     {
         TempPath = kTempPath + (ExecCount++).ToString();
-        if (File.Exists(BuildLayoutGenerationTask.kLayoutTextFile))
-            File.Delete(BuildLayoutGenerationTask.kLayoutTextFile);
+        if (File.Exists(BuildLayoutGenerationTask.m_LayoutTextFile))
+            File.Delete(BuildLayoutGenerationTask.m_LayoutTextFile);
         m_PrevGenerateBuildLayout = ProjectConfigData.GenerateBuildLayout;
         BuildScriptPackedMode.s_SkipCompilePlayerScripts = true;
         ProjectConfigData.GenerateBuildLayout = true;
@@ -294,7 +294,7 @@ public class BuildLayoutGenerationTaskTests
             BuildAndExtractLayout();
         }
         finally { ScriptableBuildPipeline.slimWriteResults = prevSlim; }
-        FileAssert.Exists(BuildLayoutGenerationTask.kLayoutTextFile);
+        FileAssert.Exists(BuildLayoutGenerationTask.m_LayoutTextFile);
     }
 
     [Test]
@@ -303,7 +303,7 @@ public class BuildLayoutGenerationTaskTests
         ProjectConfigData.GenerateBuildLayout = false;
         CreateAddressablePrefab("p1", CreateGroup("Group1"));
         BuildAndExtractLayout();
-        FileAssert.DoesNotExist(BuildLayoutGenerationTask.kLayoutTextFile);
+        FileAssert.DoesNotExist(BuildLayoutGenerationTask.m_LayoutTextFile);
     }
 
     [Test]

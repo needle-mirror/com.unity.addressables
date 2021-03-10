@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Build.Layout;
 using UnityEditor.AddressableAssets.Settings;
@@ -11,6 +10,7 @@ using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Injector;
 using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 {
@@ -58,7 +58,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
         internal Dictionary<string, string> m_BundleNameRemap;
 
-        internal const string kLayoutTextFile = "Library/com.unity.addressables/buildlayout.txt";
+        internal static string m_LayoutTextFile = Addressables.LibraryPath + "/buildlayout.txt";
 
         static AssetBucket GetOrCreate(Dictionary<string, AssetBucket> buckets, string asset)
         {
@@ -312,11 +312,11 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         {
             BuildLayout layout = CreateBuildLayout();
 
-            Directory.CreateDirectory(Path.GetDirectoryName(kLayoutTextFile));
-            using (FileStream s = File.Open(kLayoutTextFile, FileMode.Create))
+            Directory.CreateDirectory(Path.GetDirectoryName(m_LayoutTextFile));
+            using (FileStream s = File.Open(m_LayoutTextFile, FileMode.Create))
                 BuildLayoutPrinter.WriteBundleLayout(s, layout);
 
-            UnityEngine.Debug.Log($"Build layout written to {kLayoutTextFile}");
+            UnityEngine.Debug.Log($"Build layout written to {m_LayoutTextFile}");
 
             s_LayoutCompleteCallback?.Invoke(layout);
 

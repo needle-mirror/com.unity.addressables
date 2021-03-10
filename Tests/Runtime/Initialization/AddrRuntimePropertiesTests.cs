@@ -1,6 +1,7 @@
 using UnityEngine;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using UnityEngine.AddressableAssets.Initialization;
 
 namespace AddrRuntimePropertiesTests
@@ -93,6 +94,50 @@ namespace AddrRuntimePropertiesTests
                 return replacement;
             });
 
+            Assert.AreEqual(expectedResult, actualResult);
+        }
+
+        [Test]
+        [Timeout(1000)]
+        public void RuntimeProperties_CanDetectCyclicLoops()
+        {
+            string a = "[B]";
+            string b = "[A]";
+            string toEval = "Test_[A]_";
+            string expectedResult = "Test_#ERROR-CyclicToken#_";
+            
+            string actualResult = AddressablesRuntimeProperties.EvaluateString(toEval, '[', ']', s =>
+            {
+                switch (s)
+                {
+                    case "A":
+                        return a;
+                    case "B":
+                        return b;
+                }
+                return "";
+            });
+            
+            Assert.AreEqual(expectedResult, actualResult);
+        }
+        
+        [Test]
+        [Timeout(1000)]
+        public void RuntimeProperties_CanEvaluateInnerProperties()
+        {
+            Dictionary<string, string> stringLookup = new Dictionary<string, string>();
+            stringLookup.Add("B", "inner");
+            stringLookup.Add("With_inner", "Success");
+            string toEval = "Test_[With_[B]]";
+            string expectedResult = "Test_Success";
+            
+            string actualResult = AddressablesRuntimeProperties.EvaluateString(toEval, '[', ']', s =>
+            {
+                if (stringLookup.TryGetValue(s, out string val))
+                    return val;
+                return "";
+            });
+            
             Assert.AreEqual(expectedResult, actualResult);
         }
 

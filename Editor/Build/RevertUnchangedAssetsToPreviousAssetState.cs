@@ -130,6 +130,16 @@ public class RevertUnchangedAssetsToPreviousAssetState
         }
         return operations;
     }
+    
+    private static bool IsPreviouslyRevertedDependency(string bundleFileId, ContentUpdateContext contentUpdateContext)
+    {
+        foreach(CachedAssetState state in contentUpdateContext.PreviousAssetStateCarryOver)
+        {
+            if (state.bundleFileId == bundleFileId)
+                return true;
+        }
+        return false;
+    }
 
     internal static void ApplyAssetEntryUpdates(
         List<AssetEntryRevertOperation> operations,
@@ -141,9 +151,8 @@ public class RevertUnchangedAssetsToPreviousAssetState
         {
             //Check that we can replace the entry in the file registry
             //before continuing.  Past this point destructive actions are taken.
-            if (contentUpdateContext.Registry.ReplaceBundleEntry(
-                Path.GetFileNameWithoutExtension(operation.PreviousBuildPath),
-                operation.PreviousAssetState.bundleFileId))
+            if (contentUpdateContext.Registry.ReplaceBundleEntry(Path.GetFileNameWithoutExtension(operation.PreviousBuildPath), operation.PreviousAssetState.bundleFileId) || 
+                IsPreviouslyRevertedDependency(operation.PreviousAssetState.bundleFileId, contentUpdateContext))
             {
                 File.Delete(operation.CurrentBuildPath);
                 operation.BundleCatalogEntry.InternalId = operation.PreviousAssetState.bundleFileId;

@@ -167,7 +167,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             ExtractDataTask extractData = new ExtractDataTask();
             List<CachedAssetState> carryOverCachedState = new List<CachedAssetState>();
-            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/" + PlatformMappingService.GetPlatform() + "/addressables_content_state.bin";
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/" + Addressables.LibraryPath + PlatformMappingService.GetPlatformPathSubFolder() + "/addressables_content_state.bin";
 
             var playerBuildVersion = builderInput.PlayerVersion;
             if (m_AllBundleInputDefs.Count > 0)
@@ -624,17 +624,17 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
 
             var bundleInputDefs = new List<AssetBundleBuild>();
-            List<AddressableAssetEntry> list = PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema);
+            var list = PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema);
             aaContext.assetEntries.AddRange(list);
-            HandleDuplicateBundleNames(bundleInputDefs, aaContext.bundleToAssetGroup, assetGroup.Guid, out var uniqueNames);
+            List<string> uniqueNames = HandleDuplicateBundleNames(bundleInputDefs, aaContext.bundleToAssetGroup, assetGroup.Guid);
             m_OutputAssetBundleNames.AddRange(uniqueNames);
             m_AllBundleInputDefs.AddRange(bundleInputDefs);
             return string.Empty;
         }
 
-        internal void HandleDuplicateBundleNames(List<AssetBundleBuild> bundleInputDefs, Dictionary<string, string> bundleToAssetGroup, string assetGroupGuid, out List<string> generatedUniqueNames)
+        internal static List<string> HandleDuplicateBundleNames(List<AssetBundleBuild> bundleInputDefs, Dictionary<string, string> bundleToAssetGroup = null, string assetGroupGuid = null)
         {
-            generatedUniqueNames = new List<string>();
+            var generatedUniqueNames = new List<string>();
             var handledNames = new HashSet<string>();
 
             for (int i = 0; i < bundleInputDefs.Count; i++)
@@ -657,8 +657,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 bundleBuild.assetBundleName = hashedAssetBundleName;
                 bundleInputDefs[i] = bundleBuild;
 
-                bundleToAssetGroup.Add(hashedAssetBundleName, assetGroupGuid);
+                if(bundleToAssetGroup != null)
+                    bundleToAssetGroup.Add(hashedAssetBundleName, assetGroupGuid);
             }
+            return generatedUniqueNames;
         }
 
         internal static string ErrorCheckBundleSettings(BundledAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetSettings settings)
@@ -703,18 +705,22 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             throw new Exception("Invalid naming mode.");
         }
 
-        internal static List<AddressableAssetEntry> PrepGroupBundlePacking(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, BundledAssetGroupSchema schema)
+        internal static List<AddressableAssetEntry> PrepGroupBundlePacking(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, BundledAssetGroupSchema schema, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
+            var combinedEntries = new List<AddressableAssetEntry>();
             var packingMode = schema.BundleMode;
             var namingMode = schema.InternalBundleIdMode;
-            var combinedEntries = new List<AddressableAssetEntry>();
             switch (packingMode)
             {
                 case BundledAssetGroupSchema.BundlePackingMode.PackTogether:
                 {
                     var allEntries = new List<AddressableAssetEntry>();
                     foreach (AddressableAssetEntry a in assetGroup.entries)
-                        a.GatherAllAssets(allEntries, true, true, false);
+                    {
+                        if (entryFilter != null && !entryFilter(a))
+                            continue;
+                        a.GatherAllAssets(allEntries, true, true, false, entryFilter);
+                    }
                     combinedEntries.AddRange(allEntries);
                     GenerateBuildInputDefinitions(allEntries, bundleInputDefs, CalculateGroupHash(namingMode, assetGroup, allEntries), "all");
                 } break;
@@ -722,8 +728,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 {
                     foreach (AddressableAssetEntry a in assetGroup.entries)
                     {
+                        if (entryFilter != null && !entryFilter(a))
+                            continue;
                         var allEntries = new List<AddressableAssetEntry>();
-                        a.GatherAllAssets(allEntries, true, true, false);
+                        a.GatherAllAssets(allEntries, true, true, false, entryFilter);
                         combinedEntries.AddRange(allEntries);
                         GenerateBuildInputDefinitions(allEntries, bundleInputDefs, CalculateGroupHash(namingMode, assetGroup, allEntries), a.address);
                     }
@@ -733,6 +741,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     var labelTable = new Dictionary<string, List<AddressableAssetEntry>>();
                     foreach (AddressableAssetEntry a in assetGroup.entries)
                     {
+                        if (entryFilter != null && !entryFilter(a))
+                            continue;
                         var sb = new StringBuilder();
                         foreach (var l in a.labels)
                             sb.Append(l);
@@ -747,7 +757,11 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     {
                         var allEntries = new List<AddressableAssetEntry>();
                         foreach (var a in entryGroup.Value)
-                            a.GatherAllAssets(allEntries, true, true, false);
+                        {
+                            if (entryFilter != null && !entryFilter(a))
+                                continue;
+                            a.GatherAllAssets(allEntries, true, true, false, entryFilter);
+                        }
                         combinedEntries.AddRange(allEntries);
                         GenerateBuildInputDefinitions(allEntries, bundleInputDefs, CalculateGroupHash(namingMode, assetGroup, allEntries), entryGroup.Key);
                     }
@@ -974,6 +988,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     {
                         if (File.Exists(bundleNameWithoutHash))
                             File.Delete(bundleNameWithoutHash);
+                        string destFolder = Path.GetDirectoryName(bundleNameWithoutHash);
+                        if (!string.IsNullOrEmpty(destFolder) && !Directory.Exists(destFolder))
+                            Directory.CreateDirectory(destFolder);
+
                         File.Move(targetBundlePath, bundleNameWithoutHash);
                     }
 

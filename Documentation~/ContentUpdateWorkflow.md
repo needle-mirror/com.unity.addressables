@@ -68,13 +68,13 @@ When loading AssetBundles into memory, Unity enforces that two bundles cannot be
 To make this work, one of two things must happen.  One option is to unload all your Addressables content prior to updating the catalog.  This ensures new bundles with old names will not cause conflicts in memory.  The second option is to ensure that your updated AssetBundles have unique internal identifiers.  This would allow you to load new bundles, while the old are still in memory.  We have an option to enable this second option.  Turn on "Unique Bundle IDs" within the [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) Inspector.  The downside of this option is that it requires bundles to be rebuilt up the dependency chain.  Meaning if you changed a material in one group, by default only the material's bundle would be rebuilt.  With "Unique Bundle IDs" on, any Asset that references that material would also need rebuilding.
 
 ## Identifying changed assets
-If you have modified Assets in any `Cannot Change Post Release` groups, you'll need to run the **Check for Content Update Restrictions** command (step 5 above). This will take any modified Asset, all of its dependencies, and all other Assets that depend on the modified Asset out of the `Cannot Change Post Release` groups and move them to a new group. To generate the new Asset groups:
+If you have modified Assets in any `Cannot Change Post Release` groups, you'll need to run the **Check for Content Update Restrictions** command (step 5 above). This will take any modified Asset, its dependencies if their bundle name was modified, and all other Assets that depend on the modified Asset out of the `Cannot Change Post Release` groups and move them to a new group. To generate the new Asset groups:
 
 1. Open the **Addressables Groups** window in the Unity Editor (**Window** > **Asset Management** > **Addressables** > **Groups**).
 2. In the **Addressables Groups** window, select **Tools** on the top menu bar, then **Check for Content Update Restrictions**.
 3. In the **Build Data File** dialog that opens, select the _addressables_content_state.bin_ file (by default, this is located in the `Assets/AddressableAssetsData/\<platform\>` Project directory, where `\<platform\>` is your target platform).
 
-This data is used to determine which Assets or dependencies have been modified since the application was last built. The system moves these Assets, their dependencies, and all other Assets that depend on the modified Assets to a new group in preparation for the content update build. 
+This data is used to determine which Assets or dependencies have been modified since the application was last built. The system moves these Assets, their dependencies if their bundle name was modified, and all other Assets that depend on the modified Assets to a new group in preparation for the content update build. 
 
 **Note**: This command will do nothing if all your changes are confined to `Can Change Post Release` groups.  
 

@@ -851,8 +851,14 @@ namespace UnityEditor.AddressableAssets.Settings
             if (keyList.Count == 0)
                 return;
 
+            //The asset may have previously been invalid. Since then, it may have been re-imported.
+            //This can occur in particular when using ScriptedImporters with complex, multi-step behavior.
+            //Double-check the type here in case the asset has been imported correctly after we cached its type.
+            if (MainAssetType == typeof(DefaultAsset))
+                m_cachedMainAssetType = null;
+
             Type mainType = AddressableAssetUtility.MapEditorTypeToRuntimeType(MainAssetType, false);
-            if (mainType == null && !IsInResources)
+            if ((mainType == null || mainType == typeof(DefaultAsset)) && !IsInResources)
             {
                 var t = MainAssetType;
                 Debug.LogWarningFormat("Type {0} is in editor assembly {1}.  Asset location with internal id {2} will be stripped.", t.Name, t.Assembly.FullName, assetPath);
@@ -870,7 +876,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 foreach (var t in GatherSubObjectTypes(ids, guid))
                     entries.Add(new ContentCatalogDataEntry(t, assetPath, providerType, keyList, dependencies, extraData));
             }
-            else if (mainType != null)
+            else if (mainType != null && mainType != typeof(DefaultAsset))
             {
                 entries.Add(new ContentCatalogDataEntry(mainType, assetPath, providerType, keyList, dependencies, extraData));
             }
@@ -887,7 +893,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     if (typeof(Component).IsAssignableFrom(objType))
                         continue;
                     Type rtType = AddressableAssetUtility.MapEditorTypeToRuntimeType(objType, false);
-                    if (rtType != null && !typesSeen.Contains(rtType))
+                    if (rtType != null && rtType != typeof(DefaultAsset) && !typesSeen.Contains(rtType))
                     {
                         yield return rtType;
                         typesSeen.Add(rtType);

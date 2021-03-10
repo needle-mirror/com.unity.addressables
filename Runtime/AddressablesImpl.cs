@@ -184,7 +184,7 @@ namespace UnityEngine.AddressableAssets
 
         public string BuildPath
         {
-            get { return "Library/com.unity.addressables/" + StreamingAssetsSubFolder + "/" + PlatformMappingService.GetPlatform(); }
+            get { return Addressables.LibraryPath + StreamingAssetsSubFolder + "/" + PlatformMappingService.GetPlatformPathSubFolder(); }
         }
 
         public string PlayerBuildDataPath
@@ -722,6 +722,20 @@ namespace UnityEngine.AddressableAssets
 
         public void Release<TObject>(AsyncOperationHandle<TObject> handle)
         {
+            if (typeof(TObject) == typeof(SceneInstance))
+            {
+                SceneInstance sceneInstance = (SceneInstance)Convert.ChangeType(handle.Result,typeof(SceneInstance));
+                if (sceneInstance.Scene.isLoaded && handle.ReferenceCount == 1)
+                {
+                    if (SceneOperationCount == 1 && m_SceneInstances.First().Equals(handle))
+                        m_SceneInstances.Clear();
+                    UnloadSceneAsync(handle);
+                }
+                else if(!sceneInstance.Scene.isLoaded && handle.ReferenceCount == 2)
+                {
+                    handle.Completed += s => Release(handle);
+                }
+            }
             m_ResourceManager.Release(handle);
         }
 

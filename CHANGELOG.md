@@ -4,6 +4,21 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.17.13] - 2021-03-10
+- Fixed issue when loading a Sprite from a SpriteAtlas from an Addressable folder in AssetDatabase mode.
+- Fixed bug in AssetReference "Make Addressable" functionality (when referencing an asset no longer addressable)
+- Fixed bug with cyclic references in profile variable causing an infinite loop.
+- Fixed bug where cached asset type could get stuck with DefaultType, an invalid Editor type
+- Fixed issue where AsyncOperationHandle.Completed is called after AsyncOperationHandle.Task returns when the handle is already done.
+- Fixed some faulty logic in GetDownloadStatus() when errors occur
+- Removed extra dependencies that were being flagged as modified when running Check For Content Update Restrictions.
+- Fixed a bug where the result of a Task could be inconsistent and return null given certain race conditions
+- Fixed bug where UnloadSceneAsync decreased ref count more than once, and added unload scene to Release if ref count goes to zero
+- Fixed issue where a popup appears when an AddressableAsset file is being modified even if the file is checked out locally.
+- Fixed bug where fast mode wasn't showing events in the profiler
+- Remove check for isUpdating and isCompiling so GetSettings(true) still tries to load the settings when compiling or updating
+- Fixed issue where modified local static bundle dependencies fail to load after updating a previous build. Fix is compatible with older shipped content.
+
 ## [1.17.6-preview] - 2021-02-23
 - Fixed issue where OnGlobalModification events would be EntryMoved when adding new Entries instead of EntryAdded.
 - Fixed issue where a previously built player fails to load content after running Content Update with missing local bundles
@@ -78,6 +93,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added options for internal naming of asset bundles.  This will allow for deterministic naming to avoid unintended diffs for content updates.
 - The "Ignore Invalid/Unsupported Files" option is now saved in the settings
 - Fixed issue where Filename only bundle naming schemas were overwriting old bundles prematurely in content update.
+
+## [1.16.17] - 2021-02-25
+- Updated group rename logic to support engine AssetDatabase fix. Change should be transparent to users.
 
 ## [1.16.16] - 2021-01-20
 - Updated dependency versions for testcase fix

@@ -178,9 +178,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 {
                     var unloadOp = SceneManager.UnloadSceneAsync(m_Instance.Scene);
                     if (unloadOp == null)
-                        UnloadSceneCompleted(null);
+                        UnloadSceneCompletedNoRelease(null);
                     else
-                        unloadOp.completed += UnloadSceneCompleted;
+                        unloadOp.completed += UnloadSceneCompletedNoRelease;
                 }
                 else
                     UnloadSceneCompleted(null);
@@ -201,6 +201,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 Complete(m_Instance, true, "");
                 if (m_sceneLoadHandle.IsValid())
                     m_sceneLoadHandle.Release();
+            }
+            
+            private void UnloadSceneCompletedNoRelease(AsyncOperation obj)
+            {
+                Complete(m_Instance, true, "");
             }
 
             protected override float Progress

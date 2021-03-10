@@ -131,6 +131,36 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.AreEqual(AsyncOperationStatus.Succeeded, status);
             op.Release();
         }
+        
+        [UnityTest]
+        public IEnumerator AsyncOperationHandle_TaskIsDelayedUntilAfterDelayedCompletedCallbacks()
+        {
+            var op = m_RM.CreateCompletedOperationInternal<int>(1, true, null);
+
+            var status = AsyncOperationStatus.None;
+            op.Completed += (x) => status = x.Status;
+            var t = op.Task;
+            Assert.IsFalse(t.IsCompleted);
+            
+            // callbacks are deferred to next update
+            m_RM.Update(0.0f);
+
+            // the Task may not yet have continues after at this point on the update,
+            // give the Synchronization a little time with a yield
+            yield return null;
+            
+            Assert.IsTrue(t.IsCompleted);
+            op.Release();
+        }
+        
+        [Test]
+        public void AsyncOperationHandle_TaskIsCompletedWhenHandleIsCompleteWithoutDelayedCallbacks()
+        {
+            var op = m_RM.CreateCompletedOperationInternal<int>(1, true, null);
+            var t = op.Task;
+            Assert.IsTrue(t.IsCompleted);
+            op.Release();
+        }
 
         // TODO:
         // public void WhenOperationHasDependency_AndDependencyFails_DependentOpStillExecutes()

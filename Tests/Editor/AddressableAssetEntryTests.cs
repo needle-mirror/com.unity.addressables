@@ -90,6 +90,31 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void DefaultTypeAssetEntry_ResetsCachedTypeData()
+        {
+            //Setup
+            var path = GetAssetPath("entry.prefab");
+            PrefabUtility.SaveAsPrefabAsset(new GameObject(), path);
+            string guid = AssetDatabase.AssetPathToGUID(path);
+
+            AddressableAssetEntry entry = new AddressableAssetEntry(guid, "testaddress", Settings.DefaultGroup, false);
+            entry.m_cachedMainAssetType = typeof(DefaultAsset);
+            
+            //Test
+            entry.CreateCatalogEntriesInternal(new List<ContentCatalogDataEntry>(), false, "fakeProvider", new List<object>(), null, new Dictionary<GUID, AssetLoadInfo>()
+                {
+                    { new GUID(guid), new AssetLoadInfo() {includedObjects = new List<ObjectIdentifier>()} }
+                },
+                new HashSet<Type>(), true, false, false, new HashSet<string>());
+            
+            //Assert
+            Assert.AreEqual(typeof(GameObject), entry.m_cachedMainAssetType);
+
+            //Cleanup
+            AssetDatabase.DeleteAsset(path);
+        }
+
+        [Test]
         public void CreateCatalogEntries_OverridesMainTypeIfWrong()
         {
             var e = Settings.DefaultGroup.GetAssetEntry(m_guid);

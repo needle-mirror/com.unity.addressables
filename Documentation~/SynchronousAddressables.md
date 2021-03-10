@@ -12,6 +12,10 @@ It is possible to get a `default(TObject)` for a result when the operation doesn
 ## Performance
 It is worth noting that calling `WaitForCompletion` may have performance implications on your runtime when compared to `Resources.Load` or `Instantiate` calls directly.  If your `AssetBundle` is local or has been previously downloaded and cached, these performance hits are likely to be negligible.  However, this may not be the case for your individual project setup.
 
+All currently active Asset Load operations are completed when `WaitForCompletion` is called on any Asset Load operation, due to how Async operations are handled in the Engine. To avoid unexpected stalls, use `WaitForCompletion` when the current operation count is known, and the intention is for all active operations to complete synchronously.
+
+When using `WaitForCompletion`, there are performance implications. When using 2021.2.0 or newer, these are minimal. Using an older version can result in delays that scale with the number of Engine Asset load calls that are loading when `WaitForCompletion` is called.
+
 It is not recommended that you call `WaitForCompletion` on an operation that is going to fetch and download a remote `AssetBundle`.  Though, it is possible if that fits your specific situation. 
 
 ## Code Sample
