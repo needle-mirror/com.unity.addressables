@@ -234,10 +234,13 @@ namespace UnityEditor.AddressableAssets.Tests
             group.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.NoHash;
             List<Action> callbacks = new List<Action>();
             string targetBundlePathHashed = "LocalPathToFile/testbundle_123456.bundle";
+            string targetBundlePathUnHashed = "LocalPathToFile/testbundle.bundle";
             string targetBundleInternalIdHashed = "{runtime_val}/testbundle_123456.bundle";
             string targetBundleInternalIdUnHashed = "{runtime_val}/testbundle.bundle";
             ContentCatalogDataEntry dataEntry = new ContentCatalogDataEntry(typeof(ContentCatalogData), targetBundleInternalIdHashed, typeof(BundledAssetProvider).FullName, new List<object>());
-            m_BuildScript.AddPostCatalogUpdatesInternal(group, callbacks, dataEntry, targetBundlePathHashed);
+            FileRegistry registry = new FileRegistry();
+            registry.AddFile(targetBundlePathHashed);
+            m_BuildScript.AddPostCatalogUpdatesInternal(group, callbacks, dataEntry, targetBundlePathHashed, registry);
 
             //Assert setup
             Assert.AreEqual(1, callbacks.Count);
@@ -248,6 +251,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             //Assert
             Assert.AreEqual(targetBundleInternalIdUnHashed, dataEntry.InternalId);
+            Assert.AreEqual(registry.GetFilePathForBundle("testbundle"), targetBundlePathUnHashed );
 
             //Cleanup
             Settings.RemoveGroup(group);

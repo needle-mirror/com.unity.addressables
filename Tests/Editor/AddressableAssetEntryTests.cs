@@ -61,6 +61,64 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void EditorInitialization_RemovesAssetEntriesThatDoesNotExistOnDisk()
+        {
+            //setup
+            var group = Settings.DefaultGroup;
+            AddressableAssetEntry assetEntry = new AddressableAssetEntry("fakeguid", "fakeaddress", group, false);
+            assetEntry.m_cachedAssetPath = "Assets/NotARealAssetPath/test.prefab";
+            group.AddAssetEntry(assetEntry, false);
+
+            //test
+            AddressableEditorInitialization.PurgeInvalidAssetEntries(Settings);
+
+            //Assert
+            Assert.IsFalse(group.entries.Contains(assetEntry));
+        }
+
+        [Test]
+        public void EditorInitialization_DoesNotDeleteFoldersThatAreStillOnDisk()
+        {
+            //Setup
+            string folderPath = "Assets/Temp/FakeAddressablesFolder/";
+            Directory.CreateDirectory(folderPath);
+            AssetDatabase.ImportAsset(folderPath);
+            AddressableAssetEntry entry = new AddressableAssetEntry(AssetDatabase.AssetPathToGUID(folderPath),
+                folderPath, m_testGroup, false);
+            m_testGroup.AddAssetEntry(entry);
+            entry.m_cachedAssetPath = folderPath;
+
+            Assert.IsTrue(m_testGroup.entries.Contains(entry), "Folder entry is no longer in Addressable group before purge.");
+
+            //Test
+            AddressableEditorInitialization.PurgeInvalidAssetEntries(Settings);
+
+            //Assert
+            Assert.IsTrue(m_testGroup.entries.Contains(entry), "Folder entry is no longer in Addressable group after purge.");
+
+            //Cleanup
+            m_testGroup.RemoveAssetEntry(entry);
+            AssetDatabase.DeleteAsset(folderPath);
+        }
+
+        [Test]
+        public void EditorInitialization_DoesDeleteFoldersThatAreNotOnDisk()
+        {
+            //Setup
+            string folderPath = "Assets/Temp/FakeAddressablesFolder/";
+            AddressableAssetEntry entry = new AddressableAssetEntry(AssetDatabase.AssetPathToGUID(folderPath),
+                folderPath, m_testGroup, false);
+            entry.m_cachedAssetPath = folderPath;
+            m_testGroup.AddAssetEntry(entry);
+
+            //Test
+            AddressableEditorInitialization.PurgeInvalidAssetEntries(Settings);
+
+            //Assert
+            Assert.IsFalse(m_testGroup.entries.Contains(entry), "Invalid asset entry folder is still in Asset Group after purge.");
+        }
+
+        [Test]
         public void GetAssetLoadPath_Returns_ExpectedPath()
         {
             var schema = Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>();

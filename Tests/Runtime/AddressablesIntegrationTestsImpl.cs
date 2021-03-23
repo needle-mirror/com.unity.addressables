@@ -1516,6 +1516,23 @@ namespace AddressableAssetsIntegrationTests
                 Assert.IsTrue(ops.Contains(gop.Result[i]));
             gop.Release();
         }
+        
+        [UnityTest]
+        public IEnumerator LoadAssets_InvokesCallbackPerAssetBeforeCompletedCallback()
+        {
+            yield return Init();
+            string label = AddressablesTestUtility.GetPrefabLabel("BASE");
+            HashSet<GameObject> ops = new HashSet<GameObject>();
+            int opsCompletedOnCompleted = 0;
+            var gop = m_Addressables.LoadAssetsAsync<GameObject>(label, x => { ops.Add(x); }, true);
+            gop.Completed += handle => { opsCompletedOnCompleted = ops.Count; };
+            yield return gop;
+            Assert.AreEqual(AddressablesTestUtility.kPrefabCount, ops.Count);
+            Assert.AreEqual(AddressablesTestUtility.kPrefabCount, opsCompletedOnCompleted);
+            for (int i = 0; i < ops.Count; i++)
+                Assert.IsTrue(ops.Contains(gop.Result[i]));
+            gop.Release();
+        }
 
         // TODO: this doesn't actually check that something was downloaded. It is more: can load dependencies.
         // We really need to address the downloading feature

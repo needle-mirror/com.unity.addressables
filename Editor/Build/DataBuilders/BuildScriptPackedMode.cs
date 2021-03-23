@@ -969,13 +969,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 bundleRenameMap.Add(buildBundles[i], outputBundles[i]);
                 CopyFileWithTimestampIfDifferent(srcPath, targetPath, m_Log);
 
-                AddPostCatalogUpdatesInternal(assetGroup, postCatalogUpdateCallbacks, dataEntry, targetPath);
+                AddPostCatalogUpdatesInternal(assetGroup, postCatalogUpdateCallbacks, dataEntry, targetPath, registry);
 
                 registry.AddFile(targetPath);
             }
         }
 
-        internal void AddPostCatalogUpdatesInternal(AddressableAssetGroup assetGroup, List<Action> postCatalogUpdates, ContentCatalogDataEntry dataEntry, string targetBundlePath)
+        internal void AddPostCatalogUpdatesInternal(AddressableAssetGroup assetGroup, List<Action> postCatalogUpdates, ContentCatalogDataEntry dataEntry, string targetBundlePath, FileRegistry registry)
         {
             if (assetGroup.GetSchema<BundledAssetGroupSchema>()?.BundleNaming ==
                 BundledAssetGroupSchema.BundleNamingStyle.NoHash)
@@ -993,6 +993,11 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                             Directory.CreateDirectory(destFolder);
 
                         File.Move(targetBundlePath, bundleNameWithoutHash);
+                    }
+                    if (registry != null)
+                    {
+                        if (!registry.ReplaceBundleEntry(targetBundlePath, bundleNameWithoutHash))
+                            Debug.LogErrorFormat("Unable to find registered file for bundle {0}.", targetBundlePath);
                     }
 
                     if (dataEntry != null)

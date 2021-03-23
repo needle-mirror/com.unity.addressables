@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.17.15] - 2021-03-23
+- Fixed FileNotFoundException when using bundle naming mode "Filename" with Unity Cloud Build.
+- Fixed a bug where LoadAssetsAsync handle Completed callback is invoked before all individual Asset callbacks.
+- Added in Asset validator on Editor startup.  This ensures that assets deleted when the editor was closed are removed from Addressables.
+- Fixed bug where the current amount of downloaded bytes was not properly updated
+
 ## [1.17.13] - 2021-03-10
 - Fixed issue when loading a Sprite from a SpriteAtlas from an Addressable folder in AssetDatabase mode.
 - Fixed bug in AssetReference "Make Addressable" functionality (when referencing an asset no longer addressable)

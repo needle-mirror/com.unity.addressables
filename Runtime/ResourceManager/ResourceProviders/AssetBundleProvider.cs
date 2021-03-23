@@ -184,6 +184,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             {
                 if (m_WebRequestQueueOperation != null && string.IsNullOrEmpty(m_WebRequestQueueOperation.m_WebRequest.error))
                     m_DownloadedBytes = (long)(m_WebRequestQueueOperation.m_WebRequest.downloadedBytes);
+                else if (m_RequestOperation != null && m_RequestOperation is UnityWebRequestAsyncOperation operation && string.IsNullOrEmpty(operation.webRequest.error))
+                    m_DownloadedBytes = (long)operation.webRequest.downloadedBytes;
             }
 
             status.DownloadedBytes = m_DownloadedBytes;

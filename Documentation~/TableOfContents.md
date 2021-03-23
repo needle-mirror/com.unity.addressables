@@ -55,7 +55,7 @@
     * [FAQ](AddressablesFAQ.md)
         * [Many vs few bundles](AddressablesFAQ.md#Is-it-better-to-have-many-small-bundles-or-a-few-bigger-ones)
         * [Best compression settings](AddressablesFAQ.md#What-compression-settings-are-best)
-        * [Minimize catlog size](AddressablesFAQ.md#Are-there-ways-to-miminize-the-catalog-size)
+        * [Minimize catalog size](AddressablesFAQ.md#Are-there-ways-to-miminize-the-catalog-size)
         * [Addressables content state](AddressablesFAQ.md#What-is-addressables_content_state)
         * [Scale implications](AddressablesFAQ.md#What-are-possible-scale-implications)
         * [Address Lookup](AddressablesFAQ.md#is-it-possible-to-retrieve-the-address-of-an-asset-or-reference-at-runtime)

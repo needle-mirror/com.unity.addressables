@@ -14,6 +14,7 @@ namespace UnityEngine.ResourceManagement
         Func<AsyncOperationHandle<TObjectDependency>, AsyncOperationHandle<TObject>> m_Callback;
         Action<AsyncOperationHandle<TObject>> m_CachedOnWrappedCompleted;
         bool m_ReleaseDependenciesOnFailure = true;
+        
         public ChainOperation()
         {
             m_CachedOnWrappedCompleted = OnWrappedCompleted;
@@ -58,10 +59,7 @@ namespace UnityEngine.ResourceManagement
         protected override void Execute()
         {
             m_WrappedOp = m_Callback(m_DepOp);
-            if (!m_WrappedOp.IsDone)
-                m_WrappedOp.Completed += m_CachedOnWrappedCompleted;
-            else
-                OnWrappedCompleted(m_WrappedOp);
+            m_WrappedOp.Completed += m_CachedOnWrappedCompleted;
             m_Callback = null;
         }
 
@@ -180,10 +178,7 @@ namespace UnityEngine.ResourceManagement
         protected override void Execute()
         {
             m_WrappedOp = m_Callback(m_DepOp);
-            if (m_WrappedOp.IsDone)
-                m_CachedOnWrappedCompleted(m_WrappedOp);
-            else
-                m_WrappedOp.Completed += m_CachedOnWrappedCompleted;
+            m_WrappedOp.Completed += m_CachedOnWrappedCompleted;
             m_Callback = null;
         }
 

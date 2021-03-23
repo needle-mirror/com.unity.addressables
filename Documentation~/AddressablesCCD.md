@@ -39,5 +39,6 @@ For that profile, your project will now know where to fetch its Addressable Asse
 Next, for the profile you want to use with CCD, you must generate your Addressable content that you will later place in your CCD project.
 * To build content, see [Building your Addressable content](./AddressableAssetsGettingStarted.md#building-your-addressable-content).
 * If you are changing the contents of a group, see [Building for content updates](./ContentUpdateWorkflow.md#building-for-content-updates).
+* If you are using the Unity Cloud Build service, see [Using Addressables in Unity Cloud Build](xref:UnityCloudBuildAddressables) for information about configuring your cloud builds to send content to CCD.
 
 Building your Addressable content can generate a content catalog  (.json), a hash file (.hash), and an AssetBundle (.bundle) file. At this point, you need to upload these files to the bucket you specified above. This upload is done via the CCD command-line interface (CLI). See [Unity Cloud Content Delivery](https://docs.unity3d.com/Manual/UnityCCD.html).

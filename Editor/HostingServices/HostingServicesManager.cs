@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using UnityEditor.AddressableAssets.Settings;
@@ -357,19 +358,19 @@ namespace UnityEditor.AddressableAssets.HostingServices
             var vars = GlobalProfileVariables;
             vars.Clear();
 
-            var ipAddressList = NetworkInterface.GetAllNetworkInterfaces()
-                .Where(n => n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+            var ipAddressList = FilterValidIPAddresses(NetworkInterface.GetAllNetworkInterfaces()
+                .Where(n => n.NetworkInterfaceType != NetworkInterfaceType.Loopback && n.OperationalStatus == OperationalStatus.Up)
                 .SelectMany(n => n.GetIPProperties().UnicastAddresses)
                 .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
-                .Select(a => a.Address).ToArray();
+                .Select(a => a.Address).ToList());
 
-            if (ipAddressList.Length > 0)
+            if (ipAddressList.Count > 0)
             {
                 vars.Add(KPrivateIpAddressKey, ipAddressList[0].ToString());
-
-                if (ipAddressList.Length > 1)
+                
+                if (ipAddressList.Count > 1)
                 {
-                    for (var i = 1; i < ipAddressList.Length; i++)
+                    for (var i = 1; i < ipAddressList.Count; i++)
                         vars.Add(KPrivateIpAddressKey + "_" + i, ipAddressList[i].ToString());
                 }
             }
@@ -462,6 +463,22 @@ namespace UnityEditor.AddressableAssets.HostingServices
         internal AddressableAssetSettings Settings
         {
             get { return m_Settings; }
+        }
+
+        private List<IPAddress> FilterValidIPAddresses(List<IPAddress> ipAddresses)
+        {
+            List<IPAddress> validIpList = new List<IPAddress>();
+
+            foreach (IPAddress address in ipAddresses)
+            {
+                var sender = new System.Net.NetworkInformation.Ping();
+                var reply = sender.Send(address.ToString(), 5000);
+                if (reply.Status == IPStatus.Success)
+                {
+                    validIpList.Add(address);
+                }
+            }
+            return validIpList;
         }
     }
 }
