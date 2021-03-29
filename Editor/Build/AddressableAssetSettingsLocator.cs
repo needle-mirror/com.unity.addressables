@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor.Build.Content;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -168,6 +169,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     else if (type == null || type.IsAssignableFrom(e.MainAssetType))
                     {
                         locations.Add(new ResourceLocationBase(e.address, e.AssetPath, typeof(AssetDatabaseProvider).FullName, e.MainAssetType));
+                        return true;
                     }
                     else
                     {
@@ -179,13 +181,15 @@ namespace UnityEditor.AddressableAssets.Settings
                                 if (type.IsAssignableFrom(t))
                                     locations.Add(new ResourceLocationBase(e.address, e.AssetPath, typeof(AssetDatabaseProvider).FullName, t));
                             }
+
+                            return true;
                         }
                     }
                     return false;
                 });
             }
         }
-        
+
         public bool Locate(object key, Type type, out IList<IResourceLocation> locations)
         {
             CacheKey cacheKey = new CacheKey() { m_key = key, m_type = type };
@@ -197,8 +201,28 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 foreach (AddressableAssetEntry e in entries)
                 {
-                    if (!AssetDatabase.IsValidFolder(e.AssetPath) || e.labels.Contains(key as string))
+                    if (AssetDatabase.IsValidFolder(e.AssetPath) && !e.labels.Contains(key as string))
+                        continue;
+
+                    if (type == null)
+                    {
+                        ObjectIdentifier[] ids = ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(e.guid), EditorUserBuildSettings.activeBuildTarget);
+                        IEnumerable<Type> subObjectTypes = AddressableAssetEntry.GatherSubObjectTypes(ids, e.guid);
+
+                        if (subObjectTypes.Any())
+                        {
+                            foreach (Type t in subObjectTypes)
+                                GatherEntryLocations(e, t, locations, m_AddressableAssetTree);
+                        }
+                        else
+                        {
+                            GatherEntryLocations(e, null, locations, m_AddressableAssetTree);
+                        }
+                    }
+                    else
+                    {
                         GatherEntryLocations(e, type, locations, m_AddressableAssetTree);
+                    }
                 }
             }
 

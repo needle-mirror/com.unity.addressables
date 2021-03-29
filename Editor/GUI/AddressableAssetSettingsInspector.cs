@@ -98,6 +98,8 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Build Remote Catalog", "If set, this will create a copy of the content catalog for storage on a remote server.  This catalog can be overwritten later for content updates.");
         GUIContent m_BundleLocalCatalog =
             new GUIContent("Compress Local Catalog", "If set, the local content catalog will be compressed in an asset bundle. This will affect build and load time of catalog. We recommend disabling this during iteration.");
+        GUIContent m_OptimizeCatalogSize =
+            new GUIContent("Optimize Catalog Size", "If set, duplicate internal ids will be extracted to a lookup table and reconstructed at runtime.  This can reduce the size of the catalog but may impact performance due to extra processing at load time.");
         GUIContent m_CheckForCatalogUpdateOnInit =
             new GUIContent("Disable Catalog Update on Startup", "If set, this will forgo checking for content catalog updates on initialization.");
         GUIContent m_RemoteCatBuildPath =
@@ -178,6 +180,10 @@ namespace UnityEditor.AddressableAssets.GUI
                 bool bundleLocalCatalog = EditorGUILayout.Toggle(m_BundleLocalCatalog, m_AasTarget.BundleLocalCatalog);
                 if (bundleLocalCatalog != m_AasTarget.BundleLocalCatalog)
                     m_QueuedChanges.Add(() => m_AasTarget.BundleLocalCatalog = bundleLocalCatalog);
+                bool optimizeCatalogSize = EditorGUILayout.Toggle(m_OptimizeCatalogSize, m_AasTarget.OptimizeCatalogSize);
+                if (optimizeCatalogSize != m_AasTarget.OptimizeCatalogSize)
+                    m_QueuedChanges.Add(() => m_AasTarget.OptimizeCatalogSize = optimizeCatalogSize);
+
                 bool buildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
                 if (buildRemoteCatalog != m_AasTarget.BuildRemoteCatalog)
                     m_QueuedChanges.Add(() => m_AasTarget.BuildRemoteCatalog = buildRemoteCatalog);

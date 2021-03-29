@@ -4,6 +4,20 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.16.8] - 2020-11-4
+- Added internal naming option for the Bundled Asset Group Schema.  Instead of using the full path, there are options to use the asset guid or the hashcode of the guid.  These values are stable and wont change if the asset path changes, reducing the need to rebuild a bundle if paths change but contents do not.  The internal ids stored in the content catalog will generally be shorter than asset paths - 32 bytes for the full guid, 8 bytes for the guid hash. 
+- Added option to exclude sub catalog entries by file extension
+- Added options to exclude catalog entries for address, labels, and guids
+- Added option to optimize catalog size by extracting duplicated string in urls and file paths
+- Fixed issue where ResourceLocations were returning null for the ResourceType.
+- Added warning to build when an Addressable Group doesn't have any AddressableAssetGroupSchemas
+- Fixed issue where resource folder search was case sensitive for Mac and Linux
+- Fixed issue where warnings were getting logged incorrectly when marking an asset as Addressable using the checkbox in the inspector.
+- Add Yamato trigger for release testing & rework variables into metafile
+- Fixed issue where an AssetReference's cached asset is not reset when the underlying asset re-imports.
+- Fixed issue where we were still checking for CRC when a bundle was cached.
+- Fixed bug when using Play Mode Script "Use AssetDatabase (fastest)", and calling Addressables.LoadContentCatalogAsync would fail when it had not been cached.
+
 ## [1.16.7] - 2020-10-21
 - Fixed issue where InvalidHandle errors were getting thrown if an operation failed with releaseDependenciesOnFailure turned on.
 - Fixed group build and load paths not being saved when editing multiple groups at once

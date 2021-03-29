@@ -236,7 +236,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 }
             }
 
-            var contentCatalog = new ContentCatalogData(aaContext.locations, ResourceManagerRuntimeData.kCatalogAddress);
+            var contentCatalog = new ContentCatalogData(ResourceManagerRuntimeData.kCatalogAddress);
+            contentCatalog.SetData(aaContext.locations, aaContext.Settings.OptimizeCatalogSize);
+
             contentCatalog.ResourceProviderData.AddRange(m_ResourceProviderData);
             foreach (var t in aaContext.providerTypes)
                 contentCatalog.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(t));
@@ -502,6 +504,14 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             if (assetGroup == null)
                 return string.Empty;
 
+            if (assetGroup.Schemas.Count == 0)
+            {
+                Addressables.LogWarning($"{assetGroup.Name} does not have any associated AddressableAssetGroupSchemas. " +
+                                        $"Data from this group will not be included in the build. " +
+                                        $"If this is unexpected the AddressableGroup may have become corrupted.");
+                return string.Empty;
+            }
+
             foreach (var schema in assetGroup.Schemas)
             {
                 var errorString = ProcessGroupSchema(schema, assetGroup, aaContext);
@@ -713,7 +723,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return combinedEntries;
         }
 
-        static void GenerateBuildInputDefinitions(List<AddressableAssetEntry> allEntries, List<AssetBundleBuild> buildInputDefs, string groupGuid, string address)
+        internal static void GenerateBuildInputDefinitions(List<AddressableAssetEntry> allEntries, List<AssetBundleBuild> buildInputDefs, string groupGuid, string address)
         {
             var scenes = new List<AddressableAssetEntry>();
             var assets = new List<AddressableAssetEntry>();
@@ -721,7 +731,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             {
                 if (string.IsNullOrEmpty(e.AssetPath))
                     continue;
-                if (e.AssetPath.EndsWith(".unity"))
+                if (e.IsScene)
                     scenes.Add(e);
                 else
                     assets.Add(e);
@@ -732,17 +742,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 buildInputDefs.Add(GenerateBuildInputDefinition(scenes, groupGuid + "_scenes_" + address + ".bundle"));
         }
 
-        static AssetBundleBuild GenerateBuildInputDefinition(List<AddressableAssetEntry> assets, string name)
+        internal static AssetBundleBuild GenerateBuildInputDefinition(List<AddressableAssetEntry> assets, string name)
         {
+            var assetInternalIds = new HashSet<string>();
             var assetsInputDef = new AssetBundleBuild();
             assetsInputDef.assetBundleName = name.ToLower().Replace(" ", "").Replace('\\', '/').Replace("//", "/");
-            var assetIds = new List<string>(assets.Count);
-            foreach (var a in assets)
-            {
-                assetIds.Add(a.AssetPath);
-            }
-            assetsInputDef.assetNames = assetIds.ToArray();
-            assetsInputDef.addressableNames = new string[0];
+            assetsInputDef.assetNames = assets.Select(s => s.AssetPath).ToArray();
+            assetsInputDef.addressableNames = assets.Select(s => s.GetAssetLoadPath(true, assetInternalIds)).ToArray();
             return assetsInputDef;
         }
 
@@ -831,11 +837,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             buildTasks.Add(new PostWritingCallback());
 
             return buildTasks;
-        }
-
-        static bool IsInternalIdLocal(string path)
-        {
-            return path.StartsWith("{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
         }
 
         static void CopyFileWithTimestampIfDifferent(string srcPath, string destPath, IBuildLogger log)

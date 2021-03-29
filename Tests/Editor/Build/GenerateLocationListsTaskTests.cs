@@ -91,6 +91,66 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
     }
 
     [Test]
+    public void WhenIncludeGUIDInCatalog_SetFalse_GUIDSNotIncluded()
+    {
+        GenerateLocationListsTask.Input input = GenerateDefaultInput();
+        AddressableAssetGroup groupX = CreateGroupMappedToBundle(input, "X");
+        var schema = groupX.GetSchema<BundledAssetGroupSchema>();
+        var guid = CreateAddressablePrefab(input, "p1", groupX, "fileX");
+        input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
+        schema.IncludeGUIDInCatalog = true;
+        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+            if (l.Provider == typeof(BundledAssetProvider).FullName)
+                CollectionAssert.Contains(l.Keys, guid);
+
+        schema.IncludeGUIDInCatalog = false;
+        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+            if (l.Provider == typeof(BundledAssetProvider).FullName)
+                CollectionAssert.DoesNotContain(l.Keys, guid);
+    }
+
+    [Test]
+    public void WhenIncludeAddressOptionChanged_LocationsKeysAreSetCorrectly()
+    {
+        GenerateLocationListsTask.Input input = GenerateDefaultInput();
+        AddressableAssetGroup groupX = CreateGroupMappedToBundle(input, "X");
+        var schema = groupX.GetSchema<BundledAssetGroupSchema>();
+        var guid = CreateAddressablePrefab(input, "p1", groupX, "fileX");
+        input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
+
+        schema.IncludeAddressInCatalog = true;
+        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+            if (l.Provider == typeof(BundledAssetProvider).FullName)
+                CollectionAssert.Contains(l.Keys, "p1");
+
+        schema.IncludeAddressInCatalog = false;
+        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+            if (l.Provider == typeof(BundledAssetProvider).FullName)
+                CollectionAssert.DoesNotContain(l.Keys, "p1");
+    }
+
+    [Test]
+    public void WhenIncludeLabelsOptionChanged_LocationsKeysAreSetCorrectly()
+    {
+        GenerateLocationListsTask.Input input = GenerateDefaultInput();
+        AddressableAssetGroup groupX = CreateGroupMappedToBundle(input, "X");
+        var schema = groupX.GetSchema<BundledAssetGroupSchema>();
+        var guid = CreateAddressablePrefab(input, "p1", groupX, "fileX");
+        groupX.GetAssetEntry(guid).SetLabel("LABEL1", true, true, true);
+        input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
+
+        schema.IncludeLabelsInCatalog = true;
+        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+            if (l.Provider == typeof(BundledAssetProvider).FullName)
+                CollectionAssert.Contains(l.Keys, "LABEL1");
+
+        schema.IncludeLabelsInCatalog = false;
+        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+            if(l.Provider == typeof(BundledAssetProvider).FullName)
+                CollectionAssert.DoesNotContain(l.Keys, "LABEL1");
+    }
+
+    [Test]
     public void WhenGroupCreatesMultipleBundles_AllBundlesInAssetGroupToBundlesMap()
     {
         GenerateLocationListsTask.Input input = GenerateDefaultInput();

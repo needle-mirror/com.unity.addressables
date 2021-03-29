@@ -59,16 +59,6 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             Dependencies = dependencies == null ? new List<object>() : new List<object>(dependencies);
             Data = extraData;
         }
-
-        internal int ComputeDependencyHash()
-        {
-            if (Dependencies == null)
-                return 0;
-            int hash = 0;
-            foreach (var d in Dependencies)
-                hash = hash * 31 + d.GetHashCode();
-            return hash;
-        }
     }
 
     /// <summary>
@@ -168,7 +158,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         [SerializeField]
         internal string m_EntryDataString = null;
 
-        const int k_ByteSize = 4;
+        const int kBytesPerInt32 = 4;
         const int k_EntryDataItemPerEntry = 7;
 
         [FormerlySerializedAs("m_extraDataString")]
@@ -176,10 +166,10 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         internal string m_ExtraDataString = null;
 
         [SerializeField]
-        internal string[] m_Keys = null;
+        internal SerializedType[] m_resourceTypes = null;
 
         [SerializeField]
-        internal SerializedType[] m_resourceTypes = null;
+        string[] m_InternalIdPrefixes = null;
 
         struct Bucket
         {
@@ -198,6 +188,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             int m_DependencyHashCode;
             string m_PrimaryKey;
             Type m_Type;
+
             public string InternalId { get { return m_InternalId; } }
             public string ProviderId { get { return m_ProviderId; } }
             public IList<IResourceLocation> Dependencies
@@ -256,7 +247,6 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             m_EntryDataString = "";
             m_ExtraDataString = "";
             m_InternalIds = null;
-            m_Keys = null;
             m_LocatorId = "";
             m_ProviderIds = null;
             m_ResourceProviderData = null;
@@ -298,7 +288,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             {
                 for (int i = 0; i < m_ProviderIds.Length; i++)
                 {
-                    if (!m_ProviderIds[i].EndsWith(providerSuffix))
+                    if (!m_ProviderIds[i].EndsWith(providerSuffix, StringComparison.Ordinal))
                         m_ProviderIds[i] = m_ProviderIds[i] + providerSuffix;
                 }
             }
@@ -314,40 +304,55 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
 
             var entryData = Convert.FromBase64String(m_EntryDataString);
             int count = SerializationUtilities.ReadInt32FromByteArray(entryData, 0);
-            List<IResourceLocation> locations = new List<IResourceLocation>(count);
+            var locations = new IResourceLocation[count];
             for (int i = 0; i < count; i++)
             {
-                var index = k_ByteSize + i * k_ByteSize * k_EntryDataItemPerEntry;
+                var index = kBytesPerInt32 + i * (kBytesPerInt32 * k_EntryDataItemPerEntry);
                 var internalId = SerializationUtilities.ReadInt32FromByteArray(entryData, index);
-                index += k_ByteSize;
+                index += kBytesPerInt32;
                 var providerIndex = SerializationUtilities.ReadInt32FromByteArray(entryData, index);
-                index += k_ByteSize;
-                var dependency = SerializationUtilities.ReadInt32FromByteArray(entryData, index);
-                index += k_ByteSize;
+                index += kBytesPerInt32;
+                var dependencyKeyIndex = SerializationUtilities.ReadInt32FromByteArray(entryData, index);
+                index += kBytesPerInt32;
                 var depHash = SerializationUtilities.ReadInt32FromByteArray(entryData, index);
-                index += k_ByteSize;
+                index += kBytesPerInt32;
                 var dataIndex = SerializationUtilities.ReadInt32FromByteArray(entryData, index);
-                index += k_ByteSize;
+                index += kBytesPerInt32;
                 var primaryKey = SerializationUtilities.ReadInt32FromByteArray(entryData, index);
-                index += k_ByteSize;
+                index += kBytesPerInt32;
                 var resourceType = SerializationUtilities.ReadInt32FromByteArray(entryData, index);
                 object data = dataIndex < 0 ? null : SerializationUtilities.ReadObjectFromByteArray(extraData, dataIndex);
-                locations.Add(new CompactLocation(locator, Addressables.ResolveInternalId(m_InternalIds[internalId]),
-                    m_ProviderIds[providerIndex], dependency < 0 ? null : keys[dependency], data, depHash, m_Keys[primaryKey], m_resourceTypes[resourceType].Value));
+                locations[i] = new CompactLocation(locator, Addressables.ResolveInternalId(ExpandInternalId(m_InternalIdPrefixes, m_InternalIds[internalId])),
+                    m_ProviderIds[providerIndex], dependencyKeyIndex < 0 ? null : keys[dependencyKeyIndex], data, depHash, keys[primaryKey].ToString(), m_resourceTypes[resourceType].Value);
             }
 
             for (int i = 0; i < buckets.Length; i++)
             {
                 var bucket = buckets[i];
                 var key = keys[i];
-                var locs = new List<IResourceLocation>(bucket.entries.Length);
-                foreach (var index in bucket.entries)
-                    locs.Add(locations[index]);
+                var locs = new IResourceLocation[bucket.entries.Length];
+                for (int b = 0; b < bucket.entries.Length; b++)
+                    locs[b] = locations[bucket.entries[b]];
                 locator.Add(key, locs);
             }
+
             return locator;
         }
-
+        
+        internal static string ExpandInternalId(string[] internalIdPrefixes, string v)
+        {
+            if (internalIdPrefixes == null || internalIdPrefixes.Length == 0)
+                return v;
+            int nextHash = v.LastIndexOf('#');
+            if (nextHash < 0)
+                return v;
+            int index = 0;
+            var numStr = v.Substring(0, nextHash);
+            if (!int.TryParse(numStr, out index))
+                return v;
+            return internalIdPrefixes[index] + v.Substring(nextHash + 1);
+        }
+        
         /// <summary>
         /// Create a new ContentCatalogData object without any data.
         /// </summary>
@@ -364,7 +369,12 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         public ContentCatalogData(IList<ContentCatalogDataEntry> entries, string id = null)
         {
             m_LocatorId = id;
-            SetData(entries);
+            SetData(entries, false);
+        }
+
+        internal ContentCatalogData(string id)
+        {
+            m_LocatorId = id;
         }
 
         class KeyIndexer<T>
@@ -436,6 +446,11 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// <param name="data">The list of </param>
         public void SetData(IList<ContentCatalogDataEntry> data)
         {
+            SetData(data, false);
+        }
+        
+        internal void SetData(IList<ContentCatalogDataEntry> data, bool optimizeSize)
+        {
             if (data == null)
                 return;
             var providers = new KeyIndexer<string>(data.Select(s => s.Provider), 10);
@@ -446,7 +461,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             keys.Add(data.SelectMany(s => s.Dependencies));
             var keyIndexToEntries = new KeyIndexer<List<ContentCatalogDataEntry>, object>(keys.values, s => new List<ContentCatalogDataEntry>(), keys.values.Count);
             var entryToIndex = new Dictionary<ContentCatalogDataEntry, int>(data.Count);
-            var extraDataList = new List<byte>();
+            var extraDataList = new List<byte>(8*1024);
             var entryIndexToExtraDataIndex = new Dictionary<int, int>();
 
             int extraDataIndex = 0;
@@ -502,14 +517,19 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             m_InternalIds = internalIds.values.ToArray();
             m_ProviderIds = providers.values.ToArray();
             m_resourceTypes = types.values.Select(t => new SerializedType() { Value = t }).ToArray();
-            m_Keys = keys.values.Where(x => x != null)
-                .Select(x => x.ToString())
-                .ToArray();
 
+            if (optimizeSize)
+            {
+                var internalIdPrefixes = new List<string>();
+                var prefixIndices = new Dictionary<string, int>();
+                for (int i = 0; i < m_InternalIds.Length; i++)
+                    m_InternalIds[i] = ExtractCommonPrefix(internalIdPrefixes, prefixIndices, m_InternalIds[i]);
+                m_InternalIdPrefixes = internalIdPrefixes.ToArray();
+            }
 
             //serialize entries
             {
-                var entryData = new byte[data.Count * k_ByteSize * k_EntryDataItemPerEntry + k_ByteSize];
+                var entryData = new byte[data.Count * (kBytesPerInt32 * k_EntryDataItemPerEntry) + kBytesPerInt32];
                 var entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, data.Count, 0);
                 for (int i = 0; i < data.Count; i++)
                 {
@@ -517,10 +537,10 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                     entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, internalIds.map[e.InternalId], entryDataOffset);
                     entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, providers.map[e.Provider], entryDataOffset);
                     entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, e.Dependencies.Count == 0 ? -1 : keyIndexToEntries.map[e.Dependencies[0]], entryDataOffset);
-                    entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, e.ComputeDependencyHash(), entryDataOffset);
+                    entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, GetHashCodeForEnumerable(e.Dependencies), entryDataOffset);
                     entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, entryIndexToExtraDataIndex[i], entryDataOffset);
                     entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, keys.map[e.Keys.First()], entryDataOffset);
-                    entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, types.map[e.ResourceType], entryDataOffset);
+                    entryDataOffset = SerializationUtilities.WriteInt32ToByteArray(entryData, (ushort)types.map[e.ResourceType], entryDataOffset);
                 }
                 m_EntryDataString = Convert.ToBase64String(entryData);
             }
@@ -529,7 +549,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             {
                 var entryCount = keyIndexToEntries.values.Aggregate(0, (a, s) => a += s.Count);
                 var bucketData = new byte[4 + keys.values.Count * 8 + entryCount * 4];
-                var keyData = new List<byte>(keys.values.Count * 10);
+                var keyData = new List<byte>(keys.values.Count * 100);
                 keyData.AddRange(BitConverter.GetBytes(keys.values.Count));
                 int keyDataOffset = 4;
                 int bucketDataOffset = SerializationUtilities.WriteInt32ToByteArray(bucketData, keys.values.Count, 0);
@@ -546,6 +566,21 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                 m_BucketDataString = Convert.ToBase64String(bucketData);
                 m_KeyDataString = Convert.ToBase64String(keyData.ToArray());
             }
+        }
+
+        internal static string ExtractCommonPrefix(List<string> internalIdPrefixes, Dictionary<string, int> prefixIndices, string v)
+        {
+            var s = v.LastIndexOf('/');
+            if (s <= 0)
+                return v;
+            var prefix = v.Substring(0, s);
+            int index;
+            if (!prefixIndices.TryGetValue(prefix, out index))
+            {
+                prefixIndices.Add(prefix, index = internalIdPrefixes.Count);
+                internalIdPrefixes.Add(prefix);
+            }
+            return string.Format("{0}#{1}", index, v.Substring(s));
         }
 
         internal int CalculateCollectedHash(List<object> objects, Dictionary<int, object> hashSources)
@@ -570,226 +605,6 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                 hash = hash * 31 + o.GetHashCode();
             return hash;
         }
-
-#if REFERENCE_IMPLEMENTATION
-        public void SetDataOld(List<ResourceLocationData> locations, List<string> labels)
-        {
-            var tmpEntries = new List<Entry>(locations.Count);
-            var providers = new List<string>(10);
-            var providerIndices = new Dictionary<string, int>(10);
-            var countEstimate = locations.Count * 2 + labels.Count;
-            var internalIdToEntryIndex = new Dictionary<string, int>(countEstimate);
-            var internalIdList = new List<string>(countEstimate);
-            List<object> keys = new List<object>(countEstimate);
-
-            var keyToIndex = new Dictionary<object, int>(countEstimate);
-            var tmpBuckets = new Dictionary<int, List<int>>(countEstimate);
-
-            for (int i = 0; i < locations.Count; i++)
-            {
-                var rld = locations[i];
-                int providerIndex = 0;
-                if (!providerIndices.TryGetValue(rld.m_provider, out providerIndex))
-                {
-                    providerIndices.Add(rld.m_provider, providerIndex = providers.Count);
-                    providers.Add(rld.m_provider);
-                }
-
-                int internalIdIndex = 0;
-                if (!internalIdToEntryIndex.TryGetValue(rld.m_internalId, out internalIdIndex))
-                {
-                    internalIdToEntryIndex.Add(rld.m_internalId, internalIdIndex = internalIdList.Count);
-                    internalIdList.Add(rld.m_internalId);
-                }
-
-                var e = new Entry() { internalId = internalIdIndex, providerIndex = (byte)providerIndex, dependency = -1 };
-                if (rld.m_type == ResourceLocationData.LocationType.Int)
-                    AddToBucket(tmpBuckets, keyToIndex, keys, int.Parse(rld.m_address), tmpEntries.Count, 1);
-                else if (rld.m_type == ResourceLocationData.LocationType.String)
-                    AddToBucket(tmpBuckets, keyToIndex, keys, rld.m_address, tmpEntries.Count, 1);
-                if (!string.IsNullOrEmpty(rld.m_guid))
-                    AddToBucket(tmpBuckets, keyToIndex, keys, Hash128.Parse(rld.m_guid), tmpEntries.Count, 1);
-                if (rld.m_labelMask != 0)
-                {
-                    for (int t = 0; t < labels.Count; t++)
-                    {
-                        if ((rld.m_labelMask & (1 << t)) != 0)
-                            AddToBucket(tmpBuckets, keyToIndex, keys, labels[t], tmpEntries.Count, 100);
-                    }
-                }
-
-                tmpEntries.Add(e);
-            }
-
-            for (int i = 0; i < locations.Count; i++)
-            {
-                var rld = locations[i];
-                int dependency = -1;
-                if (rld.m_dependencies != null && rld.m_dependencies.Length > 0)
-                {
-                    if (rld.m_dependencies.Length == 1)
-                    {
-                        dependency = keyToIndex[rld.m_dependencies[0]];
-                    }
-                    else
-                    {
-                        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-                        foreach (var d in rld.m_dependencies)
-                            sb.Append(d);
-                        var key = sb.ToString().GetHashCode();
-                        int keyIndex = -1;
-                        foreach (var d in rld.m_dependencies)
-                        {
-                            var ki = keyToIndex[d];
-                            var depBucket = tmpBuckets[ki];
-                            keyIndex = AddToBucket(tmpBuckets, keyToIndex, keys, key, depBucket[0], 10);
-                        }
-                        dependency = keyIndex;
-                    }
-                    var e = tmpEntries[i];
-                    e.dependency = dependency;
-                    tmpEntries[i] = e;
-                }
-            }
-
-            m_internalIds = internalIdList.ToArray();
-            m_providerIds = providers.ToArray();
-            var entryData = new byte[tmpEntries.Count * 4 * 3 + 4];
-            var offset = Serialize(entryData, tmpEntries.Count, 0);
-            for (int i = 0; i < tmpEntries.Count; i++)
-            {
-                var e = tmpEntries[i];
-                offset = Serialize(entryData, e.internalId, offset);
-                offset = Serialize(entryData, e.providerIndex, offset);
-                offset = Serialize(entryData, e.dependency, offset);
-            }
-            m_entryDataString = Convert.ToBase64String(entryData);
-
-            int bucketEntryCount = 0;
-            var bucketList = new List<Bucket>(keys.Count);
-            for (int i = 0; i < keys.Count; i++)
-            {
-                var bucketIndex = keyToIndex[keys[i]];
-                List<int> entries = tmpBuckets[bucketIndex];
-                bucketList.Add(new Bucket() { entries = entries.ToArray() });
-                bucketEntryCount += entries.Count;
-            }
-
-            var keyData = new List<byte>(bucketList.Count * 10);
-            keyData.AddRange(BitConverter.GetBytes(bucketList.Count));
-            int dataOffset = 4;
-            for (int i = 0; i < bucketList.Count; i++)
-            {
-                var bucket = bucketList[i];
-                bucket.dataOffset = dataOffset;
-                bucketList[i] = bucket;
-                var key = keys[i];
-                var kt = key.GetType();
-                if (kt == typeof(string))
-                {
-                    string str = key as string;
-                    byte[] tmp = System.Text.Encoding.Unicode.GetBytes(str);
-                    byte[] tmp2 = System.Text.Encoding.ASCII.GetBytes(str);
-                    if (System.Text.Encoding.Unicode.GetString(tmp) == System.Text.Encoding.ASCII.GetString(tmp2))
-                    {
-                        keyData.Add((byte)KeyType.ASCIIString);
-                        keyData.AddRange(tmp2);
-                        dataOffset += tmp2.Length + 1;
-                    }
-                    else
-                    {
-                        keyData.Add((byte)KeyType.UnicodeString);
-                        keyData.AddRange(tmp);
-                        dataOffset += tmp.Length + 1;
-                    }
-                }
-                else if (kt == typeof(UInt32))
-                {
-                    byte[] tmp = BitConverter.GetBytes((UInt32)key);
-                    keyData.Add((byte)KeyType.UInt32);
-                    keyData.AddRange(tmp);
-                    dataOffset += tmp.Length + 1;
-                }
-                else if (kt == typeof(UInt16))
-                {
-                    byte[] tmp = BitConverter.GetBytes((UInt16)key);
-                    keyData.Add((byte)KeyType.UInt16);
-                    keyData.AddRange(tmp);
-                    dataOffset += tmp.Length + 1;
-                }
-                else if (kt == typeof(Int32))
-                {
-                    byte[] tmp = BitConverter.GetBytes((Int32)key);
-                    keyData.Add((byte)KeyType.Int32);
-                    keyData.AddRange(tmp);
-                    dataOffset += tmp.Length + 1;
-                }
-                else if (kt == typeof(int))
-                {
-                    byte[] tmp = BitConverter.GetBytes((UInt32)key);
-                    keyData.Add((byte)KeyType.UInt32);
-                    keyData.AddRange(tmp);
-                    dataOffset += tmp.Length + 1;
-                }
-                else if (kt == typeof(Hash128))
-                {
-                    var guid = (Hash128)key;
-                    byte[] tmp = System.Text.Encoding.ASCII.GetBytes(guid.ToString());
-                    keyData.Add((byte)KeyType.Hash128);
-                    keyData.AddRange(tmp);
-                    dataOffset += tmp.Length + 1;
-                }
-            }
-            m_keyDataString = Convert.ToBase64String(keyData.ToArray());
-
-            var bucketData = new byte[4 + bucketList.Count * 8 + bucketEntryCount * 4];
-            offset = Serialize(bucketData, bucketList.Count, 0);
-            for (int i = 0; i < bucketList.Count; i++)
-            {
-                offset = Serialize(bucketData, bucketList[i].dataOffset, offset);
-                offset = Serialize(bucketData, bucketList[i].entries.Length, offset);
-                foreach (var e in bucketList[i].entries)
-                    offset = Serialize(bucketData, e, offset);
-            }
-            m_bucketDataString = Convert.ToBase64String(bucketData);
-
-#if SERIALIZE_CATALOG_AS_BINARY
-            //TODO: investigate saving catalog as binary - roughly 20% size decrease, still needs a provider implementation
-            var stream = new System.IO.MemoryStream();
-            var bw = new System.IO.BinaryWriter(stream);
-            foreach (var i in m_internalIds)
-                bw.Write(i);
-            foreach (var p in m_providerIds)
-                bw.Write(p);
-            bw.Write(entryData);
-            bw.Write(keyData.ToArray());
-            bw.Write(bucketData);
-            bw.Flush();
-            bw.Close();
-            stream.Flush();
-            System.IO.File.WriteAllBytes("Library/catalog_binary.bytes", stream.ToArray());
-            System.IO.File.WriteAllText("Library/catalog_binary.txt", Convert.ToBase64String(stream.ToArray()));
-            stream.Close();
-#endif
-        }
-
-        private int AddToBucket(Dictionary<int, List<int>> buckets, Dictionary<object, int> keyToIndex, List<object> keys, object key, int index, int sizeHint)
-        {
-            int keyIndex = -1;
-            if (!keyToIndex.TryGetValue(key, out keyIndex))
-            {
-                keyToIndex.Add(key, keyIndex = keys.Count);
-                keys.Add(key);
-            }
-
-            List<int> bucket;
-            if (!buckets.TryGetValue(keyIndex, out bucket))
-                buckets.Add(keyIndex, bucket = new List<int>(sizeHint));
-            bucket.Add(index);
-            return keyIndex;
-        }
-
-#endif
 #endif
     }
 }

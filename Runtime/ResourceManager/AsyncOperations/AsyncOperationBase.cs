@@ -93,14 +93,12 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         internal int m_Version;
         internal int Version { get { return m_Version; } }
 
-        DelegateList<AsyncOperationHandle> m_CompletedAction;
         DelegateList<AsyncOperationHandle> m_DestroyedAction;
         DelegateList<AsyncOperationHandle<TObject>> m_CompletedActionT;
 
         internal bool CompletedEventHasListeners => m_CompletedActionT != null && m_CompletedActionT.Count > 0;
         internal bool DestroyedEventHasListeners => m_DestroyedAction != null && m_DestroyedAction.Count > 0;
-        internal bool CompletedTypelessEventHasListeners => m_CompletedAction != null && m_CompletedAction.Count > 0;
-
+     
         Action<IAsyncOperation> m_OnDestroyAction;
         internal Action<IAsyncOperation> OnDestroy { set { m_OnDestroyAction = value; } }
         internal int ReferenceCount { get { return m_referenceCount; } }
@@ -308,14 +306,11 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             add
             {
-                if (m_CompletedAction == null)
-                    m_CompletedAction = DelegateList<AsyncOperationHandle>.CreateWithGlobalCache();
-                m_CompletedAction.Add(value);
-                RegisterForDeferredCallbackEvent();
+                Completed += s => value(s);
             }
             remove
             {
-                m_CompletedAction?.Remove(value);
+                Completed -= s => value(s);
             }
         }
 
@@ -357,17 +352,12 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         internal void InvokeCompletionEvent()
         {
-            if (m_CompletedAction != null)
-            {
-                m_CompletedAction.Invoke(new AsyncOperationHandle(this));
-                m_CompletedAction.Clear();
-            }
-
             if (m_CompletedActionT != null)
             {
                 m_CompletedActionT.Invoke(new AsyncOperationHandle<TObject>(this));
                 m_CompletedActionT.Clear();
             }
+
             if (m_waitHandle != null)
                 m_waitHandle.Set();
 

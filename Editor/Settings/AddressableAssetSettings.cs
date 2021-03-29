@@ -296,6 +296,9 @@ namespace UnityEditor.AddressableAssets.Settings
         public bool IsPersisted { get { return !m_IsTemporary; } }
 
         [SerializeField]
+        bool m_OptimizeCatalogSize = false;
+
+        [SerializeField]
         bool m_BuildRemoteCatalog = false;
 
         [SerializeField]
@@ -342,6 +345,15 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get { return m_ContiguousBundles; }
             set { m_ContiguousBundles = value; }
+        }
+
+        /// <summary>
+        /// Enables size optimization of content catalogs.  This may increase the cpu usage of loading the catalog.
+        /// </summary>
+        internal bool OptimizeCatalogSize
+        {
+            get { return m_OptimizeCatalogSize; }
+            set { m_OptimizeCatalogSize = value; }
         }
 
         /// <summary>
@@ -908,8 +920,8 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="postEvent">Send modification event.</param>
         public void AddLabel(string label, bool postEvent = true)
         {
-            m_LabelTable.AddLabelName(label);
-            SetDirty(ModificationEvent.LabelAdded, label, postEvent, true);
+            if(m_LabelTable.AddLabelName(label))
+                SetDirty(ModificationEvent.LabelAdded, label, postEvent, true);
         }
 
         /// <summary>
@@ -1680,16 +1692,15 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal void SetLabelValueForEntries(List<AddressableAssetEntry> entries, string label, bool value, bool postEvent = true)
         {
-            if (value)
-                AddLabel(label);
+            var addedNewLabel = value && m_LabelTable.AddLabelName(label);
 
             foreach (var e in entries)
             {
-                e.SetLabel(label, value, false);
+                e.SetLabel(label, value, false, false);
                 AddressableAssetUtility.OpenAssetIfUsingVCIntegration(e.parentGroup);
             }
 
-            SetDirty(ModificationEvent.EntryModified, entries, postEvent, true);
+            SetDirty(ModificationEvent.EntryModified, entries, postEvent, addedNewLabel);
             AddressableAssetUtility.OpenAssetIfUsingVCIntegration(this);
         }
 

@@ -48,7 +48,11 @@ void Start() {
 ```
 public IEnumerator Start() {
     AsyncOperationHandle<Texture2D> handle = Addressables.LoadAssetAsync<Texture2D>("mytexture");
-    yield return handle;
+	
+	//if the handle is done, the yield return will still wait a frame, but we can skip that with an IsDone check
+	if(!handle.IsDone)
+		yield return handle;
+		
     if (handle.Status == AsyncOperationStatus.Succeeded) {
         Texture2D texture = handle.Result;
         // The texture is ready for use.

@@ -9,9 +9,17 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 {
     class GroupOperation : AsyncOperationBase<IList<AsyncOperationHandle>>, ICachable
     {
+        [Flags]
+        public enum GroupOperationSettings
+        {
+            None = 0,
+            ReleaseDependenciesOnFailure = 1,
+            AllowFailedDependencies = 2
+        }
+        
         Action<AsyncOperationHandle> m_InternalOnComplete;
         int m_LoadedCount;
-        bool m_ReleaseDependenciesOnFailure = true;
+        GroupOperationSettings m_Settings;
         string debugName = null;
         private const int k_MaxDisplayedLocationLength = 45;
 
@@ -135,16 +143,19 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             {
                 bool success = true;
                 string errorMsg = string.Empty;
-                for (int i = 0; i < Result.Count; i++)
+                if (!m_Settings.HasFlag(GroupOperationSettings.AllowFailedDependencies))
                 {
-                    if (Result[i].Status != AsyncOperationStatus.Succeeded)
+                    for (int i = 0; i < Result.Count; i++)
                     {
-                        success = false;
-                        errorMsg = Result[i].OperationException != null ? Result[i].OperationException.Message : string.Empty;
-                        break;
+                        if (Result[i].Status != AsyncOperationStatus.Succeeded)
+                        {
+                            success = false;
+                            errorMsg = Result[i].OperationException != null ? Result[i].OperationException.Message : string.Empty;
+                            break;
+                        }
                     }
                 }
-                Complete(Result, success, errorMsg, m_ReleaseDependenciesOnFailure);
+                Complete(Result, success, errorMsg, m_Settings.HasFlag(GroupOperationSettings.ReleaseDependenciesOnFailure));
             }
         }
 
@@ -172,10 +183,18 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         }
 
 
-        public void Init(List<AsyncOperationHandle> operations, bool releaseDependenciesOnFailure = true)
+        public void Init(List<AsyncOperationHandle> operations, bool releaseDependenciesOnFailure = true, bool allowFailedDependencies = false)
         {
             Result = new List<AsyncOperationHandle>(operations);
-            m_ReleaseDependenciesOnFailure = releaseDependenciesOnFailure;
+            m_Settings = releaseDependenciesOnFailure ? GroupOperationSettings.ReleaseDependenciesOnFailure : GroupOperationSettings.None;
+            if( allowFailedDependencies )
+                m_Settings |= GroupOperationSettings.AllowFailedDependencies;
+        }
+        
+        public void Init(List<AsyncOperationHandle> operations, GroupOperationSettings settings)
+        {
+            Result = new List<AsyncOperationHandle>(operations);
+            m_Settings = settings;
         }
 
         void OnOperationCompleted(AsyncOperationHandle op)

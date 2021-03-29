@@ -54,9 +54,12 @@ namespace UnityEditor.AddressableAssets.GUI
             else
             {
                 var resourceTargets = targetInfos.Where(ti => AddressableAssetUtility.IsInResources(ti.Path));
-                var resourcePaths = resourceTargets.Select(t => t.Path).ToList();
-                var resourceGuids = resourceTargets.Select(t => t.Guid).ToList();
-                AddressableAssetUtility.SafeMoveResourcesToGroup(aaSettings, aaSettings.DefaultGroup, resourcePaths, resourceGuids);
+                if (resourceTargets.Any())
+                {
+                    var resourcePaths = resourceTargets.Select(t => t.Path).ToList();
+                    var resourceGuids = resourceTargets.Select(t => t.Guid).ToList();
+                    AddressableAssetUtility.SafeMoveResourcesToGroup(aaSettings, aaSettings.DefaultGroup, resourcePaths, resourceGuids);
+                }
 
                 var entriesAdded = new List<AddressableAssetEntry>();
                 var modifiedGroups = new HashSet<AddressableAssetGroup>();

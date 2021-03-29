@@ -484,9 +484,10 @@ namespace UnityEditor.AddressableAssets.GUI
                 var objName = subAsset == null ? "<none>" : subAsset.name;
                 if (objName.EndsWith("(Clone)"))
                     objName = objName.Replace("(Clone)", "");
-                objNames[i] = objName;
+                objNames[i] = subAsset == null ? objName : $"{objName}:{subAsset.GetType()}";
 
-                if (m_AssetRefObject.SubObjectName == objName)
+                if (subAsset == null || m_AssetRefObject.SubObjectName == objName && 
+                    subAsset.GetType().AssemblyQualifiedName == m_AssetRefObject.SubOjbectType.AssemblyQualifiedName)
                     selIndex = i;
             }
 
@@ -547,7 +548,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             bool valueChanged = false;
             string spriteName = null;
-            if (subAsset != null)
+            if (subAsset != null && subAsset.GetType() == typeof(Sprite))
             {
                 spriteName = subAsset.name;
                 if (spriteName.EndsWith("(Clone)"))
