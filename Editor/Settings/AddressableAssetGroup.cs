@@ -492,9 +492,36 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <returns></returns>
         public virtual AddressableAssetEntry GetAssetEntry(string guid)
         {
+            return GetAssetEntry(guid, false);
+        }
+
+        /// <summary>
+        /// Get an entry via the asset guid.
+        /// </summary>
+        /// <param name="guid">The asset guid.</param>
+        /// <param name="includeImplicit">Whether or not to include implicit asset entries in the search.</param>
+        /// <returns></returns>
+        internal virtual AddressableAssetEntry GetAssetEntry(string guid, bool includeImplicit)
+        {
             AddressableAssetEntry entry;
-            m_EntryMap.TryGetValue(guid, out entry);
-            return entry;
+            if (m_EntryMap.TryGetValue(guid, out entry))
+            {
+                return entry;
+            }
+
+            if (includeImplicit)
+            {
+                foreach (var e in entries)
+                {
+                    var implicitEntries = new List<AddressableAssetEntry>();
+                    e.GatherImplicitEntries(implicitEntries);
+                    var impEntry = implicitEntries.FirstOrDefault(ie => ie.guid == guid);
+                    if (impEntry != null)
+                        return impEntry;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>

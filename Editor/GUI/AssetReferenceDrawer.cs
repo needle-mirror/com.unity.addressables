@@ -48,7 +48,15 @@ namespace UnityEditor.AddressableAssets.GUI
                 && m_Restrictions != null
                 && m_Restrictions.All(r => r.ValidateAsset(obj));
         }
-        
+
+        internal bool ValidateAsset(IReferenceEntryData entryData)
+        {
+            return m_AssetRefObject != null
+                && m_AssetRefObject.ValidateAsset(entryData?.AssetPath)
+                && m_Restrictions != null
+                && m_Restrictions.All(r => r.ValidateAsset(entryData));
+        }
+
         /// <summary>
         /// Validates that the referenced asset allowable for this asset reference.
         /// </summary>
@@ -104,7 +112,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         break;
                     }
                 }
-                
+
                 if (subObject == null && AssetDatabase.IsSubAsset(target))
                 {
                     subObject = target;
@@ -315,16 +323,16 @@ namespace UnityEditor.AddressableAssets.GUI
             var subAssets = new List<Object>();
             subAssets.Add(null);
             var assetPath = AssetDatabase.GUIDToAssetPath(m_AssetRefObject.AssetGUID);
-            
+
             var repr = AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
             if (repr.Any())
             {
                 var subtype = m_AssetRefObject.SubOjbectType ?? GetGenericTypeFromAssetReference();
-                if (subtype != null) 
+                if (subtype != null)
                     repr = repr.Where(o => subtype.IsInstanceOfType(o)).OrderBy(s => s.name).ToArray();
             }
             subAssets.AddRange(repr);
-            
+
             var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
             if (mainType == typeof(SpriteAtlas))
             {
@@ -453,7 +461,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                     else if (DragAndDrop.objectReferences != null && DragAndDrop.objectReferences.Length == 1 && AssetDatabase.IsSubAsset(DragAndDrop.objectReferences[0]))
                     {
-                        if(!ValidateAsset(DragAndDrop.objectReferences[0]))
+                        if (!ValidateAsset(DragAndDrop.objectReferences[0]))
                             rejectedDrag = true;
                     }
                     else
@@ -579,12 +587,12 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var subAssetNames = subAssets.Select(sa => sa == null ? "<none>" : $"{FormatName(sa.name)}:{sa.GetType()}").ToList();
             objNames = subAssetNames.ToArray();
-            
+
             selIndex = subAssetNames.IndexOf($"{m_AssetRefObject.SubObjectName}:{m_AssetRefObject.SubOjbectType}");
             if (selIndex == -1)
                 selIndex = 0;
         }
-        
+
         SubassetPopup CreateSubAssetPopup(SerializedProperty property, List<Object> subAssets)
         {
             GetSelectedSubassetIndex(subAssets, out int selIndex, out string[] objNames);
@@ -708,7 +716,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 formatted = formatted.Replace("(Clone)", "");
             return formatted;
         }
-        
+
         internal void GatherFilters(SerializedProperty property)
         {
             if (m_Restrictions != null)
@@ -1004,7 +1012,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     foreach (var entry in allAssets)
                     {
                         if (!entry.IsInResources &&
-                            m_Drawer.ValidateAsset(entry.AssetPath))
+                            m_Drawer.ValidateAsset(entry))
                         {
                             var child = new AssetRefTreeViewItem(entry.AssetPath.GetHashCode(), 0, entry.address, entry.AssetPath);
                             root.AddChild(child);
@@ -1210,6 +1218,11 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             return data.ValidateAsset(obj);
         }
+
+        internal virtual bool ValidateAsset(IReferenceEntryData entryData)
+        {
+            return data.ValidateAsset(entryData?.AssetPath);
+        }
     }
     /// <summary>
     /// Surrogate to AssetReferenceUILabelRestriction
@@ -1242,7 +1255,12 @@ namespace UnityEditor.AddressableAssets.GUI
             if (AddressableAssetSettingsDefaultObject.Settings == null)
                 return false;
             var guid = AssetDatabase.AssetPathToGUID(path);
-            var entry = AddressableAssetSettingsDefaultObject.Settings.FindAssetEntry(guid);
+            var entry = AddressableAssetSettingsDefaultObject.Settings.FindAssetEntry(guid, true);
+            return ValidateAsset(entry);
+        }
+
+        internal override bool ValidateAsset(IReferenceEntryData entry)
+        {
             if (entry != null)
             {
                 foreach (var label in data.m_AllowedLabels)

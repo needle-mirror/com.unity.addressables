@@ -4,6 +4,16 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.17.17] - 2021-04-06
+- Add AssetPostprocessor for AddressableSettings after AssetDatabase is Initialised, if not yet initialised on initial project launch.
+- Removed serialisation of m_MainAsset and m_TargetAsset from Group entries.
+- Fixed a warning "CacheInitialization.CacheInitOp.m_UpdateRequired'' is assigned but its value is never used" when building for platforms that don't have caching enabled
+- A message is printed on successful Addressable build
+- Properly save profile variables when switching profiles
+- Fixed bug where multi-selected Addressable Groups weren't all getting set dirty on an edit.
+- Fixed bug where Fast Mode wasn't respecting Log Runtime Exceptions setting
+- Implicit assets are now taken into account when using applying a label restriction on an asset reference
+
 ## [1.17.15] - 2021-03-23
 - Fixed FileNotFoundException when using bundle naming mode "Filename" with Unity Cloud Build.
 - Fixed a bug where LoadAssetsAsync handle Completed callback is invoked before all individual Asset callbacks.

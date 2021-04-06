@@ -62,6 +62,10 @@ namespace UnityEditor.AddressableAssets.Settings
                 m_Diagnostics = null;
                 m_addressables.ResourceManager.ClearDiagnosticCallbacks();
             }
+
+            if (!m_settings.buildSettings.LogResourceManagerExceptions)
+                ResourceManager.ExceptionHandler = null;
+
             //NOTE: for some reason, the data builders can get lost from the settings asset during a domain reload - this only happens in tests and custom instance and scene providers are not needed
             m_addressables.InstanceProvider = db == null ? new InstanceProvider() : ObjectInitializationData.CreateSerializedInitializationData(db.instanceProviderType.Value).CreateInstance<IInstanceProvider>();
             m_addressables.SceneProvider = db == null ? new SceneProvider() : ObjectInitializationData.CreateSerializedInitializationData(db.sceneProviderType.Value).CreateInstance<ISceneProvider>();

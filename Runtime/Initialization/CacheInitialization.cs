@@ -70,7 +70,10 @@ namespace UnityEngine.AddressableAssets.Initialization
         class CacheInitOp : AsyncOperationBase<bool>, IUpdateReceiver
         {
             private Func<bool> m_Callback;
+
+#if ENABLE_CACHING
             private bool m_UpdateRequired = true;
+#endif //ENABLE_CACHING
 
             public void Init(Func<bool> callback)
             {

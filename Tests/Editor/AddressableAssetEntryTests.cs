@@ -157,14 +157,14 @@ namespace UnityEditor.AddressableAssets.Tests
 
             AddressableAssetEntry entry = new AddressableAssetEntry(guid, "testaddress", Settings.DefaultGroup, false);
             entry.m_cachedMainAssetType = typeof(DefaultAsset);
-            
+
             //Test
             entry.CreateCatalogEntriesInternal(new List<ContentCatalogDataEntry>(), false, "fakeProvider", new List<object>(), null, new Dictionary<GUID, AssetLoadInfo>()
-                {
-                    { new GUID(guid), new AssetLoadInfo() {includedObjects = new List<ObjectIdentifier>()} }
-                },
+            {
+                { new GUID(guid), new AssetLoadInfo() {includedObjects = new List<ObjectIdentifier>()} }
+            },
                 new HashSet<Type>(), true, false, false, new HashSet<string>());
-            
+
             //Assert
             Assert.AreEqual(typeof(GameObject), entry.m_cachedMainAssetType);
 
@@ -605,7 +605,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.RemoveAssetEntry(guid, false);
             Settings.RemoveAssetEntry(collectionGuid, false);
         }
-        
+
         [Test]
         public void GatherResourcesEntries_GathersAllResourceEntries_IncludingLowercase()
         {
@@ -613,7 +613,7 @@ namespace UnityEditor.AddressableAssets.Tests
             string testAssetFolder = GetAssetPath("TestFolder");
             var subFolderPath = testAssetFolder + "/resources";
             Directory.CreateDirectory(subFolderPath);
-            if(!Directory.Exists(resourcePath))
+            if (!Directory.Exists(resourcePath))
                 Directory.CreateDirectory(resourcePath);
 
             var r1GUID = CreateAsset(resourcePath + "/testResourceupper.prefab", "testResourceupper");
@@ -635,6 +635,76 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.RemoveAssetEntry(r1GUID);
             Settings.RemoveAssetEntry(r2GUID);
             Settings.RemoveAssetEntry(AddressableAssetEntry.ResourcesName);
+        }
+
+        [Test]
+        public void GatherImplicitAssets_ReturnsEntriesInAddressableFolders()
+        {
+            var folderPath = GetAssetPath("aaFolder");
+            Directory.CreateDirectory(folderPath);
+            AssetDatabase.Refresh();
+            var folderGuid = AssetDatabase.AssetPathToGUID(folderPath);
+            Assert.IsFalse(string.IsNullOrEmpty(folderGuid));
+
+            var asset1GUID = CreateAsset(Path.Combine(folderPath, "asset1.prefab").Replace('\\', '/'));
+            var asset2GUID = CreateAsset(Path.Combine(folderPath, "asset2.prefab").Replace('\\', '/'));
+            Assert.IsNotNull(m_testGroup);
+            var folderEntry = Settings.CreateOrMoveEntry(folderGuid, m_testGroup, false);
+            Assert.IsNotNull(folderEntry);
+
+            var implicitEntries = new List<AddressableAssetEntry>();
+            folderEntry.GatherImplicitEntries(implicitEntries);
+
+            // Assert
+            Assert.AreEqual(2, implicitEntries.Count);
+            Assert.IsTrue(implicitEntries.Any(e => e.guid == asset1GUID));
+            Assert.IsTrue(implicitEntries.Any(e => e.guid == asset2GUID));
+
+            // Cleanup
+            Directory.Delete(folderPath, true);
+            Settings.RemoveAssetEntry(folderEntry, false);
+        }
+
+        [Test]
+        public void GatherImplicitAssets_ReturnsEntriesInEntryCollection()
+        {
+            var testFolderPath = GetAssetPath("ImplicitAssetTests");
+            Directory.CreateDirectory(testFolderPath);
+            AssetDatabase.Refresh();
+            var asset1GUID = CreateAsset(Path.Combine(testFolderPath, "asset1.prefab").Replace('\\', '/'));
+            var asset2GUID = CreateAsset(Path.Combine(testFolderPath, "asset2.prefab").Replace('\\', '/'));
+
+            Assert.IsNotNull(m_testGroup);
+            var entry1 = Settings.CreateOrMoveEntry(asset1GUID, m_testGroup, false);
+            var entry2 = Settings.CreateOrMoveEntry(asset2GUID, m_testGroup, false);
+            Assert.IsNotNull(entry1);
+            Assert.IsNotNull(entry2);
+
+            // creating entry collection
+            var collectionPath = Path.Combine(testFolderPath, "entryCollection.asset").Replace('\\', '/');
+            var col = ScriptableObject.CreateInstance<AddressableAssetEntryCollection>();
+            col.Entries.Add(entry1);
+            col.Entries.Add(entry2);
+            Settings.RemoveAssetEntry(entry1, false);
+            Settings.RemoveAssetEntry(entry2, false);
+            AssetDatabase.CreateAsset(col, collectionPath);
+            AssetDatabase.Refresh();
+
+            var guid = AssetDatabase.AssetPathToGUID(collectionPath);
+            var collectionEntry = Settings.CreateOrMoveEntry(guid, m_testGroup);
+            Assert.IsNotNull(collectionEntry);
+
+            var implicitEntries = new List<AddressableAssetEntry>();
+            collectionEntry.GatherImplicitEntries(implicitEntries);
+
+            // Assert
+            Assert.AreEqual(2, implicitEntries.Count);
+            Assert.IsTrue(implicitEntries.Any(e => e.guid == asset1GUID));
+            Assert.IsTrue(implicitEntries.Any(e => e.guid == asset2GUID));
+
+            // Cleanup
+            Directory.Delete(testFolderPath, true);
+            Settings.RemoveAssetEntry(collectionEntry, false);
         }
 
         [Test]
@@ -735,17 +805,6 @@ namespace UnityEditor.AddressableAssets.Tests
             SpriteAtlasUtility.PackAtlases(new SpriteAtlas[] { spriteAtlas }, EditorUserBuildSettings.activeBuildTarget, false);
 
             return spriteAtlasPath;
-        }
-
-        string CreateAsset(string assetPath, string objectName)
-        {
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = objectName;
-            //this is to ensure that bundles are different for every run.
-            go.transform.localPosition = UnityEngine.Random.onUnitSphere;
-            PrefabUtility.SaveAsPrefabAsset(go, assetPath);
-            UnityEngine.Object.DestroyImmediate(go, false);
-            return AssetDatabase.AssetPathToGUID(assetPath);
         }
     }
 }

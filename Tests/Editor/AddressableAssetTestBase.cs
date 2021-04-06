@@ -118,5 +118,18 @@ namespace UnityEditor.AddressableAssets.Tests
         protected virtual void OnCleanup()
         {
         }
+
+        protected string CreateAsset(string assetPath, string objectName = null)
+        {
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            if (string.IsNullOrEmpty(objectName))
+                objectName = Path.GetFileNameWithoutExtension(assetPath);
+            go.name = objectName;
+            //this is to ensure that bundles are different for every run.
+            go.transform.localPosition = UnityEngine.Random.onUnitSphere;
+            PrefabUtility.SaveAsPrefabAsset(go, assetPath);
+            UnityEngine.Object.DestroyImmediate(go, false);
+            return AssetDatabase.AssetPathToGUID(assetPath);
+        }
     }
 }

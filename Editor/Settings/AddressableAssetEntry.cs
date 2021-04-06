@@ -22,6 +22,7 @@ namespace UnityEditor.AddressableAssets.Settings
         string AssetPath { get; }
         string address { get; set; }
         bool IsInResources { get; set; }
+        HashSet<string> labels { get; }
     }
 
     internal struct ImplicitAssetEntry : IReferenceEntryData
@@ -29,6 +30,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public string AssetPath { get; set; }
         public string address { get; set; }
         public bool IsInResources { get; set; }
+        public HashSet<string> labels { get; set;}
     }
 
     /// <summary>
@@ -335,7 +337,6 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        [SerializeField]
         private UnityEngine.Object m_MainAsset;
         /// <summary>
         /// The main asset object for this entry.
@@ -361,9 +362,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        [SerializeField]
         private UnityEngine.Object m_TargetAsset;
-
         /// <summary>
         /// The asset object for this entry.
         /// </summary>
@@ -592,9 +591,9 @@ namespace UnityEditor.AddressableAssets.Settings
                     {
                         entry.IsInResources = e.IsInResources;
                         foreach (var l in e.labels)
-                            entry.SetLabel(l, true, false);
+                            entry.SetLabel(l, true, false, false);
                         foreach (var l in m_Labels)
-                            entry.SetLabel(l, true, false);
+                            entry.SetLabel(l, true, false, false);
                         if (entryFilter == null || entryFilter(entry))
                             assets.Add(entry);
                     }
@@ -770,7 +769,8 @@ namespace UnityEditor.AddressableAssets.Settings
                     {
                         address = relativeAddress,
                         AssetPath = fi,
-                        IsInResources = IsInResources
+                        IsInResources = IsInResources,
+                        labels = new HashSet<string>(m_Labels)
                     };
 
                     refEntries.Add(reference);
@@ -782,12 +782,36 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (col != null)
                 {
                     foreach (var e in col.Entries)
-                        refEntries.Add(e);
+                    {
+                        refEntries.Add(new ImplicitAssetEntry()
+                        {
+                            address = e.address,
+                            AssetPath = e.AssetPath,
+                            IsInResources = e.IsInResources,
+                            labels = new HashSet<string>(e.labels.Union(this.labels))
+                        });
+                    }
                 }
             }
             else
             {
                 refEntries.Add(this);
+            }
+        }
+
+        internal void GatherImplicitEntries(List<AddressableAssetEntry> implicitEntries)
+        {
+            var path = AssetPath;
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            if (AssetDatabase.IsValidFolder(path))
+            {
+                GatherFolderEntries(implicitEntries, true, null);
+            }
+            else if (MainAssetType == typeof(AddressableAssetEntryCollection))
+            {
+                GatherAssetEntryCollectionEntries(implicitEntries, null);
             }
         }
 

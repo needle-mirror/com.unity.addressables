@@ -856,6 +856,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 if (queuedChanges == null)
                     queuedChanges = new List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>>();
                 queuedChanges.Add(a);
+                EditorUtility.SetDirty(this);
             }
             EditorGUI.showMixedValue = false;
         }

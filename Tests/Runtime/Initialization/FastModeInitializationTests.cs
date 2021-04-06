@@ -1,5 +1,6 @@
 using System.IO;
 using NUnit.Framework;
+using UnityEngine.ResourceManagement;
 #if UNITY_EDITOR
 using UnityEditor.AddressableAssets.Settings;
 #endif
@@ -52,6 +53,22 @@ namespace AddressableTests.FastModeInitTests
 
             //Cleanup
             ProjectConfigData.PostProfilerEvents = originalValue;
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void FastModeInitialization_SetsExceptionHandlerToNull_WhenLogRuntimeExceptionsIsOff(bool logRuntimeExceptions)
+        {
+            //Setup
+            var settings = AddressableAssetSettings.Create(Path.Combine(GetGeneratedAssetsPath(), "Settings"), "AddressableAssetSettings.Tests", false, true);
+            settings.buildSettings.LogResourceManagerExceptions = logRuntimeExceptions;
+
+            //Test
+            FastModeInitializationOperation fmInit = new FastModeInitializationOperation(m_Addressables, settings);
+            fmInit.InvokeExecute();
+
+            //Assert
+            Assert.AreEqual(logRuntimeExceptions, ResourceManager.ExceptionHandler != null);
         }
     }
 #endif

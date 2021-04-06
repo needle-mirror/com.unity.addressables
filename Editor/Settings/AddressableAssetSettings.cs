@@ -39,6 +39,15 @@ namespace UnityEditor.AddressableAssets.Settings
             //if the Library folder has been deleted, this will be null and it will have to be set on the first access of the settings object
             if (AddressableAssetSettingsDefaultObject.Settings != null)
                 AddressablesAssetPostProcessor.OnPostProcess = AddressableAssetSettingsDefaultObject.Settings.OnPostprocessAllAssets;
+            else
+                EditorApplication.update += TryAddAssetPostprocessorOnNextUpdate;
+        }
+
+        private static void TryAddAssetPostprocessorOnNextUpdate()
+        {
+            if (AddressableAssetSettingsDefaultObject.Settings != null)
+                AddressablesAssetPostProcessor.OnPostProcess = AddressableAssetSettingsDefaultObject.Settings.OnPostprocessAllAssets;
+            EditorApplication.update -= TryAddAssetPostprocessorOnNextUpdate;
         }
 
         /// <summary>
@@ -463,17 +472,17 @@ namespace UnityEditor.AddressableAssets.Settings
         [SerializeField] private string m_ContentStateBuildPath = "";
         internal string ContentStateBuildPath
         {
-	        get { return m_ContentStateBuildPath; }
-	        set { m_ContentStateBuildPath = value;  }
+            get { return m_ContentStateBuildPath; }
+            set { m_ContentStateBuildPath = value;  }
         }
 
         internal string GetContentStateBuildPath()
         {
-	        string p = ConfigFolder;
-	        if (!string.IsNullOrEmpty(m_ContentStateBuildPath)) 
-		        p = m_ContentStateBuildPath;
+            string p = ConfigFolder;
+            if (!string.IsNullOrEmpty(m_ContentStateBuildPath))
+                p = m_ContentStateBuildPath;
             p = Path.Combine(p, PlatformMappingService.GetPlatformPathSubFolder());
-	        return p;
+            return p;
         }
 
         /// <summary>
@@ -1073,7 +1082,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="postEvent">Send modifcation event.</param>
         /// <returns>True if the entry was found and removed.</returns>
         public bool RemoveAssetEntry(string guid, bool postEvent = true)
-	        => RemoveAssetEntry(FindAssetEntry(guid), postEvent);
+            => RemoveAssetEntry(FindAssetEntry(guid), postEvent);
 
         /// <summary>
         /// Remove an asset entry.
@@ -1083,11 +1092,11 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <returns>True if the entry was found and removed.</returns>
         internal bool RemoveAssetEntry(AddressableAssetEntry entry, bool postEvent = true)
         {
-	        if (entry == null)
-		        return false;
-	        if (entry.parentGroup != null)
-		        entry.parentGroup.RemoveAssetEntry(entry, postEvent);
-	        return true;
+            if (entry == null)
+                return false;
+            if (entry.parentGroup != null)
+                entry.parentGroup.RemoveAssetEntry(entry, postEvent);
+            return true;
         }
 
         void OnEnable()
@@ -1435,11 +1444,22 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <returns>The found entry or null.</returns>
         public AddressableAssetEntry FindAssetEntry(string guid)
         {
+            return FindAssetEntry(guid, false);
+        }
+
+        /// <summary>
+        /// Find and asset entry by guid.
+        /// </summary>
+        /// <param name="guid">The asset guid.</param>
+        /// <param name="includeImplicit">Whether or not to include implicit asset entries in the search.</param>
+        /// <returns>The found entry or null.</returns>
+        internal AddressableAssetEntry FindAssetEntry(string guid, bool includeImplicit)
+        {
             foreach (var g in groups)
             {
                 if (g != null)
                 {
-                    var e = g.GetAssetEntry(guid);
+                    var e = g.GetAssetEntry(guid, includeImplicit);
                     if (e != null)
                         return e;
                 }
@@ -1568,7 +1588,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             targetParent.AddAssetEntry(entry, postEvent);
         }
-        
+
         /// <summary>
         /// Create a new entry, or if one exists in a different group, move it into the new group.
         /// </summary>
@@ -1589,12 +1609,11 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             else //create entry
             {
-	            entry = CreateAndAddEntryToGroup(guid, targetParent, readOnly, postEvent);
+                entry = CreateAndAddEntryToGroup(guid, targetParent, readOnly, postEvent);
             }
 
             return entry;
         }
-
 
         /// <summary>
         /// Create a new entries for each asset, or if one exists in a different group, move it into the targetParent group.
@@ -1608,47 +1627,47 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <exception cref="ArgumentException"></exception>
         internal void CreateOrMoveEntries(IEnumerable guids, AddressableAssetGroup targetParent, List<AddressableAssetEntry> createdEntries, List<AddressableAssetEntry> movedEntries, bool readOnly = false, bool postEvent = true)
         {
-	        if (targetParent == null)
-		        throw new ArgumentException("targetParent must not be null");
-	        
-	        if (createdEntries == null)
-		        createdEntries = new List<AddressableAssetEntry>();
-	        if (movedEntries == null)
-		        movedEntries = new List<AddressableAssetEntry>();
+            if (targetParent == null)
+                throw new ArgumentException("targetParent must not be null");
 
-	        foreach (string guid in guids)
-	        {
-		        AddressableAssetEntry entry = FindAssetEntry(guid);
-		        if (entry != null)
-		        {
-			        MoveEntry(entry, targetParent, readOnly, postEvent);
-			        movedEntries.Add(entry);
-		        }
-		        else
-		        {
-			        createdEntries.Add(CreateAndAddEntryToGroup(guid, targetParent, readOnly, postEvent));
-		        }
-	        }
+            if (createdEntries == null)
+                createdEntries = new List<AddressableAssetEntry>();
+            if (movedEntries == null)
+                movedEntries = new List<AddressableAssetEntry>();
+
+            foreach (string guid in guids)
+            {
+                AddressableAssetEntry entry = FindAssetEntry(guid);
+                if (entry != null)
+                {
+                    MoveEntry(entry, targetParent, readOnly, postEvent);
+                    movedEntries.Add(entry);
+                }
+                else
+                {
+                    createdEntries.Add(CreateAndAddEntryToGroup(guid, targetParent, readOnly, postEvent));
+                }
+            }
         }
 
         private AddressableAssetEntry CreateAndAddEntryToGroup(string guid, AddressableAssetGroup targetParent, bool readOnly = false, bool postEvent = true)
         {
-	        AddressableAssetEntry entry = null;
-	        var path = AssetDatabase.GUIDToAssetPath(guid);
+            AddressableAssetEntry entry = null;
+            var path = AssetDatabase.GUIDToAssetPath(guid);
 
-	        if (AddressableAssetUtility.IsPathValidForEntry(path))
-	        {
-		        entry = CreateEntry(guid, path, targetParent, readOnly, postEvent);
-	        }
-	        else
-	        {
-		        if (AssetDatabase.GetMainAssetTypeAtPath(path) != null && BuildUtility.IsEditorAssembly(AssetDatabase.GetMainAssetTypeAtPath(path).Assembly))
-			        return null;
-		        entry = CreateEntry(guid, guid, targetParent, true, postEvent);
-	        }
+            if (AddressableAssetUtility.IsPathValidForEntry(path))
+            {
+                entry = CreateEntry(guid, path, targetParent, readOnly, postEvent);
+            }
+            else
+            {
+                if (AssetDatabase.GetMainAssetTypeAtPath(path) != null && BuildUtility.IsEditorAssembly(AssetDatabase.GetMainAssetTypeAtPath(path).Assembly))
+                    return null;
+                entry = CreateEntry(guid, guid, targetParent, true, postEvent);
+            }
 
-	        targetParent.AddAssetEntry(entry, postEvent);
-	        return entry;
+            targetParent.AddAssetEntry(entry, postEvent);
+            return entry;
         }
 
         internal AddressableAssetEntry CreateSubEntryIfUnique(string guid, string address, AddressableAssetEntry parentEntry)
@@ -1970,7 +1989,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             BuildPlayerContent(out AddressablesPlayerBuildResult rst);
         }
-        
+
         /// <summary>
         /// Runs the active player data build script to create runtime data.
         /// See the [BuildPlayerContent](xref:addressables-api-build-player-content) documentation for more details.
@@ -2021,7 +2040,12 @@ namespace UnityEditor.AddressableAssets.Settings
             var buildContext = new AddressablesDataBuilderInput(this);
             var result = ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(buildContext);
             if (!string.IsNullOrEmpty(result.Error))
+            {
                 Debug.LogError(result.Error);
+                Debug.LogError($"Addressable content build failure (duration : {TimeSpan.FromSeconds(result.Duration).ToString("g")})");
+            }
+            else
+                Debug.Log($"Addressable content successfully built (duration : {TimeSpan.FromSeconds(result.Duration).ToString("g")})");
             AddressableAnalytics.Report(this);
             if (BuildScript.buildCompleted != null)
                 BuildScript.buildCompleted(result);
@@ -2144,6 +2168,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             }
         }
+
         /// <summary>
         /// The ids of the registered commands.
         /// </summary>
@@ -2221,6 +2246,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             }
         }
+
         /// <summary>
         /// The ids of the registered commands.
         /// </summary>

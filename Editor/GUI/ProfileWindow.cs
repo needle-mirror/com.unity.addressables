@@ -203,6 +203,10 @@ namespace UnityEditor.AddressableAssets.GUI
             AddressableAssetProfileSettings.BuildProfile selectedProfile = GetSelectedProfile();
 
             if (selectedProfile == null) return;
+            if (evt.isMouse || evt.isKey)
+            {
+                m_ProfileTreeView.lastClickedProfile = ProfileIndex;
+            }
 
             //ensures amount of visible text is not affected by label width
             float fieldWidth = variablesPaneRect.width - (2 * k_ItemRectPadding) + m_LabelWidth + m_FieldBufferWidth;
@@ -234,10 +238,10 @@ namespace UnityEditor.AddressableAssets.GUI
                 Rect fieldRect = new Rect(fieldX, fieldY, fieldWidth, fieldHeight);
                 Rect labelRect = new Rect(fieldX, fieldY, m_LabelWidth, fieldHeight);
 
-                string newName = EditorGUI.DelayedTextField(fieldRect, curVariable.ProfileName, selectedProfile.values[i].value);
+                string newName = EditorGUI.TextField(fieldRect, curVariable.ProfileName, selectedProfile.values[i].value);
                 //Ensure changes get serialized
-                if (selectedProfile.values[i].value != newName)
-                {
+                if (selectedProfile.values[i].value != newName && ProfileIndex == m_ProfileTreeView.lastClickedProfile)
+                {                    
                     Undo.RecordObject(settings, "Variable value changed");
                     settings.profileSettings.SetValue(selectedProfile.id, settings.profileSettings.profileEntryNames[i].ProfileName, newName);
                     AddressableAssetUtility.OpenAssetIfUsingVCIntegration(settings);
