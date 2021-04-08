@@ -164,6 +164,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Set up
             var group = Settings.CreateGroup("OldTestGroup", false, false, false, null);
             var testSchema = group.AddSchema<CustomTestSchema>();
+            AssetDatabase.SaveAssets();
 
             string testSchemaFilename = ObjectToFilename(testSchema);
             Assert.IsTrue(testSchemaFilename.Contains("OldTestGroup"));

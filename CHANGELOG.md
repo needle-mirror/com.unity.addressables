@@ -4,6 +4,15 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.16.19] - 2021-04-08
+- Fixed an issue where the group property of the AddressableAssetGroupSchema was not persisted, and could get lost when objects were reloaded
+
+## [1.16.18] - 2021-03-23
+- Fixed compile warning in Unity 2020.2+
+
+## [1.16.17] - 2021-02-25
+- Updated group rename logic to support engine AssetDatabase fix. Change should be transparent to users.
+
 ## [1.16.16] - 2021-01-20
 - Updated dependency versions for testcase fix
 
