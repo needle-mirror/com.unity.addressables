@@ -27,7 +27,9 @@ Once a secondary catalog is downloaded, it is cached locally if a corresponding 
 
 If you need to update catalogs (either primary or secondary) during runtime. You must release the returned handle or use true for autoReleaseHandle when using LoadContentCatalogAsync. Refer to the [UpdateCatalogs](UpdateCatalogs.md) documentation.
 
-The `providerSuffix` parameter can be used to ensure unique IDs for the resource providers loaded from a given catalog.  The `string` passed in will be appended to all provider IDs.  
+The `providerSuffix` parameter can be used to ensure unique IDs for the resource providers loaded from a given catalog.  The `string` passed in will be appended to all provider IDs.
+
+To set a timeout for Remote catalog downloads. Set the AddressableAssetSettings value "Catalog Download Timeout" for the number of seconds before timing out with an error. 
 
 #### Code Sample
 ```

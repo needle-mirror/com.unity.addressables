@@ -25,6 +25,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             UseCache = true;
             ContiguousBundles = aaSettings.ContiguousBundles;
+#if NONRECURSIVE_DEPENDENCY_DATA
+            NonRecursiveDependencies = aaSettings.NonRecursiveBuilding;
+#endif
             m_settings = aaSettings;
             m_bundleToAssetGroup = bundleToAssetGroup;
 

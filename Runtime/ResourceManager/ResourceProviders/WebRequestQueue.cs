@@ -43,8 +43,6 @@ namespace UnityEngine.ResourceManagement
             s_MaxRequest = maxRequests;
         }
 
-        public static bool ShouldQueueNextRequest => s_ActiveRequests.Count >= s_MaxRequest;
-
         public static WebRequestQueueOperation QueueRequest(UnityWebRequest request)
         {
             WebRequestQueueOperation queueOperation = new WebRequestQueueOperation(request);

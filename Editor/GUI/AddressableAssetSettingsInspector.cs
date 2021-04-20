@@ -94,6 +94,13 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Unique Bundle IDs", "If set, every content build (original or update) will result in asset bundles with more complex internal names.  This may result in more bundles being rebuilt, but safer mid-run updates.  See docs for more info.");
         GUIContent m_ContiguousBundles =
             new GUIContent("Contiguous Bundles", "If set, packs assets in bundles contiguously based on the ordering of the source asset which results in improved asset loading times. Disable this if you've built bundles with a version of Addressables older than 1.12.1 and you want to minimize bundle changes.");
+#if NONRECURSIVE_DEPENDENCY_DATA
+        GUIContent m_NonRecursiveBundleBuilding =
+            new GUIContent("Non-Recursive Dependency Calculation", "If set, Calculates and build asset bundles using Non-Recursive Dependency calculation methods. This approach helps reduce asset bundle rebuilds and runtime memory consumption.");
+#else
+        GUIContent m_NonRecursiveBundleBuilding = 
+            new GUIContent("Non-Recursive Dependency Calculation", "If set, Calculates and build asset bundles using Non-Recursive Dependency calculation methods. This approach helps reduce asset bundle rebuilds and runtime memory consumption.\n*Requires Unity 2020.2.1 or above");
+#endif
         GUIContent m_BuildRemoteCatalog =
             new GUIContent("Build Remote Catalog", "If set, this will create a copy of the content catalog for storage on a remote server.  This catalog can be overwritten later for content updates.");
         GUIContent m_BundleLocalCatalog =
@@ -106,6 +113,8 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Build Path", "The path for a remote content catalog.");
         GUIContent m_RemoteCatLoadPath =
             new GUIContent("Load Path", "The path to load a remote content catalog.");
+        GUIContent m_CatalogTimeout =
+            new GUIContent("Catalog Download Timeout", "The time until a catalog hash or json UnityWebRequest download will timeout in seconds. 0 for no timeout.");
         GUIContent m_CertificateHandlerType =
             new GUIContent("Custom certificate handler", "The class to use for custom certificate handling.  This type must inherit from UnityEngine.Networking.CertificateHandler.");
         GUIContent m_ProfileInUse =
@@ -117,11 +126,15 @@ namespace UnityEditor.AddressableAssets.GUI
         GUIContent m_IgnoreUnsupportedFilesInBuild =
             new GUIContent("Ignore Invalid/Unsupported Files in Build", "If enabled, files that cannot be built will be ignored.");
         GUIContent m_ContentStateFileBuildPath =
-	        new GUIContent("Content State Build Path", "The path for saving the addressables_content_state.bin file. If empty, this will be the settings config folder.");
+	        new GUIContent("Content State Build Path", "The path used for saving the addressables_content_state.bin file. If empty, this will be the addressable settings config folder in your project.");
         GUIContent m_ShaderBundleNaming =
             new GUIContent("Shader Bundle Naming Prefix", "This setting determines how the Unity built in shader bundle will be named during the build.  The recommended setting is Project Name.");
         GUIContent m_ShaderBundleCustomNaming =
             new GUIContent("Shader Bundle Custom Prefix", "Custom prefix for Unity built in shader bundle.");
+        GUIContent m_MonoBundleNaming =
+            new GUIContent("MonoScript Bundle Naming Prefix", "This setting determines how and if the MonoScript bundle will be named during the build.  The recommended setting is Project Name.");
+        GUIContent m_MonoBundleCustomNaming =
+            new GUIContent("MonoScript Bundle Custom Prefix", "Custom prefix for MonoScript bundle.");
 
         public override void OnInspectorGUI()
         {
@@ -199,6 +212,9 @@ namespace UnityEditor.AddressableAssets.GUI
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogBuildPath"), m_RemoteCatBuildPath);
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogLoadPath"), m_RemoteCatLoadPath);
                 }
+                var catalogTimeouts = EditorGUILayout.IntField(m_CatalogTimeout, m_AasTarget.CatalogRequestsTimeout);
+                if (catalogTimeouts != m_AasTarget.CatalogRequestsTimeout)
+                    m_QueuedChanges.Add(() => m_AasTarget.CatalogRequestsTimeout = catalogTimeouts);
             }
 
             GUILayout.Space(6);
@@ -216,6 +232,15 @@ namespace UnityEditor.AddressableAssets.GUI
                 bool contiguousBundles = EditorGUILayout.Toggle(m_ContiguousBundles, m_AasTarget.ContiguousBundles);
                 if (contiguousBundles != m_AasTarget.ContiguousBundles)
                     m_QueuedChanges.Add(() => m_AasTarget.ContiguousBundles = contiguousBundles);
+#if !NONRECURSIVE_DEPENDENCY_DATA
+                EditorGUI.BeginDisabledGroup(true);
+#endif
+                bool nonRecursiveBuilding = EditorGUILayout.Toggle(m_NonRecursiveBundleBuilding, m_AasTarget.NonRecursiveBuilding);
+                if (nonRecursiveBuilding != m_AasTarget.NonRecursiveBuilding)
+                    m_QueuedChanges.Add(() => m_AasTarget.NonRecursiveBuilding = nonRecursiveBuilding);
+#if !NONRECURSIVE_DEPENDENCY_DATA
+                EditorGUI.EndDisabledGroup();
+#endif
                 var maxWebReqs = EditorGUILayout.IntSlider(m_MaxConcurrentWebRequests, m_AasTarget.MaxConcurrentWebRequests, 1, 1024);
                 if (maxWebReqs != m_AasTarget.MaxConcurrentWebRequests)
                     m_QueuedChanges.Add(() => m_AasTarget.MaxConcurrentWebRequests = maxWebReqs);
@@ -229,16 +254,28 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (contentStateBuildPath != m_AasTarget.ContentStateBuildPath)
 	                m_QueuedChanges.Add(() => m_AasTarget.ContentStateBuildPath = contentStateBuildPath);
 
-                ShaderBundleNaming bundleNaming = (ShaderBundleNaming) EditorGUILayout.Popup(m_ShaderBundleNaming,
+                ShaderBundleNaming shaderBundleNaming = (ShaderBundleNaming) EditorGUILayout.Popup(m_ShaderBundleNaming,
                     (int) m_AasTarget.ShaderBundleNaming, new[] { "Project Name Hash (Legacy)", "Default Group GUID", "Custom" });
-                if(bundleNaming != m_AasTarget.ShaderBundleNaming)
-                    m_QueuedChanges.Add(() => m_AasTarget.ShaderBundleNaming = bundleNaming);
+                if(shaderBundleNaming != m_AasTarget.ShaderBundleNaming)
+                    m_QueuedChanges.Add(() => m_AasTarget.ShaderBundleNaming = shaderBundleNaming);
 
-                if (bundleNaming == ShaderBundleNaming.Custom)
+                if (shaderBundleNaming == ShaderBundleNaming.Custom)
                 {
                     string customShaderBundleName = EditorGUILayout.TextField(m_ShaderBundleCustomNaming, m_AasTarget.ShaderBundleCustomNaming);
                     if (customShaderBundleName != m_AasTarget.ShaderBundleCustomNaming)
                         m_QueuedChanges.Add(() => m_AasTarget.ShaderBundleCustomNaming = customShaderBundleName);
+                }
+                
+                MonoScriptBundleNaming monoBundleNaming = (MonoScriptBundleNaming) EditorGUILayout.Popup(m_MonoBundleNaming,
+                    (int) m_AasTarget.MonoScriptBundleNaming, new[] { "Disabled", "Project Name", "Default Group GUID", "Custom" });
+                if(monoBundleNaming != m_AasTarget.MonoScriptBundleNaming)
+                    m_QueuedChanges.Add(() => m_AasTarget.MonoScriptBundleNaming = monoBundleNaming);
+
+                if (monoBundleNaming == MonoScriptBundleNaming.Custom)
+                {
+                    string customMonoScriptBundleName = EditorGUILayout.TextField(m_MonoBundleCustomNaming, m_AasTarget.MonoScriptBundleCustomNaming);
+                    if (customMonoScriptBundleName != m_AasTarget.MonoScriptBundleCustomNaming)
+                        m_QueuedChanges.Add(() => m_AasTarget.MonoScriptBundleCustomNaming = customMonoScriptBundleName);
                 }
             }
 

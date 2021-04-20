@@ -82,6 +82,14 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void GetDefaultGroupDoesNotThrowNullExceptionWhenGroupsNull()
+        {
+            Settings.groups.Insert(0,null);
+            Assert.IsNotNull(Settings.DefaultGroup);
+            Settings.groups.RemoveAt(0);
+        }
+        
+        [Test]
         public void HasDefaultInitialGroups()
         {
             Assert.IsNotNull(Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName));

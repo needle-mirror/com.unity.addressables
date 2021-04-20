@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Threading;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.HostingServices;
 using UnityEditor.AddressableAssets.Settings;
@@ -87,6 +88,60 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
                     for (var i = 0; i < data.Length; i++)
                         if (bytes[i] != data[i])
                             Assert.Fail("Data does not match {0} != {1}", bytes[i], data[i]);
+                }
+                catch (Exception e)
+                {
+                    Assert.Fail(e.Message);
+                }
+            }
+        }
+        
+        [Test]
+        public void HttpServiceCompletesWithUploadSpeedWhenExpected()
+        {
+            string subdir1 = "subdir";
+            string subdir2 = "subdir1";
+            string subdir3 = "subdir3";
+            
+            var fileNames = new[]
+            {
+                Path.GetRandomFileName(),
+                Path.Combine(subdir1, Path.GetRandomFileName()),
+                Path.Combine(subdir2, Path.Combine(subdir3, Path.GetRandomFileName()))
+            };
+
+            foreach (var fileName in fileNames)
+            {
+                var filePath = Path.Combine(m_ContentRoot, fileName);
+                var bytes = GetRandomBytes(1024);
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+                File.WriteAllBytes(filePath, bytes);
+                m_Service.StartHostingService();
+                m_Service.UploadSpeed = 1024 * 1024 * 10;
+                
+                Assert.IsTrue(m_Service.IsHostingServiceRunning);
+                var url = string.Format("http://127.0.0.1:{0}/{1}", m_Service.HostingServicePort, fileName);
+                try
+                {
+                    int preOpCount = m_Service.ActiveOperations.Count;
+                    m_Client.DownloadDataAsync(new Uri(url));
+                    while (m_Service.ActiveOperations.Count == preOpCount)
+                    {
+                        // wait until the client has communicated with the service
+                        Thread.Sleep(1);
+                    }
+
+                    var half = (bytes.Length + 1) / 2;
+                    m_Service.Update(1, half);
+                    Assert.AreEqual(m_Service.ActiveOperations.Count, 1);
+                    m_Service.Update(1, half);
+                    Assert.AreEqual(m_Service.ActiveOperations.Count, 0);
+
+                    while (m_Client.IsBusy)
+                    {
+                        // wait until the client has completed
+                        Thread.Sleep(1);
+                    }
                 }
                 catch (Exception e)
                 {

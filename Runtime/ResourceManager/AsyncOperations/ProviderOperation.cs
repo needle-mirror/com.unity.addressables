@@ -53,7 +53,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_WaitForCompletionCallback = callback;
         }
 
-        internal override bool InvokeWaitForCompletion()
+        ///<inheritdoc />
+        protected  override bool InvokeWaitForCompletion()
         {
             if (IsDone)
                 return true;
@@ -170,7 +171,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 throw new Exception(errorMsg);
             }
 
-            Complete(Result, status, e != null ? e.Message : string.Empty, m_ReleaseDependenciesOnFailure);
+            Complete(Result, status, e, m_ReleaseDependenciesOnFailure);
         }
 
         protected override float Progress

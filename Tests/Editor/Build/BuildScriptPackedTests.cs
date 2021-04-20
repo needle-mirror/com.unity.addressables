@@ -95,6 +95,47 @@ namespace UnityEditor.AddressableAssets.Tests
             m_BuildContext.Settings.ShaderBundleNaming = savedBundleNaming;
 
         }
+        
+        [Test]
+        [TestCase(MonoScriptBundleNaming.Disabled, "")]
+        [TestCase(MonoScriptBundleNaming.ProjectName, "")]
+        [TestCase(MonoScriptBundleNaming.DefaultGroupGuid, "")]
+        [TestCase(MonoScriptBundleNaming.Custom, "custom name")]
+        public void MonoScriptBundleNaming_GeneratesCorrectMonoScriptBundlePrefix(MonoScriptBundleNaming monoScriptBundleNaming, string customName)
+        {
+            //Setup
+            string savedCustomName = m_BuildContext.Settings.MonoScriptBundleCustomNaming;
+            MonoScriptBundleNaming savedBundleNaming = m_BuildContext.Settings.MonoScriptBundleNaming;
+            m_BuildContext.Settings.MonoScriptBundleCustomNaming = customName;
+            m_BuildContext.Settings.MonoScriptBundleNaming = monoScriptBundleNaming;
+            string expectedValue = "";
+            switch (monoScriptBundleNaming)
+            {
+                case MonoScriptBundleNaming.ProjectName:
+                    expectedValue = Hash128.Compute(m_BuildScript.GetProjectName()).ToString();
+                    break;
+                case MonoScriptBundleNaming.DefaultGroupGuid:
+                    expectedValue = m_BuildContext.Settings.DefaultGroup.Guid;
+                    break;
+                case MonoScriptBundleNaming.Custom:
+                    expectedValue = customName;
+                    break;
+                case MonoScriptBundleNaming.Disabled:
+                    expectedValue = null;
+                    break;
+            }
+
+            //Test
+            string bundleName = m_BuildScript.GetMonoScriptBundleName(m_BuildContext);
+
+            //Assert
+            Assert.AreEqual(expectedValue, bundleName);
+
+            //Cleanup
+            m_BuildContext.Settings.MonoScriptBundleCustomNaming = savedCustomName;
+            m_BuildContext.Settings.MonoScriptBundleNaming = savedBundleNaming;
+
+        }
 
         [Test]
         public void SettingsWithMaxConcurrentWebRequests_InitializeBuildContext_SetsMaxConcurrentWebRequestsInRuntimeData()
@@ -104,6 +145,16 @@ namespace UnityEditor.AddressableAssets.Tests
             var buildScript = ScriptableObject.CreateInstance<BuildScriptPackedMode>();
             buildScript.InitializeBuildContext(builderInput, out var buildContext);
             Assert.AreEqual(Settings.MaxConcurrentWebRequests, buildContext.runtimeData.MaxConcurrentWebRequests);
+        }
+        
+        [Test]
+        public void SettingsWithCatalogTimeout_InitializeBuildContext_SetsCatalogTimeoutInRuntimeData()
+        {
+            Settings.CatalogRequestsTimeout = 23;
+            var builderInput = new AddressablesDataBuilderInput(Settings);
+            var buildScript = ScriptableObject.CreateInstance<BuildScriptPackedMode>();
+            buildScript.InitializeBuildContext(builderInput, out var buildContext);
+            Assert.AreEqual(Settings.CatalogRequestsTimeout, buildContext.runtimeData.CatalogRequestsTimeout);
         }
 
         [Test]
@@ -132,6 +183,48 @@ namespace UnityEditor.AddressableAssets.Tests
                                               $"If this is unexpected the AddressableGroup may have become corrupted.");
 
             input.AddressableSettings.RemoveGroup(group);
+        }
+        
+        [Test]
+        public void CatalogBuiltWithDifferentGroupOrder_AreEqualWhenOrderEnabled()
+        {
+            m_PersistedSettings = AddressableAssetSettings.Create(ConfigFolder, k_TestConfigName, true, true);
+            Setup();
+            var buildScript = ScriptableObject.CreateInstance<BuildScriptPackedMode>();
+            
+            AddressableAssetGroup group1 = Settings.CreateGroup("simpleGroup1", false, false, false,
+                new List<AddressableAssetGroupSchema>(), typeof(BundledAssetGroupSchema));
+            Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(Path.Combine(ConfigFolder, "test 1.prefab")),
+                group1, false, false);
+            AddressableAssetGroup group2 = Settings.CreateGroup("simpleGroup2", false, false, false,
+                new List<AddressableAssetGroupSchema>(), typeof(BundledAssetGroupSchema));
+            Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(Path.Combine(ConfigFolder, "test 2.prefab")),
+                group2, false, false);
+            
+            var r1 = buildScript.BuildData<AddressableAssetBuildResult>(m_BuilderInput);
+            string p = r1.FileRegistry.GetFilePathForBundle("catalog");
+            Assert.IsFalse(string.IsNullOrEmpty(p));
+            string catalogjson1 = File.ReadAllText(p);
+            Assert.IsFalse(string.IsNullOrEmpty(catalogjson1));
+            
+            Settings.groups.Remove(group1);
+            Settings.groups.Remove(group2);
+            Settings.groups.Add(group2);
+            Settings.groups.Add(group1);
+            
+            var r2 = buildScript.BuildData<AddressableAssetBuildResult>(m_BuilderInput);
+            p = r2.FileRegistry.GetFilePathForBundle("catalog");
+            Assert.IsFalse(string.IsNullOrEmpty(p));
+            string catalogjson2 = File.ReadAllText(p);
+            Assert.IsFalse(string.IsNullOrEmpty(catalogjson2));
+
+            int h1 = catalogjson1.GetHashCode();
+            int h2 = catalogjson2.GetHashCode();
+
+            Settings.RemoveGroup(group1);
+            Settings.RemoveGroup(group2);
+            
+            Assert.AreEqual(h1,h2);
         }
 
         [Test]

@@ -11,5 +11,12 @@
         "Editor"
     ],
     "excludePlatforms": [],
-    "allowUnsafeCode": false
+    "allowUnsafeCode": false,
+    "versionDefines": [
+        {
+            "name": "Unity",
+            "expression": "2020.2.0a9",
+            "define": "NONRECURSIVE_DEPENDENCY_DATA"
+        }
+    ]
 }

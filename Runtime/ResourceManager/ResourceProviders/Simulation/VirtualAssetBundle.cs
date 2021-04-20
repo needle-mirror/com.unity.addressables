@@ -500,25 +500,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
                 else
                 {
                     if (ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
-                    {
-                        var objs = AssetDatabase.LoadAllAssetRepresentationsAtPath(mainPath);
-                        foreach (var o in objs)
-                        {
-                            if (o.name == subKey)
-                            {
-                                if (pt.IsAssignableFrom(o.GetType()))
-                                {
-                                    result = o;
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                        result = AssetDatabaseProvider.LoadAssetSubObject(mainPath, subKey, pt);
                     else
-                    {
-                        var obj = AssetDatabase.LoadAssetAtPath(assetPath, location.ResourceType);
-                        result = obj != null && pt.IsAssignableFrom(obj.GetType()) ? obj : null;
-                    }
+                        result = AssetDatabaseProvider.LoadAssetAtPath(assetPath, m_provideHandle);
                 }
                 SetResult(result);
                 InvokeCompletionEvent();

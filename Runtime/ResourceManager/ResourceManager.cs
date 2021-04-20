@@ -148,7 +148,7 @@ namespace UnityEngine.ResourceManagement
         internal int OperationCacheCount { get { return m_AssetOperationCache.Count; } }
         internal int InstanceOperationCount { get { return m_TrackedInstanceOperations.Count; } }
         //cache of type + providerId to IResourceProviders for faster lookup
-        Dictionary<int, IResourceProvider> m_providerMap = new Dictionary<int, IResourceProvider>();
+        internal Dictionary<int, IResourceProvider> m_providerMap = new Dictionary<int, IResourceProvider>();
         Dictionary<int, IAsyncOperation> m_AssetOperationCache = new Dictionary<int, IAsyncOperation>();
         HashSet<InstanceOperation> m_TrackedInstanceOperations = new HashSet<InstanceOperation>();
         DelegateList<float> m_UpdateCallbacks = DelegateList<float>.CreateWithGlobalCache();
@@ -375,8 +375,8 @@ namespace UnityEngine.ResourceManagement
                 provider = GetResourceProvider(desiredType, location);
                 if (provider == null)
                 {
-                    var message = new UnknownResourceProviderException(location).Message;
-                    return CreateCompletedOperationInternal<object>(null, string.IsNullOrEmpty(message), message, releaseDependenciesOnFailure);
+                    var ex = new UnknownResourceProviderException(location);
+                    return CreateCompletedOperationInternal<object>(null, false, ex, releaseDependenciesOnFailure);
                 }
                 desiredType = provider.GetDefaultType(location);
             }
@@ -450,14 +450,19 @@ namespace UnityEngine.ResourceManagement
         class CompletedOperation<TObject> : AsyncOperationBase<TObject>
         {
             bool m_Success;
-            string m_ErrorMsg;
+            Exception m_Exception;
             bool m_ReleaseDependenciesOnFailure;
             public CompletedOperation() {}
             public void Init(TObject result, bool success, string errorMsg, bool releaseDependenciesOnFailure = true)
             {
+                Init(result, success, !string.IsNullOrEmpty(errorMsg) ? new Exception(errorMsg) : null, releaseDependenciesOnFailure);
+            }
+
+            public void Init(TObject result, bool success, Exception exception, bool releaseDependenciesOnFailure = true)
+            {
                 Result = result;
                 m_Success = success;
-                m_ErrorMsg = errorMsg;
+                m_Exception = exception;
                 m_ReleaseDependenciesOnFailure = releaseDependenciesOnFailure;
             }
 
@@ -466,7 +471,8 @@ namespace UnityEngine.ResourceManagement
                 get { return "CompletedOperation";}
             }
 
-            internal override bool InvokeWaitForCompletion()
+            ///<inheritdoc />
+            protected  override bool InvokeWaitForCompletion()
             {
                 m_RM?.Update(Time.deltaTime);
                 if (!HasExecuted)
@@ -476,7 +482,7 @@ namespace UnityEngine.ResourceManagement
 
             protected override void Execute()
             {
-                Complete(Result, m_Success, m_ErrorMsg, m_ReleaseDependenciesOnFailure);
+                Complete(Result, m_Success, m_Exception, m_ReleaseDependenciesOnFailure);
             }
         }
 
@@ -552,13 +558,26 @@ namespace UnityEngine.ResourceManagement
         /// <returns>The operation handle used for the completed operation.</returns>
         public AsyncOperationHandle<TObject> CreateCompletedOperation<TObject>(TObject result, string errorMsg)
         {
-            return CreateCompletedOperationInternal(result, string.IsNullOrEmpty(errorMsg), errorMsg);
+            var success = string.IsNullOrEmpty(errorMsg);
+            return CreateCompletedOperationInternal(result, success, !success ? new Exception(errorMsg) : null);
         }
 
-        internal AsyncOperationHandle<TObject> CreateCompletedOperationInternal<TObject>(TObject result, bool success, string errorMsg, bool releaseDependenciesOnFailure = true)
+        /// <summary>
+        /// Creates an operation that has already completed with a specified result and error message./>.
+        /// </summary>
+        /// <param name="result">The result that the operation will provide.</param>
+        /// <param name="exception">The exception with an error message if the operation should be in the failed state. Otherwise null.</param>
+        /// <typeparam name="TObject">Object type.</typeparam>
+        /// <returns>The operation handle used for the completed operation.</returns>
+        public AsyncOperationHandle<TObject> CreateCompletedOperationWithException<TObject>(TObject result, Exception exception)
         {
-            var cop = CreateOperation<CompletedOperation<TObject>>(typeof(CompletedOperation<TObject>), typeof(CompletedOperation<TObject>).GetHashCode(), 0, null);
-            cop.Init(result, success, errorMsg, releaseDependenciesOnFailure);
+            return CreateCompletedOperationInternal(result, exception == null, exception);
+        }
+
+        internal AsyncOperationHandle<TObject> CreateCompletedOperationInternal<TObject>(TObject result, bool success, Exception exception, bool releaseDependenciesOnFailure = true)
+        {
+            var cop = CreateOperation<CompletedOperation<TObject>>(typeof(CompletedOperation<TObject>), typeof(CompletedOperation<TObject>).GetHashCode(), 0, m_ReleaseOpNonCached);
+            cop.Init(result, success, exception, releaseDependenciesOnFailure);
             return StartOperation(cop, default(AsyncOperationHandle));
         }
 
@@ -607,7 +626,7 @@ namespace UnityEngine.ResourceManagement
             op.Init(ops);
             return StartOperation(op, default);
         }
-        
+
         /// <summary>
         /// Create a group operation for a set of locations.
         /// </summary>
@@ -623,7 +642,7 @@ namespace UnityEngine.ResourceManagement
                 ops.Add(ProvideResource<T>(loc));
 
             GroupOperation.GroupOperationSettings settings = GroupOperation.GroupOperationSettings.None;
-            if( allowFailedDependencies )
+            if (allowFailedDependencies)
                 settings |= GroupOperation.GroupOperationSettings.AllowFailedDependencies;
             op.Init(ops, settings);
             return StartOperation(op, default);
@@ -718,7 +737,7 @@ namespace UnityEngine.ResourceManagement
                 AsyncOperationHandle<IList<AsyncOperationHandle>> handleToHandles = resultHandle.Convert<IList<AsyncOperationHandle>>();
 
                 var list = new List<TObject>();
-                var errorMessage = string.Empty;
+                Exception exception = null;
                 if (handleToHandles.Status == AsyncOperationStatus.Succeeded)
                 {
                     foreach (var r in handleToHandles.Result)
@@ -744,15 +763,15 @@ namespace UnityEngine.ResourceManagement
                     if (!foundSuccess)
                     {
                         list = null;
-                        errorMessage = handleToHandles.OperationException != null ? handleToHandles.OperationException.Message : "ProvidResources failed";
+                        exception = new ResourceManagerException("ProvideResources failed", handleToHandles.OperationException);
                     }
                     else
                     {
-                        errorMessage = "Partial success in ProvideResources.  Some items failed to load. See earlier logs for more info.";
+                        exception = new ResourceManagerException("Partial success in ProvideResources.  Some items failed to load. See earlier logs for more info.", handleToHandles.OperationException);
                     }
                 }
 
-                return CreateCompletedOperationInternal<IList<TObject>>(list, string.IsNullOrEmpty(errorMessage), errorMessage, releaseDependenciesOnFailure);
+                return CreateCompletedOperationInternal<IList<TObject>>(list, exception == null, exception, releaseDependenciesOnFailure);
             }, releaseDependenciesOnFailure);
 
             // chain operation holds the dependency
@@ -872,7 +891,8 @@ namespace UnityEngine.ResourceManagement
                 }
             }
 
-            internal override bool InvokeWaitForCompletion()
+            ///<inheritdoc />
+            protected  override bool InvokeWaitForCompletion()
             {
                 if (m_dependency.IsValid() && !m_dependency.IsDone)
                     m_dependency.WaitForCompletion();

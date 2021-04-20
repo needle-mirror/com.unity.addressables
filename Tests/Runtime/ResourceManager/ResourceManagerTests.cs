@@ -9,6 +9,7 @@ using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
 using System.Linq;
 using UnityEngine.Networking;
+using UnityEngine.ResourceManagement.Exceptions;
 using UnityEngine.TestTools.Constraints;
 
 namespace UnityEngine.ResourceManagement.Tests
@@ -254,6 +255,37 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.AreEqual("instance1", obj.Result.name);
             Assert.AreEqual(1, m_ResourceManager.OperationCacheCount);
             obj.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator ProvideResource_WhenRemote_ExceptionHandlerReceivesExceptionWithWebRequestError()
+        {
+            m_ResourceManager.ResourceProviders.Add(new AssetBundleProvider());
+
+            ResourceLocationBase location = new ResourceLocationBase("nonExistingResource", "http://urlThatCantPossiblyExistsaaaaaaaa.com/bundleName.bundle",
+                typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource));
+            location.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = "bundleName",
+                Timeout = 0
+            };
+
+            var prevHandler = ResourceManager.ExceptionHandler;
+
+            bool exceptionWithRequestResultReceived = false;
+            ResourceManager.ExceptionHandler += (h, ex) =>
+            {
+                exceptionWithRequestResultReceived |= ex is RemoteProviderException pEx && pEx.WebRequestResult != null;
+            };
+
+            AsyncOperationHandle<IAssetBundleResource> handle = m_ResourceManager.ProvideResource<IAssetBundleResource>(location);
+            yield return handle;
+
+            ResourceManager.ExceptionHandler = prevHandler;
+            Assert.AreEqual(AsyncOperationStatus.Failed, handle.Status);
+            Assert.IsTrue(exceptionWithRequestResultReceived);
+
+            handle.Release();
         }
 
         [UnityTest]

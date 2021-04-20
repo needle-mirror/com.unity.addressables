@@ -22,6 +22,24 @@ namespace UnityEditor.AddressableAssets.Tests
                 enumerations.Add((Enum)fieldInfo.GetValue(null));
             return enumerations;
         }
+        
+        [Test]
+        public void WhenNonRecursiveBuildingSet_BuildParametersHaveCorrectValue()
+        {
+#if !NONRECURSIVE_DEPENDENCY_DATA
+            Assert.Ignore($"Skipping test {nameof(WhenNonRecursiveBuildingSet_BuildParametersHaveCorrectValue)}.");
+#else
+            var bundleToAssetGroup = new Dictionary<string, string>();
+            
+            Settings.NonRecursiveBuilding = true;
+            var testParams = new AddressableAssetsBundleBuildParameters(Settings, bundleToAssetGroup, BuildTarget.StandaloneWindows64, BuildTargetGroup.Standalone, "Unused");
+            Assert.AreEqual(testParams.NonRecursiveDependencies, Settings.NonRecursiveBuilding);
+            
+            Settings.NonRecursiveBuilding = false;
+            testParams = new AddressableAssetsBundleBuildParameters(Settings, bundleToAssetGroup, BuildTarget.StandaloneWindows64, BuildTargetGroup.Standalone, "Unused");
+            Assert.AreEqual(testParams.NonRecursiveDependencies, Settings.NonRecursiveBuilding);
+#endif
+        }
 
         [Test]
         public void WhenCompressionSetForGroups_GetCompressionForIdentifier_ReturnsExpectedCompression()

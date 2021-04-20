@@ -142,7 +142,11 @@ namespace UnityEditor.AddressableAssets.GUI
 
                 if (!foundValidAsset)
                     return;
-
+                
+                // Overrides a DisabledScope in the EditorElement.cs that disables GUI drawn in the header when the asset cannot be edited.
+                bool prevEnabledState = UnityEngine.GUI.enabled;
+                UnityEngine.GUI.enabled = true;
+                
                 if (addressableCount == 0)
                 {
                     if (GUILayout.Toggle(false, s_AddressableAssetToggleText, GUILayout.ExpandWidth(false)))
@@ -154,6 +158,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     if (!GUILayout.Toggle(true, s_AddressableAssetToggleText, GUILayout.ExpandWidth(false)))
                     {
                         SetAaEntry(aaSettings, editor.targets, false);
+                        UnityEngine.GUI.enabled = prevEnabledState;
                         GUIUtility.ExitGUI();
                     }
 
@@ -183,6 +188,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     EditorGUILayout.LabelField(addressableCount + " out of " + editor.targets.Length + " assets are addressable.");
                     GUILayout.EndHorizontal();
                 }
+                UnityEngine.GUI.enabled = prevEnabledState;
             }
         }
 

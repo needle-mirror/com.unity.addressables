@@ -80,7 +80,8 @@ namespace UnityEngine.AddressableAssets.Initialization
                 m_Callback = callback;
             }
 
-            internal override bool InvokeWaitForCompletion()
+            /// <inheritdoc />
+            protected override bool InvokeWaitForCompletion()
             {
 #if ENABLE_CACHING
                 m_RM?.Update(Time.deltaTime);

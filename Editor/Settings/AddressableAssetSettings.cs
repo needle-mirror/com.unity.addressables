@@ -307,12 +307,15 @@ namespace UnityEditor.AddressableAssets.Settings
 
         [SerializeField]
         bool m_OptimizeCatalogSize = false;
-
+        
         [SerializeField]
         bool m_BuildRemoteCatalog = false;
 
         [SerializeField]
         bool m_BundleLocalCatalog = false;
+
+        [SerializeField]
+        int m_CatalogRequestsTimeout = 0;
 
         [SerializeField]
         bool m_DisableCatalogUpdateOnStart = false;
@@ -322,9 +325,25 @@ namespace UnityEditor.AddressableAssets.Settings
 
         [SerializeField]
         bool m_UniqueBundleIds = false;
+        
+        [SerializeField]
+#if UNITY_2021_1_OR_NEWER
+        bool m_NonRecursiveBuilding = true;
+#else
+        bool m_NonRecursiveBuilding = false;
+#endif
 
         [SerializeField]
         int m_maxConcurrentWebRequests = 500;
+
+        /// <summary>
+        /// The maximum time to download hash and json catalog files before a timeout error.
+        /// </summary>
+        public int CatalogRequestsTimeout
+        {
+            get { return m_CatalogRequestsTimeout; }
+            set { m_CatalogRequestsTimeout = value < 0 ? 0 : value; }
+        }
 
         /// <summary>
         /// The maximum number of concurrent web requests.  This value will be clamped from 1 to 1024.
@@ -360,6 +379,15 @@ namespace UnityEditor.AddressableAssets.Settings
             set { m_ContiguousBundles = value; }
         }
 
+        /// <summary>
+        /// If set, Calculates and build asset bundles using Non-Recursive Dependency calculation methods. This approach helps reduce asset bundle rebuilds and runtime memory consumption.
+        /// </summary>
+        public bool NonRecursiveBuilding
+        {
+            get { return m_NonRecursiveBuilding; }
+            set { m_NonRecursiveBuilding = value; }
+        }
+        
         /// <summary>
         /// Enables size optimization of content catalogs.  This may increase the cpu usage of loading the catalog.
         /// </summary>
@@ -427,6 +455,29 @@ namespace UnityEditor.AddressableAssets.Settings
             get { return m_ShaderBundleCustomNaming; }
             set { m_ShaderBundleCustomNaming = value; }
         }
+        
+        [SerializeField]
+        MonoScriptBundleNaming m_MonoScriptBundleNaming = MonoScriptBundleNaming.Disabled;
+        /// <summary>
+        /// Sets the naming convention used for the MonoScript bundle at build time. Or disabled MonoScript bundle generation.
+        /// The recommended setting is Project Name.
+        /// </summary>
+        public MonoScriptBundleNaming MonoScriptBundleNaming
+        {
+            get { return m_MonoScriptBundleNaming; }
+            set { m_MonoScriptBundleNaming = value; }
+        }
+
+        [SerializeField]
+        string m_MonoScriptBundleCustomNaming = "";
+        /// <summary>
+        /// Custom MonoScript bundle prefix that is used if AddressableAssetSettings.MonoScriptBundleNaming is set to MonoScriptBundleNaming.Custom.
+        /// </summary>
+        public string MonoScriptBundleCustomNaming
+        {
+            get { return m_MonoScriptBundleCustomNaming; }
+            set { m_MonoScriptBundleCustomNaming = value; }
+        }
 
         [SerializeField]
         ProfileValueReference m_RemoteCatalogBuildPath;
@@ -469,8 +520,12 @@ namespace UnityEditor.AddressableAssets.Settings
             set { m_RemoteCatalogLoadPath = value; }
         }
 
-        [SerializeField] private string m_ContentStateBuildPath = "";
-        internal string ContentStateBuildPath
+        [SerializeField]
+        private string m_ContentStateBuildPath = "";
+        /// <summary>
+        /// The path used for saving the addressables_content_state.bin file.  If empty, this will be the addressable settings config folder in your project.
+        /// </summary>
+        public string ContentStateBuildPath
         {
             get { return m_ContentStateBuildPath; }
             set { m_ContentStateBuildPath = value;  }
@@ -1309,13 +1364,13 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 AddressableAssetGroup group = null;
                 if (string.IsNullOrEmpty(m_DefaultGroup))
-                    group = groups.Find(s => s.CanBeSetAsDefault());
+                    group = groups.FirstOrDefault(s => s != null && s.CanBeSetAsDefault());
                 else
                 {
-                    group = groups.Find(s => s.Guid == m_DefaultGroup);
+                    group = groups.FirstOrDefault(x => x != null && x.Guid == m_DefaultGroup);
                     if (group == null || !group.CanBeSetAsDefault())
                     {
-                        group = groups.Find(s => s.CanBeSetAsDefault());
+                        group = groups.FirstOrDefault(s => s != null && s.CanBeSetAsDefault());
                         if (group != null)
                             m_DefaultGroup = group.Guid;
                     }
@@ -1453,7 +1508,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="guid">The asset guid.</param>
         /// <param name="includeImplicit">Whether or not to include implicit asset entries in the search.</param>
         /// <returns>The found entry or null.</returns>
-        internal AddressableAssetEntry FindAssetEntry(string guid, bool includeImplicit)
+        public AddressableAssetEntry FindAssetEntry(string guid, bool includeImplicit)
         {
             foreach (var g in groups)
             {

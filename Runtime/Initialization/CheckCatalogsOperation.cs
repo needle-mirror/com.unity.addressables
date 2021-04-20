@@ -41,7 +41,8 @@ namespace UnityEngine.AddressableAssets
             return m_Addressables.ResourceManager.StartOperation(this, m_DepOp);
         }
 
-        internal override bool InvokeWaitForCompletion()
+        /// <inheritdoc />
+        protected override bool InvokeWaitForCompletion()
         {
             if (IsDone)
                 return true;

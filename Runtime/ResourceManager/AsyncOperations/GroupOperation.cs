@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Security;
+using UnityEngine.ResourceManagement.Exceptions;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
@@ -16,7 +17,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             ReleaseDependenciesOnFailure = 1,
             AllowFailedDependencies = 2
         }
-        
+
         Action<AsyncOperationHandle> m_InternalOnComplete;
         int m_LoadedCount;
         GroupOperationSettings m_Settings;
@@ -29,7 +30,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             Result = new List<AsyncOperationHandle>();
         }
 
-        internal override bool InvokeWaitForCompletion()
+        ///<inheritdoc />
+        protected  override bool InvokeWaitForCompletion()
         {
             //If Result is null then we've auto released and need to return
             if (IsDone || Result == null)
@@ -94,7 +96,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                     return false;
             return true;
         }
-        
+
         protected override string DebugName
         {
             get
@@ -104,22 +106,22 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
                 if (deps.Count == 0)
                     return "Dependencies";
-                
+
                 //Only recalculate DebugName if a name hasn't been generated for currently held dependencies
                 if (debugName != null && DependenciesAreUnchanged(deps))
                     return debugName;
-                
+
                 m_CachedDependencyLocations.Clear();
-                
+
                 string toBeDisplayed = "Dependencies [";
                 for (var i = 0; i < deps.Count; i++)
                 {
                     var d = deps[i];
-                    
+
                     var locationString = d.LocationName;
                     m_CachedDependencyLocations.Add(locationString);
 
-                    if (locationString == null) 
+                    if (locationString == null)
                         continue;
 
                     //Prevent location display from being excessively long
@@ -134,14 +136,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                     else
                         toBeDisplayed += locationString + ", ";
                 }
-                
+
                 toBeDisplayed += "]";
-                
+
                 debugName = toBeDisplayed;
 
                 return debugName;
             }
-
         }
 
         protected override void Execute()
@@ -162,7 +163,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             if (m_LoadedCount == Result.Count)
             {
                 bool success = true;
-                string errorMsg = string.Empty;
+                OperationException ex = null;
                 if (!m_Settings.HasFlag(GroupOperationSettings.AllowFailedDependencies))
                 {
                     for (int i = 0; i < Result.Count; i++)
@@ -170,12 +171,12 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                         if (Result[i].Status != AsyncOperationStatus.Succeeded)
                         {
                             success = false;
-                            errorMsg = Result[i].OperationException != null ? Result[i].OperationException.Message : string.Empty;
+                            ex = new OperationException("GroupOperation failed because one of its dependencies failed", Result[i].OperationException);
                             break;
                         }
                     }
                 }
-                Complete(Result, success, errorMsg, m_Settings.HasFlag(GroupOperationSettings.ReleaseDependenciesOnFailure));
+                Complete(Result, success, ex, m_Settings.HasFlag(GroupOperationSettings.ReleaseDependenciesOnFailure));
             }
         }
 
@@ -207,10 +208,10 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             Result = new List<AsyncOperationHandle>(operations);
             m_Settings = releaseDependenciesOnFailure ? GroupOperationSettings.ReleaseDependenciesOnFailure : GroupOperationSettings.None;
-            if( allowFailedDependencies )
+            if (allowFailedDependencies)
                 m_Settings |= GroupOperationSettings.AllowFailedDependencies;
         }
-        
+
         public void Init(List<AsyncOperationHandle> operations, GroupOperationSettings settings)
         {
             Result = new List<AsyncOperationHandle>(operations);

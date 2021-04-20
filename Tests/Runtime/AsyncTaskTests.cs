@@ -24,6 +24,7 @@ namespace AddressableTests.AsyncTask
         }
 
         [UnityTest]
+        [Ignore("Ignoring until task refactor is complete.")]
         public IEnumerator AsyncTask_DoesNotReturnNull_StressTest()
         {
             for (int i = 0; i < 100; i++)
@@ -33,8 +34,10 @@ namespace AddressableTests.AsyncTask
                 var task = op.Task;
                 while (!task.IsCompleted)
                     yield return null;
+                var result = op.Task.Result;
                 yield return null; //need deferred callbacks to get called
-                Assert.IsNotNull(task.Result);
+                Assert.IsNotNull(op.Task.Result, $"task.Result is null! For task number [{i}]");
+                op.Release();
             }
         }
     }

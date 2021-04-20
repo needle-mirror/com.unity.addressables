@@ -64,12 +64,8 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             if (splitPath[0] != "packages")
                 return false;
-            if (splitPath.Length == 3)
-            {
-                string ext = Path.GetExtension(splitPath[2]);
-                if (ext == ".json" || ext == ".asmdef")
-                    return false;
-            }
+            if (splitPath[2] == "package.json")
+                return false;
             return true;
         }
 

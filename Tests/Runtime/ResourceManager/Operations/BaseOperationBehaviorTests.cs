@@ -119,7 +119,7 @@ namespace UnityEngine.ResourceManagement.Tests
             bool exceptionHandlerCalled = false;
             ResourceManager.ExceptionHandler += (h, ex) => exceptionHandlerCalled = true;
 
-            var op = m_RM.CreateCompletedOperationInternal<int>(1, true, "An exception occured.");
+            var op = m_RM.CreateCompletedOperationInternal<int>(1, true, new Exception("An exception occured."));
 
             var status = AsyncOperationStatus.None;
             op.Completed += (x) => status = x.Status;
@@ -131,7 +131,7 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.AreEqual(AsyncOperationStatus.Succeeded, status);
             op.Release();
         }
-        
+
         [UnityTest]
         public IEnumerator AsyncOperationHandle_TaskIsDelayedUntilAfterDelayedCompletedCallbacks()
         {
@@ -141,18 +141,18 @@ namespace UnityEngine.ResourceManagement.Tests
             op.Completed += (x) => status = x.Status;
             var t = op.Task;
             Assert.IsFalse(t.IsCompleted);
-            
+
             // callbacks are deferred to next update
             m_RM.Update(0.0f);
 
             // the Task may not yet have continues after at this point on the update,
             // give the Synchronization a little time with a yield
             yield return null;
-            
+
             Assert.IsTrue(t.IsCompleted);
             op.Release();
         }
-        
+
         [Test]
         public void AsyncOperationHandle_TaskIsCompletedWhenHandleIsCompleteWithoutDelayedCallbacks()
         {
@@ -281,11 +281,11 @@ namespace UnityEngine.ResourceManagement.Tests
         public void PercentComplete_ReturnsZero_WhenChainOperationHasNotBegun()
         {
             var baseOperation = m_RM.CreateChainOperation<AsyncOperationHandle>(
-                new AsyncOperationHandle(new ManualPercentCompleteOperation(1f)), 
+                new AsyncOperationHandle(new ManualPercentCompleteOperation(1f)),
                 (obj) =>
-            {
-                return new AsyncOperationHandle<AsyncOperationHandle>();
-            });
+                {
+                    return new AsyncOperationHandle<AsyncOperationHandle>();
+                });
 
             Assert.AreEqual(0, baseOperation.PercentComplete);
         }
@@ -316,7 +316,7 @@ namespace UnityEngine.ResourceManagement.Tests
             }
         }
 
-        [Test] 
+        [Test]
         public void CompletionEvents_AreInvoked_InOrderAdded()
         {
             var op = new TestOp();

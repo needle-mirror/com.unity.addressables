@@ -66,7 +66,8 @@ namespace UnityEngine.AddressableAssets.Initialization
             return aa.ResourceManager.StartOperation<IResourceLocator>(initOp, groupOpHandle);
         }
 
-        internal override bool InvokeWaitForCompletion()
+        /// <inheritdoc />
+        protected override bool InvokeWaitForCompletion()
         {
             if (IsDone)
                 return true;
@@ -104,6 +105,14 @@ namespace UnityEngine.AddressableAssets.Initialization
             
             m_Addressables.ResourceManager.postProfilerEvents = rtd.ProfileEvents;
             WebRequestQueue.SetMaxConcurrentRequests(rtd.MaxConcurrentWebRequests);
+            m_Addressables.CatalogRequestsTimeout = rtd.CatalogRequestsTimeout;
+            foreach (var catalogLocation in rtd.CatalogLocations)
+            {
+                if (catalogLocation.Data != null && catalogLocation.Data is ProviderLoadRequestOptions loadData)
+                {
+                    loadData.WebRequestTimeout = rtd.CatalogRequestsTimeout;
+                }
+            }
 
             m_Addressables.Release(m_rtdOp);
             if (rtd.CertificateHandlerType != null)

@@ -21,21 +21,12 @@ namespace UnityEditor.AddressableAssets.HostingServices
         internal const string KPrivateIpAddressKey = "PrivateIpAddress";
 
         [Serializable]
-        internal class HostingServiceInfo : ISerializationCallbackReceiver
+        internal class HostingServiceInfo
         {
             [SerializeField]
             internal string classRef;
             [SerializeField]
             internal KeyDataStore dataStore;
-
-            public void OnBeforeSerialize() {}
-
-            public void OnAfterDeserialize()
-            {
-                //handle change to namespace that happened just before Addressables 1.0.0.  Can remove once upgrades from 0.5.x are no longer expected
-                if (classRef.Contains("UnityEditor.AddressableAssets.HttpHostingService"))
-                    classRef = classRef.Replace("UnityEditor.AddressableAssets.HttpHostingService", "UnityEditor.AddressableAssets.HostingServices.HttpHostingService");
-            }
         }
 
         [FormerlySerializedAs("m_hostingServiceInfos")]
@@ -56,7 +47,6 @@ namespace UnityEditor.AddressableAssets.HostingServices
             typeof(HttpHostingService)
         };
 
-        private static Dictionary<int, WeakReference<IHostingService>> s_HostingServicesCache = new Dictionary<int, WeakReference<IHostingService>>();
         Dictionary<IHostingService, HostingServiceInfo> m_HostingServiceInfoMap;
         ILogger m_Logger;
         List<Type> m_RegisteredServiceTypes;
@@ -157,8 +147,10 @@ namespace UnityEditor.AddressableAssets.HostingServices
         public HostingServicesManager()
         {
             GlobalProfileVariables = new Dictionary<string, string>();
+            m_HostingServiceInfos = new List<HostingServiceInfo>();
             m_HostingServiceInfoMap = new Dictionary<IHostingService, HostingServiceInfo>();
             m_RegisteredServiceTypes = new List<Type>();
+            m_RegisteredServiceTypeRefs = new List<string>();
             m_Logger = Debug.unityLogger;
         }
 
@@ -242,7 +234,6 @@ namespace UnityEditor.AddressableAssets.HostingServices
             m_Settings.profileSettings.RegisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
 
             m_HostingServiceInfoMap.Add(svc, info);
-            s_HostingServicesCache[svc.InstanceId] = new WeakReference<IHostingService>(svc);
             m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true, true);
 
             m_NextInstanceId++;
@@ -262,7 +253,6 @@ namespace UnityEditor.AddressableAssets.HostingServices
             svc.StopHostingService();
             m_Settings.profileSettings.UnregisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
             m_HostingServiceInfoMap.Remove(svc);
-            s_HostingServicesCache.Remove(svc.InstanceId);
             m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true, true);
         }
 
@@ -280,6 +270,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             {
                 svc.Logger = m_Logger;
                 m_Settings.profileSettings.RegisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
+                (svc as BaseHostingService)?.OnEnable();
             }
 
             RefreshGlobalProfileVariables();
@@ -299,6 +290,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             {
                 svc.Logger = null;
                 m_Settings.profileSettings.UnregisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
+                (svc as BaseHostingService)?.OnDisable();
             }
         }
 
@@ -307,7 +299,12 @@ namespace UnityEditor.AddressableAssets.HostingServices
         /// </summary>
         public void OnBeforeSerialize()
         {
-            m_HostingServiceInfos = new List<HostingServiceInfo>();
+            // https://docs.unity3d.com/ScriptReference/EditorWindow.OnInspectorUpdate.html
+            // Because the manager is a serialized field in the Addressables settings, this method is called
+            // at 10 frames per second when the settings are opened in the inspector...
+            // Be careful what you put in there...
+
+            m_HostingServiceInfos.Clear();
             foreach (var svc in HostingServices)
             {
                 var info = m_HostingServiceInfoMap[svc];
@@ -315,7 +312,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
                 svc.OnBeforeSerialize(info.dataStore);
             }
 
-            m_RegisteredServiceTypeRefs = new List<string>();
+            m_RegisteredServiceTypeRefs.Clear();
             foreach (var type in m_RegisteredServiceTypes)
                 m_RegisteredServiceTypeRefs.Add(TypeToClassRef(type));
         }
@@ -328,17 +325,11 @@ namespace UnityEditor.AddressableAssets.HostingServices
             m_HostingServiceInfoMap = new Dictionary<IHostingService, HostingServiceInfo>();
             foreach (var svcInfo in m_HostingServiceInfos)
             {
-                IHostingService svc = null;
-                var id = svcInfo.dataStore.GetData(BaseHostingService.k_InstanceIdKey, -1);
-                if (id == -1 || !s_HostingServicesCache.ContainsKey(id) || !s_HostingServicesCache[id].TryGetTarget(out svc))
-                {
-                    svc = CreateHostingServiceInstance(svcInfo.classRef);
-                }
+                IHostingService svc = CreateHostingServiceInstance(svcInfo.classRef);
 
                 if (svc == null) continue;
                 svc.OnAfterDeserialize(svcInfo.dataStore);
                 m_HostingServiceInfoMap.Add(svc, svcInfo);
-                s_HostingServicesCache[svc.InstanceId] = new WeakReference<IHostingService>(svc);
             }
 
             m_RegisteredServiceTypes = new List<Type>();
@@ -367,7 +358,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             if (ipAddressList.Count > 0)
             {
                 vars.Add(KPrivateIpAddressKey, ipAddressList[0].ToString());
-                
+
                 if (ipAddressList.Count > 1)
                 {
                     for (var i = 1; i < ipAddressList.Count; i++)

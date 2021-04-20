@@ -53,7 +53,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             return messageLogged;
         }
 
-        internal override bool InvokeWaitForCompletion()
+        /// <inheritdoc />
+        protected override bool InvokeWaitForCompletion()
         {
             if (IsDone)
                 return true;

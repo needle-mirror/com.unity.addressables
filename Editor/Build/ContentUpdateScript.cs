@@ -802,6 +802,11 @@ namespace UnityEditor.AddressableAssets.Build
             settings.MoveEntries(items, contentGroup);
         }
 
+        /// <summary>
+        /// Functor to filter AddressableAssetGroups during content update. If the functor returns false, the group is excluded from the update.
+        /// </summary>
+        public static Func<AddressableAssetGroup, bool> GroupFilterFunc = GroupFilter;
+
         internal static bool GroupFilter(AddressableAssetGroup g)
         {
             if (g == null)

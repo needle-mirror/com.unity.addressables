@@ -15,6 +15,27 @@ namespace UnityEditor.AddressableAssets.HostingServices
         const string k_DescriptiveNameKey = "DescriptiveName";
         internal const string k_InstanceIdKey = "InstanceId";
 
+        internal bool WasEnabled { get; set; }
+
+        void OnPlayModeStateChanged(PlayModeStateChange obj) => SaveEnabledState();
+        void OnQuitting() => SaveEnabledState();
+        void SaveEnabledState() => WasEnabled = IsHostingServiceRunning;
+
+        internal void OnEnable()
+        {
+            EditorApplication.quitting += OnQuitting;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            if (!IsHostingServiceRunning && WasEnabled)
+                StartHostingService();
+        }
+
+        internal void OnDisable()
+        {
+            EditorApplication.quitting -= OnQuitting;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            StopHostingService();
+        }
+
         /// <summary>
         /// List of content roots for hosting service.
         /// </summary>
@@ -79,7 +100,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         public virtual void OnBeforeSerialize(KeyDataStore dataStore)
         {
             dataStore.SetData(k_HostingServiceContentRootKey, string.Join(";", HostingServiceContentRoots.ToArray()));
-            dataStore.SetData(k_IsHostingServiceRunningKey, IsHostingServiceRunning);
+            dataStore.SetData(k_IsHostingServiceRunningKey, WasEnabled);
             dataStore.SetData(k_DescriptiveNameKey, DescriptiveName);
             dataStore.SetData(k_InstanceIdKey, InstanceId);
         }
@@ -89,10 +110,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         {
             var contentRoots = dataStore.GetData(k_HostingServiceContentRootKey, string.Empty);
             HostingServiceContentRoots.AddRange(contentRoots.Split(';'));
-
-            if (dataStore.GetData(k_IsHostingServiceRunningKey, false))
-                StartHostingService();
-
+            WasEnabled = dataStore.GetData(k_IsHostingServiceRunningKey, false);
             DescriptiveName = dataStore.GetDataString(k_DescriptiveNameKey, string.Empty);
             InstanceId = dataStore.GetData(k_InstanceIdKey, -1);
         }

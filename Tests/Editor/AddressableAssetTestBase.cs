@@ -53,10 +53,16 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Settings.labelTable.labelNames.Clear();
             GameObject testObject = new GameObject("TestObject");
+            GameObject testObject1 = new GameObject("TestObject 1");
+            GameObject testObject2 = new GameObject("TestObject 2");
 #if UNITY_2018_3_OR_NEWER
             PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/test.prefab");
+            PrefabUtility.SaveAsPrefabAsset(testObject1, ConfigFolder + "/test 1.prefab");
+            PrefabUtility.SaveAsPrefabAsset(testObject2, ConfigFolder + "/test 2.prefab");
 #else
             PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
+            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test 1.prefab", testObject1);
+            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test 2.prefab", testObject2);
 #endif
             m_AssetGUID = AssetDatabase.AssetPathToGUID(ConfigFolder + "/test.prefab");
 

@@ -46,7 +46,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_Priority = priority;
             }
 
-            internal override bool InvokeWaitForCompletion()
+            ///<inheritdoc />
+            protected override bool InvokeWaitForCompletion()
             {
                 if (m_DepOp.IsValid() && !m_DepOp.IsDone)
                     m_DepOp.WaitForCompletion();
@@ -188,7 +189,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 HasExecuted = true;
             }
 
-            internal override bool InvokeWaitForCompletion()
+            ///<inheritdoc />
+            protected  override bool InvokeWaitForCompletion()
             {
                 m_RM?.Update(Time.deltaTime);
                 if (!HasExecuted)

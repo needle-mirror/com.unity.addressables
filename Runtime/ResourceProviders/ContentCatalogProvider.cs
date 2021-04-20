@@ -146,8 +146,11 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                     }
                     else
                     {
-                        IResourceLocation location = new ResourceLocationBase(idToLoad, idToLoad,
+                        ResourceLocationBase location = new ResourceLocationBase(idToLoad, idToLoad,
                             typeof(JsonAssetProvider).FullName, typeof(ContentCatalogData));
+                        if (m_ProviderInterface.Location.Data is ProviderLoadRequestOptions providerData)
+                            location.Data = providerData.Copy();
+                        
                         m_ContentCatalogDataLoadOp = m_ProviderInterface.ResourceManager.ProvideResource<ContentCatalogData>(location);
                         m_ContentCatalogDataLoadOp.Completed += CatalogLoadOpCompleteCallback;
                     }

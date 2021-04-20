@@ -5,7 +5,7 @@
         "Unity.Addressables",
         "Unity.ResourceManager",
         "Unity.ScriptableBuildPipeline.Editor",
-        "Unity.Addressables.Tests"		
+        "Unity.Addressables.Tests"
     ],
     "optionalUnityReferences": [
         "TestAssemblies"
@@ -20,5 +20,12 @@
     "autoReferenced": true,
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [
+        {
+            "name": "Unity",
+            "expression": "2020.2.0a9",
+            "define": "NONRECURSIVE_DEPENDENCY_DATA"
+        }
     ]
 }

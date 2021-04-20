@@ -31,7 +31,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         /// <summary>
         /// The mapping of the old to new bundle names. 
         /// </summary>
-        public Dictionary<string, string> BundleNameRemap { get { return m_BundleNameRemap; } }
+        public Dictionary<string, string> BundleNameRemap { get { return m_BundleNameRemap; } set { m_BundleNameRemap = value; }}
 
 #pragma warning disable 649
         [InjectContext(ContextUsage.In)]

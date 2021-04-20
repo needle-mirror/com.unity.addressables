@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 #if UNITY_EDITOR
@@ -36,11 +36,12 @@ namespace AddressableTests.SyncAddressables
             AddressableAssetEntry sceneEntry = settings.CreateOrMoveEntry(sceneGuid, syncGroup);
             sceneEntry.address = m_SceneKey;
         }
+
 #endif
 
         protected void ReleaseOp(AsyncOperationHandle handle)
         {
-            if(handle.IsValid())
+            if (handle.IsValid())
                 handle.Release();
             Assert.IsFalse(handle.IsValid());
         }
@@ -118,7 +119,7 @@ namespace AddressableTests.SyncAddressables
             var updateCatalogs = m_Addressables.UpdateCatalogs(null, false);
             Assert.IsNull(updateCatalogs.WaitForCompletion());
             LogAssert.Expect(LogType.Error, new Regex("Content update not available*"));
-            LogAssert.Expect(LogType.Error, new Regex("Exception encountered in operation ChainOperation*"));
+            LogAssert.Expect(LogType.Error, new Regex(".*ChainOperation.*"));
             Assert.AreEqual(AsyncOperationStatus.Failed, updateCatalogs.Status);
             Assert.IsTrue(updateCatalogs.IsDone);
 
@@ -275,7 +276,7 @@ namespace AddressableTests.SyncAddressables
             LogAssert.Expect(LogType.Error, new Regex("Invalid path in TextDataProvider*"));
             LogAssert.Expect(LogType.Error, new Regex("Unable to load ContentCatalogData*"));
             LogAssert.Expect(LogType.Error, new Regex("Failed to load content catalog*"));
-            LogAssert.Expect(LogType.Error, new Regex("ChainOperation of Type: UnityEngine.AddressableAssets.ResourceLocators.IResourceLocator failed*"));
+            LogAssert.Expect(LogType.Error, new Regex(".*ChainOperation.*"));
 
             var loadCatalogOp = m_Addressables.LoadContentCatalogAsync("not a real path.json", false);
 
@@ -345,5 +346,4 @@ namespace AddressableTests.SyncAddressables
 
     [UnityPlatform(exclude = new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor })]
     class SyncAddressableTests_PackedMode : SyncAddressableTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Packed; } } }
-
 }

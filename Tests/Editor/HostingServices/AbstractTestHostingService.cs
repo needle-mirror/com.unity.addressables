@@ -30,6 +30,10 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
         {
         }
 
+        public virtual void CloseHostingService()
+        {
+        }
+
         public virtual void OnBeforeSerialize(KeyDataStore dataStore)
         {
         }

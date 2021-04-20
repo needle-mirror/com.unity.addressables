@@ -101,7 +101,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 #if UNITY_2019_3_OR_NEWER
                 AddressablesVersion = PackageManager.PackageInfo.FindForAssembly(typeof(Addressables).Assembly)?.version,
 #endif
-                MaxConcurrentWebRequests = aaSettings.MaxConcurrentWebRequests
+                MaxConcurrentWebRequests = aaSettings.MaxConcurrentWebRequests,
+                CatalogRequestsTimeout = aaSettings.CatalogRequestsTimeout
             };
             m_Linker = UnityEditor.Build.Pipeline.Utilities.LinkXmlGenerator.CreateDefault();
             m_Linker.AddAssemblies(new[] { typeof(Addressables).Assembly, typeof(UnityEngine.ResourceManagement.ResourceManager).Assembly });
@@ -155,6 +156,25 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             return value;
         }
+        
+        internal string GetMonoScriptBundleName(AddressableAssetsBuildContext aaContext)
+        {
+            string value = null;
+            switch (aaContext.Settings.MonoScriptBundleNaming)
+            {
+                case MonoScriptBundleNaming.ProjectName:
+                    value = Hash128.Compute(GetProjectName()).ToString();
+                    break;
+                case MonoScriptBundleNaming.DefaultGroupGuid:
+                    value = aaContext.Settings.DefaultGroup.Guid;
+                    break;
+                case MonoScriptBundleNaming.Custom:
+                    value = aaContext.Settings.MonoScriptBundleCustomNaming;
+                    break;
+            }
+
+            return value;
+        }
 
         /// <summary>
         /// The method that does the actual building after all the groups have been processed.
@@ -186,7 +206,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     aaContext.Settings.buildSettings.bundleBuildPath);
 
                 var builtinShaderBundleName = GetBuiltInShaderBundleName(aaContext) + "_unitybuiltinshaders.bundle";
-                var buildTasks = RuntimeDataBuildTasks(builtinShaderBundleName);
+                string monoScriptBundleName = GetMonoScriptBundleName(aaContext);
+                if (!string.IsNullOrEmpty(monoScriptBundleName))
+                    monoScriptBundleName += "_monoscripts.bundle";
+                var buildTasks = RuntimeDataBuildTasks(builtinShaderBundleName, monoScriptBundleName);
                 buildTasks.Add(extractData);
 
                 IBundleBuildResults results;
@@ -259,7 +282,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
 
             var contentCatalog = new ContentCatalogData(ResourceManagerRuntimeData.kCatalogAddress);
-            contentCatalog.SetData(aaContext.locations, aaContext.Settings.OptimizeCatalogSize);
+            contentCatalog.SetData(aaContext.locations.OrderBy(f => f.InternalId).ToList(), aaContext.Settings.OptimizeCatalogSize);
 
             contentCatalog.ResourceProviderData.AddRange(m_ResourceProviderData);
             foreach (var t in aaContext.providerTypes)
@@ -407,7 +430,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             string[] dependencyHashes = null;
             if (aaContext.Settings.BuildRemoteCatalog)
             {
-                dependencyHashes = CreateRemoteCatalog(jsonText, aaContext.runtimeData.CatalogLocations, aaContext.Settings, builderInput);
+                dependencyHashes = CreateRemoteCatalog(jsonText, aaContext.runtimeData.CatalogLocations, aaContext.Settings, builderInput, new ProviderLoadRequestOptions() {IgnoreFailures = true});
             }
 
             aaContext.runtimeData.CatalogLocations.Add(new ResourceLocationData(
@@ -801,7 +824,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return assetsInputDef;
         }
 
-        static string[] CreateRemoteCatalog(string jsonText, List<ResourceLocationData> locations, AddressableAssetSettings aaSettings, AddressablesDataBuilderInput builderInput)
+        static string[] CreateRemoteCatalog(string jsonText, List<ResourceLocationData> locations, AddressableAssetSettings aaSettings, AddressablesDataBuilderInput builderInput, ProviderLoadRequestOptions catalogLoadOptions)
         {
             string[] dependencyHashes = null;
 
@@ -835,7 +858,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     new[] {dependencyHashes[(int) ContentCatalogProvider.DependencyHashIndex.Remote]},
                     remoteHashLoadPath,
                     typeof(TextDataProvider), typeof(string));
-                remoteHashLoadLocation.Data = new ProviderLoadRequestOptions() {IgnoreFailures = true};
+                remoteHashLoadLocation.Data = catalogLoadOptions.Copy();
                 locations.Add(remoteHashLoadLocation);
 
                 var cacheLoadPath = "{UnityEngine.Application.persistentDataPath}/com.unity.addressables" + versionedFileName + ".hash";
@@ -843,7 +866,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     new[] {dependencyHashes[(int) ContentCatalogProvider.DependencyHashIndex.Cache]},
                     cacheLoadPath,
                     typeof(TextDataProvider), typeof(string));
-                cacheLoadLocation.Data = new ProviderLoadRequestOptions() {IgnoreFailures = true};
+                cacheLoadLocation.Data = catalogLoadOptions.Copy();
                 locations.Add(cacheLoadLocation);
             }
 
@@ -854,7 +877,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         // and isn't needed for most tests.
         internal static bool s_SkipCompilePlayerScripts = false;
 
-        static IList<IBuildTask> RuntimeDataBuildTasks(string builtinShaderBundleName)
+        static IList<IBuildTask> RuntimeDataBuildTasks(string builtinShaderBundleName, string monoScriptBundleName)
         {
             var buildTasks = new List<IBuildTask>();
 
@@ -873,6 +896,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             buildTasks.Add(new AddHashToBundleNameTask());
             buildTasks.Add(new StripUnusedSpriteSources());
             buildTasks.Add(new CreateBuiltInShadersBundle(builtinShaderBundleName));
+            if (!string.IsNullOrEmpty(monoScriptBundleName))
+                buildTasks.Add(new CreateMonoScriptBundle(monoScriptBundleName));
             buildTasks.Add(new PostDependencyCallback());
 
             // Packing
@@ -931,6 +956,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     {
                         Crc = schema.UseAssetBundleCrc ? info.Crc : 0,
                         UseCrcForCachedBundle = schema.UseAssetBundleCrcForCachedBundles,
+                        UseUnityWebRequestForLocalBundles = schema.UseUnityWebRequestForLocalBundles,
                         Hash = schema.UseAssetBundleCache ? info.Hash.ToString() : "",
                         ChunkedTransfer = schema.ChunkedTransfer,
                         RedirectLimit = schema.RedirectLimit,

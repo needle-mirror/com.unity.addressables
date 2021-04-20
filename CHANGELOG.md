@@ -4,6 +4,30 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.18.2] - 2021-04-20
+- Where available use synchronous load api's when AsyncOperationHandle.WaitForCompletion is called.
+- Fixed issue where loading of Prefabs and ScriptableObjects in "Use Asset Database" and "Simulate Groups" play mode could cause changes to source Assets. Now those play modes will return instanced copies of the Assets.
+- Added "Catalog Download Timeout" to AddressableAssetSettings, used for setting a timeout for .hash and .json catalog file downloads.
+- Fixed issue where order of data in catalog.json can change. Order is now sorted to be deterministic.
+- Added best practice documentation for define dependant compilation during build time.
+- CompletedOperation are now returned to the op pool so they can be reused
+- Made AddressableAssetSettings.ContentStateBuildPath public api access.
+- Add option for building MonoScript bundle. This approach improves multi bundle dependencies to the same MonoScript.
+- Added documentation for AddressableAssetSettings options.
+- Improved error handling of failed unity web requests and some other operations. 
+- Users can now look into the InnerException property of an operation's exception for additional details"
+- Fixed issue where .json and .asmdef files in the root of a package folder cannot be marked as Addressable.
+- Fixed issue where unmodifiable assets cannot be marked as Addressable.
+- Exposed more tools for making custom build scripts
+- Exposed InvokeWaitForCompletion to be inheritable by custom operations
+- Fixed issue where an url was improperly parsed by LoadContentCatalogAsync() if it contained query parameters
+- Fixed issue where the post assigned to a hosting service was changing on domain reloads
+- Add option for building asset bundles using "Non-Recursive Dependency calculation" methods. This approach helps reduce asset bundle rebuilds and runtime memory consumption.
+- Add upload speed option to the http service settings. Downloads will be provided by the rate set in Kbp/s
+- Add an option to force using UnityWebRequest even when AssetBundles are local
+- Fixed issue with WebRequestQueue where web requests weren't getting queued correctly
+- Fixed issue where looking for default group would spam null reference to GUI if Built In data group was deleted/null
+
 ## [1.17.17] - 2021-04-06
 - Add AssetPostprocessor for AddressableSettings after AssetDatabase is Initialised, if not yet initialised on initial project launch.
 - Removed serialisation of m_MainAsset and m_TargetAsset from Group entries.
@@ -109,6 +133,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added options for internal naming of asset bundles.  This will allow for deterministic naming to avoid unintended diffs for content updates.
 - The "Ignore Invalid/Unsupported Files" option is now saved in the settings
 - Fixed issue where Filename only bundle naming schemas were overwriting old bundles prematurely in content update.
+
+## [1.16.19] - 2021-04-08
+- Fixed an issue where the group property of the AddressableAssetGroupSchema was not persisted, and could get lost when objects were reloaded
+
+## [1.16.18] - 2021-03-23
+- Fixed compile warning in Unity 2020.2+
 
 ## [1.16.17] - 2021-02-25
 - Updated group rename logic to support engine AssetDatabase fix. Change should be transparent to users.

@@ -25,6 +25,8 @@ namespace UnityEngine.AddressableAssets
     {
         ResourceManager m_ResourceManager;
         IInstanceProvider m_InstanceProvider;
+        int m_CatalogRequestsTimeout;
+
         internal const string kCacheDataFolder = "{UnityEngine.Application.persistentDataPath}/com.unity.addressables/";
 
         public IInstanceProvider InstanceProvider
@@ -49,6 +51,17 @@ namespace UnityEngine.AddressableAssets
                 if (m_ResourceManager == null)
                     m_ResourceManager = new ResourceManager(new DefaultAllocationStrategy());
                 return m_ResourceManager;
+            }
+        }
+        public int CatalogRequestsTimeout
+        {
+            get
+            {
+                return m_CatalogRequestsTimeout;
+            }
+            set
+            {
+                m_CatalogRequestsTimeout = value;
             }
         }
 
@@ -235,9 +248,12 @@ namespace UnityEngine.AddressableAssets
         public void LogException(AsyncOperationHandle op, Exception ex)
         {
             if (op.Status == AsyncOperationStatus.Failed)
-                Debug.LogErrorFormat("{0} encountered in operation {1}, status={2}, result={3} : {4}", ex.GetType().Name, op.DebugName, op.Status, op.Result, ex.Message);
+            {
+                Debug.LogError(ex.ToString());
+                Addressables.Log($"Failed op : {op.DebugName}");
+            }
             else
-                Addressables.LogFormat("{0} encountered in operation {1}, status={2}, result={3} : {2}", ex.GetType().Name, op.DebugName, op.Status, op.Result, ex.Message);
+                Addressables.Log(ex.ToString());
         }
 
         public void LogErrorFormat(string format, params object[] args)
@@ -376,7 +392,7 @@ namespace UnityEngine.AddressableAssets
             {
                 if (m_InitializationOperation.IsValid())
                     return m_InitializationOperation;
-                return ResourceManager.CreateCompletedOperation(m_ResourceLocators[0].Locator, null);
+                return ResourceManager.CreateCompletedOperation(m_ResourceLocators[0].Locator, errorMsg: null);
             }
 
             if (ResourceManager.ExceptionHandler == null)
@@ -437,16 +453,33 @@ namespace UnityEngine.AddressableAssets
         internal ResourceLocationBase CreateCatalogLocationWithHashDependencies(string catalogPath, string hashFilePath)
         {
             var catalogLoc = new ResourceLocationBase(catalogPath, catalogPath, typeof(ContentCatalogProvider).FullName, typeof(IResourceLocator));
+            catalogLoc.Data = new ProviderLoadRequestOptions()
+            {
+                IgnoreFailures = false,
+                WebRequestTimeout = CatalogRequestsTimeout
+            };
 
             if (!string.IsNullOrEmpty(hashFilePath))
             {
-                string cacheHashFilePath = ResolveInternalId(kCacheDataFolder + hashFilePath.GetHashCode() + hashFilePath.Substring(hashFilePath.LastIndexOf(".")));
+                ProviderLoadRequestOptions hashOptions = new ProviderLoadRequestOptions()
+                {
+                    IgnoreFailures = true,
+                    WebRequestTimeout = CatalogRequestsTimeout
+                };
+
+                string tmpPath = hashFilePath;
+                if (ResourceManagerConfig.IsPathRemote(hashFilePath))
+                {
+                    tmpPath = ResourceManagerConfig.StripQueryParameters(hashFilePath);
+                }
+                // The file name of the local cached catalog + hash file is the hash code of the remote hash path, without query parameters (if any).
+                string cacheHashFilePath = ResolveInternalId(kCacheDataFolder + tmpPath.GetHashCode() + ".hash");
 
                 var hashResourceLocation = new ResourceLocationBase(hashFilePath, hashFilePath, typeof(TextDataProvider).FullName, typeof(string));
-                hashResourceLocation.Data = new ProviderLoadRequestOptions() {IgnoreFailures = true};
+                hashResourceLocation.Data = hashOptions.Copy();
                 catalogLoc.Dependencies.Add(hashResourceLocation);
                 var cacheResourceLocation = new ResourceLocationBase(cacheHashFilePath, cacheHashFilePath, typeof(TextDataProvider).FullName, typeof(string));
-                cacheResourceLocation.Data = new ProviderLoadRequestOptions() {IgnoreFailures = true};
+                cacheResourceLocation.Data = hashOptions.Copy();
                 catalogLoc.Dependencies.Add(cacheResourceLocation);
             }
 
@@ -550,7 +583,8 @@ namespace UnityEngine.AddressableAssets
                 m_Addressables = aa;
             }
 
-            internal override bool InvokeWaitForCompletion()
+            /// <inheritdoc />
+            protected override bool InvokeWaitForCompletion()
             {
                 m_RM?.Update(Time.deltaTime);
                 if (!HasExecuted)
@@ -592,7 +626,8 @@ namespace UnityEngine.AddressableAssets
                 Complete(m_locations, true, string.Empty);
             }
 
-            internal override bool InvokeWaitForCompletion()
+            /// <inheritdoc />
+            protected override bool InvokeWaitForCompletion()
             {
                 m_RM?.Update(Time.deltaTime);
                 if (!HasExecuted)
@@ -724,14 +759,14 @@ namespace UnityEngine.AddressableAssets
         {
             if (typeof(TObject) == typeof(SceneInstance))
             {
-                SceneInstance sceneInstance = (SceneInstance)Convert.ChangeType(handle.Result,typeof(SceneInstance));
+                SceneInstance sceneInstance = (SceneInstance)Convert.ChangeType(handle.Result, typeof(SceneInstance));
                 if (sceneInstance.Scene.isLoaded && handle.ReferenceCount == 1)
                 {
                     if (SceneOperationCount == 1 && m_SceneInstances.First().Equals(handle))
                         m_SceneInstances.Clear();
                     UnloadSceneAsync(handle);
                 }
-                else if(!sceneInstance.Scene.isLoaded && handle.ReferenceCount == 2)
+                else if (!sceneInstance.Scene.isLoaded && handle.ReferenceCount == 2)
                 {
                     handle.Completed += s => Release(handle);
                 }

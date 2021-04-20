@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading;
@@ -38,7 +39,6 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             var services = m_Manager.HostingServices.ToArray();
             foreach (var svc in services)
             {
-                svc.StopHostingService();
                 m_Manager.RemoveHostingService(svc);
             }
             if (Directory.Exists(k_TestConfigFolder))
@@ -413,41 +413,54 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             Assert.IsFalse(ProfileStringEvalDelegateIsRegistered(m_Settings, svc));
         }
 
-        // OnAfterDeserialize
-
         [Test]
-        public void OnAfterDeserializeShould_RestoreHostingServicesInstancesIfStillAlive()
+        public void OnDisableShould_StopAllServices()
         {
             m_Manager.Initialize(m_Settings);
-            var svc = m_Manager.AddHostingService(typeof(TestHostingService), "test");
-            Assert.IsTrue(m_Manager.HostingServices.Contains(svc));
+            for (int i = 0; i < 3; i++)
+            {
+                var svc = m_Manager.AddHostingService(typeof(HttpHostingService), $"test_{i}") as HttpHostingService;
+                Assert.IsNotNull(svc);
+                svc.StartHostingService();
+                Assert.IsTrue(svc.IsHostingServiceRunning);
+            }
+            m_Manager.OnDisable();
 
-            var generator = new ObjectIDGenerator();
-            var id = generator.GetId(svc, out bool firstTime);
-            Assert.IsTrue(firstTime);
+            foreach (var svc in m_Manager.HostingServices)
+                Assert.IsFalse(svc.IsHostingServiceRunning);
+        }
 
-            m_Manager.OnBeforeSerialize();
-            var serializedData = Serialize(m_Manager);
+        [Test]
+        public void OnEnableShould_RestoreServicesThatWherePreviouslyEnabled()
+        {
+            m_Manager.Initialize(m_Settings);
+            var svc = m_Manager.AddHostingService(typeof(HttpHostingService), "test") as HttpHostingService;
+            Assert.IsNotNull(svc);
+            svc.WasEnabled = true;
+            Assert.IsFalse(svc.IsHostingServiceRunning);
+            m_Manager.OnEnable();
+            Assert.IsTrue(svc.IsHostingServiceRunning);
+        }
 
-            svc = null;
-            m_Manager = null;
-            m_Settings.HostingServicesManager = null;
+        [Test]
+        public void OnDomainReload_HttpServicePortShouldntChange()
+        {
+            m_Manager.Initialize(m_Settings);
+            var svc = m_Manager.AddHostingService(typeof(HttpHostingService), "test") as HttpHostingService;
+            Assert.IsNotNull(svc);
+            svc.WasEnabled = true;
+            m_Manager.OnEnable();
+            var expectedPort = svc.HostingServicePort;
+            Assert.IsTrue(svc.IsHostingServiceRunning);
 
-            var newManager = new HostingServicesManager();
-            m_Settings.HostingServicesManager = newManager;
-            newManager.Initialize(m_Settings);
-
-            Deserialize(newManager, serializedData);
-            newManager.OnAfterDeserialize();
-
-            Assert.IsNotEmpty(newManager.HostingServices);
-            svc = newManager.HostingServices.FirstOrDefault();
-            Assert.NotNull(svc);
-            var id2 = generator.GetId(svc, out firstTime);
-            Assert.IsFalse(firstTime);
-            Assert.AreEqual(id, id2);
-
-            m_Manager = newManager;
+            for (int i = 1; i <= 5; i++)
+            {
+                m_Manager.OnDisable();
+                Assert.IsFalse(svc.IsHostingServiceRunning, $"Service '{svc.DescriptiveName}' was still running after manager.OnDisable() (iteration {i}");
+                m_Manager.OnEnable();
+                Assert.IsTrue(svc.IsHostingServiceRunning, $"Service '{svc.DescriptiveName}' not running after manager.OnEnable() (iteration {i}");
+            }
+            Assert.AreEqual(expectedPort, svc.HostingServicePort);
         }
 
         // RegisterLogger
