@@ -9,6 +9,8 @@ using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
+using UnityEditor.Build.Pipeline.Utilities;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -131,9 +133,89 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
         internal virtual void BuiltInResourcesToDependenciesMap(string[] resourcePaths)
         {
-            foreach (string path in resourcePaths)
+            for (int sceneIndex=0; sceneIndex<resourcePaths.Length; ++sceneIndex)
             {
-                string[] dependencies = AssetDatabase.GetDependencies(path);
+                string path = resourcePaths[sceneIndex];
+                if (EditorUtility.DisplayCancelableProgressBar("Generating built-in resource dependency map",
+                    "Checking " + path + " for duplicates with Addressables content.",
+                    (float) sceneIndex / resourcePaths.Length))
+                {
+                    m_ResourcesToDependencies.Clear();
+                    EditorUtility.ClearProgressBar();
+                    return;
+                }
+                string[] dependencies;
+                if (path.EndsWith(".unity"))
+                {
+#if UNITY_2019_3_OR_NEWER
+                    using (var w = new BuildInterfacesWrapper())
+                    {
+                        var usageTags = new BuildUsageTagSet();
+                        BuildSettings settings = new BuildSettings
+                        {
+                            group = EditorUserBuildSettings.selectedBuildTargetGroup,
+                            target = EditorUserBuildSettings.activeBuildTarget,
+                            typeDB = null,
+                            buildFlags = ContentBuildFlags.None
+                        };
+
+                        SceneDependencyInfo sceneInfo =
+                            ContentBuildInterface.CalculatePlayerDependenciesForScene(path, settings, usageTags);
+                        dependencies = new string[sceneInfo.referencedObjects.Count];
+                        for (int i = 0; i < sceneInfo.referencedObjects.Count; ++i)
+                        {
+                            if (string.IsNullOrEmpty(sceneInfo.referencedObjects[i].filePath))
+                                dependencies[i] = AssetDatabase.GUIDToAssetPath(sceneInfo.referencedObjects[i].guid.ToString());
+                            else
+                                dependencies[i] = sceneInfo.referencedObjects[i].filePath;
+                        }
+                    }
+#else
+                    HashSet<string> assetPaths = new HashSet<string>();
+                    assetPaths.Add(path);
+                    var s = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
+                    List<UnityEngine.Object> roots = new List<UnityEngine.Object>(s.GetRootGameObjects());
+                    
+                    var sceneHierarchyStack = new Stack<GameObject>();
+                    for (int i = roots.Count - 1; i >= 0; --i)
+                    {
+                        GameObject go = (GameObject) roots[i];
+                        if (go.CompareTag("EditorOnly"))
+                        {
+                            UnityEngine.Object.DestroyImmediate(roots[i]);
+                            roots.RemoveAt(i);
+                        }
+                        else
+                            sceneHierarchyStack.Push(go);
+                    }
+
+                    while (sceneHierarchyStack.Count > 0)
+                    {
+                        var item = sceneHierarchyStack.Pop();
+                        for(int i=0; i<item.transform.childCount; ++i)
+                        {
+                            GameObject go = item.transform.GetChild(i).gameObject;
+                            if (go.CompareTag("EditorOnly"))
+                                UnityEngine.Object.DestroyImmediate(go);
+                            else
+                                sceneHierarchyStack.Push(go);
+                        }
+                    }
+
+                    UnityEngine.Object[] deps = EditorUtility.CollectDependencies(roots.ToArray());
+                    foreach (UnityEngine.Object o in deps)
+                    {
+                        string p = AssetDatabase.GetAssetPath(o.GetInstanceID());
+                        if (!string.IsNullOrEmpty(p))
+                            assetPaths.Add(p);
+                    }
+                    
+                    EditorSceneManager.CloseScene(s, true);
+                    dependencies = assetPaths.ToArray();
+#endif
+                }
+                else
+                    dependencies = AssetDatabase.GetDependencies(path);
 
                 if (!m_ResourcesToDependencies.ContainsKey(path))
                     m_ResourcesToDependencies.Add(path, new List<GUID>(dependencies.Length));
@@ -147,6 +229,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                     m_ResourcesToDependencies[path].Add(new GUID(AssetDatabase.AssetPathToGUID(dependency)));
                 }
             }
+            EditorUtility.ClearProgressBar();
         }
 
         internal void ConvertBundleNamesToGroupNames(AddressableAssetsBuildContext buildContext)
@@ -183,31 +266,48 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 }
             }
         }
-
+        
         internal void CalculateInputDefinitions(AddressableAssetSettings settings)
         {
-            foreach (AddressableAssetGroup group in settings.groups)
+            int updateFrequency = Mathf.Max(settings.groups.Count / 10, 1);
+            bool progressDisplayed = false;
+            for (int groupIndex = 0; groupIndex < settings.groups.Count; ++groupIndex)
             {
+                AddressableAssetGroup group = settings.groups[groupIndex];
                 if (group == null)
                     continue;
-
+                if (!progressDisplayed || groupIndex % updateFrequency == 0)
+                {
+                    progressDisplayed = true;
+                    if (EditorUtility.DisplayCancelableProgressBar("Calculating Input Definitions", "",
+                        (float) groupIndex / settings.groups.Count))
+                    {
+                        m_AssetEntries.Clear();
+                        m_BundleToAssetGroup.Clear();
+                        m_AllBundleInputDefs.Clear();
+                        break;
+                    }
+                }
+        
                 if (group.HasSchema<BundledAssetGroupSchema>())
                 {
                     var schema = group.GetSchema<BundledAssetGroupSchema>();
                     List<AssetBundleBuild> bundleInputDefinitions = new List<AssetBundleBuild>();
                     m_AssetEntries.AddRange(BuildScriptPackedMode.PrepGroupBundlePacking(group, bundleInputDefinitions, schema));
-
+        
                     for (int i = 0; i < bundleInputDefinitions.Count; i++)
                     {
                         if (m_BundleToAssetGroup.ContainsKey(bundleInputDefinitions[i].assetBundleName))
                             bundleInputDefinitions[i] = CreateUniqueBundle(bundleInputDefinitions[i]);
-
+        
                         m_BundleToAssetGroup.Add(bundleInputDefinitions[i].assetBundleName, schema.Group.Guid);
                     }
-
+        
                     m_AllBundleInputDefs.AddRange(bundleInputDefinitions);
                 }
             }
+            if (progressDisplayed)
+                EditorUtility.ClearProgressBar();
         }
         internal AssetBundleBuild CreateUniqueBundle(AssetBundleBuild bid)
         {
@@ -268,14 +368,27 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 return results;
             }
 
+            EditorUtility.DisplayProgressBar("Calculating Built-in dependencies", "Calculating dependencies between Built-in resources and Addressables", 0);
             m_AddressableAssets = (from aaGroup in settings.groups
                 where aaGroup != null
                 from entry in aaGroup.entries
                 select new GUID(entry.guid)).ToList();
 
-
+            // bulk of work and progress bars displayed in these methods
             BuiltInResourcesToDependenciesMap(builtInResourcesPaths);
+            if (m_ResourcesToDependencies == null || m_ResourcesToDependencies.Count == 0)
+            {
+                results.Add(new AnalyzeResult {resultName = ruleName + " - No issues found."});
+                return results;
+            }
+
             CalculateInputDefinitions(settings);
+            if (m_AllBundleInputDefs == null || m_AllBundleInputDefs.Count == 0)
+            {
+                results.Add(new AnalyzeResult {resultName = ruleName + " - No issues found."});
+                return results;
+            }
+            EditorUtility.DisplayProgressBar("Calculating Built-in dependencies", "Calculating dependencies between Built-in resources and Addressables", 0.5f);
 
             var context = GetBuildContext(settings);
             ReturnCode exitCode = RefreshBuild(context);
@@ -283,11 +396,12 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             {
                 Debug.LogError("Analyze build failed. " + exitCode);
                 results.Add(new AnalyzeResult { resultName = ruleName + "Analyze build failed. " + exitCode });
+                EditorUtility.ClearProgressBar();
                 return results;
             }
 
+            EditorUtility.DisplayProgressBar("Calculating Built-in dependencies", "Calculating dependencies between Built-in resources and Addressables", 0.9f);
             IntersectResourcesDepedenciesWithBundleDependencies(GetAllBundleDependencies());
-
             ConvertBundleNamesToGroupNames(context);
 
             results = (from resource in m_ResourcesToDependencies.Keys
@@ -313,6 +427,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             if (results.Count == 0)
                 results.Add(new AnalyzeResult { resultName = ruleName + " - No issues found." });
 
+            EditorUtility.ClearProgressBar();
             return results;
         }
 

@@ -114,6 +114,15 @@ namespace AddressableTests.SyncAddressables
         }
 
         [Test]
+        public void CheckForCatalogUpdates_CompletesSynchronously_WhenAutoReleaseHandle()
+        {
+            var checkForUpdates = m_Addressables.CheckForCatalogUpdates();
+            checkForUpdates.WaitForCompletion();
+            Assert.IsFalse(checkForUpdates.IsValid());
+            Assert.IsTrue(checkForUpdates.IsDone);
+        }
+
+        [Test]
         public void UpdateCatalogs_CompletesSynchronously()
         {
             var updateCatalogs = m_Addressables.UpdateCatalogs(null, false);

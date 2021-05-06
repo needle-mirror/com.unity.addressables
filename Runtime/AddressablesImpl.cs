@@ -19,6 +19,7 @@ using UnityEngine.SceneManagement;
 [assembly: InternalsVisibleTo("Unity.Addressables.Editor.Tests")]
 #endif
 [assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
+[assembly: InternalsVisibleTo("Unity.Addressables.Samples.Tests")]
 namespace UnityEngine.AddressableAssets
 {
     internal class AddressablesImpl : IEqualityComparer<IResourceLocation>

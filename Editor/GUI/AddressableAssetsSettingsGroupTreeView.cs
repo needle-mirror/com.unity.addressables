@@ -352,7 +352,7 @@ namespace UnityEditor.AddressableAssets.GUI
             int depth = 0;
 
             AssetEntryTreeViewItem groupItem = null;
-            if (ProjectConfigData.ShowGroupsAsHierarchy)
+            if (ProjectConfigData.ShowGroupsAsHierarchy && group != null)
             {
                 //// dash in name imitates hiearchy.
                 TreeViewItem newRoot = root;
@@ -1268,17 +1268,20 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     if (args.parentItem == null || args.parentItem == rootItem && visualMode != DragAndDropVisualMode.Rejected)
                     {
-                        AddressableAssetGroup group = draggedNodes.First().@group;
-                        int index = m_Editor.settings.groups.FindIndex(g => g == group);
-                        if (index < args.insertAtIndex)
-                            args.insertAtIndex--;
+                        foreach (var node in draggedNodes)
+                        {
+                            AddressableAssetGroup group = node.@group;
+                            int index = m_Editor.settings.groups.FindIndex(g => g == group);
+                            if (index < args.insertAtIndex)
+                                args.insertAtIndex--;
 
-                        m_Editor.settings.groups.RemoveAt(index);
+                            m_Editor.settings.groups.RemoveAt(index);
 
-                        if (args.insertAtIndex < 0 || args.insertAtIndex > m_Editor.settings.groups.Count)
-                            m_Editor.settings.groups.Insert(m_Editor.settings.groups.Count, group);
-                        else
-                            m_Editor.settings.groups.Insert(args.insertAtIndex, group);
+                            if (args.insertAtIndex < 0 || args.insertAtIndex > m_Editor.settings.groups.Count)
+                                m_Editor.settings.groups.Insert(m_Editor.settings.groups.Count, group);
+                            else
+                                m_Editor.settings.groups.Insert(args.insertAtIndex, group);
+                        }
 
                         m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupMoved, m_Editor.settings.groups, true, true);
                         Reload();

@@ -1,7 +1,7 @@
 {
   "name": "com.unity.addressables",
   "displayName": "Addressables",
-  "version": "1.18.2",
+  "version": "1.18.4",
   "unity": "2018.4",
   "description": "The Addressable Asset System allows the developer to ask for an asset via its address. Once an asset (e.g. a prefab) is marked \"addressable\", it generates an address which can be called from anywhere. Wherever the asset resides (local or remote), the system will locate it and its dependencies, then return it.\n\nUse 'Window->Asset Management->Addressables' to begin working with the system.\n\nAddressables use asynchronous loading to support loading from any location with any collection of dependencies. Whether you have been using direct references, traditional asset bundles, or Resource folders, addressables provide a simpler way to make your game more dynamic. Addressables simultaneously opens up the world of asset bundles while managing all the complexity.\n\nFor usage samples, see github.com/Unity-Technologies/Addressables-Sample",
   "keywords": [
@@ -22,9 +22,26 @@
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/Addressables.git",
     "type": "git",
-    "revision": "25f047e0ae53fa81e049cb1dcd2d83962d7c45d0"
+    "revision": "cb4e6f60b4355966681a164019a82d71abbd0524"
   },
   "upmCi": {
-    "footprint": "1cb10afb3f45099a2fd5abdd5e83233d57512dde"
-  }
+    "footprint": "8d9efce387cd5072bfe96fe8672c09cb679438c7"
+  },
+  "samples": [
+    {
+      "displayName": "Addressables Utility",
+      "description": "This sample contains a set of utility functions for Addressables.",
+      "path": "Samples~/AddressablesUtility"
+    },
+    {
+      "displayName": "Disable AssetImport on Build",
+      "description": "A script that disables asset importing during a player build.  This improves build performance since AssetBundles are copied into StreamingAssets at build time.",
+      "path": "Samples~/DisableAssetImportOnBuild"
+    },
+    {
+      "displayName": "Prefab Spawner",
+      "description": "A basic script that instantiates and destroys a prefab AssetReference.",
+      "path": "Samples~/PrefabSpawner"
+    }
+  ]
 }

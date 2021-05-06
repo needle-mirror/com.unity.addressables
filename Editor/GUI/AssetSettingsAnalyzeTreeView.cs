@@ -282,13 +282,13 @@ namespace UnityEditor.AddressableAssets.GUI
 
             //Build results tree
             index = 0;
-            int updateFrequency = hashToTreeViewItems.Keys.Count / 10;
+            int updateFrequency = Mathf.Max(hashToTreeViewItems.Keys.Count / 10, 1);
             foreach (var hash in hashToTreeViewItems.Keys)
             {
                 TreeViewItem item;
                 if (hashToTreeViewItems.TryGetValue(hash, out item))
                 {
-                    if(index % updateFrequency == 0)
+                    if (index == 0 || index % updateFrequency == 0)
                         EditorUtility.DisplayProgressBar("Building Results Tree...", item.displayName, (index / hashToTreeViewItems.Keys.Count));
                     if ((item as AnalyzeResultsTreeViewItem) != null && hashToTreeViewItems.ContainsKey((item as AnalyzeResultsTreeViewItem).parentHash))
                     {

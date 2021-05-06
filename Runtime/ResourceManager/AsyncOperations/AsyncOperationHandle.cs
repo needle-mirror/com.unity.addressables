@@ -170,10 +170,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             finally
             {
                 AsyncOperationHandle.IsWaitingForCompletion = false;
+                m_InternalOp?.m_RM?.Update(Time.deltaTime);
             }
 #else
             if (IsValid())
                 InternalOp.WaitForCompletion();
+
+            m_InternalOp?.m_RM?.Update(Time.deltaTime);
             if (IsValid())
                 return Result;
 #endif

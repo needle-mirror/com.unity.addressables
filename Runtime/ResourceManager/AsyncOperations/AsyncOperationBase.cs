@@ -185,6 +185,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 Result = default(TObject);
                 m_referenceCount = 1;
                 m_Status = AsyncOperationStatus.None;
+                m_taskCompletionSource = null;
+                m_taskCompletionSourceTypeless = null;
                 m_Error = null;
                 m_Version++;
                 m_RM = null;
@@ -197,116 +199,33 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             }
         }
 
-        System.Threading.EventWaitHandle m_waitHandle;
-        internal System.Threading.WaitHandle WaitHandle
+        TaskCompletionSource<TObject> m_taskCompletionSource;
+        internal Task<TObject> Task
         {
             get
             {
-                if (m_waitHandle == null)
-                    m_waitHandle = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.ManualReset);
-                m_waitHandle.Reset();
-                return m_waitHandle;
+                if (m_taskCompletionSource == null)
+                {
+                    m_taskCompletionSource = new TaskCompletionSource<TObject>();
+                    if (IsDone && !CompletedEventHasListeners)
+                        m_taskCompletionSource.SetResult(Result);
+                }
+                return m_taskCompletionSource.Task;
             }
         }
 
-        internal System.Threading.Tasks.Task<TObject> Task
+        TaskCompletionSource<object> m_taskCompletionSourceTypeless;
+        Task<object> IAsyncOperation.Task
         {
             get
             {
-#if UNITY_WEBGL
-                Debug.LogError("Multithreaded operation are not supported on WebGL.  Unable to aquire Task.");
-                return default;
-#else
-                if (Status == AsyncOperationStatus.Failed)
+                if (m_taskCompletionSourceTypeless == null)
                 {
-                    return System.Threading.Tasks.Task.FromResult(default(TObject));
+                    m_taskCompletionSourceTypeless = new TaskCompletionSource<object>();
+                    if (IsDone && !CompletedEventHasListeners)
+                        m_taskCompletionSourceTypeless.SetResult(Result);
                 }
-                System.Threading.WaitHandle waitHandle = null;
-                if (Status == AsyncOperationStatus.Succeeded)
-                {
-                    if (Handle.IsValid() && CompletedEventHasListeners)
-                    {
-                        waitHandle = WaitHandle;
-                        Task<TObject> t = System.Threading.Tasks.Task.Factory.StartNew((Func<object, TObject>)(o =>
-                        {
-                            var asyncOperation = o as AsyncOperationBase<TObject>;
-                            if (asyncOperation == null)
-                                return default(TObject);
-                            asyncOperation.IncrementReferenceCount();
-                            waitHandle.WaitOne();
-                            var result = (TObject)asyncOperation.Result;
-                            asyncOperation.DecrementReferenceCount();
-                            return result;
-                        }), this);
-                        return t;
-                    }
-
-                    return System.Threading.Tasks.Task.FromResult(Result);
-                }
-
-                waitHandle = WaitHandle;
-                return System.Threading.Tasks.Task.Factory.StartNew((Func<object, TObject>)(o =>
-                {
-                    var asyncOperation = o as AsyncOperationBase<TObject>;
-                    if (asyncOperation == null)
-                        return default(TObject);
-                    asyncOperation.IncrementReferenceCount();
-                    waitHandle.WaitOne();
-                    var result = (TObject)asyncOperation.Result;
-                    asyncOperation.DecrementReferenceCount();
-                    return result;
-                }), this);
-#endif
-            }
-        }
-
-        System.Threading.Tasks.Task<object> IAsyncOperation.Task
-        {
-            get
-            {
-#if UNITY_WEBGL
-                Debug.LogError("Multithreaded operation are not supported on WebGL.  Unable to aquire Task.");
-                return default;
-#else
-                if (Status == AsyncOperationStatus.Failed)
-                {
-                    return System.Threading.Tasks.Task.FromResult<object>(null);
-                }
-                System.Threading.WaitHandle waitHandle = null;
-                if (Status == AsyncOperationStatus.Succeeded)
-                {
-                    if (Handle.IsValid() && CompletedEventHasListeners)
-                    {
-                        waitHandle = WaitHandle;
-                        Task<object> t = System.Threading.Tasks.Task.Factory.StartNew<object>((Func<object, object>)(o =>
-                        {
-                            var asyncOperation = o as AsyncOperationBase<TObject>;
-                            if (asyncOperation == null)
-                                return default(object);
-                            asyncOperation.IncrementReferenceCount();
-                            waitHandle.WaitOne();
-                            var result = (object)asyncOperation.Result;
-                            asyncOperation.DecrementReferenceCount();
-                            return result;
-                        }), this);
-                        return t;
-                    }
-                    return System.Threading.Tasks.Task.FromResult<object>(Result);
-                }
-
-                waitHandle = WaitHandle;
-                return System.Threading.Tasks.Task.Factory.StartNew<object>((Func<object, object>)(o =>
-                {
-                    var asyncOperation = o as AsyncOperationBase<TObject>;
-                    if (asyncOperation == null)
-                        return default(object);
-                    asyncOperation.IncrementReferenceCount();
-                    waitHandle.WaitOne();
-                    var result = (object)asyncOperation.Result;
-                    asyncOperation.DecrementReferenceCount();
-                    return result;
-                }), this);
-#endif
+                return m_taskCompletionSourceTypeless.Task;
             }
         }
 
@@ -417,9 +336,11 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 m_CompletedActionT.Invoke(new AsyncOperationHandle<TObject>(this));
                 m_CompletedActionT.Clear();
             }
-
-            if (m_waitHandle != null)
-                m_waitHandle.Set();
+            if (m_taskCompletionSource != null)
+                m_taskCompletionSource.TrySetResult(Result);
+            
+            if (m_taskCompletionSourceTypeless != null)
+                m_taskCompletionSourceTypeless.TrySetResult(Result);
 
             m_InDeferredCallbackQueue = false;
         }

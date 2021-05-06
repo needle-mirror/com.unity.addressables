@@ -11,6 +11,8 @@ public class AssetReferenceTestBehavior : MonoBehaviour
     public AssetReference ReferenceWithMultiTypedSubObject;
     public AssetReference ReferenceWithMultiTypedSubObjectSubReference;
 
+    public string AssetReferenceAddress;
+
     public AssetLabelReference LabelReference;
     public AssetLabelReference InvalidLabelReference;
 }

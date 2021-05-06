@@ -134,6 +134,53 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
         }
 
         [Test]
+        public void DetermineIdToLoad_IfDisableContentCatalogUpdateTrue_ForcesLocalId()
+        {
+            var contentCatalogOp = new ContentCatalogProvider.InternalOp();
+
+            IResourceLocation[] dependencies = new IResourceLocation[(int)ContentCatalogProvider.DependencyHashIndex.Count];
+
+            dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote] = new ResourceLocationBase(string.Empty, k_RemoteLocationId, typeof(ContentCatalogProvider).FullName, typeof(object));
+            dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Cache] = new ResourceLocationBase(string.Empty, k_CacheLocationId, typeof(ContentCatalogProvider).FullName, typeof(object));
+
+            var location = new ResourceLocationBase(k_LocationName, k_LocationId, typeof(ContentCatalogProvider).FullName, typeof(object), dependencies);
+            var loadedId = contentCatalogOp.DetermineIdToLoad(location, new List<object> { "hash", "" }, true);
+
+            Assert.AreEqual(k_LocationId, loadedId);
+        }
+
+        [Test]
+        public void DetermineIdToLoad_IfDisableContentCatalogUpdateTrue_ForcesCachedIdWhenLocalHashExists()
+        {
+            var contentCatalogOp = new ContentCatalogProvider.InternalOp();
+
+            IResourceLocation[] dependencies = new IResourceLocation[(int)ContentCatalogProvider.DependencyHashIndex.Count];
+
+            dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote] = new ResourceLocationBase(string.Empty, k_RemoteLocationId, typeof(ContentCatalogProvider).FullName, typeof(object));
+            dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Cache] = new ResourceLocationBase(string.Empty, k_CacheLocationId, typeof(ContentCatalogProvider).FullName, typeof(object));
+
+            var location = new ResourceLocationBase(k_LocationName, k_LocationId, typeof(ContentCatalogProvider).FullName, typeof(object), dependencies);
+            var loadedId = contentCatalogOp.DetermineIdToLoad(location, new List<object> { "hash", "local" }, true);
+            Assert.AreEqual(k_CacheLocationId, loadedId);
+        }
+
+        [Test]
+        public void DetermineIdToLoad_SetsLocalHash_WhenDisableContentCatalogIsTrue_AndNoLocalHashExists()
+        {
+            var contentCatalogOp = new ContentCatalogProvider.InternalOp();
+
+            IResourceLocation[] dependencies = new IResourceLocation[(int)ContentCatalogProvider.DependencyHashIndex.Count];
+
+            dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote] = new ResourceLocationBase(string.Empty, k_RemoteLocationId, typeof(ContentCatalogProvider).FullName, typeof(object));
+            dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Cache] = new ResourceLocationBase(string.Empty, k_CacheLocationId, typeof(ContentCatalogProvider).FullName, typeof(object));
+
+            var location = new ResourceLocationBase(k_LocationName, k_LocationId, typeof(ContentCatalogProvider).FullName, typeof(object), dependencies);
+            Assert.IsTrue(string.IsNullOrEmpty(contentCatalogOp.m_LocalHashValue));
+            var loadedId = contentCatalogOp.DetermineIdToLoad(location, new List<object> { "hash", "" }, true);
+            Assert.IsFalse(string.IsNullOrEmpty(contentCatalogOp.m_LocalHashValue));
+        }
+
+        [Test]
         public void DetermineIdToLoad_IfOnlineMismatchesCache_ReturnsRemoteId()
         {
             var contentCatalogOp = new ContentCatalogProvider.InternalOp();

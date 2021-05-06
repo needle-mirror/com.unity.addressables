@@ -13,12 +13,14 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
 using System;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 
 using Object = UnityEngine.Object;
 
+[assembly: InternalsVisibleTo("Unity.Addressables.Samples.Tests")]
 public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanup
 {
     internal AddressablesImpl m_Addressables;

@@ -75,7 +75,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
             //   int m_StartFrame;
             string m_LocalDataPath;
             string m_RemoteHashValue;
-            string m_LocalHashValue;
+            internal string m_LocalHashValue;
             ProvideHandle m_ProviderInterface;
             internal ContentCatalogData m_ContentCatalogData;
             AsyncOperationHandle<ContentCatalogData> m_ContentCatalogDataLoadOp;
@@ -281,10 +281,12 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                     m_LocalHashValue = dependencyObjects[(int)DependencyHashIndex.Cache] as string;
                     Addressables.LogFormat("Addressables - ContentCatalogProvider CachedHash = {0}, RemoteHash = {1}.", m_LocalHashValue, remoteHash);
 
-                    if (string.IsNullOrEmpty(remoteHash)) //offline
+                    if (string.IsNullOrEmpty(remoteHash) || disableCatalogUpdateOnStart) //offline
                     {
                         if (!string.IsNullOrEmpty(m_LocalHashValue)) //cache exists
                             idToLoad = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Cache]).Replace(".hash", ".json");
+                        else
+                            m_LocalHashValue = Hash128.Compute(idToLoad).ToString();
                     }
                     else //online
                     {
@@ -294,14 +296,8 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                         }
                         else //remote is different than cache, or no cache
                         {
-                            if (disableCatalogUpdateOnStart)
-                                m_LocalHashValue = Hash128.Compute(idToLoad).ToString();
-                            else
-                            {
-                                idToLoad = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Remote]).Replace(".hash", ".json");
-                                m_LocalDataPath = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Cache]).Replace(".hash", ".json");
-                            }
-
+                            idToLoad = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Remote]).Replace(".hash", ".json");
+                            m_LocalDataPath = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Cache]).Replace(".hash", ".json");
                             m_RemoteHashValue = remoteHash;
                         }
                     }

@@ -167,14 +167,11 @@ namespace UnityEngine.ResourceManagement.Tests
 
                 await operation.Task;
                 result = operation.Result;
-                await operation.Task;
-                await operation.Task;
                 done = true;
             }
         }
 
         [UnityTest, Timeout(10000)]
-        [Ignore("Test is unstable on Katana.  Needs investigation and either fixed or removed.  https://jira.unity3d.com/browse/ADDR-1867")]
         public IEnumerator WhenAsyncOperationIsDone_TaskIsCompleted()
         {
             // Setup
@@ -196,7 +193,6 @@ namespace UnityEngine.ResourceManagement.Tests
         }
         
         [UnityTest, Timeout(10000)]
-        [Ignore("Test is unstable on Katana.  Needs investigation and either fixed or removed.  https://jira.unity3d.com/browse/ADDR-1867")]
         public IEnumerator WhenAsyncOperationIsDone_TasksAndCallbackIsCompleted()
         {
             // Setup

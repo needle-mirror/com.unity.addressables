@@ -4,6 +4,15 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.18.4] - 2021-05-06
+- EditorOnly tagged GameObjects in Scenes are no longer detected as duplicates for Scene Analyze results.
+- Fixed issue when dragging multiple groups around within the groups window to set their display order.
+- Reimplemented AsyncOperationBase.Task API to use TaskComppletionSource instead of creating a background thread.
+- Fixed issue where remote .hash file was still being requested when Disable Content Catalog Update on Startup was enabled
+- Fixed issue where AssetReference variable names weren't consistently formatted in the inspector
+- Fixed bug where Completed callback was not called the same frame for some async operations when WaitForCompletion is used.
+- Added Samples to the package.  These can be added to the project through the Addressables page in Package Manager
+
 ## [1.18.2] - 2021-04-20
 - Where available use synchronous load api's when AsyncOperationHandle.WaitForCompletion is called.
 - Fixed issue where loading of Prefabs and ScriptableObjects in "Use Asset Database" and "Simulate Groups" play mode could cause changes to source Assets. Now those play modes will return instanced copies of the Assets.

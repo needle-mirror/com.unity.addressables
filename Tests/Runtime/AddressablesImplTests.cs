@@ -265,6 +265,19 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator DownloadDependenciesAsync_AutoReleaseHandle_ReleasesCorrectHandle()
+        {
+            yield return Init();
+            IList<IResourceLocation> locations;
+            m_Addressables.GetResourceLocations(new object[] { "prefabs_evenBASE" }, typeof(GameObject), Addressables.MergeMode.Intersection, out locations);
+
+            AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(locations, true);
+            yield return op;
+
+            Assert.IsFalse(op.IsValid());
+        }
+
+        [UnityTest]
         public IEnumerator AddressablesImpl_DownloadDependenciesAsync_CanDoWithChainOpHandle()
         {
             // Setup

@@ -155,7 +155,13 @@ namespace UnityEngine.AddressableAssets.Initialization
             else
             {
                 Addressables.LogFormat("Addressables - loading content catalogs, {0} found.", catalogs.Count);
-                m_loadCatalogOp = LoadContentCatalogInternal(catalogs, 0, locMap);
+                IResourceLocation remoteHashLocation = null;
+                if (catalogs[0].Dependencies.Count == 2 && rtd.DisableCatalogUpdateOnStartup)
+                {
+                    remoteHashLocation = catalogs[0].Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote];
+                    catalogs[0].Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote] = catalogs[0].Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Cache];
+                }
+                m_loadCatalogOp = LoadContentCatalogInternal(catalogs, 0, locMap, remoteHashLocation);
             }
         }
 
@@ -198,7 +204,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             }
         }
 
-        static AsyncOperationHandle<IResourceLocator> OnCatalogDataLoaded(AddressablesImpl addressables, AsyncOperationHandle<ContentCatalogData> op, string providerSuffix)
+        static AsyncOperationHandle<IResourceLocator> OnCatalogDataLoaded(AddressablesImpl addressables, AsyncOperationHandle<ContentCatalogData> op, string providerSuffix, IResourceLocation remoteHashLocation)
         {
             var data = op.Result;
             addressables.Release(op);
@@ -223,6 +229,8 @@ namespace UnityEngine.AddressableAssets.Initialization
                     if (prov != null)
                         addressables.SceneProvider = prov;
                 }
+                if (remoteHashLocation != null)
+                    data.location.Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote] = remoteHashLocation;
 
                 ResourceLocationMap locMap = data.CreateCustomLocator(data.location.PrimaryKey, providerSuffix);
                 addressables.AddResourceLocator(locMap, data.localHash, data.location);
@@ -231,7 +239,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             }
         }
 
-        public static AsyncOperationHandle<IResourceLocator> LoadContentCatalog(AddressablesImpl addressables, IResourceLocation loc, string providerSuffix)
+        public static AsyncOperationHandle<IResourceLocator> LoadContentCatalog(AddressablesImpl addressables, IResourceLocation loc, string providerSuffix, IResourceLocation remoteHashLocation = null)
         {
             Type provType = typeof(ProviderOperation<ContentCatalogData>);
             var catalogOp = addressables.ResourceManager.CreateOperation<ProviderOperation<ContentCatalogData>>( provType, provType.GetHashCode(), 0, null );
@@ -251,28 +259,31 @@ namespace UnityEngine.AddressableAssets.Initialization
             var catalogHandle = addressables.ResourceManager.StartOperation( catalogOp, dependencies );
             dependencies.Release();
             
-            var chainOp = addressables.ResourceManager.CreateChainOperation(catalogHandle, res => OnCatalogDataLoaded(addressables, res, providerSuffix));
+            var chainOp = addressables.ResourceManager.CreateChainOperation(catalogHandle, res => OnCatalogDataLoaded(addressables, res, providerSuffix, remoteHashLocation));
             return chainOp;
         }
 
-        public AsyncOperationHandle<IResourceLocator> LoadContentCatalog(IResourceLocation loc, string providerSuffix)
+        public AsyncOperationHandle<IResourceLocator> LoadContentCatalog(IResourceLocation loc, string providerSuffix, IResourceLocation remoteHashLocation)
         {
-            return LoadContentCatalog(m_Addressables, loc, providerSuffix);
+            return LoadContentCatalog(m_Addressables, loc, providerSuffix, remoteHashLocation);
         }
 
         //Attempts to load each catalog in order, stopping at first success.
-        AsyncOperationHandle<IResourceLocator> LoadContentCatalogInternal(IList<IResourceLocation> catalogs, int index, ResourceLocationMap locMap)
+        internal AsyncOperationHandle<IResourceLocator> LoadContentCatalogInternal(IList<IResourceLocation> catalogs, int index, ResourceLocationMap locMap, IResourceLocation remoteHashLocation)
         {
             Addressables.LogFormat("Addressables - loading content catalog from {0}.", m_Addressables.ResourceManager.TransformInternalId(catalogs[index]));
-            var loadOp = LoadContentCatalog(catalogs[index], m_ProviderSuffix);
-            if(loadOp.IsDone)
-                LoadOpComplete(loadOp, catalogs, locMap, index);
+            var loadOp = LoadContentCatalog(catalogs[index], m_ProviderSuffix, remoteHashLocation);
+            if (loadOp.IsDone)
+                LoadOpComplete(loadOp, catalogs, locMap, index, remoteHashLocation);
             else
-                loadOp.Completed += op => LoadOpComplete(op, catalogs, locMap, index);
+                loadOp.Completed += op =>
+                {
+                    LoadOpComplete(op, catalogs, locMap, index, remoteHashLocation);
+                };
             return loadOp;
         }
 
-        void LoadOpComplete(AsyncOperationHandle<IResourceLocator> op, IList<IResourceLocation> catalogs, ResourceLocationMap locMap, int index)
+        void LoadOpComplete(AsyncOperationHandle<IResourceLocator> op, IList<IResourceLocation> catalogs, ResourceLocationMap locMap, int index, IResourceLocation remoteHashLocation)
         {
             if (op.Result != null)
             {
@@ -294,7 +305,7 @@ namespace UnityEngine.AddressableAssets.Initialization
                 }
                 else
                 {
-                    m_loadCatalogOp = LoadContentCatalogInternal(catalogs, index + 1, locMap);
+                    m_loadCatalogOp = LoadContentCatalogInternal(catalogs, index + 1, locMap, remoteHashLocation);
                     m_Addressables.Release(op);
                 }
             }
