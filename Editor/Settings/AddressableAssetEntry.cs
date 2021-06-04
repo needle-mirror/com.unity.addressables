@@ -62,6 +62,10 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal virtual bool HasSettings() { return false; }
 
+        internal bool IsFolder { get; set; }
+        [NonSerialized]
+        internal List<AddressableAssetEntry> SubAssets = new List<AddressableAssetEntry>();
+
         [NonSerialized]
         AddressableAssetGroup m_ParentGroup;
         /// <summary>
@@ -345,7 +349,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-                if (m_MainAsset == null)
+                if (m_MainAsset == null || !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(m_MainAsset, out string guid, out long localId))
                 {
                     AddressableAssetEntry e = this;
                     while (string.IsNullOrEmpty(e.AssetPath))
@@ -370,7 +374,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-                if (m_TargetAsset == null)
+                if (m_TargetAsset == null || !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(m_TargetAsset, out string guid, out long localId))
                 {
                     if (!string.IsNullOrEmpty(AssetPath) || !IsSubAsset)
                     {
@@ -490,7 +494,9 @@ namespace UnityEditor.AddressableAssets.Settings
 
                 if (AssetDatabase.IsValidFolder(AssetPath))
                 {
+                    IsFolder = true;
                     GatherFolderEntries(assets, recurseAll, entryFilter);
+                    SubAssets = assets;
                 }
                 else
                 {

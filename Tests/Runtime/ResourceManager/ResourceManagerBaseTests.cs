@@ -171,7 +171,7 @@ namespace UnityEngine.ResourceManagement.Tests
             }
         }
 
-        [UnityTest, Timeout(10000)]
+        [UnityTest]
         public IEnumerator WhenAsyncOperationIsDone_TaskIsCompleted()
         {
             // Setup
@@ -192,7 +192,7 @@ namespace UnityEngine.ResourceManagement.Tests
             GameObject.Destroy(go);
         }
         
-        [UnityTest, Timeout(10000)]
+        [UnityTest]
         public IEnumerator WhenAsyncOperationIsDone_TasksAndCallbackIsCompleted()
         {
             // Setup

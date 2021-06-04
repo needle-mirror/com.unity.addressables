@@ -783,6 +783,28 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.DoesNotThrow(() => entry.SetAddress("[Entry]"));
         }
 
+        [Test]
+        public void WhenTargetAssetNotFoundInAssetDatabase_ReloadObject()
+        {
+            var obj = UnityEngine.AddressableAssets.Tests.TestObject.Create("test_targetAsset");
+            var obj2 = UnityEngine.AddressableAssets.Tests.TestObject.Create("test_targetAsset2");
+            string path = GetAssetPath("test_targetAsset.asset");
+
+            AssetDatabase.CreateAsset(obj, path);
+            AssetDatabase.SaveAssets();
+            var entry = new AddressableAssetEntry(AssetDatabase.AssetPathToGUID(path), "Entry", null, false);
+            UnityEngine.Object targetAsset = entry.TargetAsset;
+
+            AssetDatabase.CreateAsset(obj2, path);
+            AssetDatabase.SaveAssets();
+
+            Assert.IsFalse(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(targetAsset, out string guid, out long localId));
+            UnityEngine.Object targetAsset2 = entry.TargetAsset;
+            Assert.IsTrue(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(targetAsset2, out string guid2, out long localId2));
+
+            AssetDatabase.DeleteAsset(path);
+        }
+
         string CreateSpriteAtlasWithSprite()
         {
             // create a Sprite atlas, + sprite

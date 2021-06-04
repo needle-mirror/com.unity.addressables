@@ -189,7 +189,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     string originalBundleName = bd.Key as string;
                     string newBundleName = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, hash, originalBundleName);
                     bundleLocData.InternalId = bundleLocData.InternalId.Remove(bundleLocData.InternalId.Length - originalBundleName.Length) + newBundleName;
-
+                    var abb = m_AllBundleInputDefinitions.FirstOrDefault(a => a.assetBundleName == originalBundleName);
                     var virtualBundleName = AddressablesRuntimeProperties.EvaluateString(bundleLocData.InternalId);
                     var bundleData = new VirtualAssetBundle(virtualBundleName, isLocalBundle, crc, hash);
 
@@ -197,8 +197,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     long headerSize = 0;
                     foreach (var a in bd.Value)
                     {
-                        var size = ComputeSize(a);
-                        bundleData.Assets.Add(new VirtualAssetBundleEntry(a, size));
+                        var i = Array.IndexOf(abb.addressableNames, a);
+                        var assetPath = abb.assetNames[i];
+                        var size = ComputeSize(assetPath);
+                        var vab = new VirtualAssetBundleEntry(a, size);
+                        vab.m_AssetPath = assetPath;
+                        bundleData.Assets.Add(vab);
                         dataSize += size;
                         headerSize += a.Length * 5; //assume 5x path length overhead size per item, probably much less
                     }

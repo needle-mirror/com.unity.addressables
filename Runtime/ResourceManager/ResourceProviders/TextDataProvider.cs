@@ -156,6 +156,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 if (m_Timeout > 0)
                     request.timeout = m_Timeout;
 
+                m_PI.ResourceManager.WebRequestOverride?.Invoke(request);
                 m_RequestQueueOperation = WebRequestQueue.QueueRequest(request);
                 if (m_RequestQueueOperation.IsDone)
                 {

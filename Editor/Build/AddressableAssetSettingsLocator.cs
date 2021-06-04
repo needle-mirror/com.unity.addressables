@@ -17,7 +17,7 @@ namespace UnityEditor.AddressableAssets.Settings
 	    private static Type m_SpriteAtlasType = typeof(SpriteAtlas);
 	    
         public string LocatorId { get; private set; }
-        public Dictionary<object, List<AddressableAssetEntry>> m_keyToEntries;
+        public Dictionary<object, HashSet<AddressableAssetEntry>> m_keyToEntries;
         public Dictionary<CacheKey, IList<IResourceLocation>> m_Cache;
         public AddressableAssetTree m_AddressableAssetTree;
         HashSet<object> m_Keys = null;
@@ -97,7 +97,7 @@ namespace UnityEditor.AddressableAssets.Settings
             LocatorId = m_Settings.name;
             m_AddressableAssetTree = BuildAddressableTree(m_Settings);
             m_Cache = new Dictionary<CacheKey, IList<IResourceLocation>>();
-            m_keyToEntries = new Dictionary<object, List<AddressableAssetEntry>>(m_Settings.labelTable.labelNames.Count);
+            m_keyToEntries = new Dictionary<object, HashSet<AddressableAssetEntry>>(m_Settings.labelTable.labelNames.Count);
             using (new AddressablesFileEnumerationScope(m_AddressableAssetTree))
             {
                 foreach (AddressableAssetGroup g in m_Settings.groups)
@@ -131,14 +131,14 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        static void AddEntry(AddressableAssetEntry e, object k, Dictionary<object, List<AddressableAssetEntry>> keyToEntries)
+        static void AddEntry(AddressableAssetEntry e, object k, Dictionary<object, HashSet<AddressableAssetEntry>> keyToEntries)
         {
-            if (!keyToEntries.TryGetValue(k, out List<AddressableAssetEntry> entries))
-                keyToEntries.Add(k, entries = new List<AddressableAssetEntry>());
+            if (!keyToEntries.TryGetValue(k, out HashSet<AddressableAssetEntry> entries))
+                keyToEntries.Add(k, entries = new HashSet<AddressableAssetEntry>());
             entries.Add(e);
         }
 
-        static void AddEntriesToTables(Dictionary<object, List<AddressableAssetEntry>> keyToEntries, AddressableAssetEntry e)
+        static void AddEntriesToTables(Dictionary<object, HashSet<AddressableAssetEntry>> keyToEntries, AddressableAssetEntry e)
         {
             AddEntry(e, e.address, keyToEntries);
             AddEntry(e, e.guid, keyToEntries);
@@ -204,7 +204,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return locations != null;
 
             locations = new List<IResourceLocation>();
-            if (m_keyToEntries.TryGetValue(key, out List<AddressableAssetEntry> entries))
+            if (m_keyToEntries.TryGetValue(key, out HashSet<AddressableAssetEntry> entries))
             {
                 foreach (AddressableAssetEntry e in entries)
                 {

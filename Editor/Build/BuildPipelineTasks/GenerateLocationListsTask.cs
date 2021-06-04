@@ -39,6 +39,10 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
         [InjectContext(ContextUsage.In, true)]
         IBuildLogger m_Log;
+
+        [InjectContext(ContextUsage.In)]
+        IBuildParameters m_Parameters;
+
 #pragma warning restore 649
 
         /// <summary>
@@ -56,6 +60,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             input.Settings = aaContext.Settings;
             input.BundleToAssetGroup = aaContext.bundleToAssetGroup;
             input.AddressableAssetEntries = aaContext.assetEntries;
+            input.Target = m_Parameters.Target;
 
             Output output = RunInternal(input);
 
@@ -85,6 +90,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             public AddressableAssetSettings Settings;
             public Dictionary<string, string> BundleToAssetGroup;
             public List<AddressableAssetEntry> AddressableAssetEntries;
+            public BuildTarget Target;
         }
 
         internal struct Output
@@ -187,7 +193,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             foreach (BundleEntry bEntry in bundleToEntry.Values)
             {
                 string bundleProvider = GetBundleProviderName(bEntry.Group);
-                string bundleInternalId = GetLoadPath(bEntry.Group, bEntry.BundleName);
+                string bundleInternalId = GetLoadPath(bEntry.Group, bEntry.BundleName, input.Target);
                 locations.Add(new ContentCatalogDataEntry(typeof(IAssetBundleResource), bundleInternalId, bundleProvider, new object[] { bEntry.BundleName }));
             }
 
@@ -257,7 +263,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             return group.GetSchema<BundledAssetGroupSchema>().GetAssetCachedProviderId();
         }
 
-        static string GetLoadPath(AddressableAssetGroup group, string name)
+        internal static string GetLoadPath(AddressableAssetGroup group, string name, BuildTarget target)
         {
             var bagSchema = group.GetSchema<BundledAssetGroupSchema>();
             if (bagSchema == null || bagSchema.LoadPath == null)
@@ -265,10 +271,24 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 Debug.LogError("Unable to determine load path for " + name + ". Check that your default group is not '" + AddressableAssetSettings.PlayerDataGroupName + "'");
                 return string.Empty;
             }
-            var loadPath = bagSchema.LoadPath.GetValue(group.Settings) + "/" + name;
+
+            var loadPath = bagSchema.LoadPath.GetValue(group.Settings) + PathSeparatorForPlatform(target) + name;
             if (!string.IsNullOrEmpty(bagSchema.UrlSuffix))
                 loadPath += bagSchema.UrlSuffix;
             return loadPath;
+        }
+
+        static char PathSeparatorForPlatform(BuildTarget target)
+        {
+            switch (target)
+            {
+                case BuildTarget.StandaloneWindows64:
+                case BuildTarget.StandaloneWindows:
+                case BuildTarget.XboxOne:
+                    return '\\';
+                default:
+                    return '/';
+            }
         }
     }
 }

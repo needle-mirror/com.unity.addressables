@@ -15,7 +15,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 {
     internal interface ICachable
     {
-        int Hash { get; set; }
+        IOperationCacheKey Key { get; set; }
     }
 
     internal interface IAsyncOperation
@@ -106,7 +106,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         internal Action<IAsyncOperation> OnDestroy { set { m_OnDestroyAction = value; } }
         internal int ReferenceCount { get { return m_referenceCount; } }
         Action<AsyncOperationHandle> m_dependencyCompleteAction;
-        protected bool HasExecuted = false;
+        protected internal bool HasExecuted = false;
 
         /// <summary>
         /// True if the current op has begun but hasn't yet reached completion.  False otherwise.
@@ -158,7 +158,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// Used for the implementation of WaitForCompletion in an IAsyncOperation.
         /// </summary>
         /// <returns>True if the operation has completed, otherwise false.</returns>
-        protected virtual bool InvokeWaitForCompletion(){ return IsDone; }
+        protected virtual bool InvokeWaitForCompletion() { return IsDone; }
 
         internal void DecrementReferenceCount()
         {
@@ -338,7 +338,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             }
             if (m_taskCompletionSource != null)
                 m_taskCompletionSource.TrySetResult(Result);
-            
+
             if (m_taskCompletionSourceTypeless != null)
                 m_taskCompletionSourceTypeless.TrySetResult(Result);
 
@@ -434,8 +434,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                     m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationFail, 0, exception?.ToString()));
 
                 ICachable cachedOperation = this as ICachable;
-                if (cachedOperation != null)
-                    m_RM?.RemoveOperationFromCache(cachedOperation.Hash);
+                if (cachedOperation?.Key != null)
+                    m_RM?.RemoveOperationFromCache(cachedOperation.Key);
 
                 RegisterForDeferredCallbackEvent(false);
             }
@@ -451,6 +451,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             m_RM = rm;
             IsRunning = true;
+            HasExecuted = false;
             if (m_RM != null && m_RM.postProfilerEvents)
             {
                 m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationCreate));

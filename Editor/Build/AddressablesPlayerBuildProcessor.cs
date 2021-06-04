@@ -19,7 +19,7 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
     }
 
     /// <summary>
-    /// Removes temporary data created as part of a build.
+    /// Restores temporary data created as part of a build.
     /// </summary>
     public void OnPostprocessBuild(BuildReport report)
     {
@@ -31,9 +31,8 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
     {
         if (Directory.Exists(Addressables.PlayerBuildDataPath))
         {
-            DirectoryUtility.DeleteDirectory(Addressables.PlayerBuildDataPath, false);
-            //Will delete the directory only if it's empty
-            DirectoryUtility.DeleteDirectory(Application.streamingAssetsPath);
+            DirectoryUtility.DirectoryMove(Addressables.PlayerBuildDataPath, Addressables.BuildPath);
+            DirectoryUtility.DeleteDirectory(Application.streamingAssetsPath, onlyIfEmpty: true);
         }
     }
 
@@ -48,6 +47,17 @@ public class AddressablesPlayerBuildProcessor : IPreprocessBuildWithReport, IPos
     internal static void CopyTemporaryPlayerBuildData()
     {
         if (Directory.Exists(Addressables.BuildPath))
-            DirectoryUtility.DirectoryCopy(Addressables.BuildPath, Addressables.PlayerBuildDataPath, true);
+        {
+            if (Directory.Exists(Addressables.PlayerBuildDataPath))
+            {
+                Debug.LogWarning($"Found and deleting directory \"{Addressables.PlayerBuildDataPath}\", directory is managed through Addressables.");
+                DirectoryUtility.DeleteDirectory(Addressables.PlayerBuildDataPath, false);
+            }
+
+            string parentDir = Path.GetDirectoryName(Addressables.PlayerBuildDataPath);
+            if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
+                Directory.CreateDirectory(parentDir);
+            Directory.Move(Addressables.BuildPath, Addressables.PlayerBuildDataPath );
+        }
     }
 }

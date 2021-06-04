@@ -23,7 +23,7 @@ namespace UnityEditor.AddressableAssets.GUI
             Editor.finishedDefaultHeaderGUI += OnPostHeaderGUI;
         }
 
-        static void SetAaEntry(AddressableAssetSettings aaSettings, Object[] targets, bool create)
+        static void SetAaEntry(AddressableAssetSettings aaSettings, List<TargetInfo> targetInfos, bool create)
         {
             if (create && aaSettings.DefaultGroup.ReadOnly)
             {
@@ -32,15 +32,6 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             Undo.RecordObject(aaSettings, "AddressableAssetSettings");
-
-            var targetInfos = new List<TargetInfo>();
-            foreach (var t in targets)
-            {
-                if (AddressableAssetUtility.GetPathAndGUIDFromTarget(t, out var path, out var guid, out var mainAssetType))
-                {
-                    targetInfos.Add(new TargetInfo(){Guid = guid, Path = path, MainAssetType = mainAssetType});
-                }
-            }
 
             if (!create)
             {
@@ -102,6 +93,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 int addressableCount = 0;
                 bool foundValidAsset = false;
                 bool foundAssetGroup = false;
+                var targetInfos = new List<TargetInfo>();
                 foreach (var t in editor.targets)
                 {
                     foundAssetGroup |= t is AddressableAssetGroup;
@@ -112,6 +104,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         if (!BuildUtility.IsEditorAssembly(mainAssetType.Assembly))
                         {
                             foundValidAsset = true;
+                            var info = new TargetInfo(){Guid = guid, Path = path, MainAssetType = mainAssetType};
 
                             if (aaSettings != null)
                             {
@@ -119,8 +112,10 @@ namespace UnityEditor.AddressableAssets.GUI
                                 if (entry != null && !entry.IsSubAsset)
                                 {
                                     addressableCount++;
+                                    info.Entry = entry;
                                 }
                             }
+                            targetInfos.Add(info);
                         }
                     }
                 }
@@ -150,14 +145,14 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (addressableCount == 0)
                 {
                     if (GUILayout.Toggle(false, s_AddressableAssetToggleText, GUILayout.ExpandWidth(false)))
-                        SetAaEntry(AddressableAssetSettingsDefaultObject.GetSettings(true), editor.targets, true);
+                        SetAaEntry(AddressableAssetSettingsDefaultObject.GetSettings(true), targetInfos, true);
                 }
                 else if (addressableCount == editor.targets.Length)
                 {
                     GUILayout.BeginHorizontal();
                     if (!GUILayout.Toggle(true, s_AddressableAssetToggleText, GUILayout.ExpandWidth(false)))
                     {
-                        SetAaEntry(aaSettings, editor.targets, false);
+                        SetAaEntry(aaSettings, targetInfos, false);
                         UnityEngine.GUI.enabled = prevEnabledState;
                         GUIUtility.ExitGUI();
                     }
@@ -176,6 +171,13 @@ namespace UnityEditor.AddressableAssets.GUI
                             }
                         }
                     }
+                    else
+                    {
+                        EditorGUILayout.LabelField(addressableCount + " out of " + editor.targets.Length + " assets are addressable.");
+                    }
+                    
+                    if (GUILayout.Button("Select"))
+                        SelectEntriesInGroupsWindow(targetInfos);
                     GUILayout.EndHorizontal();
                 }
                 else
@@ -184,12 +186,27 @@ namespace UnityEditor.AddressableAssets.GUI
                     if (s_ToggleMixed == null)
                         s_ToggleMixed = new GUIStyle("ToggleMixed");
                     if (GUILayout.Toggle(false, s_AddressableAssetToggleText, s_ToggleMixed, GUILayout.ExpandWidth(false)))
-                        SetAaEntry(AddressableAssetSettingsDefaultObject.GetSettings(true), editor.targets, true);
+                        SetAaEntry(AddressableAssetSettingsDefaultObject.GetSettings(true), targetInfos, true);
                     EditorGUILayout.LabelField(addressableCount + " out of " + editor.targets.Length + " assets are addressable.");
+                    if (GUILayout.Button("Select"))
+                        SelectEntriesInGroupsWindow(targetInfos);
                     GUILayout.EndHorizontal();
                 }
                 UnityEngine.GUI.enabled = prevEnabledState;
             }
+        }
+
+        static void SelectEntriesInGroupsWindow(List<TargetInfo> targets)
+        {
+            AddressableAssetsWindow.Init();
+            var window = EditorWindow.GetWindow<AddressableAssetsWindow>();
+            List<AddressableAssetEntry> entries = new List<AddressableAssetEntry>(targets.Count);
+            foreach (TargetInfo info in targets)
+            {
+                if (info.Entry != null)
+                    entries.Add(info.Entry);
+            }
+            window.SelectAssetsInGroupEditor(entries);
         }
 
         class TargetInfo
@@ -197,6 +214,7 @@ namespace UnityEditor.AddressableAssets.GUI
             public string Guid;
             public string Path;
             public Type MainAssetType;
+            public AddressableAssetEntry Entry;
         }
     }
 }

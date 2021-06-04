@@ -21,6 +21,7 @@ namespace UnityEditor.AddressableAssets.GUI
         internal string customSearchString = string.Empty;
         string m_FirstSelectedGroup;
         private readonly Dictionary<AssetEntryTreeViewItem, bool> m_SearchedEntries = new Dictionary<AssetEntryTreeViewItem, bool>();
+        private bool m_ForceSelectionClear = false;
 
         enum ColumnId
         {
@@ -51,6 +52,7 @@ namespace UnityEditor.AddressableAssets.GUI
             multiColumnHeader.sortingChanged += OnSortingChanged;
 
             BuiltinSceneCache.sceneListChanged += OnScenesChanged;
+            AddressablesAssetPostProcessor.OnPostProcess += OnPostProcessAllAssets;
         }
 
         internal TreeViewItem Root => rootItem;
@@ -66,6 +68,20 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             SortChildren(rootItem);
             Reload();
+        }
+
+        void OnPostProcessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
+        {
+            foreach (Object obj in Selection.objects)
+            {
+                if (obj == null)
+                    continue;
+                if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj.GetInstanceID(), out string guid, out long localId))
+                {
+                    m_ForceSelectionClear = true;
+                    return;
+                }
+            }
         }
 
         protected override void SelectionChanged(IList<int> selectedIds)
@@ -453,11 +469,14 @@ namespace UnityEditor.AddressableAssets.GUI
             base.OnGUI(rect);
 
             //TODO - this occasionally causes a "hot control" issue.
-            if (Event.current.type == EventType.MouseDown &&
-                Event.current.button == 0 &&
-                rect.Contains(Event.current.mousePosition))
+            if (m_ForceSelectionClear ||
+                (Event.current.type == EventType.MouseDown &&
+                 Event.current.button == 0 &&
+                 rect.Contains(Event.current.mousePosition)))
             {
                 SetSelection(new int[0], TreeViewSelectionOptions.FireSelectionChanged);
+                if (m_ForceSelectionClear)
+                    m_ForceSelectionClear = false;
             }
         }
 
@@ -1268,8 +1287,10 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     if (args.parentItem == null || args.parentItem == rootItem && visualMode != DragAndDropVisualMode.Rejected)
                     {
-                        foreach (var node in draggedNodes)
+                        // Need to insert groups in reverse order because all groups will be inserted at the same index
+                        for (int i = draggedNodes.Count - 1; i >= 0; i--)
                         {
+                            AssetEntryTreeViewItem node = draggedNodes[i];
                             AddressableAssetGroup group = node.@group;
                             int index = m_Editor.settings.groups.FindIndex(g => g == group);
                             if (index < args.insertAtIndex)
@@ -1308,12 +1329,12 @@ namespace UnityEditor.AddressableAssets.GUI
                                 foreach (var node in draggedNodes)
                                 {
                                     modifiedGroups.Add(node.entry.parentGroup);
-	                                m_Editor.settings.MoveEntry(node.entry, parent, false, false);
-	                                entries.Add(node.entry);
+                                    m_Editor.settings.MoveEntry(node.entry, parent, false, false);
+                                    entries.Add(node.entry);
                                 }
                                 foreach (AddressableAssetGroup modifiedGroup in modifiedGroups)
                                     AddressableAssetUtility.OpenAssetIfUsingVCIntegration(modifiedGroup);
-	                            m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, true, false);
+                                m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, true, false);
                             }
                         }
                     }
@@ -1380,24 +1401,24 @@ namespace UnityEditor.AddressableAssets.GUI
 
                         if (canMarkNonResources)
                         {
-	                        if (nonResourceGuids.Count > 0)
-	                        {
-		                        var entriesMoved = new List<AddressableAssetEntry>();
-		                        var entriesCreated = new List<AddressableAssetEntry>();
-		                        m_Editor.settings.CreateOrMoveEntries(nonResourceGuids, parent, entriesCreated, entriesMoved, false, false);
+                            if (nonResourceGuids.Count > 0)
+                            {
+                                var entriesMoved = new List<AddressableAssetEntry>();
+                                var entriesCreated = new List<AddressableAssetEntry>();
+                                m_Editor.settings.CreateOrMoveEntries(nonResourceGuids, parent, entriesCreated, entriesMoved, false, false);
 
-		                        if (entriesMoved.Count > 0)
-			                        m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesMoved, true);
-		                        if (entriesCreated.Count > 0)
-			                        m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryAdded, entriesCreated, true);
-		                        
-		                        AddressableAssetUtility.OpenAssetIfUsingVCIntegration(parent);
-	                        }
+                                if (entriesMoved.Count > 0)
+                                    m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesMoved, true);
+                                if (entriesCreated.Count > 0)
+                                    m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryAdded, entriesCreated, true);
 
-	                        if (targetIsGroup)
-	                        {
-		                        SetExpanded(target.id, true);
-	                        }
+                                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(parent);
+                            }
+
+                            if (targetIsGroup)
+                            {
+                                SetExpanded(target.id, true);
+                            }
                         }
                     }
                 }

@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
+using UnityEngine.Networking;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -135,6 +136,11 @@ namespace UnityEngine.AddressableAssets
             set { ResourceManager.InternalIdTransformFunc = value; }
         }
 
+        internal Action<UnityWebRequest> WebRequestOverride
+        {
+            get { return ResourceManager.WebRequestOverride; }
+            set { ResourceManager.WebRequestOverride = value; }
+        }
 
         public AsyncOperationHandle ChainOperation
         {

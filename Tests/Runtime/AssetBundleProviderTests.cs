@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
@@ -11,6 +12,8 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -55,7 +58,15 @@ namespace AddressableTests.SyncAddressables
                 entry.address = "testprefab";
             }
         }
+
 #endif
+
+        [SetUp]
+        public void Setup()
+        {
+            if (m_Addressables != null)
+                m_Addressables.WebRequestOverride = null;
+        }
 
         [UnityTest]
         public IEnumerator WhenUWRExceedsMaxLimit_UWRAreQueued()
@@ -87,6 +98,54 @@ namespace AddressableTests.SyncAddressables
             Assert.AreEqual(0, WebRequestQueue.s_ActiveRequests.Count);
             yield return h;
             h.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator WhenWebRequestOverrideIsSet_CallbackIsCalled_AssetBundleProvider()
+        {
+            bool webRequestOverrideCalled = false;
+            m_Addressables.WebRequestOverride = request => webRequestOverrideCalled = true;
+
+            var prev = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+
+            var nonExistingPath = "http://127.0.0.1/non-existing-bundle";
+            var loc = new ResourceLocationBase(nonExistingPath, nonExistingPath, typeof(AssetBundleProvider).FullName, typeof(AssetBundleResource));
+            loc.Data = new AssetBundleRequestOptions();
+            var h = m_Addressables.ResourceManager.ProvideResource<AssetBundleResource>(loc);
+            yield return h;
+
+            if (h.IsValid()) h.Release();
+            LogAssert.ignoreFailingMessages = prev;
+            Assert.IsTrue(webRequestOverrideCalled);
+        }
+        
+        [Test]
+        [TestCase("Relative/Local/Path", true, false)]
+        [TestCase("Relative/Local/Path", true, true)]
+        [TestCase("http://127.0.0.1/Web/Path",  false, true)]
+        [TestCase("jar:file://Local/Path",  true, false)]
+        [TestCase("jar:file://Local/Path",  true, true)]
+        public void AssetBundleLoadPathsCorrectForGetLoadInfo(string internalId, bool isLocal, bool useUnityWebRequestForLocalBundles)
+        {
+            if (internalId.StartsWith("jar") && Application.platform != RuntimePlatform.Android)
+                Assert.Ignore($"Skipping test {TestContext.CurrentContext.Test.Name} due jar based tests are only for running on Android Platform.");
+            
+            var loc = new ResourceLocationBase("dummy", internalId, "dummy", typeof(Object));
+            loc.Data = new AssetBundleRequestOptions { UseUnityWebRequestForLocalBundles = useUnityWebRequestForLocalBundles };
+            ProviderOperation<Object> op = new ProviderOperation<Object>();
+            op.Init(m_Addressables.ResourceManager, null, loc, new AsyncOperationHandle<IList<AsyncOperationHandle>>());
+            ProvideHandle h = new ProvideHandle(m_Addressables.ResourceManager, op);
+
+            AssetBundleResource.GetLoadInfo(h, out AssetBundleResource.LoadType loadType, out string path);
+            var expectedLoadType = isLocal ? useUnityWebRequestForLocalBundles ? AssetBundleResource.LoadType.Web : AssetBundleResource.LoadType.Local : AssetBundleResource.LoadType.Web;
+            Assert.AreEqual(expectedLoadType, loadType, "Incorrect load type found for internalId " + internalId);
+            var expectedPath = internalId;
+            if (isLocal && useUnityWebRequestForLocalBundles)
+            {
+                expectedPath = internalId.StartsWith("jar") ? internalId : "file:///" + Path.GetFullPath(internalId);
+            }
+            Assert.AreEqual(expectedPath, path);
         }
     }
 

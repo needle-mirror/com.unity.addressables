@@ -3,6 +3,8 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
 using UnityEngine;
+using UnityEditor.Build.Content;
+using BuildCompression = UnityEngine.BuildCompression;
 
 namespace UnityEditor.AddressableAssets.Build.DataBuilders
 {
@@ -28,6 +30,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 #if NONRECURSIVE_DEPENDENCY_DATA
             NonRecursiveDependencies = aaSettings.NonRecursiveBuilding;
 #endif
+            DisableVisibleSubAssetRepresentations = aaSettings.DisableVisibleSubAssetRepresentations;
+
             m_settings = aaSettings;
             m_bundleToAssetGroup = bundleToAssetGroup;
 
@@ -36,6 +40,11 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 BundleCompression = ConverBundleCompressiontToBuildCompression(m_settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().Compression);
             else
                 BundleCompression = target == BuildTarget.WebGL ? BuildCompression.LZ4Runtime : BuildCompression.LZMA;
+
+#if UNITY_2019_4_OR_NEWER
+            if (aaSettings.StripUnityVersionFromBundleBuild)
+                ContentBuildFlags |= ContentBuildFlags.StripUnityVersion;
+#endif
         }
 
         private BuildCompression ConverBundleCompressiontToBuildCompression(

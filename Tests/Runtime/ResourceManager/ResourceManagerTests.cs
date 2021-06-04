@@ -68,6 +68,47 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.IsFalse(ur.invoked);
         }
 
+        class RMTestOp : AsyncOperationBase<object>
+        {
+            public int CompletedEventTriggeredCount = 0;
+
+            protected override void Execute()
+            {
+                m_RM.RegisterForDeferredCallback(this);
+            }
+
+            protected override bool InvokeWaitForCompletion() 
+            {
+                m_RM.Update(1);
+                return true; 
+            }
+        }
+        class RMTestUpdateReceiver : IUpdateReceiver
+        {
+            public int UpdateCount = 0;
+            public void Update(float unscaledDeltaTime)
+            {
+                UpdateCount++;
+            }
+        }
+        [Test]
+        public void Reentering_UpdateMethod_ThrowsException()
+        {
+            var op = new RMTestOp();
+            op.Completed += o =>
+            {
+                (o.m_InternalOp as RMTestOp).CompletedEventTriggeredCount++;
+                Assert.Throws<Exception>(() => o.WaitForCompletion());
+            };
+            var rec = new RMTestUpdateReceiver();
+            m_ResourceManager.AddUpdateReceiver(rec);
+            m_ResourceManager.StartOperation(op, default);
+            op.WaitForCompletion();
+            m_ResourceManager.RemoveUpdateReciever(rec);
+            Assert.AreEqual(1, op.CompletedEventTriggeredCount);
+            Assert.AreEqual(1, rec.UpdateCount);
+        }
+
         class TestUpdateReceiverThatRemovesSelfDuringUpdate : IUpdateReceiver
         {
             public ResourceManager rm;

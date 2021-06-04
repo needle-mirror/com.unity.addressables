@@ -44,9 +44,31 @@ If you are planning to do content updates, you will need the version of this fil
 ### What are possible scale implications?
 As your project grows larger, keep an eye on the following aspects of your assets and bundles:
 * Total bundle size - Historically Unity has not supported files larger than 4GB.  This has been fixed in some recent editor versions, but there can still be issues. It is recommended to keep the content of a given bundle under this limit for best compatibility across all platforms.  
-* Sub assets affecting UI performance - There is no hard limit here, but if you have many assets, and those assets have many sub-assets, it may be best to turn off sub-asset display. This option only affects how the data is displayed in the Groups window, and does not affect what you can and cannot load at runtime.  The option is available in the groups window under **Tools** > **Show Sprite and Subobject Addresses**.  Disabling this will make the UI more responsive.
-* Group hierarchy display - Another UI-only option to help with scale is **Group Hierarchy with Dashes**.  This is available within the inspector of the top level settings. With this enabled, groups that contain dashes '-' in their names will display as if the dashes represented folder hierarchy. This does not affect the actual group name, or the way things are built.  For example, two groups called "x-y-z" and "x-y-w" would display as if inside a folder called "x", there was a folder called "y".  Inside that folder were two groups, called "x-y-z" and "x-y-w". This will not really affect UI responsiveness, but simply makes it easier to browse a large collection of groups. 
+* Sub assets affecting UI performance - There is no hard limit here, but if you have many assets, and those assets have many sub-assets, it may be best to turn off sub-asset display. This option only affects how the data is displayed in the Groups window, and does not affect what you can and cannot load at runtime.  The option is available in the groups window under **Tools** > **Groups View** > **Show Sprite and Subobject Addresses**.  Disabling this will make the UI more responsive.
+* Group hierarchy display - Another UI-only option to help with scale is **Group Hierarchy with Dashes**.  The option is available in the groups window under **Tools** > **Groups View** > **Group Hierarchy with Dashes**. With this enabled, groups that contain dashes '-' in their names will display as if the dashes represented folder hierarchy. This does not affect the actual group name, or the way things are built.  For example, two groups called "x-y-z" and "x-y-w" would display as if inside a folder called "x", there was a folder called "y".  Inside that folder were two groups, called "x-y-z" and "x-y-w". This will not really affect UI responsiveness, but simply makes it easier to browse a large collection of groups. 
 * Bundle layout at scale - For more information about how best to set up your layout, see the earlier question: [_Is it better to have many small bundles or a few bigger ones_](AddressablesFAQ.md#Is-it-better-t-have-many-small-bundles-or-a-few-bigger-ones)
+
+### Is it safe to edit loaded Assets?
+When editing Assets loaded from Bundles, in a Player or when using "Use Existing Build (requires built groups)" playmode setting. The Assets are loaded from the Bundle and only exist in memory. Changes cannot be written back to the Bundle on disk, and any modifications to the Object in memory do not persist between sessions.
+
+This is different when using "Use Asset Database (fastest)" or "Simulate Groups (advanced)" playmode settings, in these modes the Assets are loaded from the Project files. Any modifications that are made to loaded Asset modifies the Project Asset, and are saved to file.
+
+In order to prevent this, when making runtime changes, create a new instance of the Object to modify and use as the Object to create an instance of with the Instantiate method. As shown in the example code below. 
+
+```
+var op = Addressables.LoadAssetAsync<GameObject>("myKey");
+yield return op;
+if (op.Result != null)
+{
+    GameObject inst = UnityEngine.Object.Instantiate(op.Result);
+    // can now use and safely make edits to inst, without the source Project Asset being changed.
+}
+```
+
+****Please Note****, When instancing an Object:
+* The AsyncOperationHandle or original Asset must be used when releasing the Asset, not the instance.
+* Instantiating an Asset that has references to other Assets does not create new instances other those referenced Assets. The references remain targeting the Project Asset.
+* Unity Methods are invoked on the new instance, such as Start, OnEnable, and OnDisable.
 
 ### Is it possible to retrieve the address of an asset or reference at runtime?
 In the most general case, loaded assets no longer have a tie to their address or `IResourceLocation`. There are ways, however, to get the properly associated `IResourceLocation` and use that to read the field PrimaryKey. The PrimaryKey field will be set to the assets's address unless "Include Address In Catalog" is disabled for the group this object came from. In that case, the PrimaryKey will be the next item in the list of keys (probably a GUID, but possibly a Label or empty string). 

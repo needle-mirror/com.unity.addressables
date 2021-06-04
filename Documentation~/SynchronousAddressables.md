@@ -31,3 +31,7 @@ void Start()
     Addressables.Release(op);
 }
 ```
+### Synchronous Addressables with Custom Operations
+Addressables supports custom `AsyncOperations` which support unique implementations of `InvokeWaitForCompletion`.  This overridable method is what you'll use to implement custom synchronous operations.
+
+Custom operations work with `ChainOperations` and `GroupsOperations`.  If you require chained operations to be completed synchronously, ensure that your custom operations implement `InvokeWaitForCompletion` and create a `ChainOperation` using your custom operations.  Similarly, `GroupOperations` are well suited to ensure a collection of `AsyncOperations`, including custom operations, complete together.  Both `ChainOperation` and `GroupOperation` have their own implementations of `InvokeWaitForCompletion` that relies on the `InvokeWaitForCompletion` implementations of the operations they depend on.

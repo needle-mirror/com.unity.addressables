@@ -51,7 +51,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             return IsDone;
         }
 
-        int ICachable.Hash { get; set; }
+        IOperationCacheKey ICachable.Key { get; set; }
 
         internal IList<AsyncOperationHandle> GetDependentOps()
         {

@@ -36,7 +36,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         private IResourceLocation m_Location;
         private int m_ProvideHandleVersion;
         private bool m_NeedsRelease;
-        int ICachable.Hash { get; set; }
+        IOperationCacheKey ICachable.Key { get; set; }
         private ResourceManager m_ResourceManager;
         private const float k_OperationWaitingToCompletePercentComplete = 0.99f;
         public int ProvideHandleVersion { get { return m_ProvideHandleVersion; } }

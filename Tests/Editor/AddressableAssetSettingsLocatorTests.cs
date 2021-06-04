@@ -100,10 +100,20 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        public void WhenLocatorWithSingleAsset_LocateWithAddressReturnsSingleLocation()
+        public void WhenLocatorWithSingleAsset_LocateWithAddress_ReturnsSingleLocation()
         {
             var path = GetPath("asset1.asset");
             m_Settings.CreateOrMoveEntry(CreateAsset("asset1", path), m_Settings.DefaultGroup).address = "address1";
+            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "address1", null, path);
+        }
+
+        [Test]
+        public void WhenLocatorWithSingleAsset_LocateWithSameAddressAsLabel_ReturnsSingleLocation()
+        {
+            var path = GetPath("asset1.asset");
+            var e = m_Settings.CreateOrMoveEntry(CreateAsset("asset1", path), m_Settings.DefaultGroup);
+            e.address = "address1";
+            e.SetLabel("address1", true, true);
             AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "address1", null, path);
         }
 

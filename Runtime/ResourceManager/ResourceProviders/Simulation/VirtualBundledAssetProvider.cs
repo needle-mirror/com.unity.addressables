@@ -100,11 +100,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
                 new InternalOp().Start(provideHandle, bundle);
             }
         }
-
-        public override void Release(IResourceLocation location, object obj)
-        {
-            AssetDatabaseProvider.ReleaseAssetDatabaseLoadedObject(obj);
-        }
     }
 }
 #endif

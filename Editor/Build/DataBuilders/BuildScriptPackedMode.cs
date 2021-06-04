@@ -519,7 +519,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             foreach (var loc in assetEntries)
             {
-                GUID guid = new GUID(loc.guid);
+                AddressableAssetEntry processedEntry = loc;
+                if (loc.IsFolder && loc.SubAssets.Count > 0)
+                    processedEntry = loc.SubAssets[0];
+                GUID guid = new GUID(processedEntry.guid);
                 //For every entry in the write data we need to ensure the BundleFileId is set so we can save it correctly in the cached state
                 if (writeData.AssetToFiles.TryGetValue(guid, out List<string> files))
                 {
@@ -531,10 +534,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         out ContentCatalogDataEntry catalogEntry))
                     {
                         loc.BundleFileId = catalogEntry.InternalId;
-
+                        
                         //This is where we strip out the temporary hash added to the bundle name for Content Update for the AssetEntry
-                        if(loc.parentGroup?.GetSchema<BundledAssetGroupSchema>()?.BundleNaming ==
-                          BundledAssetGroupSchema.BundleNamingStyle.NoHash)
+                        if (loc.parentGroup?.GetSchema<BundledAssetGroupSchema>()?.BundleNaming ==
+                            BundledAssetGroupSchema.BundleNamingStyle.NoHash)
                         {
                             loc.BundleFileId = StripHashFromBundleLocation(loc.BundleFileId);
                         }
@@ -917,7 +920,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return buildTasks;
         }
 
-        static void CopyFileWithTimestampIfDifferent(string srcPath, string destPath, IBuildLogger log)
+        static void MoveFileToDestinationWithTimestampIfDifferent(string srcPath, string destPath, IBuildLogger log)
         {
             if (srcPath == destPath)
                 return;
@@ -928,12 +931,14 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             if (destTime == time)
                 return;
 
-            using (log.ScopedStep(LogLevel.Verbose, "Copy File", $"{srcPath} -> {destPath}"))
+            using (log.ScopedStep(LogLevel.Verbose, "Move File", $"{srcPath} -> {destPath}"))
             {
                 var directory = Path.GetDirectoryName(destPath);
-                if (!string.IsNullOrEmpty(directory))
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                     Directory.CreateDirectory(directory);
-                File.Copy(srcPath, destPath, true);
+                else if (File.Exists(destPath))
+                    File.Delete(destPath);
+                File.Move(srcPath, destPath);
             }
         }
 
@@ -993,7 +998,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 var targetPath = Path.Combine(path, outputBundles[i]);
                 var srcPath = Path.Combine(assetGroup.Settings.buildSettings.bundleBuildPath, buildBundles[i]);
                 bundleRenameMap.Add(buildBundles[i], outputBundles[i]);
-                CopyFileWithTimestampIfDifferent(srcPath, targetPath, m_Log);
+                MoveFileToDestinationWithTimestampIfDifferent(srcPath, targetPath, m_Log);
 
                 AddPostCatalogUpdatesInternal(assetGroup, postCatalogUpdateCallbacks, dataEntry, targetPath, registry);
 

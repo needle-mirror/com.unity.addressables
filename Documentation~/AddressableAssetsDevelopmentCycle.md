@@ -22,10 +22,14 @@ The Addressable Assets package has three build scripts that create Play mode dat
 #### Use Asset Database (faster)
 Use Asset Database mode ([`BuildScriptFastMode`](xref:UnityEditor.AddressableAssets.Build.DataBuilders.BuildScriptFastMode)) allows you to run the game quickly as you work through the flow of your game. It loads Assets directly through the Asset database for quick iteration with no analysis or AssetBundle creation.
 
+****Please Note****: Modification's to Serialised Assets (Such as Prefab's and ScriptableObject's) loaded using Asset Database mode modifies the source Asset in the Project.
+
 #### Simulate Groups (advanced)
 Simulate Groups mode ([`BuildScriptVirtualMode`](xref:UnityEditor.AddressableAssets.Build.DataBuilders.BuildScriptVirtualMode)) analyzes content for layout and dependencies without creating AssetBundles. Assets load from the Asset database though the [`ResourceManager`](xref:UnityEngine.ResourceManagement.ResourceManager), as if they were loaded through bundles. To see when bundles load or unload during game play, view the Asset usage in the [**Addressables Event Viewer** window](MemoryManagement.md#the-addressables-event-viewer) (**Window** > **Asset Management** > **Addressables** > **Event Viewer**).
 
 Simulate Groups mode helps you simulate load strategies and tweak your content groups to find the right balance for a production release.
+
+****Please Note****: Modification's to Serialised Assets (Such as Prefab's and ScriptableObject's) loaded using Asset Database mode modifies the source Asset in the Project.
 
 #### Use Existing Build (requires built groups)
 Use Existing Build mode most closely matches a deployed application build, but it requires you to build the data as a separate step. If you aren't modifying Assets, this mode is the fastest since it does not process any data when entering Play mode. You must either build the content for this mode in the **Addressables Groups** window (**Window** > **Asset Management** > **Addressables** > **Groups**) by selecting **Build** > **New Build** > **Default Build Script**, or using the [`AddressableAssetSettings.BuildPlayerContent()`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.BuildPlayerContent) method in your game script.

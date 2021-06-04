@@ -12,7 +12,7 @@ Moving from Editor Play mode testing to platform application build testing intro
 This article details the initial setup of Asset Hosting Services for your project. While the setup guide focuses on Editor workflows, you can use the API to configure Hosting Services by setting the [`HostingServicesManager`](xref:UnityEditor.AddressableAssets.HostingServices.HostingServicesManager) property of the [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) class.
 
 ### Configuring a new Hosting Service
-Use the **Hosting window** to add, configure, and enable new Hosting Services. In the Editor, select **Window** > **Asset Management** > **Addressables** > **Hosting**, or click the **Tools** > **Hosting Services** button from the **Addressables Groups** window menu to access the **Addressables Hosting** window.
+Use the **Hosting window** to add, configure, and enable new Hosting Services. In the Editor, select **Window** > **Asset Management** > **Addressables** > **Hosting**, or click the **Tools** > **Window** > **Hosting Services** button from the **Addressables Groups** window menu to access the **Addressables Hosting** window.
 
 ![The Addressables Hosting window.](images/HostingServicesWindow_1.png)</br>
 _The **Addressables Hosting** window._

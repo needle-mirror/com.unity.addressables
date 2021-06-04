@@ -11,6 +11,7 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using UnityEngine.Networking;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -147,6 +148,18 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
+        /// Delegate that can be used to override the web request options before being sent.
+        /// </summary>
+        /// <remarks>
+        /// The web request passed to this delegate has already been preconfigured internally. Override at your own risk.
+        /// </remarks>
+        internal static Action<UnityWebRequest> WebRequestOverride
+        {
+            get { return m_Addressables.WebRequestOverride; }
+            set { m_Addressables.WebRequestOverride = value; }
+        }
+
+        /// <summary>
         /// Options for merging the results of requests.
         /// If keys (A, B) mapped to results ([1,2,4],[3,4,5])...
         ///  - UseFirst (or None) takes the results from the first key
@@ -195,8 +208,8 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// The path to the Addressables Library subfolder
         /// </summary>
-        public static string LibraryPath = "Library/com.unity.addressables/"; 
-        
+        public static string LibraryPath = "Library/com.unity.addressables/";
+
         /// <summary>
         /// The path used by the Addressables system for its initialization data.
         /// </summary>
@@ -796,6 +809,7 @@ namespace UnityEngine.AddressableAssets
         {
             return m_Addressables.GetDownloadSizeAsync(key);
         }
+
         /// <summary>
         /// Determines the required download size, dependencies included, for the specified <paramref name="key"/>.
         /// Cached assets require no download and thus their download size will be 0.  The Result of the operation
@@ -882,6 +896,7 @@ namespace UnityEngine.AddressableAssets
         {
             return m_Addressables.DownloadDependenciesAsync(keys, mode, autoReleaseHandle);
         }
+
         /// <summary>
         /// Downloads dependencies of assets marked with the specified labels or addresses.
         /// See the [DownloadDependenciesAsync](xref:addressables-api-download-dependencies-async) documentation for more details.
@@ -925,7 +940,7 @@ namespace UnityEngine.AddressableAssets
         {
             m_Addressables.ClearDependencyCacheAsync(keys, true);
         }
-        
+
         /// <summary>
         /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
         /// is initializing or updating.
@@ -935,7 +950,7 @@ namespace UnityEngine.AddressableAssets
         {
             m_Addressables.ClearDependencyCacheAsync(keys, true);
         }
-        
+
         /// <summary>
         /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
         /// is initializing or updating.

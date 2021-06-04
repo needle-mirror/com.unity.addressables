@@ -132,26 +132,36 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
     }
 
-    class AssetBundleResource : IAssetBundleResource
+    internal class AssetBundleResource : IAssetBundleResource
     {
+        internal enum LoadType
+        {
+            None,
+            Local,
+            Web
+        }
+        
         AssetBundle m_AssetBundle;
         DownloadHandlerAssetBundle m_downloadHandler;
         AsyncOperation m_RequestOperation;
         WebRequestQueueOperation m_WebRequestQueueOperation;
         internal ProvideHandle m_ProvideHandle;
         internal AssetBundleRequestOptions m_Options;
+        [NonSerialized]
+        bool m_WebRequestCompletedCallbackCalled = false;
         int m_Retries;
         long m_BytesToDownload;
         long m_DownloadedBytes;
         bool m_Completed = false;
-
+        const int k_WaitForWebRequestMainThreadSleep = 1;
+        string m_TransformedInternalId;
 
         internal UnityWebRequest CreateWebRequest(IResourceLocation loc)
         {
             var url = m_ProvideHandle.ResourceManager.TransformInternalId(loc);
             return CreateWebRequest(url);
         }
-            
+
         internal UnityWebRequest CreateWebRequest(string url)
         {
             if (m_Options == null)
@@ -184,6 +194,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 webRequest.certificateHandler = m_ProvideHandle.ResourceManager.CertificateHandlerInstance;
                 webRequest.disposeCertificateHandlerOnDispose = false;
             }
+
+            m_ProvideHandle.ResourceManager.WebRequestOverride?.Invoke(webRequest);
             return webRequest;
         }
 
@@ -234,6 +246,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             m_AssetBundle = null;
             m_downloadHandler = null;
             m_RequestOperation = null;
+            m_WebRequestCompletedCallbackCalled = false;
             m_ProvideHandle = provideHandle;
             m_Options = m_ProvideHandle.Location.Data as AssetBundleRequestOptions;
             if (m_Options != null)
@@ -251,10 +264,16 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
             //We don't want to wait for request op to complete if it's a LoadFromFileAsync. Only UWR will complete in a tight loop like this.
             if (!(m_RequestOperation is AssetBundleCreateRequest))
-                while (!m_RequestOperation.isDone) {}
+                while (!m_RequestOperation.isDone) { System.Threading.Thread.Sleep(k_WaitForWebRequestMainThreadSleep); }
+
+            if (m_RequestOperation is UnityWebRequestAsyncOperation && !m_WebRequestCompletedCallbackCalled)
+            {
+                WebRequestOperationCompleted(m_RequestOperation);
+                m_RequestOperation.completed -= WebRequestOperationCompleted;
+            }
 
             var assetBundle = GetAssetBundle();
-            if (!m_Completed && assetBundle != null)
+            if (!m_Completed && m_RequestOperation.isDone)
             {
                 m_ProvideHandle.Complete(this, m_AssetBundle != null, null);
                 m_Completed = true;
@@ -270,38 +289,53 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             else
                 operation.completed += callback;
         }
+        
+        internal static void GetLoadInfo(ProvideHandle handle, out LoadType loadType, out string path)
+        {
+            var options = handle.Location?.Data as AssetBundleRequestOptions;
+            if (options == null)
+            {
+                loadType = LoadType.None;
+                path = null;
+                return;
+            }
+            
+            path = handle.ResourceManager.TransformInternalId(handle.Location);
+            if (Application.platform == RuntimePlatform.Android && path.StartsWith("jar:"))
+                loadType = options.UseUnityWebRequestForLocalBundles ? LoadType.Web : LoadType.Local;
+            else if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
+                loadType = LoadType.Web;
+            else if (options.UseUnityWebRequestForLocalBundles)
+            {
+                path = "file:///" + Path.GetFullPath(path);
+                loadType = LoadType.Web;
+            }
+            else
+                loadType = LoadType.Local;
+        }
 
         private void BeginOperation()
         {
             m_DownloadedBytes = 0;
-            string path = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
-            bool fileExists = File.Exists(path);
-            bool shouldLoadFromFile = fileExists;
-            if ((Application.platform == RuntimePlatform.Android && path.StartsWith("jar:")))
-                shouldLoadFromFile = !m_Options.UseUnityWebRequestForLocalBundles;
-            else if (shouldLoadFromFile && m_Options.UseUnityWebRequestForLocalBundles)
-            {
-                shouldLoadFromFile = false;
-                if (fileExists && !ResourceManagerConfig.ShouldPathUseWebRequest(path))
-                    path = "file:///" + Path.GetFullPath(path);
-            }
-            if (shouldLoadFromFile)
+            GetLoadInfo(m_ProvideHandle, out LoadType loadType, out m_TransformedInternalId);
+
+            if (loadType == LoadType.Local)
             {
 #if !UNITY_2021_1_OR_NEWER
                 if (AsyncOperationHandle.IsWaitingForCompletion)
-                    CompleteBundleLoad(AssetBundle.LoadFromFile(path, m_Options == null ? 0 : m_Options.Crc));
+                    CompleteBundleLoad(AssetBundle.LoadFromFile(m_TransformedInternalId, m_Options == null ? 0 : m_Options.Crc));
                 else
 #endif
                 {
-                    m_RequestOperation = AssetBundle.LoadFromFileAsync(path, m_Options == null ? 0 : m_Options.Crc);
+                    m_RequestOperation = AssetBundle.LoadFromFileAsync(m_TransformedInternalId, m_Options == null ? 0 : m_Options.Crc);
                     AddCallbackInvokeIfDone(m_RequestOperation, LocalRequestOperationCompleted);
                 }
             }
-            else if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
+            else if (loadType == LoadType.Web)
             {
-                var req = CreateWebRequest(path);
+                var req = CreateWebRequest(m_TransformedInternalId);
                 req.disposeDownloadHandlerOnDispose = false;
-                
+
                 m_WebRequestQueueOperation = WebRequestQueue.QueueRequest(req);
                 if (m_WebRequestQueueOperation.IsDone)
                 {
@@ -323,7 +357,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             else
             {
                 m_RequestOperation = null;
-                m_ProvideHandle.Complete<AssetBundleResource>(null, false, new RemoteProviderException(string.Format("Invalid path in AssetBundleProvider: '{0}'.", path), m_ProvideHandle.Location));
+                m_ProvideHandle.Complete<AssetBundleResource>(null, false, new RemoteProviderException(string.Format("Invalid path in AssetBundleProvider: '{0}'.", m_TransformedInternalId), m_ProvideHandle.Location));
                 m_Completed = true;
             }
         }
@@ -336,12 +370,19 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         private void CompleteBundleLoad(AssetBundle bundle)
         {
             m_AssetBundle = bundle;
-            m_ProvideHandle.Complete(this, m_AssetBundle != null, null);
+            if (m_AssetBundle != null)
+                m_ProvideHandle.Complete(this, true, null);
+            else
+                m_ProvideHandle.Complete<AssetBundleResource>(null, false, new RemoteProviderException(string.Format("Invalid path in AssetBundleProvider: '{0}'.", m_TransformedInternalId), m_ProvideHandle.Location));
             m_Completed = true;
         }
 
         private void WebRequestOperationCompleted(AsyncOperation op)
         {
+            if (m_WebRequestCompletedCallbackCalled)
+                return;
+
+            m_WebRequestCompletedCallbackCalled = true;
             UnityWebRequestAsyncOperation remoteReq = op as UnityWebRequestAsyncOperation;
             var webReq = remoteReq.webRequest;
             if (!UnityWebRequestUtilities.RequestHasErrors(webReq, out UnityWebRequestResult uwrResult))

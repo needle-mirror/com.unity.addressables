@@ -31,7 +31,7 @@ See [Unity Scriptable Build Pipeline](https://docs.unity3d.com/Packages/com.unit
 Analyze is a tool that gathers information on your Projects' Addressables layout. In some cases, Analyze may take appropriate actions to clean up the state of your Project. In others, Analyze is purely an informational tool that allows you to make more informed decisions about your Addressables layout.
 
 ### Using Analyze
-In the Editor, open the **Addressables Analyze** window (**Window** > **Asset Management** > **Addressables** > **Analyze**), or open it via the **Addressables Groups** window by clicking  the **Tools** > **Analyze** button.
+In the Editor, open the **Addressables Analyze** window (**Window** > **Asset Management** > **Addressables** > **Analyze**), or open it via the **Addressables Groups** window by clicking  the **Tools** > **Window** > **Analyze** button.
 
 The Analyze window displays a list of Analyze rules, along with the following operations: 
 

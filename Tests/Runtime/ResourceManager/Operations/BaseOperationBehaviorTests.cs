@@ -244,7 +244,7 @@ namespace UnityEngine.ResourceManagement.Tests
             var mdpco = new List<ManualDownloadPercentCompleteOperation>();
             for (int i = 0; i < 4; i++)
             {
-                var o = m_RM.CreateOperation<ManualDownloadPercentCompleteOperation>(typeof(ManualDownloadPercentCompleteOperation), 1, 0, null);
+                var o = m_RM.CreateOperation<ManualDownloadPercentCompleteOperation>(typeof(ManualDownloadPercentCompleteOperation), 1, null, null);
                 o.Start(m_RM, default, null);
                 mdpco.Add(o);
                 ops.Add(new AsyncOperationHandle(o));
@@ -263,7 +263,7 @@ namespace UnityEngine.ResourceManagement.Tests
         [Test]
         public void ChainOperation_WithOpThatImplementGetDownloadStatus_ComputesExpectedDownloadPercentComplete()
         {
-            var depOp = m_RM.CreateOperation<ManualDownloadPercentCompleteOperation>(typeof(ManualDownloadPercentCompleteOperation), 1, 0, null);
+            var depOp = m_RM.CreateOperation<ManualDownloadPercentCompleteOperation>(typeof(ManualDownloadPercentCompleteOperation), 1, null, null);
             depOp.Start(m_RM, default, null);
             var chainOp = m_RM.CreateChainOperation<object>(new AsyncOperationHandle(depOp), s => m_RM.CreateCompletedOperationInternal<object>(null, true, null));
 
@@ -294,7 +294,7 @@ namespace UnityEngine.ResourceManagement.Tests
         public void GroupOperation_WithDuplicateOpThatImplementGetDownloadStatus_DoesNotOverCountValues()
         {
             var ops = new List<AsyncOperationHandle>();
-            var o = m_RM.CreateOperation<ManualDownloadPercentCompleteOperation>(typeof(ManualDownloadPercentCompleteOperation), 1, 0, null);
+            var o = m_RM.CreateOperation<ManualDownloadPercentCompleteOperation>(typeof(ManualDownloadPercentCompleteOperation), 1, null, null);
             o.Start(m_RM, default, null);
             for (int i = 0; i < 4; i++)
                 ops.Add(new AsyncOperationHandle(o));
@@ -327,6 +327,19 @@ namespace UnityEngine.ResourceManagement.Tests
             op.CompletedTypeless += o => { Assert.AreEqual(3, count); count++; };
             op.Start(null, default, null);
             op.Complete(1, true, null);
+        }
+
+        [Test]
+        public void WhenOperationIsReused_HasExecutedIsReset()
+        {
+            var op = new TestOp();
+            op.Start(null, default, null);
+            op.Complete(1, true, null);
+
+            Assert.IsTrue(op.HasExecuted);
+            var dep = new AsyncOperationHandle(new TestOp());
+            op.Start(null, dep, null);
+            Assert.IsFalse(op.HasExecuted);
         }
     }
 }

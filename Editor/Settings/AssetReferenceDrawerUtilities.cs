@@ -245,24 +245,24 @@ namespace UnityEditor.AddressableAssets.Settings
             if (o != null)
             {
                 var t = o.GetType();
-
+                FieldInfo info = null;
+                
                 // We need to look into sub types, if any.
                 string[] pathParts = property.propertyPath.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries);
-                for (int i = 0; i < pathParts.Length - 1; i++)
+                for (int i = 0; i < pathParts.Length; i++)
                 {
-                    FieldInfo info = t.GetField(pathParts[i],
+                    FieldInfo f = t.GetField(pathParts[i],
                         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (info != null)
+                    if (f != null)
                     {
-                        t = info.FieldType;
+                        t = f.FieldType;
+                        info = f;
                     }
                 }
-
-                string propertyName = pathParts.LastOrDefault();
-                var f = t.GetField(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (f != null)
+                
+                if (info != null)
                 {
-                    var a = f.GetCustomAttributes(false);
+                    var a = info.GetCustomAttributes(false);
                     foreach (var attr in a)
                     {
                         var uiRestriction = attr as AssetReferenceUIRestriction;

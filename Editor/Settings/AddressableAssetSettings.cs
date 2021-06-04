@@ -307,7 +307,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         [SerializeField]
         bool m_OptimizeCatalogSize = false;
-        
+
         [SerializeField]
         bool m_BuildRemoteCatalog = false;
 
@@ -325,7 +325,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         [SerializeField]
         bool m_UniqueBundleIds = false;
-        
+
         [SerializeField]
 #if UNITY_2021_1_OR_NEWER
         bool m_NonRecursiveBuilding = true;
@@ -387,7 +387,7 @@ namespace UnityEditor.AddressableAssets.Settings
             get { return m_NonRecursiveBuilding; }
             set { m_NonRecursiveBuilding = value; }
         }
-        
+
         /// <summary>
         /// Enables size optimization of content catalogs.  This may increase the cpu usage of loading the catalog.
         /// </summary>
@@ -424,6 +424,28 @@ namespace UnityEditor.AddressableAssets.Settings
             set { m_DisableCatalogUpdateOnStart = value; }
         }
 
+#if UNITY_2019_4_OR_NEWER
+        bool m_StripUnityVersionFromBundleBuild = false;
+        /// <summary>
+        /// If true, this option will strip the Unity Editor Version from the header of the AssetBundle during a build.
+        /// </summary>
+        internal bool StripUnityVersionFromBundleBuild
+        {
+            get { return m_StripUnityVersionFromBundleBuild; }
+            set { m_StripUnityVersionFromBundleBuild = value; }
+        }
+#endif
+        bool m_DisableVisibleSubAssetRepresentations = false;
+        /// <summary>
+        /// If true, the build will assume that sub Assets have no visible asset representations (are not visible in the Project view) which results in improved build times.
+        /// However sub assets in the built bundles cannot be accessed by AssetBundle.LoadAsset&lt;T&gt or AssetBundle.LoadAllAssets&lt;T&gt.
+        /// </summary>
+        internal bool DisableVisibleSubAssetRepresentations
+        {
+            get { return m_DisableVisibleSubAssetRepresentations; }
+            set { m_DisableVisibleSubAssetRepresentations = value; }
+        }
+
         /// <summary>
         /// Whether unsupported files during build should be ignored or treated as an error.
         /// </summary>
@@ -455,7 +477,7 @@ namespace UnityEditor.AddressableAssets.Settings
             get { return m_ShaderBundleCustomNaming; }
             set { m_ShaderBundleCustomNaming = value; }
         }
-        
+
         [SerializeField]
         MonoScriptBundleNaming m_MonoScriptBundleNaming = MonoScriptBundleNaming.Disabled;
         /// <summary>
@@ -1037,6 +1059,30 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             if (m_LabelTable.AddLabelName(label))
                 SetDirty(ModificationEvent.LabelAdded, label, postEvent, true);
+        }
+
+        internal void RenameLabel(string oldLabelName, string newLabelName)
+        {
+            int index = m_LabelTable.GetIndexOfLabel(oldLabelName);
+            if (index < 0)
+                return;
+
+            if (!m_LabelTable.AddLabelName(newLabelName, index))
+                return;
+
+            foreach (var group in groups)
+            {
+                foreach (var entry in group.entries)
+                {
+                    if (entry.labels.Contains(oldLabelName))
+                    {
+                        entry.labels.Remove(oldLabelName);
+                        entry.SetLabel(newLabelName, true);
+                    }
+                }
+            }
+
+            m_LabelTable.RemoveLabelName(oldLabelName);
         }
 
         /// <summary>
@@ -1737,6 +1783,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 entry = new AddressableAssetEntry(guid, address, parentEntry.parentGroup, true);
                 entry.IsSubAsset = true;
                 entry.ParentEntry = parentEntry;
+                entry.BundleFileId = parentEntry.BundleFileId;
                 //parentEntry.parentGroup.AddAssetEntry(entry);
                 return entry;
             }
@@ -1748,6 +1795,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 entry.IsInResources = parentEntry.IsInResources;
                 entry.address = address;
                 entry.ReadOnly = true;
+                entry.BundleFileId = parentEntry.BundleFileId;
                 return entry;
             }
             return null;

@@ -1,7 +1,7 @@
 {
   "name": "com.unity.addressables",
   "displayName": "Addressables",
-  "version": "1.18.4",
+  "version": "1.18.9",
   "unity": "2018.4",
   "description": "The Addressable Asset System allows the developer to ask for an asset via its address. Once an asset (e.g. a prefab) is marked \"addressable\", it generates an address which can be called from anywhere. Wherever the asset resides (local or remote), the system will locate it and its dependencies, then return it.\n\nUse 'Window->Asset Management->Addressables' to begin working with the system.\n\nAddressables use asynchronous loading to support loading from any location with any collection of dependencies. Whether you have been using direct references, traditional asset bundles, or Resource folders, addressables provide a simpler way to make your game more dynamic. Addressables simultaneously opens up the world of asset bundles while managing all the complexity.\n\nFor usage samples, see github.com/Unity-Technologies/Addressables-Sample",
   "keywords": [
@@ -12,7 +12,7 @@
     "assetbundles"
   ],
   "dependencies": {
-    "com.unity.scriptablebuildpipeline": "1.18.0",
+    "com.unity.scriptablebuildpipeline": "1.19.0",
     "com.unity.modules.assetbundle": "1.0.0",
     "com.unity.modules.imageconversion": "1.0.0",
     "com.unity.modules.jsonserialize": "1.0.0",
@@ -22,10 +22,10 @@
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/Addressables.git",
     "type": "git",
-    "revision": "cb4e6f60b4355966681a164019a82d71abbd0524"
+    "revision": "0fc62dc1024e533883dfa7a8485a6a1e6ae99e0a"
   },
   "upmCi": {
-    "footprint": "8d9efce387cd5072bfe96fe8672c09cb679438c7"
+    "footprint": "baab8e83bf1f1b32dd3cd9db6da06f4982e19cda"
   },
   "samples": [
     {
@@ -37,6 +37,11 @@
       "displayName": "Disable AssetImport on Build",
       "description": "A script that disables asset importing during a player build.  This improves build performance since AssetBundles are copied into StreamingAssets at build time.",
       "path": "Samples~/DisableAssetImportOnBuild"
+    },
+    {
+      "displayName": "Import Groups Tool",
+      "description": "A tool that imports group assets (for example from a custom package) to the current project.",
+      "path": "Samples~/ImportExistingGroup"
     },
     {
       "displayName": "Prefab Spawner",

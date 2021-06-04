@@ -107,6 +107,65 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void RenameLabel_KeepsIndexTheSame_ForNewTableEntry()
+        {
+            string dummyLabel1, dummyLabel2, dummyLabel3;
+            dummyLabel3 = dummyLabel2 = dummyLabel1 = "dummylabel";
+            string replaceMe = "replaceme";
+            string useMeToReplace = "usemetoreplace";
+            Settings.AddLabel(dummyLabel1);
+            Settings.AddLabel(dummyLabel2);
+            Settings.AddLabel(replaceMe);
+            Settings.AddLabel(dummyLabel3);
+
+            int startIndex = Settings.labelTable.GetIndexOfLabel(replaceMe);
+
+            Settings.RenameLabel(replaceMe, useMeToReplace);
+
+            int endIndex = Settings.labelTable.GetIndexOfLabel(useMeToReplace);
+
+            Assert.AreEqual(startIndex, endIndex);
+
+            Settings.RemoveLabel(dummyLabel1);
+            Settings.RemoveLabel(dummyLabel2);
+            Settings.RemoveLabel(dummyLabel3);
+            Settings.RemoveLabel(useMeToReplace);
+        }
+
+        [Test]
+        public void RenameLabel_UpdatesLabelList_WithCorrectLabels()
+        {
+            string replaceMe = "replaceme";
+            string useMeToReplace = "usemetoreplace";
+            Settings.AddLabel(replaceMe);
+
+            Settings.RenameLabel(replaceMe, useMeToReplace);
+
+            Assert.IsFalse(Settings.GetLabels().Contains(replaceMe));
+            Assert.IsTrue(Settings.GetLabels().Contains(useMeToReplace));
+            
+            Settings.RemoveLabel(useMeToReplace);
+        }
+
+        [Test]
+        public void RenameLabel_UpdatesAssetEntries_ThatContainUsesOfTheOldLabels()
+        {
+            string replaceMe = "replaceme";
+            string useMeToReplace = "usemetoreplace";
+            Settings.AddLabel(replaceMe);
+            var assetEntry = Settings.CreateOrMoveEntry(m_AssetGUID, Settings.DefaultGroup);
+            assetEntry.SetLabel(replaceMe, true);
+
+            Settings.RenameLabel(replaceMe, useMeToReplace);
+
+            Assert.IsTrue(assetEntry.labels.Contains(useMeToReplace));
+            Assert.IsFalse(assetEntry.labels.Contains(replaceMe));
+
+            Settings.RemoveAssetEntry(assetEntry);
+            Settings.RemoveLabel(useMeToReplace);
+        }
+
+        [Test]
         public void GetLabels_ShouldReturnCopy()
         {
             const string labelName = "Newlabel";

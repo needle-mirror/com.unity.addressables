@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
@@ -13,7 +14,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         [FormerlySerializedAs("m_groupEditor")]
         [SerializeField]
-        AddressableAssetsSettingsGroupEditor m_GroupEditor;
+        internal AddressableAssetsSettingsGroupEditor m_GroupEditor;
 
         [MenuItem("Window/Asset Management/Addressables/Settings", priority = 2051)]
         internal static void ShowSettingsInspector()
@@ -43,6 +44,13 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var window = GetWindow<AddressableAssetsWindow>();
             return new Vector2(window.position.x, window.position.y);
+        }
+
+        internal void SelectAssetsInGroupEditor(IList<AddressableAssetEntry> entries)
+        {
+            if (m_GroupEditor == null)
+                m_GroupEditor = new AddressableAssetsSettingsGroupEditor(this);
+            m_GroupEditor.SelectEntries(entries);
         }
 
         public void OnEnable()

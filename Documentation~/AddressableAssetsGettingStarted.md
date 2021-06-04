@@ -21,6 +21,8 @@ In your **Project** window, select the desired asset to view its Inspector. In t
 ![Marking an asset as Addressable in the Inspector window.](images/inspectorcheckbox.png)</br>
 _Marking an asset as Addressable in the **Inspector** window._
 
+Pressing the `Select` button to the right of the inspector opens the Groups window as sown below. Focusing on the Addressables Entry for the selected Asset.
+
 #### Using the Addressables window
 Select **Window** > **Asset Management** > **Addressables** > **Groups** to open the **Addressables Groups** window. Next, drag the desired asset from your **Project** window into one of the asset groups in the **Addressables Groups** window.
 
@@ -40,16 +42,39 @@ The Addressables Asset System needs to build your content into files that can be
 
 See [Build layout report](DiagnosticTools.md#build-layout-report) for information on how to generate a report about the layout of your built content.
 
-## Assets in Packages
+## Addressable Assets in Custom Packages
 
-**Important**: Marking package assets as Addressable requires Unity version 2020.2.0a9 or later.
+**Important**: Marking package assets as Addressable requires Unity version 2019.4.10f1 or later and Asset Import Pipeline v2. For 2019.4 versions the pipeline version being used can be found in **Edit** > **Preferences** > **Cache Server (global)** > **Active Version**. On newer versions (2020.1 or later) Asset Import Pipeline v2 is enabled by default.
 
-### Creating Addressable Groups in packages 
-Create a group in the **Addressables Groups** window. When you are done modifying the group, save the project. Move the group asset and its respective schema assets into your package.
+### Exporting Addressable Groups to packages 
+Create a group in the **Addressables Groups** window. When you are done modifying the group, save the project. Move the group asset and its respective schema assets into your package directory. In preparation for the import process keep the schema assets in one folder, separate from the group asset.
 
-Open a new project that uses your package. If your group has a “Content Packing & Unloading” schema, update its build and load paths. Your group can now be included in your next Addressables build.
+Any projects that use your package will need to have Addressables Assets package installed. In your `package.json` file, list `com.unity.addressables` as a dependency like so:
 
-If you want to modify the group again, make sure to close all projects that use the package and reopen them once you save all modifications. This will reload the group asset. If your group has a “Content Packing & Unloading” schema, update its build and load paths again.
+```
+{
+    "name": "com.unity.example",
+    "version": "1.2.3",
+    "dependencies": {
+        "com.unity.addressables": "1.17.17"
+   }
+}
+```
+
+### Importing Addressable Groups from packages
+
+Importing a group from another project directly, including from a package doesn't set all the internal references correctly. You can either reset these references by creating a custom script or use the Import Groups tool available with the package samples.
+
+#### Import Groups Tool
+
+The Addressables package comes with several code samples, including an *Import Groups* tool. The Samples folder can be added to the project through the Addressables page in Package Manager. 
+
+1. Create the default settings object via the **Addressables Groups** Window. Group assets must always be linked to a settings object in order to build your Addressables content. 
+2. If Samples is installed correctly there will be new options in the top menu bar. Go to **Window** > **Asset Management** > **Addressables** > **Import Groups** to open the Import Groups Window. 
+3. Enter the group path (i.e. `Packages/com.unity.example/MyGroup.asset`) and click **Import Groups**. This will copy the group to the default location (`Assets/AddressableAssetsData`) and link the group to the default settings object. Using the copy will prevent any unintentional modifications to the original asset in the package. 
+4. Enter group name (i.e. `MyGroup`) if it's not already auto-populated and the schema folder path (i.e. `Packages/com.unity.example/Schemas`). Then click **Import Schemas**. This will copy the schemas to the default location (`Assets/AddressableAssetsData`) and link them to the specified group. It will also reset the build and load paths of a “Content Packing & Unloading” schema to the LocalBuildPath and LocalLoadPath. The references we just modified are stored internally as GUIDs, which are project-specific. Relinking the schemas and resetting the paths allow them to be properly evaluated in the current project. 
+
+At this point your group can now be included in the next Addressables build. If you want to modify the package group asset again, make sure to close all projects that use the package and reopen them once you save all modifications. This will reload the group asset. You will need to do the import process again for any projects that use the package.
 
 ## Using Addressable Assets
 ### Loading or instantiating by address
@@ -113,7 +138,7 @@ In addition, you can use an [`AssetReference`](xref:UnityEngine.AddressableAsset
 
 For [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) objects specifically, note that the atlas inspector has a checkbox for **Include In Build**. This option does not determine whether the atlas itself is built into AssetBundles, rather it determines how items reference it. When you enable **Include in Build**, all dependency linkages remain intact. Thus, if you have an Addressable prefab sprite that is dependent on an atlas, the atlas will be pulled into an AssetBundle.  Similarly, if you explicilty mark the atlas as Addressable, the prefab will list the atlas bundle as a dependency, and things are hooked up properly at load time. If you disable **Include In Build**, the linkage is not preserved. When you load an Addressable prefab that is dependent on the atlas, the atlas will be requested, and you must load and manage the connection manually using [SpriteAtlasManager.atlasRequested](https://docs.unity3d.com/ScriptReference/U2D.SpriteAtlasManager-atlasRequested.html). In this scenario, you can still mark the atlas as Addressable to access each sprite manually. 
 
-When viewing a [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) in the **Addressables Groups** window, ensure the [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) has been packed if you intend to view the sub-objects in the Window. This can be done by clicking **Pack Preview** in the inspector of the [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) object. If the [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) is packed and you still cannot see the sub-objects, check the **Show Sprite and Subobject Addresses** option is enabled; it is located in the **Tools** menu of the **Addressables Groups** window.
+When viewing a [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) in the **Addressables Groups** window, ensure the [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) has been packed if you intend to view the sub-objects in the Window. This can be done by clicking **Pack Preview** in the inspector of the [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) object. If the [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) is packed and you still cannot see the sub-objects, check the **Show Sprite and Subobject Addresses** option is enabled; it is located in the **Tools** > **Groups View** menu of the **Addressables Groups** window.
 
 ### Using the AssetReference class
 The [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) class provides a way to access Addressable Assets without needing to know their addresses. To access an Addressable Asset using the `AssetReference` class:

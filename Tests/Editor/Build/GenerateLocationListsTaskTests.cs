@@ -21,6 +21,7 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         input.FileToBundle = new Dictionary<string, string>();
         input.Settings = m_Settings;
         input.BundleToAssetGroup = new Dictionary<string, string>();
+        input.Target = EditorUserBuildSettings.activeBuildTarget;
         return input;
     }
 
@@ -192,6 +193,25 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         AssertLocationDependencies(output, "p4", "bundleZ", "bundleW");
         AssertLocationDependencies(output, "p5", "bundleZ", "bundleW");
         AssertLocationDependencies(output, "p6", "bundleW");
+    }
+
+    //static 
+    [Test]
+    [TestCase("abc", BuildTarget.XboxOne, @"\abc")]
+    [TestCase("abc", BuildTarget.StandaloneWindows64, @"\abc")]
+    [TestCase("abc", BuildTarget.iOS, @"/abc")]
+    [TestCase("abc", BuildTarget.Android, @"/abc")]
+    [TestCase("abc", BuildTarget.StandaloneLinux64, @"/abc")]
+    [TestCase("abc", BuildTarget.Switch, @"/abc")]
+    [TestCase("abc", BuildTarget.StandaloneOSX, @"/abc")]
+    public void WhenBuildTargetIsWindowsOrXBox_BackSlashUsedInLoadPath(string id, BuildTarget target, string expected)
+    {
+        AddressableAssetGroup group = m_Settings.CreateGroup($"xyz", false, false, false, null, typeof(BundledAssetGroupSchema));
+        var bag = group.GetSchema<BundledAssetGroupSchema>();
+        var expectedPath = $"{bag.LoadPath.GetValue(m_Settings)}{expected}";
+        var path = GenerateLocationListsTask.GetLoadPath(group, id, target);
+        Assert.AreEqual(expectedPath, path);
+        m_Settings.RemoveGroup(group);
     }
 
     //[Test]

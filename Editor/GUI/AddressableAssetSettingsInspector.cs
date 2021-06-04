@@ -15,14 +15,19 @@ namespace UnityEditor.AddressableAssets.GUI
     {
         AddressableAssetSettings m_AasTarget;
 
-        [FormerlySerializedAs("m_generalFoldout")]
-        [SerializeField]
-        bool m_GeneralFoldout = true;
         [FormerlySerializedAs("m_profilesFoldout")]
+        [SerializeField]
+        bool m_ProfilesFoldout = true;
+        [SerializeField]
+        bool m_DiagnosticsFoldout = true;
         [SerializeField]
         bool m_CatalogFoldout = true;
         [SerializeField]
-        bool m_ProfilesFoldout = true;
+        bool m_ContentUpdateFoldout = true;
+        [SerializeField]
+        bool m_DownloadsFoldout = true;
+        [SerializeField]
+        bool m_BuildFoldout = true;
         [FormerlySerializedAs("m_dataBuildersFoldout")]
         [SerializeField]
         bool m_DataBuildersFoldout = true;
@@ -98,7 +103,7 @@ namespace UnityEditor.AddressableAssets.GUI
         GUIContent m_NonRecursiveBundleBuilding =
             new GUIContent("Non-Recursive Dependency Calculation", "If set, Calculates and build asset bundles using Non-Recursive Dependency calculation methods. This approach helps reduce asset bundle rebuilds and runtime memory consumption.");
 #else
-        GUIContent m_NonRecursiveBundleBuilding = 
+        GUIContent m_NonRecursiveBundleBuilding =
             new GUIContent("Non-Recursive Dependency Calculation", "If set, Calculates and build asset bundles using Non-Recursive Dependency calculation methods. This approach helps reduce asset bundle rebuilds and runtime memory consumption.\n*Requires Unity 2020.2.1 or above");
 #endif
         GUIContent m_BuildRemoteCatalog =
@@ -121,12 +126,10 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Profile In Use", "This is the active profile that will be used to evaluate all profile variables during a build and when entering play mode.");
         GUIContent m_MaxConcurrentWebRequests =
             new GUIContent("Max Concurrent Web Requests", "Limits the number of concurrent web requests.  If more requests are made, they will be queued until some requests complete.");
-        GUIContent m_groupHierarchyView =
-            new GUIContent("Group Hierarchy with Dashes", "If enabled, group names are parsed as if a '-' represented a child in hierarchy.  So a group called 'a-b-c' would be displayed as if it were in a folder called 'b' that lived in a folder called 'a'.  In this mode, only groups without '-' can be rearranged within the groups window.");
         GUIContent m_IgnoreUnsupportedFilesInBuild =
             new GUIContent("Ignore Invalid/Unsupported Files in Build", "If enabled, files that cannot be built will be ignored.");
         GUIContent m_ContentStateFileBuildPath =
-	        new GUIContent("Content State Build Path", "The path used for saving the addressables_content_state.bin file. If empty, this will be the addressable settings config folder in your project.");
+            new GUIContent("Content State Build Path", "The path used for saving the addressables_content_state.bin file. If empty, this will be the addressable settings config folder in your project.");
         GUIContent m_ShaderBundleNaming =
             new GUIContent("Shader Bundle Naming Prefix", "This setting determines how the Unity built in shader bundle will be named during the build.  The recommended setting is Project Name.");
         GUIContent m_ShaderBundleCustomNaming =
@@ -135,6 +138,12 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("MonoScript Bundle Naming Prefix", "This setting determines how and if the MonoScript bundle will be named during the build.  The recommended setting is Project Name.");
         GUIContent m_MonoBundleCustomNaming =
             new GUIContent("MonoScript Bundle Custom Prefix", "Custom prefix for MonoScript bundle.");
+#if UNITY_2019_4_OR_NEWER
+        GUIContent m_StripUnityVersionFromBundleBuild =
+            new GUIContent("Strip Unity Version from AssetBundles", "If enabled, the Unity Editor version is stripped from the AssetBundle header.");
+#endif
+        GUIContent m_DisableVisibleSubAssetRepresentations =
+            new GUIContent("Disable Visible Sub Asset Representations", "If enabled, the build will assume that all sub Assets have no visible asset representations.");
 
         public override void OnInspectorGUI()
         {
@@ -187,21 +196,44 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             GUILayout.Space(6);
+            m_DiagnosticsFoldout = EditorGUILayout.Foldout(m_DiagnosticsFoldout, "Diagnostics");
+            if (m_DiagnosticsFoldout)
+            {
+                ProjectConfigData.PostProfilerEvents = EditorGUILayout.Toggle(m_SendProfilerEvents, ProjectConfigData.PostProfilerEvents);
+                bool logResourceManagerExceptions = EditorGUILayout.Toggle(m_LogRuntimeExceptions, m_AasTarget.buildSettings.LogResourceManagerExceptions);
+
+                if (logResourceManagerExceptions != m_AasTarget.buildSettings.LogResourceManagerExceptions)
+                    m_QueuedChanges.Add(() => m_AasTarget.buildSettings.LogResourceManagerExceptions = logResourceManagerExceptions);
+            }
+
+            GUILayout.Space(6);
             m_CatalogFoldout = EditorGUILayout.Foldout(m_CatalogFoldout, "Catalog");
             if (m_CatalogFoldout)
+            {
+                string overridePlayerVersion = EditorGUILayout.TextField(m_OverridePlayerVersion, m_AasTarget.OverridePlayerVersion);
+                if (overridePlayerVersion != m_AasTarget.OverridePlayerVersion)
+                    m_QueuedChanges.Add(() => m_AasTarget.OverridePlayerVersion = overridePlayerVersion);
+
+                bool bundleLocalCatalog = EditorGUILayout.Toggle(m_BundleLocalCatalog, m_AasTarget.BundleLocalCatalog);
+                if (bundleLocalCatalog != m_AasTarget.BundleLocalCatalog)
+                    m_QueuedChanges.Add(() => m_AasTarget.BundleLocalCatalog = bundleLocalCatalog);
+
+                bool optimizeCatalogSize = EditorGUILayout.Toggle(m_OptimizeCatalogSize, m_AasTarget.OptimizeCatalogSize);
+                if (optimizeCatalogSize != m_AasTarget.OptimizeCatalogSize)
+                    m_QueuedChanges.Add(() => m_AasTarget.OptimizeCatalogSize = optimizeCatalogSize);
+            }
+
+            GUILayout.Space(6);
+            m_ContentUpdateFoldout = EditorGUILayout.Foldout(m_ContentUpdateFoldout, "Content Update");
+            if (m_ContentUpdateFoldout)
             {
                 bool disableCatalogOnStartup = EditorGUILayout.Toggle(m_CheckForCatalogUpdateOnInit, m_AasTarget.DisableCatalogUpdateOnStartup);
                 if (disableCatalogOnStartup != m_AasTarget.DisableCatalogUpdateOnStartup)
                     m_QueuedChanges.Add(() => m_AasTarget.DisableCatalogUpdateOnStartup = disableCatalogOnStartup);
-                string overridePlayerVersion = EditorGUILayout.TextField(m_OverridePlayerVersion, m_AasTarget.OverridePlayerVersion);
-                if (overridePlayerVersion != m_AasTarget.OverridePlayerVersion)
-                    m_QueuedChanges.Add(() => m_AasTarget.OverridePlayerVersion = overridePlayerVersion);
-                bool bundleLocalCatalog = EditorGUILayout.Toggle(m_BundleLocalCatalog, m_AasTarget.BundleLocalCatalog);
-                if (bundleLocalCatalog != m_AasTarget.BundleLocalCatalog)
-                    m_QueuedChanges.Add(() => m_AasTarget.BundleLocalCatalog = bundleLocalCatalog);
-                bool optimizeCatalogSize = EditorGUILayout.Toggle(m_OptimizeCatalogSize, m_AasTarget.OptimizeCatalogSize);
-                if (optimizeCatalogSize != m_AasTarget.OptimizeCatalogSize)
-                    m_QueuedChanges.Add(() => m_AasTarget.OptimizeCatalogSize = optimizeCatalogSize);
+
+                string contentStateBuildPath = EditorGUILayout.TextField(m_ContentStateFileBuildPath, m_AasTarget.ContentStateBuildPath);
+                if (contentStateBuildPath != m_AasTarget.ContentStateBuildPath)
+                    m_QueuedChanges.Add(() => m_AasTarget.ContentStateBuildPath = contentStateBuildPath);
 
                 bool buildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
                 if (buildRemoteCatalog != m_AasTarget.BuildRemoteCatalog)
@@ -212,26 +244,39 @@ namespace UnityEditor.AddressableAssets.GUI
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogBuildPath"), m_RemoteCatBuildPath);
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogLoadPath"), m_RemoteCatLoadPath);
                 }
+            }
+
+            GUILayout.Space(6);
+            m_DownloadsFoldout = EditorGUILayout.Foldout(m_DownloadsFoldout, "Downloads");
+            if (m_DownloadsFoldout)
+            {
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("m_CertificateHandlerType"), m_CertificateHandlerType);
+
+                var maxWebReqs = EditorGUILayout.IntSlider(m_MaxConcurrentWebRequests, m_AasTarget.MaxConcurrentWebRequests, 1, 1024);
+                if (maxWebReqs != m_AasTarget.MaxConcurrentWebRequests)
+                    m_QueuedChanges.Add(() => m_AasTarget.MaxConcurrentWebRequests = maxWebReqs);
+
                 var catalogTimeouts = EditorGUILayout.IntField(m_CatalogTimeout, m_AasTarget.CatalogRequestsTimeout);
                 if (catalogTimeouts != m_AasTarget.CatalogRequestsTimeout)
                     m_QueuedChanges.Add(() => m_AasTarget.CatalogRequestsTimeout = catalogTimeouts);
             }
 
             GUILayout.Space(6);
-            m_GeneralFoldout = EditorGUILayout.Foldout(m_GeneralFoldout, "General");
-            if (m_GeneralFoldout)
+            m_BuildFoldout = EditorGUILayout.Foldout(m_BuildFoldout, "Build");
+            if (m_BuildFoldout)
             {
-                ProjectConfigData.PostProfilerEvents = EditorGUILayout.Toggle(m_SendProfilerEvents, ProjectConfigData.PostProfilerEvents);
-                bool logResourceManagerExceptions = EditorGUILayout.Toggle(m_LogRuntimeExceptions, m_AasTarget.buildSettings.LogResourceManagerExceptions);
-                if (logResourceManagerExceptions != m_AasTarget.buildSettings.LogResourceManagerExceptions)
-                    m_QueuedChanges.Add(() => m_AasTarget.buildSettings.LogResourceManagerExceptions = logResourceManagerExceptions);
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("m_CertificateHandlerType"), m_CertificateHandlerType);
+                bool ignoreUnsupportedFilesInBuild = EditorGUILayout.Toggle(m_IgnoreUnsupportedFilesInBuild, m_AasTarget.IgnoreUnsupportedFilesInBuild);
+                if (ignoreUnsupportedFilesInBuild != m_AasTarget.IgnoreUnsupportedFilesInBuild)
+                    m_QueuedChanges.Add(() => m_AasTarget.IgnoreUnsupportedFilesInBuild = ignoreUnsupportedFilesInBuild);
+
                 bool uniqueBundleIds = EditorGUILayout.Toggle(m_UniqueBundles, m_AasTarget.UniqueBundleIds);
                 if (uniqueBundleIds != m_AasTarget.UniqueBundleIds)
                     m_QueuedChanges.Add(() => m_AasTarget.UniqueBundleIds = uniqueBundleIds);
+
                 bool contiguousBundles = EditorGUILayout.Toggle(m_ContiguousBundles, m_AasTarget.ContiguousBundles);
                 if (contiguousBundles != m_AasTarget.ContiguousBundles)
                     m_QueuedChanges.Add(() => m_AasTarget.ContiguousBundles = contiguousBundles);
+
 #if !NONRECURSIVE_DEPENDENCY_DATA
                 EditorGUI.BeginDisabledGroup(true);
 #endif
@@ -241,42 +286,37 @@ namespace UnityEditor.AddressableAssets.GUI
 #if !NONRECURSIVE_DEPENDENCY_DATA
                 EditorGUI.EndDisabledGroup();
 #endif
-                var maxWebReqs = EditorGUILayout.IntSlider(m_MaxConcurrentWebRequests, m_AasTarget.MaxConcurrentWebRequests, 1, 1024);
-                if (maxWebReqs != m_AasTarget.MaxConcurrentWebRequests)
-                    m_QueuedChanges.Add(() => m_AasTarget.MaxConcurrentWebRequests = maxWebReqs);
 
-                ProjectConfigData.ShowGroupsAsHierarchy = EditorGUILayout.Toggle(m_groupHierarchyView, ProjectConfigData.ShowGroupsAsHierarchy);
-
-                bool ignoreUnsupportedFilesInBuild = EditorGUILayout.Toggle(m_IgnoreUnsupportedFilesInBuild, m_AasTarget.IgnoreUnsupportedFilesInBuild);
-                if (ignoreUnsupportedFilesInBuild != m_AasTarget.IgnoreUnsupportedFilesInBuild)
-                    m_QueuedChanges.Add(() => m_AasTarget.IgnoreUnsupportedFilesInBuild = ignoreUnsupportedFilesInBuild);
-                string contentStateBuildPath = EditorGUILayout.TextField(m_ContentStateFileBuildPath, m_AasTarget.ContentStateBuildPath);
-                if (contentStateBuildPath != m_AasTarget.ContentStateBuildPath)
-	                m_QueuedChanges.Add(() => m_AasTarget.ContentStateBuildPath = contentStateBuildPath);
-
-                ShaderBundleNaming shaderBundleNaming = (ShaderBundleNaming) EditorGUILayout.Popup(m_ShaderBundleNaming,
-                    (int) m_AasTarget.ShaderBundleNaming, new[] { "Project Name Hash (Legacy)", "Default Group GUID", "Custom" });
-                if(shaderBundleNaming != m_AasTarget.ShaderBundleNaming)
+                ShaderBundleNaming shaderBundleNaming = (ShaderBundleNaming)EditorGUILayout.Popup(m_ShaderBundleNaming,
+                    (int)m_AasTarget.ShaderBundleNaming, new[] { "Project Name Hash (Legacy)", "Default Group GUID", "Custom" });
+                if (shaderBundleNaming != m_AasTarget.ShaderBundleNaming)
                     m_QueuedChanges.Add(() => m_AasTarget.ShaderBundleNaming = shaderBundleNaming);
-
                 if (shaderBundleNaming == ShaderBundleNaming.Custom)
                 {
                     string customShaderBundleName = EditorGUILayout.TextField(m_ShaderBundleCustomNaming, m_AasTarget.ShaderBundleCustomNaming);
                     if (customShaderBundleName != m_AasTarget.ShaderBundleCustomNaming)
                         m_QueuedChanges.Add(() => m_AasTarget.ShaderBundleCustomNaming = customShaderBundleName);
                 }
-                
-                MonoScriptBundleNaming monoBundleNaming = (MonoScriptBundleNaming) EditorGUILayout.Popup(m_MonoBundleNaming,
-                    (int) m_AasTarget.MonoScriptBundleNaming, new[] { "Disabled", "Project Name", "Default Group GUID", "Custom" });
-                if(monoBundleNaming != m_AasTarget.MonoScriptBundleNaming)
-                    m_QueuedChanges.Add(() => m_AasTarget.MonoScriptBundleNaming = monoBundleNaming);
 
+                MonoScriptBundleNaming monoBundleNaming = (MonoScriptBundleNaming)EditorGUILayout.Popup(m_MonoBundleNaming,
+                    (int)m_AasTarget.MonoScriptBundleNaming, new[] { "Disabled", "Project Name", "Default Group GUID", "Custom" });
+                if (monoBundleNaming != m_AasTarget.MonoScriptBundleNaming)
+                    m_QueuedChanges.Add(() => m_AasTarget.MonoScriptBundleNaming = monoBundleNaming);
                 if (monoBundleNaming == MonoScriptBundleNaming.Custom)
                 {
                     string customMonoScriptBundleName = EditorGUILayout.TextField(m_MonoBundleCustomNaming, m_AasTarget.MonoScriptBundleCustomNaming);
                     if (customMonoScriptBundleName != m_AasTarget.MonoScriptBundleCustomNaming)
                         m_QueuedChanges.Add(() => m_AasTarget.MonoScriptBundleCustomNaming = customMonoScriptBundleName);
                 }
+
+#if UNITY_2019_4_OR_NEWER
+                bool stripUnityVersion = EditorGUILayout.Toggle(m_StripUnityVersionFromBundleBuild, m_AasTarget.StripUnityVersionFromBundleBuild);
+                if (stripUnityVersion != m_AasTarget.StripUnityVersionFromBundleBuild)
+                    m_QueuedChanges.Add(() => m_AasTarget.StripUnityVersionFromBundleBuild = stripUnityVersion);
+#endif
+                bool disableVisibleSubAssetRepresentations = EditorGUILayout.Toggle(m_DisableVisibleSubAssetRepresentations, m_AasTarget.DisableVisibleSubAssetRepresentations);
+                if (disableVisibleSubAssetRepresentations != m_AasTarget.DisableVisibleSubAssetRepresentations)
+                    m_QueuedChanges.Add(() => m_AasTarget.DisableVisibleSubAssetRepresentations = disableVisibleSubAssetRepresentations);
             }
 
             GUILayout.Space(6);

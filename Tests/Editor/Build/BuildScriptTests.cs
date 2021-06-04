@@ -65,6 +65,68 @@ namespace UnityEditor.AddressableAssets.Tests
             }
 
             [Test]
+            public void Folder_WithSubAssets_GetsBundleFileIdAssigned_DuringBuild()
+            {
+                var context = new AddressablesDataBuilderInput(Settings);
+                string folderGuid = AssetDatabase.CreateFolder(ConfigFolder, "FolderAsset");
+                string folderPath = $"{ConfigFolder}/FolderAsset";
+                PrefabUtility.SaveAsPrefabAsset(new GameObject(), $"{folderPath}/subfolderprefab.prefab");
+
+                AddressableAssetEntry folderEntry = Settings.CreateOrMoveEntry(folderGuid, Settings.DefaultGroup);
+                
+                Assert.IsTrue(string.IsNullOrEmpty(folderEntry.BundleFileId));
+
+                Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+
+                Assert.IsTrue(folderEntry.IsFolder);
+                Assert.IsFalse(string.IsNullOrEmpty(folderEntry.BundleFileId));
+
+                //Cleanup
+                AssetDatabase.DeleteAsset(folderPath);
+                Settings.RemoveAssetEntry(folderEntry);
+            }
+
+            [Test]
+            public void Folder_WithNoSubAssets_DoesNotThrowErrorDuringBuild()
+            {
+                var context = new AddressablesDataBuilderInput(Settings);
+                string folderGuid = AssetDatabase.CreateFolder(ConfigFolder, "FolderAsset");
+                string folderPath = $"{ConfigFolder}/FolderAsset";
+
+                AddressableAssetEntry folderEntry = Settings.CreateOrMoveEntry(folderGuid, Settings.DefaultGroup);
+                
+                Assert.IsTrue(string.IsNullOrEmpty(folderEntry.BundleFileId));
+
+                Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+
+                Assert.IsTrue(folderEntry.IsFolder);
+                Assert.IsTrue(string.IsNullOrEmpty(folderEntry.BundleFileId));
+
+                //Cleanup
+                AssetDatabase.DeleteAsset(folderPath);
+                Settings.RemoveAssetEntry(folderEntry);
+            }
+
+            [Test]
+            public void Folder_DoesNotAssignBundleFileId_ForDynamicallyCreatedSubEntries()
+            {
+                var context = new AddressablesDataBuilderInput(Settings);
+                string folderGuid = AssetDatabase.CreateFolder(ConfigFolder, "FolderAsset");
+                string folderPath = $"{ConfigFolder}/FolderAsset";
+                PrefabUtility.SaveAsPrefabAsset(new GameObject(), $"{folderPath}/subfolderprefab.prefab");
+
+                AddressableAssetEntry folderEntry = Settings.CreateOrMoveEntry(folderGuid, Settings.DefaultGroup);
+                
+                Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+
+                Assert.True(string.IsNullOrEmpty(folderEntry.SubAssets[0].BundleFileId));
+
+                //Cleanup
+                AssetDatabase.DeleteAsset(folderPath);
+                Settings.RemoveAssetEntry(folderEntry);
+            }
+
+            [Test]
             public void CopiedStreamingAssetAreCorrectlyDeleted_DirectoriesWithoutImport()
             {
                 var context = new AddressablesDataBuilderInput(Settings);
@@ -171,57 +233,6 @@ namespace UnityEditor.AddressableAssets.Tests
                 }
 
                 Assert.IsTrue(builderCount > 0);
-            }
-        }
-
-        [Test]
-        public void BuildCompleteCallbackGetsCalled()
-        {
-            LogAssert.ignoreFailingMessages = true;
-            AddressableAssetSettings oldSettings = AddressableAssetSettingsDefaultObject.Settings;
-            AddressableAssetSettingsDefaultObject.Settings = Settings;
-            
-            try
-            {
-                bool callbackCalled = false;
-                BuildScript.buildCompleted += (result) =>
-                {
-                    callbackCalled = true;
-                };
-                AddressableAssetSettings.BuildPlayerContent();
-                Assert.IsTrue(callbackCalled);
-            }
-            finally
-            {
-                if (oldSettings != null)
-                {
-                    AddressableAssetSettingsDefaultObject.Settings = oldSettings;
-                    AddressableAssetSettings.BuildPlayerContent();
-                }
-                LogAssert.ignoreFailingMessages = false;
-            }
-        }
-        
-        [Test]
-        public void BuildCompleteWithResult()
-        {
-            LogAssert.ignoreFailingMessages = true;
-            AddressableAssetSettings oldSettings = AddressableAssetSettingsDefaultObject.Settings;
-            AddressableAssetSettingsDefaultObject.Settings = Settings;
-
-            try
-            {
-                AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult result);
-                Assert.IsTrue(string.IsNullOrEmpty(result.Error));
-            }
-            finally
-            {
-                if (oldSettings != null)
-                {
-                    AddressableAssetSettingsDefaultObject.Settings = oldSettings;
-                    AddressableAssetSettings.BuildPlayerContent();
-                }
-                LogAssert.ignoreFailingMessages = false;
             }
         }
 

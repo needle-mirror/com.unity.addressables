@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using UnityEngine.AddressableAssets.ResourceProviders.Tests;
+using UnityEngine.Networking;
 using UnityEngine.U2D;
 using Object = UnityEngine.Object;
 
@@ -238,6 +239,22 @@ namespace AddressableAssetsIntegrationTests
             m_Addressables.InternalIdTransformFunc = null;
             var originalId = m_Addressables.ResourceManager.TransformInternalId(loc);
             Assert.AreEqual("original", originalId);
+        }
+
+        [UnityTest]
+        public IEnumerator WebRequestOverrideTest()
+        {
+            yield return Init();
+            var originalUrl = "http://127.0.0.1/original.asset";
+            var replacedUrl = "http://127.0.0.1/replaced.asset";
+            var uwr = new UnityWebRequest(originalUrl);
+
+            m_Addressables.WebRequestOverride = request => request.url = replacedUrl;
+            m_Addressables.ResourceManager.WebRequestOverride(uwr);
+            var currentUrl = uwr.url;
+            uwr.Dispose();
+            m_Addressables.WebRequestOverride = null;
+            Assert.AreEqual(replacedUrl, currentUrl);
         }
 
         [UnityTest]
@@ -1673,7 +1690,6 @@ namespace AddressableAssetsIntegrationTests
             Assert.AreEqual(bundleCountBefore, AssetBundle.GetAllLoadedAssetBundles().Count());
         }
 
-        
         [UnityTest]
         [Ignore("Test is unstable until task refactor is finished.")]
         public IEnumerator DownloadDependencies_ReturnsValidTask()
@@ -1685,7 +1701,7 @@ namespace AddressableAssetsIntegrationTests
             Assert.IsNotNull(op.Task);
             yield return op;
             Assert.IsNotNull(op.Task);
-            
+
             op.Release();
         }
 

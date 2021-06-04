@@ -102,7 +102,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             Addressables.LogFormat("Initializing Addressables version {0}.", m_rtdOp.Result.AddressablesVersion);
 #endif
             var rtd = m_rtdOp.Result;
-            
+
             m_Addressables.ResourceManager.postProfilerEvents = rtd.ProfileEvents;
             WebRequestQueue.SetMaxConcurrentRequests(rtd.MaxConcurrentWebRequests);
             m_Addressables.CatalogRequestsTimeout = rtd.CatalogRequestsTimeout;
@@ -131,7 +131,7 @@ namespace UnityEngine.AddressableAssets.Initialization
                 m_Diagnostics = null;
                 m_Addressables.ResourceManager.ClearDiagnosticCallbacks();
             }
-            
+
             Addressables.Log("Addressables - loading initialization objects.");
 
             ContentCatalogProvider ccp = m_Addressables.ResourceManager.ResourceProviders
@@ -242,23 +242,23 @@ namespace UnityEngine.AddressableAssets.Initialization
         public static AsyncOperationHandle<IResourceLocator> LoadContentCatalog(AddressablesImpl addressables, IResourceLocation loc, string providerSuffix, IResourceLocation remoteHashLocation = null)
         {
             Type provType = typeof(ProviderOperation<ContentCatalogData>);
-            var catalogOp = addressables.ResourceManager.CreateOperation<ProviderOperation<ContentCatalogData>>( provType, provType.GetHashCode(), 0, null );
+            var catalogOp = addressables.ResourceManager.CreateOperation<ProviderOperation<ContentCatalogData>>(provType, provType.GetHashCode(), null, null);
 
             IResourceProvider catalogProvider = null;
-            foreach( IResourceProvider provider in addressables.ResourceManager.ResourceProviders )
+            foreach (IResourceProvider provider in addressables.ResourceManager.ResourceProviders)
             {
-                if( provider is ContentCatalogProvider )
+                if (provider is ContentCatalogProvider)
                 {
                     catalogProvider = provider;
                     break;
                 }
             }
 
-            var dependencies = addressables.ResourceManager.CreateGroupOperation<string>( loc.Dependencies, true );
-            catalogOp.Init( addressables.ResourceManager, catalogProvider, loc, dependencies, true );
-            var catalogHandle = addressables.ResourceManager.StartOperation( catalogOp, dependencies );
+            var dependencies = addressables.ResourceManager.CreateGroupOperation<string>(loc.Dependencies, true);
+            catalogOp.Init(addressables.ResourceManager, catalogProvider, loc, dependencies, true);
+            var catalogHandle = addressables.ResourceManager.StartOperation(catalogOp, dependencies);
             dependencies.Release();
-            
+
             var chainOp = addressables.ResourceManager.CreateChainOperation(catalogHandle, res => OnCatalogDataLoaded(addressables, res, providerSuffix, remoteHashLocation));
             return chainOp;
         }

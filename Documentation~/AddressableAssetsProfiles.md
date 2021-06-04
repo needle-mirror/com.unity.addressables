@@ -10,7 +10,7 @@ For each profile, you specify values for each variable. This way, instead of man
 
 There are multiple ways to access the Profile setup window in the Editor.
 * Select **Window** > **Asset Management** > **Addressables** > **Profiles**.
-* Select **Window** > **Asset Management** > **Addressables** > **Groups**, then select **Tools** > **Profiles**.
+* Select **Window** > **Asset Management** > **Addressables** > **Groups**, then select **Tools** > **Window** > **Profiles**.
 * Select **Window** > **Asset Management** > **Addressables** > **Groups**, then select **Profile** > **Manage Profiles**..
 * You can also access these settings via the `AddressableAssetSettings` Inspector.
 
@@ -26,6 +26,18 @@ There are five variables we provide by default:
 
  You can add or remove variables at any time.
 
+### Path Pairs
+Profile variables are automatically divided into a prefix and postfix by the `.` character. Profile variables sharing a prefix and a set of specific postfixes, `BuildPath` and `LoadPath`, are grouped together into a _path pair_.
+
+A path pair is defined by the following criteria:
+1. two variables with a common prefix separated by a `.` character
+2. one variable postfix following the `.` must be `BuildPath`
+3. one variable postfix following the `.` must be `LoadPath`
+
+![Path pairs grouped by a common prefix and separated by a period.](images/ProfilesWithPathPairsExample1.png)</br>
+_The **Addressables Profiles** window showing two profiles with two path pairs._
+
+
 ### Adding a new profile
 You can create new profile by selecting **Create** > **Profile**. A new profile row appears in the table.
 
@@ -38,10 +50,12 @@ You can create new variables to add to the default set by selecting **Create** >
 
 Right-click the variable name to rename or delete the variable. You can likewise rename or delete the provided variables.
 
+If a pair of variables meets the path pair criteria, they are automatically grouped into a path pair.
+
 ### Syntax
 All variables are of type "string". In general, you can type in exactly the needed path or value, but there are two additional syntax designators allowed:
 * Square brackets [ ]. Items surrounded by square brackets are evaluated at build time. The values inside can be other profile variables (such as [BuildTarget]) or code variables (such as [UnityEditor.EditorUserBuildSettings.activeBuildTarget]). During build time, as the groups are being processed, the items inside square brackets are evaluated and the resulting string is written into the catalog.
-* Curly brackets { }. Items surrounded by curly brackets are evaluated at runtime. Generally values here will be code variables (such as {UnityEngine.AddressableAssets.Addressables.RuntimePath}).
+* Curly brackets { }. Items surrounded by curly brackets are evaluated at runtime. Generally values here are code variables (such as {UnityEngine.AddressableAssets.Addressables.RuntimePath}).
 <br/>For example, you have a load path of: `{MyNamespace.MyClass.MyURL}/content/[BuildTarget]}`
 set on a group that is creating an AssetBundle called "trees.bundle". During the build, the catalog would register the load path for that bundle as `{MyNamespace.MyClass.MyURL}/content/Android/trees.bundle}`. Then, at startup, as the catalog is being processed, the profile system would evaluate MyNamespace.MyClass.MyURL to end up with the final load path of `http://myinternet.com/content/Android/trees.bundle`.
 
@@ -63,6 +77,9 @@ While in development, you would have both your local and remote bundles using lo
 
 ![Creating a service profile.](images/ProfilesExample3.png)</br>
 _Paths set for local development._
+
+![Creating a service profile with path pairs.](images/ProfilesWithPathPairsExample2.png)<br>
+_Path pairs set for local development._
 
 In this instance, you can see that the local and remote paths are in fact local, which makes more sense for development, as setting up a remote server would be a pain. However, once the content is ready for production, you would move the remote bundles to a server, as the diagram below shows.
 

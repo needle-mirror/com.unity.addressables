@@ -59,6 +59,8 @@
         * [Addressables content state](AddressablesFAQ.md#What-is-addressables_content_state)
         * [Scale implications](AddressablesFAQ.md#What-are-possible-scale-implications)
         * [Address Lookup](AddressablesFAQ.md#is-it-possible-to-retrieve-the-address-of-an-asset-or-reference-at-runtime)
+        * [Building and Recompiling Scripts](AddressablesFAQ.md#can-i-build-addressables-when-recompiling-scripts)
+    * [Using Addressables and CI Pipelines](ContinuousIntegration.md)
 * [Expanded API documentation](AddressablesAPI.md)
     * [AddressableAssetSettings](AddressableAssetSettings.md)
     * [BuildPlayerContent](BuildPlayerContent.md)

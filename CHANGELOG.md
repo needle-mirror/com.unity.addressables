@@ -4,6 +4,29 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.18.9] - 2021-06-04
+- Added "Select" button for Addressable Asset in Inspector to select the Asset in the Addressables Groups Window.
+- Reduced the number of file copies required during building Addressables and moving Addressables content during Player build.
+- Fixed issue with AssetReferenceUIRestriction not working with Lists and Arrays.
+- Optimised loading AssetBundles to avoid redundent existing file checks.
+- Fixed issue with folder asset entries throwing null ref exceptions when doing a Check for Content Update Restriction
+- Added documentation about how to implement custom operations with synchronous behavior
+- Added option on AddressableAssetSettings to strip the Unity version from the AssetBundle hash during build.
+- Added documentation about useful tools you can use when building Addressables content with a CI pipeline
+- Added Import Groups tool to Samples folder.
+- Updated documentation for setting up and importing addressable assets in packages."
+- Fixed issue where multi-group drag and drop places groups in reverse order.
+- Fixed issue where an asset entry is no longer selected in the Project window after it is modified on disk.
+- Fixed simulated play mode when "Internal Asset Naming Mode" was set to something other than "Full Path"
+- Fixed issues with WaitForCompletion getting stuck in infinite loop during failed operations
+- Organised AddressableAssetSettings GUI into more distint setting types.
+- Fixed issue where the wrong operation would sometimes be returned by the cache when a project contains over 10K addressable assets
+- Added path pairs feature
+- Fixed issue where AsyncOperationBase.HasExecuted isn't being reset when the operation is reused.
+- Added check to ensure that ResourceManager.Update() is never called from within its own callstack.
+- Added ability to rename labels from the label window.
+- Added the DisableVisibleSubAssetRepresentations option in Settings.
+
 ## [1.18.4] - 2021-05-06
 - EditorOnly tagged GameObjects in Scenes are no longer detected as duplicates for Scene Analyze results.
 - Fixed issue when dragging multiple groups around within the groups window to set their display order.

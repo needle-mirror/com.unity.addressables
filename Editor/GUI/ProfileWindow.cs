@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using UnityEditor.AddressableAssets.HostingServices;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
-using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using UnityEngine.Assertions.Comparers;
-using UnityEngine.Serialization;
+using System.Linq;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
@@ -31,6 +28,9 @@ namespace UnityEditor.AddressableAssets.GUI
         //Default length of the Label within the Variables Pane
         private float m_LabelWidth = 155f;
         private float m_FieldBufferWidth = 0f;
+
+        //Separator
+        private const char k_PrefixSeparator = '.';
 
         GUIStyle m_ItemRectPadding;
 
@@ -58,6 +58,9 @@ namespace UnityEditor.AddressableAssets.GUI
 
 
         private GUIStyle m_ButtonStyle;
+
+
+        private Dictionary<string, bool?> m_foldouts = new Dictionary<string, bool?>();
 
         [MenuItem("Window/Asset Management/Addressables/Profiles", priority = 2051)]
         internal static void ShowWindow()
@@ -162,7 +165,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             try
             {
-                PopupWindow.Show(new Rect(0, k_ToolbarHeight, position.width, k_ToolbarHeight),
+                PopupWindow.Show(new Rect(position.x, position.y + k_ToolbarHeight, position.width, k_ToolbarHeight),
                     new ProfileNewVariablePopup(position.width, position.height, 0, m_ProfileTreeView, settings));
             }
             catch (ExitGUIException)
@@ -210,14 +213,6 @@ namespace UnityEditor.AddressableAssets.GUI
 
             //ensures amount of visible text is not affected by label width
             float fieldWidth = variablesPaneRect.width - (2 * k_ItemRectPadding) + m_LabelWidth + m_FieldBufferWidth;
-            float fieldX = variablesPaneRect.x + k_ItemRectPadding;
-            float fieldHeight = k_ToolbarHeight;
-
-            //Amount of text visible not affected by amount of text either, large enough for arbitrary # of variables
-            float viewRectHeight = (fieldHeight + k_VariableItemPadding) * settings.profileSettings.profileEntryNames.Count + fieldHeight;
-            float viewRectWidth = fieldWidth + (2 * k_ItemRectPadding);
-
-            Rect viewRect = new Rect(variablesPaneRect.x, variablesPaneRect.y, viewRectWidth, viewRectHeight);
 
             if (!EditorGUIUtility.labelWidth.Equals(m_LabelWidth))
                 EditorGUIUtility.labelWidth = m_LabelWidth;
@@ -225,32 +220,77 @@ namespace UnityEditor.AddressableAssets.GUI
             int maxLabelLen = 0;
             int maxFieldLen = 0;
 
-            m_VariablesPaneScrollPosition = UnityEngine.GUI.BeginScrollView(variablesPaneRect, m_VariablesPaneScrollPosition, viewRect);
-            for (int i = 0; i < settings.profileSettings.profileEntryNames.Count; i++)
+            GUILayout.BeginArea(variablesPaneRect);
+            EditorGUI.indentLevel++;
+            List<ProfileGroupType> groupTypes = CreateGroupTypes(selectedProfile);
+            HashSet<string> drawnGroupTypes = new HashSet<string>();
+
+            //Displaying Path Groups
+            foreach (ProfileGroupType groupType in groupTypes)
             {
-                //Keep track of the maximum length label, field so we can ensure that variable names, values are always completely visible
-                maxLabelLen = Math.Max(maxLabelLen, settings.profileSettings.profileEntryNames[i].ProfileName.Length);
-                maxFieldLen = Math.Max(maxFieldLen, selectedProfile.values[i].value.Length);
+                bool? foldout;
+                m_foldouts.TryGetValue(groupType.GroupTypePrefix, out foldout);
+                GUILayout.Space(5);
+                m_foldouts[groupType.GroupTypePrefix] = EditorGUILayout.Foldout(foldout != null ? foldout.Value : true, groupType.GroupTypePrefix, true);
+                //Specific Grouped variables
+                List<ProfileGroupType.GroupTypeVariable> pathVariables = new List<ProfileGroupType.GroupTypeVariable>();
+                pathVariables.Add(groupType.GetVariableBySuffix("BuildPath"));
+                drawnGroupTypes.Add(groupType.GetName(groupType.GetVariableBySuffix("BuildPath")));
+                pathVariables.Add(groupType.GetVariableBySuffix("LoadPath"));
+                drawnGroupTypes.Add(groupType.GetName(groupType.GetVariableBySuffix("LoadPath")));
 
-                float fieldY = (variablesPaneRect.y + k_VariableItemPadding) * i + k_ItemRectPadding + k_ToolbarHeight;
-                AddressableAssetProfileSettings.ProfileIdData curVariable = settings.profileSettings.profileEntryNames[i];
+                if (m_foldouts[groupType.GroupTypePrefix].Value)
+                {
+                    EditorGUI.indentLevel++;
 
-                Rect fieldRect = new Rect(fieldX, fieldY, fieldWidth, fieldHeight);
-                Rect labelRect = new Rect(fieldX, fieldY, m_LabelWidth, fieldHeight);
-
-                string newName = EditorGUI.TextField(fieldRect, curVariable.ProfileName, selectedProfile.values[i].value);
-                //Ensure changes get serialized
-                if (selectedProfile.values[i].value != newName && ProfileIndex == m_ProfileTreeView.lastClickedProfile)
-                {                    
-                    Undo.RecordObject(settings, "Variable value changed");
-                    settings.profileSettings.SetValue(selectedProfile.id, settings.profileSettings.profileEntryNames[i].ProfileName, newName);
-                    AddressableAssetUtility.OpenAssetIfUsingVCIntegration(settings);
+                    //Displaying Path Groups
+                    foreach(var variable in pathVariables)
+                    {
+                        Rect newPathRect = EditorGUILayout.BeginVertical();
+                        string newPath = EditorGUILayout.TextField(groupType.GetName(variable), variable.Value);
+                        EditorGUILayout.EndVertical();
+                        if (evt.type == EventType.ContextClick)
+                        {
+                            CreateVariableContextMenu(variablesPaneRect, newPathRect, settings.profileSettings.GetProfileDataByName(groupType.GetName(variable)), evt);
+                        }
+                        if (newPath != variable.Value && ProfileIndex == m_ProfileTreeView.lastClickedProfile)
+                        {
+                            Undo.RecordObject(settings, "Variable value changed");
+                            settings.profileSettings.SetValue(selectedProfile.id, groupType.GetName(variable), newPath);
+                            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(settings);
+                        }
+                    }
+                    EditorGUI.indentLevel--;
                 }
-
-                if (evt.type == EventType.ContextClick)
-                    CreateVariableContextMenu(labelRect, curVariable, i, evt);
             }
-            UnityEngine.GUI.EndScrollView();
+
+            //Display all other variables
+            for (var i = 0; i < settings.profileSettings.profileEntryNames.Count; i++)
+            {
+                AddressableAssetProfileSettings.ProfileIdData curVariable = settings.profileSettings.profileEntryNames[i];
+                if (!drawnGroupTypes.Contains(curVariable.ProfileName))
+                {
+                    GUILayout.Space(5);
+                    Rect newValueRect = EditorGUILayout.BeginVertical();
+                    string newValue = EditorGUILayout.TextField(curVariable.ProfileName, selectedProfile.values[i].value);
+                    EditorGUILayout.EndVertical();
+                    if (newValue != selectedProfile.values[i].value && ProfileIndex == m_ProfileTreeView.lastClickedProfile)
+                    {
+                        Undo.RecordObject(settings, "Variable value changed");
+                        settings.profileSettings.SetValue(selectedProfile.id, settings.profileSettings.profileEntryNames[i].ProfileName, newValue);
+                        AddressableAssetUtility.OpenAssetIfUsingVCIntegration(settings);
+                    }
+
+                    if (evt.type == EventType.ContextClick)
+                    {
+                        CreateVariableContextMenu(variablesPaneRect, newValueRect, curVariable, evt);
+                    }
+                }
+                maxLabelLen = Math.Max(maxLabelLen, curVariable.ProfileName.Length);
+            }
+
+            EditorGUI.indentLevel--;
+            GUILayout.EndArea();
 
             //Update the label width to the maximum of the minimum acceptable label width and the amount of
             //space required to contain the longest variable name
@@ -258,9 +298,37 @@ namespace UnityEditor.AddressableAssets.GUI
             m_FieldBufferWidth = Mathf.Clamp((maxFieldLen * k_ApproxCharWidth) - fieldWidth, 0f, float.MaxValue);
         }
 
+        //UI magic to group the path pairs from profile variables
+        List<ProfileGroupType> CreateGroupTypes(AddressableAssetProfileSettings.BuildProfile buildProfile)
+        {
+            Dictionary<string, ProfileGroupType> groups = new Dictionary<string, ProfileGroupType>();
+            foreach(var profileEntry in settings.profileSettings.profileEntryNames)
+            {
+                string[] parts = profileEntry.ProfileName.Split(k_PrefixSeparator);
+                if (parts.Length > 1)
+                {
+                    string prefix = String.Join(k_PrefixSeparator.ToString(), parts, 0, parts.Length - 1);
+                    string suffix = parts[parts.Length - 1];
+                    string profileEntryValue = buildProfile.GetValueById(profileEntry.Id);
+                    ProfileGroupType group;
+                    groups.TryGetValue(prefix, out group);
+                    if (group == null)
+                    {
+                        group = new ProfileGroupType(prefix);
+                    }
+                    ProfileGroupType.GroupTypeVariable variable = new ProfileGroupType.GroupTypeVariable(suffix, profileEntryValue);
+                    group.AddVariable(variable);
+                    groups[prefix] = group;
+                }
+            }
+
+            List<ProfileGroupType> groupList = new List<ProfileGroupType>();
+            groupList.AddRange(groups.Values.Where(group => group.IsValidGroupType()));
+            return groupList;
+        }
+
         //Creates the context menu for the selected variable
-        void CreateVariableContextMenu(Rect menuRect, AddressableAssetProfileSettings.ProfileIdData variable,
-            int index, Event evt)
+        void CreateVariableContextMenu(Rect parentWindow, Rect menuRect, AddressableAssetProfileSettings.ProfileIdData variable, Event evt)
         {
             if (menuRect.Contains(evt.mousePosition))
             {
@@ -268,19 +336,21 @@ namespace UnityEditor.AddressableAssets.GUI
                 //Displays name of selected variable so user can be confident they're deleting/renaming the right one
                 menu.AddDisabledItem(new GUIContent(variable.ProfileName));
                 menu.AddSeparator("");
-                menu.AddItem(new GUIContent("Rename Variable (All Profiles)"), false, () => { RenameVariable(variable, menuRect); });
-                menu.AddItem(new GUIContent("Delete Variable (All Profiles)"), false, () => { DeleteVariable(settings.profileSettings.profileEntryNames[index]); });
+                menu.AddItem(new GUIContent("Rename Variable (All Profiles)"), false, () => { RenameVariable(variable, parentWindow, menuRect); });
+                menu.AddItem(new GUIContent("Delete Variable (All Profiles)"), false, () => { DeleteVariable(variable); });
                 menu.ShowAsContext();
                 evt.Use();
             }
         }
 
         //Opens ProfileRenameVariablePopup
-        void RenameVariable(AddressableAssetProfileSettings.ProfileIdData profileVariable, Rect displayRect)
+        void RenameVariable(AddressableAssetProfileSettings.ProfileIdData profileVariable, Rect parentWindow, Rect displayRect)
         {
             try
             {
-                PopupWindow.Show(displayRect, new ProfileRenameVariablePopup(displayRect, profileVariable, settings));
+                //Determines the current variable rect location
+                Rect variableRect = new Rect(position.x + parentWindow.x + displayRect.x, position.y + parentWindow.y + displayRect.y, position.width, k_ToolbarHeight);
+                PopupWindow.Show(variableRect, new ProfileRenameVariablePopup(displayRect, profileVariable, settings));
             }
             catch (ExitGUIException)
             {

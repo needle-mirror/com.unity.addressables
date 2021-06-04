@@ -7,7 +7,9 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 #endif
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -296,6 +298,47 @@ namespace AddressableTests.SyncAddressables
 
             //Cleanup
             ReleaseOp(loadCatalogOp);
+        }
+
+        [Test]
+        public void InstanceOperation_WithFailedBundleLoad_CompletesSync()
+        {
+            var depOp = m_Addressables.LoadAssetAsync<GameObject>(m_InvalidKey);
+            LogAssert.Expect(LogType.Error, new Regex("InvalidKeyException*"));
+            
+            var instanceOperation = new ResourceManager.InstanceOperation();
+            instanceOperation.Init(m_Addressables.ResourceManager, new InstanceProvider(), new InstantiationParameters(), depOp);
+            //Since we're calling the operation directly we need to simulate the full workflow of the additional ref count during load
+            instanceOperation.IncrementReferenceCount();
+
+            instanceOperation.WaitForCompletion();
+            LogAssert.Expect(LogType.Error, new Regex("InvalidKeyException*"));
+
+            Assert.IsTrue(instanceOperation.IsDone);
+            m_Addressables.Release(depOp);
+        }
+
+        [Test]
+        public void InstanceOperation_WithSuccessfulBundleLoad_CompletesSync()
+        {
+                var depOp = m_Addressables.LoadAssetAsync<GameObject>(m_PrefabKey);
+                var instanceOperation = new ResourceManager.InstanceOperation();
+                instanceOperation.Init(m_Addressables.ResourceManager, new InstanceProvider(), new InstantiationParameters(), depOp);
+                //Since we're calling the operation directly we need to simulate the full workflow of the additional ref count during load
+                instanceOperation.IncrementReferenceCount();
+
+                instanceOperation.WaitForCompletion();
+
+                Assert.IsTrue(instanceOperation.IsDone);
+                m_Addressables.Release(depOp);
+        }
+
+        class FailedAssetBundleResource : IAssetBundleResource
+        {
+            public AssetBundle GetAssetBundle()
+            {
+                return null;
+            }
         }
     }
 
