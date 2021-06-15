@@ -11,6 +11,7 @@ using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
 using static UnityEditor.AddressableAssets.Settings.AddressablesFileEnumeration;
 
 namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
@@ -165,7 +166,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             // Create a bundle entry for every bundle that our assets could reference
             foreach (List<string> files in input.AssetToFiles.Values)
                 files.ForEach(x => GetOrCreateBundleEntry(input.FileToBundle[x], bundleToEntry));
-
+            
             // build list of assets each bundle has as well as the dependent bundles
             using (input.Logger.ScopedStep(LogLevel.Info, "Calculate Bundle Dependencies"))
             {
@@ -208,19 +209,8 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                     var schema = bEntry.Group.GetSchema<BundledAssetGroupSchema>();
                     foreach (GUID assetGUID in bEntry.Assets)
                     {
-                        if (guidToEntry.TryGetValue(assetGUID.ToString(), out AddressableAssetEntry entry))
-                        {
-                            if (entry.guid.Length > 0 && entry.address.Contains("[") && entry.address.Contains("]"))
-                                throw new Exception($"Address '{entry.address}' cannot contain '[ ]'.");
-                            if (entry.MainAssetType == typeof(DefaultAsset) && !AssetDatabase.IsValidFolder(entry.AssetPath))
-                            {
-                                if (input.Settings.IgnoreUnsupportedFilesInBuild)
-                                    Debug.LogWarning($"Cannot recognize file type for entry located at '{entry.AssetPath}'. Asset location will be ignored.");
-                                else
-                                    throw new Exception($"Cannot recognize file type for entry located at '{entry.AssetPath}'. Asset import failed for using an unsupported file type.");
-                            }
+                        if (guidToEntry.TryGetValue(assetGUID.ToString(), out AddressableAssetEntry entry)) 
                             entry.CreateCatalogEntriesInternal(locations, true, assetProvider, bEntry.ExpandedDependencies.Select(x => x.BundleName), null, input.AssetToAssetInfo, providerTypes, schema.IncludeAddressInCatalog, schema.IncludeGUIDInCatalog, schema.IncludeLabelsInCatalog, bEntry.AssetInternalIds);
-                        }
                     }
                 }
             }
@@ -272,13 +262,25 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 return string.Empty;
             }
 
-            var loadPath = bagSchema.LoadPath.GetValue(group.Settings) + PathSeparatorForPlatform(target) + name;
+            string loadPath = bagSchema.LoadPath.GetValue(group.Settings);
+            loadPath = loadPath.Replace('\\', '/');
+            if (loadPath.EndsWith("/"))
+                loadPath += name;
+            else
+                loadPath = loadPath + "/" + name;
+            
             if (!string.IsNullOrEmpty(bagSchema.UrlSuffix))
                 loadPath += bagSchema.UrlSuffix;
+            if (!ResourceManagerConfig.ShouldPathUseWebRequest(loadPath) && !bagSchema.UseUnityWebRequestForLocalBundles)
+            {
+                char separator = PathSeparatorForPlatform(target);
+                if (separator != '/')
+                    loadPath = loadPath.Replace('/', separator);
+            }
             return loadPath;
         }
 
-        static char PathSeparatorForPlatform(BuildTarget target)
+        internal static char PathSeparatorForPlatform(BuildTarget target)
         {
             switch (target)
             {

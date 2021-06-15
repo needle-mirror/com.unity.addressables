@@ -1127,8 +1127,7 @@ namespace AddressableAssetsIntegrationTests
             dOp.Release();
         }
 
-        [UnityTest]
-        public IEnumerator GetDownloadSize_CalculatesCachedBundles()
+        public IEnumerator GetDownloadSize_CalculatesCachedBundlesInternal()
         {
 #if ENABLE_CACHING
             yield return Init();
@@ -1179,8 +1178,7 @@ namespace AddressableAssetsIntegrationTests
 #endif
         }
 
-        [UnityTest]
-        public IEnumerator GetDownloadSize_WithList_CalculatesCachedBundles()
+        public IEnumerator GetDownloadSize_WithList_CalculatesCachedBundlesInternal()
         {
 #if ENABLE_CACHING
             yield return Init();
@@ -1237,8 +1235,7 @@ namespace AddressableAssetsIntegrationTests
 #endif
         }
 
-        [UnityTest]
-        public IEnumerator GetDownloadSize_WithList_CalculatesCorrectSize_WhenAssetsReferenceSameBundle()
+        public IEnumerator GetDownloadSize_WithList_CalculatesCorrectSize_WhenAssetsReferenceSameBundleInternal()
         {
 #if ENABLE_CACHING
             yield return Init();
@@ -1553,6 +1550,38 @@ namespace AddressableAssetsIntegrationTests
             op.Release();
         }
 
+        [UnityTest]
+        public IEnumerator LoadAsset_SuccessfulWhenLoadAssetMode_LoadAllAssets()
+        {
+            yield return Init();
+            if (string.IsNullOrEmpty(TypeName) || TypeName == "BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
+            {
+                Assert.Ignore($"Skipping test {nameof(LoadAsset_SuccessfulWhenLoadAssetMode_LoadAllAssets)} for {TypeName}, AssetBundle based test.");
+            }
+
+            string label = AddressablesTestUtility.GetPrefabUniqueLabel("BASE", 0);
+            
+            var locationHandle = m_Addressables.LoadResourceLocationsAsync(label);
+            yield return locationHandle;
+            Assert.IsTrue(locationHandle.Result != null, "Failed to get Location for " + label);
+            Assert.AreEqual(1, locationHandle.Result.Count, "Failed to get Location for " + label);
+            IResourceLocation loc = locationHandle.Result[0];
+            Addressables.Release(locationHandle);
+            
+            foreach (IResourceLocation dependency in loc.Dependencies)
+            {
+                var locOptions = dependency.Data as AssetBundleRequestOptions;
+                Assert.IsNotNull(locOptions, "Location dependency did not contain expected AssetBundleRequestOptions data");
+                locOptions.AssetLoadMode = AssetLoadMode.AllPackedAssetsAndDependencies;
+            }
+            
+            AsyncOperationHandle<GameObject> op = m_Addressables.LoadAssetAsync<GameObject>(loc);
+            yield return op;
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status, "Loading of " + label + " failed.");
+            Assert.IsTrue(op.Result != null, "Loading of " + label + " was successful, but result was null.");
+            op.Release();
+        }
+        
         [UnityTest]
         public IEnumerator LoadAssetWithWrongType_WhenEntryExists_Fails()
         {

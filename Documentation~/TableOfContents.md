@@ -61,6 +61,7 @@
         * [Address Lookup](AddressablesFAQ.md#is-it-possible-to-retrieve-the-address-of-an-asset-or-reference-at-runtime)
         * [Building and Recompiling Scripts](AddressablesFAQ.md#can-i-build-addressables-when-recompiling-scripts)
     * [Using Addressables and CI Pipelines](ContinuousIntegration.md)
+    * [Loading Content from Multiple Projects](MultiProject.md)
 * [Expanded API documentation](AddressablesAPI.md)
     * [AddressableAssetSettings](AddressableAssetSettings.md)
     * [BuildPlayerContent](BuildPlayerContent.md)
@@ -75,3 +76,4 @@
     * [LoadSceneAsync](LoadSceneAsync.md)
     * [TransformInternalId](TransformInternalId.md)
     * [UpdateCatalogs](UpdateCatalogs.md)
+    * [Modification Events](ModificationEvents.md)

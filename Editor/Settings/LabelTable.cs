@@ -63,6 +63,9 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal string GetString(HashSet<string> val, float width) //TODO - use width to add the "..." in the right place.
         {
+            if (val == null || val.Count == 0)
+                return "";
+            
             StringBuilder sb = new StringBuilder();
             int counter = 0;
             foreach (var v in m_LabelNames)

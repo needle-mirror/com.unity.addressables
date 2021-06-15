@@ -218,8 +218,25 @@ namespace AddressableAssetsIntegrationTests
             AddressablesTestUtility.TearDown("BuildScriptPackedMode", PathFormat, "BASE");
             AddressablesTestUtility.TearDown(TypeName, PathFormat, "BASE");
         }
-    }
 
+        [UnityTest]
+        public IEnumerator GetDownloadSize_CalculatesCachedBundles()
+        {
+            return GetDownloadSize_CalculatesCachedBundlesInternal();
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSize_WithList_CalculatesCachedBundles()
+        {
+            return GetDownloadSize_WithList_CalculatesCachedBundlesInternal();
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSize_WithList_CalculatesCorrectSize_WhenAssetsReferenceSameBundle()
+        {
+            return GetDownloadSize_WithList_CalculatesCorrectSize_WhenAssetsReferenceSameBundleInternal();
+        }
+    }
 #endif
 
     class AddressablesIntegrationPlayer : AddressablesIntegrationTests
@@ -237,6 +254,24 @@ namespace AddressableAssetsIntegrationTests
                 Crc = crc,
                 Hash = hash
             };
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSize_CalculatesCachedBundles()
+        {
+            return GetDownloadSize_CalculatesCachedBundlesInternal();
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSize_WithList_CalculatesCachedBundles()
+        {
+            return GetDownloadSize_WithList_CalculatesCachedBundlesInternal();
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSize_WithList_CalculatesCorrectSize_WhenAssetsReferenceSameBundle()
+        {
+            return GetDownloadSize_WithList_CalculatesCorrectSize_WhenAssetsReferenceSameBundleInternal();
         }
     }
 }

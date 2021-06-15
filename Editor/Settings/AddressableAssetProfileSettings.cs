@@ -587,7 +587,7 @@ namespace UnityEditor.AddressableAssets.Settings
             return m_Profiles.Find(p => p.id == profileId);
         }
 
-        string GetVariableId(string variableName)
+        internal string GetVariableId(string variableName)
         {
             foreach (var idPair in profileEntryNames)
             {

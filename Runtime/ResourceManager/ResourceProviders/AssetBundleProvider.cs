@@ -13,6 +13,15 @@ using UnityEngine.Serialization;
 namespace UnityEngine.ResourceManagement.ResourceProviders
 {
     /// <summary>
+    /// Used to indication how Assets are loaded from the AssetBundle on the first load request.
+    /// </summary>
+    internal enum AssetLoadMode
+    {
+        RequestedAssetAndDependencies = 0,
+        AllPackedAssetsAndDependencies,
+    }
+    
+    /// <summary>
     /// Wrapper for asset bundles.
     /// </summary>
     public interface IAssetBundleResource
@@ -79,6 +88,17 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// The name of the original bundle.  This does not contain the appended hash.
         /// </summary>
         public string BundleName { get { return m_BundleName; } set { m_BundleName = value; } }
+        
+        [SerializeField]
+        AssetLoadMode m_AssetLoadMode = AssetLoadMode.RequestedAssetAndDependencies;
+        /// <summary>
+        /// Determines how Assets are loaded when accessed.
+        /// </summary>
+        /// <remarks>
+        /// Requested Asset And Dependencies, will only load the requested Asset (Recommended).
+        /// All Packed Assets And Dependencies, will load all Assets that are packed together. Best used when loading all Assets into memory is required.
+        ///</remarks>
+        internal AssetLoadMode AssetLoadMode { get { return m_AssetLoadMode; } set { m_AssetLoadMode = value; } }
 
         [SerializeField]
         long m_BundleSize;
@@ -155,6 +175,23 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         bool m_Completed = false;
         const int k_WaitForWebRequestMainThreadSleep = 1;
         string m_TransformedInternalId;
+        AssetBundleRequest m_PreloadRequest;
+        bool m_PreloadCompleted = false;
+
+        internal long BytesToDownload
+        {
+            get
+            {
+                if (m_BytesToDownload == -1)
+                {
+                    if (m_Options != null)
+                        m_BytesToDownload = m_Options.ComputeSize(m_ProvideHandle.Location, m_ProvideHandle.ResourceManager);
+                    else
+                        m_BytesToDownload = 0;
+                }
+                return m_BytesToDownload;
+            }
+        }
 
         internal UnityWebRequest CreateWebRequest(IResourceLocation loc)
         {
@@ -198,6 +235,32 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             m_ProvideHandle.ResourceManager.WebRequestOverride?.Invoke(webRequest);
             return webRequest;
         }
+        
+        internal AssetBundleRequest GetAssetPreloadRequest()
+        {
+            if (m_PreloadCompleted || GetAssetBundle() == null)
+                return null;
+
+            if (m_Options.AssetLoadMode == AssetLoadMode.AllPackedAssetsAndDependencies)
+            {
+#if !UNITY_2021_1_OR_NEWER
+                if (AsyncOperationHandle.IsWaitingForCompletion)
+                {
+                    m_AssetBundle.LoadAllAssets();
+                    m_PreloadCompleted = true;
+                    return null;
+                }
+#endif
+                if (m_PreloadRequest == null)
+                {
+                    m_PreloadRequest = m_AssetBundle.LoadAllAssetsAsync();
+                    m_PreloadRequest.completed += operation => m_PreloadCompleted = true;
+                }
+                return m_PreloadRequest;
+            }
+
+            return null;
+        }
 
         float PercentComplete() { return m_RequestOperation != null ? m_RequestOperation.progress : 0.0f; }
 
@@ -205,8 +268,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             if (m_Options == null)
                 return default;
-            var status = new DownloadStatus() { TotalBytes = m_BytesToDownload, IsDone = PercentComplete() >= 1f };
-            if (m_BytesToDownload > 0)
+            var status = new DownloadStatus() { TotalBytes = BytesToDownload, IsDone = PercentComplete() >= 1f };
+            if (BytesToDownload > 0)
             {
                 if (m_WebRequestQueueOperation != null && string.IsNullOrEmpty(m_WebRequestQueueOperation.m_WebRequest.error))
                     m_DownloadedBytes = (long)(m_WebRequestQueueOperation.m_WebRequest.downloadedBytes);
@@ -249,8 +312,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             m_WebRequestCompletedCallbackCalled = false;
             m_ProvideHandle = provideHandle;
             m_Options = m_ProvideHandle.Location.Data as AssetBundleRequestOptions;
-            if (m_Options != null)
-                m_BytesToDownload = m_Options.ComputeSize(m_ProvideHandle.Location, m_ProvideHandle.ResourceManager);
+            m_BytesToDownload = -1;
             m_ProvideHandle.SetProgressCallback(PercentComplete);
             m_ProvideHandle.SetDownloadProgressCallbacks(GetDownloadStatus);
             m_ProvideHandle.SetWaitForCompletionCallback(WaitForCompletionHandler);

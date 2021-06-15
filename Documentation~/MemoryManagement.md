@@ -16,6 +16,8 @@ To unload the Asset, use the [`Addressables.Release`](xref:UnityEngine.Addressab
 
 **Note**: The Asset may or may not be unloaded immediately, contingent on existing dependencies. For more information, read the section on [when memory is cleared](#when-is-memory-cleared).
 
+**Note**: If Asset Load Mode `All Packed Assets and Dependencies` is used in "Content Packing & Loading" settings, the first Asset loaded from the pack will load all Assets at the same time. This can cause a delay in expected time to load the first Asset, subsequent Asset loads will be preloaded and complete quickly. This can lead to Assets in memory with no ref count until they have been requested with Addressables Loading API and could be unloaded from memory, and will be reloaded individually on request. For more information, read the section on [when memory is cleared](#when-is-memory-cleared). 
+
 ### Scene loading
 To load a Scene, use [`Addressables.LoadSceneAsync`](xref:UnityEngine.AddressableAssets.AssetReference.LoadSceneAsync(UnityEngine.SceneManagement.LoadSceneMode,System.Boolean,System.Int32)). You can use this method to load a Scene in `Single` mode, which closes all open Scenes, or in `Additive` mode (for more information, see documentation on [Scene mode loading](https://docs.unity3d.com/ScriptReference/SceneManagement.LoadSceneMode.html)).  
 

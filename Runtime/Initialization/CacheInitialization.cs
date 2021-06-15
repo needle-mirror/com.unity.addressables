@@ -45,8 +45,9 @@ namespace UnityEngine.AddressableAssets.Initialization
                     activeCache.maximumAvailableStorageSpace = data.MaximumCacheSize;
                 else
                     activeCache.maximumAvailableStorageSpace = long.MaxValue;
-
+#pragma warning disable 618
                 activeCache.expirationDelay = data.ExpirationDelay;
+#pragma warning restore 618
             }
 #endif //ENABLE_CACHING
             return true;
@@ -148,6 +149,7 @@ namespace UnityEngine.AddressableAssets.Initialization
         /// <summary>
         /// Controls how long bundles are kept in the cache. This value is applied to Caching.currentCacheForWriting.expirationDelay.  The value is in seconds and has a limit of 12960000 (150 days).
         /// </summary>
+        [Obsolete("Functionality remains unchanged.  However, due to issues with Caching this property is being marked obsolete.  See Caching API documentation for more details.")]
         public int ExpirationDelay { get { return m_ExpirationDelay; } set { m_ExpirationDelay = value; } }
 
         [FormerlySerializedAs("m_limitCacheSize")]

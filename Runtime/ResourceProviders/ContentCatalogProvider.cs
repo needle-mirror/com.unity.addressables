@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.Networking;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEngine.AddressableAssets.ResourceProviders
 {
@@ -94,9 +96,9 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
 
                 Addressables.LogFormat("Addressables - Using content catalog from {0}.", idToLoad);
 
-                bool isLocalCatalog = idToLoad.Equals(GetTransformedInternalId(m_ProviderInterface.Location));
+                bool loadCatalogFromLocalBundle = isLocalCatalogInBundle && CanLoadCatalogFromBundle(idToLoad, m_ProviderInterface.Location);
 
-                LoadCatalog(idToLoad, isLocalCatalogInBundle, isLocalCatalog);
+                LoadCatalog(idToLoad, loadCatalogFromLocalBundle);
             }
 
             bool WaitForCompletionCallback()
@@ -130,13 +132,24 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                 m_ContentCatalogData?.CleanData();
             }
 
-            internal void LoadCatalog(string idToLoad,bool isLocalCatalogInBundle, bool isLocalCatalog)
+            internal bool CanLoadCatalogFromBundle(string idToLoad, IResourceLocation location)
+            {
+                return Path.GetExtension(idToLoad) == ".bundle" &&
+                    idToLoad.Equals(GetTransformedInternalId(location));
+            }
+
+            internal void LoadCatalog(string idToLoad, bool loadCatalogFromLocalBundle)
             {
                 try
                 {
-                    if (isLocalCatalogInBundle && isLocalCatalog)
+                    ProviderLoadRequestOptions providerLoadRequestOptions = null;
+                    if (m_ProviderInterface.Location.Data is ProviderLoadRequestOptions providerData)
+                        providerLoadRequestOptions = providerData.Copy();
+
+                    if (loadCatalogFromLocalBundle)
                     {
-                        m_BundledCatalog = new BundledCatalog(idToLoad);
+                        int webRequestTimeout = providerLoadRequestOptions?.WebRequestTimeout ?? 0;
+                        m_BundledCatalog = new BundledCatalog(idToLoad, webRequestTimeout);
                         m_BundledCatalog.OnLoaded += ccd =>
                         {
                             m_ContentCatalogData = ccd;
@@ -148,9 +161,8 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                     {
                         ResourceLocationBase location = new ResourceLocationBase(idToLoad, idToLoad,
                             typeof(JsonAssetProvider).FullName, typeof(ContentCatalogData));
-                        if (m_ProviderInterface.Location.Data is ProviderLoadRequestOptions providerData)
-                            location.Data = providerData.Copy();
-                        
+                        location.Data = providerLoadRequestOptions;
+
                         m_ContentCatalogDataLoadOp = m_ProviderInterface.ResourceManager.ProvideResource<ContentCatalogData>(location);
                         m_ContentCatalogDataLoadOp.Completed += CatalogLoadOpCompleteCallback;
                     }
@@ -176,13 +188,16 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                 internal AssetBundle m_CatalogAssetBundle;
                 private AssetBundleRequest m_LoadTextAssetRequest;
                 private ContentCatalogData m_CatalogData;
+                private WebRequestQueueOperation m_WebRequestQueueOperation;
+                private AsyncOperation m_RequestOperation;
+                private int m_WebRequestTimeout;
 
                 public event Action<ContentCatalogData> OnLoaded;
 
                 public bool OpInProgress => m_OpInProgress;
                 public bool OpIsSuccess => !m_OpInProgress && m_CatalogData != null;
 
-                public BundledCatalog(string bundlePath)
+                public BundledCatalog(string bundlePath, int webRequestTimeout = 0)
                 {
                     if (string.IsNullOrEmpty(bundlePath))
                     {
@@ -194,6 +209,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                     }
 
                     m_BundlePath = bundlePath;
+                    m_WebRequestTimeout = webRequestTimeout;
                 }
 
                 ~BundledCatalog()
@@ -217,24 +233,74 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                     }
 
                     m_OpInProgress = true;
-                    m_LoadBundleRequest = AssetBundle.LoadFromFileAsync(m_BundlePath);
-                    m_LoadBundleRequest.completed += loadOp =>
+
+                    if (ResourceManagerConfig.ShouldPathUseWebRequest(m_BundlePath))
                     {
-                        if (loadOp is AssetBundleCreateRequest createRequest && createRequest.assetBundle != null)
+                        var req = UnityWebRequestAssetBundle.GetAssetBundle(m_BundlePath);
+                        if (m_WebRequestTimeout > 0)
+                            req.timeout = m_WebRequestTimeout;
+
+                        m_WebRequestQueueOperation = WebRequestQueue.QueueRequest(req);
+                        if (m_WebRequestQueueOperation.IsDone)
                         {
-                            m_CatalogAssetBundle = createRequest.assetBundle;
-                            m_LoadTextAssetRequest = m_CatalogAssetBundle.LoadAllAssetsAsync<TextAsset>();
-                            if (m_LoadTextAssetRequest.isDone)
-                                LoadTextAssetRequestComplete(m_LoadTextAssetRequest);
-                            m_LoadTextAssetRequest.completed += LoadTextAssetRequestComplete;
-                        } 
+                            m_RequestOperation = m_WebRequestQueueOperation.Result;
+                            if (m_RequestOperation.isDone)
+                                WebRequestOperationCompleted(m_RequestOperation);
+                            else
+                                m_RequestOperation.completed += WebRequestOperationCompleted;
+                        }
                         else
                         {
-                            Addressables.LogError($"Unable to load dependent bundle from location : {m_BundlePath}");
-                            m_OpInProgress = false;
+                            m_WebRequestQueueOperation.OnComplete += asyncOp =>
+                            {
+                                m_RequestOperation = asyncOp;
+                                m_RequestOperation.completed += WebRequestOperationCompleted;
+                            };
                         }
-                    };
+                    }
+                    else
+                    {
+                        m_LoadBundleRequest = AssetBundle.LoadFromFileAsync(m_BundlePath);
+                        m_LoadBundleRequest.completed += loadOp =>
+                        {
+                            if (loadOp is AssetBundleCreateRequest createRequest && createRequest.assetBundle != null)
+                            {
+                                m_CatalogAssetBundle = createRequest.assetBundle;
+                                m_LoadTextAssetRequest = m_CatalogAssetBundle.LoadAllAssetsAsync<TextAsset>();
+                                if (m_LoadTextAssetRequest.isDone)
+                                    LoadTextAssetRequestComplete(m_LoadTextAssetRequest);
+                                m_LoadTextAssetRequest.completed += LoadTextAssetRequestComplete;
+                            }
+                            else
+                            {
+                                Addressables.LogError($"Unable to load dependent bundle from location : {m_BundlePath}");
+                                m_OpInProgress = false;
+                            }
+                        };
+                    }
                 }
+
+                private void WebRequestOperationCompleted(AsyncOperation op)
+                {
+                    UnityWebRequestAsyncOperation remoteReq = op as UnityWebRequestAsyncOperation;
+                    var webReq = remoteReq.webRequest;
+                    DownloadHandlerAssetBundle downloadHandler = webReq.downloadHandler as DownloadHandlerAssetBundle;
+                    if (!UnityWebRequestUtilities.RequestHasErrors(webReq, out UnityWebRequestResult uwrResult))
+                    {
+                        m_CatalogAssetBundle = downloadHandler.assetBundle;
+                        m_LoadTextAssetRequest = m_CatalogAssetBundle.LoadAllAssetsAsync<TextAsset>();
+                        if (m_LoadTextAssetRequest.isDone)
+                            LoadTextAssetRequestComplete(m_LoadTextAssetRequest);
+                        m_LoadTextAssetRequest.completed += LoadTextAssetRequestComplete;
+                    }
+                    else
+                    {
+                        Addressables.LogError($"Unable to load dependent bundle from location : {m_BundlePath}");
+                        m_OpInProgress = false;
+                    }
+                    webReq.Dispose();
+                }
+
                 void LoadTextAssetRequestComplete(AsyncOperation op)
                 {
                     if (op is AssetBundleRequest loadRequest

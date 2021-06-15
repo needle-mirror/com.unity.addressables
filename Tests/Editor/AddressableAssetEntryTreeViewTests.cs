@@ -6,6 +6,7 @@ using UnityEditor.AddressableAssets.GUI;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.IMGUI.Controls;
+using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -277,6 +278,75 @@ namespace UnityEditor.AddressableAssets.Tests
             // Last child is the full name of the group
             Assert.NotNull(result.FirstOrDefault(c => c.displayName == nameWithDashes));
         }
+        
+        [Test]
+        public void CopyAddressesToClipboard_Simple()
+        {
+            List<AssetEntryTreeViewItem> nodesToSelect = new List<AssetEntryTreeViewItem>();
+            
+            AddressableAssetEntry entry1 = new AddressableAssetEntry("0001", "address1", null, false);
+            
+            nodesToSelect.Add(new AssetEntryTreeViewItem(entry1, 0));
+
+            //Save users previous clipboard so it doesn't get eaten during test
+            string previousClipboard = GUIUtility.systemCopyBuffer;
+            
+            AddressableAssetEntryTreeView.CopyAddressesToClipboard(nodesToSelect);
+            
+            string result = GUIUtility.systemCopyBuffer;
+            GUIUtility.systemCopyBuffer = previousClipboard;
+            
+            Assert.AreEqual("address1", result, "Entry's address was incorrectly copied.");
+        }
+        
+        [Test]
+        public void CopyAddressesToClipboard_Multiple()
+        {
+            List<AssetEntryTreeViewItem> nodesToSelect = new List<AssetEntryTreeViewItem>();
+            
+            AddressableAssetEntry entry1 = new AddressableAssetEntry("0001", "address1", null, false);
+            AddressableAssetEntry entry2 = new AddressableAssetEntry("0002", "address2", null, false);
+            AddressableAssetEntry entry3 = new AddressableAssetEntry("0003", "address3", null, false);
+            
+            nodesToSelect.Add(new AssetEntryTreeViewItem(entry1, 0));
+            nodesToSelect.Add(new AssetEntryTreeViewItem(entry2, 0));
+            nodesToSelect.Add(new AssetEntryTreeViewItem(entry3, 0));
+
+            //Save users previous clipboard so it doesn't get eaten during test
+            string previousClipboard = GUIUtility.systemCopyBuffer;
+            
+            AddressableAssetEntryTreeView.CopyAddressesToClipboard(nodesToSelect);
+            
+            string result = GUIUtility.systemCopyBuffer;
+            GUIUtility.systemCopyBuffer = previousClipboard;
+            
+            Assert.AreEqual("address1,address2,address3", result, "Entry's address was incorrectly copied.");
+        }
+
+        [Test]
+        public void CopyAddressesToClipboard_MaintainsOrder()
+        {
+            List<AssetEntryTreeViewItem> nodesToSelect = new List<AssetEntryTreeViewItem>();
+            
+            AddressableAssetEntry entry1 = new AddressableAssetEntry("0001", "address1", null, false);
+            AddressableAssetEntry entry2 = new AddressableAssetEntry("0002", "address2", null, false);
+            AddressableAssetEntry entry3 = new AddressableAssetEntry("0003", "address3", null, false);
+            
+            nodesToSelect.Add(new AssetEntryTreeViewItem(entry2, 0));
+            nodesToSelect.Add(new AssetEntryTreeViewItem(entry3, 0));
+            nodesToSelect.Add(new AssetEntryTreeViewItem(entry1, 0));
+
+            //Save users previous clipboard so it doesn't get eaten during test
+            string previousClipboard = GUIUtility.systemCopyBuffer;
+            
+            AddressableAssetEntryTreeView.CopyAddressesToClipboard(nodesToSelect);
+            
+            string result = GUIUtility.systemCopyBuffer;
+            GUIUtility.systemCopyBuffer = previousClipboard;
+            
+            Assert.AreEqual("address2,address3,address1", result, "Entry's address was incorrectly copied.");
+        }
+        
 
         List<AddressableAssetEntry> GetAllEntries(bool includeSubObjects = false)
         {

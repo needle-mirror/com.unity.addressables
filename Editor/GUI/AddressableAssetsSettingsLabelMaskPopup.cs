@@ -43,7 +43,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 var content = new GUIContent(maxStr);
                 UnityEngine.GUI.skin.toggle.CalcMinMaxWidth(content, out minWidth, out maxWidth);
                 var height = UnityEngine.GUI.skin.toggle.CalcHeight(content, maxWidth) + 3.5f;
-                m_Rect = new Vector2(Mathf.Clamp(maxWidth + 15, 125, 600), Mathf.Clamp(labelTable.labelNames.Count * height + 25, 30, 150));
+                m_Rect = new Vector2(Mathf.Clamp(maxWidth + 35, 125, 600), Mathf.Clamp(labelTable.labelNames.Count * height + 25, 30, 150));
                 m_LastItemCount = labelTable.labelNames.Count;
             }
             return m_Rect;
@@ -61,16 +61,23 @@ namespace UnityEditor.AddressableAssets.GUI
             if (m_Entries.Count == 0)
                 return;
 
-
             var labelTable = m_Settings.labelTable;
 
-            GUILayout.BeginArea(new Rect(rect.xMin + 3, rect.yMin + 3, rect.width - 6, rect.height - 6));
+            var areaRect = new Rect(rect.xMin + 3, rect.yMin + 3, rect.width - 6, rect.height - 6);
+            GUILayout.BeginArea(areaRect);
             m_ScrollPosition = GUILayout.BeginScrollView(m_ScrollPosition, false, false);
-
-            //string toRemove = null;
+            Vector2 yPositionDrawRange = new Vector2(m_ScrollPosition.y - 30, m_ScrollPosition.y + rect.height + 30);
+            
             foreach (var labelName in labelTable.labelNames)
             {
-                EditorGUILayout.BeginHorizontal();
+                var toggleRect = EditorGUILayout.GetControlRect(GUILayout.Width(areaRect.width-20));
+                if (toggleRect.height > 1)
+                {
+                    // only draw toggles if they are in view
+                    if (toggleRect.y < yPositionDrawRange.x || toggleRect.y > yPositionDrawRange.y)
+                        continue;
+                }
+                else continue;
 
                 bool newState;
                 int count;
@@ -80,30 +87,19 @@ namespace UnityEditor.AddressableAssets.GUI
                     m_LabelCount.TryGetValue(labelName, out count);
 
                 bool oldState = count == m_Entries.Count;
-                if (count == 0 || count == m_Entries.Count)
-                {
-                    newState = GUILayout.Toggle(oldState, new GUIContent(labelName), GUILayout.ExpandWidth(false));
-                }
-                else
-                {
-                    if (m_ToggleMixed == null)
-                        m_ToggleMixed = new GUIStyle("ToggleMixed");
-                    newState = GUILayout.Toggle(oldState, new GUIContent(labelName), m_ToggleMixed, GUILayout.ExpandWidth(false));
-                }
+                if (!(count == 0 || count == m_Entries.Count))
+                    EditorGUI.showMixedValue = true;
+                newState = EditorGUI.ToggleLeft(toggleRect, new GUIContent(labelName), oldState);
+                EditorGUI.showMixedValue = false;
+                
                 if (oldState != newState)
-                {
                     SetLabelForEntries(labelName, newState);
-                }
-
-                EditorGUILayout.EndHorizontal();
             }
 
-            EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Manage Labels", UnityEngine.GUI.skin.button, GUILayout.ExpandWidth(false)))
             {
                 EditorWindow.GetWindow<LabelWindow>(true).Intialize(m_Settings);
             }
-            EditorGUILayout.EndHorizontal();
 
             GUILayout.EndScrollView();
             GUILayout.EndArea();

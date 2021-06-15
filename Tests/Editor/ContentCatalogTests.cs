@@ -108,7 +108,8 @@ namespace UnityEditor.AddressableAssets.Tests
                 Hash = new Hash128(1, 2, 3, 4).ToString(),
                 RedirectLimit = 4,
                 RetryCount = 7,
-                Timeout = 12
+                Timeout = 12,
+                AssetLoadMode = AssetLoadMode.AllPackedAssetsAndDependencies
             };
             var dataEntry = new ContentCatalogDataEntry(typeof(ContentCatalogData), "internalId", "provider", new object[] { 1 }, null, options);
             var entries = new List<ContentCatalogDataEntry>();
@@ -128,6 +129,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(locOptions.RedirectLimit, options.RedirectLimit);
             Assert.AreEqual(locOptions.RetryCount, options.RetryCount);
             Assert.AreEqual(locOptions.Timeout, options.Timeout);
+            Assert.AreEqual(locOptions.AssetLoadMode, options.AssetLoadMode);
         }
 
         [Test]

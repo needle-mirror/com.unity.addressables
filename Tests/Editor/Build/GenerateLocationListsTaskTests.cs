@@ -208,10 +208,74 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
     {
         AddressableAssetGroup group = m_Settings.CreateGroup($"xyz", false, false, false, null, typeof(BundledAssetGroupSchema));
         var bag = group.GetSchema<BundledAssetGroupSchema>();
-        var expectedPath = $"{bag.LoadPath.GetValue(m_Settings)}{expected}";
+        var expectedPath = $"{bag.LoadPath.GetValue(m_Settings)}{expected}".Replace('/', GenerateLocationListsTask.PathSeparatorForPlatform(target));
         var path = GenerateLocationListsTask.GetLoadPath(group, id, target);
         Assert.AreEqual(expectedPath, path);
         m_Settings.RemoveGroup(group);
+    }
+
+    [Test]
+    [TestCase("abc", BuildTarget.XboxOne)]
+    [TestCase("abc", BuildTarget.StandaloneWindows64)]
+    [TestCase("abc", BuildTarget.iOS)]
+    [TestCase("abc", BuildTarget.Android)]
+    [TestCase("abc", BuildTarget.StandaloneLinux64)]
+    [TestCase("abc", BuildTarget.Switch)]
+    [TestCase("abc", BuildTarget.StandaloneOSX)]
+    public void WhenPathIsRemote_WithTrailingSlash_PathIsNotMalformed(string id, BuildTarget target)
+    {
+        //Setup
+        string baseId = m_Settings.profileSettings.Reset();
+        string profileId = m_Settings.profileSettings.AddProfile("remote", baseId);
+        m_Settings.profileSettings.SetValue(profileId, "RemoteLoadPath", "http://127.0.0.1:80/");
+        m_Settings.activeProfileId = profileId;
+        AddressableAssetGroup group = m_Settings.CreateGroup($"xyz", false, false, false, null, typeof(BundledAssetGroupSchema));
+        var bag = group.GetSchema<BundledAssetGroupSchema>();
+        bag.LoadPath.Id = m_Settings.profileSettings.GetVariableId("RemoteLoadPath");
+        
+        //Test
+        var path = GenerateLocationListsTask.GetLoadPath(group, id, target);
+        string pahWithoutHttp = path.Replace("http://", "");
+
+        //Assert
+        Assert.IsFalse(path.Contains("/\\"));
+        Assert.IsFalse(pahWithoutHttp.Contains("//"));
+        
+        //Cleanup
+        m_Settings.RemoveGroup(group);
+        m_Settings.activeProfileId = baseId;
+    }
+
+    [Test]
+    [TestCase("abc", BuildTarget.XboxOne)]
+    [TestCase("abc", BuildTarget.StandaloneWindows64)]
+    [TestCase("abc", BuildTarget.iOS)]
+    [TestCase("abc", BuildTarget.Android)]
+    [TestCase("abc", BuildTarget.StandaloneLinux64)]
+    [TestCase("abc", BuildTarget.Switch)]
+    [TestCase("abc", BuildTarget.StandaloneOSX)]
+    public void WhenPathIsRemote_WithoutTrailingSlash_PathIsNotMalformed(string id, BuildTarget target)
+    {
+        //Setup
+        string baseId = m_Settings.profileSettings.Reset();
+        string profileId = m_Settings.profileSettings.AddProfile("remote", baseId);
+        m_Settings.profileSettings.SetValue(profileId, "RemoteLoadPath", "http://127.0.0.1:80");
+        m_Settings.activeProfileId = profileId;
+        AddressableAssetGroup group = m_Settings.CreateGroup($"xyz", false, false, false, null, typeof(BundledAssetGroupSchema));
+        var bag = group.GetSchema<BundledAssetGroupSchema>();
+        bag.LoadPath.Id = m_Settings.profileSettings.GetVariableId("RemoteLoadPath");
+        
+        //Test
+        var path = GenerateLocationListsTask.GetLoadPath(group, id, target);
+        string pahWithoutHttp = path.Replace("http://", "");
+
+        //Assert
+        Assert.IsFalse(path.Contains("/\\"));
+        Assert.IsFalse(pahWithoutHttp.Contains("//"));
+        
+        //Cleanup
+        m_Settings.RemoveGroup(group);
+        m_Settings.activeProfileId = baseId;
     }
 
     //[Test]

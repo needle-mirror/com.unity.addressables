@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using UnityEditor.AddressableAssets.HostingServices;
@@ -6,6 +7,7 @@ using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
+using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 {
@@ -514,6 +516,20 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         public SerializedType AssetBundleProviderType { get { return m_AssetBundleProviderType; } }
 
         /// <summary>
+        /// Used to determine if dropdown should be custom
+        /// </summary>
+        private bool m_UseCustomPaths = false;
+
+
+        /// <summary>
+        /// Internal settings
+        /// </summary>
+        internal AddressableAssetSettings settings
+        {
+            get { return AddressableAssetSettingsDefaultObject.Settings; }
+        }
+
+        /// <summary>
         /// Set default values taken from the assigned group.
         /// </summary>
         /// <param name="group">The group this schema has been added to.</param>
@@ -675,6 +691,21 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 SetDirty(true);
             }
         }
+        
+        [SerializeField]
+        AssetLoadMode m_AssetLoadMode;
+        /// <summary>
+        /// Will load all Assets into memory from the AssetBundle after the AssetBundle is loaded.
+        /// </summary>
+        internal AssetLoadMode AssetLoadMode
+        {
+            get { return m_AssetLoadMode; }
+            set
+            {
+                m_AssetLoadMode = value;
+                SetDirty(true);
+            }
+        }
 
         private bool m_ShowPaths = true;
         private bool m_ShowAdvanced = false;
@@ -693,11 +724,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             var so = new SerializedObject(this);
 
-            m_ShowPaths = EditorGUILayout.Foldout(m_ShowPaths, "Build and Load Paths");
-            if (m_ShowPaths)
-            {
-                ShowPaths(so);
-            }
+            ShowSelectedPropertyPathPair(so);
 
             m_ShowAdvanced = EditorGUILayout.Foldout(m_ShowAdvanced, "Advanced Options");
             if (m_ShowAdvanced)
@@ -717,17 +744,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 otherBundledSchemas.Add(schema as BundledAssetGroupSchema);
             }
 
-            EditorGUI.BeginChangeCheck();
-            m_ShowPaths = EditorGUILayout.Foldout(m_ShowPaths, "Build and Load Paths");
-            if (EditorGUI.EndChangeCheck())
-            {
-                foreach (var schema in otherBundledSchemas)
+            foreach (var schema in otherBundledSchemas)
                     schema.m_ShowPaths = m_ShowPaths;
-            }
-            if (m_ShowPaths)
-            {
-                ShowPathsMulti(so, otherSchemas, ref queuedChanges);
-            }
+            ShowSelectedPropertyPathPairMulti(so, otherSchemas, ref queuedChanges,
+                (src, dst) => { dst.m_BuildPath.Id = src.BuildPath.Id; dst.m_LoadPath.Id = src.LoadPath.Id; dst.m_UseCustomPaths = src.m_UseCustomPaths;  dst.SetDirty(true); });
 
             EditorGUI.BeginChangeCheck();
             m_ShowAdvanced = EditorGUILayout.Foldout(m_ShowAdvanced, "Advanced Options");
@@ -789,6 +809,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         GUIContent m_CacheClearBehaviorContent = new GUIContent("Cache Clear Behavior", "Controls how old cached asset bundles are cleared.");
         GUIContent m_BundleModeContent = new GUIContent("Bundle Mode", "Controls how bundles are created from this group.");
         GUIContent m_BundleNamingContent = new GUIContent("Bundle Naming Mode", "Controls the final file naming mode for bundles in this group.");
+        GUIContent m_AssetLoadModeContent = new GUIContent("Asset Load Mode", "Determines how Assets are loaded when accessed." +
+                                                                              "\n- Requested Asset And Dependencies, will only load the requested Asset (Recommended)." +
+                                                                              "\n- All Packed Assets And Dependencies, will load all Assets that are packed together. Best used when loading all Assets into memory is required.");
         GUIContent m_AssetProviderContent = new GUIContent("Asset Provider", "The provider to use for loading assets out of AssetBundles");
         GUIContent m_BundleProviderContent = new GUIContent("Asset Bundle Provider", "The provider to use for loading AssetBundles (not the assets within bundles)");
 
@@ -814,6 +837,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_CacheClearBehavior)), m_CacheClearBehaviorContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_BundleMode)), m_BundleModeContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_BundleNaming)), m_BundleNamingContent, true);
+            EditorGUILayout.PropertyField(so.FindProperty(nameof(m_AssetLoadMode)), m_AssetLoadModeContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_BundledAssetProviderType)), m_AssetProviderContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_AssetBundleProviderType)), m_BundleProviderContent, true);
         }
@@ -839,6 +863,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             ShowSelectedPropertyMulti(so, nameof(m_CacheClearBehavior), m_CacheClearBehaviorContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.AssetBundledCacheClearBehavior = src.AssetBundledCacheClearBehavior, ref m_CacheClearBehavior);
             ShowSelectedPropertyMulti(so, nameof(m_BundleMode), m_BundleModeContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.BundleMode = src.BundleMode, ref m_BundleMode);
             ShowSelectedPropertyMulti(so, nameof(m_BundleNaming), m_BundleNamingContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.BundleNaming = src.BundleNaming, ref m_BundleNaming);
+            ShowSelectedPropertyMulti(so, nameof(m_AssetLoadMode), m_AssetLoadModeContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.AssetLoadMode = src.AssetLoadMode, ref m_AssetLoadMode);
             ShowSelectedPropertyMulti(so, nameof(m_BundledAssetProviderType), m_AssetProviderContent, otherBundledSchemas, ref queuedChanges, (src, dst) => { dst.m_BundledAssetProviderType = src.BundledAssetProviderType; dst.SetDirty(true); }, ref m_BundledAssetProviderType);
             ShowSelectedPropertyMulti(so, nameof(m_AssetBundleProviderType), m_BundleProviderContent, otherBundledSchemas, ref queuedChanges, (src, dst) => { dst.m_AssetBundleProviderType = src.AssetBundleProviderType; dst.SetDirty(true); }, ref m_AssetBundleProviderType);
         }
@@ -910,6 +935,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             var prop = so.FindProperty(propertyName);
             string previousValue = currentValue.Id;
             EditorGUI.BeginChangeCheck();
+            //Current implementation using ProfileValueReferenceDrawer
             EditorGUILayout.PropertyField(prop, label, true);
             if (EditorGUI.EndChangeCheck())
             {
@@ -920,6 +946,148 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 EditorUtility.SetDirty(this);
             }
             EditorGUI.showMixedValue = false;
+        }
+
+        void ShowSelectedPropertyPathPairMulti(SerializedObject so, List<AddressableAssetGroupSchema> otherSchemas, ref List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>> queuedChanges,
+            Action<BundledAssetGroupSchema, BundledAssetGroupSchema> a)
+        {
+            var buildPathProperty = so.FindProperty(nameof(m_BuildPath));
+            var loadPathProperty = so.FindProperty(nameof(m_LoadPath));
+            ShowMixedValue(buildPathProperty, otherSchemas, typeof(ProfileValueReference), nameof(m_BuildPath));
+            ShowMixedValue(loadPathProperty, otherSchemas, typeof(ProfileValueReference), nameof(m_LoadPath));
+
+            List<ProfileGroupType> groupTypes = ProfileGroupType.CreateGroupTypes(settings.profileSettings.GetProfile(settings.activeProfileId));
+            List<string> options = groupTypes.Select(group => group.GroupTypePrefix).ToList();
+            //set selected to custom
+            options.Add(AddressableAssetProfileSettings.customEntryString);
+            int? selected = null;
+
+            //Determine selection and whether to show custom
+            if (!EditorGUI.showMixedValue)
+            {
+                //disregard custom value, want to check if valid pair
+                selected = DetermineSelectedIndex(groupTypes, options.Count - 1);
+                if (selected.HasValue && selected != options.Count - 1)
+                {
+                    m_UseCustomPaths = false;
+                }
+                else
+                {
+                    m_UseCustomPaths = true;
+                }
+            }
+
+            //Dropdown selector
+            EditorGUI.BeginChangeCheck();
+            var newIndex = EditorGUILayout.Popup("Build & Load Paths", selected.HasValue? selected.Value : -1, options.ToArray());
+            if (EditorGUI.EndChangeCheck() && newIndex != selected)
+            {
+                selected = newIndex;
+                SetPathPairOption(so, options, groupTypes, newIndex);
+
+                if (queuedChanges == null)
+                    queuedChanges = new List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>>();
+                queuedChanges.Add(a);
+                EditorGUI.showMixedValue = false;
+            }
+
+            if (m_UseCustomPaths && selected.HasValue)
+            {
+                ShowPathsMulti(so, otherSchemas, ref queuedChanges);
+            }
+
+            ShowPathsPreview(!selected.HasValue);
+            EditorGUI.showMixedValue = false;
+        }
+
+        void ShowSelectedPropertyPathPair(SerializedObject so)
+        {
+            List<ProfileGroupType> groupTypes = ProfileGroupType.CreateGroupTypes(settings.profileSettings.GetProfile(settings.activeProfileId));
+            List<string> options = groupTypes.Select(group => group.GroupTypePrefix).ToList();
+            //Set selected to custom
+            options.Add(AddressableAssetProfileSettings.customEntryString);
+            int? selected = options.Count - 1;
+
+            //Determine selection and whether to show custom
+            selected = DetermineSelectedIndex(groupTypes, options.Count - 1);
+            if (selected.HasValue && selected != options.Count - 1) 
+            {
+                m_UseCustomPaths = false;
+            }
+            else
+            {
+                m_UseCustomPaths = true;
+            }
+
+            //Dropdown selector
+            EditorGUI.BeginChangeCheck();
+            var newIndex = EditorGUILayout.Popup("Build & Load Paths", selected.HasValue? selected.Value : options.Count - 1, options.ToArray());
+            if (EditorGUI.EndChangeCheck() && newIndex != selected)
+            {
+                SetPathPairOption(so, options, groupTypes, newIndex);
+                EditorUtility.SetDirty(this);
+            }
+
+            if (m_UseCustomPaths)
+            {
+                ShowPaths(so);
+            }
+
+            ShowPathsPreview(false);
+            EditorGUI.showMixedValue = false;
+        }
+
+        int? DetermineSelectedIndex(List<ProfileGroupType> groupTypes, int? defaultValue)
+        {
+            int? selected = defaultValue;
+
+            HashSet<string> vars = settings.profileSettings.GetAllVariableIds();
+            if (vars.Contains(m_BuildPath.Id) && vars.Contains(m_LoadPath.Id) && !m_UseCustomPaths)
+            {
+                for (int i = 0; i < groupTypes.Count; i++)
+                {
+                    ProfileGroupType.GroupTypeVariable buildPathVar = groupTypes[i].GetVariableBySuffix("BuildPath");
+                    ProfileGroupType.GroupTypeVariable loadPathVar = groupTypes[i].GetVariableBySuffix("LoadPath");
+                    if (m_BuildPath.GetName(settings) == groupTypes[i].GetName(buildPathVar) && m_LoadPath.GetName(settings) == groupTypes[i].GetName(loadPathVar))
+                    {
+                        selected = i;
+                        break;
+                    }
+                }
+            }
+            return selected;
+        }
+
+        void SetPathPairOption(SerializedObject so, List<string> options, List<ProfileGroupType> groupTypes, int newIndex)
+        {
+
+            if (options[newIndex] != AddressableAssetProfileSettings.customEntryString)
+            {
+                Undo.RecordObject(so.targetObject, so.targetObject.name + "Path Pair");
+                m_BuildPath.SetVariableByName(settings, groupTypes[newIndex].GroupTypePrefix + ProfileGroupType.k_PrefixSeparator + "BuildPath");
+                m_LoadPath.SetVariableByName(settings, groupTypes[newIndex].GroupTypePrefix + ProfileGroupType.k_PrefixSeparator + "LoadPath");
+                m_UseCustomPaths = false;
+            }
+            else
+            {
+                Undo.RecordObject(so.targetObject, so.targetObject.name + "Path Pair");
+                m_UseCustomPaths = true;
+            }
+        }
+
+        void ShowPathsPreview(bool showMixedValue)
+        {
+            EditorGUI.indentLevel++;
+            m_ShowPaths = EditorGUILayout.Foldout(m_ShowPaths, "Path Preview", true);
+            if (m_ShowPaths)
+            {
+                EditorStyles.helpBox.fontSize = 12;
+                var baseBuildPathValue = settings.profileSettings.GetValueById(settings.activeProfileId, m_BuildPath.Id);
+                var baseLoadPathValue = settings.profileSettings.GetValueById(settings.activeProfileId, m_LoadPath.Id);
+                EditorGUILayout.HelpBox(String.Format("Build Path: {0}", showMixedValue ? "-" : settings.profileSettings.EvaluateString(settings.activeProfileId, baseBuildPathValue)), MessageType.None);
+                EditorGUILayout.HelpBox(String.Format("Load Path: {0}", showMixedValue ? "-" : settings.profileSettings.EvaluateString(settings.activeProfileId, baseLoadPathValue)), MessageType.None);
+            }
+            EditorGUI.indentLevel--;
         }
     }
 }

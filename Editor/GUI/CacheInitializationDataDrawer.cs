@@ -54,7 +54,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (!isPreview)
             {
                 var prop = property.FindPropertyRelative("m_ExpirationDelay");
-                prop.intValue = EditorGUI.IntSlider(rectForGUIRow, new GUIContent("Expiration Delay (in seconds)", "Controls how long items are left in the cache before deleting."), prop.intValue, 0, 12960000);
+                prop.intValue = EditorGUI.IntSlider(rectForGUIRow, new GUIContent("[Obsolete] Expiration Delay (in seconds)", "Controls how long items are left in the cache before deleting."), prop.intValue, 0, 12960000);
                 rectForGUIRow.y += rectForGUIRow.height + EditorGUIUtility.standardVerticalSpacing;
                 var ts = new TimeSpan(0, 0, prop.intValue);
                 EditorGUI.LabelField(new Rect(rectForGUIRow.x + 16, rectForGUIRow.y, rectForGUIRow.width - 16, rectForGUIRow.height), new GUIContent(NicifyTimeSpan(ts)));

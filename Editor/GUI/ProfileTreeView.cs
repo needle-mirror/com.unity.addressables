@@ -222,6 +222,9 @@ namespace UnityEditor.AddressableAssets.GUI
 
         protected override void RenameEnded(RenameEndedArgs args)
         {
+            if (!args.acceptedRename)
+                return;
+            
             var item = FindItemInVisibleRows(args.itemID);
 
             AddressableAssetProfileSettings.BuildProfile profile = GetProfile(item.id);

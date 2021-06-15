@@ -197,12 +197,12 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
         {
             CacheDirectoryOverride = Caching.currentCacheForWriting.path,
             CompressionEnabled = Caching.compressionEnabled,
-            ExpirationDelay = Caching.currentCacheForWriting.expirationDelay,
+            //ExpirationDelay = Caching.currentCacheForWriting.expirationDelay,
             MaximumCacheSize = Caching.currentCacheForWriting.maximumAvailableStorageSpace
         };
 
         string cacheDirectoryOverride = "TestDirectory";
-        int expirationDelay = 4321;
+        //int expirationDelay = 4321;
         long maxCacheSize = 9876;
         bool compressionEnabled = !preTestCacheData.CompressionEnabled;
 
@@ -210,7 +210,7 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
         {
             CacheDirectoryOverride = cacheDirectoryOverride,
             CompressionEnabled = compressionEnabled,
-            ExpirationDelay = expirationDelay,
+            //ExpirationDelay = expirationDelay,
             LimitCacheSize = true,
             MaximumCacheSize = maxCacheSize
         };
@@ -222,7 +222,7 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
         yield return handle;
 
         Assert.AreEqual(cacheDirectoryOverride, Caching.currentCacheForWriting.path);
-        Assert.AreEqual(expirationDelay, Caching.currentCacheForWriting.expirationDelay);
+        //Assert.AreEqual(expirationDelay, Caching.currentCacheForWriting.expirationDelay);
         Assert.AreEqual(compressionEnabled, Caching.compressionEnabled);
         Assert.AreEqual(maxCacheSize, Caching.currentCacheForWriting.maximumAvailableStorageSpace);
 
@@ -230,7 +230,7 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
         Cache cache = Caching.GetCacheByPath(preTestCacheData.CacheDirectoryOverride);
         Caching.compressionEnabled = preTestCacheData.CompressionEnabled;
         cache.maximumAvailableStorageSpace = preTestCacheData.MaximumCacheSize;
-        cache.expirationDelay = preTestCacheData.ExpirationDelay;
+        //cache.expirationDelay = preTestCacheData.ExpirationDelay;
         Caching.currentCacheForWriting = cache;
 
         handle.Release();

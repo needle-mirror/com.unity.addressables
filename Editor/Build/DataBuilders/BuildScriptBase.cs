@@ -82,11 +82,19 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             AddressablesRuntimeProperties.ClearCachedPropertyValues();
 
-            TResult result;
+            TResult result = default;
             // Append the file registry to the results
             using (m_Log.ScopedStep(LogLevel.Info, $"Building {this.Name}"))
             {
-                result = BuildDataImplementation<TResult>(builderInput);
+                try
+                {
+                    result = BuildDataImplementation<TResult>(builderInput);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError(e.Message);
+                    return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, e.Message);
+                }
                 if (result != null)
                     result.FileRegistry = builderInput.Registry;
             }

@@ -48,7 +48,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        const char k_PrefixSeparator = '.';
+        internal const char k_PrefixSeparator = '.';
 
         string m_GroupTypePrefix;
 
@@ -137,6 +137,36 @@ namespace UnityEditor.AddressableAssets.Settings
         internal GroupTypeVariable GetVariableBySuffix(string suffix)
         {
             return m_Variables.Where(var => var.m_Suffix == suffix).FirstOrDefault();
+        }
+
+        //UI magic to group the path pairs from profile variables
+        internal static List<ProfileGroupType> CreateGroupTypes(AddressableAssetProfileSettings.BuildProfile buildProfile)
+        {
+            AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
+            Dictionary<string, ProfileGroupType> groups = new Dictionary<string, ProfileGroupType>();
+            foreach (var profileEntry in settings.profileSettings.profileEntryNames)
+            {
+                string[] parts = profileEntry.ProfileName.Split(k_PrefixSeparator);
+                if (parts.Length > 1)
+                {
+                    string prefix = String.Join(k_PrefixSeparator.ToString(), parts, 0, parts.Length - 1);
+                    string suffix = parts[parts.Length - 1];
+                    string profileEntryValue = buildProfile.GetValueById(profileEntry.Id);
+                    ProfileGroupType group;
+                    groups.TryGetValue(prefix, out group);
+                    if (group == null)
+                    {
+                        group = new ProfileGroupType(prefix);
+                    }
+                    ProfileGroupType.GroupTypeVariable variable = new ProfileGroupType.GroupTypeVariable(suffix, profileEntryValue);
+                    group.AddVariable(variable);
+                    groups[prefix] = group;
+                }
+            }
+
+            List<ProfileGroupType> groupList = new List<ProfileGroupType>();
+            groupList.AddRange(groups.Values.Where(group => group.IsValidGroupType()));
+            return groupList;
         }
 
         /// <summary>

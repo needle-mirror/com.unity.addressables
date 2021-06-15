@@ -72,7 +72,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public const string kRemoteLoadPath = "RemoteLoadPath";
 
         /// <summary>
-        /// Options for labelling all the different generated events.
+        /// Options for labeling all the different generated events.
         /// </summary>
         public enum ModificationEvent
         {
@@ -425,6 +425,7 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
 #if UNITY_2019_4_OR_NEWER
+        [SerializeField]
         bool m_StripUnityVersionFromBundleBuild = false;
         /// <summary>
         /// If true, this option will strip the Unity Editor Version from the header of the AssetBundle during a build.
@@ -435,6 +436,7 @@ namespace UnityEditor.AddressableAssets.Settings
             set { m_StripUnityVersionFromBundleBuild = value; }
         }
 #endif
+        [SerializeField]
         bool m_DisableVisibleSubAssetRepresentations = false;
         /// <summary>
         /// If true, the build will assume that sub Assets have no visible asset representations (are not visible in the Project view) which results in improved build times.

@@ -14,21 +14,23 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     {
         internal class InternalOp
         {
+            AssetBundle m_AssetBundle;
+            AssetBundleRequest m_PreloadRequest;
             AssetBundleRequest m_RequestOperation;
             object m_Result;
             ProvideHandle m_ProvideHandle;
             string subObjectName = null;
             
-            internal static IAssetBundleResource LoadBundleFromDependecies(IList<object> results)
+            internal static AssetBundleResource LoadBundleFromDependecies(IList<object> results)
             {
                 if (results == null || results.Count == 0)
                     return null;
 
-                IAssetBundleResource bundle = null;
+                AssetBundleResource bundle = null;
                 bool firstBundleWrapper = true;
                 for (int i = 0; i < results.Count; i++)
                 {
-                    var abWrapper = results[i] as IAssetBundleResource;
+                    var abWrapper = results[i] as AssetBundleResource;
                     if (abWrapper != null)
                     {
                         //only use the first asset bundle, even if it is invalid
@@ -57,80 +59,97 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 }
                 else
                 {
-                    var bundle = bundleResource.GetAssetBundle();
-                    if (bundle == null)
+                    m_AssetBundle = bundleResource.GetAssetBundle();
+                    if (m_AssetBundle == null)
                     {
                         m_ProvideHandle.Complete<AssetBundle>(null, false, new Exception("Unable to load dependent bundle from location " + m_ProvideHandle.Location));
+                        return;
+                    }
+                    
+                    m_PreloadRequest = bundleResource.GetAssetPreloadRequest();
+                    if (m_PreloadRequest == null || m_PreloadRequest.isDone)
+                        BeginAssetLoad();
+                    else
+                        m_PreloadRequest.completed += operation => BeginAssetLoad();
+                }
+            }
+
+            private void BeginAssetLoad()
+            {
+                if (m_AssetBundle == null)
+                {
+                    m_ProvideHandle.Complete<AssetBundle>(null, false, new Exception("Unable to load dependent bundle from location " + m_ProvideHandle.Location));
+                }
+                else
+                {
+                    var assetPath = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
+                    if (m_ProvideHandle.Type.IsArray)
+                    {
+#if !UNITY_2021_1_OR_NEWER
+                        if (AsyncOperationHandle.IsWaitingForCompletion)
+                        {
+                            GetArrayResult(m_AssetBundle.LoadAssetWithSubAssets(assetPath, m_ProvideHandle.Type.GetElementType()));
+                            CompleteOperation();
+                        }
+                        else
+#endif
+                            m_RequestOperation = m_AssetBundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetElementType());
+                    }
+                    else if (m_ProvideHandle.Type.IsGenericType && typeof(IList<>) == m_ProvideHandle.Type.GetGenericTypeDefinition())
+                    {
+#if !UNITY_2021_1_OR_NEWER
+                        if (AsyncOperationHandle.IsWaitingForCompletion)
+                        {
+                            GetListResult(m_AssetBundle.LoadAssetWithSubAssets(assetPath, m_ProvideHandle.Type.GetGenericArguments()[0]));
+                            CompleteOperation();
+                        }
+                        else
+#endif
+                            m_RequestOperation = m_AssetBundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetGenericArguments()[0]);
                     }
                     else
                     {
-                        var assetPath = m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location);
-                        if (m_ProvideHandle.Type.IsArray)
+                        if (ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
                         {
+                            subObjectName = subKey;
 #if !UNITY_2021_1_OR_NEWER
                             if (AsyncOperationHandle.IsWaitingForCompletion)
                             {
-                                GetArrayResult(bundle.LoadAssetWithSubAssets(assetPath, m_ProvideHandle.Type.GetElementType()));
+                                GetAssetSubObjectResult(m_AssetBundle.LoadAssetWithSubAssets(mainPath, m_ProvideHandle.Type));
                                 CompleteOperation();
                             }
                             else
 #endif
-                                m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetElementType());
-                        }
-                        else if (m_ProvideHandle.Type.IsGenericType && typeof(IList<>) == m_ProvideHandle.Type.GetGenericTypeDefinition())
-                        {
-#if !UNITY_2021_1_OR_NEWER
-                            if (AsyncOperationHandle.IsWaitingForCompletion)
-                            {
-                                GetListResult(bundle.LoadAssetWithSubAssets(assetPath, m_ProvideHandle.Type.GetGenericArguments()[0]));
-                                CompleteOperation();
-                            }
-                            else
-#endif
-                                m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(assetPath, m_ProvideHandle.Type.GetGenericArguments()[0]);
+                                m_RequestOperation = m_AssetBundle.LoadAssetWithSubAssetsAsync(mainPath, m_ProvideHandle.Type);
                         }
                         else
                         {
-                            if (ResourceManagerConfig.ExtractKeyAndSubKey(assetPath, out string mainPath, out string subKey))
-                            {
-                                subObjectName = subKey;
 #if !UNITY_2021_1_OR_NEWER
-                                if (AsyncOperationHandle.IsWaitingForCompletion)
-                                {
-                                    GetAssetSubObjectResult(bundle.LoadAssetWithSubAssets(mainPath, m_ProvideHandle.Type));
-                                    CompleteOperation();
-                                }
-                                else
-#endif
-                                    m_RequestOperation = bundle.LoadAssetWithSubAssetsAsync(mainPath, m_ProvideHandle.Type);
+                            if (AsyncOperationHandle.IsWaitingForCompletion)
+                            {
+                                GetAssetResult(m_AssetBundle.LoadAsset(assetPath, m_ProvideHandle.Type));
+                                CompleteOperation();
                             }
                             else
-                            {
-#if !UNITY_2021_1_OR_NEWER
-                                if (AsyncOperationHandle.IsWaitingForCompletion)
-                                {
-                                    GetAssetResult(bundle.LoadAsset(assetPath, m_ProvideHandle.Type));
-                                    CompleteOperation();
-                                }
-                                else
 #endif
-                                    m_RequestOperation = bundle.LoadAssetAsync(assetPath, m_ProvideHandle.Type);
-                            }
+                                m_RequestOperation = m_AssetBundle.LoadAssetAsync(assetPath, m_ProvideHandle.Type);
                         }
-                        
-                        if (m_RequestOperation != null)
-                        {
-                            if (m_RequestOperation.isDone)
-                                ActionComplete(m_RequestOperation);
-                            else
-                                m_RequestOperation.completed += ActionComplete;
-                        }
+                    }
+                    
+                    if (m_RequestOperation != null)
+                    {
+                        if (m_RequestOperation.isDone)
+                            ActionComplete(m_RequestOperation);
+                        else
+                            m_RequestOperation.completed += ActionComplete;
                     }
                 }
             }
 
             private bool WaitForCompletionHandler()
             {
+                if (m_PreloadRequest != null && !m_PreloadRequest.isDone)
+                    return m_PreloadRequest.asset == null;
                 if (m_Result != null)
                     return true;
                 if (m_RequestOperation == null)

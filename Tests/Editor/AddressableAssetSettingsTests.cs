@@ -240,6 +240,76 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void CreateOrMoveEntries_CreatesNewEntries()
+        {
+            string guid1 = "guid1";
+            string guid2 = "guid2";
+            string guid3 = "guid3";
+
+            Settings.CreateOrMoveEntries(new List<string>() { guid1, guid2, guid3 }, Settings.DefaultGroup, 
+                new List<AddressableAssetEntry>(), 
+                new List<AddressableAssetEntry>());
+
+            Assert.IsNotNull(Settings.FindAssetEntry(guid1));
+            Assert.IsNotNull(Settings.FindAssetEntry(guid2));
+            Assert.IsNotNull(Settings.FindAssetEntry(guid3));
+
+            Settings.RemoveAssetEntry(guid1);
+            Settings.RemoveAssetEntry(guid2);
+            Settings.RemoveAssetEntry(guid3);
+        }
+
+        [Test]
+        public void CreateOrMoveEntries_MovesEntriesThatAlreadyExist()
+        {
+            string guid1 = "guid1";
+            string guid2 = "guid2";
+            string guid3 = "guid3";
+            var group = Settings.CreateGroup("SeparateGroup", false, false, true, new List<AddressableAssetGroupSchema>());
+            group.AddAssetEntry(Settings.CreateEntry(guid1, "addr1", group,false));
+            group.AddAssetEntry(Settings.CreateEntry(guid2, "addr2", group,false));
+            group.AddAssetEntry(Settings.CreateEntry(guid3, "addr3", group,false));
+
+            Settings.CreateOrMoveEntries(new List<string>() { guid1, guid2, guid3 }, Settings.DefaultGroup, 
+                new List<AddressableAssetEntry>(), 
+                new List<AddressableAssetEntry>());
+
+            Assert.IsNull(group.GetAssetEntry(guid1));
+            Assert.IsNull(group.GetAssetEntry(guid2));
+            Assert.IsNull(group.GetAssetEntry(guid3));
+
+            Assert.IsNotNull(Settings.DefaultGroup.GetAssetEntry(guid1));
+            Assert.IsNotNull(Settings.DefaultGroup.GetAssetEntry(guid2));
+            Assert.IsNotNull(Settings.DefaultGroup.GetAssetEntry(guid3));
+
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
+        public void CreateOrMoveEntries_Creates_AndMovesExistingEntries_InMixedLists()
+        {
+            string guid1 = "guid1";
+            string guid2 = "guid2";
+            string guid3 = "guid3";
+            var group = Settings.CreateGroup("SeparateGroup", false, false, true, new List<AddressableAssetGroupSchema>());
+            group.AddAssetEntry(Settings.CreateEntry(guid1, "addr1", group,false));
+            group.AddAssetEntry(Settings.CreateEntry(guid3, "addr3", group,false));
+
+            Settings.CreateOrMoveEntries(new List<string>() { guid1, guid2, guid3 }, Settings.DefaultGroup, 
+                new List<AddressableAssetEntry>(), 
+                new List<AddressableAssetEntry>());
+
+            Assert.IsNull(group.GetAssetEntry(guid1));
+            Assert.IsNull(group.GetAssetEntry(guid3));
+
+            Assert.IsNotNull(Settings.DefaultGroup.GetAssetEntry(guid1));
+            Assert.IsNotNull(Settings.DefaultGroup.GetAssetEntry(guid2));
+            Assert.IsNotNull(Settings.DefaultGroup.GetAssetEntry(guid3));
+
+            Settings.RemoveGroup(group);
+        }
+
+        [Test]
         public void CannotCreateOrMoveWithoutGuid()
         {
             Assert.IsNull(Settings.CreateOrMoveEntry(null, Settings.DefaultGroup));

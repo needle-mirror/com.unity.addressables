@@ -453,7 +453,6 @@ namespace UnityEditor.AddressableAssets.Tests
             AddressableAssetEntry entry = Settings.CreateOrMoveEntry(m_AssetGUID, Settings.DefaultGroup);
             entry.address = "[test]";
             LogAssert.Expect(LogType.Error, $"Address '{entry.address}' cannot contain '[ ]'.");
-
             foreach (IDataBuilder db in Settings.DataBuilders)
             {
                 if (db.GetType() == typeof(BuildScriptFastMode) || db.GetType() == typeof(BuildScriptPackedPlayMode))
@@ -463,7 +462,7 @@ namespace UnityEditor.AddressableAssets.Tests
                     db.BuildData<AddressablesPlayerBuildResult>(context);
                 else if (db.CanBuildData<AddressablesPlayModeBuildResult>())
                     db.BuildData<AddressablesPlayModeBuildResult>(context);
-                LogAssert.Expect(LogType.Error, new Regex(@"Address \'\[test\]\' cannot contain \'\[ \]\'"));
+                LogAssert.Expect(LogType.Error, "Address '[test]' cannot contain '[ ]'.");
             }
 
             Settings.RemoveAssetEntry(m_AssetGUID, false);
@@ -484,16 +483,16 @@ namespace UnityEditor.AddressableAssets.Tests
 
             foreach (IDataBuilder db in Settings.DataBuilders)
             {
-                if (db.GetType() == typeof(BuildScriptFastMode) || db.GetType() == typeof(BuildScriptPackedPlayMode))
+                if (db.GetType() == typeof(BuildScriptFastMode) ||
+                    db.GetType() == typeof(BuildScriptPackedPlayMode))
                     continue;
 
                 if (db.CanBuildData<AddressablesPlayerBuildResult>())
                     db.BuildData<AddressablesPlayerBuildResult>(context);
                 else if (db.CanBuildData<AddressablesPlayModeBuildResult>())
                     db.BuildData<AddressablesPlayModeBuildResult>(context);
-                LogAssert.Expect(LogType.Error, new Regex($".*{path}.*import failed.*"));
+                LogAssert.Expect(LogType.Error, "Cannot recognize file type for entry located at 'Assets/UnityEditor.AddressableAssets.Tests.BuildScriptTests_Tests/fake.file'. Asset import failed for using an unsupported file type.");
             }
-
             Settings.RemoveAssetEntry(guid, false);
             AssetDatabase.DeleteAsset(path);
         }

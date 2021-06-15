@@ -4,6 +4,24 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.18.11] - 2021-06-15
+- Improved performance of Labels popup in Groups Window.
+- Added "Copy Address to Clipboard" Context menu option in Groups Window.
+- Added AssetLoadMode option to AddressableAssetsGroup, adds "Requested Asset And Dependencies" and "All Packed - Assets And Dependencies" load methods.
+- (2021.2+) Improved performance of copying local buld path Groups built content when building a Player.
+- Removed "Export Addressables" button from groups window because it was no longer in use.
+- Fixed issue where loading remote catalog from .json fails when Compress Local Catalog is enabled.
+- Fixed issue where loading remote catalog from bundle on WebGL fails when Compress Local Catalog is enabled.
+- Added multi-project workflow documentation
+- Made CacheInitializationData.ExpirationDelay obsolete
+- Improve Hierarchical Search performance in Groups Window.
+- Build now fails earlier if invalid or unsupported files are included.
+- Fixed issue where renaming Group and Profiles would not cancel using Escape key.
+- Fixed issue where StripUnityVersionFromBundleBuild and DisableVisibleSubAssetRepresentations were not being serialised to file.
+- Updated content update docs to be a little more clear
+- Made ExpirationDelay on the CacheInitializationObjects obsolete
+- Reduced amount of main thread file I/O performed during AssetBundle loading
+
 ## [1.18.9] - 2021-06-04
 - Added "Select" button for Addressable Asset in Inspector to select the Asset in the Addressables Groups Window.
 - Reduced the number of file copies required during building Addressables and moving Addressables content during Player build.

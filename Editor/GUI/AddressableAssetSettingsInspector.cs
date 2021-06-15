@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
@@ -36,6 +37,10 @@ namespace UnityEditor.AddressableAssets.GUI
         [FormerlySerializedAs("m_initObjectsFoldout")]
         [SerializeField]
         bool m_InitObjectsFoldout = true;
+
+        //Used for displaying path pairs
+        bool m_UseCustomPaths = false;
+        bool m_ShowPaths = true;
 
         [FormerlySerializedAs("m_profileEntriesRL")]
         [SerializeField]
@@ -104,7 +109,7 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("Non-Recursive Dependency Calculation", "If set, Calculates and build asset bundles using Non-Recursive Dependency calculation methods. This approach helps reduce asset bundle rebuilds and runtime memory consumption.");
 #else
         GUIContent m_NonRecursiveBundleBuilding =
-            new GUIContent("Non-Recursive Dependency Calculation", "If set, Calculates and build asset bundles using Non-Recursive Dependency calculation methods. This approach helps reduce asset bundle rebuilds and runtime memory consumption.\n*Requires Unity 2020.2.1 or above");
+            new GUIContent("Non-Recursive Dependency Calculation", "If set, Calculates and build asset bundles using Non-Recursive Dependency calculation methods. This approach helps reduce asset bundle rebuilds and runtime memory consumption.\n*Requires Unity 2019.4.19f1 or above");
 #endif
         GUIContent m_BuildRemoteCatalog =
             new GUIContent("Build Remote Catalog", "If set, this will create a copy of the content catalog for storage on a remote server.  This catalog can be overwritten later for content updates.");
@@ -241,8 +246,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 if ((m_AasTarget.RemoteCatalogBuildPath != null && m_AasTarget.RemoteCatalogLoadPath != null) // these will never actually be null, as the accessor initializes them.
                     && (buildRemoteCatalog))
                 {
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogBuildPath"), m_RemoteCatBuildPath);
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogLoadPath"), m_RemoteCatLoadPath);
+                    DrawRemoteCatalogPaths();
                 }
             }
 
@@ -478,5 +482,80 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             m_AasTarget.AddInitializationObject(initObj as IObjectInitializationDataProvider);
         }
+
+        void DrawRemoteCatalogPaths()
+        {
+            ProfileValueReference BuildPath = m_AasTarget.RemoteCatalogBuildPath;
+            ProfileValueReference LoadPath = m_AasTarget.RemoteCatalogLoadPath;
+
+            AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
+            if (settings == null) return;
+            List<ProfileGroupType> groupTypes = ProfileGroupType.CreateGroupTypes(settings.profileSettings.GetProfile(settings.activeProfileId));
+            List<string> options = groupTypes.Select(group => group.GroupTypePrefix).ToList();
+            //set selected to custom
+            options.Add(AddressableAssetProfileSettings.customEntryString);
+            int? selected = options.Count - 1;
+            HashSet<string> vars = settings.profileSettings.GetAllVariableIds();
+            if (vars.Contains(BuildPath.Id) && vars.Contains(LoadPath.Id) && !m_UseCustomPaths)
+            {
+                for (int i = 0; i < groupTypes.Count; i++)
+                {
+                    ProfileGroupType.GroupTypeVariable buildPathVar = groupTypes[i].GetVariableBySuffix("BuildPath");
+                    ProfileGroupType.GroupTypeVariable loadPathVar = groupTypes[i].GetVariableBySuffix("LoadPath");
+                    if (BuildPath.GetName(settings) == groupTypes[i].GetName(buildPathVar) && LoadPath.GetName(settings) == groupTypes[i].GetName(loadPathVar))
+                    {
+                        selected = i;
+                        break;
+                    }
+                }
+            }
+
+            if (selected.HasValue && selected != options.Count - 1)
+            {
+                m_UseCustomPaths = false;
+            }
+            else
+            {
+                m_UseCustomPaths = true;
+            }
+
+            EditorGUI.BeginChangeCheck();
+            var newIndex = EditorGUILayout.Popup("Build & Load Paths", selected.HasValue ? selected.Value : options.Count - 1, options.ToArray());
+            if (EditorGUI.EndChangeCheck() && newIndex != selected)
+            {
+                if (options[newIndex] != AddressableAssetProfileSettings.customEntryString)
+                {
+                    Undo.RecordObject(serializedObject.targetObject, serializedObject.targetObject.name + "Path Pair");
+                    BuildPath.SetVariableByName(settings, groupTypes[newIndex].GroupTypePrefix + ProfileGroupType.k_PrefixSeparator + "BuildPath");
+                    LoadPath.SetVariableByName(settings, groupTypes[newIndex].GroupTypePrefix + ProfileGroupType.k_PrefixSeparator + "LoadPath");
+                    m_UseCustomPaths = false;
+                }
+                else
+                {
+                    Undo.RecordObject(serializedObject.targetObject, serializedObject.targetObject.name + "Path Pair");
+                    m_UseCustomPaths = true;
+                }
+                EditorUtility.SetDirty(this);
+            }
+
+            if (m_UseCustomPaths)
+            {
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogBuildPath"), m_RemoteCatBuildPath);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("m_RemoteCatalogLoadPath"), m_RemoteCatLoadPath);
+            }
+
+            EditorGUI.indentLevel++;
+            m_ShowPaths = EditorGUILayout.Foldout(m_ShowPaths, "Path Preview", true);
+            if (m_ShowPaths)
+            {
+                EditorStyles.helpBox.fontSize = 12;
+                var baseBuildPathValue = settings.profileSettings.GetValueById(settings.activeProfileId, BuildPath.Id);
+                var baseLoadPathValue = settings.profileSettings.GetValueById(settings.activeProfileId, LoadPath.Id);
+                EditorGUILayout.HelpBox(String.Format("Build Path: {0}", settings.profileSettings.EvaluateString(settings.activeProfileId, baseBuildPathValue)), MessageType.None);
+                EditorGUILayout.HelpBox(String.Format("Load Path: {0}", settings.profileSettings.EvaluateString(settings.activeProfileId, baseLoadPathValue)), MessageType.None);
+            }
+            EditorGUI.indentLevel--;
+        }
+
     }
 }

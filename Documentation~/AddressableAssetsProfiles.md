@@ -65,7 +65,11 @@ Once you set up the necessary variables in your profile, you can select the buil
 To set your build and load paths:
 
 1. Select an Addressable Assets group from the **Project** window.
-2. In its related **Inspector** window, under **Content Packing & Loading** > **Build and Load Paths**, select the desired variables from the currently set profile in the drop-downs for **Build Path** and **Load Path**. <br/>Notice that you do not enter the path directly, but rather select the variable representing the path defined in the **Profiles** window earlier. Once selected, the path displays under the drop-down but is not editable here. <br/>Be careful to ensure the build and load paths are a matched pair. For example, if you are building to the local path, you cannot load from a server.
+2. In its related **Inspector** window, under **Content Packing & Loading** > **Build and Load Paths**, select the desired variables from the currently set profile in the drop-downs for **Build Path** and **Load Path**. <br/>Notice that you do not enter the path directly, but rather select the variable representing the path defined in the **Profiles** window earlier. Once selected, the path displays under the drop-down but is not editable here. <br/>Be careful when utilizing the `<custom>` setting and ensure that the build and load paths are a matched pair. For example, if you are building to the local path, you cannot load from a server.
+![Selecting a path pair of variables.](images/InspectorPathPair.png)</br>
+_Selecting a path pair in the inspector window._
+![Selecting a path pair of variables.](images/InspectorCustomPathPair.png)</br>
+_Selecting a custom path pair in the inspector window._
 
 ## Examples
 Consider the following example, demonstrating the local development phase of your content. 

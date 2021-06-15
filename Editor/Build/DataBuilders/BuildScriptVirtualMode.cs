@@ -223,6 +223,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         RetryCount = schema.RetryCount,
                         Timeout = schema.Timeout,
                         BundleName = Path.GetFileName(bundleLocData.InternalId),
+                        AssetLoadMode = schema.AssetLoadMode,
                         BundleSize = dataSize + headerSize
                     };
                     bundleLocData.Data = requestOptions;
