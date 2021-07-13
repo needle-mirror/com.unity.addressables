@@ -192,6 +192,16 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             m_Service.OnBeforeSerialize(data);
             Assert.AreEqual(port, data.GetData("HostingServicePort", 0));
         }
+        
+        [Test]
+        public void OnBeforeSerializeShould_WasEnableCorrectToKeyDataStore()
+        {
+            m_Service.StartHostingService();
+            var data = new KeyDataStore();
+            m_Service.OnDisable();
+            m_Service.OnBeforeSerialize(data);
+            Assert.IsTrue(data.GetData("IsEnabled", false), "Hosting server was started before shutting down. IsEnabled expected to be true");
+        }
 
         // OnAfterDeserialize
 

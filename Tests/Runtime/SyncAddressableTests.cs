@@ -98,11 +98,10 @@ namespace AddressableTests.SyncAddressables
             LogAssert.Expect(LogType.Error, new Regex("InvalidKeyException*"));
             Assert.AreEqual(AsyncOperationStatus.Failed, loadOp.Status);
             Assert.IsNull(loadOp.Result);
-
             //Cleanup
             ReleaseOp(loadOp);
         }
-
+        
         [Test]
         public void CheckForCatalogUpdates_CompletesSynchronously()
         {
@@ -233,7 +232,7 @@ namespace AddressableTests.SyncAddressables
             //Cleanup
             ReleaseOp(loadOp);
         }
-
+        
         [Test]
         public void RequestingResourceLocation_CompletesSynchronously()
         {
@@ -316,6 +315,20 @@ namespace AddressableTests.SyncAddressables
 
             Assert.IsTrue(instanceOperation.IsDone);
             m_Addressables.Release(depOp);
+        }
+        
+        [Test]
+        public void InstantiateSync_InvalidKeyExceptionCorrectlyThrown()
+        {
+            var prevHandler = ResourceManager.ExceptionHandler;
+            ResourceManager.ExceptionHandler = (handle, exception) =>
+            {
+                Assert.AreEqual(typeof(InvalidKeyException), exception.GetType(),
+                    "Exception thrown is not of the correct type.");
+            };
+            var depOp = m_Addressables.LoadAssetAsync<GameObject>(m_InvalidKey);
+            m_Addressables.Release(depOp);
+            ResourceManager.ExceptionHandler = prevHandler;
         }
 
         [Test]

@@ -638,6 +638,7 @@ namespace UnityEditor.AddressableAssets.Settings
                         {
                             entry.IsInResources = IsInResources; //if this is a sub-folder of Resources, copy it on down
                             entry.m_Labels = m_Labels;
+                            entry.IsFolder = true;
                             if (entryFilter == null || entryFilter(entry))
                                 assets.Add(entry);
                         }

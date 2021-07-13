@@ -100,7 +100,6 @@ namespace UnityEditor.AddressableAssets.GUI
         void OnEnable()
         {
             PopulateServiceTypes();
-
             m_ItemRectPadding = new GUIStyle();
             m_ItemRectPadding.padding = new RectOffset(k_ItemRectPadding, k_ItemRectPadding, k_ItemRectPadding, k_ItemRectPadding);
             m_LogRectPadding = new GUIStyle();
@@ -163,7 +162,13 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void OnGUI()
         {
-            if (m_Settings == null) return;
+            if (m_Settings == null)
+            {
+                if (AddressableAssetSettingsDefaultObject.Settings == null)
+                    return;
+                InitializeWithDefaultSettings();
+            }
+                
 
             if (m_IsResizingVerticalSplitter)
                 m_VerticalSplitterRatio = Mathf.Clamp(Event.current.mousePosition.y / position.height, 0.2f, 0.9f);

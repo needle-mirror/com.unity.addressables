@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.AsyncOperations;
-using UnityEngine.ResourceManagement.Diagnostics;
 using UnityEngine.ResourceManagement.Exceptions;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -164,6 +163,14 @@ namespace UnityEngine.ResourceManagement
         HashSet<InstanceOperation> m_TrackedInstanceOperations = new HashSet<InstanceOperation>();
         DelegateList<float> m_UpdateCallbacks = DelegateList<float>.CreateWithGlobalCache();
         List<IAsyncOperation> m_DeferredCompleteCallbacks = new List<IAsyncOperation>();
+
+        bool m_InsideExecuteDeferredCallbacksMethod = false;
+        List<DeferredCallbackRegisterRequest> m_DeferredCallbacksToRegister = null;
+        private struct DeferredCallbackRegisterRequest
+        {
+            internal IAsyncOperation operation;
+            internal bool incrementRefCount;
+        }
 
         Action<AsyncOperationHandle, DiagnosticEventType, int, object> m_obsoleteDiagnosticsHandler; // For use in working with Obsolete RegisterDiagnosticCallback method.
         Action<DiagnosticEventContext> m_diagnosticsHandler;
@@ -1017,20 +1024,40 @@ namespace UnityEngine.ResourceManagement
 
         private void ExecuteDeferredCallbacks()
         {
+            m_InsideExecuteDeferredCallbacksMethod = true;
             for (int i = 0; i < m_DeferredCompleteCallbacks.Count; i++)
             {
+                if (!m_DeferredCompleteCallbacks[i].IsDone)
+                    Debug.LogWarning("Executing complete callback for a released operation.");
                 m_DeferredCompleteCallbacks[i].InvokeCompletionEvent();
                 m_DeferredCompleteCallbacks[i].DecrementReferenceCount();
             }
             m_DeferredCompleteCallbacks.Clear();
+            m_InsideExecuteDeferredCallbacksMethod = false;
         }
 
         internal void RegisterForDeferredCallback(IAsyncOperation op, bool incrementRefCount = true)
         {
-            if (incrementRefCount)
-                op.IncrementReferenceCount();
-            m_DeferredCompleteCallbacks.Add(op);
-            RegisterForCallbacks();
+            if (CallbackHooksEnabled && m_InsideExecuteDeferredCallbacksMethod)
+            {
+                if (m_DeferredCallbacksToRegister == null)
+                    m_DeferredCallbacksToRegister = new List<DeferredCallbackRegisterRequest>();
+                m_DeferredCallbacksToRegister.Add
+                    (
+                        new DeferredCallbackRegisterRequest()
+                        {
+                            operation = op,
+                            incrementRefCount = incrementRefCount
+                        }
+                    );
+            }
+            else
+            {
+                if (incrementRefCount)
+                    op.IncrementReferenceCount();
+                m_DeferredCompleteCallbacks.Add(op);
+                RegisterForCallbacks();
+            }
         }
 
         internal void Update(float unscaledDeltaTime)
@@ -1048,6 +1075,12 @@ namespace UnityEngine.ResourceManagement
                 foreach (var r in m_UpdateReceiversToRemove)
                     m_UpdateReceivers.Remove(r);
                 m_UpdateReceiversToRemove = null;
+            }
+            if (m_DeferredCallbacksToRegister != null)
+            {
+                foreach (DeferredCallbackRegisterRequest callback in m_DeferredCallbacksToRegister)
+                    RegisterForDeferredCallback(callback.operation, callback.incrementRefCount);
+                m_DeferredCallbacksToRegister = null;
             }
             ExecuteDeferredCallbacks();
             m_InsideUpdateMethod = false;

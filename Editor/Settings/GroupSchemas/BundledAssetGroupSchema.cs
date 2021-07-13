@@ -562,7 +562,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             switch (InternalIdNamingMode)
             {
                 case AssetNamingMode.FullPath: return assetPath;
-                case AssetNamingMode.Filename: return System.IO.Path.GetFileName(assetPath);
+                case AssetNamingMode.Filename: return assetPath.EndsWith(".unity") ? System.IO.Path.GetFileNameWithoutExtension(assetPath) : System.IO.Path.GetFileName(assetPath);
                 case AssetNamingMode.GUID: return pathToGUIDFunc(assetPath);
                 case AssetNamingMode.Dynamic:
                     {

@@ -153,7 +153,7 @@ namespace UnityEditor.AddressableAssets.Build
     public static class ContentUpdateScript
     {
         /// <summary>
-        /// Contains build information used for updating assets. 
+        /// Contains build information used for updating assets.
         /// </summary>
         public struct ContentUpdateContext
         {
@@ -161,32 +161,32 @@ namespace UnityEditor.AddressableAssets.Build
             /// The mapping of an asset's guid to its cached asset state.
             /// </summary>
             public Dictionary<string, CachedAssetState> GuidToPreviousAssetStateMap;
-            
+
             /// <summary>
             /// The mapping of an asset's or bundle's internal id to its catalog entry.
             /// </summary>
             public Dictionary<string, ContentCatalogDataEntry> IdToCatalogDataEntryMap;
-            
+
             /// <summary>
             /// The mapping of a bundle's name to its internal bundle id.
             /// </summary>
             public Dictionary<string, string> BundleToInternalBundleIdMap;
-            
+
             /// <summary>
             /// Stores the asset bundle write information.
             /// </summary>
             public IBundleWriteData WriteData;
-            
+
             /// <summary>
             /// Stores the cached build data.
             /// </summary>
             public AddressablesContentState ContentState;
-            
+
             /// <summary>
             /// Stores the paths of the files created during a build.
             /// </summary>
             public FileRegistry Registry;
-            
+
             /// <summary>
             /// The list of asset state information gathered from the previous build.
             /// </summary>
@@ -336,7 +336,7 @@ namespace UnityEditor.AddressableAssets.Build
             catch (UnauthorizedAccessException uae)
             {
                 if (!AddressableAssetUtility.IsVCAssetOpenForEdit(path))
-                    Debug.LogErrorFormat("Cannot access the file {0}. Is it checked out?", path);
+                    Debug.LogErrorFormat("Cannot access the file {0}. It may be locked by version control.", path);
                 else
                     Debug.LogException(uae);
                 return false;
@@ -381,7 +381,7 @@ namespace UnityEditor.AddressableAssets.Build
 
             return cachedInfos;
         }
-        
+
         /// <summary>
         /// Gets the path of the cache data from a selected build.
         /// </summary>
@@ -392,7 +392,7 @@ namespace UnityEditor.AddressableAssets.Build
             string assetPath = AddressableAssetSettingsDefaultObject.Settings != null ?
                 AddressableAssetSettingsDefaultObject.Settings.GetContentStateBuildPath() :
                 Path.Combine(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, PlatformMappingService.GetPlatformPathSubFolder());
-            
+
             if (browse)
             {
                 if (string.IsNullOrEmpty(assetPath))
@@ -422,7 +422,7 @@ namespace UnityEditor.AddressableAssets.Build
             }
             else
                 Directory.CreateDirectory(assetPath);
-            
+
             var path = Path.Combine(assetPath, "addressables_content_state.bin");
             return path;
         }
@@ -619,9 +619,9 @@ namespace UnityEditor.AddressableAssets.Build
             AddressablesContentState cacheData = LoadContentState(cachePath);
             if (cacheData == null)
                 return modifiedData;
-            
+
             GatherExplicitModifiedEntries(settings, ref modifiedData, cacheData);
-            GetStaticContentDependenciesForEntries(settings, ref modifiedData, cacheData);
+            GetStaticContentDependenciesForEntries(settings, ref modifiedData, GetGroupGuidToCacheBundleNameMap(cacheData));
             return modifiedData;
         }
 
@@ -637,19 +637,23 @@ namespace UnityEditor.AddressableAssets.Build
             var groupGuidToCacheBundleName = new Dictionary<string, string>();
             foreach (CachedAssetState cacheInfo in cacheData.cachedInfos)
             {
-                if(cacheInfo != null && bundleIdToCacheInfo.TryGetValue(cacheInfo.bundleFileId, out string bundleName))
+                if (cacheInfo != null && bundleIdToCacheInfo.TryGetValue(cacheInfo.bundleFileId, out string bundleName))
                     groupGuidToCacheBundleName[cacheInfo.groupGuid] = bundleName;
             }
             return groupGuidToCacheBundleName;
         }
 
-        internal static HashSet<string> GetGroupGuidsWithUnchangedBundleName(AddressableAssetSettings settings, Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap, AddressablesContentState cacheData)
+        internal static HashSet<string> GetGroupGuidsWithUnchangedBundleName(AddressableAssetSettings settings, Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap, Dictionary<string, string> groupGuidToCacheBundleName)
         {
             var result = new HashSet<string>();
-            if (cacheData == null)
+            if (groupGuidToCacheBundleName == null || groupGuidToCacheBundleName.Count == 0)
                 return result;
 
-            Dictionary<string, string> groupGuidToCacheBundleName = GetGroupGuidToCacheBundleNameMap(cacheData);
+            var entryGuidToDeps = new Dictionary<string, List<AddressableAssetEntry>>();
+            foreach (KeyValuePair<AddressableAssetEntry, List<AddressableAssetEntry>> entryToDeps in dependencyMap)
+            {
+                entryGuidToDeps.Add(entryToDeps.Key.guid, entryToDeps.Value);
+            }
 
             foreach (AddressableAssetGroup group in settings.groups)
             {
@@ -659,7 +663,7 @@ namespace UnityEditor.AddressableAssets.Build
                 var schema = group.GetSchema<BundledAssetGroupSchema>();
                 List<AssetBundleBuild> bundleInputDefinitions = new List<AssetBundleBuild>();
 
-                BuildScriptPackedMode.PrepGroupBundlePacking(group, bundleInputDefinitions, schema, x => !dependencyMap.ContainsKey(x));
+                BuildScriptPackedMode.PrepGroupBundlePacking(group, bundleInputDefinitions, schema, entry => !entryGuidToDeps.ContainsKey(entry.guid));
                 BuildScriptPackedMode.HandleDuplicateBundleNames(bundleInputDefinitions);
 
                 for (int i = 0; i < bundleInputDefinitions.Count; i++)
@@ -672,14 +676,13 @@ namespace UnityEditor.AddressableAssets.Build
             return result;
         }
 
-        internal static void GetStaticContentDependenciesForEntries(AddressableAssetSettings settings, ref Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap, AddressablesContentState cacheData = null)
+        internal static void GetStaticContentDependenciesForEntries(AddressableAssetSettings settings, ref Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap, Dictionary<string, string> groupGuidToCacheBundleName = null)
         {
-            Dictionary<AddressableAssetGroup, bool> groupHasStaticContentMap = new Dictionary<AddressableAssetGroup, bool>();
-
             if (dependencyMap == null)
                 return;
             
-            HashSet<string> groupGuidsWithUnchangedBundleName = GetGroupGuidsWithUnchangedBundleName(settings, dependencyMap, cacheData);
+            Dictionary<AddressableAssetGroup, bool> groupHasStaticContentMap = new Dictionary<AddressableAssetGroup, bool>();
+            HashSet<string> groupGuidsWithUnchangedBundleName = GetGroupGuidsWithUnchangedBundleName(settings, dependencyMap, groupGuidToCacheBundleName);
 
             foreach (AddressableAssetEntry entry in dependencyMap.Keys)
             {
@@ -692,7 +695,7 @@ namespace UnityEditor.AddressableAssets.Build
                 foreach (string dependency in dependencies)
                 {
                     string guid = AssetDatabase.AssetPathToGUID(dependency);
-                    var depEntry = settings.FindAssetEntry(guid);
+                    var depEntry = settings.FindAssetEntry(guid, true);
                     if (depEntry == null)
                         continue;
 
@@ -700,7 +703,7 @@ namespace UnityEditor.AddressableAssets.Build
                     {
                         groupHasStaticContentEnabled = depEntry.parentGroup.HasSchema<ContentUpdateGroupSchema>() &&
                             depEntry.parentGroup.GetSchema<ContentUpdateGroupSchema>().StaticContent;
-                        
+
                         if (groupGuidsWithUnchangedBundleName.Contains(depEntry.parentGroup.Guid))
                             continue;
 

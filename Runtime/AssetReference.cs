@@ -32,7 +32,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load the referenced asset as type TObject.
         /// This cannot be used a second time until the first load is released. If you wish to call load multiple times
-        /// on an AssetReference, use Addressables.LoadAssetAsync<>() and pass your AssetReference in as the key.
+        /// on an AssetReference, use Addressables.LoadAssetAsync&lt;&gt;() and pass your AssetReference in as the key.
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <returns>The load operation.</returns>
@@ -46,7 +46,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load the referenced asset as type TObject.
         /// This cannot be used a second time until the first load is released. If you wish to call load multiple times
-        /// on an AssetReference, use Addressables.LoadAssetAsync<>() and pass your AssetReference in as the key.
+        /// on an AssetReference, use Addressables.LoadAssetAsync&lt;&gt;() and pass your AssetReference in as the key.
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <returns>The load operation.</returns>
@@ -425,7 +425,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load the referenced asset as type TObject.
         /// This cannot be used a second time until the first load is released. If you wish to call load multiple times
-        /// on an AssetReference, use Addressables.LoadAssetAsync<>() and pass your AssetReference in as the key.
+        /// on an AssetReference, use Addressables.LoadAssetAsync&lt;&gt;() and pass your AssetReference in as the key.
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <typeparam name="TObject">The object type.</typeparam>
@@ -487,7 +487,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Load the referenced asset as type TObject.
         /// This cannot be used a second time until the first load is released. If you wish to call load multiple times
-        /// on an AssetReference, use Addressables.LoadAssetAsync<>() and pass your AssetReference in as the key.
+        /// on an AssetReference, use Addressables.LoadAssetAsync&lt;&gt;() and pass your AssetReference in as the key.
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
         /// <typeparam name="TObject">The object type.</typeparam>

@@ -157,6 +157,19 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return value;
         }
 
+        void AddBundleProvider(BundledAssetGroupSchema schema)
+        {
+            var bundleProviderId = schema.GetBundleCachedProviderId();
+
+            if (!m_CreatedProviderIds.Contains(bundleProviderId))
+            {
+                m_CreatedProviderIds.Add(bundleProviderId);
+                var bundleProviderType = schema.AssetBundleProviderType.Value;
+                var bundleProviderData = ObjectInitializationData.CreateSerializedInitializationData(bundleProviderType, bundleProviderId);
+                m_ResourceProviderData.Add(bundleProviderData);
+            }
+        }
+
         internal string GetMonoScriptBundleName(AddressableAssetsBuildContext aaContext)
         {
             string value = null;
@@ -206,6 +219,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     aaContext.Settings.buildSettings.bundleBuildPath);
 
                 var builtinShaderBundleName = GetBuiltInShaderBundleName(aaContext) + "_unitybuiltinshaders.bundle";
+
+                var schema = aaContext.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>();
+                AddBundleProvider(schema);
+
                 string monoScriptBundleName = GetMonoScriptBundleName(aaContext);
                 if (!string.IsNullOrEmpty(monoScriptBundleName))
                     monoScriptBundleName += "_monoscripts.bundle";
@@ -331,11 +348,18 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 var remoteCatalogLoadPath = aaContext.Settings.BuildRemoteCatalog ? aaContext.Settings.RemoteCatalogLoadPath.GetValue(aaContext.Settings) : string.Empty;
                 if (ContentUpdateScript.SaveContentState(aaContext.locations, tempPath, allEntries, extractData.DependencyData, playerBuildVersion, remoteCatalogLoadPath, carryOverCachedState))
                 {
+                    string contentStatePath = ContentUpdateScript.GetContentStateDataPath(false);
                     try
                     {
-                        var contentStatePath = ContentUpdateScript.GetContentStateDataPath(false);
                         File.Copy(tempPath, contentStatePath, true);
                         builderInput.Registry.AddFile(contentStatePath);
+                    }
+                    catch (UnauthorizedAccessException uae)
+                    {
+                        if (!AddressableAssetUtility.IsVCAssetOpenForEdit(contentStatePath))
+                            Debug.LogErrorFormat("Cannot access the file {0}. It may be locked by version control.", contentStatePath);
+                        else
+                            Debug.LogException(uae);
                     }
                     catch (Exception e)
                     {
@@ -633,16 +657,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             if (!string.IsNullOrEmpty(errorStr))
                 return errorStr;
 
-            var bundledProviderId = schema.GetBundleCachedProviderId();
-            var assetProviderId = schema.GetAssetCachedProviderId();
-            if (!m_CreatedProviderIds.Contains(bundledProviderId))
-            {
-                m_CreatedProviderIds.Add(bundledProviderId);
-                var bundleProviderType = schema.AssetBundleProviderType.Value;
-                var bundleProviderData = ObjectInitializationData.CreateSerializedInitializationData(bundleProviderType, bundledProviderId);
-                m_ResourceProviderData.Add(bundleProviderData);
-            }
+            AddBundleProvider(schema);
 
+            var assetProviderId = schema.GetAssetCachedProviderId();
             if (!m_CreatedProviderIds.Contains(assetProviderId))
             {
                 m_CreatedProviderIds.Add(assetProviderId);
@@ -739,7 +756,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             var packingMode = schema.BundleMode;
             var namingMode = schema.InternalBundleIdMode;
             bool ignoreUnsupportedFilesInBuild = assetGroup.Settings.IgnoreUnsupportedFilesInBuild;
-            
+
             switch (packingMode)
             {
                 case BundledAssetGroupSchema.BundlePackingMode.PackTogether:
@@ -1033,27 +1050,38 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 postCatalogUpdates.Add(() =>
                 {
                     //This is where we strip out the temporary hash for the final bundle location and filename
-                    string bundleNameWithoutHash = StripHashFromBundleLocation(targetBundlePath);
+                    string bundlePathWithoutHash = StripHashFromBundleLocation(targetBundlePath);
                     if (File.Exists(targetBundlePath))
                     {
-                        if (File.Exists(bundleNameWithoutHash))
-                            File.Delete(bundleNameWithoutHash);
-                        string destFolder = Path.GetDirectoryName(bundleNameWithoutHash);
+                        if (File.Exists(bundlePathWithoutHash))
+                            File.Delete(bundlePathWithoutHash);
+                        string destFolder = Path.GetDirectoryName(bundlePathWithoutHash);
                         if (!string.IsNullOrEmpty(destFolder) && !Directory.Exists(destFolder))
                             Directory.CreateDirectory(destFolder);
 
-                        File.Move(targetBundlePath, bundleNameWithoutHash);
+                        File.Move(targetBundlePath, bundlePathWithoutHash);
                     }
                     if (registry != null)
                     {
-                        if (!registry.ReplaceBundleEntry(targetBundlePath, bundleNameWithoutHash))
+                        if (!registry.ReplaceBundleEntry(targetBundlePath, bundlePathWithoutHash))
                             Debug.LogErrorFormat("Unable to find registered file for bundle {0}.", targetBundlePath);
                     }
-
+                    
                     if (dataEntry != null)
-                        dataEntry.InternalId = StripHashFromBundleLocation(dataEntry.InternalId);
+                        if (DataEntryDiffersFromBundleFilename(dataEntry, bundlePathWithoutHash))
+                            dataEntry.InternalId = StripHashFromBundleLocation(dataEntry.InternalId);
                 });
             }
+        }
+
+        // if false, there is no need to remove the hash from dataEntry.InternalId
+        bool DataEntryDiffersFromBundleFilename(ContentCatalogDataEntry dataEntry, string bundlePathWithoutHash)
+        {
+            string dataEntryId = dataEntry.InternalId;
+            string dataEntryFilename = Path.GetFileName(dataEntryId);
+            string bundleFileName = Path.GetFileName(bundlePathWithoutHash);
+            
+            return dataEntryFilename != bundleFileName;
         }
 
         /// <summary>

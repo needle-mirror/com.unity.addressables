@@ -12,6 +12,11 @@ using UnityEngine.Serialization;
 
 namespace UnityEngine.ResourceManagement.ResourceProviders
 {
+    internal class DownloadOnlyLocation : LocationWrapper
+    {
+        public DownloadOnlyLocation(IResourceLocation location) : base(location) { }
+    }
+
     /// <summary>
     /// Used to indication how Assets are loaded from the AssetBundle on the first load request.
     /// </summary>
@@ -160,7 +165,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             Local,
             Web
         }
-        
+
         AssetBundle m_AssetBundle;
         DownloadHandlerAssetBundle m_downloadHandler;
         AsyncOperation m_RequestOperation;
@@ -395,7 +400,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
             else if (loadType == LoadType.Web)
             {
+                m_WebRequestCompletedCallbackCalled = false;
                 var req = CreateWebRequest(m_TransformedInternalId);
+#if ENABLE_ASYNC_ASSETBUNDLE_UWR
+                ((DownloadHandlerAssetBundle)req.downloadHandler).autoLoadAssetBundle = !(m_ProvideHandle.Location is DownloadOnlyLocation);
+#endif
                 req.disposeDownloadHandlerOnDispose = false;
 
                 m_WebRequestQueueOperation = WebRequestQueue.QueueRequest(req);
@@ -447,28 +456,21 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             m_WebRequestCompletedCallbackCalled = true;
             UnityWebRequestAsyncOperation remoteReq = op as UnityWebRequestAsyncOperation;
             var webReq = remoteReq.webRequest;
+            m_downloadHandler = webReq.downloadHandler as DownloadHandlerAssetBundle;
             if (!UnityWebRequestUtilities.RequestHasErrors(webReq, out UnityWebRequestResult uwrResult))
             {
                 if (!m_Completed)
                 {
-                    m_downloadHandler = webReq.downloadHandler as DownloadHandlerAssetBundle;
                     m_ProvideHandle.Complete(this, true, null);
                     m_Completed = true;
                 }
-                m_downloadHandler = webReq.downloadHandler as DownloadHandlerAssetBundle;
 #if ENABLE_CACHING
                 if (!string.IsNullOrEmpty(m_Options.Hash) && m_Options.ClearOtherCachedVersionsWhenLoaded)
                     Caching.ClearOtherCachedVersions(m_Options.BundleName, Hash128.Parse(m_Options.Hash));
 #endif
-                if (!m_Completed)
-                {
-                    m_ProvideHandle.Complete(this, true, null);
-                    m_Completed = true;
-                }
             }
             else
             {
-                m_downloadHandler = webReq.downloadHandler as DownloadHandlerAssetBundle;
                 m_downloadHandler.Dispose();
                 m_downloadHandler = null;
                 bool forcedRetry = false;

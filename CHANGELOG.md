@@ -4,6 +4,24 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.18.13] - 2021-07-13
+- Fixed issue where Addressables would not use a custom Asset Bundle Provider if the default group was empty
+- InvalidKeyExceptions are now correctly thrown as InvalidKeyExceptions, as opposed to before, where they were thrown as System.Exceptions. Please note that this may break any checks that rely on InvalidKeyExceptions being thrown as System.Exception
+- Fixed issue where UnauthorizedAccessException is logged during a build if content_state.bin is locked by version control integration.
+- Fixed issue where user defined callbacks can cause unexpected behavior for async operations that are automatically released.
+- Fixed issue where Content Update would not include folder entry sub entries.
+- Fixed issue where NullReferenceException was logged when multi-selecting with Resource in Groups TreeView.
+- Fixed issue where Check for Content Update Restrictions excludes dependencies for folder entries.
+- Fixed issue where AddPostCatalogUpdatesInternal would attempt to remove the hash from strings that did not include a hash, occassionally leading to incorrect bundle names in catalog.json
+- Load AssetBundles Asynchronously from UnityWebRequest for supported Editor versions 
+- Fixed issue where hidden files were being flagged in GetDownloadSizeAsync when "Use Asset Database (fastest)" is enabled.
+- Added logic for auto releasing completion handle in InitializeAsync
+- Fixed issue where AssetBundleProvider would fail to retry on download dailed
+- Fixed bug where Fast Mode wasn't returning the correct resource locations or their types, especially for sub-objects.
+- Fixed bug where Hosting Service was not saving if enabled between domain reloads
+- Fixed bug where Scenes with Group setting Asset Internal Naming Mode of Filename failed to load
+- Fixed bug where Hosting window would occassionally be empty on startup.
+
 ## [1.18.11] - 2021-06-15
 - Improved performance of Labels popup in Groups Window.
 - Added "Copy Address to Clipboard" Context menu option in Groups Window.

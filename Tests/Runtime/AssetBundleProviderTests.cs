@@ -64,6 +64,7 @@ namespace AddressableTests.SyncAddressables
         [SetUp]
         public void Setup()
         {
+            Caching.ClearCache();
             if (m_Addressables != null)
                 m_Addressables.WebRequestOverride = null;
         }
@@ -100,6 +101,25 @@ namespace AddressableTests.SyncAddressables
             h.Release();
         }
 
+#if ENABLE_ASYNC_ASSETBUNDLE_UWR
+        [UnityTest]
+        public IEnumerator WhenAssetBundleLoadedThroughUWR_NoMainThreadFileIO()
+        {
+            AsyncOperationHandle<GameObject> h;
+            try
+            {
+                TestReflectionHelpers.SetResritctMainThreadFileIO(true);
+                h = m_Addressables.LoadAssetAsync<GameObject>(GetForceUWRAddrName(0));
+                yield return h;
+            }
+            finally
+            {
+                TestReflectionHelpers.SetResritctMainThreadFileIO(false);
+            }
+            h.Release();
+        }
+#endif
+
         [UnityTest]
         public IEnumerator WhenWebRequestOverrideIsSet_CallbackIsCalled_AssetBundleProvider()
         {
@@ -118,6 +138,28 @@ namespace AddressableTests.SyncAddressables
             if (h.IsValid()) h.Release();
             LogAssert.ignoreFailingMessages = prev;
             Assert.IsTrue(webRequestOverrideCalled);
+        }
+        
+        [UnityTest]
+        public IEnumerator WhenWebRequestFails_RetriesCorrectAmount_AssetBundleProvider()
+        {
+            var prev = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+
+            var nonExistingPath = "http://127.0.0.1/non-existing-bundle";
+            var loc = new ResourceLocationBase(nonExistingPath, nonExistingPath, typeof(AssetBundleProvider).FullName, typeof(AssetBundleResource));
+            var d = new AssetBundleRequestOptions();
+            d.RetryCount = 3;
+            loc.Data = d;
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^(Web request failed, retrying \(0/3)"));
+            LogAssert.Expect(LogType.Log, new Regex(@"^(Web request failed, retrying \(1/3)"));
+            LogAssert.Expect(LogType.Log, new Regex(@"^(Web request failed, retrying \(2/3)"));
+            var h = m_Addressables.ResourceManager.ProvideResource<AssetBundleResource>(loc);
+            yield return h;
+
+            if (h.IsValid()) h.Release();
+            LogAssert.ignoreFailingMessages = prev;
         }
         
         [Test]

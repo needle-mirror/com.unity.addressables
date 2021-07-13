@@ -187,7 +187,7 @@ namespace UnityEngine.AddressableAssets
                     m_SceneInstances.Remove(s);
                     m_resultToHandle.Remove(s.Result);
                     var op = m_ResourceManager.ReleaseScene(SceneProvider, sceneHandle);
-                    op.Completed += handle => { Release(op); };
+                    AutoReleaseHandleOnCompletion(op);
                     break;
                 }
             }
@@ -399,7 +399,10 @@ namespace UnityEngine.AddressableAssets
             {
                 if (m_InitializationOperation.IsValid())
                     return m_InitializationOperation;
-                return ResourceManager.CreateCompletedOperation(m_ResourceLocators[0].Locator, errorMsg: null);
+                var completedOperation = ResourceManager.CreateCompletedOperation(m_ResourceLocators[0].Locator, errorMsg: null);
+                if(autoReleaseHandle)
+                    AutoReleaseHandleOnCompletion(completedOperation);
+                return completedOperation;
             }
 
             if (ResourceManager.ExceptionHandler == null)
@@ -440,7 +443,7 @@ namespace UnityEngine.AddressableAssets
 
             m_InitializationOperation = Initialization.InitializationOperation.CreateInitializationOperation(this, runtimeDataPath, providerSuffix);
             if (autoReleaseHandle)
-                m_InitializationOperation.Completed += (x) => ResourceManager.Release(x);
+                AutoReleaseHandleOnCompletion(m_InitializationOperation);
 
             return m_InitializationOperation;
         }
@@ -501,12 +504,7 @@ namespace UnityEngine.AddressableAssets
                 return ResourceManager.CreateChainOperation(ChainOperation, op => LoadContentCatalogAsync(catalogPath, autoReleaseHandle, providerSuffix));
             var handle = Initialization.InitializationOperation.LoadContentCatalog(this, catalogLoc, providerSuffix);
             if (autoReleaseHandle)
-            {
-                handle.Completed += (obj =>
-                {
-                    Release(handle);
-                });
-            }
+                AutoReleaseHandleOnCompletion(handle);
             return handle;
         }
 
@@ -572,7 +570,7 @@ namespace UnityEngine.AddressableAssets
                     }
                 }
             }
-            return ResourceManager.CreateCompletedOperation<TObject>(default(TObject), new InvalidKeyException(key, t).Message);
+            return ResourceManager.CreateCompletedOperationWithException<TObject>(default(TObject), new InvalidKeyException(key, t));
         }
 
         class LoadResourceLocationKeyOp : AsyncOperationBase<IList<IResourceLocation>>
@@ -690,7 +688,7 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(keys, typeof(TObject), mode, out locations))
-                return ResourceManager.CreateCompletedOperation<IList<TObject>>(null, new InvalidKeyException(keys, typeof(TObject)).Message);
+                return ResourceManager.CreateCompletedOperationWithException<IList<TObject>>(null, new InvalidKeyException(keys, typeof(TObject)));
 
             return LoadAssetsAsync(locations, callback, releaseDependenciesOnFailure);
         }
@@ -707,7 +705,7 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, typeof(TObject), out locations))
-                return ResourceManager.CreateCompletedOperation<IList<TObject>>(null, new InvalidKeyException(key, typeof(TObject)).Message);
+                return ResourceManager.CreateCompletedOperationWithException<IList<TObject>>(null, new InvalidKeyException(key, typeof(TObject)));
 
             return LoadAssetsAsync(locations, callback, releaseDependenciesOnFailure);
         }
@@ -773,9 +771,9 @@ namespace UnityEngine.AddressableAssets
                         m_SceneInstances.Clear();
                     UnloadSceneAsync(handle);
                 }
-                else if (!sceneInstance.Scene.isLoaded && handle.ReferenceCount == 2)
+                else if (!sceneInstance.Scene.isLoaded && handle.ReferenceCount == 2 && !handle.UnloadSceneOpExcludeReleaseCallback)
                 {
-                    handle.Completed += s => Release(handle);
+                    AutoReleaseHandleOnCompletion(handle);
                 }
             }
             m_ResourceManager.Release(handle);
@@ -820,7 +818,7 @@ namespace UnityEngine.AddressableAssets
                     };
                 }
                 else if (!GetResourceLocations(key, typeof(object), out locations))
-                    return ResourceManager.CreateCompletedOperation<long>(0, new InvalidKeyException(key, typeof(object)).Message);
+                    return ResourceManager.CreateCompletedOperationWithException<long>(0, new InvalidKeyException(key, typeof(object)));
 
                 foreach (var loc in locations)
                 {
@@ -844,8 +842,14 @@ namespace UnityEngine.AddressableAssets
         {
             var handle = ResourceManager.CreateChainOperation(dep, op => DownloadDependenciesAsync(key).Convert<IList<IAssetBundleResource>>());
             if (autoReleaseHandle)
-                handle.Completed += op => Release(op);
+                AutoReleaseHandleOnCompletion(handle);
             return handle;
+        }
+        
+        internal static void WrapAsDownloadLocations(List<IResourceLocation> locations)
+        {
+            for (int i = 0; i < locations.Count; i++)
+                locations[i] = new DownloadOnlyLocation(locations[i]);
         }
 
         static List<IResourceLocation> GatherDependenciesFromLocations(IList<IResourceLocation> locations)
@@ -875,17 +879,18 @@ namespace UnityEngine.AddressableAssets
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, typeof(object), out locations))
             {
-                var handle = ResourceManager.CreateCompletedOperation<IList<IAssetBundleResource>>(null,
-                    new InvalidKeyException(key, typeof(object)).Message);
+                var handle = ResourceManager.CreateCompletedOperationWithException<IList<IAssetBundleResource>>(null, new InvalidKeyException(key, typeof(object)));
                 if (autoReleaseHandle)
-                    handle.Completed += op => Release(op);
+                    AutoReleaseHandleOnCompletion(handle);
                 return handle;
             }
             else
             {
-                var handle = LoadAssetsAsync<IAssetBundleResource>(GatherDependenciesFromLocations(locations), null, true);
+                List<IResourceLocation> dlLocations = GatherDependenciesFromLocations(locations);
+                WrapAsDownloadLocations(dlLocations);
+                var handle = LoadAssetsAsync<IAssetBundleResource>(dlLocations, null, true);
                 if (autoReleaseHandle)
-                    handle.Completed += op => Release(op);
+                    AutoReleaseHandleOnCompletion(handle);
                 return handle;
             }
         }
@@ -894,7 +899,7 @@ namespace UnityEngine.AddressableAssets
         {
             var handle = ResourceManager.CreateChainOperation(dep, op => DownloadDependenciesAsync(locations).Convert<IList<IAssetBundleResource>>());
             if (autoReleaseHandle)
-                handle.Completed += op => Release(op);
+                AutoReleaseHandleOnCompletion(handle);
             return handle;
         }
 
@@ -903,9 +908,11 @@ namespace UnityEngine.AddressableAssets
             if (ShouldChainRequest)
                 return DownloadDependenciesAsyncWithChain(ChainOperation, locations, autoReleaseHandle);
 
-            var handle = LoadAssetsAsync<IAssetBundleResource>(GatherDependenciesFromLocations(locations), null, true);
+            List<IResourceLocation> dlLocations = GatherDependenciesFromLocations(locations);
+            WrapAsDownloadLocations(dlLocations);
+            var handle = LoadAssetsAsync<IAssetBundleResource>(dlLocations, null, true);
             if (autoReleaseHandle)
-                handle.Completed += op => Release(op);
+                AutoReleaseHandleOnCompletion(handle);
             return handle;
         }
 
@@ -913,7 +920,7 @@ namespace UnityEngine.AddressableAssets
         {
             var handle = ResourceManager.CreateChainOperation(dep, op => DownloadDependenciesAsync(keys, mode).Convert<IList<IAssetBundleResource>>());
             if (autoReleaseHandle)
-                handle.Completed += op => Release(op);
+                AutoReleaseHandleOnCompletion(handle);
             return handle;
         }
 
@@ -925,17 +932,16 @@ namespace UnityEngine.AddressableAssets
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(keys, typeof(object), mode, out locations))
             {
-                var handle = ResourceManager.CreateCompletedOperation<IList<IAssetBundleResource>>(null,
-                    new InvalidKeyException(keys, typeof(object)).Message);
+                var handle = ResourceManager.CreateCompletedOperationWithException<IList<IAssetBundleResource>>(null, new InvalidKeyException(keys, typeof(object)));
                 if (autoReleaseHandle)
-                    handle.Completed += op => Release(op);
+                    AutoReleaseHandleOnCompletion(handle);
                 return handle;
             }
             else
             {
                 var handle = LoadAssetsAsync<IAssetBundleResource>(GatherDependenciesFromLocations(locations), null, true);
                 if (autoReleaseHandle)
-                    handle.Completed += op => Release(op);
+                    AutoReleaseHandleOnCompletion(handle);
                 return handle;
             }
         }
@@ -970,6 +976,26 @@ namespace UnityEngine.AddressableAssets
         internal void AutoReleaseHandleOnCompletion(AsyncOperationHandle handle)
         {
             handle.Completed += op => Release(op);
+        }
+
+        internal void AutoReleaseHandleOnCompletion<TObject>(AsyncOperationHandle<TObject> handle)
+        {
+            handle.Completed += op => Release(op);
+        }
+
+        internal void AutoReleaseHandleOnCompletion<TObject>(AsyncOperationHandle<TObject> handle, bool unloadSceneOpExcludeReleaseCallback)
+        {
+            handle.Completed += op =>
+            {
+                if (unloadSceneOpExcludeReleaseCallback)
+                    op.UnloadSceneOpExcludeReleaseCallback = true;
+                Release(op);
+            };
+        }
+
+        internal void AutoReleaseHandleOnTypelessCompletion<TObject>(AsyncOperationHandle<TObject> handle)
+        {
+            handle.CompletedTypeless += op => Release(op);
         }
 
         public AsyncOperationHandle<bool> ClearDependencyCacheAsync(object key, bool autoReleaseHandle)
@@ -1074,7 +1100,7 @@ namespace UnityEngine.AddressableAssets
                 if (locator.Locate(key, typeof(GameObject), out locs))
                     return InstantiateAsync(locs[0], instantiateParameters, trackHandle);
             }
-            return ResourceManager.CreateCompletedOperation<GameObject>(null, new InvalidKeyException(key, typeof(GameObject)).Message);
+            return ResourceManager.CreateCompletedOperationWithException<GameObject>(null, new InvalidKeyException(key, typeof(GameObject)));
         }
 
         AsyncOperationHandle<GameObject> InstantiateWithChain(AsyncOperationHandle dep, IResourceLocation location, InstantiationParameters instantiateParameters, bool trackHandle = true)
@@ -1126,7 +1152,7 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, typeof(SceneInstance), out locations))
-                return ResourceManager.CreateCompletedOperation<SceneInstance>(default(SceneInstance), new InvalidKeyException(key, typeof(SceneInstance)).Message);
+                return ResourceManager.CreateCompletedOperationWithException<SceneInstance>(default(SceneInstance), new InvalidKeyException(key, typeof(SceneInstance)));
 
             return LoadSceneAsync(locations[0], loadMode, activateOnLoad, priority, trackHandle);
         }
@@ -1186,7 +1212,7 @@ namespace UnityEngine.AddressableAssets
         {
             var relOp = ResourceManager.ReleaseScene(SceneProvider, handle);
             if (autoReleaseHandle)
-                relOp.Completed += op => Release(op);
+                AutoReleaseHandleOnCompletion(relOp, true);
             return relOp;
         }
 
@@ -1203,7 +1229,7 @@ namespace UnityEngine.AddressableAssets
                 Release(m_ActiveCheckUpdateOperation);
             m_ActiveCheckUpdateOperation = new CheckCatalogsOperation(this).Start(m_ResourceLocators);
             if (autoReleaseHandle)
-                m_ActiveCheckUpdateOperation.CompletedTypeless += o => ResourceManager.Release(o);
+                AutoReleaseHandleOnTypelessCompletion(m_ActiveCheckUpdateOperation);
             return m_ActiveCheckUpdateOperation;
         }
 
@@ -1225,7 +1251,7 @@ namespace UnityEngine.AddressableAssets
 
             var op = new UpdateCatalogsOperation(this).Start(catalogIds == null ? CatalogsWithAvailableUpdates : catalogIds);
             if (autoReleaseHandle)
-                op.CompletedTypeless += o => ResourceManager.Release(o);
+                AutoReleaseHandleOnTypelessCompletion(op);
             return op;
         }
 

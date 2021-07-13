@@ -60,8 +60,12 @@ public class RevertUnchangedAssetsToPreviousAssetState
         bool groupIsStaticContentGroup = group.HasSchema<ContentUpdateGroupSchema>() && group.GetSchema<ContentUpdateGroupSchema>().StaticContent;
         List<AssetEntryRevertOperation> operations = new List<AssetEntryRevertOperation>();
 
-        foreach (AddressableAssetEntry entry in group.entries)
+        List<AddressableAssetEntry> allEntries = new List<AddressableAssetEntry>();
+        group.GatherAllAssets(allEntries, true, true, false);
+        foreach (AddressableAssetEntry entry in allEntries)
         {
+            if (entry.IsFolder)
+                continue;
             GUID guid = new GUID(entry.guid);
             if (!contentUpdateContext.WriteData.AssetToFiles.ContainsKey(guid))
                 continue;

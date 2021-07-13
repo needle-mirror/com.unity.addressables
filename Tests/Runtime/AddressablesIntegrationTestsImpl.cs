@@ -21,9 +21,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using UnityEngine.AddressableAssets.ResourceProviders.Tests;
+using UnityEngine.AddressableAssets.Tests;
 using UnityEngine.Networking;
 using UnityEngine.U2D;
 using Object = UnityEngine.Object;
+using Texture2D = UnityEngine.Texture2D;
 
 namespace AddressableAssetsIntegrationTests
 {
@@ -55,7 +57,9 @@ namespace AddressableAssetsIntegrationTests
             //Test
             Assert.DoesNotThrow(() =>
             {
-                m_Addressables.LoadResourceLocationsAsync("noSuchLabel", typeof(object));
+                var handle = m_Addressables.LoadResourceLocationsAsync("noSuchLabel", typeof(object));
+                handle.WaitForCompletion();
+                handle.Release();
             });
         }
 
@@ -70,6 +74,62 @@ namespace AddressableAssetsIntegrationTests
             {
                 m_Addressables.LoadResourceLocationsAsync(AddressablesTestUtility.GetPrefabLabel("BASE"), typeof(GameObject));
             });
+        }
+
+        [UnityTest]
+        public IEnumerator LoadResourceLocations_SubObjects_ReturnsCorrectResourceTypes()
+        {
+            yield return Init();
+            string subObjectsAddress = "assetWithDifferentTypedSubAssets";
+
+            var loadLocsHandle = m_Addressables.LoadResourceLocationsAsync(subObjectsAddress, typeof(object));
+            yield return loadLocsHandle;
+
+            Assert.AreEqual(3, loadLocsHandle.Result.Count);
+            Assert.IsTrue(loadLocsHandle.Result.Any(loc => loc.ResourceType == typeof(Mesh)));
+            Assert.IsTrue(loadLocsHandle.Result.Any(loc => loc.ResourceType == typeof(Material)));
+            Assert.IsTrue(loadLocsHandle.Result.Any(loc => loc.ResourceType == typeof(TestObject)));
+
+            loadLocsHandle.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator LoadResourceLocations_ReturnsCorrectResourceTypes()
+        {
+            yield return Init();
+            string spriteAddress = "sprite";
+
+            var loadLocsHandle = m_Addressables.LoadResourceLocationsAsync(spriteAddress, typeof(object));
+            yield return loadLocsHandle;
+
+            Assert.AreEqual(2, loadLocsHandle.Result.Count);
+            Assert.IsTrue(loadLocsHandle.Result.Any(loc => loc.ResourceType == typeof(Texture2D)));
+            Assert.IsTrue(loadLocsHandle.Result.Any(loc => loc.ResourceType == typeof(Sprite)));
+
+            loadLocsHandle.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator LoadResourceLocations_SpecificType_ReturnsCorrectResourceTypes()
+        {
+            yield return Init();
+            string spriteAddress = "sprite";
+
+            var loadLocsHandle = m_Addressables.LoadResourceLocationsAsync(spriteAddress, typeof(Sprite));
+            yield return loadLocsHandle;
+
+            Assert.AreEqual(1, loadLocsHandle.Result.Count);
+            Assert.AreEqual(typeof(Sprite), loadLocsHandle.Result[0].ResourceType);
+
+            loadLocsHandle.Release();
+
+            loadLocsHandle = m_Addressables.LoadResourceLocationsAsync(spriteAddress, typeof(Texture2D));
+            yield return loadLocsHandle;
+
+            Assert.AreEqual(1, loadLocsHandle.Result.Count);
+            Assert.AreEqual(typeof(Texture2D), loadLocsHandle.Result[0].ResourceType);
+
+            loadLocsHandle.Release();
         }
 
         [UnityTest]

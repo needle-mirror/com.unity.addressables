@@ -344,12 +344,41 @@ namespace UnityEditor.AddressableAssets.Tests
 
             //Assert
             Assert.AreEqual(targetBundleInternalIdUnHashed, dataEntry.InternalId);
-            Assert.AreEqual(registry.GetFilePathForBundle("testbundle"), targetBundlePathUnHashed );
+            Assert.AreEqual(registry.GetFilePathForBundle("testbundle"), targetBundlePathUnHashed);
 
             //Cleanup
             Settings.RemoveGroup(group);
+        }
 
+        [Test]
+        public void AddPostCatalogUpdatesInternal_DoesNotAttemptToRemoveHashUnnecessarily()
+        {
+            AddressableAssetGroup group = Settings.CreateGroup("TestAddPostCatalogUpdate", false, false, false,
+                new List<AddressableAssetGroupSchema>(), typeof(BundledAssetGroupSchema));
+            group.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.NoHash;
+            List<Action> callbacks = new List<Action>();
+            string targetBundlePathHashed = "LocalPathToFile/testbundle_test_123456.bundle";
+            string targetBundlePathUnHashed = "LocalPathToFile/testbundle_test.bundle";
+            string targetBundleInternalId= "{runtime_val}/testbundle_test.bundle";
+            ContentCatalogDataEntry dataEntry = new ContentCatalogDataEntry(typeof(ContentCatalogData), targetBundleInternalId, typeof(BundledAssetProvider).FullName, new List<object>());
+            FileRegistry registry = new FileRegistry();
+            registry.AddFile(targetBundlePathHashed);
+            m_BuildScript.AddPostCatalogUpdatesInternal(group, callbacks, dataEntry, targetBundlePathHashed, registry);
+            
+            //Assert Setup
+            Assert.AreEqual(1, callbacks.Count);
+            Assert.AreEqual(targetBundleInternalId, dataEntry.InternalId);
+            
+            //Test
+            callbacks[0].Invoke();
 
+            //Assert
+            //InternalId should not have changed since it was already unhashed.
+            Assert.AreEqual(targetBundleInternalId, dataEntry.InternalId);
+            Assert.AreEqual(registry.GetFilePathForBundle("testbundle_test"), targetBundlePathUnHashed);
+            
+            //Cleanup
+            Settings.RemoveGroup(group);
         }
 
         [Test]

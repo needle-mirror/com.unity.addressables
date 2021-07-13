@@ -21,6 +21,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             set { m_LocationName = value; }
         }
 
+        bool m_UnloadSceneOpExcludeReleaseCallback;
+        internal bool UnloadSceneOpExcludeReleaseCallback
+        {
+            get { return m_UnloadSceneOpExcludeReleaseCallback; }
+            set { m_UnloadSceneOpExcludeReleaseCallback = value; }
+        }
+
         /// <summary>
         /// Conversion from typed to non typed handles.  This does not increment the reference count.
         /// To convert from non-typed back, use AsyncOperationHandle.Convert&lt;T&gt;()
@@ -37,6 +44,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_InternalOp = op;
             m_Version = op?.Version ?? 0;
             m_LocationName = null;
+            m_UnloadSceneOpExcludeReleaseCallback = false;
         }
 
         /// <summary>
@@ -60,6 +68,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_InternalOp = (AsyncOperationBase<TObject>)op;
             m_Version = op?.Version ?? 0;
             m_LocationName = null;
+            m_UnloadSceneOpExcludeReleaseCallback = false;
         }
 
         internal AsyncOperationHandle(IAsyncOperation op, int version)
@@ -67,6 +76,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_InternalOp = (AsyncOperationBase<TObject>)op;
             m_Version = version;
             m_LocationName = null;
+            m_UnloadSceneOpExcludeReleaseCallback = false;
         }
 
         internal AsyncOperationHandle(IAsyncOperation op, string locationName)
@@ -74,6 +84,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_InternalOp = (AsyncOperationBase<TObject>)op;
             m_Version = op?.Version ?? 0;
             m_LocationName = locationName;
+            m_UnloadSceneOpExcludeReleaseCallback = false;
         }
 
         internal AsyncOperationHandle(IAsyncOperation op, int version, string locationName)
@@ -81,6 +92,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_InternalOp = (AsyncOperationBase<TObject>)op;
             m_Version = version;
             m_LocationName = locationName;
+            m_UnloadSceneOpExcludeReleaseCallback = false;
         }
 
         /// <summary>

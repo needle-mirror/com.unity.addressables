@@ -111,13 +111,16 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             // Make last selected group the first object in the array
-            if (selectedObjects.Length > 1)
+            if (!string.IsNullOrEmpty(m_FirstSelectedGroup) && selectedObjects.Length > 1)
             {
-                if (selectedObjects[0].name == m_FirstSelectedGroup)
+                for (int i = 0; i < selectedObjects.Length-1; ++i)
                 {
-                    var temp = selectedObjects[0];
-                    selectedObjects[0] = selectedObjects[selectedIds.Count - 1];
-                    selectedObjects[selectedIds.Count - 1] = temp;
+                    if (selectedObjects[i] != null && selectedObjects[i].name == m_FirstSelectedGroup)
+                    {
+                        var temp = selectedObjects[i];
+                        selectedObjects[i] = selectedObjects[selectedIds.Count - 1];
+                        selectedObjects[selectedIds.Count - 1] = temp;
+                    }
                 }
             }
 

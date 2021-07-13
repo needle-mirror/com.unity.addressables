@@ -31,6 +31,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
 
         internal void OnDisable()
         {
+            SaveEnabledState();
             EditorApplication.quitting -= OnQuitting;
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             StopHostingService();

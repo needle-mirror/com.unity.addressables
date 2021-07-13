@@ -201,6 +201,19 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void WhenFileIsNotInAssetDatabase_EnumerateFiles_DoesNotReturnPath()
+        {
+            string folderPath = m_TestFolderPath + "/TestFolder";
+            AssetDatabase.CreateFolder(m_TestFolderPath, "TestFolder");
+            File.Create(folderPath + "/.hiddenfile");
+
+            List<string> assetPaths = EnumerateAddressableFolder(folderPath, Settings, true);
+            Assert.AreEqual(0, assetPaths.Count);
+
+            AssetDatabase.DeleteAsset(folderPath);
+        }
+
+        [Test]
         public void WhenNoFolderIsAddressable_EnumerateFiles_ReturnsNothing()
         {
             string parentFolderGuid = AssetDatabase.AssetPathToGUID(m_AddrParentFolderPath);

@@ -5,6 +5,7 @@ using System.IO;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -86,7 +87,7 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
-        public IEnumerator AddressablesImpl_InitializeAsync_CanCreateCompleted()
+        public IEnumerator AddressablesImpl_InitializeAsync_HandleReleasedAfterSecondInit()
         {
             // Setup
             m_Addressables = null;
@@ -95,6 +96,22 @@ namespace AddressableAssetsIntegrationTests
 
             m_Addressables.hasStartedInitialization = true;
             var initialOp = m_Addressables.InitializeAsync();
+            yield return initialOp;
+
+            // Test
+            Assert.IsFalse(initialOp.IsValid());
+        }
+
+        [UnityTest]
+        public IEnumerator AddressablesImpl_InitializeAsync_CanCreateCompleted()
+        {
+            // Setup
+            m_Addressables = null;
+            initializationComplete = false;
+            yield return InitWithoutInitializeAsync();
+
+            m_Addressables.hasStartedInitialization = true;
+            var initialOp = m_Addressables.InitializeAsync(m_RuntimeSettingsPath, "BASE", false);
             yield return initialOp;
 
             // Test
@@ -146,6 +163,46 @@ namespace AddressableAssetsIntegrationTests
 
             // Test
             Assert.IsFalse(op1.IsValid());
+        }
+
+        class AsyncAwaitLoadContentCatalog : MonoBehaviour
+        {
+            public AddressablesImpl addressables;
+            public IResourceLocation location;
+            public bool autoReleaseHandle = false;
+            public bool done = false;
+            public AsyncOperationHandle<IResourceLocator> operation;
+            async void Start()
+            {
+                operation = addressables.LoadContentCatalogAsync(location.InternalId, autoReleaseHandle);
+                await operation.Task;
+                operation.Completed += handle => done = true;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator AddressablesImpl_LoadContentCatalogAsync_WhenAutoReleaseHandleEnabled_ExecutingCompleteCallback_LogsWarning()
+        {
+            // Setup
+            yield return Init();
+
+            if (TypeName == "BuildScriptFastMode")
+                Assert.Ignore($"Skipping test {nameof(AddressablesImpl_LoadContentCatalogAsync_CanLoad)} for {TypeName}");
+
+            // Setup
+            var go = new GameObject("test", typeof(AsyncAwaitLoadContentCatalog));
+            var comp = go.GetComponent<AsyncAwaitLoadContentCatalog>();
+            comp.addressables = m_Addressables;
+            comp.location = m_Addressables.m_ResourceLocators[0].CatalogLocation;
+            comp.autoReleaseHandle = true;
+
+            // Test
+            LogAssert.Expect(LogType.Warning, "Executing complete callback for a released operation.");
+            while (!comp.done)
+                yield return null;
+
+            // Cleanup
+            GameObject.Destroy(go);
         }
 
         [UnityTest]

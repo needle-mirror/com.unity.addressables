@@ -149,7 +149,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 foreach (string filename in Directory.EnumerateFileSystemEntries(path, "*.*", SearchOption.AllDirectories))
                 {
-                    if (!AddressableAssetUtility.IsPathValidForEntry(filename))
+                    if (!AddressableAssetUtility.IsPathValidForEntry(filename) || string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(filename)))
                         continue;
                     string convertedPath = filename.Replace('\\', '/');
                     var node = tree.FindNode(convertedPath, true);
@@ -206,7 +206,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         public static List<string> EnumerateAddressableFolder(string path, AddressableAssetSettings settings, bool recurseAll, IBuildLogger logger = null)
         {
-            if(!AssetDatabase.IsValidFolder(path))
+            if (!AssetDatabase.IsValidFolder(path))
                 throw new Exception($"Path {path} cannot be enumerated because it does not exist");
 
             AddressableAssetTree tree = m_PrecomputedTree != null ? m_PrecomputedTree : BuildAddressableTree(settings, logger);
