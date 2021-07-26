@@ -66,7 +66,7 @@ namespace UnityEngine.AddressableAssets
         /// Validates that the asset located at a path is allowable for this asset reference. An asset is allowable if
         /// it is of the correct type or if one of its sub-asset is.
         /// </summary>
-        /// <param name="path">The path to the asset in question.</param>
+        /// <param name="mainAssetPath">The path to the asset in question.</param>
         /// <returns>Whether the referenced asset is valid.</returns>
         public override bool ValidateAsset(string mainAssetPath)
         {

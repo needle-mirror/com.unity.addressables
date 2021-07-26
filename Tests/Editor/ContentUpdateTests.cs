@@ -1197,5 +1197,15 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.RemoveGroup(group);
             Settings.RemoveGroup(depGroup);
         }
+
+        [Test]
+        [TestCase("{Addressables.RuntimePath}/TargetPlatform/prefabA.bundle", "{Addressables.RuntimePath}/TargetPlatform", "Library/aa/TargetPlatform")]
+        [TestCase("{Addressables.RuntimePath}\\TargetPlatform\\prefabA.bundle", "{Addressables.RuntimePath}/TargetPlatform", "Library/aa/TargetPlatform")]
+        [TestCase("http://localhost/TargetPlatform/prefabA.bundle", "http://localhost/TargetPlatform", "ServerData/TargetPlatform")]
+        public void BundleIdToBuildPath_ReturnsBundleBuildPath(string bundleId, string rootLoadPath, string rootBuildPath)
+        {
+            string buildPath = RevertUnchangedAssetsToPreviousAssetState.BundleIdToBuildPath(bundleId, rootLoadPath, rootBuildPath);
+            Assert.IsTrue(buildPath.StartsWith(rootBuildPath));
+        }
     }
 }

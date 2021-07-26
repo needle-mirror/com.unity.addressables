@@ -81,5 +81,47 @@ namespace UnityEngine.ResourceManagement.Tests
             public string PrimaryKey { get; }
             public Type ResourceType { get; }
         }
+
+        [Test]
+        public void Locations_WithDiffNames_LocationEquals_Returns_True()
+        {
+            var l1 = new ResourceLocationBase("a", "b", "c", typeof(Mesh));
+            var l2 = new ResourceLocationBase("x", "b", "c", typeof(Mesh));
+            Assert.IsTrue(LocationUtils.LocationEquals(l1, l2));
+        }
+        [Test]
+        public void Locations_WithDiffIds_LocationEquals_Returns_False()
+        {
+            var l1 = new ResourceLocationBase("a", "b", "c", typeof(Mesh));
+            var l2 = new ResourceLocationBase("a", "x", "c", typeof(Mesh));
+            Assert.IsFalse(LocationUtils.LocationEquals(l1, l2));
+        }
+        [Test]
+        public void Locations_WithDiffProvider_LocationEquals_Returns_False()
+        {
+            var l1 = new ResourceLocationBase("a", "b", "c", typeof(Mesh));
+            var l2 = new ResourceLocationBase("a", "b", "x", typeof(Mesh));
+            Assert.IsFalse(LocationUtils.LocationEquals(l1, l2));
+        }
+        [Test]
+        public void Locations_WithDiffResourceTypes_LocationEquals_Returns_True()
+        {
+            var l1 = new ResourceLocationBase("a", "b", "c", typeof(Mesh));
+            var l2 = new ResourceLocationBase("a", "b", "c", typeof(Material));
+            Assert.IsFalse(LocationUtils.LocationEquals(l1, l2));
+        }
+
+        class ResourceLocatonTestSub : ResourceLocationBase
+        {
+            public ResourceLocatonTestSub(string n, string id, string pr, Type t) : base(n, id, pr, t) { }
+        }
+        [Test]
+        public void Locations_WithDiffTypes_LocationEquals_Returns_True()
+        {
+            var l1 = new ResourceLocationBase("a", "b", "c", typeof(Mesh));
+            var l2 = new ResourceLocatonTestSub("a", "b", "c", typeof(Mesh));
+            Assert.IsTrue(LocationUtils.LocationEquals(l1, l2));
+        }
+
     }
 }

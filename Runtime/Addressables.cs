@@ -635,6 +635,7 @@ namespace UnityEngine.AddressableAssets
         /// down to one based on the provided MergeMode.
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
+        /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="keys">IEnumerable set of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
@@ -658,6 +659,7 @@ namespace UnityEngine.AddressableAssets
         /// down to one based on the provided MergeMode.
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
         /// </summary>
+        /// <typeparam name="TObject">The type of the assets.</typeparam>
         /// <param name="keys">IEnumerable set of keys for the locations.</param>
         /// <param name="callback">Callback Action that is called per load operation.</param>
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
@@ -955,7 +957,7 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
-        /// <param name="keys">The key to clear the cache for.</param>
+        /// <param name="key">The key to clear the cache for.</param>
         public static void ClearDependencyCacheAsync(string key)
         {
             m_Addressables.ClearDependencyCacheAsync((object)key, true);
@@ -1014,7 +1016,7 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
-        /// <param name="keys">The keys to clear the cache for.</param>
+        /// <param name="key">The keys to clear the cache for.</param>
         /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<bool> ClearDependencyCacheAsync(string key, bool autoReleaseHandle)

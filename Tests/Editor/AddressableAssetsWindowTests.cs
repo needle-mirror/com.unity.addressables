@@ -85,10 +85,25 @@ namespace UnityEditor.AddressableAssets.Tests
             //Setup
             var defaultGroup = Settings.DefaultGroup;
             Assert.IsNotNull(defaultGroup, "Default Group is not found");
+            ProjectConfigData.ShowSubObjectsInGroupView = true;
+            
+            string path0 = GetAssetPath("test.prefab");
+            string p0 = AssetDatabase.AssetPathToGUID(path0);
+            Assert.IsFalse(string.IsNullOrEmpty(p0), "Could not setup for Asset \"test.prefab\"");
+            Texture t = new Texture2D(4, 4);
+            t.name = "tex";
+            AssetDatabase.AddObjectToAsset(t, path0);
+            AssetDatabase.SaveAssets();
             string p1 = AssetDatabase.AssetPathToGUID(GetAssetPath("test 1.prefab"));
             Assert.IsFalse(string.IsNullOrEmpty(p1), "Could not setup for Asset \"test 1.prefab\"");
             string p2 = AssetDatabase.AssetPathToGUID(GetAssetPath("test 2.prefab"));
             Assert.IsFalse(string.IsNullOrEmpty(p2), "Could not setup for Asset \"test 2.prefab\"");
+            
+            var e0 = Settings.CreateOrMoveEntry(p0, defaultGroup);
+            List<AddressableAssetEntry> gathered = new List<AddressableAssetEntry>();
+            e0.GatherAllAssets(gathered, false, true, true);
+            Assert.AreEqual(1, gathered.Count, "Incorrect subObject count for Asset at " + path0 );
+            
             var e1 = Settings.CreateOrMoveEntry(p1, defaultGroup);
             var e2 = Settings.CreateOrMoveEntry(p2, defaultGroup);
 
@@ -106,6 +121,10 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(1, entryTree.GetSelection().Count, "Expecting to have \"test 2.prefab\" selected.");
             aaWindow.SelectAssetsInGroupEditor(new List<AddressableAssetEntry>(){e1, e2});
             Assert.AreEqual(2, entryTree.GetSelection().Count, "Expecting to have \"test 1.prefab\" and \"test 2.prefab\" selected.");
+
+            Assert.IsTrue(ProjectConfigData.ShowSubObjectsInGroupView, "Need to display subObjects to test that they are being shown");
+            aaWindow.SelectAssetsInGroupEditor(new List<AddressableAssetEntry>(){gathered[0]});
+            Assert.AreEqual(1, entryTree.GetSelection().Count, "Expecting to have \"test.prefab[SubObject]\" selected.");
 
             //Cleanup
             Assert.IsTrue(Settings.RemoveAssetEntry(e1, false), "Failed to cleanup AssetEntry \"test 1.prefab\" from test settings.");

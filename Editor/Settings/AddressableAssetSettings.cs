@@ -1748,7 +1748,9 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
                 else
                 {
-                    createdEntries.Add(CreateAndAddEntryToGroup(guid, targetParent, readOnly, postEvent));
+                    entry = CreateAndAddEntryToGroup(guid, targetParent, readOnly, postEvent);
+                    if (entry != null)
+                        createdEntries.Add(entry);
                 }
             }
         }
@@ -2326,7 +2328,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Invoke a registered command for a set of groups.
         /// </summary>
         /// <param name="cmdId">The id of the command.</param>
-        /// <param name="entries">The groups to run the command on.</param>
+        /// <param name="groups">The groups to run the command on.</param>
         /// <returns>Returns true if the command was invoked successfully.</returns>
         public static bool InvokeAssetGroupCommand(string cmdId, IEnumerable<AddressableAssetGroup> groups)
         {

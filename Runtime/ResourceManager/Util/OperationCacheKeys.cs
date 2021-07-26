@@ -95,20 +95,10 @@ namespace UnityEngine.ResourceManagement.Util
             if (ReferenceEquals(loc1, loc2)) return true;
             if (ReferenceEquals(loc1, null)) return false;
             if (ReferenceEquals(loc2, null)) return false;
-            if (loc1.GetType() != loc2.GetType()) return false;
 
-            bool membersEqual = loc1.PrimaryKey == loc2.PrimaryKey
-                && loc1.InternalId == loc2.InternalId
-                && loc1.ProviderId == loc2.ProviderId
-                && loc1.ResourceType == loc2.ResourceType;
-
-            if (!membersEqual)
-                return false;
-
-            if (loc1.HasDependencies != loc2.HasDependencies)
-                return false;
-
-            return DependenciesEqual(loc1.Dependencies, loc2.Dependencies);
+            return (loc1.InternalId.Equals(loc2.InternalId)
+                && loc1.ProviderId.Equals(loc2.ProviderId)
+                && loc1.ResourceType.Equals(loc2.ResourceType));
         }
 
         public static bool DependenciesEqual(IList<IResourceLocation> deps1, IList<IResourceLocation> deps2)

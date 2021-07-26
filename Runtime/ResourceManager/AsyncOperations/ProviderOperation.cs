@@ -65,6 +65,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_RM?.Update(Time.deltaTime);
             if (!HasExecuted)
                 InvokeExecute();
+            if (m_WaitForCompletionCallback == null)
+                return false;
             return m_WaitForCompletionCallback.Invoke();
         }
 
@@ -149,6 +151,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_ProvideHandleVersion++;
             m_GetProgressCallback = null;
             m_GetDownloadProgressCallback = null;
+            m_WaitForCompletionCallback = null;
             m_NeedsRelease = status;
 
             ProviderOperation<T> top = this as ProviderOperation<T>;

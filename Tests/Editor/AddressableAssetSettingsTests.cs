@@ -483,7 +483,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var deletedAssets = new string[0];
             var movedAssets = new string[0];
             var movedFromAssetPaths = new string[0];
-            var collectionPath = Path.Combine(ConfigFolder, "collection.asset").Replace('\\', '/');
+            var collectionPath = Path.Combine(TestFolder, "collection.asset").Replace('\\', '/');
             var collection = ScriptableObject.CreateInstance<AddressableAssetEntryCollection>();
             var entry = new AddressableAssetEntry("12345698655", "TestAssetEntry", null, false);
             entry.m_cachedAssetPath = "TestPath";
@@ -534,7 +534,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var entry = Settings.CreateOrMoveEntry(m_AssetGUID, Settings.groups[0]);
             var prevTestObjName = entry.MainAsset.name;
             entry.MainAsset.name = "test";
-            importedAssets[0] = ConfigFolder + "/test.prefab";
+            importedAssets[0] = TestFolder + "/test.prefab";
             EditorUtility.ClearDirty(Settings);
             var prevDC = EditorUtility.GetDirtyCount(Settings);
             Settings.OnPostprocessAllAssets(importedAssets, deletedAssets, movedAssets, movedFromAssetPaths);
@@ -581,11 +581,11 @@ namespace UnityEditor.AddressableAssets.Tests
             var deletedAssets = new string[0];
             var movedAssets = new string[1];
             var movedFromAssetPaths = new string[1];
-            var assetPath = ConfigFolder + "/test.prefab";
-            var newAssetPath = ConfigFolder + "/resources/test.prefab";
-            if (!Directory.Exists(ConfigFolder + "/resources"))
+            var assetPath = TestFolder + "/test.prefab";
+            var newAssetPath = TestFolder + "/resources/test.prefab";
+            if (!Directory.Exists(TestFolder + "/resources"))
             {
-                Directory.CreateDirectory(ConfigFolder + "/resources");
+                Directory.CreateDirectory(TestFolder + "/resources");
                 AssetDatabase.Refresh();
             }
             Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(newAssetPath), Settings.groups[0]);
@@ -600,7 +600,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Cleanup
             AssetDatabase.MoveAsset(newAssetPath, assetPath);
             Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(assetPath), Settings.groups[0]);
-            Directory.Delete(ConfigFolder + "/resources");
+            Directory.Delete(TestFolder + "/resources");
         }
 
         [Test]
@@ -1001,7 +1001,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var prevPath = AssetDatabase.GUIDToAssetPath(m_AssetGUID);
             var prevPathTwo = AssetDatabase.GUIDToAssetPath(testAssetGUID);
             var testGroup = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
-            var testAssetPath = ConfigFolder + "/testMoveAssets";
+            var testAssetPath = TestFolder + "/testMoveAssets";
             testGuidsToPaths[m_AssetGUID] = testAssetPath + "/resources/test.prefab";
             testGuidsToPaths[testAssetGUID] = testAssetPath + "/resources/testasset.prefab";
 
@@ -1014,8 +1014,8 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreNotEqual(prevGroup, Settings.FindAssetEntry(testAssetGUID).parentGroup);
             Assert.AreEqual(prevDC + 1, dc);
 
-            testGuidsToPaths[m_AssetGUID] = ConfigFolder + "/test.prefab";
-            testGuidsToPaths[testAssetGUID] = ConfigFolder + "/testasset.prefab";
+            testGuidsToPaths[m_AssetGUID] = TestFolder + "/test.prefab";
+            testGuidsToPaths[testAssetGUID] = TestFolder + "/testasset.prefab";
             Settings.MoveAssetsFromResources(testGuidsToPaths, prevGroup);
             originalAssetEntry = Settings.FindAssetEntry(m_AssetGUID);
             Assert.AreEqual(originalAssetEntry.address, "test");
@@ -1034,7 +1034,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var guidsToPaths = new Dictionary<string, string>();
             var obj = new GameObject("TestObjectMoveAssets");
 
-            var objFolder = ConfigFolder + "/Resources/subfolder/subsubfolder";
+            var objFolder = TestFolder + "/Resources/subfolder/subsubfolder";
             if (!Directory.Exists(objFolder))
             {
                 Directory.CreateDirectory(objFolder);
@@ -1047,7 +1047,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var playerDataGroup = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
             Settings.CreateOrMoveEntry(guid, playerDataGroup);
 
-            var destinationFolder = ConfigFolder + "/testMoveAssets";
+            var destinationFolder = TestFolder + "/testMoveAssets";
             guidsToPaths[guid] = destinationFolder + "/testasset.prefab";
 
             // Test
@@ -1062,9 +1062,9 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(defaultLocalGroup, entry.parentGroup);
 
             //Cleanup
-            if (Directory.Exists(ConfigFolder + "/Resources"))
-                AssetDatabase.DeleteAsset(ConfigFolder + "/Resources");
-            EditorBuildSettings.RemoveConfigObject(ConfigFolder + "/Resources");
+            if (Directory.Exists(TestFolder + "/Resources"))
+                AssetDatabase.DeleteAsset(TestFolder + "/Resources");
+            EditorBuildSettings.RemoveConfigObject(TestFolder + "/Resources");
 
             Settings.RemoveAssetEntry(guid);
             AssetDatabase.DeleteAsset(guidsToPaths[guid]);
@@ -1081,7 +1081,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var currentGroup = testAssetEntry.parentGroup;
             var testGuidsToPaths = new Dictionary<string, string>();
             var currentPath = AssetDatabase.GUIDToAssetPath(m_AssetGUID);
-            var newAssetPath = ConfigFolder + "/testMoveAssets";
+            var newAssetPath = TestFolder + "/testMoveAssets";
             testGuidsToPaths[m_AssetGUID] = newAssetPath + "/test.prefab";
             Settings.MoveAssetsFromResources(testGuidsToPaths, null);
             Settings.MoveEntry(testAssetEntry, null);

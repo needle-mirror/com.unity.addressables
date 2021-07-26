@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor.AddressableAssets.HostingServices;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
@@ -58,6 +59,12 @@ namespace UnityEditor.AddressableAssets.GUI
         readonly Dictionary<object, HostingServicesProfileVarsTreeView> m_ProfileVarTables =
             new Dictionary<object, HostingServicesProfileVarsTreeView>();
 
+        readonly Dictionary<object, Dictionary<string, string>> m_TablePrevData =
+            new Dictionary<object, Dictionary<string, string>>();
+
+        private readonly Dictionary<object, Dictionary<string, string>> m_TablePrevManagerVariables =
+            new Dictionary<object, Dictionary<string, string>>();
+        
         readonly List<IHostingService> m_RemovalQueue = new List<IHostingService>();
         HostingServicesProfileVarsTreeView m_GlobalProfileVarTable;
         HostingServicesListTreeView m_ServicesList;
@@ -215,7 +222,6 @@ namespace UnityEditor.AddressableAssets.GUI
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
 
-
             DrawOutline(servicesRect, 1);
 
             GUILayout.BeginArea(servicesRect);
@@ -363,7 +369,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
                 GUILayout.EndHorizontal();
 
-                DrawProfileVarTable(svc, svc.ProfileVariables);
+                DrawProfileVarTable(svc);
             }
 
             if (isDirty && m_Settings != null)
@@ -384,34 +390,47 @@ namespace UnityEditor.AddressableAssets.GUI
             EditorGUILayout.EndScrollView();
         }
 
-        void DrawProfileVarTable(object tableKey, IEnumerable<KeyValuePair<string, string>> data)
+        internal static bool DictsAreEqual(Dictionary<string, string> a, Dictionary<string, string> b)
         {
+            return a.Count == b.Count && !a.Except(b).Any();
+        }
+
+        void DrawProfileVarTable(IHostingService tableKey)
+        {
+            var manager = m_Settings.HostingServicesManager;
+            var data = tableKey.ProfileVariables;
+            
             HostingServicesProfileVarsTreeView table;
+            
             if (!m_ProfileVarTables.TryGetValue(tableKey, out table))
             {
                 table = new HostingServicesProfileVarsTreeView(new TreeViewState(),
                     HostingServicesProfileVarsTreeView.CreateHeader());
                 m_ProfileVarTables[tableKey] = table;
+                m_TablePrevData[tableKey] = new Dictionary<string, string>(data);
+                m_TablePrevManagerVariables[tableKey] = new Dictionary<string, string>(manager.GlobalProfileVariables);
+            }
+            
+            else if (!DictsAreEqual(data, m_TablePrevData[tableKey]) || !DictsAreEqual(manager.GlobalProfileVariables, m_TablePrevManagerVariables[tableKey]))
+            {
+                table.ClearItems();
+                m_TablePrevData[tableKey] = new Dictionary<string, string>(data);
+                m_TablePrevManagerVariables[tableKey] = new Dictionary<string, string>(manager.GlobalProfileVariables);
             }
 
+            if (table.Count == 0)
+            {
+                foreach (var globalVar in manager.GlobalProfileVariables)
+                    table.AddOrUpdateItem(globalVar.Key, globalVar.Value);
+                
+                foreach (var kvp in data)
+                    table.AddOrUpdateItem(kvp.Key, kvp.Value);
+            }
+            
             var rowHeight = table.RowHeight;
-            var tableHeight = table.multiColumnHeader.height + rowHeight; // header + 1 extra line
-
-            table.ClearItems();
-
-            var manager = m_Settings.HostingServicesManager;
-            foreach (var globalVar in manager.GlobalProfileVariables)
-            {
-                table.AddOrUpdateItem(globalVar.Key, globalVar.Value);
-                tableHeight += rowHeight;
-            }
-            foreach (var kvp in data)
-            {
-                table.AddOrUpdateItem(kvp.Key, kvp.Value);
-                tableHeight += rowHeight;
-            }
-
-            table.OnGUI(EditorGUILayout.GetControlRect(false, tableHeight));
+            var tableHeight = table.multiColumnHeader.height + rowHeight + (rowHeight * (data.Count() + manager.GlobalProfileVariables.Count)); // header + 1 extra line
+        
+            table.OnGUI(EditorGUILayout.GetControlRect(false, tableHeight)); 
         }
 
         /// <inheritdoc/>

@@ -74,7 +74,22 @@ namespace UnityEditor.AddressableAssets.GUI
             while (items.Count > 0)
             {
                 var i = items.Pop();
-                if (!i.IsGroup && entries.Contains(i.entry))
+
+                bool contains = false;
+                if (i.entry != null)
+                {
+                    foreach (AddressableAssetEntry entry in entries)
+                    {
+                        // class instances can be different but refer to the same entry, use guid
+                        if (entry.guid == i.entry.guid && i.entry.TargetAsset == entry.TargetAsset)
+                        {
+                            contains = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!i.IsGroup && contains)
                 {
                     selectedIDs.Add(i.id);
                 }

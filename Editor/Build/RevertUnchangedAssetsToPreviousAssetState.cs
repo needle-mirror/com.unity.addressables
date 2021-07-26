@@ -13,6 +13,7 @@ using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
 using static UnityEditor.AddressableAssets.Build.ContentUpdateScript;
 
 /// <summary>
@@ -31,7 +32,7 @@ public class RevertUnchangedAssetsToPreviousAssetState
     }
 
     /// <summary>
-    /// Reverts asset entries to their previous state if not modified by the new build. 
+    /// Reverts asset entries to their previous state if not modified by the new build.
     /// </summary>
     /// <param name="aaBuildContext">The new build data.</param>
     /// <param name="updateContext">The cached build data.</param>
@@ -109,8 +110,7 @@ public class RevertUnchangedAssetsToPreviousAssetState
                 continue;
             }
 
-            string previousBundlePath = previousAssetState.bundleFileId?.Replace(loadPath, buildPath);
-
+            string previousBundlePath = BundleIdToBuildPath(previousAssetState.bundleFileId, loadPath, buildPath);
             if (!File.Exists(previousBundlePath))
             {
                 //Logging this as a warning because users may choose to delete their bundles on disk which will trigger this state.
@@ -119,7 +119,7 @@ public class RevertUnchangedAssetsToPreviousAssetState
                     $"\"Use Existing Build (requires built groups)\" will fail.");
             }
 
-            string builtBundlePath = contentUpdateContext.BundleToInternalBundleIdMap[fullInternalBundleName].Replace(loadPath, buildPath);
+            string builtBundlePath = BundleIdToBuildPath(contentUpdateContext.BundleToInternalBundleIdMap[fullInternalBundleName], loadPath, buildPath);
 
             AssetEntryRevertOperation operation = new AssetEntryRevertOperation()
             {
@@ -134,10 +134,19 @@ public class RevertUnchangedAssetsToPreviousAssetState
         }
         return operations;
     }
-    
+
+    internal static string BundleIdToBuildPath(string bundleId, string rootLoadPath, string rootBuildPath)
+    {
+        if (bundleId == null)
+            return null;
+        bool replaceBackSlashes = rootLoadPath.Contains('/') && !ResourceManagerConfig.ShouldPathUseWebRequest(rootLoadPath);
+        string path = replaceBackSlashes ? bundleId.Replace('\\', '/') : bundleId;
+        return path.Replace(rootLoadPath, rootBuildPath);
+    }
+
     private static bool IsPreviouslyRevertedDependency(string bundleFileId, ContentUpdateContext contentUpdateContext)
     {
-        foreach(CachedAssetState state in contentUpdateContext.PreviousAssetStateCarryOver)
+        foreach (CachedAssetState state in contentUpdateContext.PreviousAssetStateCarryOver)
         {
             if (state.bundleFileId == bundleFileId)
                 return true;
@@ -155,7 +164,7 @@ public class RevertUnchangedAssetsToPreviousAssetState
         {
             //Check that we can replace the entry in the file registry
             //before continuing.  Past this point destructive actions are taken.
-            if (contentUpdateContext.Registry.ReplaceBundleEntry(Path.GetFileNameWithoutExtension(operation.PreviousBuildPath), operation.PreviousAssetState.bundleFileId) || 
+            if (contentUpdateContext.Registry.ReplaceBundleEntry(Path.GetFileNameWithoutExtension(operation.PreviousBuildPath), operation.PreviousAssetState.bundleFileId) ||
                 IsPreviouslyRevertedDependency(operation.PreviousAssetState.bundleFileId, contentUpdateContext))
             {
                 File.Delete(operation.CurrentBuildPath);

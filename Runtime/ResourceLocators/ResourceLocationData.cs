@@ -49,12 +49,12 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
         /// </summary>
         public Type ResourceType { get { return m_ResourceType.Value; } }
 
-        /// <summary>
-        /// The optional arbitrary data stored along with location
-        /// </summary>
         [SerializeField]
         byte[] SerializedData;
         object _Data;
+        /// <summary>
+        /// The optional arbitrary data stored along with location
+        /// </summary>
         public object Data
         {
             get

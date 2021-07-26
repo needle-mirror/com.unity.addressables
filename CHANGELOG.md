@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.18.15] - 2021-07-26
+- Improved Addressables inspector for Assets.
+- Fixed issue where the hosting window would use an exceptionally high (8-20%) amount of CPU while open with a hosting service created
+- Added update on profile change, changed to remove preceding slashes and change all to forward slash for hosting service
+- Added documentation explaining why we are unable to support WaitForCompletion (sync Addressables) on WebGL 
+
 ## [1.18.13] - 2021-07-13
 - Fixed issue where Addressables would not use a custom Asset Bundle Provider if the default group was empty
 - InvalidKeyExceptions are now correctly thrown as InvalidKeyExceptions, as opposed to before, where they were thrown as System.Exceptions. Please note that this may break any checks that rely on InvalidKeyExceptions being thrown as System.Exception

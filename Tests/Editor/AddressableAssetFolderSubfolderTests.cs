@@ -35,7 +35,7 @@ namespace UnityEditor.AddressableAssets.Tests
         protected override void OnInit()
         {
             // Create directories
-            m_TestFolderPath = ConfigFolder;
+            m_TestFolderPath = TestFolder;
             m_AddrParentFolderPath = m_TestFolderPath + "/AddrParentFolder";
             m_AddrChildSubfolderPath = m_AddrParentFolderPath + "/AddrChildSubfolder";
 

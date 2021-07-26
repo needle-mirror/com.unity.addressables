@@ -21,9 +21,8 @@ namespace UnityEditor.AddressableAssets.Settings
             return path.Replace('\\', '/').ToLower().Contains("/resources/");
         }
 
-        internal static bool GetPathAndGUIDFromTarget(Object target, out string path, out string guid, out Type mainAssetType)
+        internal static bool TryGetPathAndGUIDFromTarget(Object target, out string path, out string guid)
         {
-            mainAssetType = null;
             guid = string.Empty;
             path = string.Empty;
             if (target == null)
@@ -31,13 +30,7 @@ namespace UnityEditor.AddressableAssets.Settings
             path = AssetDatabase.GetAssetOrScenePath(target);
             if (!IsPathValidForEntry(path))
                 return false;
-            guid = AssetDatabase.AssetPathToGUID(path);
-            if (string.IsNullOrEmpty(guid))
-                return false;
-            mainAssetType = AssetDatabase.GetMainAssetTypeAtPath(path);
-            if (mainAssetType == null)
-                return false;
-            if (mainAssetType != target.GetType() && !typeof(AssetImporter).IsAssignableFrom(target.GetType()))
+            if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(target, out guid, out long id))
                 return false;
             return true;
         }
@@ -51,6 +44,13 @@ namespace UnityEditor.AddressableAssets.Settings
             if (path == CommonStrings.UnityEditorResourcePath ||
                 path == CommonStrings.UnityDefaultResourcePath ||
                 path == CommonStrings.UnityBuiltInExtraPath)
+                return false;
+            if (path.EndsWith("/Editor") || path.Contains("/Editor/"))
+                return false;
+            if (path == "Assets")
+                return false;
+            var settings = AddressableAssetSettingsDefaultObject.SettingsExists ? AddressableAssetSettingsDefaultObject.Settings : null;
+            if (settings != null && path.StartsWith(settings.ConfigFolder) || path.StartsWith(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder))
                 return false;
             return !excludedExtensions.Contains(Path.GetExtension(path));
         }

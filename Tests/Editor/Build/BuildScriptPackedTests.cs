@@ -194,11 +194,11 @@ namespace UnityEditor.AddressableAssets.Tests
             
             AddressableAssetGroup group1 = Settings.CreateGroup("simpleGroup1", false, false, false,
                 new List<AddressableAssetGroupSchema>(), typeof(BundledAssetGroupSchema));
-            Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(Path.Combine(ConfigFolder, "test 1.prefab")),
+            Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(Path.Combine(TestFolder, "test 1.prefab")),
                 group1, false, false);
             AddressableAssetGroup group2 = Settings.CreateGroup("simpleGroup2", false, false, false,
                 new List<AddressableAssetGroupSchema>(), typeof(BundledAssetGroupSchema));
-            Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(Path.Combine(ConfigFolder, "test 2.prefab")),
+            Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(Path.Combine(TestFolder, "test 2.prefab")),
                 group2, false, false);
             
             var r1 = buildScript.BuildData<AddressableAssetBuildResult>(m_BuilderInput);

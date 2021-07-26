@@ -192,6 +192,9 @@ namespace UnityEditor.AddressableAssets.HostingServices
             MyHttpListener = new HttpListener();
         }
 
+        /// <summary>
+        /// Destroys a <see cref="HttpHostingService"/>
+        /// </summary>
         ~HttpHostingService()
         {
             StopHostingService();
@@ -394,9 +397,11 @@ namespace UnityEditor.AddressableAssets.HostingServices
         /// <returns>The full system path to the file if found, or null if file could not be found</returns>
         protected virtual string FindFileInContentRoots(string relativePath)
         {
+            relativePath = relativePath.TrimStart('/');
+            relativePath = relativePath.TrimStart('\\');
             foreach (var root in HostingServiceContentRoots)
             {
-                var fullPath = Path.Combine(root, relativePath);
+                var fullPath = Path.Combine(root, relativePath).Replace('\\','/');
                 if (File.Exists(fullPath))
                     return fullPath;
             }

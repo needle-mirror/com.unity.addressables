@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Creates build logs that need to be seen at runtime.
+/// </summary>
 [Serializable]
 public class PackedPlayModeBuildLogs
 {

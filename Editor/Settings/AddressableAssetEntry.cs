@@ -822,6 +822,29 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
+        internal AddressableAssetEntry GetImplicitEntry(string guid)
+        {
+            var path = AssetPath;
+            if (string.IsNullOrEmpty(path))
+                return null;
+            
+            List<AddressableAssetEntry> implicitEntries = new List<AddressableAssetEntry>();
+            if (AssetDatabase.IsValidFolder(path))
+            {
+                // ensure that this folder entry could have the Asset before Gathering entries
+                string p = AssetDatabase.GUIDToAssetPath(guid);
+                if (!p.StartsWith(path))
+                    return null;
+                GatherFolderEntries(implicitEntries, true, null);
+            }
+            else if (MainAssetType == typeof(AddressableAssetEntryCollection))
+            {
+                GatherAssetEntryCollectionEntries(implicitEntries, null);
+            }
+            
+            return implicitEntries.FirstOrDefault(ie => ie.guid == guid);
+        }
+
         string GetRelativePath(string file, string path)
         {
             return file.Substring(path.Length);

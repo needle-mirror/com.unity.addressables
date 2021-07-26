@@ -513,9 +513,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 foreach (var e in entries)
                 {
-                    var implicitEntries = new List<AddressableAssetEntry>();
-                    e.GatherImplicitEntries(implicitEntries);
-                    var impEntry = implicitEntries.FirstOrDefault(ie => ie.guid == guid);
+                    var impEntry = e.GetImplicitEntry(guid);
                     if (impEntry != null)
                         return impEntry;
                 }

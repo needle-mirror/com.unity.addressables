@@ -68,8 +68,8 @@ namespace UnityEditor.AddressableAssets.Tests
             public void Folder_WithSubAssets_GetsBundleFileIdAssigned_DuringBuild()
             {
                 var context = new AddressablesDataBuilderInput(Settings);
-                string folderGuid = AssetDatabase.CreateFolder(ConfigFolder, "FolderAsset");
-                string folderPath = $"{ConfigFolder}/FolderAsset";
+                string folderGuid = AssetDatabase.CreateFolder(TestFolder, "FolderAsset");
+                string folderPath = $"{TestFolder}/FolderAsset";
                 PrefabUtility.SaveAsPrefabAsset(new GameObject(), $"{folderPath}/subfolderprefab.prefab");
 
                 AddressableAssetEntry folderEntry = Settings.CreateOrMoveEntry(folderGuid, Settings.DefaultGroup);
@@ -90,8 +90,8 @@ namespace UnityEditor.AddressableAssets.Tests
             public void Folder_WithNoSubAssets_DoesNotThrowErrorDuringBuild()
             {
                 var context = new AddressablesDataBuilderInput(Settings);
-                string folderGuid = AssetDatabase.CreateFolder(ConfigFolder, "FolderAsset");
-                string folderPath = $"{ConfigFolder}/FolderAsset";
+                string folderGuid = AssetDatabase.CreateFolder(TestFolder, "FolderAsset");
+                string folderPath = $"{TestFolder}/FolderAsset";
 
                 AddressableAssetEntry folderEntry = Settings.CreateOrMoveEntry(folderGuid, Settings.DefaultGroup);
                 
@@ -111,8 +111,8 @@ namespace UnityEditor.AddressableAssets.Tests
             public void Folder_DoesNotAssignBundleFileId_ForDynamicallyCreatedSubEntries()
             {
                 var context = new AddressablesDataBuilderInput(Settings);
-                string folderGuid = AssetDatabase.CreateFolder(ConfigFolder, "FolderAsset");
-                string folderPath = $"{ConfigFolder}/FolderAsset";
+                string folderGuid = AssetDatabase.CreateFolder(TestFolder, "FolderAsset");
+                string folderPath = $"{TestFolder}/FolderAsset";
                 PrefabUtility.SaveAsPrefabAsset(new GameObject(), $"{folderPath}/subfolderprefab.prefab");
 
                 AddressableAssetEntry folderEntry = Settings.CreateOrMoveEntry(folderGuid, Settings.DefaultGroup);

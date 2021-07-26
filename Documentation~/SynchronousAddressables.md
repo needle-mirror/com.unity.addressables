@@ -35,3 +35,8 @@ void Start()
 Addressables supports custom `AsyncOperations` which support unique implementations of `InvokeWaitForCompletion`.  This overridable method is what you'll use to implement custom synchronous operations.
 
 Custom operations work with `ChainOperations` and `GroupsOperations`.  If you require chained operations to be completed synchronously, ensure that your custom operations implement `InvokeWaitForCompletion` and create a `ChainOperation` using your custom operations.  Similarly, `GroupOperations` are well suited to ensure a collection of `AsyncOperations`, including custom operations, complete together.  Both `ChainOperation` and `GroupOperation` have their own implementations of `InvokeWaitForCompletion` that relies on the `InvokeWaitForCompletion` implementations of the operations they depend on.
+
+### WebGL
+WebGL does not support `WaitForCompletion`.  On WebGL, all files are loaded using a web request.  On other platforms, a web request gets started on a background thread and the main thread spins in a tight loop while waiting for the web request to finish.  This is how Addressables does it for `WaitForCompletion` when a web request is used.
+
+Since WebGL is single-threaded, the tight loop blocks the web request and the operation is never allowed to finish.  If a web request finishes the same frame it was created, then `WaitForCompletion` wouldn't have any issue.  However, we cannot guarantee this to be the case, and likely it isn't the case for most instances.

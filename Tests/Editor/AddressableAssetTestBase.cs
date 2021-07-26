@@ -12,10 +12,15 @@ namespace UnityEditor.AddressableAssets.Tests
     public abstract class AddressableAssetTestBase
     {
         protected const string k_TestConfigName = "AddressableAssetSettings.Tests";
-        protected string ConfigFolder => $"Assets/{GetType()}_Tests";
+
+        protected string TestFolder => $"Assets/{TestFolderName}";
+        protected string TestFolderName => $"{GetType()}_Tests";
+        protected string ConfigFolder => TestFolder + "/Config";
+        
+        
         protected string GetAssetPath(string assetName)
         {
-            return $"{ConfigFolder}/{assetName}";
+            return $"{TestFolder}/{assetName}";
         }
 
         private AddressableAssetSettings m_Settings;
@@ -39,36 +44,29 @@ namespace UnityEditor.AddressableAssets.Tests
             //TODO: Remove when NSImage warning issue on bokken is fixed
             Application.logMessageReceived += CheckLogForWarning;
 
-            if (Directory.Exists(ConfigFolder))
+            if (Directory.Exists(TestFolder))
             {
-                Debug.Log($"{GetType()} (init) - deleting {ConfigFolder}");
-                AssetDatabase.DeleteAsset(ConfigFolder);
+                Debug.Log($"{GetType()} (init) - deleting {TestFolder}");
+                if (!AssetDatabase.DeleteAsset(TestFolder))
+                    Directory.Delete(TestFolder);
             }
-            if (!Directory.Exists(ConfigFolder))
-            {
-                Debug.Log($"{GetType()} (init) - creating {ConfigFolder}");
-                Directory.CreateDirectory(ConfigFolder);
-                AssetDatabase.Refresh();
-            }
+            
+            Debug.Log($"{GetType()} (init) - creating {TestFolder}");
+            AssetDatabase.CreateFolder("Assets", TestFolderName);
+            AssetDatabase.CreateFolder(TestFolder, "Config");
 
             Settings.labelTable.labelNames.Clear();
             GameObject testObject = new GameObject("TestObject");
             GameObject testObject1 = new GameObject("TestObject 1");
             GameObject testObject2 = new GameObject("TestObject 2");
-#if UNITY_2018_3_OR_NEWER
-            PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/test.prefab");
-            PrefabUtility.SaveAsPrefabAsset(testObject1, ConfigFolder + "/test 1.prefab");
-            PrefabUtility.SaveAsPrefabAsset(testObject2, ConfigFolder + "/test 2.prefab");
-#else
-            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
-            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test 1.prefab", testObject1);
-            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test 2.prefab", testObject2);
-#endif
-            m_AssetGUID = AssetDatabase.AssetPathToGUID(ConfigFolder + "/test.prefab");
+            PrefabUtility.SaveAsPrefabAsset(testObject, TestFolder + "/test.prefab");
+            PrefabUtility.SaveAsPrefabAsset(testObject1, TestFolder + "/test 1.prefab");
+            PrefabUtility.SaveAsPrefabAsset(testObject2, TestFolder + "/test 2.prefab");
+            m_AssetGUID = AssetDatabase.AssetPathToGUID(TestFolder + "/test.prefab");
 
-            string scene1Path = ConfigFolder + "/contentUpdateScene1.unity";
-            string scene2Path = ConfigFolder + "/contentUpdateScene2.unity";
-            string scene3Path = ConfigFolder + "/contentUpdateScene3.unity";
+            string scene1Path = TestFolder + "/contentUpdateScene1.unity";
+            string scene2Path = TestFolder + "/contentUpdateScene2.unity";
+            string scene3Path = TestFolder + "/contentUpdateScene3.unity";
 
             Scene scene1 = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
             EditorSceneManager.SaveScene(scene1, scene1Path);
@@ -113,10 +111,10 @@ namespace UnityEditor.AddressableAssets.Tests
         public void Cleanup()
         {
             OnCleanup();
-            if (Directory.Exists(ConfigFolder))
+            if (Directory.Exists(TestFolder))
             {
-                Debug.Log($"{GetType()} - (cleanup) deleting {ConfigFolder}");
-                AssetDatabase.DeleteAsset(ConfigFolder);
+                Debug.Log($"{GetType()} - (cleanup) deleting {TestFolder}");
+                AssetDatabase.DeleteAsset(TestFolder);
             }
             EditorBuildSettings.RemoveConfigObject(k_TestConfigName);
         }

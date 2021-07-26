@@ -66,6 +66,11 @@ namespace UnityEditor.AddressableAssets.GUI
 
         readonly Dictionary<string, ProfileVarItem> m_ItemMap;
 
+        internal int Count
+        {
+            get { return m_ItemMap.Count; }
+        }
+
         public float RowHeight
         {
             get { return rowHeight; }
