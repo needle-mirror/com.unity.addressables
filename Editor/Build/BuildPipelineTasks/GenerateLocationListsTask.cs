@@ -63,7 +63,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             input.AddressableAssetEntries = aaContext.assetEntries;
             input.Target = m_Parameters.Target;
 
-            Output output = RunInternal(input);
+            Output output = ProcessInput(input);
 
             if (aaContext.locations == null)
                 aaContext.locations = output.Locations;
@@ -80,26 +80,69 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             return ReturnCode.Success;
         }
 
-        internal struct Input
+        /// <summary>
+        /// Storage for data gathered by the build pipeline.
+        /// </summary>
+        public struct Input
         {
-            // mapping from serialized filename to the bundle name
+            /// <summary>
+            /// Mapping from serialized filename to the bundle name 
+            /// </summary>
             public Dictionary<string, string> FileToBundle;
-            // mapping of an asset to all the serialized files needed to load it. The first entry is the file that contains the asset itself.
+            /// <summary>
+            /// Mapping of an asset to all the serialized files needed to load it. The first entry is the file that contains the asset itself.
+            /// </summary>
             public Dictionary<GUID, List<string>> AssetToFiles;
+            /// <summary>
+            /// Map of Guid to AssetLoadInfo
+            /// </summary>
             public Dictionary<GUID, AssetLoadInfo> AssetToAssetInfo;
+            /// <summary>
+            /// The logger used during the build.
+            /// </summary>
             public IBuildLogger Logger;
+            /// <summary>
+            /// The current AddressableAssetSettings to be processed.
+            /// </summary>
             public AddressableAssetSettings Settings;
+            /// <summary>
+            /// Mapping of the AssetBundle to the AddressableAssetGroup it was derived from
+            /// </summary>
             public Dictionary<string, string> BundleToAssetGroup;
+            /// <summary>
+            /// All the AddressableAssetEntries to process
+            /// </summary>
             public List<AddressableAssetEntry> AddressableAssetEntries;
+            /// <summary>
+            /// The BuildTarget to build for.
+            /// </summary>
             public BuildTarget Target;
         }
 
-        internal struct Output
+        /// <summary>
+        /// Storage for location data, including: dependencies, locations, and provider types.
+        /// </summary>
+        public struct Output
         {
+            /// <summary>
+            /// Content Catalog entries that were built into the Catalog.
+            /// </summary>
             public List<ContentCatalogDataEntry> Locations;
+            /// <summary>
+            /// A mapping of AddressableAssetGroups to the AssetBundles generated from its data.
+            /// </summary>
             public Dictionary<AddressableAssetGroup, List<string>> AssetGroupToBundles;
+            /// <summary>
+            /// A hash set of all the provider types included in the build.
+            /// </summary>
             public HashSet<Type> ProviderTypes;
+            /// <summary>
+            /// A mapping of AssetBundles to the direct dependencies
+            /// </summary>
             public Dictionary<string, List<string>> BundleToImmediateBundleDependencies;
+            /// <summary>
+            /// A mapping of AssetBundles to their expanded dependencies.
+            /// </summary>
             public Dictionary<string, List<string>> BundleToExpandedBundleDependencies;
         }
 
@@ -156,7 +199,12 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             return e;
         }
 
-        internal static Output RunInternal(Input input)
+        /// <summary>
+        /// Processes the Input data from the build and returns an organized struct of information, including dependencies and catalog loctions.
+        /// </summary>
+        /// <param name="input">Data captured as part of the build process.</param>
+        /// <returns>An object that contains organized information about dependencies and catalog locations.</returns>
+        public static Output ProcessInput(Input input)
         {
             var locations = new List<ContentCatalogDataEntry>();
             var assetGroupToBundles = new Dictionary<AddressableAssetGroup, List<string>>();
@@ -210,7 +258,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                     foreach (GUID assetGUID in bEntry.Assets)
                     {
                         if (guidToEntry.TryGetValue(assetGUID.ToString(), out AddressableAssetEntry entry)) 
-                            entry.CreateCatalogEntriesInternal(locations, true, assetProvider, bEntry.ExpandedDependencies.Select(x => x.BundleName), null, input.AssetToAssetInfo, providerTypes, schema.IncludeAddressInCatalog, schema.IncludeGUIDInCatalog, schema.IncludeLabelsInCatalog, bEntry.AssetInternalIds);
+                            entry.CreateCatalogEntries(locations, true, assetProvider, bEntry.ExpandedDependencies.Select(x => x.BundleName), null, input.AssetToAssetInfo, providerTypes, schema.IncludeAddressInCatalog, schema.IncludeGUIDInCatalog, schema.IncludeLabelsInCatalog, bEntry.AssetInternalIds);
                     }
                 }
             }

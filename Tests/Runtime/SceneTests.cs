@@ -1,4 +1,3 @@
-#if UNITY_2019_3_OR_NEWER
 using NUnit.Framework;
 using System;
 using System.Collections;
@@ -6,13 +5,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 #if UNITY_EDITOR
+using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.SceneManagement;
 #endif
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.SceneManagement;
@@ -26,6 +28,7 @@ namespace SceneTests
         const int numScenes = 2;
         protected List<String> sceneKeys;
         const string prefabKey = "prefabKey";
+        internal const string kEmbeddedSceneName = "embeddedassetscene";
 
         protected internal string GetPrefabKey()
         {
@@ -58,6 +61,16 @@ namespace SceneTests
             {
                 string scenePath = CreateAssetPath(tempAssetFolder, sceneKeys[i], ".unity");
                 string sceneGuid = CreateScene(scenePath);
+                AddressableAssetEntry sceneEntry = settings.CreateOrMoveEntry(sceneGuid, group, false, false);
+                sceneEntry.address = Path.GetFileNameWithoutExtension(sceneEntry.AssetPath);
+            }
+
+            {
+                string scenePath = CreateAssetPath(tempAssetFolder, kEmbeddedSceneName, ".unity");
+                var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Additive);
+                new GameObject("EmbededMeshGameObject").AddComponent<MeshFilter>().mesh = new Mesh();
+                EditorSceneManager.SaveScene(scene, scenePath);
+                string sceneGuid = AssetDatabase.AssetPathToGUID(scene.path);
                 AddressableAssetEntry sceneEntry = settings.CreateOrMoveEntry(sceneGuid, group, false, false);
                 sceneEntry.address = Path.GetFileNameWithoutExtension(sceneEntry.AssetPath);
             }
@@ -96,14 +109,29 @@ namespace SceneTests
         [UnityTest]
         public IEnumerator AddressablesImpl_LoadSceneAsync_FailsLoadNonexistent()
         {
+            var ifm = LogAssert.ignoreFailingMessages;
             LogAssert.ignoreFailingMessages = true;
             var op = m_Addressables.LoadSceneAsync("testkey");
             yield return op;
             
             Assert.AreEqual(AsyncOperationStatus.Failed,op.Status);
             Assert.IsTrue(op.OperationException.Message.Contains("InvalidKey"));
+            LogAssert.ignoreFailingMessages = ifm;
         }
 
+        [UnityTest]
+        public IEnumerator LoadSceneAsync_Fails_When_DepsFail()
+        {
+            var ifm = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+            var loc = new ResourceLocationBase("scene", "asdf", typeof(SceneProvider).FullName, typeof(SceneInstance), new ResourceLocationBase("invalid", "nobundle", typeof(AssetBundleProvider).FullName, typeof(AssetBundleResource)));
+            var op = m_Addressables.LoadSceneAsync(loc);
+            yield return op;
+
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status);
+            Assert.IsTrue(op.OperationException.Message.Contains("GroupOperation"));
+            LogAssert.ignoreFailingMessages = ifm;
+        }
         [UnityTest]
         public IEnumerator PercentComplete_NeverHasDecreasedValue_WhenLoadingScene()
         {
@@ -288,7 +316,7 @@ namespace SceneTests
             
             Assert.AreEqual(1, m_Addressables.m_SceneInstances.Count);
             bool autoReleaseHandle = false;
-            op = impl.UnloadSceneAsync((AsyncOperationHandle)op,autoReleaseHandle);
+            op = impl.UnloadSceneAsync((AsyncOperationHandle)op, UnloadSceneOptions.None, autoReleaseHandle);
             yield return op;
 
             Assert.AreEqual(AsyncOperationStatus.Succeeded,op.Status);
@@ -499,10 +527,27 @@ namespace SceneTests
             Assert.AreEqual(bundleCountBeforeTest,bundleCountEndTest);
             Assert.IsFalse(instOp.IsValid());
         }
+
+        [UnityTest]
+        public IEnumerator WhenUnloadScene_UnloadEmbeddedAssetsFlagWorks([Values(false,true)] bool unloadEmbeddedAssets)
+        {
+            // Create scene with embedded asset. Let's use Scriptable Object for ease of use
+            var op = m_Addressables.LoadSceneAsync(kEmbeddedSceneName, LoadSceneMode.Additive);
+            yield return op;
+
+            // find the ScriptableObject. Get reference to it
+            Mesh mesh = GameObject.Find("EmbededMeshGameObject").GetComponent<MeshFilter>().mesh;
+
+            
+            UnloadSceneOptions options = unloadEmbeddedAssets ? UnloadSceneOptions.UnloadAllEmbeddedSceneObjects : UnloadSceneOptions.None;
+            var unloadOp = m_Addressables.UnloadSceneAsync(op, options, false);
+            yield return unloadOp;
+
+            Assert.AreEqual(mesh == null, unloadEmbeddedAssets);
+        }
     }
 #endif
     //[Bug: https://jira.unity3d.com/browse/ADDR-1215]
     //[UnityPlatform(exclude = new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor })]
     //class SceneTests_PackedMode : SceneTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Packed; } } }
 }
-#endif

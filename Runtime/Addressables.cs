@@ -39,6 +39,11 @@ namespace UnityEngine.AddressableAssets
         public Type Type { get; private set; }
 
         /// <summary>
+        /// MergeMode if used, else null.
+        /// </summary>
+        public Addressables.MergeMode? MergeMode { get; }
+
+        /// <summary>
         /// Construct a new InvalidKeyException.
         /// </summary>
         /// <param name="key">The key that caused the exception.</param>
@@ -53,6 +58,19 @@ namespace UnityEngine.AddressableAssets
         {
             Key = key;
             Type = type;
+        }
+
+        /// <summary>
+        /// Construct a new InvalidKeyException.
+        /// </summary>
+        /// <param name="key">The key that caused the exception.</param>
+        /// <param name="type">The type of the key that caused the exception.</param>
+        /// <param name="mergeMode">The mergeMode of the input that caused the exception.</param>
+        public InvalidKeyException(object key, Type type, Addressables.MergeMode mergeMode)
+        {
+            Key = key;
+            Type = type;
+            MergeMode = mergeMode;
         }
 
         ///<inheritdoc cref="InvalidKeyException"/>
@@ -74,6 +92,28 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
+                if (Key is string)
+                    return base.Message + $", Key={Key}, Type={Type}";
+
+                IEnumerable enumerableKey = Key as IEnumerable;
+                if (enumerableKey != null)
+                {
+                    System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder("Keys=");
+                    int count = 0;
+                    foreach (object s in enumerableKey)
+                    {
+                        count++;
+                        stringBuilder.Append(count > 1 ? $", {s}" : s);
+                    }
+
+                    if (count == 1)
+                        stringBuilder.Replace("Keys=", "Key=");
+
+                    if (MergeMode.HasValue)
+                        return base.Message + $", {stringBuilder}, Type={Type}, MergeMode={MergeMode.Value}";
+                    return base.Message + $", {stringBuilder}, Type={Type}";
+                }
+
                 return base.Message + $", Key={Key}, Type={Type}";
             }
         }
@@ -90,7 +130,7 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
-#if UNITY_EDITOR && UNITY_2019_3_OR_NEWER
+#if UNITY_EDITOR
                 if (EditorSettings.enterPlayModeOptionsEnabled && reinitializeAddressables)
                 {
                     reinitializeAddressables = false;
@@ -107,7 +147,7 @@ namespace UnityEngine.AddressableAssets
         public static ResourceManager ResourceManager { get { return m_Addressables.ResourceManager; } }
         internal static AddressablesImpl Instance { get { return m_Addressables; } }
 
-#if UNITY_EDITOR && UNITY_2019_3_OR_NEWER
+#if UNITY_EDITOR
         [InitializeOnLoadMethod]
         static void RegisterPlayModeStateChange()
         {
@@ -116,7 +156,7 @@ namespace UnityEngine.AddressableAssets
 
         static void SetAddressablesReInitFlagOnExitPlayMode(PlayModeStateChange change)
         {
-            if (change == PlayModeStateChange.ExitingPlayMode)
+            if (change == PlayModeStateChange.EnteredEditMode)
                 reinitializeAddressables = true;
         }
 
@@ -153,7 +193,7 @@ namespace UnityEngine.AddressableAssets
         /// <remarks>
         /// The web request passed to this delegate has already been preconfigured internally. Override at your own risk.
         /// </remarks>
-        internal static Action<UnityWebRequest> WebRequestOverride
+        public static Action<UnityWebRequest> WebRequestOverride
         {
             get { return m_Addressables.WebRequestOverride; }
             set { m_Addressables.WebRequestOverride = value; }
@@ -330,6 +370,15 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
+        /// Debug.LogException wrapper method.
+        /// </summary>
+        /// <param name="ex">The exception.</param>
+        public static void LogException(Exception ex)
+        {
+            m_Addressables.LogException(ex);
+        }
+
+        /// <summary>
         /// Debug.LogErrorFormat wrapper method.
         /// </summary>
         /// <param name="format">The string with format tags.</param>
@@ -358,6 +407,17 @@ namespace UnityEngine.AddressableAssets
         public static AsyncOperationHandle<IResourceLocator> InitializeAsync()
         {
             return m_Addressables.InitializeAsync();
+        }
+
+        /// <summary>
+        /// Initialize Addressables system.  Addressables will be initialized on the first API call if this is not called explicitly.
+        /// See the [InitializeAsync](xref:addressables-api-initialize-async) documentation for more details.
+        /// </summary>
+        /// <param name="autoReleaseHandle">If true, the handle is automatically released on completion.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<IResourceLocator> InitializeAsync(bool autoReleaseHandle)
+        {
+            return m_Addressables.InitializeAsync(autoReleaseHandle);
         }
 
         /// <summary>
@@ -1300,10 +1360,47 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="scene">The SceneInstance to release.</param>
         /// <param name="autoReleaseHandle">If true, the handle will be released automatically when complete.</param>
+        /// <param name="shouldUnloadEmbeddedAssets">If true, assets embededed in the scene will be unloaded as part of the scene unload process.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<SceneInstance> UnloadSceneAsync(SceneInstance scene, UnloadSceneOptions unloadOptions, bool autoReleaseHandle = true)
+        {
+            return m_Addressables.UnloadSceneAsync(scene, unloadOptions, autoReleaseHandle);
+        }
+
+        /// <summary>
+        /// Release scene
+        /// </summary>
+        /// <param name="handle">The handle returned by LoadSceneAsync for the scene to release.</param>
+        /// <param name="unloadOptions">If true, assets embededed in the scene will be unloaded as part of the scene unload process.</param>
+        /// <param name="autoReleaseHandle">If true, the handle will be released automatically when complete.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<SceneInstance> UnloadSceneAsync(AsyncOperationHandle handle, UnloadSceneOptions unloadOptions, bool autoReleaseHandle = true)
+        {
+            return m_Addressables.UnloadSceneAsync(handle, unloadOptions, autoReleaseHandle);
+        }
+
+        /// <summary>
+        /// Release scene
+        /// </summary>
+        /// <param name="handle">The handle returned by LoadSceneAsync for the scene to release.</param>
+        /// <param name="autoReleaseHandle">If true, the handle will be released automatically when complete.</param>
+        /// <returns>The operation handle for the request.</returns>
+        //[Obsolete("We have added Async to the name of all asycn methods (UnityUpgradable) -> UnloadSceneAsync(*)", true)]
+        [Obsolete]
+        public static AsyncOperationHandle<SceneInstance> UnloadScene(AsyncOperationHandle<SceneInstance> handle, UnloadSceneOptions unloadOptions, bool autoReleaseHandle = true)
+        {
+            return UnloadSceneAsync(handle, unloadOptions, autoReleaseHandle);
+        }
+
+        /// <summary>
+        /// Release scene
+        /// </summary>
+        /// <param name="scene">The SceneInstance to release.</param>
+        /// <param name="autoReleaseHandle">If true, the handle will be released automatically when complete.</param>
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<SceneInstance> UnloadSceneAsync(SceneInstance scene, bool autoReleaseHandle = true)
         {
-            return m_Addressables.UnloadSceneAsync(scene, autoReleaseHandle);
+            return m_Addressables.UnloadSceneAsync(scene, UnloadSceneOptions.None, autoReleaseHandle);
         }
 
         /// <summary>
@@ -1314,7 +1411,7 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<SceneInstance> UnloadSceneAsync(AsyncOperationHandle handle, bool autoReleaseHandle = true)
         {
-            return m_Addressables.UnloadSceneAsync(handle, autoReleaseHandle);
+            return m_Addressables.UnloadSceneAsync(handle, UnloadSceneOptions.None, autoReleaseHandle);
         }
 
         /// <summary>
@@ -1325,7 +1422,7 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<SceneInstance> UnloadSceneAsync(AsyncOperationHandle<SceneInstance> handle, bool autoReleaseHandle = true)
         {
-            return m_Addressables.UnloadSceneAsync(handle, autoReleaseHandle);
+            return m_Addressables.UnloadSceneAsync(handle, UnloadSceneOptions.None, autoReleaseHandle);
         }
 
         /// <summary>
@@ -1347,7 +1444,20 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The operation with the list of updated content catalog data.</returns>
         public static AsyncOperationHandle<List<IResourceLocator>> UpdateCatalogs(IEnumerable<string> catalogs = null, bool autoReleaseHandle = true)
         {
-            return m_Addressables.UpdateCatalogs(catalogs, autoReleaseHandle);
+            return m_Addressables.UpdateCatalogs(catalogs, autoReleaseHandle, false);
+        }
+
+        /// <summary>
+        /// Update the specified catalogs.
+        /// See the [UpdateCatalogs](xref:addressables-api-update-catalogs) documentation for more details.
+        /// </summary>
+        /// <param name="autoCleanBundleCache">If true, removes any nonreferenced bundles in the cache.</param>
+        /// <param name="catalogs">The set of catalogs to update.  If null, all catalogs that have an available update will be updated.</param>
+        /// <param name="autoReleaseHandle">If true, the handle will automatically be released when the operation completes.</param>
+        /// <returns>The operation with the list of updated content catalog data.</returns>
+        public static AsyncOperationHandle<List<IResourceLocator>> UpdateCatalogs(bool autoCleanBundleCache, IEnumerable<string> catalogs = null, bool autoReleaseHandle = true) // autoCleanBundleCache must be listed first to avoid breaking API
+        {
+            return m_Addressables.UpdateCatalogs(catalogs, autoReleaseHandle, autoCleanBundleCache);
         }
 
         /// <summary>
@@ -1376,6 +1486,20 @@ namespace UnityEngine.AddressableAssets
         public static void ClearResourceLocators()
         {
             m_Addressables.ClearResourceLocators();
+        }
+
+        /// <summary>
+        /// Removes any AssetBundles that are no longer referenced in the bundle cache. This can occur when a new, updated catalog excludes entries present in an older catalog.
+        /// </summary>
+        /// <remarks>
+        /// Note, that only AssetBundles loaded through UnityWebRequest are cached. If you want to purge the entire cache, use Caching.ClearCache instead.
+        /// In the Editor CleanBundleCache should only be called when using the "Use Existing Build (requires built groups)" playmode script as it loads content from bundles.
+        /// </remarks>
+        /// <param name="catalogsIds">The ids of catalogs whose bundle cache entries we want to preserve. If null, entries for all currently loaded catalogs will be preserved.</param>
+        /// <returns>The operation handle for the request. Note, that it is user's responsibility to release the returned operation; this can be done before or after the operation completes.</returns>
+        public static AsyncOperationHandle<bool> CleanBundleCache(IEnumerable<string> catalogsIds = null)
+        {
+            return m_Addressables.CleanBundleCache(catalogsIds);
         }
     }
 }

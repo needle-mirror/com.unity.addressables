@@ -12,17 +12,22 @@ namespace UnityEngine.AddressableAssets
         AddressablesImpl m_Addressables;
         List<AddressablesImpl.ResourceLocatorInfo> m_LocatorInfos;
         AsyncOperationHandle<IList<AsyncOperationHandle>> m_DepOp;
+        AsyncOperationHandle<bool> m_CleanCacheOp;
+        bool m_AutoCleanBundleCache = false;
+
         public UpdateCatalogsOperation(AddressablesImpl aa)
         {
             m_Addressables = aa;
         }
 
-        public AsyncOperationHandle<List<IResourceLocator>> Start(IEnumerable<string> catalogIds)
+        public AsyncOperationHandle<List<IResourceLocator>> Start(IEnumerable<string> catalogIds, bool autoCleanBundleCache)
         {
             m_LocatorInfos = new List<AddressablesImpl.ResourceLocatorInfo>();
             var locations = new List<IResourceLocation>();
             foreach (var c in catalogIds)
             {
+                if (c == null)
+                    continue;
                 var loc = m_Addressables.GetLocatorInfo(c);
                 locations.Add(loc.CatalogLocation);
                 m_LocatorInfos.Add(loc);
@@ -36,6 +41,7 @@ namespace UnityEngine.AddressableAssets
                 ccp.DisableCatalogUpdateOnStart = false;
 
             m_DepOp = m_Addressables.ResourceManager.CreateGroupOperation<object>(locations);
+            m_AutoCleanBundleCache = autoCleanBundleCache;
             return m_Addressables.ResourceManager.StartOperation(this, m_DepOp);
         }
 
@@ -47,11 +53,14 @@ namespace UnityEngine.AddressableAssets
             if (m_DepOp.IsValid() && !m_DepOp.IsDone)
                 m_DepOp.WaitForCompletion();
 
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
             if (!HasExecuted)
                 InvokeExecute();
 
-            m_Addressables.ResourceManager.Update(Time.deltaTime);
+            if (m_CleanCacheOp.IsValid() && !m_CleanCacheOp.IsDone)
+                m_CleanCacheOp.WaitForCompletion();
+
+            m_Addressables.ResourceManager.Update(Time.unscaledDeltaTime);
             return IsDone;
         }
 
@@ -60,7 +69,8 @@ namespace UnityEngine.AddressableAssets
             m_Addressables.Release(m_DepOp);
         }
 
-        protected override void GetDependencies(List<AsyncOperationHandle> dependencies)
+        /// <inheritdoc />
+        public override void GetDependencies(List<AsyncOperationHandle> dependencies)
         {
             dependencies.Add(m_DepOp);
         }
@@ -84,7 +94,23 @@ namespace UnityEngine.AddressableAssets
                 m_LocatorInfos[i].UpdateContent(locator, localHash, remoteLocation);
                 catalogs.Add(m_LocatorInfos[i].Locator);
             }
-            Complete(catalogs, true, null);
+
+            if (!m_AutoCleanBundleCache)
+                Complete(catalogs, true, null);
+            else
+            {
+                m_CleanCacheOp = m_Addressables.CleanBundleCache(m_DepOp);
+                OnCleanCacheCompleted(m_CleanCacheOp, catalogs);
+            }
+        }
+
+        void OnCleanCacheCompleted(AsyncOperationHandle<bool> handle, List<IResourceLocator> catalogs)
+        {
+            handle.Completed += (obj) =>
+            {
+                bool success = obj.Status == AsyncOperationStatus.Succeeded;
+                Complete(catalogs, success, success ? null : $"{obj.DebugName}, status={obj.Status}, result={obj.Result} catalogs updated, but failed to clean bundle cache.");
+            };
         }
     }
 }

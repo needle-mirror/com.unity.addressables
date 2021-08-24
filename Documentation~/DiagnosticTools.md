@@ -33,7 +33,7 @@ Analyze is a tool that gathers information on your Projects' Addressables layout
 ### Using Analyze
 In the Editor, open the **Addressables Analyze** window (**Window** > **Asset Management** > **Addressables** > **Analyze**), or open it via the **Addressables Groups** window by clicking  the **Tools** > **Window** > **Analyze** button.
 
-The Analyze window displays a list of Analyze rules, along with the following operations: 
+The Analyze window displays a list of Analyze rules, along with the following operations:
 
 * Analyze Selected Rules
 * Clear Selected Rules
@@ -69,14 +69,14 @@ Also note that duplicate assets may not always be an issue. If assets will never
 
 #### Unfixable rules
 ##### Check Resources to Addressable Duplicate Dependencies
-This rule detects if any assets or asset dependencies are duplicated between built Addressable data and assets residing in a `Resources` folder. 
+This rule detects if any assets or asset dependencies are duplicated between built Addressable data and assets residing in a `Resources` folder.
 
 **Issues**: These duplications mean that data will be included in both the application build and the Addressables build.
 
 **Resolution**: This rule is unfixable, because no appropriate action exists. It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any. One example of a possible manual fix is to move the offending asset(s) out of the `Resources` folder, and make them Addressable.
 
 ##### Check Scene to Addressable Duplicate Dependencies
-This rule detects any assets or asset dependencies that are shared between the Scenes in the Editor Scene list and Addressables. 
+This rule detects any assets or asset dependencies that are shared between the Scenes in the Editor Scene list and Addressables.
 
 **Issues**: These duplications mean that data will be included in both the application build and the Addressables build.
 
@@ -85,18 +85,18 @@ This rule detects any assets or asset dependencies that are shared between the S
 ##### Build Bundle Layout
 This rule will show how assets explicitly marked as Addressable will be laid out in the Addressable build.  Given these explicit assets, we also show what assets are implicitly referenced by, and therefore will be pulled into, the build.
 
-Data gathered by this rule does not indicate any particular issues.  It is purely informational. 
+Data gathered by this rule does not indicate any particular issues.  It is purely informational.
 
 ### Extending Analyze
-Each unique Project may require additional Analyze rules beyond what comes pre-packaged. The Addressable Assets System allows you to create your own custom rule classes. 
+Each unique Project may require additional Analyze rules beyond what comes pre-packaged. The Addressable Assets System allows you to create your own custom rule classes.
 
 #### AnalyzeRule objects
-Create a new child class of the [`AnalyzeRule`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule) class, overriding the following properties: 
+Create a new child class of the [`AnalyzeRule`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule) class, overriding the following properties:
 
 * [`CanFix`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.CanFix) tells Analyze if the rule is deemed fixable or not.
 * [`ruleName`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.ruleName) is the display name you'll see for this rule in the **Analyze window**.
 
-You'll also need to override the following methods, which are detailed below: 
+You'll also need to override the following methods, which are detailed below:
 
 * [`List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.RefreshAnalysis(UnityEditor.AddressableAssets.Settings.AddressableAssetSettings))
 * [`void FixIssues(AddressableAssetSettings settings)`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRule.FixIssues(UnityEditor.AddressableAssets.Settings.AddressableAssetSettings))
@@ -129,3 +129,15 @@ class RegisterMyRule
     }
 }
 ```
+
+#### Included AnalyzeRule inheritors
+In order to make it faster to setup custom rules, a couple Addressables classes inherited from [`AnalyzeRule`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRules) are included.
+
+#### Bundle Rules Base class
+[`BundleRuleBase`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.BundleRuleBase) is a base class for handling [`AnalyzeRule`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRules) tasks. It includes some basic methods to retrieve information about bundle and resource dependencies.
+
+#### Check bundle duplicates
+Three classes are included for checking for bundle dependency duplicates, and in these [`FixIssues`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.CheckBundleDupeDependencies.FixIssues``1(AddressableAssetSettings settings)) method can be overridden to perform some custom action.
+[`CheckBundleDupeDependencies`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.CheckBundleDupeDependencies) inherits from [`BundleRuleBase`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.BundleRuleBase) and includes further methods for [`AnalyzeRule`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.AnalyzeRules) to check bundle dependencies for duplicates and a method to attempt to resolve these duplicates.
+[`CheckResourcesDupeDependencies`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.CheckResourcesDupeDependencies) is the same, but resource dependencies specific.
+[`CheckSceneDupeDependencies`](xref:UnityEditor.AddressableAssets.Build.AnalyzeRules.CheckSceneDupeDependencies) is the same, but for scene dependencies specific.

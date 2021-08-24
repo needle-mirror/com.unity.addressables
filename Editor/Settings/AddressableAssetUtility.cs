@@ -1,8 +1,14 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Utilities;
 using UnityEditor.PackageManager;
@@ -34,6 +40,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             return true;
         }
+
         static HashSet<string> excludedExtensions = new HashSet<string>(new string[] { ".cs", ".js", ".boo", ".exe", ".dll", ".meta" });
         internal static bool IsPathValidForEntry(string path)
         {
@@ -276,7 +283,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             return result;
         }
-        
+
         internal static bool IsUsingVCIntegration()
         {
             return Provider.isActive && Provider.enabled;
@@ -285,7 +292,7 @@ namespace UnityEditor.AddressableAssets.Settings
         internal static bool IsVCAssetOpenForEdit(string path)
         {
             AssetList VCAssets = GetVCAssets(path);
-            foreach(Asset vcAsset in VCAssets)
+            foreach (Asset vcAsset in VCAssets)
             {
                 if (vcAsset.path == path)
                     return Provider.IsOpenForEdit(vcAsset);
@@ -295,25 +302,15 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal static AssetList GetVCAssets(string path)
         {
-            Task op = Provider.Status(path);
+            VersionControl.Task op = Provider.Status(path);
             op.Wait();
             return op.assetList;
         }
-                
+
         private static bool MakeAssetEditable(Asset asset)
         {
-#if UNITY_2019_4_OR_NEWER
-            if(!AssetDatabase.IsOpenForEdit(asset.path))
+            if (!AssetDatabase.IsOpenForEdit(asset.path))
                 return AssetDatabase.MakeEditable(asset.path);
-#else
-            if(!Provider.IsOpenForEdit(asset))
-            {
-                CheckoutMode mode = asset.isMeta ? CheckoutMode.Meta : CheckoutMode.Asset;
-                Task task = Provider.Checkout(asset, mode);
-                task.Wait();
-                return task.success;
-            }
-#endif
             return false;
         }
 
@@ -328,13 +325,13 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             if (!IsUsingVCIntegration() || string.IsNullOrEmpty(path))
                 return false;
-            
+
             AssetList assets = GetVCAssets(path);
-            var uneditableAssets = new List<Asset>();            
+            var uneditableAssets = new List<Asset>();
             string message = "Check out file(s)?\n\n";
-            foreach(Asset asset in assets)
+            foreach (Asset asset in assets)
             {
-                if(!Provider.IsOpenForEdit(asset))
+                if (!Provider.IsOpenForEdit(asset))
                 {
                     uneditableAssets.Add(asset);
                     message += $"{asset.path}\n";
@@ -347,7 +344,7 @@ namespace UnityEditor.AddressableAssets.Settings
             bool openedAsset = true;
             if (EditorUtility.DisplayDialog("Attempting to modify files that are uneditable", message, "Yes", "No"))
             {
-                foreach(Asset asset in uneditableAssets)
+                foreach (Asset asset in uneditableAssets)
                 {
                     if (!MakeAssetEditable(asset))
                         openedAsset = false;
@@ -358,10 +355,25 @@ namespace UnityEditor.AddressableAssets.Settings
             return openedAsset;
         }
 
-        internal static List<PackageManager.PackageInfo> GetPackages()
+        internal static ListRequest RequestPackageListAsync()
         {
-            ListRequest req = Client.List();
-            while (!req.IsCompleted) {}
+            ListRequest req = null;
+#if !UNITY_2021_1_OR_NEWER
+            req = Client.List(true);
+#endif
+            return req;
+        }
+
+        internal static List<PackageManager.PackageInfo> GetPackages(ListRequest req)
+        {
+#if UNITY_2021_1_OR_NEWER
+            var packagesList = new List<PackageManager.PackageInfo>(PackageManager.PackageInfo.GetAllRegisteredPackages());
+            return packagesList;
+#endif
+            while (!req.IsCompleted)
+            {
+                Thread.Sleep(5);
+            }
 
             var packages = new List<PackageManager.PackageInfo>();
             if (req.Status == StatusCode.Success)
@@ -371,6 +383,66 @@ namespace UnityEditor.AddressableAssets.Settings
                     packages.Add(package);
             }
             return packages;
+        }
+
+        internal static bool InstallCCDPackage()
+        {
+#if !ENABLE_CCD
+            string path = EditorUtility.OpenFolderPanel("Select CCD Management SDK Package", "", "");
+            if (!string.IsNullOrEmpty(path))
+            {
+                PackageManager.Client.Add($"file:{path}");
+                AddressableAssetSettingsDefaultObject.Settings.CCDEnabled = true;
+            }
+#endif
+            return AddressableAssetSettingsDefaultObject.Settings.CCDEnabled;
+        }
+
+        internal static void RemoveCCDPackage()
+        {
+            var confirm = EditorUtility.DisplayDialog("Remove CCD Management SDK Package", "Are you sure you want to remove the CCD Management SDK package?", "Yes", "No");
+            if (confirm)
+            {
+#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+                Client.Remove(AddressableAssetSettings.kCCDPackageName);
+                AddressableAssetSettingsDefaultObject.Settings.CCDEnabled = false;
+#endif
+            }
+        }
+
+        internal static string GetMd5Hash(string path)
+        {
+            string hashString;
+            using (var md5 = MD5.Create())
+            {
+                using (var stream = File.OpenRead(path))
+                {
+                    var hash = md5.ComputeHash(stream);
+                    hashString = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+
+                }
+            }
+            return hashString;
+        }
+
+
+
+        internal static System.Threading.Tasks.Task ParallelForEachAsync<T>(this IEnumerable<T> source, int dop, Func<T, System.Threading.Tasks.Task> body)
+        {
+            async System.Threading.Tasks.Task AwaitPartition(IEnumerator<T> partition)
+            {
+                using (partition)
+                {
+                    while (partition.MoveNext())
+                    { await body(partition.Current); }
+                }
+            }
+            return System.Threading.Tasks.Task.WhenAll(
+                Partitioner
+                    .Create(source)
+                    .GetPartitions(dop)
+                    .AsParallel()
+                    .Select(p => AwaitPartition(p)));
         }
     }
 }

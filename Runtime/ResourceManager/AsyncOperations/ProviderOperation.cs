@@ -62,7 +62,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 m_DepOp.WaitForCompletion();
             if (m_WaitForCompletionCallback == null)
                 return false;
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
             if (!HasExecuted)
                 InvokeExecute();
             if (m_WaitForCompletionCallback == null)
@@ -87,7 +87,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
         }
 
-        protected override void GetDependencies(List<AsyncOperationHandle> deps)
+        /// <inheritdoc />
+        public override void GetDependencies(List<AsyncOperationHandle> deps)
         {
             if (m_DepOp.IsValid())
                 deps.Add(m_DepOp);

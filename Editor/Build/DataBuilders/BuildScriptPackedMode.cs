@@ -668,6 +668,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 m_ResourceProviderData.Add(assetProviderData);
             }
 
+#if UNITY_2022_1_OR_NEWER
+            string loadPath = schema.LoadPath.GetValue(aaContext.Settings);
+            if (loadPath.StartsWith("http://"))
+                Addressables.LogWarning($"Addressable group {assetGroup.Name} uses insecure http for its load path.  By default UnityWebRequests no longer allow http connections.");
+#endif
+
             var bundleInputDefs = new List<AssetBundleBuild>();
             var list = PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema);
             aaContext.assetEntries.AddRange(list);
@@ -750,7 +756,15 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             throw new Exception("Invalid naming mode.");
         }
 
-        internal static List<AddressableAssetEntry> PrepGroupBundlePacking(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, BundledAssetGroupSchema schema, Func<AddressableAssetEntry, bool> entryFilter = null)
+        /// <summary>
+        /// Processes an AddressableAssetGroup and generates AssetBundle input definitions based on the BundlePackingMode.
+        /// </summary>
+        /// <param name="assetGroup">The AddressableAssetGroup to be processed.</param>
+        /// <param name="bundleInputDefs">The list of bundle definitions fed into the build pipeline AssetBundleBuild</param>
+        /// <param name="schema">The BundledAssetGroupSchema of used to process the assetGroup.</param>
+        /// <param name="entryFilter">A filter to remove AddressableAssetEntries from being processed in the build.</param>
+        /// <returns>The total list of AddressableAssetEntries that were processed.</returns>
+        public static List<AddressableAssetEntry> PrepGroupBundlePacking(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, BundledAssetGroupSchema schema, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
             var combinedEntries = new List<AddressableAssetEntry>();
             var packingMode = schema.BundleMode;

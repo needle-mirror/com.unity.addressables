@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets.HostingServices
 {
@@ -83,9 +84,18 @@ namespace UnityEditor.AddressableAssets.HostingServices
                 }
                 catch (Exception e)
                 {
+                    string url = m_Context.Request.Url.ToString();
                     Stop();
-                    Debug.LogException(e);
-                    throw;
+                    if (e.InnerException != null && e.InnerException is SocketException &&
+                        e.InnerException.Message == "The socket has been shut down")
+                    {
+                        Addressables.LogWarning($"Connection lost: {url}. The socket has been shut down.");
+                    }
+                    else
+                    {
+                        Addressables.LogException(e);
+                        throw;
+                    }
                 }
             }
 
@@ -238,7 +248,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         private void EditorUpdate()
         {
             if (m_LastFrameTime == 0)
-                m_LastFrameTime = EditorApplication.timeSinceStartup - Time.deltaTime;
+                m_LastFrameTime = EditorApplication.timeSinceStartup - Time.unscaledDeltaTime;
             double diff = EditorApplication.timeSinceStartup - m_LastFrameTime;
             int speed = m_UploadSpeed * 1024;
             int bps = speed > 0 ? speed : k_OneGBPS;

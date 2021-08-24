@@ -99,7 +99,10 @@ namespace UnityEditor.AddressableAssets.Settings
         }
     }
 
-    internal class AddressablesFileEnumeration
+    /// <summary>
+    /// Methods for enumerating Addressable folders.
+    /// </summary>
+    public class AddressablesFileEnumeration
     {
         internal static AddressableAssetTree BuildAddressableTree(AddressableAssetSettings settings, IBuildLogger logger = null)
         {
@@ -204,6 +207,14 @@ namespace UnityEditor.AddressableAssets.Settings
             m_PrecomputedTree = null;
         }
 
+        /// <summary>
+        /// Collects and returns all the asset paths of a given Addressable folder entry
+        /// </summary>
+        /// <param name="path">The path of the folder</param>
+        /// <param name="settings">The AddressableAssetSettings used to gather sub entries.</param>
+        /// <param name="recurseAll">Flag indicating if the folder should be traversed recursively.</param>
+        /// <param name="logger">Used to log messages during a build, if desired.</param>
+        /// <returns>List of asset files in a given folder entry</returns>
         public static List<string> EnumerateAddressableFolder(string path, AddressableAssetSettings settings, bool recurseAll, IBuildLogger logger = null)
         {
             if (!AssetDatabase.IsValidFolder(path))

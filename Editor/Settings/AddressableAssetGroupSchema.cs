@@ -101,10 +101,10 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (var schema in otherSchemas)
             {
                 var s_prop = (new SerializedObject(schema)).FindProperty(propertyName);
-                if ((type.IsEnum && (property.enumValueIndex != s_prop.enumValueIndex)) ||
-                    (type == typeof(string) && (property.stringValue != s_prop.stringValue)) ||
-                    (type == typeof(int) && (property.intValue != s_prop.intValue)) ||
-                    (type == typeof(bool) && (property.boolValue != s_prop.boolValue)))
+                if ((property.propertyType == SerializedPropertyType.Enum && (property.enumValueIndex != s_prop.enumValueIndex)) ||
+                    (property.propertyType == SerializedPropertyType.String && (property.stringValue != s_prop.stringValue)) ||
+                    (property.propertyType == SerializedPropertyType.Integer && (property.intValue != s_prop.intValue)) ||
+                    (property.propertyType == SerializedPropertyType.Boolean && (property.boolValue != s_prop.boolValue)))
                 {
                     EditorGUI.showMixedValue = true;
                     return;

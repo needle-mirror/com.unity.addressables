@@ -87,7 +87,7 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         AddressableAssetGroup groupX = CreateGroupMappedToBundle(input, "X");
         CreateAddressablePrefab(input, "p1", groupX, "fileX");
         input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
-        GenerateLocationListsTask.Output output = GenerateLocationListsTask.RunInternal(input);
+        GenerateLocationListsTask.Output output = GenerateLocationListsTask.ProcessInput(input);
         CollectionAssert.Contains(output.ProviderTypes, typeof(BundledAssetProvider));
     }
 
@@ -100,12 +100,12 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         var guid = CreateAddressablePrefab(input, "p1", groupX, "fileX");
         input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
         schema.IncludeGUIDInCatalog = true;
-        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+        foreach (var l in GenerateLocationListsTask.ProcessInput(input).Locations)
             if (l.Provider == typeof(BundledAssetProvider).FullName)
                 CollectionAssert.Contains(l.Keys, guid);
 
         schema.IncludeGUIDInCatalog = false;
-        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+        foreach (var l in GenerateLocationListsTask.ProcessInput(input).Locations)
             if (l.Provider == typeof(BundledAssetProvider).FullName)
                 CollectionAssert.DoesNotContain(l.Keys, guid);
     }
@@ -120,12 +120,12 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
 
         schema.IncludeAddressInCatalog = true;
-        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+        foreach (var l in GenerateLocationListsTask.ProcessInput(input).Locations)
             if (l.Provider == typeof(BundledAssetProvider).FullName)
                 CollectionAssert.Contains(l.Keys, "p1");
 
         schema.IncludeAddressInCatalog = false;
-        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+        foreach (var l in GenerateLocationListsTask.ProcessInput(input).Locations)
             if (l.Provider == typeof(BundledAssetProvider).FullName)
                 CollectionAssert.DoesNotContain(l.Keys, "p1");
     }
@@ -141,12 +141,12 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
 
         schema.IncludeLabelsInCatalog = true;
-        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+        foreach (var l in GenerateLocationListsTask.ProcessInput(input).Locations)
             if (l.Provider == typeof(BundledAssetProvider).FullName)
                 CollectionAssert.Contains(l.Keys, "LABEL1");
 
         schema.IncludeLabelsInCatalog = false;
-        foreach (var l in GenerateLocationListsTask.RunInternal(input).Locations)
+        foreach (var l in GenerateLocationListsTask.ProcessInput(input).Locations)
             if(l.Provider == typeof(BundledAssetProvider).FullName)
                 CollectionAssert.DoesNotContain(l.Keys, "LABEL1");
     }
@@ -163,7 +163,7 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         CreateAddressablePrefab(input, "p1", group, "fileX");
         CreateAddressablePrefab(input, "p2", group, "fileY");
         input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
-        GenerateLocationListsTask.Output output = GenerateLocationListsTask.RunInternal(input);
+        GenerateLocationListsTask.Output output = GenerateLocationListsTask.ProcessInput(input);
         CollectionAssert.AreEquivalent(new string[] { "bundle1", "bundle2" }, output.AssetGroupToBundles[group]);
     }
 
@@ -185,7 +185,7 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         CreateAddressablePrefab(input, "p6", groupW, "fileW");
 
         input.AddressableAssetEntries = BuildAddressableAssetEntryList(input.Settings);
-        GenerateLocationListsTask.Output output = GenerateLocationListsTask.RunInternal(input);
+        GenerateLocationListsTask.Output output = GenerateLocationListsTask.ProcessInput(input);
 
         AssertLocationDependencies(output, "p1", "bundleX", "bundleY", "bundleZ", "bundleW");
         AssertLocationDependencies(output, "p2", "bundleY", "bundleZ", "bundleW");
@@ -227,12 +227,12 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         //Setup
         string baseId = m_Settings.profileSettings.Reset();
         string profileId = m_Settings.profileSettings.AddProfile("remote", baseId);
-        m_Settings.profileSettings.SetValue(profileId, "RemoteLoadPath", "http://127.0.0.1:80/");
+        m_Settings.profileSettings.SetValue(profileId, AddressableAssetSettings.kRemoteLoadPath, "http://127.0.0.1:80/");
         m_Settings.activeProfileId = profileId;
         AddressableAssetGroup group = m_Settings.CreateGroup($"xyz", false, false, false, null, typeof(BundledAssetGroupSchema));
         var bag = group.GetSchema<BundledAssetGroupSchema>();
-        bag.LoadPath.Id = m_Settings.profileSettings.GetVariableId("RemoteLoadPath");
-        
+        bag.LoadPath.Id = m_Settings.profileSettings.GetVariableId(AddressableAssetSettings.kRemoteLoadPath);
+
         //Test
         var path = GenerateLocationListsTask.GetLoadPath(group, id, target);
         string pahWithoutHttp = path.Replace("http://", "");
@@ -240,7 +240,7 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         //Assert
         Assert.IsFalse(path.Contains("/\\"));
         Assert.IsFalse(pahWithoutHttp.Contains("//"));
-        
+
         //Cleanup
         m_Settings.RemoveGroup(group);
         m_Settings.activeProfileId = baseId;
@@ -259,12 +259,12 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         //Setup
         string baseId = m_Settings.profileSettings.Reset();
         string profileId = m_Settings.profileSettings.AddProfile("remote", baseId);
-        m_Settings.profileSettings.SetValue(profileId, "RemoteLoadPath", "http://127.0.0.1:80");
+        m_Settings.profileSettings.SetValue(profileId, AddressableAssetSettings.kRemoteLoadPath, "http://127.0.0.1:80");
         m_Settings.activeProfileId = profileId;
         AddressableAssetGroup group = m_Settings.CreateGroup($"xyz", false, false, false, null, typeof(BundledAssetGroupSchema));
         var bag = group.GetSchema<BundledAssetGroupSchema>();
-        bag.LoadPath.Id = m_Settings.profileSettings.GetVariableId("RemoteLoadPath");
-        
+        bag.LoadPath.Id = m_Settings.profileSettings.GetVariableId(AddressableAssetSettings.kRemoteLoadPath);
+
         //Test
         var path = GenerateLocationListsTask.GetLoadPath(group, id, target);
         string pahWithoutHttp = path.Replace("http://", "");
@@ -272,7 +272,7 @@ public class GenerateLocationListsTaskTests : AddressableBuildTaskTestBase
         //Assert
         Assert.IsFalse(path.Contains("/\\"));
         Assert.IsFalse(pahWithoutHttp.Contains("//"));
-        
+
         //Cleanup
         m_Settings.RemoveGroup(group);
         m_Settings.activeProfileId = baseId;

@@ -95,5 +95,24 @@ namespace UnityEditor.AddressableAssets.Tests
             profileGroupType.RemoveVariable(buildPath);
             LogAssert.Expect(LogType.Error, "prefix.BuildPath does not exist.");
         }
+
+        [Test]
+        public void DoesContainVariable_Returns_True()
+        {
+
+            ProfileGroupType.GroupTypeVariable buildPath = new ProfileGroupType.GroupTypeVariable("BuildPath", "Test Build Path");
+            ProfileGroupType profileGroupType = new ProfileGroupType("prefix");
+            profileGroupType.AddVariable(buildPath);
+            Assert.True(profileGroupType.ContainsVariable(buildPath));
+        }
+
+        [Test]
+        public void DoesContainVariable_Returns_False()
+        {
+
+            ProfileGroupType.GroupTypeVariable buildPath = new ProfileGroupType.GroupTypeVariable("BuildPath", "Test Build Path");
+            ProfileGroupType profileGroupType = new ProfileGroupType("prefix");
+            Assert.False(profileGroupType.ContainsVariable(buildPath));
+        }
     }
 }

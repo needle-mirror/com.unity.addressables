@@ -10,9 +10,15 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
-    class CheckBundleDupeDependencies : BundleRuleBase
+    /// <summary>
+    /// Rule class to check for duplicate bundle dependencies
+    /// </summary>
+    public class CheckBundleDupeDependencies : BundleRuleBase
     {
-        internal struct CheckDupeResult
+        /// <summary>
+        /// Result for checking for duplicates
+        /// </summary>
+        protected internal struct CheckDupeResult
         {
             public AddressableAssetGroup Group;
             public string DuplicatedFile;
@@ -20,16 +26,21 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             public GUID DuplicatedGroupGuid;
         }
 
-        internal struct ExtraCheckBundleDupeData
+        /// <summary>
+        /// Results for duplicate results inverted check
+        /// </summary>
+        protected internal struct ExtraCheckBundleDupeData
         {
             public bool ResultsInverted;
         }
 
+        /// <inheritdoc />
         public override bool CanFix
         {
             get { return true; }
         }
 
+        /// <inheritdoc />
         public override string ruleName
         { get { return "Check Duplicate Bundle Dependencies"; } }
 
@@ -38,6 +49,11 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         [SerializeField]
         internal HashSet<GUID> m_ImplicitAssets;
 
+        /// <summary>
+        /// Clear current analysis and rerun check for duplicates
+        /// </summary>
+        /// <param name="settings">The current Addressables settings object</param>
+        /// <returns>List of the analysis results</returns>
         public override List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)
         {
             ClearAnalysis();
@@ -127,7 +143,12 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             return String.Join(kDelimiter.ToString(), splitData);
         }
 
-        List<AnalyzeResult> CheckForDuplicateDependencies(AddressableAssetSettings settings)
+        /// <summary>
+        /// Check for duplicates among the dependencies and build implicit duplicates
+        /// </summary>
+        /// <param name="settings">The current Addressables settings object</param>
+        /// <returns>List of results from analysis</returns>
+        protected List<AnalyzeResult> CheckForDuplicateDependencies(AddressableAssetSettings settings)
         {
             if (!BuildUtility.CheckModifiedScenesAndAskToSave())
             {
@@ -157,8 +178,14 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             RefreshDisplay();
             return m_Results;
         }
-
-        internal IEnumerable<CheckDupeResult> CalculateDuplicates(Dictionary<GUID, List<string>> implicitGuids, AddressableAssetsBuildContext aaContext)
+        
+        /// <summary>
+        /// Calculate duplicate dependencies 
+        /// </summary>
+        /// <param name="implicitGuids">Map of implicit guids to their bundle files</param>
+        /// <param name="aaContext">The build context information</param>
+        /// <returns>Enumerable of results from duplicates check</returns>
+        protected internal IEnumerable<CheckDupeResult> CalculateDuplicates(Dictionary<GUID, List<string>> implicitGuids, AddressableAssetsBuildContext aaContext)
         {
             //Get all guids that have more than one bundle referencing them
             IEnumerable<KeyValuePair<GUID, List<string>>> validGuids =
@@ -215,6 +242,10 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             }
         }
 
+        /// <summary>
+        /// Fix duplicates by moving to a new group
+        /// </summary>
+        /// <param name="settings">The current Addressables settings object</param>
         public override void FixIssues(AddressableAssetSettings settings)
         {
             if (m_ImplicitAssets == null)

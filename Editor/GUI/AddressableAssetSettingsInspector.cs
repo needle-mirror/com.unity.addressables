@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditorInternal;
@@ -37,6 +36,11 @@ namespace UnityEditor.AddressableAssets.GUI
         [FormerlySerializedAs("m_initObjectsFoldout")]
         [SerializeField]
         bool m_InitObjectsFoldout = true;
+
+#if UNITY_2019_4_OR_NEWER
+        [SerializeField]
+        bool m_CCDEnabledFoldout = true;
+#endif 
 
         //Used for displaying path pairs
         bool m_UseCustomPaths = false;
@@ -143,12 +147,15 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("MonoScript Bundle Naming Prefix", "This setting determines how and if the MonoScript bundle will be named during the build.  The recommended setting is Project Name.");
         GUIContent m_MonoBundleCustomNaming =
             new GUIContent("MonoScript Bundle Custom Prefix", "Custom prefix for MonoScript bundle.");
-#if UNITY_2019_4_OR_NEWER
         GUIContent m_StripUnityVersionFromBundleBuild =
             new GUIContent("Strip Unity Version from AssetBundles", "If enabled, the Unity Editor version is stripped from the AssetBundle header.");
-#endif
         GUIContent m_DisableVisibleSubAssetRepresentations =
             new GUIContent("Disable Visible Sub Asset Representations", "If enabled, the build will assume that all sub Assets have no visible asset representations.");
+#if UNITY_2019_4_OR_NEWER
+        GUIContent m_CCDEnabled = new GUIContent("Enable Experimental CCD Features", "If enabled, will unlock experimental CCD features");
+#endif
+        GUIContent m_BuildAddressablesWithPlayerBuild =
+            new GUIContent("Build Addressables on Player Build", "Determines if a new Addressables build will be built with a Player Build.");
 
         public override void OnInspectorGUI()
         {
@@ -176,7 +183,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     // Current profile in use was changed by different window
                     if (AddressableAssetSettingsDefaultObject.Settings.profileSettings.profiles[m_CurrentProfileIndex].id != AddressableAssetSettingsDefaultObject.Settings.activeProfileId)
                     {
-                        currentProfileIndex =  profileNames.IndexOf(AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileName(AddressableAssetSettingsDefaultObject.Settings.activeProfileId));
+                        currentProfileIndex = profileNames.IndexOf(AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetProfileName(AddressableAssetSettingsDefaultObject.Settings.activeProfileId));
                         if (currentProfileIndex != m_CurrentProfileIndex)
                             m_QueuedChanges.Add(() => m_CurrentProfileIndex = currentProfileIndex);
                     }
@@ -269,6 +276,24 @@ namespace UnityEditor.AddressableAssets.GUI
             m_BuildFoldout = EditorGUILayout.Foldout(m_BuildFoldout, "Build");
             if (m_BuildFoldout)
             {
+                int index = (int) m_AasTarget.BuildAddressablesWithPlayerBuild;
+                int newIndex = EditorGUILayout.Popup(m_BuildAddressablesWithPlayerBuild, index, new[]
+                {
+                    "Use global Settings (stored in preferences)",
+                    "Build Addressables content on Player Build",
+                    "Do not Build Addressables content on Player build"
+                });
+                if (index != newIndex)
+                    m_QueuedChanges.Add(() => m_AasTarget.BuildAddressablesWithPlayerBuild = (AddressableAssetSettings.PlayerBuildOption)newIndex);
+                if (newIndex == 0)
+                {
+                    using (new EditorGUI.DisabledScope(true))
+                    {
+                        bool enabled = EditorPrefs.GetBool(AddressablesPreferences.kBuildAddressablesWithPlayerBuildKey, true);
+                        EditorGUILayout.TextField(" ", enabled ? "Enabled" : "Disabled");
+                    }
+                }
+                
                 bool ignoreUnsupportedFilesInBuild = EditorGUILayout.Toggle(m_IgnoreUnsupportedFilesInBuild, m_AasTarget.IgnoreUnsupportedFilesInBuild);
                 if (ignoreUnsupportedFilesInBuild != m_AasTarget.IgnoreUnsupportedFilesInBuild)
                     m_QueuedChanges.Add(() => m_AasTarget.IgnoreUnsupportedFilesInBuild = ignoreUnsupportedFilesInBuild);
@@ -313,11 +338,10 @@ namespace UnityEditor.AddressableAssets.GUI
                         m_QueuedChanges.Add(() => m_AasTarget.MonoScriptBundleCustomNaming = customMonoScriptBundleName);
                 }
 
-#if UNITY_2019_4_OR_NEWER
                 bool stripUnityVersion = EditorGUILayout.Toggle(m_StripUnityVersionFromBundleBuild, m_AasTarget.StripUnityVersionFromBundleBuild);
                 if (stripUnityVersion != m_AasTarget.StripUnityVersionFromBundleBuild)
                     m_QueuedChanges.Add(() => m_AasTarget.StripUnityVersionFromBundleBuild = stripUnityVersion);
-#endif
+
                 bool disableVisibleSubAssetRepresentations = EditorGUILayout.Toggle(m_DisableVisibleSubAssetRepresentations, m_AasTarget.DisableVisibleSubAssetRepresentations);
                 if (disableVisibleSubAssetRepresentations != m_AasTarget.DisableVisibleSubAssetRepresentations)
                     m_QueuedChanges.Add(() => m_AasTarget.DisableVisibleSubAssetRepresentations = disableVisibleSubAssetRepresentations);
@@ -337,6 +361,27 @@ namespace UnityEditor.AddressableAssets.GUI
             m_InitObjectsFoldout = EditorGUILayout.Foldout(m_InitObjectsFoldout, "Initialization Objects");
             if (m_InitObjectsFoldout)
                 m_InitObjectsRl.DoLayoutList();
+
+#if UNITY_2019_4_OR_NEWER
+            GUILayout.Space(6);
+            m_CCDEnabledFoldout = EditorGUILayout.Foldout(m_CCDEnabledFoldout, "Cloud Content Delivery");
+            if (m_CCDEnabledFoldout)
+            {
+                var toggle = EditorGUILayout.Toggle(m_CCDEnabled, m_AasTarget.CCDEnabled);
+                if (toggle != m_AasTarget.CCDEnabled)
+                {
+                    if (toggle)
+                    {
+                        toggle = AddressableAssetUtility.InstallCCDPackage();
+                    }
+                    else
+                    {
+                        AddressableAssetUtility.RemoveCCDPackage();
+                    }
+                    m_QueuedChanges.Add(() => m_AasTarget.CCDEnabled = toggle);
+                }
+            }
+#endif
 
             if (EditorGUI.EndChangeCheck() || m_QueuedChanges.Count > 0)
             {

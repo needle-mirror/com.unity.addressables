@@ -8,7 +8,7 @@ To access these settings, open the AddressableAssetSettings Inspector (menu: **W
 
 When you perform a content build, the build process saves the settings needed at runtime to the `settings.json` data file. When you run your application in the Editor using the `Use Existing Build (requires built groups)` Playmode Script, you must rebuild your Addressable content to update `settings.json` if you have made changes. If you enter Play mode using the `Use Asset Database (fastest)` or `Simulate Groups (advanced)` scripts, the Addressables system uses the current values in AddressableAssetSettings, so you do not need to rebuild.
 
-![Addressable Asset Settings Inspector](images/AddressableAssetSettingsWithPathPair.png)<br/>
+![Addressable Asset Settings Inspector](images/AddressableAssetSettings.png)<br/>
 *Addressable Asset Settings Inspector*
 
 #### Manage Groups
@@ -53,6 +53,7 @@ The **Manage Profiles** button opens the Profiles window. You can also open the 
 #### Build
 | **Property:** | **Function:** |
 |:---|:---|
+| **Build Addressables on Player Build** | Whether Unity builds Addressables content as part of your Player build.<br/>&#8226; __Build Addressables content on Player Build__: Always build Addressables content when building the Player.<br/>&#8226; __Do not Build Addressables content on Player Build__: Never build Addressables content when building the Player. (If you modify Addressables content, you must rebuild it manually before building the Player.)<br/>&#8226; __Use global Settings (stored in preferences)__: Use the value specified in the Unity Editor Preferences (under __Addressables__).<br/><br/>The first two options override the global Preference for the current Project and affect all contributors who build the Project. Otherwise, the global, Preferences value applies to all Unity projects. See [Addressable Assets Development Cycle](AddressableAssetsDevelopmentCycle.md#build-addressables-content-on-player-build) for more information. |
 | **Ignore Invalid/Unsupported Files in Build** |  Whether unsupported files during build should be ignored or treated as an error. |
 | **Unique Bundle IDs** | When enabled, AssetBundles are assigned unique, more complex internal identifiers. This may result in more bundles being rebuilt. See [Content Update Workflow](ContentUpdateWorkflow.md#unique-bundle-ids) for more information. |
 | **Contiguous Bundles** | When enabled, the Addressables build script packs assets in bundles contiguously based on the ordering of the source asset, which results in improved asset loading times. Unity recommends that you enable this option. However, enabling this option does result in binary differences in the bundles produced. Disable this option if you've built bundles with a version of Addressables older than 1.12.1 and you want to minimize bundle changes. |

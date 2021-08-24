@@ -67,7 +67,6 @@ namespace UnityEditor.AddressableAssets.Tests
             }
         }
 
-#if UNITY_2019_4_OR_NEWER
         [Test]
         [TestCase(true)]
         [TestCase(false)]
@@ -85,7 +84,6 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Settings.StripUnityVersionFromBundleBuild = oldValue;
         }
-#endif
 
         [Test]
         [TestCase(true)]

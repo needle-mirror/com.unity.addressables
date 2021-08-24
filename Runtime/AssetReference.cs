@@ -332,7 +332,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         public AssetReference()
         {
-#if UNITY_EDITOR && UNITY_2019_3_OR_NEWER
+#if UNITY_EDITOR
             EditorApplication.playModeStateChanged -= ReleaseHandleWhenPlaymodeStateChanged;
             EditorApplication.playModeStateChanged += ReleaseHandleWhenPlaymodeStateChanged;
 #endif
@@ -345,13 +345,13 @@ namespace UnityEngine.AddressableAssets
         public AssetReference(string guid)
         {
             m_AssetGUID = guid;
-#if UNITY_EDITOR && UNITY_2019_3_OR_NEWER
+#if UNITY_EDITOR
             EditorApplication.playModeStateChanged -= ReleaseHandleWhenPlaymodeStateChanged;
             EditorApplication.playModeStateChanged += ReleaseHandleWhenPlaymodeStateChanged;
 #endif
         }
 
-#if UNITY_EDITOR && UNITY_2019_3_OR_NEWER
+#if UNITY_EDITOR
         void ReleaseHandleWhenPlaymodeStateChanged(PlayModeStateChange state)
         {
             if (EditorSettings.enterPlayModeOptionsEnabled && Addressables.reinitializeAddressables)

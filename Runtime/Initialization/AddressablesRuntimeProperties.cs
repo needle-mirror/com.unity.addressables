@@ -12,6 +12,7 @@ namespace UnityEngine.AddressableAssets.Initialization
         // cache these to avoid GC allocations
         static Stack<string> s_TokenStack = new Stack<string>(32);
         static Stack<int> s_TokenStartStack = new Stack<int>(32);
+        static bool s_StaticStacksAreInUse = false;
         
 #if !UNITY_EDITOR && UNITY_WSA_10_0 && ENABLE_DOTNET
         static Assembly[] GetAssemblies()
@@ -134,42 +135,60 @@ namespace UnityEngine.AddressableAssets.Initialization
         {
             if (string.IsNullOrEmpty(inputString))
                 return string.Empty;
+
+            string originalString = inputString;
             
-            s_TokenStack.Push(inputString);
+            Stack<string> tokenStack;
+            Stack<int> tokenStartStack;
+
+            if (!s_StaticStacksAreInUse)
+            {
+                tokenStack = s_TokenStack;
+                tokenStartStack = s_TokenStartStack;
+                s_StaticStacksAreInUse = true;
+            }
+            else
+            {
+                tokenStack = new Stack<string>(32);
+                tokenStartStack = new Stack<int>(32);
+            }
+            
+            tokenStack.Push(inputString);
             int popTokenAt = inputString.Length;
             char[] delimiters = {startDelimiter, endDelimiter};
             bool delimitersMatch = startDelimiter == endDelimiter;
 
             int i = inputString.IndexOf(startDelimiter);
+            int prevIndex = -2;
             while (i >= 0)
             {
                 char c = inputString[i];
-                if (c == startDelimiter && (!delimitersMatch || s_TokenStartStack.Count == 0))
+                if (c == startDelimiter && (!delimitersMatch || tokenStartStack.Count == 0))
                 {
-                    s_TokenStartStack.Push(i);
+                    tokenStartStack.Push(i);
                     i++;
                 }
-                else if (c == endDelimiter && s_TokenStartStack.Count > 0)
+                else if (c == endDelimiter && tokenStartStack.Count > 0)
                 {
-                    int start = s_TokenStartStack.Peek();
+                    int start = tokenStartStack.Peek();
                     string token = inputString.Substring(start + 1, i - start - 1);
                     string tokenVal;
 
                     if (popTokenAt <= i)
                     {
-                        s_TokenStack.Pop();
+                        tokenStack.Pop();
                     }
                     
                     // check if the token is already included
-                    if (s_TokenStack.Contains(token))
+                    if (tokenStack.Contains(token))
                         tokenVal = "#ERROR-CyclicToken#";
                     else
                     {
                         tokenVal = varFunc == null ? string.Empty : varFunc(token);
-                        s_TokenStack.Push(token);
+                        tokenStack.Push(token);
                     }
         
-                    i = s_TokenStartStack.Pop();
+                    i = tokenStartStack.Pop();
                     popTokenAt = i + tokenVal.Length + 1;
         
                     if (i > 0)
@@ -184,11 +203,18 @@ namespace UnityEngine.AddressableAssets.Initialization
                         inputString = tokenVal + inputString.Substring(i + token.Length + 2);
                 }
                 
+                bool infiniteLoopDetected = prevIndex == i;
+                if (infiniteLoopDetected)
+                    return "#ERROR-" + originalString +" contains unmatched delimiters#";
+
+                prevIndex = i;
                 i = inputString.IndexOfAny(delimiters, i);
             }
 
-            s_TokenStack.Clear();
-            s_TokenStartStack.Clear();
+            tokenStack.Clear();
+            tokenStartStack.Clear();
+            if (ReferenceEquals(tokenStack, s_TokenStack))
+                s_StaticStacksAreInUse = false;
             return inputString;
         }
     }

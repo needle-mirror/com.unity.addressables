@@ -1,7 +1,4 @@
 using UnityEngine;
-using System.Threading;
-using System.Collections.Generic;
-using System.IO;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
 
@@ -9,6 +6,7 @@ namespace UnityEditor.AddressableAssets
 {
     internal static class AddressablesPreferences
     {
+        internal const string kBuildAddressablesWithPlayerBuildKey = "Addressables.BuildAddressablesWithPlayerBuild"; 
         private class GUIScope : UnityEngine.GUI.Scope
         {
             float m_LabelWidth;
@@ -38,13 +36,14 @@ namespace UnityEditor.AddressableAssets
         {
             public static readonly GUIContent buildSettings = EditorGUIUtility.TrTextContent("Build Settings");
             public static readonly GUIContent buildLayoutReport = EditorGUIUtility.TrTextContent("Debug Build Layout", $"A debug build layout file will be generated as part of the build process. The file will put written to {BuildLayoutGenerationTask.m_LayoutTextFile}");
+            public static readonly GUIContent playerBuildSettings = EditorGUIUtility.TrTextContent("Player Build Settings");
+            public static readonly GUIContent enableAddressableBuildPreprocessPlayer = EditorGUIUtility.TrTextContent("Build Addressables on build Player", $"If enabled, will perform a new Addressables build before building a Player. Addressable Asset Settings value can override the user global preferences.");
         }
 
         static AddressablesPreferences()
         {
         }
 
-#if UNITY_2019_1_OR_NEWER
         [SettingsProvider]
         static SettingsProvider CreateAddressableSettingsProvider()
         {
@@ -53,9 +52,6 @@ namespace UnityEditor.AddressableAssets
             return provider;
         }
 
-#else
-        [PreferenceItem("Addressables")]
-#endif
         static void OnGUI()
         {
             using (new GUIScope())
@@ -71,6 +67,39 @@ namespace UnityEditor.AddressableAssets
             ProjectConfigData.GenerateBuildLayout = EditorGUILayout.Toggle(Properties.buildLayoutReport, ProjectConfigData.GenerateBuildLayout);
 
             GUILayout.Space(15);
+            
+#if UNITY_2021_2_OR_NEWER
+            bool buildWithPlayerValue = EditorPrefs.GetBool(kBuildAddressablesWithPlayerBuildKey, true);
+
+            GUILayout.Label(Properties.playerBuildSettings, EditorStyles.boldLabel);
+            int index = buildWithPlayerValue ? 0 : 1;
+            int val = EditorGUILayout.Popup(Properties.enableAddressableBuildPreprocessPlayer, index,
+                new[] {"Build Addressables on Player Build", "Do Not Build Addressables on Player Build"});
+            if (val != index)
+            {
+                bool newValue = val == 0 ? true : false;
+                EditorPrefs.SetBool(kBuildAddressablesWithPlayerBuildKey, newValue);
+                buildWithPlayerValue = newValue;
+            }
+
+            var settings = AddressableAssetSettingsDefaultObject.Settings;
+            if (settings != null)
+            {
+                using (new EditorGUI.DisabledScope(true))
+                {
+                    if (settings.BuildAddressablesWithPlayerBuild == AddressableAssetSettings.PlayerBuildOption.BuildWithPlayer && 
+                        buildWithPlayerValue == false)
+                    {
+                        EditorGUILayout.TextField(" ", "Enabled in AddressableAssetSettings (priority)");
+                    }
+                    else if (settings.BuildAddressablesWithPlayerBuild == AddressableAssetSettings.PlayerBuildOption.DoNotBuildWithPlayer && 
+                             buildWithPlayerValue)
+                    {
+                        EditorGUILayout.TextField(" ", "Disabled in AddressableAssetSettings (priority)");
+                    }
+                }
+            }
+#endif
         }
     }
 }

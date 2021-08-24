@@ -54,11 +54,8 @@ namespace UnityEngine.ResourceManagement.Tests
                 if (!Directory.Exists(Path.GetDirectoryName(assetPath)))
                     Directory.CreateDirectory(Path.GetDirectoryName(assetPath));
 
-#if UNITY_2018_3_OR_NEWER
                 PrefabUtility.SaveAsPrefabAsset(go, assetPath);
-#else
-                PrefabUtility.CreatePrefab(assetPath, go);
-#endif
+     
                 Object.DestroyImmediate(go, false);
             }
 

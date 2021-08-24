@@ -82,7 +82,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// A custom operation should override this method to provide a list of AsyncOperationHandles that it depends on.
         /// </summary>
         /// <param name="dependencies">The list that should be populated with dependent AsyncOperationHandles.</param>
-        protected virtual void GetDependencies(List<AsyncOperationHandle> dependencies) {}
+        public virtual void GetDependencies(List<AsyncOperationHandle> dependencies) {}
 
         /// <summary>
         /// Accessor to Result of the operation.
@@ -161,7 +161,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// Used for the implementation of WaitForCompletion in an IAsyncOperation.
         /// </summary>
         /// <returns>True if the operation has completed, otherwise false.</returns>
-        protected virtual bool InvokeWaitForCompletion() { return IsDone; }
+        protected virtual bool InvokeWaitForCompletion() { return true; }
 
         internal void DecrementReferenceCount()
         {

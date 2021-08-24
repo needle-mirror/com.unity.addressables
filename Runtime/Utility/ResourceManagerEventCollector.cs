@@ -1,10 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.Diagnostics;
-using UnityEngine.ResourceManagement.ResourceLocations;
 
 namespace UnityEngine.AddressableAssets.Utility
 {
@@ -22,6 +22,8 @@ namespace UnityEngine.AddressableAssets.Utility
     internal class ResourceManagerDiagnostics : IDisposable
     {
         ResourceManager m_ResourceManager;
+        private const int k_NumberOfCompletedOpResultEntriesToShow = 4;
+        private const int k_MaximumCompletedOpResultEntryLength = 30;
 
         /// <summary>
         /// This class is responsible for passing events from the resource manager to the event collector,
@@ -51,6 +53,9 @@ namespace UnityEngine.AddressableAssets.Utility
 
         internal int CalculateHashCode(AsyncOperationHandle handle)
         {
+            if (handle.DebugName.Contains("CompletedOperation"))
+                return CalculateCompletedOperationHashcode(handle);
+
             int sumOfDependencyHashes = SumDependencyNameHashCodes(handle);
             bool nameChangesWithState = handle.DebugName.Contains("result=") && handle.DebugName.Contains("status=");
             
@@ -66,11 +71,55 @@ namespace UnityEngine.AddressableAssets.Utility
             }
         }
 
+        internal int CalculateCompletedOperationHashcode(AsyncOperationHandle handle)
+        {
+            unchecked
+            {
+                if (handle.Result == null)
+                    return handle.GetHashCode();
+                return handle.Result.GetHashCode() + handle.Result.GetType().GetHashCode();
+            }
+        }
+
+        internal string GenerateCompletedOperationDisplayName(AsyncOperationHandle handle)
+        {
+            if (handle.Result == null)
+                return handle.DebugName;
+            if (handle.Result.GetType().IsGenericType && handle.Result is IList resultList)
+            {
+                string completedOpResultString = handle.DebugName;
+                if (resultList.Count > 0)
+                {
+                    StringBuilder completedOpResultStringBuilder = new StringBuilder("[");
+                    for (int i = 0; i < resultList.Count && i < k_NumberOfCompletedOpResultEntriesToShow; i++)
+                    {
+                        var entry = resultList[i];
+                        if (k_MaximumCompletedOpResultEntryLength <= entry.ToString().Length)
+                        {
+                            completedOpResultStringBuilder.Append(entry.ToString().Substring(0, k_MaximumCompletedOpResultEntryLength));
+                            completedOpResultStringBuilder.Append("..., ");
+                        }
+                        else
+                        {
+                            completedOpResultStringBuilder.Append(entry.ToString().Substring(0, entry.ToString().Length));
+                            completedOpResultStringBuilder.Append(", ");
+                        }
+                    }
+                    completedOpResultStringBuilder.Remove(completedOpResultStringBuilder.Length - 2, 2);
+                    completedOpResultStringBuilder.Append("]");
+                    completedOpResultString = completedOpResultStringBuilder.ToString(); 
+                }
+
+                return handle.DebugName + " Result type: List, result: " + completedOpResultString;
+            }
+            return handle.DebugName + " Result type: " + handle.Result.GetType();
+        }
+
         void OnResourceManagerDiagnosticEvent(ResourceManager.DiagnosticEventContext eventContext)
         {
             var hashCode = CalculateHashCode(eventContext.OperationHandle);
             DiagnosticInfo diagInfo = null;
-
+            
             if (eventContext.Type == ResourceManager.DiagnosticEventType.AsyncOperationDestroy)
             {
                 if (m_cachedDiagnosticInfo.TryGetValue(hashCode, out diagInfo))
@@ -86,8 +135,14 @@ namespace UnityEngine.AddressableAssets.Utility
                     
                     for (int i = 0; i < depIds.Length; i++)
                         depIds[i] = CalculateHashCode(deps[i]);
-                    
-                    m_cachedDiagnosticInfo.Add(hashCode, diagInfo = new DiagnosticInfo() { ObjectId = hashCode, DisplayName = eventContext.OperationHandle.DebugName, Dependencies = depIds });
+
+                    if (eventContext.OperationHandle.DebugName.Contains("CompletedOperation"))
+                    {
+                        string displayName = GenerateCompletedOperationDisplayName(eventContext.OperationHandle);
+                        m_cachedDiagnosticInfo.Add(hashCode, diagInfo = new DiagnosticInfo() { ObjectId = hashCode, DisplayName = displayName, Dependencies = depIds });
+                    }
+                    else
+                        m_cachedDiagnosticInfo.Add(hashCode, diagInfo = new DiagnosticInfo() { ObjectId = hashCode, DisplayName = eventContext.OperationHandle.DebugName, Dependencies = depIds });
                 }
             }
 

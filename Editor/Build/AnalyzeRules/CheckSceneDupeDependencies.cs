@@ -5,18 +5,28 @@ using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
-    class CheckSceneDupeDependencies : BundleRuleBase
+    /// <summary>
+    /// Rule class to check scene dependencies for duplicates
+    /// </summary>
+    public class CheckSceneDupeDependencies : BundleRuleBase
     {
+        /// <inheritdoc />
         public override bool CanFix
         {
             get { return false; }
         }
 
+        /// <inheritdoc />
         public override string ruleName
         {
             get { return "Check Scene to Addressable Duplicate Dependencies"; }
         }
 
+        /// <summary>
+        /// Clear analysis and calculate built in resources and corresponding bundle dependencies for scenes
+        /// </summary>
+        /// <param name="settings">The current Addressables settings object</param>
+        /// <returns>List of results from analysis</returns>
         public override List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)
         {
             ClearAnalysis();
@@ -27,6 +37,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             return CalculateBuiltInResourceDependenciesToBundleDependecies(settings, scenePaths);
         }
 
+        /// <inheritdoc />
         public override void FixIssues(AddressableAssetSettings settings)
         {
             //Do nothing.  There's nothing to fix.

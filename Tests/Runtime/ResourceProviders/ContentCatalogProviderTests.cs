@@ -220,9 +220,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var bytes = new byte[] { 1, 2, 3, 4, 5, 6 };
             File.WriteAllBytes(bundleFilePath, bytes);
 
-#if UNITY_2019_4_OR_NEWER
             LogAssert.Expect(LogType.Error, new Regex("Failed to read data for the AssetBundle", RegexOptions.IgnoreCase));
-#endif
 
             LogAssert.Expect(LogType.Error, new Regex("Unable to load dependent " +
                 $"bundle from location :", RegexOptions.IgnoreCase));

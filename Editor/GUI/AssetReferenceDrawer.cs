@@ -33,10 +33,7 @@ namespace UnityEditor.AddressableAssets.GUI
         internal bool m_ReferencesSame = true;
         internal List<AssetReferenceUIRestrictionSurrogate> m_Restrictions = null;
         SubassetPopup m_SubassetPopup;
-
-#if UNITY_2019_1_OR_NEWER
         private Texture2D m_CaretTexture = null;
-#endif
 
         internal List<AssetReferenceUIRestrictionSurrogate> Restrictions => m_Restrictions;
         /// <summary>
@@ -222,9 +219,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 UnityEngine.GUI.Box(assetDropDownRect, new GUIContent(nameToUse), EditorStyles.objectField);
             }
 
-#if UNITY_2019_1_OR_NEWER
             DrawCaret(pickerRect);
-#endif
 
             if (isPickerPressed)
             {
@@ -236,7 +231,6 @@ namespace UnityEditor.AddressableAssets.GUI
 
         private void DrawCaret(Rect pickerRect)
         {
-#if UNITY_2019_1_OR_NEWER
             if (m_CaretTexture == null)
             {
                 string caretIconPath = EditorGUIUtility.isProSkin
@@ -253,7 +247,6 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 UnityEngine.GUI.DrawTexture(pickerRect, m_CaretTexture, ScaleMode.ScaleToFit);
             }
-#endif
         }
 
         private void HandleDragAndDrop(SerializedProperty property, bool isDragging, bool isDropping, string guid)
@@ -373,10 +366,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 nameSelected.text = AssetReferenceDrawerUtilities.FormatName(m_AssetRefObject.SubObjectName);
             UnityEngine.GUI.Box(objRect, nameSelected, EditorStyles.objectField);
 
-#if UNITY_2019_1_OR_NEWER
             // Draw picker arrow
             DrawCaret(pickerRect);
-#endif
+      
             return assetDropDownRect;
         }
 

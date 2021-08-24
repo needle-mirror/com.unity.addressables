@@ -137,6 +137,15 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         }
 
         /// <summary>
+        /// Get dependency operations.
+        /// </summary>
+        /// <param name="deps">The list of AsyncOperationHandles that are dependencies of a given AsyncOperationHandle</param>
+        public void GetDependencies(List<AsyncOperationHandle> deps)
+        {
+            InternalOp.GetDependencies(deps);
+        }
+
+        /// <summary>
         /// Event for handling the destruction of the operation.
         /// </summary>
         public event Action<AsyncOperationHandle> Destroyed
@@ -174,7 +183,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             AsyncOperationHandle.IsWaitingForCompletion = true;
             try
             {
-                if (IsValid())
+                if (IsValid() && !InternalOp.IsDone)
                     InternalOp.WaitForCompletion();
                 if (IsValid())
                     return Result;
@@ -182,13 +191,13 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             finally
             {
                 AsyncOperationHandle.IsWaitingForCompletion = false;
-                m_InternalOp?.m_RM?.Update(Time.deltaTime);
+                m_InternalOp?.m_RM?.Update(Time.unscaledDeltaTime);
             }
 #else
-            if (IsValid())
+            if (IsValid() && !InternalOp.IsDone)
                 InternalOp.WaitForCompletion();
 
-            m_InternalOp?.m_RM?.Update(Time.deltaTime);
+            m_InternalOp?.m_RM?.Update(Time.unscaledDeltaTime);
             if (IsValid())
                 return Result;
 #endif
@@ -570,7 +579,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             IsWaitingForCompletion = true;
             try
             {
-                if (IsValid())
+                if (IsValid() && !InternalOp.IsDone)
                     InternalOp.WaitForCompletion();
                 if (IsValid())
                     return Result;
@@ -580,7 +589,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 IsWaitingForCompletion = false;
             }
 #else
-            if (IsValid())
+            if (IsValid() && !InternalOp.IsDone)
                 InternalOp.WaitForCompletion();
             if (IsValid())
                 return Result;

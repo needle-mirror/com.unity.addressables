@@ -55,10 +55,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         internal static void WriteBuildLog(BuildLog log, string directory)
         {
             Directory.CreateDirectory(directory);
-#if UNITY_2019_2_OR_NEWER // PackageManager package inspection APIs didn't exist until 2019.2
             PackageManager.PackageInfo info = PackageManager.PackageInfo.FindForAssembly(typeof(BuildScriptBase).Assembly);
             log.AddMetaData(info.name, info.version);
-#endif
             File.WriteAllText(Path.Combine(directory, "AddressablesBuildTEP.json"), log.FormatForTraceEventProfiler());
         }
 
@@ -92,8 +90,14 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError(e.Message);
-                    return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, e.Message);
+                    string errMessage;
+                    if (e.Message == "path")
+                        errMessage = "Invalid path detected during build. Check for unmatched brackets in your active profile's variables.";
+                    else
+                        errMessage = e.Message;
+                    
+                    Debug.LogError(errMessage);
+                    return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, errMessage);
                 }
                 if (result != null)
                     result.FileRegistry = builderInput.Registry;

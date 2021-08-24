@@ -82,10 +82,6 @@ namespace UnityEngine.AddressableAssets
             {BuildTarget.StandaloneOSX, AddressablesPlatform.OSX},
             {BuildTarget.StandaloneLinux64, AddressablesPlatform.Linux},
             {BuildTarget.WSAPlayer, AddressablesPlatform.WindowsUniversal},
-#if !UNITY_2019_2_OR_NEWER
-            {BuildTarget.StandaloneLinux, AddressablesPlatform.Linux},
-            {BuildTarget.StandaloneLinuxUniversal, AddressablesPlatform.Linux}
-#endif
         };
 #endif
         internal static readonly Dictionary<RuntimePlatform, AddressablesPlatform> s_RuntimeTargetMapping =

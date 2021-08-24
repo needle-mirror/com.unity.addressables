@@ -141,7 +141,7 @@ namespace UnityEngine.ResourceManagement
         /// <remarks>
         /// The web request passed to this delegate has already been preconfigured internally. Override at your own risk.
         /// </remarks>
-        internal Action<UnityWebRequest> WebRequestOverride { get; set; }
+        public Action<UnityWebRequest> WebRequestOverride { get; set; }
 
         internal bool CallbackHooksEnabled = true; // tests might need to disable the callback hooks to manually pump updating
 
@@ -492,7 +492,7 @@ namespace UnityEngine.ResourceManagement
             ///<inheritdoc />
             protected  override bool InvokeWaitForCompletion()
             {
-                m_RM?.Update(Time.deltaTime);
+                m_RM?.Update(Time.unscaledDeltaTime);
                 if (!HasExecuted)
                     InvokeExecute();
                 return true;
@@ -881,7 +881,8 @@ namespace UnityEngine.ResourceManagement
                 return m_dependency.IsValid() ? m_dependency.InternalGetDownloadStatus(visited) : new DownloadStatus() { IsDone = IsDone };
             }
 
-            protected override void GetDependencies(List<AsyncOperationHandle> deps)
+            /// <inheritdoc />
+            public override void GetDependencies(List<AsyncOperationHandle> deps)
             {
                 deps.Add(m_dependency);
             }
@@ -917,7 +918,7 @@ namespace UnityEngine.ResourceManagement
                 if (m_dependency.IsValid() && !m_dependency.IsDone)
                     m_dependency.WaitForCompletion();
 
-                m_RM?.Update(Time.deltaTime);
+                m_RM?.Update(Time.unscaledDeltaTime);
                 if (m_instance == null && !HasExecuted)
                     InvokeExecute();
 

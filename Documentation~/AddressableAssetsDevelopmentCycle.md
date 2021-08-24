@@ -38,6 +38,16 @@ If under **New Build** there is an unclickable **No Build Script Available**, ch
 
 To add a new Build or Play Mode script, click the `+` under the **Build and Play Mode Scripts** section and find your build mode asset. Once it is added, if the script is a Play Mode script it will show up under **Window** > **Asset Management** > **Addressables** > **Groups** > **Play Mode Script**.  If the script is able to build [`AddressablesPlayerBuildResult`](xref:UnityEditor.AddressableAssets.Build.AddressablesPlayerBuildResult) it will show up under **Window** > **Asset Management** > **Addressables** > **Groups** > **Build** > **New Build**. Build and Play Mode scripts provided by default, including `BuildSciptPackedMode`, are located under `Assets/AddressableAssetsData/DataBuilders`. See earlier section "Build scripts" for more information on custom build scripts.
 
+## Build Addressables Content on Player Build
+When you modify Addressable assets during development, you must rebuild your Addressables content before you build the Player. You can run the Addressables content build as a separate step before building a Player or you can run both the Addressables content build and the Player build together. 
+
+Building Addressables content together with the Player can be convenient, but does increase build time, especially on large projects, since this rebuilds the Addressables content even when you haven't modified any assets. If you don't change your Addressables content between most builds, consider disabling this option.
+
+The __Build Addressables on Player Build__ setting in the Project [Addressable Asset Settings](AddressableAssetSettings.md#build) specifies which option to use for building Addressables content. You can choose the appropriate option for each Project or defer to the global Preferences setting (which you can find in the __Addressables__ section of your Unity Editor Preferences). When you set a Project-level setting, it applies to all contributors who build the Project. The Preferences setting applies to all Unity Projects that don't set a specific value.
+
+> [!NOTE] 
+> Building Addressables on Player Build requires Unity 2021.2+. In earlier versions of Unity, you must build your Addressables content as a separate step.
+
 ## Analysis and debugging
 By default, Addressable Assets only logs warnings and errors. You can enable detailed logging by opening the **Player** settings window (**Edit** > **Project Settings...** > **Player**), navigating to the **Other Settings** > **Configuration** section, and adding "`ADDRESSABLES_LOG_ALL`" to the **Scripting Define Symbols** field. 
 

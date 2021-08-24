@@ -126,6 +126,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 Settings.RemoveAssetEntry(folderEntry);
             }
 
+#if !UNITY_2021_2_OR_NEWER
             [Test]
             public void CopiedStreamingAssetAreCorrectlyDeleted_DirectoriesWithoutImport()
             {
@@ -234,6 +235,30 @@ namespace UnityEditor.AddressableAssets.Tests
 
                 Assert.IsTrue(builderCount > 0);
             }
+#else
+            [Test]
+            public void AddressablesBuildPlayerProcessor_IncludeAdditionalStreamingAssetsWhenExist()
+            {
+                string path = Addressables.BuildPath;
+                Directory.CreateDirectory(path);
+                var paths = AddressablesPlayerBuildProcessor.GetStreamingAssetPaths();
+                Assert.AreEqual(1, paths.Count, "StreamingAssets paths expected to include Addressables.BuildPath");
+
+                // cleanup
+                Directory.Delete(path);
+            }
+
+            [Test]
+            public void AddressablesBuildPlayerProcessor_DoesntIncludeAdditionalStreamingAssetsWhenDontExist()
+            {
+                if (Directory.Exists(Addressables.BuildPath))
+                    DirectoryUtility.DeleteDirectory(Addressables.BuildPath, false);
+                var paths = AddressablesPlayerBuildProcessor.GetStreamingAssetPaths();
+                Assert.AreEqual(0, paths.Count, "StreamingAssets paths are expected to be empty");
+
+                // cleanup
+            }
+#endif
         }
 
         [Test]
@@ -347,7 +372,6 @@ namespace UnityEditor.AddressableAssets.Tests
             }
         }
 
-#if UNITY_2019_2_OR_NEWER // PackageManager package inspection APIs didn't exist until 2019.2
         [Test]
         public void Building_CreatesPerformanceReportWithMetaData()
         {
@@ -357,8 +381,6 @@ namespace UnityEditor.AddressableAssets.Tests
             string text = File.ReadAllText(path);
             StringAssert.Contains("com.unity.addressables", text);
         }
-
-#endif
 
         [Test]
         public void Build_WithInvalidAssetInResourcesFolder_Succeeds()

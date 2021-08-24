@@ -49,12 +49,12 @@ namespace UnityEngine.AddressableAssets
             if (m_DepOp.IsValid() && !m_DepOp.IsDone)
                 m_DepOp.WaitForCompletion();
 
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
 
             if (!HasExecuted)
                 InvokeExecute();
 
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
             return IsDone;
         }
 
@@ -63,25 +63,60 @@ namespace UnityEngine.AddressableAssets
             m_Addressables.Release(m_DepOp);
         }
 
-        protected override void GetDependencies(List<AsyncOperationHandle> dependencies)
+        /// <inheritdoc />
+        public override void GetDependencies(List<AsyncOperationHandle> dependencies)
         {
             dependencies.Add(m_DepOp);
         }
 
-        protected override void Execute()
+        internal static List<string> ProcessDependentOpResults(IList<AsyncOperationHandle> results,
+            List<AddressablesImpl.ResourceLocatorInfo> locatorInfos, List<string> localHashes, out string errorString, out bool success)
         {
             var result = new List<string>();
-            for (int i = 0; i < m_DepOp.Result.Count; i++)
+            List<string> errorMsgList = new List<string>();
+            for (int i = 0; i < results.Count; i++)
             {
-                var remHashOp = m_DepOp.Result[i];
+                var remHashOp = results[i];
                 var remoteHash = remHashOp.Result as string;
-                if (!string.IsNullOrEmpty(remoteHash) && remoteHash != m_LocalHashes[i])
+                if (!string.IsNullOrEmpty(remoteHash) && remoteHash != localHashes[i])
                 {
-                    result.Add(m_LocatorInfos[i].Locator.LocatorId);
-                    m_LocatorInfos[i].ContentUpdateAvailable = true;
+                    result.Add(locatorInfos[i].Locator.LocatorId);
+                    locatorInfos[i].ContentUpdateAvailable = true;
+                }
+                else if (remHashOp.OperationException != null)
+                {
+                    result.Add(null);
+                    locatorInfos[i].ContentUpdateAvailable = false;
+                    errorMsgList.Add(remHashOp.OperationException.Message);
                 }
             }
-            Complete(result, true, null);
+
+            errorString = null;
+
+            if (errorMsgList.Count > 0)
+            {
+                if (errorMsgList.Count == result.Count)
+                {
+                    result = null;
+                    errorString = "CheckCatalogsOperation failed with the following errors: ";
+                }
+                else
+                {
+                    errorString = "Partial success in CheckCatalogsOperation with the following errors: ";
+                }
+                
+                foreach (string str in errorMsgList)
+                    errorString = errorString + "\n" + str;
+            }
+
+            success = errorMsgList.Count == 0;
+            return result;
+        }
+
+        protected override void Execute()
+        {
+            var result = ProcessDependentOpResults(m_DepOp.Result, m_LocatorInfos, m_LocalHashes, out string errorString, out bool success);
+            Complete(result, success, errorString);
         }
     }
 }

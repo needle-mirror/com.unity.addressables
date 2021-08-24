@@ -59,6 +59,7 @@ namespace UnityEditor.AddressableAssets.Tests
             GameObject testObject = new GameObject("TestObject");
             GameObject testObject1 = new GameObject("TestObject 1");
             GameObject testObject2 = new GameObject("TestObject 2");
+          
             PrefabUtility.SaveAsPrefabAsset(testObject, TestFolder + "/test.prefab");
             PrefabUtility.SaveAsPrefabAsset(testObject1, TestFolder + "/test 1.prefab");
             PrefabUtility.SaveAsPrefabAsset(testObject2, TestFolder + "/test 2.prefab");

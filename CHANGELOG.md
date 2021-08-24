@@ -4,6 +4,38 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.19.4] - 2021-08-24
+- Removing support for 2018.4
+- Added options for building Addressables content as a prebuild step when building Player.
+- Optimised StreamingAssets usage to no longer need to be copied into the project (2021.2+).
+- Fixed issue where OnDestroy use of Addressables API results in errors when Enter Play Mode Settings are enabled.
+- Set AssetEntryCollection is Obsolete, includes auto update process to create Group entries from EntryCollections.
+- Updated CheckForCatalogUpdates to properly report any failures that occur while its running.
+- Combined BundledAssetGrupSchema CRC settings to a single value.
+- BundledAssetGroupSchema Request Timeout will now use time in seconds since last time data wasa downloaded.
+- Fixed issue where Exceptions in UnityWebRequest.Send were not caught.
+- Updated the way that CompletedOperation events are handled in the Event Viewer to make it easier to associate a given CompletedOperation with its corresponding ChainOperation
+- References to Time.deltaTime throughout Addressables are now replaced with Time.unscaledDeltaTime to better match whats described in the API
+- Improved the performance of the ProcessAllGroups build step.
+- Fixed a bug where having unmatched brackets in a profile's value could lead to a freeze.
+- Fixed a bug where certain patterns of values in a profile variable would occasionally lead to an InvalidOperationException while building
+- Added check to prevent infinite loop during WaitForCompletion during Asset Database Mode and Simulate Groups Mode
+- Users can now supply a callback to receive the UnityWebRequest before being sent by web-based providers
+- Added new API to clear the bundle cache for nonreferenced remote asset bundles. UpdateCatalogs has a new optional parameter called autoCleanBundleCache that when enabled will clear the bundle cache for nonreferenced remote asset bundles.
+- New public APIs
+	- BundledAssetGroupSchema.AssetLoadMode
+	- AssetBundleProvider.AssetBundleRequestOptions.AssetLoadMode
+	- Addressables.WebRequestOverride
+	- ResourceManager.WebRequestOverride
+	- AddressableAssetSettings.DisableVisibleSubAssetRepresentations
+	- Exposed Auto release parameter added to InitializeAsync
+	- BundleRuleBase
+	- GenerateLocationListsTask.ProcessInput (formally RunInteral)
+	- BuildScriptPackedMode.PrepGroupBundlePacking
+	- UnloadSceneAsync APIs with exposed UnloadSceneOptions parameter
+	- Addressables.CleanBundleCache
+	- New parameter for Addressables.UpdateCatalogs to auto clean the bundle cache
+
 ## [1.18.15] - 2021-07-26
 - Improved Addressables inspector for Assets.
 - Fixed issue where the hosting window would use an exceptionally high (8-20%) amount of CPU while open with a hosting service created

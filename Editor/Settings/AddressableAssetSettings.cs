@@ -13,13 +13,26 @@ using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
-using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.ResourceManagement.AsyncOperations;
-using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 using static UnityEditor.AddressableAssets.Settings.AddressablesFileEnumeration;
+using System.Threading.Tasks;
 
+#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+using Unity.Services.CCD.Management;
+using Unity.Services.CCD.Management.Apis.Entries;
+using Unity.Services.CCD.Management.Http;
+using Unity.Services.CCD.Management.Apis.Content;
+using Unity.Services.CCD.Management.Apis.Releases;
+using Unity.Services.CCD.Management.Entries;
+using Unity.Services.CCD.Management.Content;
+using System.Net;
+using Unity.Services.CCD.Management.Apis.Badges;
+using Unity.Services.CCD.Management.Releases;
+using Unity.Services.CCD.Management.Badges;
+using Unity.Services.CCD.Management.Models;
+#endif
 [assembly: InternalsVisibleTo("Unity.Addressables.Editor.Tests")]
 [assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
 [assembly: InternalsVisibleTo("PerformanceTests.Editor")]
@@ -51,25 +64,82 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
+        /// Build Path Name
+        /// </summary>
+        public const string kBuildPath = "BuildPath";
+        /// <summary>
+        /// Load Path Name
+        /// </summary>
+        public const string kLoadPath = "LoadPath";
+        /// <summary>
         /// Default name of a newly created group.
         /// </summary>
         public const string kNewGroupName = "New Group";
         /// <summary>
         /// Default name of local build path.
         /// </summary>
-        public const string kLocalBuildPath = "LocalBuildPath";
+        public const string kLocalBuildPath = "Local.BuildPath";
         /// <summary>
         /// Default name of local load path.
         /// </summary>
-        public const string kLocalLoadPath = "LocalLoadPath";
+        public const string kLocalLoadPath = "Local.LoadPath";
         /// <summary>
         /// Default name of remote build path.
         /// </summary>
-        public const string kRemoteBuildPath = "RemoteBuildPath";
+        public const string kRemoteBuildPath = "Remote.BuildPath";
         /// <summary>
         /// Default name of remote load path.
         /// </summary>
-        public const string kRemoteLoadPath = "RemoteLoadPath";
+        public const string kRemoteLoadPath = "Remote.LoadPath";
+        /// <summary>
+        /// Default value of local build path.
+        /// </summary>
+        public const string kLocalBuildPathValue = "[UnityEngine.AddressableAssets.Addressables.BuildPath]/[BuildTarget]";
+        /// <summary>
+        /// Default value of local load path.
+        /// </summary>
+        public const string kLocalLoadPathValue = "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]";
+        /// <summary>
+        /// Default value of remote build path.
+        /// </summary>
+        public const string kRemoteBuildPathValue = "ServerData/[BuildTarget]";
+        /// <summary>
+        /// Default value of remote load path.
+        /// </summary>
+        public const string kRemoteLoadPathValue = "http://localhost/[BuildTarget]";
+#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+        /// <summary>
+        /// Default path of build assets that are uploaded to CCD.
+        /// </summary>
+        public const string kCCDBuildDataPath = "CCDBuildData";
+        /// <summary>
+        /// CCD Package Name
+        /// </summary>
+        public const string kCCDPackageName = "com.unity.services.ccd.management";
+#endif
+
+
+        private const string kImportAssetEntryCollectionOptOutKey = "com.unity.addressables.importAssetEntryCollections.optOut";
+        internal bool DenyEntryCollectionPermission { get; set; }
+
+        /// <summary>
+        /// Options for building Addressables when building a player.
+        /// </summary>
+        public enum PlayerBuildOption
+        {
+            /// <summary>
+            /// Use to indicate that the global settings (stored in preferences) will determine if building a player will also build Addressables.
+            /// </summary>
+            PreferencesValue,
+            /// <summary>
+            /// Use to indicate that building a player will also build Addressables.
+            /// </summary>
+            BuildWithPlayer,
+            /// <summary>
+            /// Use to indicate that building a player won't build Addressables.
+            /// </summary>
+            DoNotBuildWithPlayer
+        }
 
         /// <summary>
         /// Options for labeling all the different generated events.
@@ -333,6 +403,21 @@ namespace UnityEditor.AddressableAssets.Settings
         bool m_NonRecursiveBuilding = false;
 #endif
 
+#if UNITY_2019_4_OR_NEWER
+        [SerializeField]
+#if !ENABLE_CCD
+        bool m_CCDEnabled = false;
+#else
+        bool m_CCDEnabled = true;
+#endif
+
+        public bool CCDEnabled
+        {
+            get { return m_CCDEnabled; }
+            set { m_CCDEnabled = value; }
+        }
+#endif
+
         [SerializeField]
         int m_maxConcurrentWebRequests = 500;
 
@@ -424,7 +509,6 @@ namespace UnityEditor.AddressableAssets.Settings
             set { m_DisableCatalogUpdateOnStart = value; }
         }
 
-#if UNITY_2019_4_OR_NEWER
         [SerializeField]
         bool m_StripUnityVersionFromBundleBuild = false;
         /// <summary>
@@ -435,14 +519,14 @@ namespace UnityEditor.AddressableAssets.Settings
             get { return m_StripUnityVersionFromBundleBuild; }
             set { m_StripUnityVersionFromBundleBuild = value; }
         }
-#endif
+
         [SerializeField]
         bool m_DisableVisibleSubAssetRepresentations = false;
         /// <summary>
         /// If true, the build will assume that sub Assets have no visible asset representations (are not visible in the Project view) which results in improved build times.
-        /// However sub assets in the built bundles cannot be accessed by AssetBundle.LoadAsset&lt;T&gt or AssetBundle.LoadAllAssets&lt;T&gt.
+        /// However sub assets in the built bundles cannot be accessed by AssetBundle.LoadAsset&lt;T&gt; or AssetBundle.LoadAllAssets&lt;T&gt;.
         /// </summary>
-        internal bool DisableVisibleSubAssetRepresentations
+        public bool DisableVisibleSubAssetRepresentations
         {
             get { return m_DisableVisibleSubAssetRepresentations; }
             set { m_DisableVisibleSubAssetRepresentations = value; }
@@ -552,7 +636,23 @@ namespace UnityEditor.AddressableAssets.Settings
         public string ContentStateBuildPath
         {
             get { return m_ContentStateBuildPath; }
-            set { m_ContentStateBuildPath = value;  }
+            set { m_ContentStateBuildPath = value; }
+        }
+        
+        [SerializeField]
+        private PlayerBuildOption m_BuildAddressablesWithPlayerBuild = PlayerBuildOption.DoNotBuildWithPlayer;
+        /// <summary>
+        /// Defines if Addressables content will be built along with a Player build.
+        /// </summary>
+        /// <remarks>
+        /// Build with Player, will build Addressables with a Player build, this overrides preferences value.
+        /// Do not Build with Player, will not build Addressables with a Player build, this overrides preferences value.
+        /// Preferences value, will build with the Player dependant on is the user preferences value for "Build Addressables on Player build" is set.
+        /// </remarks>
+        public PlayerBuildOption BuildAddressablesWithPlayerBuild
+        {
+            get { return m_BuildAddressablesWithPlayerBuild; }
+            set { m_BuildAddressablesWithPlayerBuild = value;  }
         }
 
         internal string GetContentStateBuildPath()
@@ -1207,6 +1307,30 @@ namespace UnityEditor.AddressableAssets.Settings
             profileSettings.OnAfterDeserialize(this);
             buildSettings.OnAfterDeserialize(this);
             HostingServicesManager.OnEnable();
+
+#pragma warning disable 0618
+            if (!SessionState.GetBool("com.unity.addressables.updateAssetEntryCollections", false))
+            {
+                List<string> aecPaths = new List<string>();
+                foreach (AddressableAssetGroup assetGroup in groups)
+                {
+                    foreach (var assetEntry in assetGroup.entries)
+                    {
+                        if (typeof(AddressableAssetEntryCollection).IsAssignableFrom(assetEntry.MainAssetType))
+                        {
+                            aecPaths.Add(assetEntry.AssetPath);
+                        }
+                    }
+                }
+
+                if (aecPaths.Count > 0)
+                {
+                    if (ConvertAssetEntryCollectionsWithPermissionRequest(aecPaths))
+                        SetDirty(ModificationEvent.BatchModification, null, true, false);
+                }
+                SessionState.SetBool("com.unity.addressables.updateAssetEntryCollections", true);
+            }
+#pragma warning restore 0618
         }
 
         void OnDisable()
@@ -1264,8 +1388,14 @@ namespace UnityEditor.AddressableAssets.Settings
             return AssetDatabase.LoadAssetAtPath<T>(path);
         }
 
-        internal const string PlayerDataGroupName = "Built In Data";
-        internal const string DefaultLocalGroupName = "Default Local Group";
+        /// <summary>
+        /// The default name of the built in player data AddressableAssetGroup
+        /// </summary>
+        public const string PlayerDataGroupName = "Built In Data";
+        /// <summary>
+        /// The default name of the local data AddressableAsssetGroup
+        /// </summary>
+        public const string DefaultLocalGroupName = "Default Local Group";
 
         /// <summary>
         /// Create a new AddressableAssetSettings object.
@@ -1288,6 +1418,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 aa.name = configName;
                 // TODO: Uncomment after initial opt-in testing period
                 //aa.ContiguousBundles = true;
+                aa.BuildAddressablesWithPlayerBuild = PlayerBuildOption.PreferencesValue;
 
                 if (isPersisted)
                 {
@@ -1931,6 +2062,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
+            List<string> assetEntryCollections = new List<string>();
             var aa = this;
             bool relatedAssetChanged = false;
             bool settingsChanged = false;
@@ -1961,11 +2093,10 @@ namespace UnityEditor.AddressableAssets.Settings
                         group.DedupeEnteries();
                 }
 
+#pragma warning disable 0618
                 if (typeof(AddressableAssetEntryCollection).IsAssignableFrom(assetType))
-                {
-                    aa.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(str), aa.DefaultGroup);
-                    relatedAssetChanged = true;
-                }
+                    assetEntryCollections.Add(str);
+#pragma warning restore 0618
 
                 var guid = AssetDatabase.AssetPathToGUID(str);
                 if (aa.FindAssetEntry(guid) != null)
@@ -1974,6 +2105,9 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (AddressableAssetUtility.IsInResources(str))
                     relatedAssetChanged = true;
             }
+
+            if (assetEntryCollections.Count > 0)
+                relatedAssetChanged = ConvertAssetEntryCollectionsWithPermissionRequest(assetEntryCollections) || relatedAssetChanged;
 
             if (deletedAssets.Length > 0)
             {
@@ -2055,6 +2189,58 @@ namespace UnityEditor.AddressableAssets.Settings
                 aa.SetDirty(ModificationEvent.BatchModification, null, true, settingsChanged);
         }
 
+#pragma warning disable 0618
+        internal bool ConvertAssetEntryCollectionsWithPermissionRequest(List<string> assetEntryCollections)
+        {
+            if (assetEntryCollections == null || assetEntryCollections.Count == 0 || DenyEntryCollectionPermission)
+                return false;
+
+            bool allowConvertCollectionToEntries = EditorUtility.GetDialogOptOutDecision(DialogOptOutDecisionType.ForThisMachine, kImportAssetEntryCollectionOptOutKey);
+            if (!allowConvertCollectionToEntries)
+            {
+                allowConvertCollectionToEntries = EditorUtility.DisplayDialog("AssetEntryCollection Found",
+                    "AssetEntryCollection is obsolete, do you want create AddressableAssetEntries from the AssetEntryCollection in the Default Group and remove the AssetEntryCollection from the project?",
+                    "Yes", "No",
+                    DialogOptOutDecisionType.ForThisMachine, kImportAssetEntryCollectionOptOutKey);
+            }
+            return allowConvertCollectionToEntries ? ConvertAssetEntryCollections(assetEntryCollections) : false;
+        }
+
+        internal bool ConvertAssetEntryCollections(List<string> assetEntryCollections)
+        {
+            if (assetEntryCollections == null || assetEntryCollections.Count == 0)
+                return false;
+
+            bool changesMade = false;
+            foreach (string collectionPath in assetEntryCollections)
+            {
+                var collection = AssetDatabase.LoadAssetAtPath<AddressableAssetEntryCollection>(collectionPath);
+                if (collection == null)
+                {
+                    Debug.LogError("Could not load and convert AssetEntryCollection at " + collectionPath);
+                    continue;
+                }
+                if (!AddressableAssetEntryCollection.ConvertEntryCollectionToEntries(collection, this))
+                {
+                    Debug.LogError("Failed to convert AssetEntryCollection to AddressableAssetEntries at " + collectionPath);
+                    continue;
+                }
+
+                if (collectionPath.StartsWith("Assets"))
+                {
+                    if (!AssetDatabase.DeleteAsset(collectionPath))
+                        Debug.LogError("Failed to Delete AssetEntryCollection at " + collectionPath);
+                }
+                else
+                {
+                    Debug.LogWarning($"Imported AssetEntryCollection is in a Package, deletion of Asset at {collectionPath} aborted.");
+                }
+                changesMade = true;
+            }
+            return changesMade;
+        }
+#pragma warning restore 0618
+
         internal bool CheckForGroupDataDeletion(string str)
         {
             if (string.IsNullOrEmpty(str))
@@ -2097,6 +2283,195 @@ namespace UnityEditor.AddressableAssets.Settings
             BuildPlayerContent(out AddressablesPlayerBuildResult rst);
         }
 
+#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+        /// <summary>
+        /// Runs the active player data build script to create runtime data.
+        /// Any groups referencing CCD group type will have the produced bundles uploaded to the specified non-promotion only bucket.
+        /// See the [BuildPlayerContent](xref:addressables-api-build-player-content) documentation for more details.
+        /// </summary>
+        public async static Task<AddressableAssetBuildResult> BuildAndReleasePlayerContent()
+        {
+            AddressableAssetBuildResult result = null;
+            var settings = AddressableAssetSettingsDefaultObject.Settings;
+            if (settings == null)
+            {
+                string error;
+                if (EditorApplication.isUpdating)
+                    error = "Addressable Asset Settings does not exist.  EditorApplication.isUpdating was true.";
+                else if (EditorApplication.isCompiling)
+                    error = "Addressable Asset Settings does not exist.  EditorApplication.isCompiling was true.";
+                else
+                    error = "Addressable Asset Settings does not exist.  Failed to create.";
+                Addressables.LogError(error);
+                result = new AddressablesPlayerBuildResult();
+                result.Error = error;
+                return result;
+            }
+
+            NullifyBundleFileIds(settings);
+
+            //Processing groups, checking for promotion buckets
+            bool promotionOnly = GroupsContainPromotionOnlyBucket(settings);
+            if (promotionOnly)
+            {
+                result = new AddressablesPlayerBuildResult();
+                result.Error = "Cannot upload to Promotion Only bucket.";
+                return result;
+            }
+
+            //Build the player content
+            result = settings.BuildPlayerContentImpl();
+
+            //Getting files
+            Addressables.Log("Creating and uploading entries");
+            var startDirectory = new DirectoryInfo(kCCDBuildDataPath);
+            var buckets = CreateBucketData(startDirectory);
+
+
+            //Creating a release for each bucket
+            var projectId = CloudProjectSettings.projectId;
+            await CCDManagementAPIService.SetConfigurationAuthHeader(CloudProjectSettings.accessToken);
+            var httpClient = new HttpClient();
+            var ccdEntryClient = new EntriesApiClient(httpClient);
+            var ccdContentClient = new ContentApiClient(httpClient);
+            var ccdReleaseClient = new ReleasesApiClient(httpClient);
+            var ccdBadgesClient = new BadgesApiClient(httpClient);
+
+            await CreateReleaseForBuckets(buckets, ccdEntryClient, projectId, ccdContentClient, ccdReleaseClient, ccdBadgesClient);
+
+            return result;
+
+        }
+
+        static Dictionary<DirectoryInfo, Dictionary<DirectoryInfo, List<FileInfo>>> CreateBucketData(DirectoryInfo startDirectory)
+        {
+            var buckets = new Dictionary<DirectoryInfo, Dictionary<DirectoryInfo, List<FileInfo>>>();
+            var bucketDirs = startDirectory.GetDirectories().Where(d => !d.Attributes.HasFlag(FileAttributes.Hidden));
+            foreach (var bucketDir in bucketDirs)
+            {
+                var badgeDirs = bucketDir.GetDirectories().Where(d => !d.Attributes.HasFlag(FileAttributes.Hidden));
+                foreach (var badgeDir in badgeDirs)
+                {
+                    var files = badgeDir.GetFiles().Where(f => !f.Attributes.HasFlag(FileAttributes.Hidden)).ToList();
+                    if (!buckets.ContainsKey(bucketDir))
+                    {
+                        var badges = new Dictionary<DirectoryInfo, List<FileInfo>>();
+                        badges.Add(badgeDir, files);
+                        buckets.Add(bucketDir, badges);
+                    }
+                    else
+                    {
+                        buckets.TryGetValue(bucketDir, out var badges);
+                        if (!badges.ContainsKey(badgeDir))
+                        {
+                            badges.Add(badgeDir, files);
+                        }
+                        else
+                        {
+                            badges.TryGetValue(badgeDir, out var existingFiles);
+                            existingFiles.AddRange(files);
+                        }
+                    }
+                }
+            }
+
+            return buckets;
+        }
+
+        async static Task CreateReleaseForBuckets(Dictionary<DirectoryInfo, Dictionary<DirectoryInfo, List<FileInfo>>> buckets, EntriesApiClient ccdEntryClient, string projectId,
+            ContentApiClient ccdContentClient, ReleasesApiClient ccdReleaseClient, BadgesApiClient ccdBadgesClient)
+        {
+            foreach (var bucketKvp in buckets)
+            {
+                string bucketId = bucketKvp.Key.Name;
+
+                foreach (var badgeKvp in bucketKvp.Value)
+                {
+                    string badgeName = badgeKvp.Key.Name;
+
+                    //Creating entries and uploading files
+                    await AddressableAssetUtility.ParallelForEachAsync(badgeKvp.Value, 5, async (path) =>
+                    {
+                        string contentHash = AddressableAssetUtility.GetMd5Hash(path.FullName);
+                        using (var stream = File.OpenRead(path.FullName))
+                        {
+                            var entryPath = path.Name;
+                            var entry = new CcdEntryCreateByPath(contentHash, (int)stream.Length);
+                            var createEntryRequest = new CreateOrUpdateEntryByPathRequest(bucketId, entryPath, projectId, entry, true);
+                            var createdEntry = (await ccdEntryClient.CreateOrUpdateEntryByPathAsync(createEntryRequest)).Result;
+
+                            var uploadContentRequest = new UploadContentRequest(bucketId, createdEntry.Entryid.ToString(), projectId, stream);
+
+                            var response = await ccdContentClient.UploadContentAsync(uploadContentRequest, (prog, total) =>
+                            {
+                                Addressables.Log($"Uploaded {prog}/{total} of {entryPath}");
+                            });
+                            if (response.Status == (long)HttpStatusCode.NoContent)
+                            {
+                                Addressables.Log($"File: {createdEntry.Path} has been successfully uploaded");
+                            }
+                        }
+                    });
+
+                    //Creating release
+                    Addressables.Log("Creating release.");
+                    var createRelease = new CcdReleaseCreate();
+                    var createReleaseRequest = new CreateReleaseRequest(bucketId, projectId, createRelease);
+                    var release = (await ccdReleaseClient.CreateReleaseAsync(createReleaseRequest)).Result;
+                    Addressables.Log($"Release {release.Releaseid} created.");
+
+                    //Don't update latest badge (as it always updates)
+                    if (badgeName != "latest")
+                    {
+                        //Updating badge
+                        Addressables.Log("Updating badge.");
+                        var updateBadge = new CcdBadgeAssign("TestBadge", release.Releaseid);
+                        var updateBadgeRequest = new UpdateBadgeRequest(bucketId, projectId, updateBadge);
+                        var badge = (await ccdBadgesClient.UpdateBadgeAsync(updateBadgeRequest)).Result;
+                        Addressables.Log($"Badge {badge.Name} updated.");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Check if groups contain promotion only buckets.
+        /// </summary>
+        /// <param name="settings">The Settings to process</param>
+        /// <returns>True if any group points to a promotion only bucket.</returns>
+        internal static bool GroupsContainPromotionOnlyBucket(AddressableAssetSettings settings)
+        {
+            foreach (AddressableAssetGroup group in settings.groups)
+            {
+                if (group == null)
+                    continue;
+
+                var schema = group.GetSchema<BundledAssetGroupSchema>();
+                if (schema != null)
+                {
+                    var buildPath = schema.BuildPath.GetValue(settings);
+                    var loadPath = schema.LoadPath.GetValue(settings);
+                    var groupType = new ProfileGroupType("temp");
+                    groupType.AddVariable(new ProfileGroupType.GroupTypeVariable(kBuildPath, buildPath));
+                    groupType.AddVariable(new ProfileGroupType.GroupTypeVariable(kLoadPath, loadPath));
+                    var foundGroupType = ProfileDataSourceSettings.GetSettings().FindGroupType(groupType);
+                    if (foundGroupType != null && foundGroupType.GroupTypePrefix.StartsWith("CCD"))
+                    {
+                        if (bool.Parse(foundGroupType.GetVariableBySuffix(nameof(CcdBucket.Attributes.PromoteOnly)).Value) == true)
+                        {
+                            string error = "Cannot upload to Promotion Only bucket.";
+                            Addressables.LogError(error);
+                            return true;
+                        }
+                    }
+
+                }
+            }
+
+            return false;
+        }
+#endif
+
         /// <summary>
         /// Runs the active player data build script to create runtime data.
         /// See the [BuildPlayerContent](xref:addressables-api-build-player-content) documentation for more details.
@@ -2120,6 +2495,13 @@ namespace UnityEditor.AddressableAssets.Settings
                 return;
             }
 
+            NullifyBundleFileIds(settings);
+
+            result = settings.BuildPlayerContentImpl();
+        }
+
+        internal static void NullifyBundleFileIds(AddressableAssetSettings settings)
+        {
             foreach (AddressableAssetGroup group in settings.groups)
             {
                 if (group == null)
@@ -2127,7 +2509,6 @@ namespace UnityEditor.AddressableAssets.Settings
                 foreach (AddressableAssetEntry entry in group.entries)
                     entry.BundleFileId = null;
             }
-            result = settings.BuildPlayerContentImpl();
         }
 
         internal AddressablesPlayerBuildResult BuildPlayerContentImpl()

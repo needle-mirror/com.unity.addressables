@@ -75,7 +75,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             if (m_rtdOp.IsValid() && !m_rtdOp.IsDone)
                 m_rtdOp.WaitForCompletion();
 
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
 
             if (!HasExecuted)
                 InvokeExecute();
@@ -83,7 +83,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             if (m_loadCatalogOp.IsValid() && !m_loadCatalogOp.IsDone)
             {
                 m_loadCatalogOp.WaitForCompletion();
-                m_RM?.Update(Time.deltaTime); //We need completion callbacks to get triggered.
+                m_RM?.Update(Time.unscaledDeltaTime); //We need completion callbacks to get triggered.
             }
 
             return m_rtdOp.IsDone && m_loadCatalogOp.IsDone;
@@ -98,9 +98,7 @@ namespace UnityEngine.AddressableAssets.Initialization
                 Complete(Result, false, string.Format("Addressables - Unable to load runtime data at location {0}.", m_rtdOp));
                 return;
             }
-#if UNITY_2019_3_OR_NEWER
             Addressables.LogFormat("Initializing Addressables version {0}.", m_rtdOp.Result.AddressablesVersion);
-#endif
             var rtd = m_rtdOp.Result;
 
             m_Addressables.ResourceManager.postProfilerEvents = rtd.ProfileEvents;

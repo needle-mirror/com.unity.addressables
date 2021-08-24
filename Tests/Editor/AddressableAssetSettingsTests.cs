@@ -70,11 +70,7 @@ namespace UnityEditor.AddressableAssets.Tests
         public void SetupEntries(ref List<AddressableAssetEntry> entries, int numEntries)
         {
             var testObject = new GameObject("TestObjectSetLabel");
-#if UNITY_2018_3_OR_NEWER
             PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/testasset.prefab");
-#else
-            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
-#endif
             var testAssetGUID = AssetDatabase.AssetPathToGUID(ConfigFolder + "/testasset.prefab");
             entries.Add(Settings.CreateOrMoveEntry(m_AssetGUID, Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName)));
             for (int i = 0; i <= numEntries; i++)
@@ -424,7 +420,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsNull(Settings.FindGroup(groupName));
         }
 
-#if UNITY_2019_2_OR_NEWER
         [Test]
         public void Settings_WhenActivePlayerDataBuilderIndexSetWithSameValue_DoesNotDirtyAsset()
         {
@@ -473,30 +468,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.OnPostprocessAllAssets(importedAssets, deletedAssets, movedAssets, movedFromAssetPaths);
             Assert.AreEqual(prevDC + 2, EditorUtility.GetDirtyCount(Settings));
             Assert.IsTrue(EditorUtility.IsDirty(Settings));
-        }
-
-        [Test]
-        public void AddressableAssetSettings_OnPostprocessAllAssets_AddAssetEntriesCollectionNotTriggerSettingsSave()
-        {
-            // Setup
-            var importedAssets = new string[1];
-            var deletedAssets = new string[0];
-            var movedAssets = new string[0];
-            var movedFromAssetPaths = new string[0];
-            var collectionPath = Path.Combine(TestFolder, "collection.asset").Replace('\\', '/');
-            var collection = ScriptableObject.CreateInstance<AddressableAssetEntryCollection>();
-            var entry = new AddressableAssetEntry("12345698655", "TestAssetEntry", null, false);
-            entry.m_cachedAssetPath = "TestPath";
-            collection.Entries.Add(entry);
-            AssetDatabase.CreateAsset(collection, collectionPath);
-            importedAssets[0] = collectionPath;
-            EditorUtility.ClearDirty(Settings);
-            var prevDC = EditorUtility.GetDirtyCount(Settings);
-
-            // Test
-            Settings.OnPostprocessAllAssets(importedAssets, deletedAssets, movedAssets, movedFromAssetPaths);
-            Assert.AreEqual(prevDC, EditorUtility.GetDirtyCount(Settings));
-            Assert.IsFalse(EditorUtility.IsDirty(Settings));
         }
 
         [Test]
@@ -987,11 +958,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Setup
             var testGuidsToPaths = new Dictionary<string, string>();
             var testObject = new GameObject("TestObjectMoveAssets");
-#if UNITY_2018_3_OR_NEWER
             PrefabUtility.SaveAsPrefabAsset(testObject, ConfigFolder + "/testasset.prefab");
-#else
-            PrefabUtility.CreatePrefab(k_TestConfigFolder + "/test.prefab", testObject);
-#endif
             var testAssetGUID = AssetDatabase.AssetPathToGUID(ConfigFolder + "/testasset.prefab");
             Settings.CreateOrMoveEntry(testAssetGUID, Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName));
             var originalAssetEntry = Settings.CreateOrMoveEntry(m_AssetGUID, Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName));
@@ -1184,8 +1151,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.groups.RemoveAt(Settings.groups.Count - 1);
         }
 
-#endif
-
         [Test]
         public void CustomEntryCommand_WhenRegistered_InvokeIsCalled()
         {
@@ -1336,6 +1301,19 @@ namespace UnityEditor.AddressableAssets.Tests
                 LogAssert.Expect(LogType.Error, $"Asset Group Command 'cmd' not found.  Ensure that it is registered by calling RegisterCustomAssetGroupCommand.");
                 Assert.IsFalse(AddressableAssetSettings.InvokeAssetGroupCommand("cmd", new AddressableAssetGroup[] {}));
             });
+        }
+
+        [Test]
+        public void NullifyBundleFileIds_SetsBundleFileIdsToNull()
+        {
+            AddressableAssetSettings.NullifyBundleFileIds(Settings);
+            foreach (var group in Settings.groups)
+            {
+                foreach (var entry in group.entries)
+                {
+                    Assert.IsNull(entry.BundleFileId);
+                }
+            }
         }
     }
 }

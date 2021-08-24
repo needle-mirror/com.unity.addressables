@@ -41,10 +41,13 @@ namespace UnityEditor.AddressableAssets.Settings
         ///<inheritdoc />
         protected override bool InvokeWaitForCompletion()
         {
-            m_RM?.Update(Time.deltaTime);
+            if (IsDone)
+                return true;
+
+            m_RM?.Update(Time.unscaledDeltaTime);
             if(!HasExecuted)
                 InvokeExecute();
-            return IsDone;
+            return true;
         }
 
         protected override void Execute()

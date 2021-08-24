@@ -12,7 +12,7 @@ namespace UnityEditor.AddressableAssets
         private const string m_EditorInitializedBoolName = nameof(m_EditorInitializedBoolName);
 
         static AddressableEditorInitialization()
-        {  
+        {
             bool editorInitialized = SessionState.GetBool(m_EditorInitializedBoolName, false);
             if (editorInitialized) return;
 
@@ -35,7 +35,7 @@ namespace UnityEditor.AddressableAssets
                 foreach (var assetEntry in group.entries)
                 {
                     if (assetEntry == null ||
-                        assetEntry.address == AddressableAssetEntry.EditorSceneListName || 
+                        assetEntry.address == AddressableAssetEntry.EditorSceneListName ||
                         assetEntry.address == AddressableAssetEntry.ResourcesName)
                         continue;
 

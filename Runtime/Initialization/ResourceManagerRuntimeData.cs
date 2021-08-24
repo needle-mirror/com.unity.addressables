@@ -102,7 +102,7 @@ namespace UnityEngine.AddressableAssets.Initialization
                 m_CertificateHandlerType.Value = value;
             }
         }
-#if UNITY_2019_3_OR_NEWER
+        
         [SerializeField]
         string m_AddressablesVersion;
 
@@ -120,7 +120,6 @@ namespace UnityEngine.AddressableAssets.Initialization
                 m_AddressablesVersion = value;
             }
         }
-#endif
 
         [SerializeField]
         int m_maxConcurrentWebRequests = 500;

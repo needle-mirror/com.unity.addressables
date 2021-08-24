@@ -387,8 +387,8 @@ namespace UnityEditor.AddressableAssets.HostingServices
                 case AddressableAssetSettings.ModificationEvent.ActiveProfileSet:
                 case AddressableAssetSettings.ModificationEvent.BuildSettingsChanged:
                 case AddressableAssetSettings.ModificationEvent.ProfileModified:
-                    var profileRemoteBuildPath = m_Settings.profileSettings.GetValueByName(m_Settings.activeProfileId,"RemoteBuildPath");
-                    if (profileRemoteBuildPath.Contains('[') || !CurrentContentRootsContain(profileRemoteBuildPath))
+                    var profileRemoteBuildPath = m_Settings.profileSettings.GetValueByName(m_Settings.activeProfileId, AddressableAssetSettings.kRemoteBuildPath);
+                    if (profileRemoteBuildPath != null && (profileRemoteBuildPath.Contains('[') || !CurrentContentRootsContain(profileRemoteBuildPath)))
                         ConfigureAllHostingServices();
                     break;
                 case AddressableAssetSettings.ModificationEvent.BatchModification:
@@ -396,7 +396,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
                     break;
             }
         }
-        
+
         bool CurrentContentRootsContain(string root)
         {
             foreach (var svc in HostingServices)

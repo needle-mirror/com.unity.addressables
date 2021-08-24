@@ -18,10 +18,7 @@ using UnityEngine.ResourceManagement.Util;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-
-#if UNITY_2019_3_OR_NEWER
 using UnityEditor.Experimental;
-#endif
 
 namespace UnityEditor.AddressableAssets.Build.DataBuilders
 {
@@ -108,9 +105,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 new[] { ResourceManagerRuntimeData.kCatalogAddress },
                 string.Format(m_PathFormat, "file://{UnityEngine.Application.dataPath}/../", "catalog"),
                 typeof(ContentCatalogProvider), typeof(ContentCatalogData)));
-#if UNITY_2019_3_OR_NEWER
             aaContext.runtimeData.AddressablesVersion = PackageManager.PackageInfo.FindForAssembly(typeof(Addressables).Assembly)?.version;
-#endif
             m_CreatedProviderIds = new Dictionary<string, VirtualAssetBundleRuntimeData>();
             m_ResourceProviderData = new List<ObjectInitializationData>();
 
@@ -356,7 +351,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 return Path.GetFullPath(paths[0]);
             else
                 legacyPath = String.Empty; // legacy path is never valid in 2020.1+
-#elif UNITY_2019_3_OR_NEWER
+#else
             if (IsAssetDatabaseV2Enabled()) // AssetDatabase V2 is optional in 2019.3 and 2019.4
             {
                 var hash = Experimental.AssetDatabaseExperimental.GetArtifactHash(guid);

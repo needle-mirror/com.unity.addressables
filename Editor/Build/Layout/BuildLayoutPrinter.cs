@@ -213,11 +213,9 @@ namespace UnityEditor.AddressableAssets.Build.Layout
 
                 writer.WriteLine("WARNING! The formatting in this file may change in future package versions.");
                 writer.WriteLine($"Unity Version: {UnityEngine.Application.unityVersion}");
-#if UNITY_2019_2_OR_NEWER // PackageManager package inspection APIs didn't exist until 2019.2
                 PackageManager.PackageInfo info = PackageManager.PackageInfo.FindForAssembly(typeof(BuildLayoutPrinter).Assembly);
                 if (info != null)
                     writer.WriteLine($"{info.name}: {info.version}");
-#endif
 
                 WriteSummary(writer, layout);
                 writer.WriteLine("");

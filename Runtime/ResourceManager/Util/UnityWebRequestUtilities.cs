@@ -85,7 +85,7 @@ namespace UnityEngine.ResourceManagement.Util
         /// <summary>
         /// A string explaining the error that occured.
         /// </summary>
-        public string Error { get; }
+        public string Error { get; internal set; }
 
         /// <summary>
         /// The numeric HTTP response code returned by the server, if any.

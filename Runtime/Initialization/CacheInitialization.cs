@@ -85,7 +85,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             protected override bool InvokeWaitForCompletion()
             {
 #if ENABLE_CACHING
-                m_RM?.Update(Time.deltaTime);
+                m_RM?.Update(Time.unscaledDeltaTime);
                 if (!IsDone)
                     InvokeExecute();
                 return IsDone;

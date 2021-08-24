@@ -1,11 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Utilities;
+using UnityEditor.PackageManager;
+using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -48,7 +54,8 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void GetPackages_ReturnsUnityPackages()
         {
-            var packages = AddressableAssetUtility.GetPackages();
+            ListRequest req = Client.List(true);
+            var packages = AddressableAssetUtility.GetPackages(req);
             var addressablesPackage = packages.FirstOrDefault(p => p.name == $"com.unity.addressables");
             Assert.IsNotNull(addressablesPackage);
         }
@@ -62,10 +69,10 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsEmpty(actualGUID);
         }
 
-        public class TestBaseClass { }
+        public class TestBaseClass {}
         [System.ComponentModel.DisplayName("TestSubClass_DisplayName")]
-        public class TestSubClass : TestBaseClass { }
-        public abstract class TestAbstractSubClass : TestBaseClass { }
+        public class TestSubClass : TestBaseClass {}
+        public abstract class TestAbstractSubClass : TestBaseClass {}
 
         [Test]
         public void GetTypesGeneric_ReturnsOnly_NonAbstractSubTypes()
@@ -239,7 +246,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsFalse(AddressableAssetUtility.SafeMoveResourcesToGroup(Settings, Settings.DefaultGroup, null, null, false));
         }
 
-
         HashSet<string> otherInternaIds = new HashSet<string>(new string[] { "a", "ab", "abc" });
 
         [TestCase(BundledAssetGroupSchema.AssetNamingMode.FullPath, "Assets/blah/something.asset", "", "Assets/blah/something.asset")]
@@ -329,6 +335,45 @@ namespace UnityEditor.AddressableAssets.Tests
            
             // clean up
             Settings.RemoveAssetEntry(guid1);
+        }
+
+        [Test]
+        public void GivenFunction_ParallelForEachAsync_ReturnsCompletedTask()
+        {
+            //two identical lists
+            var originalNums = new List<int>() { 1, 2, 3, 4, 5 };
+            var nums = new List<int>() { 1, 2, 3, 4, 5 };
+
+            //function modifies original list by adding one 
+            AddressableAssetUtility.ParallelForEachAsync(nums, 5, (num) =>
+            {
+                originalNums[num - 1] += 1;
+                return Task.FromResult(originalNums[num - 1]);
+            }).GetAwaiter().GetResult();
+
+            //validate that the modified number matches
+            for (var i = 0; i < originalNums.Count; i++)
+            {
+                Assert.AreEqual(nums[i] + 1, originalNums[i]);
+            }
+        }
+
+        [Test]
+        public void GetMD5Hash_ReturnsValidMD5Hash()
+        {
+            const string FilePath = "test_file";
+            var file = File.Create(FilePath);
+            var content = "12345";
+            var contentBytes = Encoding.ASCII.GetBytes(content);
+            file.Write(contentBytes, 0, contentBytes.Length);
+            file.Close();
+
+            var hashString = AddressableAssetUtility.GetMd5Hash(FilePath);
+            File.Delete(FilePath);
+
+            Assert.NotNull(hashString);
+            Assert.AreEqual("827ccb0eea8a706c4c34a16891f84e7b", hashString);
+
         }
     }
 }

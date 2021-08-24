@@ -24,13 +24,8 @@ namespace AddressableAssetSettingsResourceLocationTests
             GameObject testObject2 = new GameObject("TestObject2");
             string path = tempAssetFolder + "/test.prefab";
             string path2 = tempAssetFolder + "/test2.prefab";
-#if UNITY_2018_3_OR_NEWER
             PrefabUtility.SaveAsPrefabAsset(testObject, path);
             PrefabUtility.SaveAsPrefabAsset(testObject2, path2);
-#else
-            PrefabUtility.CreatePrefab(path, testObject);
-            PrefabUtility.CreatePrefab(path2, testObject2);
-#endif
             string guid = AssetDatabase.AssetPathToGUID(path);
             string guid2 = AssetDatabase.AssetPathToGUID(path2);
 

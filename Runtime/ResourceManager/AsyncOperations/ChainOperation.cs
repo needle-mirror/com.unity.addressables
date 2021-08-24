@@ -23,7 +23,8 @@ namespace UnityEngine.ResourceManagement
 
         protected override string DebugName { get { return $"ChainOperation<{typeof(TObject).Name},{typeof(TObjectDependency).Name}> - {m_DepOp.DebugName}"; } }
 
-        protected override void GetDependencies(List<AsyncOperationHandle> deps)
+        /// <inheritdoc />
+        public override void GetDependencies(List<AsyncOperationHandle> deps)
         {
             if (m_DepOp.IsValid())
                 deps.Add(m_DepOp);
@@ -47,7 +48,7 @@ namespace UnityEngine.ResourceManagement
             if (!m_DepOp.IsDone)
                 m_DepOp.WaitForCompletion();
 
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
 
             if (!HasExecuted)
                 InvokeExecute();
@@ -143,7 +144,8 @@ namespace UnityEngine.ResourceManagement
 
         protected override string DebugName { get { return $"ChainOperation<{typeof(TObject).Name}> - {m_DepOp.DebugName}"; } }
 
-        protected override void GetDependencies(List<AsyncOperationHandle> deps)
+        /// <inheritdoc />
+        public override void GetDependencies(List<AsyncOperationHandle> deps)
         {
             if (m_DepOp.IsValid())
                 deps.Add(m_DepOp);
@@ -167,7 +169,7 @@ namespace UnityEngine.ResourceManagement
             if (!m_DepOp.IsDone)
                 m_DepOp.WaitForCompletion();
 
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
 
             if (!HasExecuted)
                 InvokeExecute();

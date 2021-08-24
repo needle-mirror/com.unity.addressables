@@ -39,15 +39,9 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
 
             prefabA.AddComponent<TestBehaviourWithReference>();
 
-#if UNITY_2018_3_OR_NEWER
             PrefabUtility.SaveAsPrefabAsset(prefabA, k_CheckDupePrefabA);
             PrefabUtility.SaveAsPrefabAsset(prefabB, k_CheckDupePrefabB);
             PrefabUtility.SaveAsPrefabAsset(prefabWithMaterial, k_PrefabWithMaterialPath);
-#else
-            PrefabUtility.CreatePrefab(k_CheckDupePrefabA, prefabA);
-            PrefabUtility.CreatePrefab(k_CheckDupePrefabB, prefabB);
-            PrefabUtility.CreatePrefab(k_PrefabWithMaterialPath, prefabWithMaterial);
-#endif
             AssetDatabase.Refresh();
         }
 

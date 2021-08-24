@@ -46,7 +46,6 @@ namespace UnityEditor.AddressableAssets.Tests
             SpriteAtlasUtility.PackAtlases(new SpriteAtlas[] { spriteAtlas }, EditorUserBuildSettings.activeBuildTarget, false);
         }
 
-#if UNITY_2019_1_OR_NEWER
         [Test]
         public void VerifySetEditorAsset_DoesNotMakeRefAssetDirty()
         {
@@ -61,7 +60,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsFalse(EditorUtility.IsDirty(reference.editorAsset));
         }
 
-#endif
         [Test]
         public void AssetReference_SetMainAsset_ResetsSubAsset()
         {

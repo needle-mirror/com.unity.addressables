@@ -41,10 +41,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             else
                 BundleCompression = target == BuildTarget.WebGL ? BuildCompression.LZ4Runtime : BuildCompression.LZMA;
 
-#if UNITY_2019_4_OR_NEWER
             if (aaSettings.StripUnityVersionFromBundleBuild)
                 ContentBuildFlags |= ContentBuildFlags.StripUnityVersion;
-#endif
         }
 
         private BuildCompression ConverBundleCompressiontToBuildCompression(

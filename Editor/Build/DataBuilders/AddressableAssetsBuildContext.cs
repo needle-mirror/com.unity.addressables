@@ -71,7 +71,14 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// </summary>
         public List<AddressableAssetEntry> assetEntries;
 
-        internal Dictionary<string, List<string>> bundleToImmediateBundleDependencies;
-        internal Dictionary<string, List<string>> bundleToExpandedBundleDependencies;
+        /// <summary>
+        /// Mapping of AssetBundle to the direct dependencies.
+        /// </summary>
+        public Dictionary<string, List<string>> bundleToImmediateBundleDependencies;
+
+        /// <summary>
+        /// A mapping of AssetBundle to the full dependency tree, flattened into a single list.
+        /// </summary>
+        public Dictionary<string, List<string>> bundleToExpandedBundleDependencies;
     }
 }

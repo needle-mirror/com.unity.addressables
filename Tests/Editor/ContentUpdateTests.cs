@@ -118,11 +118,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var path = AssetDatabase.GUIDToAssetPath(m_AssetGUID);
             var obj = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             obj.GetComponent<Transform>().SetPositionAndRotation(new Vector3(10, 10, 10), Quaternion.identity);
-#if UNITY_2018_3_OR_NEWER
             PrefabUtility.SavePrefabAsset(obj);
-#else
-            EditorUtility.SetDirty(obj);
-#endif
             AssetDatabase.SaveAssets();
             var tempPath = Path.GetDirectoryName(Application.dataPath) + "/" + Addressables.LibraryPath + PlatformMappingService.GetPlatformPathSubFolder() + "/addressables_content_state.bin";
             var modifiedEntries = ContentUpdateScript.GatherModifiedEntries(Settings, tempPath);
@@ -177,11 +173,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Modify assets
             var mainAsset = AssetDatabase.LoadAssetAtPath<GameObject>(mainAssetPath);
             mainAsset.GetComponent<Transform>().SetPositionAndRotation(new Vector3(10, 10, 10), Quaternion.identity);
-#if UNITY_2018_3_OR_NEWER
             PrefabUtility.SavePrefabAsset(mainAsset);
-#else
-            EditorUtility.SetDirty(mainAsset);
-#endif
             AssetDatabase.SaveAssets();
 
             // Test
@@ -242,11 +234,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Modify assets
             var mainAsset = AssetDatabase.LoadAssetAtPath<GameObject>(mainAssetPath);
             mainAsset.GetComponent<Transform>().SetPositionAndRotation(new Vector3(10, 10, 10), Quaternion.identity);
-#if UNITY_2018_3_OR_NEWER
             PrefabUtility.SavePrefabAsset(mainAsset);
-#else
-            EditorUtility.SetDirty(mainAsset);
-#endif
             staticContentGroup.GetSchema<BundledAssetGroupSchema>().InternalBundleIdMode = BundledAssetGroupSchema.BundleInternalIdMode.GroupGuidProjectIdEntriesHash;
             AssetDatabase.SaveAssets();
 
@@ -536,6 +524,7 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        [Ignore("Editor crash that's being fixed: https://jira.unity3d.com/browse/BPSBP-110")]
         public void BuildContentUpdate_DoesNotDeleteBuiltData()
         {
             var oldSetting = Settings.BuildRemoteCatalog;

@@ -5,6 +5,9 @@ using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using System.Linq;
+#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+using Unity.Services.CCD.Management.Models;
+#endif
 
 namespace UnityEditor.AddressableAssets.GUI
 {
@@ -29,9 +32,6 @@ namespace UnityEditor.AddressableAssets.GUI
         private float m_LabelWidth = 155f;
         private float m_FieldBufferWidth = 0f;
 
-        //Separator
-        private const char k_PrefixSeparator = '.';
-
         GUIStyle m_ItemRectPadding;
 
         float m_HorizontalSplitterRatio = k_DefaultHorizontalSplitterRatio;
@@ -39,6 +39,11 @@ namespace UnityEditor.AddressableAssets.GUI
         internal AddressableAssetSettings settings
         {
             get { return AddressableAssetSettingsDefaultObject.Settings; }
+        }
+
+        internal ProfileDataSourceSettings dataSourceSettings
+        {
+            get { return ProfileDataSourceSettings.GetSettings(); }
         }
 
         private ProfileTreeView m_ProfileTreeView;
@@ -61,6 +66,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
 
         private Dictionary<string, bool?> m_foldouts = new Dictionary<string, bool?>();
+        private Dictionary<string, bool> m_CustomGroupTypes = new Dictionary<string, bool>();
 
         [MenuItem("Window/Asset Management/Addressables/Profiles", priority = 2051)]
         internal static void ShowWindow()
@@ -97,9 +103,15 @@ namespace UnityEditor.AddressableAssets.GUI
             UnityEngine.GUI.color = orgColor;
         }
 
+#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+        private async void Awake()
+        {
+            if (CloudProjectSettings.projectId != String.Empty) await ProfileDataSourceSettings.UpdateCCDDataSourcesAsync(CloudProjectSettings.projectId, false);
+        }
+#endif
+            
         private void OnEnable()
         {
-            
             Undo.undoRedoPerformed += MarkForReload;
             titleContent = new GUIContent("Addressables Profiles");
             m_ItemRectPadding = new GUIStyle();
@@ -245,16 +257,29 @@ namespace UnityEditor.AddressableAssets.GUI
                 bool? foldout;
                 m_foldouts.TryGetValue(groupType.GroupTypePrefix, out foldout);
                 GUILayout.Space(5);
+                EditorGUILayout.BeginHorizontal(new GUILayoutOption[] { GUILayout.Width(fieldWidth + k_VariableItemPadding - k_SplitterThickness), GUILayout.MinWidth(fieldWidth + k_VariableItemPadding - k_SplitterThickness) });
                 m_foldouts[groupType.GroupTypePrefix] = EditorGUILayout.Foldout(foldout != null ? foldout.Value : true, groupType.GroupTypePrefix, true);
+                Rect dsDropdownRect = EditorGUILayout.BeginHorizontal(new GUILayoutOption[] { GUILayout.Width(fieldWidth - m_LabelWidth), GUILayout.MinWidth(fieldWidth - m_LabelWidth) });
+                string dropdownText = DetermineOptionString(groupType);
+                bool dsDropdown = EditorGUILayout.DropdownButton(new GUIContent(dropdownText), FocusType.Keyboard, new GUILayoutOption[] { GUILayout.Width(fieldWidth - m_LabelWidth) });
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.EndHorizontal();
+                DrawDataSourceDropDowns(dsDropdownRect, groupType, dsDropdown);
+
                 //Specific Grouped variables
                 List<ProfileGroupType.GroupTypeVariable> pathVariables = new List<ProfileGroupType.GroupTypeVariable>();
-                pathVariables.Add(groupType.GetVariableBySuffix("BuildPath"));
-                drawnGroupTypes.Add(groupType.GetName(groupType.GetVariableBySuffix("BuildPath")));
-                pathVariables.Add(groupType.GetVariableBySuffix("LoadPath"));
-                drawnGroupTypes.Add(groupType.GetName(groupType.GetVariableBySuffix("LoadPath")));
+                pathVariables.Add(groupType.GetVariableBySuffix(AddressableAssetSettings.kBuildPath));
+                drawnGroupTypes.Add(groupType.GetName(groupType.GetVariableBySuffix(AddressableAssetSettings.kBuildPath)));
+                pathVariables.Add(groupType.GetVariableBySuffix(AddressableAssetSettings.kLoadPath));
+                drawnGroupTypes.Add(groupType.GetName(groupType.GetVariableBySuffix(AddressableAssetSettings.kLoadPath)));
+
 
                 if (m_foldouts[groupType.GroupTypePrefix].Value)
                 {
+                    bool custom;
+                    m_CustomGroupTypes.TryGetValue(groupType.GroupTypePrefix, out custom);
+                    EditorGUI.BeginDisabledGroup(!custom);
+
                     EditorGUI.indentLevel++;
 
                     //Displaying Path Groups
@@ -275,6 +300,8 @@ namespace UnityEditor.AddressableAssets.GUI
                         }
                     }
                     EditorGUI.indentLevel--;
+
+                    EditorGUI.EndDisabledGroup();
                 }
             }
 
@@ -310,6 +337,76 @@ namespace UnityEditor.AddressableAssets.GUI
             //space required to contain the longest variable name
             m_LabelWidth = Mathf.Max(maxLabelLen * k_ApproxCharWidth, k_MinLabelWidth);
             m_FieldBufferWidth = Mathf.Clamp((maxFieldLen * k_ApproxCharWidth) - fieldWidth, 0f, float.MaxValue);
+        }
+
+        void DrawDataSourceDropDowns(Rect dsDropdownRect, ProfileGroupType groupType, bool showDropdown)
+        {
+            Rect fixedDropdownRect = new Rect(
+                //Determine correct position for dropdown window
+                new Vector2(
+                    dsDropdownRect.x,
+                    dsDropdownRect.y
+                ),
+                new Vector2(dsDropdownRect.width, 120)
+            );
+
+            if (showDropdown)
+            {
+                ProfileDataSourceDropdownWindow dataSourceDropdownWindow = new ProfileDataSourceDropdownWindow(fixedDropdownRect, groupType);
+                //TODO: Add Event Handler Here
+                dataSourceDropdownWindow.ValueChanged += DataSourceDropdownValueChanged;
+                PopupWindow.Show(dsDropdownRect, dataSourceDropdownWindow);
+            }
+        }
+
+        internal void DataSourceDropdownValueChanged(object sender, ProfileDataSourceDropdownWindow.DropdownWindowEventArgs e)
+        {
+            m_CustomGroupTypes[e.GroupType.GroupTypePrefix] = e.IsCustom;
+            if (!e.IsCustom)
+            {
+                var selectedProfile = GetSelectedProfile();
+                Undo.RecordObject(settings, "Variable value changed");
+                settings.profileSettings.SetValue(selectedProfile.id, e.GroupType.GetName(e.GroupType.GetVariableBySuffix(AddressableAssetSettings.kBuildPath)), e.Option.BuildPath);
+                settings.profileSettings.SetValue(selectedProfile.id, e.GroupType.GetName(e.GroupType.GetVariableBySuffix(AddressableAssetSettings.kLoadPath)), e.Option.LoadPath);
+                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(settings);
+            }
+
+        }
+
+        private string DetermineOptionString(ProfileGroupType groupType)
+        {
+
+            ProfileGroupType selectedGroupType = dataSourceSettings.FindGroupType(groupType);
+            if (selectedGroupType != null)
+            {
+                bool custom;
+                m_CustomGroupTypes.TryGetValue(groupType.GroupTypePrefix, out custom);
+                if (custom && ProfileIndex == m_ProfileTreeView.lastClickedProfile)
+                    return "Custom";
+                m_CustomGroupTypes[groupType.GroupTypePrefix] = false;
+
+#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+                //Could ERR if user has group type prefix that starts with CCD
+                if (selectedGroupType.GroupTypePrefix.StartsWith("CCD"))
+                {
+                    var parts = selectedGroupType.GroupTypePrefix.Split(ProfileGroupType.k_PrefixSeparator);
+                    var badgeName = String.Join(ProfileGroupType.k_PrefixSeparator.ToString(), parts, 3, parts.Length - 3);
+                    var bucketName = selectedGroupType.GetVariableBySuffix($"{nameof(CcdBucket)}{nameof(CcdBucket.Name)}").Value;
+                    return String.Join(ProfileGroupType.k_PrefixSeparator.ToString(), new string[]
+                    {
+                        "CCD",
+                        bucketName,
+                        badgeName
+                    });
+                }
+#endif
+                return selectedGroupType.GroupTypePrefix;
+            }
+            else
+            {
+                m_CustomGroupTypes[groupType.GroupTypePrefix] = true;
+                return "Custom";
+            }
         }
 
         
@@ -552,8 +649,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 UnityEngine.GUI.enabled = m_Name.Length != 0;
                 if (GUILayout.Button("Save") || hitEnter)
                 {
-                    string buildPathName = m_Name + ProfileGroupType.k_PrefixSeparator + "BuildPath";
-                    string loadPathName = m_Name + ProfileGroupType.k_PrefixSeparator + "LoadPath";
+                    string buildPathName = m_Name + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kBuildPath;
+                    string loadPathName = m_Name + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kLoadPath;
                     if (string.IsNullOrEmpty(m_Name))
                         Debug.LogError("Variable name cannot be empty.");
                     else if (buildPathName != m_Settings.profileSettings.GetUniqueProfileEntryName(buildPathName))
@@ -563,8 +660,8 @@ namespace UnityEditor.AddressableAssets.GUI
                     else
                     {
                         Undo.RecordObject(m_Settings, "Profile Path Pair Created");
-                        m_Settings.profileSettings.CreateValue(m_Name + ProfileGroupType.k_PrefixSeparator + "BuildPath", m_BuildPath);
-                        m_Settings.profileSettings.CreateValue(m_Name + ProfileGroupType.k_PrefixSeparator + "LoadPath", m_LoadPath);
+                        m_Settings.profileSettings.CreateValue(m_Name + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kBuildPath, m_BuildPath);
+                        m_Settings.profileSettings.CreateValue(m_Name + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kLoadPath, m_LoadPath);
                         AddressableAssetUtility.OpenAssetIfUsingVCIntegration(m_Settings);
                         m_ProfileTreeView.Reload();
                         editorWindow.Close();

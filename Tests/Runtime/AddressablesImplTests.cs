@@ -10,6 +10,7 @@ using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
 
 namespace AddressableAssetsIntegrationTests
@@ -100,6 +101,41 @@ namespace AddressableAssetsIntegrationTests
 
             // Test
             Assert.IsFalse(initialOp.IsValid());
+        }
+
+        [UnityTest]
+        public IEnumerator AddressablesImpl_InitializeAsync_RespectsAutoReleaseHandleParameterOnFirstInitializationCall()
+        {
+            m_Addressables = null;
+            initializationComplete = false;
+            yield return InitWithoutInitializeAsync();
+
+            // Setup
+            var initialOp = m_Addressables.InitializeAsync(m_RuntimeSettingsPath, "BASE", false);
+            yield return initialOp;
+
+            // Test
+            Assert.IsTrue(initialOp.IsValid());
+
+            //Cleanup
+            initialOp.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator AddressablesImpl_InitializeAsync_RespectsAutoReleaseHandleParameterOnSecondInitializationCall()
+        {
+            // Setup
+            yield return Init();
+
+            //The Init above should have already initialized Addressables, making this the second call
+            var initialOp = m_Addressables.InitializeAsync(false);
+            yield return initialOp;
+
+            // Test
+            Assert.IsTrue(initialOp.IsValid());
+
+            //Cleanup
+            initialOp.Release();
         }
 
         [UnityTest]

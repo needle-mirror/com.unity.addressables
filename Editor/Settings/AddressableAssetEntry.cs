@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor.Build.Content;
-using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -62,9 +61,16 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal virtual bool HasSettings() { return false; }
 
-        internal bool IsFolder { get; set; }
+        /// <summary>
+        /// Flag indicating if an AssetEntry is a folder or not.
+        /// </summary>
+        public bool IsFolder { get; set; }
+        
+        /// <summary>
+        /// List of AddressableAssetEntries that are considered sub-assets of a main Asset.  Typically used for Folder entires.
+        /// </summary>
         [NonSerialized]
-        internal List<AddressableAssetEntry> SubAssets = new List<AddressableAssetEntry>();
+        public List<AddressableAssetEntry> SubAssets = new List<AddressableAssetEntry>();
 
         [NonSerialized]
         AddressableAssetGroup m_ParentGroup;
@@ -182,7 +188,10 @@ namespace UnityEditor.AddressableAssets.Settings
         public HashSet<string> labels { get { return m_Labels; } }
 
         internal Type m_cachedMainAssetType = null;
-        internal Type MainAssetType
+        /// <summary>
+        /// The System.Type of the main Object referenced by an AddressableAssetEntry
+        /// </summary>
+        public Type MainAssetType
         {
             get
             {
@@ -500,7 +509,10 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
                 else
                 {
-                    if (MainAssetType == typeof(AddressableAssetEntryCollection))
+#pragma warning disable 0618
+                    bool isEntryCollection = MainAssetType == typeof(AddressableAssetEntryCollection);
+#pragma warning restore 0618
+                    if (isEntryCollection)
                     {
                         GatherAssetEntryCollectionEntries(assets, entryFilter);
                     }
@@ -584,6 +596,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
+#pragma warning disable 0618
         void GatherAssetEntryCollectionEntries(List<AddressableAssetEntry> assets, Func<AddressableAssetEntry, bool> entryFilter)
         {
             var settings = parentGroup.Settings;
@@ -606,6 +619,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
             }
         }
+#pragma warning restore 0618
 
         void GatherFolderEntries(List<AddressableAssetEntry> assets, bool recurseAll, Func<AddressableAssetEntry, bool> entryFilter)
         {
@@ -696,12 +710,13 @@ namespace UnityEditor.AddressableAssets.Settings
 
         static IEnumerable<string> GetResourceDirectories()
         {
+            ListRequest req = AddressableAssetUtility.RequestPackageListAsync();
+
             foreach (string path in GetResourceDirectoriesatPath("Assets"))
             {
                 yield return path;
             }
-
-            List<PackageManager.PackageInfo> packages = AddressableAssetUtility.GetPackages();
+            List<PackageManager.PackageInfo> packages = AddressableAssetUtility.GetPackages(req);
             foreach (PackageManager.PackageInfo package in packages)
             {
                 foreach (string path in GetResourceDirectoriesatPath(package.assetPath))
@@ -783,6 +798,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     refEntries.Add(reference);
                 }
             }
+#pragma warning disable 0618
             else if (MainAssetType == typeof(AddressableAssetEntryCollection))
             {
                 var col = AssetDatabase.LoadAssetAtPath<AddressableAssetEntryCollection>(AssetPath);
@@ -800,6 +816,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     }
                 }
             }
+#pragma warning restore 0618
             else
             {
                 refEntries.Add(this);
@@ -816,10 +833,12 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 GatherFolderEntries(implicitEntries, true, null);
             }
+#pragma warning disable 0618
             else if (MainAssetType == typeof(AddressableAssetEntryCollection))
             {
                 GatherAssetEntryCollectionEntries(implicitEntries, null);
             }
+#pragma warning restore 0618
         }
 
         internal AddressableAssetEntry GetImplicitEntry(string guid)
@@ -837,10 +856,12 @@ namespace UnityEditor.AddressableAssets.Settings
                     return null;
                 GatherFolderEntries(implicitEntries, true, null);
             }
+#pragma warning disable 0618
             else if (MainAssetType == typeof(AddressableAssetEntryCollection))
             {
                 GatherAssetEntryCollectionEntries(implicitEntries, null);
             }
+#pragma warning restore 0618
             
             return implicitEntries.FirstOrDefault(ie => ie.guid == guid);
         }
@@ -892,10 +913,24 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="providerTypes">Any unknown provider types are added to this set in order to ensure they are not stripped.</param>
         public void CreateCatalogEntries(List<ContentCatalogDataEntry> entries, bool isBundled, string providerType, IEnumerable<object> dependencies, object extraData, HashSet<Type> providerTypes)
         {
-            CreateCatalogEntriesInternal(entries, isBundled, providerType, dependencies, extraData, null, providerTypes, true, true, true, null);
+            CreateCatalogEntries(entries, isBundled, providerType, dependencies, extraData, null, providerTypes, true, true, true, null);
         }
 
-        internal void CreateCatalogEntriesInternal(List<ContentCatalogDataEntry> entries, bool isBundled, string providerType, IEnumerable<object> dependencies, object extraData, Dictionary<GUID, AssetLoadInfo> depInfo, HashSet<Type> providerTypes, bool includeAddress, bool includeGUID, bool includeLabels, HashSet<string> assetsInBundle)
+        /// <summary>
+        /// Create all entries for this addressable asset.  This will expand subassets (Sprites, Meshes, etc) and also different representations.
+        /// </summary>
+        /// <param name="entries">The list of entries to fill in.</param>
+        /// <param name="isBundled">Whether the entry is bundles or not.  This will affect the load path.</param>
+        /// <param name="providerType">The provider type for the main entry.</param>
+        /// <param name="dependencies">Keys of dependencies</param>
+        /// <param name="extraData">Extra data to append to catalog entries.</param>
+        /// <param name="depInfo">Map of guids to AssetLoadInfo for object identifiers in an Asset.  If null, ContentBuildInterface gathers object ids automatically.</param>
+        /// <param name="providerTypes">Any unknown provider types are added to this set in order to ensure they are not stripped.</param>
+        /// <param name="includeAddress">Flag indicating if address locations should be included</param>
+        /// <param name="includeGUID">Flag indicating if guid locations should be included</param>
+        /// <param name="includeLabels">Flag indicating if label locations should be included</param>
+        /// <param name="assetsInBundle">The internal ids of the asset, typically shortened versions of the asset's GUID.</param>
+        public void CreateCatalogEntries(List<ContentCatalogDataEntry> entries, bool isBundled, string providerType, IEnumerable<object> dependencies, object extraData, Dictionary<GUID, AssetLoadInfo> depInfo, HashSet<Type> providerTypes, bool includeAddress, bool includeGUID, bool includeLabels, HashSet<string> assetsInBundle)
         {
             if (string.IsNullOrEmpty(AssetPath))
                 return;

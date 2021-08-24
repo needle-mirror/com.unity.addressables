@@ -37,13 +37,8 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             meshA.sharedMaterial = mat;
             meshB.sharedMaterial = mat;
 
-#if UNITY_2018_3_OR_NEWER
             PrefabUtility.SaveAsPrefabAsset(prefabA, k_CheckDupePrefabA);
             PrefabUtility.SaveAsPrefabAsset(prefabB, k_CheckDupePrefabB);
-#else
-            PrefabUtility.CreatePrefab(k_CheckDupePrefabA, prefabA);
-            PrefabUtility.CreatePrefab(k_CheckDupePrefabB, prefabB);
-#endif
             AssetDatabase.Refresh();
         }
 

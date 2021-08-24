@@ -277,6 +277,15 @@ namespace UnityEditor.AddressableAssets.GUI
                     menu.DropDown(rBuild);
                 }
 
+#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+                //Build & Release 
+                var guiBuildAndRelease = new GUIContent("Build & Release");
+                if (GUILayout.Button(guiBuildAndRelease, EditorStyles.toolbarButton))
+                {
+                    OnBuildAndRelease();
+                }
+#endif
+
                 GUILayout.Space(4);
                 Rect searchRect = GUILayoutUtility.GetRect(0, toolbarPos.width * 0.6f, 16f, 16f, m_SearchStyles[0], GUILayout.MinWidth(65), GUILayout.MaxWidth(300));
                 Rect popupPosition = searchRect;
@@ -328,6 +337,13 @@ namespace UnityEditor.AddressableAssets.GUI
             else
                 ContentUpdatePreviewWindow.PrepareForContentUpdate(AddressableAssetSettingsDefaultObject.Settings, path);
         }
+
+#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+        async void OnBuildAndRelease()
+        {
+            await AddressableAssetSettings.BuildAndReleasePlayerContent();
+        }
+#endif
 
         void OnBuildScript(object context)
         {

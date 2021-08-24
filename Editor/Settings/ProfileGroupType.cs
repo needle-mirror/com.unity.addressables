@@ -9,11 +9,14 @@ namespace UnityEditor.AddressableAssets.Settings
     /// <summary>
     /// Used to store path pairs and act as an abstraction between path pairs and profile variables. 
     /// </summary>
-    internal class ProfileGroupType
+    [Serializable]
+    public class ProfileGroupType
     {
         /// <summary>
         /// Used to store path values, identified by postfix
         /// </summary>
+        ///
+        [Serializable]
         internal class GroupTypeVariable
         {
             /// <summary>
@@ -30,6 +33,8 @@ namespace UnityEditor.AddressableAssets.Settings
             /// <summary>
             /// Postfix of a GroupTypeVariable
             /// </summary>
+            ///
+            [SerializeField]
             internal string m_Suffix;
             internal string Suffix
             {
@@ -40,6 +45,7 @@ namespace UnityEditor.AddressableAssets.Settings
             /// <summary>
             /// Specified Value
             /// </summary>
+            [SerializeField]
             internal string m_Value;
             internal string Value
             {
@@ -50,6 +56,8 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal const char k_PrefixSeparator = '.';
 
+
+        [SerializeField]
         string m_GroupTypePrefix;
 
         /// <summary>
@@ -64,6 +72,8 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <summary>
         /// Group of variables that share a common prefix
         /// </summary>
+        ///
+        [SerializeField]
         internal List<GroupTypeVariable> m_Variables;
         internal List<GroupTypeVariable> Variables
         {
@@ -139,6 +149,16 @@ namespace UnityEditor.AddressableAssets.Settings
             return m_Variables.Where(var => var.m_Suffix == suffix).FirstOrDefault();
         }
 
+        /// <summary>
+        /// Returns true if a group type has a certain variable
+        /// </summary>
+        /// <param name="groupTypeVariable">group type variable</param>
+        /// <returns>true if the group type contains the variable, false otherwise</returns>
+        internal bool ContainsVariable(GroupTypeVariable groupTypeVariable)
+        {
+            return m_Variables.Any(var => var.Suffix == groupTypeVariable.Suffix && var.Value == groupTypeVariable.Value);
+        }
+
         //UI magic to group the path pairs from profile variables
         internal static List<ProfileGroupType> CreateGroupTypes(AddressableAssetProfileSettings.BuildProfile buildProfile)
         {
@@ -158,7 +178,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     {
                         group = new ProfileGroupType(prefix);
                     }
-                    ProfileGroupType.GroupTypeVariable variable = new ProfileGroupType.GroupTypeVariable(suffix, profileEntryValue);
+                    GroupTypeVariable variable = new GroupTypeVariable(suffix, profileEntryValue);
                     group.AddVariable(variable);
                     groups[prefix] = group;
                 }
