@@ -591,7 +591,7 @@ namespace UnityEngine.AddressableAssets
             /// <inheritdoc />
             protected override bool InvokeWaitForCompletion()
             {
-                m_RM?.Update(Time.deltaTime);
+                m_RM?.Update(Time.unscaledDeltaTime);
                 if (!HasExecuted)
                     InvokeExecute();
                 return true;
@@ -634,7 +634,7 @@ namespace UnityEngine.AddressableAssets
             /// <inheritdoc />
             protected override bool InvokeWaitForCompletion()
             {
-                m_RM?.Update(Time.deltaTime);
+                m_RM?.Update(Time.unscaledDeltaTime);
                 if (!HasExecuted)
                     InvokeExecute();
                 return true;

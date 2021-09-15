@@ -47,11 +47,11 @@ namespace UnityEngine.AddressableAssets
             if (m_DepOp.IsValid() && !m_DepOp.IsDone)
                 m_DepOp.WaitForCompletion();
 
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
             if (!HasExecuted)
                 InvokeExecute();
 
-            m_Addressables.ResourceManager.Update(Time.deltaTime);
+            m_Addressables.ResourceManager.Update(Time.unscaledDeltaTime);
             return IsDone;
         }
 

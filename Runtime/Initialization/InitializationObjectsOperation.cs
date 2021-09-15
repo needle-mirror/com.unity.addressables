@@ -61,14 +61,14 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             if (m_RtdOp.IsValid() && !m_RtdOp.IsDone)
                 m_RtdOp.WaitForCompletion();
 
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
 
             if (!HasExecuted)
                 InvokeExecute();
 
             if (m_DepOp.IsValid() && !m_DepOp.IsDone)
                 m_DepOp.WaitForCompletion();
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
 
             return IsDone;
         }

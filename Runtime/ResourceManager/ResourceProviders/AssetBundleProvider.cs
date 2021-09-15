@@ -411,7 +411,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 if (m_WebRequestQueueOperation.IsDone)
                 {
                     m_RequestOperation = m_WebRequestQueueOperation.Result;
-                    if (m_RequestOperation.isDone)
+                    if (m_RequestOperation == null || m_RequestOperation.isDone)
                         WebRequestOperationCompleted(m_RequestOperation);
                     else
                         m_RequestOperation.completed += WebRequestOperationCompleted;
@@ -455,9 +455,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
             m_WebRequestCompletedCallbackCalled = true;
             UnityWebRequestAsyncOperation remoteReq = op as UnityWebRequestAsyncOperation;
-            var webReq = remoteReq.webRequest;
-            m_downloadHandler = webReq.downloadHandler as DownloadHandlerAssetBundle;
-            if (!UnityWebRequestUtilities.RequestHasErrors(webReq, out UnityWebRequestResult uwrResult))
+            var webReq = remoteReq?.webRequest;
+            m_downloadHandler = webReq?.downloadHandler as DownloadHandlerAssetBundle;
+            UnityWebRequestResult uwrResult = null;
+            if (webReq != null && !UnityWebRequestUtilities.RequestHasErrors(webReq, out uwrResult))
             {
                 if (!m_Completed)
                 {
@@ -471,6 +472,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
             else
             {
+                webReq = m_WebRequestQueueOperation.m_WebRequest;
+                if (uwrResult == null)
+                    uwrResult = new UnityWebRequestResult(m_WebRequestQueueOperation.m_WebRequest);
+                
+                m_downloadHandler = webReq.downloadHandler as DownloadHandlerAssetBundle;
                 m_downloadHandler.Dispose();
                 m_downloadHandler = null;
                 bool forcedRetry = false;
@@ -497,9 +503,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 {
                     if (m_Retries < m_Options.RetryCount)
                     {
+                        m_Retries++;
                         Debug.LogFormat(message);
                         BeginOperation();
-                        m_Retries++;
                     }
                     else
                     {

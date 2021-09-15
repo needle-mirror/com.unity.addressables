@@ -19,10 +19,11 @@ using UnityEngine.TestTools;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
+#if UNITY_2019_4_OR_NEWER
+
     public class ContentUpdateTests : AddressableAssetTestBase
     {
         protected override bool PersistSettings { get { return true; } }
-
         [Test]
         public void CanCreateContentStateData()
         {
@@ -44,7 +45,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.NotNull(cacheData);
             Settings.RemoveGroup(group);
         }
-
         [Test]
         public void ContentState_WithDisabledGroups_DoesNotInclude_EntriesFromGroup()
         {
@@ -536,6 +536,7 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        [Ignore("Editor crash that's being fixed: https://jira.unity3d.com/browse/BPSBP-110")]
         public void BuildContentUpdate_DoesNotDeleteBuiltData()
         {
             var oldSetting = Settings.BuildRemoteCatalog;
@@ -1208,4 +1209,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsTrue(buildPath.StartsWith(rootBuildPath));
         }
     }
+#endif
+
 }

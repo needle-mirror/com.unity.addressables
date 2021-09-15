@@ -52,14 +52,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 if (m_DepOp.IsValid() && !m_DepOp.IsDone)
                     m_DepOp.WaitForCompletion();
 
-                m_RM?.Update(Time.deltaTime);
+                m_RM?.Update(Time.unscaledDeltaTime);
                 if (!HasExecuted)
                     InvokeExecute();
 
                 //We need the operation to complete but it'll take a frame to activate the scene.
                 m_Inst.m_Operation.allowSceneActivation = false;
                 while (!IsDone)
-                    ((IUpdateReceiver)this).Update(Time.deltaTime);
+                    ((IUpdateReceiver)this).Update(Time.unscaledDeltaTime);
 
                 //Reset value on scene load operation so we don't activate a scene that a user doesn't want to activate on load.
                 m_Inst.m_Operation.allowSceneActivation = m_ActivateOnLoad;
@@ -192,7 +192,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             ///<inheritdoc />
             protected  override bool InvokeWaitForCompletion()
             {
-                m_RM?.Update(Time.deltaTime);
+                m_RM?.Update(Time.unscaledDeltaTime);
                 if (!HasExecuted)
                     InvokeExecute();
                 return true;

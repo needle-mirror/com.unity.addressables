@@ -45,9 +45,9 @@ static class AddressablesTestUtility
     static public void Setup(string testType, string pathFormat, string suffix)
     {
 #if UNITY_EDITOR
-        bool currentIgnoreState = LogAssert.ignoreFailingMessages;
-        LogAssert.ignoreFailingMessages = true;
-
+        //bool currentIgnoreState = LogAssert.ignoreFailingMessages;
+        //LogAssert.ignoreFailingMessages = true;
+        
         var RootFolder = string.Format(pathFormat, testType, suffix);
 
         Directory.CreateDirectory(RootFolder);
@@ -144,7 +144,7 @@ static class AddressablesTestUtility
         AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 
         RunBuilder(settings, testType, suffix);
-        LogAssert.ignoreFailingMessages = currentIgnoreState;
+        //LogAssert.ignoreFailingMessages = currentIgnoreState;
 
 #endif
     }

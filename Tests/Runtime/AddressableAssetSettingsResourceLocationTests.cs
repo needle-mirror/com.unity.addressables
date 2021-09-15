@@ -6,6 +6,7 @@ using UnityEngine.TestTools;
 using UnityEngine;
 using System.Linq;
 #if UNITY_EDITOR
+using System;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor;
 #endif
@@ -38,12 +39,11 @@ namespace AddressableAssetSettingsResourceLocationTests
             entry.address = k_ValidKey;
 
             entry = settings.CreateOrMoveEntry(guid2, settings.DefaultGroup);
-            entry.address = k_InvalidKey;
+            entry.m_Address = k_InvalidKey;
 
-            bool currentIgnoreState = LogAssert.ignoreFailingMessages;
-            LogAssert.ignoreFailingMessages = false;
-            LogAssert.Expect(LogType.Error, $"Address '{entry.address}' cannot contain '[ ]'.");
-            LogAssert.ignoreFailingMessages = currentIgnoreState;
+            //bool currentIgnoreState = LogAssert.ignoreFailingMessages;
+            //LogAssert.ignoreFailingMessages = false;
+            //LogAssert.ignoreFailingMessages = currentIgnoreState;
         }
 
         protected override void OnRuntimeSetup()

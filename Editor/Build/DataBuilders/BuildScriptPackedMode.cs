@@ -668,6 +668,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 m_ResourceProviderData.Add(assetProviderData);
             }
 
+#if UNITY_2022_1_OR_NEWER
+            string loadPath = schema.LoadPath.GetValue(aaContext.Settings);
+            if (loadPath.StartsWith("http://"))
+                Addressables.LogWarning($"Addressable group {assetGroup.Name} uses insecure http for its load path.  By default UnityWebRequests no longer allow http connections.");
+#endif
+
             var bundleInputDefs = new List<AssetBundleBuild>();
             var list = PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema);
             aaContext.assetEntries.AddRange(list);

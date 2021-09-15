@@ -238,7 +238,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         private void EditorUpdate()
         {
             if (m_LastFrameTime == 0)
-                m_LastFrameTime = EditorApplication.timeSinceStartup - Time.deltaTime;
+                m_LastFrameTime = EditorApplication.timeSinceStartup - Time.unscaledDeltaTime;
             double diff = EditorApplication.timeSinceStartup - m_LastFrameTime;
             int speed = m_UploadSpeed * 1024;
             int bps = speed > 0 ? speed : k_OneGBPS;

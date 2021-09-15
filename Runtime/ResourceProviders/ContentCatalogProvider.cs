@@ -82,10 +82,15 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
             internal ContentCatalogData m_ContentCatalogData;
             AsyncOperationHandle<ContentCatalogData> m_ContentCatalogDataLoadOp;
             private BundledCatalog m_BundledCatalog;
+            private bool m_Retried;
+            private bool m_DisableCatalogUpdateOnStart;
+            private bool m_IsLocalCatalogInBundle;
 
             public void Start(ProvideHandle providerInterface, bool disableCatalogUpdateOnStart, bool isLocalCatalogInBundle)
             {
                 m_ProviderInterface = providerInterface;
+                m_DisableCatalogUpdateOnStart = disableCatalogUpdateOnStart;
+                m_IsLocalCatalogInBundle = isLocalCatalogInBundle;
                 m_ProviderInterface.SetWaitForCompletionCallback(WaitForCompletionCallback);
                 m_LocalDataPath = null;
                 m_RemoteHashValue = null;
@@ -119,7 +124,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
 
                 //content catalog op needs the Update to be pumped so we can invoke completion callbacks
                 if (ccComplete && m_ContentCatalogData == null)
-                    m_ProviderInterface.ResourceManager.Update(Time.deltaTime);
+                    m_ProviderInterface.ResourceManager.Update(Time.unscaledDeltaTime);
 
                 return ccComplete;
             }
@@ -349,14 +354,18 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
 
                     if (string.IsNullOrEmpty(remoteHash) || disableCatalogUpdateOnStart) //offline
                     {
-                        if (!string.IsNullOrEmpty(m_LocalHashValue)) //cache exists
+                        if (!string.IsNullOrEmpty(m_LocalHashValue) && !m_Retried) //cache exists and not forcing a retry state
+                        {
                             idToLoad = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Cache]).Replace(".hash", ".json");
+                        }
                         else
+                        {
                             m_LocalHashValue = Hash128.Compute(idToLoad).ToString();
+                        }
                     }
                     else //online
                     {
-                        if (remoteHash == m_LocalHashValue) //cache of remote is good
+                        if (remoteHash == m_LocalHashValue && !m_Retried) //cache of remote is good and not forcing a retry state
                         {
                             idToLoad = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Cache]).Replace(".hash", ".json");
                         }
@@ -389,8 +398,39 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                         File.WriteAllText(localCachePath.Replace(".json", ".hash"), m_RemoteHashValue);
                         ccd.localHash = m_RemoteHashValue;
                     }
+                    m_ProviderInterface.Complete(ccd, true, null);
                 }
-                m_ProviderInterface.Complete(ccd, ccd != null, ccd == null ? new Exception($"Unable to load ContentCatalogData  from location {m_ProviderInterface.Location}.") : null);
+                else
+                {
+                    var errorMessage = $"Unable to load ContentCatalogData from location {m_ProviderInterface.Location}";
+                    if (!m_Retried)
+                    {
+                        m_Retried = true;
+
+                        //if the prev load path is cache, try to remove cache and reload from remote
+                        var cachePath = GetTransformedInternalId(m_ProviderInterface.Location.Dependencies[(int)DependencyHashIndex.Cache]);
+                        if (m_ContentCatalogDataLoadOp.LocationName == cachePath.Replace(".hash", ".json"))
+                        {
+                            try
+                            {
+                                File.Delete(cachePath);
+                            }
+                            catch (Exception)
+                            {
+                                errorMessage += $". Unable to delete cache data from location {cachePath}";
+                                m_ProviderInterface.Complete(ccd, false, new Exception(errorMessage));
+                                return;
+                            }
+                        }
+
+                        Addressables.LogWarning(errorMessage + ". Attempting to retry...");
+                        Start(m_ProviderInterface, m_DisableCatalogUpdateOnStart, m_IsLocalCatalogInBundle);
+                    }
+                    else
+                    {
+                        m_ProviderInterface.Complete(ccd, false, new Exception(errorMessage + " on second attempt."));
+                    }
+                }
             }
         }
 

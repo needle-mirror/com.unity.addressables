@@ -476,30 +476,6 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        public void AddressableAssetSettings_OnPostprocessAllAssets_AddAssetEntriesCollectionNotTriggerSettingsSave()
-        {
-            // Setup
-            var importedAssets = new string[1];
-            var deletedAssets = new string[0];
-            var movedAssets = new string[0];
-            var movedFromAssetPaths = new string[0];
-            var collectionPath = Path.Combine(TestFolder, "collection.asset").Replace('\\', '/');
-            var collection = ScriptableObject.CreateInstance<AddressableAssetEntryCollection>();
-            var entry = new AddressableAssetEntry("12345698655", "TestAssetEntry", null, false);
-            entry.m_cachedAssetPath = "TestPath";
-            collection.Entries.Add(entry);
-            AssetDatabase.CreateAsset(collection, collectionPath);
-            importedAssets[0] = collectionPath;
-            EditorUtility.ClearDirty(Settings);
-            var prevDC = EditorUtility.GetDirtyCount(Settings);
-
-            // Test
-            Settings.OnPostprocessAllAssets(importedAssets, deletedAssets, movedAssets, movedFromAssetPaths);
-            Assert.AreEqual(prevDC, EditorUtility.GetDirtyCount(Settings));
-            Assert.IsFalse(EditorUtility.IsDirty(Settings));
-        }
-
-        [Test]
         public void AddressableAssetSettings_OnPostprocessAllAssets_DeleteAssetToNullNotTriggerSettingsSave()
         {
             // Setup

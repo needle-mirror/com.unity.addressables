@@ -6,6 +6,8 @@ using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Utilities;
+using UnityEditor.PackageManager;
+using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -48,7 +50,8 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void GetPackages_ReturnsUnityPackages()
         {
-            var packages = AddressableAssetUtility.GetPackages();
+            ListRequest req = Client.List(true);
+            var packages = AddressableAssetUtility.GetPackages(req);
             var addressablesPackage = packages.FirstOrDefault(p => p.name == $"com.unity.addressables");
             Assert.IsNotNull(addressablesPackage);
         }
@@ -62,10 +65,10 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsEmpty(actualGUID);
         }
 
-        public class TestBaseClass { }
+        public class TestBaseClass {}
         [System.ComponentModel.DisplayName("TestSubClass_DisplayName")]
-        public class TestSubClass : TestBaseClass { }
-        public abstract class TestAbstractSubClass : TestBaseClass { }
+        public class TestSubClass : TestBaseClass {}
+        public abstract class TestAbstractSubClass : TestBaseClass {}
 
         [Test]
         public void GetTypesGeneric_ReturnsOnly_NonAbstractSubTypes()
@@ -238,7 +241,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsFalse(AddressableAssetUtility.SafeMoveResourcesToGroup(Settings, null, null, null, false));
             Assert.IsFalse(AddressableAssetUtility.SafeMoveResourcesToGroup(Settings, Settings.DefaultGroup, null, null, false));
         }
-
 
         HashSet<string> otherInternaIds = new HashSet<string>(new string[] { "a", "ab", "abc" });
 

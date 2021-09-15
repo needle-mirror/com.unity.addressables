@@ -1,4 +1,8 @@
-# Modification Events
+---
+uid: addressables-modification-events
+---
+
+# Modification events
 Modification events are used to signal to parts of the Addressables system when certain data is manipulated, such as an `AddressableAssetGroup` or an `AddressableAssetEntry` getting added or removed.
 
 Modification events are triggered as part of `SetDirty` calls inside of Addressables.  `SetDirty` is used to indicate when an asset needs to be re-serialized by the `AssetDatabase`.  As part of this `SetDirty`, two modification event callbacks can trigger: 
@@ -45,9 +49,9 @@ The data passed with this event is the `ScriptableObject`, typically one that im
 - GroupTemplateRemoved
 The data passed with this event is the `ScriptableObject`, typically one that implements [`IGroupTemplate`](xref:UnityEditor.AddressableAssets.Settings.IGroupTemplate), that was the removed Group Template object.
 - GroupTemplateSchemaAdded
-The data passed with this event is the [`AddressableAssetGroupTemplete`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetGroupTemplete) that had a schema added.
+The data passed with this event is the [`AddressableAssetGroupTemplate`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetGroupTemplate) that had a schema added.
 - GroupTemplateSchemaRemoved
-The data passed with this event is the [`AddressableAssetGroupTemplete`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetGroupTemplete) that had a schema removed.
+The data passed with this event is the [`AddressableAssetGroupTemplate`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetGroupTemplate) that had a schema removed.
 - EntryCreated
 The data passed with this event is the [`AddressableAssetEntry`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetEntry) that was created.
 - EntryAdded

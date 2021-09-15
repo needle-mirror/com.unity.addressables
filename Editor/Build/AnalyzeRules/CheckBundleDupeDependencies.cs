@@ -232,6 +232,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
             settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true, true);
         }
 
+        /// <inheritdoc />
         public override void ClearAnalysis()
         {
             m_AllIssues.Clear();

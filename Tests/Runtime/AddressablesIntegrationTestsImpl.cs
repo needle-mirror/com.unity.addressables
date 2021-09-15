@@ -1003,6 +1003,46 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator UpdateContentCatalog_UpdatesCachedData_IfCacheCorrupted()
+        {
+            yield return Init();
+            if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
+            {
+                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalog_UpdatesCachedData_IfHashFileUpdates)} due to missing CatalogLocation.");
+                yield break;
+            }
+
+            Directory.CreateDirectory(kCatalogFolderPath);
+            string fullRemotePath = Path.Combine(kCatalogFolderPath, kCatalogRemotePath);
+            string fullRemoteHashPath = fullRemotePath.Replace(".json", ".hash");
+            string cachedDataPath = m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + fullRemoteHashPath.GetHashCode() + fullRemotePath.Substring(fullRemotePath.LastIndexOf(".")));
+            string cachedHashPath = cachedDataPath.Replace(".json", ".hash");
+            string remoteHashPath = WriteHashFileForCatalog(fullRemoteHashPath, "123");
+
+            string baseCatalogPath = m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId;
+            if (baseCatalogPath.StartsWith("file://"))
+                baseCatalogPath = new Uri(m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId).AbsolutePath;
+            File.Copy(baseCatalogPath, fullRemotePath);
+
+            File.WriteAllText(remoteHashPath, File.ReadAllText(cachedHashPath));
+            File.WriteAllText(cachedDataPath, "corrupted content");
+
+            //load from fullRemotePath will first load cachedDataPath, then load fullRemotePath on error
+            var op = m_Addressables.LoadContentCatalogAsync(fullRemotePath, false);
+            LogAssert.Expect(LogType.Exception, new Regex(".*JSON parse error.*"));
+            yield return op;
+
+            Assert.IsTrue(File.Exists(cachedDataPath));
+            Assert.IsTrue(File.Exists(cachedHashPath));
+            Assert.AreEqual(File.ReadAllText(cachedDataPath), File.ReadAllText(fullRemotePath));
+
+            m_Addressables.Release(op);
+            Directory.Delete(kCatalogFolderPath, true);
+            File.Delete(cachedDataPath);
+            File.Delete(cachedHashPath);
+        }
+
+        [UnityTest]
         public IEnumerator LoadingContentCatalog_NoCacheDataCreated_IfRemoteHashDoesntExist()
         {
             yield return Init();
@@ -2084,6 +2124,26 @@ namespace AddressableAssetsIntegrationTests
             foreach (var h in handles)
                 manualDepNameHashSum += h.DebugName.GetHashCode();
             Assert.AreEqual(manualDepNameHashSum, dependencyNameHashSum, "Calculation of hashcode was not completed as expected.");
+        }
+        
+        [UnityTest]
+        public IEnumerator ResourceManagerDiagnostics_CalculateCompletedOperationHashcode_DoesNotErrorOnNullResult()
+        {
+            yield return Init();
+            var rmd = new ResourceManagerDiagnostics(m_Addressables.ResourceManager);
+            var completedOp = m_Addressables.ResourceManager.CreateCompletedOperation<string>(null, "x");
+            int hashcode = rmd.CalculateCompletedOperationHashcode(completedOp);
+            Assert.NotNull(hashcode, "CalculateCompletedOperationHashcode should not error when a completedOperation with a null result is passed in.");
+        }
+        
+        [UnityTest]
+        public IEnumerator ResourceManagerDiagnostics_CalculateCompletedOperationDisplayname_DoesNotErrorOnNullResult()
+        {
+            yield return Init();
+            var rmd = new ResourceManagerDiagnostics(m_Addressables.ResourceManager);
+            var completedOp = m_Addressables.ResourceManager.CreateCompletedOperation<string>(null, "x");
+            string displayName = rmd.GenerateCompletedOperationDisplayName(completedOp);
+            Assert.NotNull(displayName, "GenerateCompletedOperationDisplayName should not error when a completedOperation with a null result is passed in.");
         }
 
         private class DebugNameTestOperation : AsyncOperationBase<string>

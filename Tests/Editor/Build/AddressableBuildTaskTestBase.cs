@@ -15,7 +15,7 @@ public class AddressableBuildTaskTestBase
     [SetUp]
     public void Setup()
     {
-        using (new IgnoreFailingLogMessage())
+        //using (new IgnoreFailingLogMessage())
         {
             if (AssetDatabase.IsValidFolder(TempPath))
                 AssetDatabase.DeleteAsset(TempPath);

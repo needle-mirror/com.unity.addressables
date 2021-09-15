@@ -75,8 +75,8 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
     void IPrebuildSetup.Setup()
     {
 #if UNITY_EDITOR
-        bool currentIgnoreState = LogAssert.ignoreFailingMessages;
-        LogAssert.ignoreFailingMessages = true;
+        //bool currentIgnoreState = LogAssert.ignoreFailingMessages;
+        //LogAssert.ignoreFailingMessages = true;
 
         var activeScenePath = EditorSceneManager.GetActiveScene().path;
 
@@ -92,7 +92,7 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
 
         if (activeScenePath != EditorSceneManager.GetActiveScene().path)
             EditorSceneManager.OpenScene(activeScenePath, OpenSceneMode.Single);
-        LogAssert.ignoreFailingMessages = currentIgnoreState;
+        //LogAssert.ignoreFailingMessages = currentIgnoreState;
 #endif
     }
 

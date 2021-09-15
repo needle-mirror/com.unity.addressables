@@ -75,7 +75,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             if (m_rtdOp.IsValid() && !m_rtdOp.IsDone)
                 m_rtdOp.WaitForCompletion();
 
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
 
             if (!HasExecuted)
                 InvokeExecute();
@@ -83,7 +83,7 @@ namespace UnityEngine.AddressableAssets.Initialization
             if (m_loadCatalogOp.IsValid() && !m_loadCatalogOp.IsDone)
             {
                 m_loadCatalogOp.WaitForCompletion();
-                m_RM?.Update(Time.deltaTime); //We need completion callbacks to get triggered.
+                m_RM?.Update(Time.unscaledDeltaTime); //We need completion callbacks to get triggered.
             }
 
             return m_rtdOp.IsDone && m_loadCatalogOp.IsDone;

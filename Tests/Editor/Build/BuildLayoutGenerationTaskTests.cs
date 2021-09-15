@@ -322,7 +322,7 @@ public class BuildLayoutGenerationTaskTests
     {
         AddressableAssetGroup group = CreateGroup("Group1");
         string assetPath = $"{TempPath}/testpreset.preset";
-        GameObject obj = new GameObject();
+        Material obj = new Material(Shader.Find("Transparent/Diffuse"));
         Preset myPreset = new Preset(obj);
         AssetDatabase.CreateAsset(myPreset, assetPath);
         GameObject.DestroyImmediate(obj);

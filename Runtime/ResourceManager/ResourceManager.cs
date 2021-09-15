@@ -115,8 +115,10 @@ namespace UnityEngine.ResourceManagement
 
         /// <summary>
         /// Global exception handler.  This will be called whenever an IAsyncOperation.OperationException is set to a non-null value.
-        /// See the [ResourceManager.ExceptionHandler](xref:addressables-api-exception-handler) documentation for more details.
         /// </summary>
+        /// <example>
+        /// <code source="../../Samples/DocSampleCode/AddExceptionHandler.cs" region="doc_AddExceptionHandler" title="Adding a global exception hanlder"/>
+        /// </example>
         public static Action<AsyncOperationHandle, Exception> ExceptionHandler { get; set; }
 
         /// <summary>
@@ -180,7 +182,7 @@ namespace UnityEngine.ResourceManagement
         static int s_GroupOperationTypeHash = typeof(GroupOperation).GetHashCode();
         static int s_InstanceOperationTypeHash = typeof(InstanceOperation).GetHashCode();
         /// <summary>
-        /// Add an update reveiver.
+        /// Add an update receiver.
         /// </summary>
         /// <param name="receiver">The object to add. The Update method will be called until the object is removed. </param>
         public void AddUpdateReceiver(IUpdateReceiver receiver)
@@ -492,7 +494,7 @@ namespace UnityEngine.ResourceManagement
             ///<inheritdoc />
             protected  override bool InvokeWaitForCompletion()
             {
-                m_RM?.Update(Time.deltaTime);
+                m_RM?.Update(Time.unscaledDeltaTime);
                 if (!HasExecuted)
                     InvokeExecute();
                 return true;
@@ -917,7 +919,7 @@ namespace UnityEngine.ResourceManagement
                 if (m_dependency.IsValid() && !m_dependency.IsDone)
                     m_dependency.WaitForCompletion();
 
-                m_RM?.Update(Time.deltaTime);
+                m_RM?.Update(Time.unscaledDeltaTime);
                 if (m_instance == null && !HasExecuted)
                     InvokeExecute();
 

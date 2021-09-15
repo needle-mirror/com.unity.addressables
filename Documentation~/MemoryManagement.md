@@ -1,170 +1,117 @@
 ---
 uid: addressables-memory-management
 ---
+
 # Memory management
-## Mirroring load and unload
-When working with Addressable Assets, the primary way to ensure proper memory management is to mirror your load and unload calls correctly. How you do so depends on your Asset types and load methods. In all cases, however, the release method can either take the loaded Asset, or an operation handle returned by the load. For example, during Scene creation (described below) the load returns a [`AsyncOperationHandle<SceneInstance>`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle), which you can release via this returned handle, or by keeping up with the `handle.Result` (in this case, a [`SceneInstance`](xref:UnityEngine.ResourceManagement.ResourceProviders.SceneInstance)).
 
-### Asset loading
-To load an Asset, use [`Addressables.LoadAssetAsync` (single asset)](xref:UnityEngine.AddressableAssets.Addressables.LoadAssetAsync``1(System.Object)) or [`Addressables.LoadAssetsAsync` (multiple assets)](xref:UnityEngine.AddressableAssets.Addressables.LoadAssetsAsync``1(System.Collections.Generic.IList{System.Object},System.Action{``0},UnityEngine.AddressableAssets.Addressables.MergeMode)).
+The Addressables system manages the memory used to load assets and bundles by keeping a reference count of every item it loads.
 
-**Note**: `LoadAssetAsync` is intended for use with keys that map to single entries. If you provide a key that matches multiple entries (such as a widely used label) the method will load the first match it finds to the given key. This is not deterministic as it can be affected by build order.
+When an Addressable is loaded, the system increments the reference count; when the asset is released, the system decrements the reference count. When the reference count of an Addressable returns to zero, it is eligible to be unloaded. When you explicitly load an Addressable asset, you must also release the asset when you are done with it. 
 
-This loads the Asset into memory without instantiating it. Every time the load call executes, it adds one to the ref-count for each Asset loaded. If you call [`LoadAssetAsync`](xref:UnityEngine.AddressableAssets.Addressables.LoadAssetAsync``1(System.Object)) three times with the same address, you will get three different instances of an [`AsyncOperationHandle`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle) struct back, all referencing the same underlying operation. That operation has a ref-count of three for the corresponding Asset. If the load succeeds, the resulting [`AsyncOperationHandle`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle) struct contains the Asset in the `.Result` property. You can use the loaded Asset to instantiate using Unity's built-in instantiation methods, which does not increment the Addressables ref-count.
+The basic rule of thumb to avoid "memory leaks" (assets that remain in memory after they are no longer needed) is to mirror every call to a load function with a call to a release function. You can release an asset with a reference to the asset instance itself or with the result handle returned by the original load operation.
 
-To unload the Asset, use the [`Addressables.Release`](xref:UnityEngine.AddressableAssets.Addressables.Release``1(``0)) method, which decrements the ref-count. When a given Asset's ref-count is zero, that Asset is ready to be unloaded, and decrements the ref-count of any dependencies. 
+Note, however, that released assets are not necessarily unloaded from memory immediately. The memory used by an asset is not freed until the AssetBundle it belongs to is also unloaded. (Released assets can also be unloaded by calling [Resources.UnloadUnusedAssets], but that tends to be a slow operation which can cause frame rate hitches.)
 
-**Note**: The Asset may or may not be unloaded immediately, contingent on existing dependencies. For more information, read the section on [when memory is cleared](#when-is-memory-cleared).
+AssetBundles have their own reference count (the system treats them like Addressables with the assets they contain as dependencies). When you load an asset from a bundle, the bundle's reference count increases and when you release the asset, the bundle reference count decreases. When a bundle's reference count returns to zero, that means none of the assets it contains are still in use and the bundle and all the assets it contains are unloaded from memory.
 
-**Note**: If Asset Load Mode `All Packed Assets and Dependencies` is used in "Content Packing & Loading" settings, the first Asset loaded from the pack will load all Assets at the same time. This can cause a delay in expected time to load the first Asset, subsequent Asset loads will be preloaded and complete quickly. This can lead to Assets in memory with no ref count until they have been requested with Addressables Loading API and could be unloaded from memory, and will be reloaded individually on request. For more information, read the section on [when memory is cleared](#when-is-memory-cleared). 
+Use the [Event Viewer] to monitor your runtime memory management. The viewer shows when assets and their dependencies are loaded and unloaded. 
 
-### Scene loading
-To load a Scene, use [`Addressables.LoadSceneAsync`](xref:UnityEngine.AddressableAssets.AssetReference.LoadSceneAsync(UnityEngine.SceneManagement.LoadSceneMode,System.Boolean,System.Int32)). You can use this method to load a Scene in `Single` mode, which closes all open Scenes, or in `Additive` mode (for more information, see documentation on [Scene mode loading](https://docs.unity3d.com/ScriptReference/SceneManagement.LoadSceneMode.html)).  
+<a name="when-is-memory-cleared"></a>
+## Understanding when memory is cleared
 
-To unload a Scene, use [`Addressables.UnloadSceneAsync`](xref:UnityEngine.AddressableAssets.Addressables.UnloadSceneAsync(UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle,System.Boolean)), or open a new Scene in `Single` mode. You can open a new Scene by either using the Addressables interface, or using the [`SceneManager.LoadScene`](https://docs.unity3d.com/ScriptReference/SceneManagement.SceneManager.LoadScene.html) or [`SceneManager.LoadSceneAsync`](https://docs.unity3d.com/ScriptReference/SceneManagement.SceneManager.LoadSceneAsync.html) methods. Opening a new Scene closes the current one, properly decrementing the ref-count.
+An asset no longer being referenced (indicated by the end of a blue section in the [Event Viewer]) does not necessarily mean that asset was unloaded. A common applicable scenario involves multiple assets in an AssetBundle. For example:
 
-### GameObject instantiation
-To load and instantiate a GameObject Asset, use [`Addressables.InstantiateAsync`](xref:UnityEngine.AddressableAssets.Addressables.InstantiateAsync(System.Object,UnityEngine.Transform,System.Boolean,System.Boolean)). This instantiates the Prefab located by the specified `location` parameter. The Addressables system will load the Prefab and its dependencies, incrementing the ref-count of all associated Assets. 
+* You have three Assets (`tree`, `tank`, and `cow`) in an AssetBundle (`stuff`).
+* When `tree` loads, the profiler displays a single ref-count for `tree`, and one for `stuff`.
+* Later, when `tank` loads, the profiler displays a single ref-count for both `tree` and `tank`, and two ref-counts for the `stuff` AssetBundle.
+* If you release `tree`, it's ref-count becomes zero, and the blue bar goes away.
 
-Calling [`InstantiateAsync`](xref:UnityEngine.AddressableAssets.Addressables.InstantiateAsync(System.Object,UnityEngine.Transform,System.Boolean,System.Boolean)) three times on the same address results in all dependent assets having a ref-count of three. Unlike calling [`LoadAssetAsync`](xref:UnityEngine.AddressableAssets.Addressables.LoadAssetAsync``1(System.Object)) three times, however, each `InstantiateAsync` call returns an [`AsyncOperationHandle`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle`1) pointing to a unique operation.  This is because the result of each `InstantiateAsync` is a unique instance. You will need to individually release each returned [`AsyncOperationHandle`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle) or GameObject instance. Another distinction between `InstantiateAsync` and other load calls is the optional `trackHandle` parameter. When set to `false`, you must keep the [`AsyncOperationHandle`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle) to use while releasing your instance. This is more efficient, but requires more development effort.
+In this example, the `tree` asset is not actually unloaded at this point. You can load an AssetBundle, or its partial contents, but you cannot partially unload an AssetBundle. No asset in stuff unloads until the AssetBundle itself is completely unloaded. The exception to this rule is the engine interface [Resources.UnloadUnusedAssets]. Executing this method in the above scenario causes `tree` to unload. Because the Addressables system cannot be aware of these events, the profiler graph only reflects the Addressables ref-counts (not exactly what memory holds). Note that if you choose to use [Resources.UnloadUnusedAssets], it is a very slow operation, and should only be called on a screen that won't show any hitches (such as a loading screen).
 
-To destroy an instantiated GameObject, use [`Addressables.ReleaseInstance`](xref:UnityEngine.AddressableAssets.Addressables.ReleaseInstance(UnityEngine.GameObject)), or close the Scene that contains the instantiated object. This Scene can have been loaded (and thus closed) in `Additive` or `Single` mode. This Scene can also have been loaded using either the [`Addressables`](xref:UnityEngine.AddressableAssets.Addressables) or `SceneManagement` API. As noted above, if you set `trackHandle` to `false`, you can only call `Addressables.ReleaseInstance` with the handle, not with the actual GameObject.
 
-**Note**: If you call [`Addressables.ReleaseInstance`](xref:UnityEngine.AddressableAssets.Addressables.ReleaseInstance(UnityEngine.GameObject)) on an instance that was not created using the [`Addressables`](xref:UnityEngine.AddressableAssets.Addressables) API, or was created with `trackHandle==false`, the system detects that and returns `false` to indicate that the method was unable to release the specified instance. The instance will not be destroyed in this case.
+## Avoiding asset churn
 
-[`Addressables.InstantiateAsync`](xref:UnityEngine.AddressableAssets.Addressables.InstantiateAsync(System.Object,UnityEngine.Transform,System.Boolean,System.Boolean)) has some associated overhead, so if you need to instantiate the same objects hundreds of times per frame, consider loading via the [`Addressables`](xref:UnityEngine.AddressableAssets.Addressables) API, then instantiating through other methods. In this case, you would call [`Addressables.LoadAssetAsync`](xref:UnityEngine.AddressableAssets.Addressables.LoadAssetAsync*), then save the result and call [`GameObject.Instantiate()`](https://docs.unity3d.com/ScriptReference/Object.Instantiate.html) for that result. This allows flexibility to call `Instantiate` in a synchronous way. The downside is that the Addressables system has no knowledge of how many instances you created, which can lead to memory issues if not properly managed. For example, a Prefab referencing a texture would no longer have a valid loaded texture to reference, causing rendering issues (or worse). These sorts of problems can be hard to track down as you may not immediately trigger the memory unload (see section on [clearing memory](#when-is-memory-cleared), below).
+Asset churn is a problem that can arise if you release an object that happens to be the last item in an AssetBundle and then immediately reload either that asset or another asset in the bundle.
 
-### Data loading
-Interfaces that do not need their [`AsyncOperationHandle.Result`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.Result) released, will still need the operation itself to be released. Examples of these would be `Addressables.LoadResourceLocationsAsync` and `Addressables.GetDownloadSizeAsync`. They load data that you can access until the operation is released. This release should be done via `Addressables.Release`.
+For example, say you have two materials, `boat` and `plane` that share a texture, `cammo`, which has been pulled into its own AssetBundle. Level 1 uses `boat` and level 2 uses `plane`. As you exit level 1 you release `boat`, and immediately load `plane`. When you release `boat`, Addressables unloads texture `cammo`. Then, when you load `plane`, Addressables immediately reloads `cammo`.
 
-### Background interactions
-Operations that do not return anything in the [`AsyncOperationHandle.Result`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.Result) field have have an optional parameter to automatically release the operation handle on completion. If you have no further need for one of these operation handles after it has completed, set the `autoReleaseHandle` parameter to true to make sure the operation handle is cleaned up. The scenario where you would want `autoReleaseHandle` to be false would be if you needed to check the `Status` of the operation handle after it has completed.  Examples of these interfaces are [`Addressables.DownloadDependenciesAsync`](xref:UnityEngine.AddressableAssets.Addressables.DownloadDependenciesAsync(System.Collections.Generic.IList{System.Object},UnityEngine.AddressableAssets.Addressables.MergeMode,System.Boolean)) and [`Addressables.UnloadScene`](xref:UnityEngine.AddressableAssets.Addressables.UnloadScene(UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle,System.Boolean)).
+You can use the [Event Viewer] to help detect asset churn by monitoring asset loading and unloading.  
 
-## The Addressables Event Viewer
-Use the **Addressables Event Viewer** window to monitor the ref-counts of all Addressables system operations. To access the window in the Editor, select **Window** > **Asset Management** > **Addressables** > **Event Viewer**.
+## AssetBundle memory overhead
 
-**Important**: In order to view data in the Event Viewer, you must enable the **Send Profiler Events** setting in your [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) object's Inspector. Changes to **Send Profiler Events** will be reflected in the following build. This means that entering play mode when using the **Use Existing Build** play mode script will use the value set during the most recent build. Alternatively, entering play mode when using the **Use Asset Database** or **Simulate Groups** play mode scripts will pick up the current state, as those play mode scripts rebuild the settings data upon entering play mode.
+When you load an AssetBundle, Unity allocates memory to store the bundle's internal data, which is in addition to the memory used for the assets it contains. The main types of internal data for a loaded AssetBundle include: 
 
-The following information is available in the Event Viewer:
+* [Serialized file buffers]: used to load data from a bundle
+* [TypeTrees]: defines the serialized layout of your objects
+* [Table of contents]: lists the assets in a bundle
+* [Preload table]: lists the dependencies of each asset
 
-* A white vertical line indicates the frame in which a load request occurred.
-* A blue background indicates that an Asset is currently loaded.
-* The green part of the graph indicates an Asset's current ref-count.
+When you organize your Addressable groups and AssetBundles, you typically must make tradeoffs between the size and the number of AssetBundles you create and load. On the one hand, fewer, larger bundles can minimize the total memory usage of your AssetBundles. On the other hand, using a larger number of small bundles can minimize the peak memory usage because you can unload assets and AssetBundles more easily.  
 
-Note that the Event Viewer is only concerned with ref-counts, not memory consumption (see section on [clearing memory](#when-is-memory-cleared), below, for more information).
+While the size of an AssetBundle on disk is not the same as its size at runtime, you can use the disk size as an approximate guide to the memory overhead of the AssetBundles in a build. You can get bundle size and other information you can use to help analyze your AssetBundles from the [Build Layout Report].
 
-Listed under the Assets column, you will see a row for each of the following, per frame:
+The following sections discuss the internal data used by AssetBundles and how you can minimize the amount of memory they require, where possible. 
 
-* FPS: The frames per second count.
-* MonoHeap: The amount of RAM in use.
-* Event Counts: The total number of events in a frame.
-* Instantiation Counts: The total number of calls to Addressables.InstantiateAsync on a frame.
-* Asset requests: Displays the reference count on an operation over time. If the Asset request has any dependencies, a triangle appears that you can click on to view the children's request operations.
+### Serialized file buffers
 
-You can click the left and right arrows in order to step through the frames one by one, or click **Current** to jump to the latest frame. Press the **+** button to expand a row for more details.
+When Unity loads an AssetBundle, it allocates an internal buffer for each serialized file in the bundle and keeps this buffer for the lifetime of the AssetBundle. A non-scene AssetBundle contains one serialized file, but a scene AssetBundle can contain up to two serialized files for each scene in the bundle. 
 
-The information displayed in the Event Viewer is related to the [build script](AddressableAssetsDevelopmentCycle.md#build-scripts) you use to create Play mode data.
+Because file buffers are allocated per loaded AssetBundle, you can reduce the amount of memory used for them by keeping the number of bundles loaded at a given time to a minimum. In addition, if your AssetBundle sizes are small enough that the size of the file buffers becomes a significant percentage of the total memory used for your loaded bundles, then consider whether it makes more sense to use larger bundles.
 
-When using the Event Viewer, avoid the **Use Asset Database** built script because it does not account for any shared dependencies among the Assets. Use the **Simulate Groups** script or the **Use Existing Build** script instead, but the latter is better suited for the Event Viewer because it gives a more accurate monitoring of the ref-counts.
+The buffer sizes are optimized per platform. Switch, Playstation, and Windows RT use 128k buffers. All other platforms use 14k buffers. You can use the [Build Layout Report] to determine how many serialized files are in an AssetBundle. 
 
-### Connecting the Event Viewer to a standalone player	
-To connect the Event Viewer to a standalone player, go into the build menu, select the platform you wish to use, and ensure that **Development Build** and **Autoconnect Profiler** are both enabled. Next, open the Unity Profiler by selecting **Window** > **Analysis** > **Profiler** and select the platform you wish to build for on the top toolbar. Finally, select **Build and Run** in the Build Settings window and the Event Viewer will automatically connect to and display events for the standalone player selected.
+### TypeTrees
 
-## When is memory cleared?
-An Asset no longer being referenced (indicated by the end of a blue section in the profiler) does not necessarily mean that Asset was unloaded. A common applicable scenario involves multiple Assets in an [AssetBundle](https://docs.unity3d.com/Manual/AssetBundlesIntro.html "AssetBundles"). For example:
-* You have three Assets (`tree`, `tank`, and `cow`) in an AssetBundle (`stuff`).  
-* When `tree` loads, the profiler displays a single ref-count for `tree`, and one for `stuff`.  
-* Later, when `tank` loads, the profiler displays a single ref-count for both `tree` and `tank`, and two ref-counts for the `stuff` AssetBundle.  
-* If you release `tree`, it's ref-count becomes zero, and the blue bar goes away. 
+A TypeTree describes the field layout of one of your data types.
 
-In this example, the `tree` asset is not actually unloaded at this point. You can load an AssetBundle, or its partial contents, but you cannot partially unload an AssetBundle. No asset in `stuff` unloads until the AssetBundle itself is completely unloaded. The exception to this rule is the engine interface [`Resources.UnloadUnusedAssets`](https://docs.unity3d.com/ScriptReference/Resources.UnloadUnusedAssets.html). Executing this method in the above scenario causes `tree` to unload. Because the Addressables system cannot be aware of these events, the profiler graph only reflects the Addressables ref-counts (not exactly what memory holds). Note that if you choose to use `Resources.UnloadUnusedAssets`, it is a very slow operation, and should only be called on a screen that won't show any hitches (such as a loading screen).
+Each serialized file in an AssetBundle contains a TypeTree for each object type within the file. The TypeTree information allows you to load objects that are deserialized slightly differently from the way they were serialized. TypeTree information is not shared between AssetBundles; each bundle has a complete set of TypeTrees for the objects it contains.
 
-### Delaying Unload
-In addition to ensuring items are cleared from memory quickly enough (as discussed above), it's important to ensure items are not churning in and out of memory too often.  Specifically, loading an item, releasing it, then quickly reloading it. If it is the only item in a bundle, or at least the last released item, then we will unload the AssetBundle the moment the release comes through. This means there will be a full unload, and then an immediate reload. A common example of this is with shared dependencies. 
+All the TypeTrees are loaded when the AssetBundle is loaded and held in memory for the lifetime of the AssetBundle. The memory overhead associated with TypeTrees is proportional to the number of unique types in the serialized file and the complexity of those types.
 
-For example, say you have two materials, `boat` and `plane` that share a texture, `cammo`, which has been pulled into its own AssetBundle. Level 1 uses `boat` and level 2 uses `plane`. As you exit level 1 you release the `boat`, and immediately load `plane`. During the release, we will unload texture `cammo`. Then the subsequent load will immediately reload it.
+You can reduce the memory requirements of AssetBundle TypeTrees in the following ways:
 
-For this specific example, the easiest solution is to build a wrapper around Addressables that delays Release calls. That works here because it's known "release and reload" are likely to happen in a very short timeframe (level transitions).  Depending on your scenario, the solution may need to be more or less complex. 
+* Keep assets of the same types together in the same bundles.  
+* Turn off TypeTrees -- turning off TypeTrees makes your AssetBundles smaller by excluding this information from a bundle. However, without TypeTree information, you may encounter serialization errors or undefined behaviour when loading older bundles with a newer version of Unity or after making even small script changes in your project. 
+*  Prefer simpler data types to reduce TypeTree complexity.
 
-## AssetBundle Memory Overhead
-When deciding how to organize your Addressable groups and AssetBundles, you may want to consider the runtime memory usage of each AssetBundle. Many small AssetBundles can give greater granularity for unloading, but can come at the cost of some runtime memory overhead. This section describes the various types of AssetBundle memory overhead.
+You can test the impact that TypeTrees have on the size of your AssetBundles by building them with and without TypeTrees disabled and comparing the sizes. Use [BuildAssetBundleOptions.DisableWriteTypeTree] to disable TypeTrees in your AssetBundles. Note that not all platforms support TypeTrees and some platforms require TypeTrees (and ignore this setting).
 
-### Serialized File Overhead
+If you disable TypeTrees in a project, always rebuild local Addressable groups before building a new player. If you are distributing content remotely, only update content using the same version (including patch number) of Unity that you used to produce your current player and don't make even minor code changes. (When you are juggling multiple player versions, updates, and versions of Unity, you might not find the memory savings from disabling TypeTrees to be worth the trouble.) 
 
-When Unity loads an AssetBundle, it allocates an internal buffer for each serialized file in the AssetBundle. This buffer persists for the lifetime of the AssetBundle. A non-scene AssetBundle contains one serialized file, but a scene AssetBundle can contain up to two serialized files for each scene in the bundle. The buffer sizes are optimized per platform. Switch, Playstation, and Windows RT use 128k buffers. All other platforms use 14k buffers. You can use the [Build Layout Report](DiagnosticTools.md#build-layout-report) to determine how many serialized files are in an AssetBundle.
-
-Each serialized file also contains a TypeTree for each object type within the file. The TypeTree describes the data layout of each object type and allows you to load objects that are deserialized slightly differently from how they were serialized. All the TypeTrees are loaded when the AssetBundle is loaded and held in memory for the lifetime of the AssetBundle. The memory overhead associated with TypeTrees scales with the number of unique types in the serialized file and the complexity of those types. Although you can choose to ship AssetBundles without TypeTrees, be aware that even engine version patches can slightly change the serialization format and could result in undefined behavior when you use a newer runtime to load assets serialized with an older format; Unity recommends always shipping AssetBundles with TypeTree information, which is the default behavior.
-
-When you put objects of the same type in more than one AssetBundle, the type information for those objects is duplicated in the TypeTree of each AssetBundle. This duplication of type information is more noticeable when you use many small AssetBundles. You can test the impact that TypeTrees have on the size of your AssetBundles by building them with and without TypeTrees disabled and comparing the sizes. If after measuring, you find the duplicate TypeTree memory overhead to be unacceptable, you can avoid it by packing your objects of the same types in the same AssetBundles.
-
-### AssetBundle Object
-
-The AssetBundle object itself has two main sources of runtime memory overhead: the table of contents and the preload table. While the size of an AssetBundle on disk is not the same as its size at runtime, you can use the disk size to approximate the memory overhead. This information is located in the [Build Layout Report](DiagnosticTools.md#build-layout-report).
+### Table of contents
 
 The table of contents is a map within the bundle that allows you to look up each explicitly included asset by name. It scales linearly with the number of assets and the length of the string names by which they are mapped.
 
-The preload table is a list of all the objects that a loadable asset references. This data is needed so Unity can load all those referenced objects when you load an asset from the AssetBundle. For example, a prefab would have a preload entry for each component as well as any other assets it may reference (materials, textures, etc). Each preload entry is 64 bits and can reference objects in other AssetBundles.
+The size of your table of contents data is based on the total number of assets. You can minimize the amount of memory dedicated to holding table of content data by minimizing the number of AssetBundles loaded at a given time. 
 
-As an example, consider a situation in which you are adding two Assets to an AssetBundle  (`PrefabA` and `PrefabB`) and both of these prefabs reference a third prefab  (`PrefabC`), which is large and contains several components and references to other assets. This AssetBundle has two preload tables, one for `PrefabA` and one for `PrefabB`. Those tables contain entries for all the objects of their respective prefab, but also entries for all the objects in `PrefabC` and any objects referenced by `PrefabC`. Thus the information required to load `PrefabC` ends up duplicated in both `PrefabA` and `PrefabB`. This will happen whether or not `PrefabC` is explicitly added to an AssetBundle.
+### Preload table
 
-Depending on how you organize your assets, the preload tables in AssetBundles could become quite large and contain many duplicate entries. This is especially true if you have several loadable assets that all reference a complex asset, such as `PrefabC` in the situation above. If you determine that the memory overhead from the preload table is a problem, you can structure your loadable assets so that they have fewer complex loading dependencies.
+The preload table is a list of all the other objects that an asset references. Unity uses the preload table to load these referenced objects when you load an asset from the AssetBundle. 
 
-## AssetBundle dependencies	
-Loading an Addressable Asset loads all the AssetBundle dependencies and keeps them loaded until you call [`Addressables.Release`](xref:UnityEngine.AddressableAssets.Addressables.Release``1(``0)) on the handle returned from the loading method.	
+For example, a Prefab has a preload entry for each of its components as well as any other assets it may reference (materials, textures, etc). Each preload entry is 64 bits and can reference objects in other AssetBundles.
 
-AssetBundle dependencies are created when an asset in one AssetBundle references an asset in another AssetBundle. An example of this is a material referencing a texture.  The dependencies of all these AssetBundles can be thought of as a dependency graph. During the catalog generation stage of the build process, Addressables walks this graph to calculate all the AssetBundles that must be loaded for each Addressable Asset. Because dependencies are calculated at the AssetBundle level, all Addressable Assets within a single AssetBundle have the same dependencies. Adding an Addressable Asset that has an external reference (references an object in another AssetBundle) to an AssetBundle adds that AssetBundle as a dependency for all the other Addressable Assets in the AssetBundle.
+When an asset references another asset that in turn references other assets, the preload table can become large because it contains the entries needed to load both assets. If two assets both reference a third asset, then the preload tables of both contain entries to load the third asset (whether or not the referenced asset is Addressable or in the same AssetBundle).   
 
-For Example:	
+As an example, consider a situation in which you have two assets in an AssetBundle (PrefabA and PrefabB) and both of these prefabs reference a third prefab (PrefabC), which is large and contains several components and references to other assets. This AssetBundle contains two preload tables, one for PrefabA and one for PrefabB. Those tables contain entries for all the objects of their respective prefab, but also entries for all the objects in PrefabC and any objects referenced by PrefabC. Thus the information required to load PrefabC ends up duplicated in both PrefabA and PrefabB. This happens whether or not PrefabC is explicitly added to an AssetBundle.
 
-`BundleA` contains Addressable Assets `RootAsset1` and `RootAsset2`. `RootAsset2` references `DependencyAsset3`, which is contained in `BundleB`. Even though `RootAsset1` has no reference to `BundleB`, `BundleB` is still a dependency of `RootAsset1` because `RootAsset1` is in `BundleA`, which has a reference on `BundleB`.
+Depending on how you organize your assets, the preload tables in AssetBundles could become quite large and contain many duplicate entries. This is especially true if you have several loadable assets that all reference a complex asset, such as PrefabC in the situation above. If you determine that the memory overhead from the preload table is a problem, you can structure your loadable assets so that they have fewer complex loading dependencies.
 
-Prior to 1.13.0, the dependency graph was not as thorough as it is now.  In the example above, `RootAsset1` would not have had a dependency on `BundleB`. This previous behavior resulted in references breaking when an AssetBundle being referenced by another AssetBundle was unloaded and reloaded.  This fix may result in additional data remaining in memory if the dependency graph is complex enough.
+## AssetBundle dependencies
 
-### Duplicate dependencies
-When exploring memory management and dependency graphs, it's important to discuss duplicated content.  There are two mechanisms by which an asset can be built into an AssetBundle: explicit and implicit. If you mark an asset as Addressable, it is explicitly put into an AssetBundle.  That is the only AssetBundle it is in.  
+Loading an Addressable asset also loads all of the AssetBundles containing its dependencies. An AssetBundle dependency occurs when an asset in one bundle references an asset in another bundle. An example of this is a material referencing a texture. 
 
-Example:
-A material has a direct dependency on a texture, and both assets are marked as Addressable in separate AssetBundles `BundleM` and `BundleT` respectively.  `BundleT` contains the texture. `BundleM` contains the material and lists `BundleT` as a dependency.
+Addressables calculates dependencies between bundles at the bundle level. If one asset references an object in another bundle, then the entire bundle has a dependency on that bundle. This means that even if you load an asset in the first bundle that has no dependencies of its own, the second AssetBundle is still loaded into memory.
 
-If any dependencies are not explicitly included, then they are implicitly pulled in.
+To avoid loading more bundles than are required, you should strive to keep the dependencies between AssetBundles as simple as possible. 
 
-Example:
-A material has a direct dependency on a texture, and only the material is marked as Addressable in `BundleM`.  During build, the texture, because it is not explicitly included elsewhere, is pulled into `BundleM` when the material is.  
+> [!NOTE]
+> Prior to Addressables 1.13.0, the dependency graph was not as thorough as it is now. In the example above, RootAsset1 would not have had a dependency on BundleB. This previous behavior resulted in references breaking when an AssetBundle being referenced by another AssetBundle was unloaded and reloaded. This fix may result in additional data remaining in memory if the dependency graph is complex enough.
 
-This implicit dependency inclusion can lead to duplication.
-
-Example:
-Two materials, matA and matB, are Addressable and both have direct dependencies on the same texture.  If matA and matB are built into the same AssetBundle, then the texture is pulled implicitly in once.  If matA and matB are built into separate AssetBundles, then the texture is pulled implicitly into each of those AssetBundles.  At runtime, the engine has no record that these textures came from the same source asset, and are each loaded as they are needed by their respective materials. 
-
-### SpriteAtlas dependencies
-SpriteAtlases complicate the dependency calculation a bit, and merit a more thorough set of examples.
-
-Addressable Sprite Example 1:
-
-Three textures exist and are marked as Addressable in three separate groups.  Each texture builds to about 500KB.  During the build, they are built into three separate AssetBundles, each AssetBundle only containing the given sprite meta data and texture.  Each AssetBundle is about 500KB and none of these AssetBundles have dependencies.  
-
-Addressable Sprite Example 2:
-
-The three textures in Example 1 are put into a SpriteAtlas.  That atlas is not Addressable.  One of the AssetBundles generated contains that atlas texture and is about 1500KB.  The other two AssetBundles only contain Sprite metadata (a few KB), and list the atlas AssetBundle as a dependency.  Which AssetBundle contains the texture is deterministic in that it is the same through rebuilds, but is not something that can be set by the user.  This is the key portion that goes against the standard duplication of dependencies.  The sprites are dependent on the SpriteAtlas texture to load, and yet that texture is not built into all three AssetBundles, but is instead built only into one.
-
-Addressable Sprite Example 3:
-
-The SpriteAtlas from Example 2 is marked as Addressable in its own AssetBundle.  At this point there are four AssetBundles created.  If you are using a 2020.x or newer version of Unity, this builds as you would expect.  The three AssetBundles with the sprites are each only a few KB and have a dependency on this fourth SpriteAtlas AssetBundle, which is be about 1500KB.  If you are using 2019.x or older, the texture itself may end up elsewhere.  The three sprite AssetBundles still depend on the SpriteAtlas AssetBundle. However, the SpriteAtlas AssetBundle may only contain meta data, and the texture may be in one of the other sprite AssetBundles.
-
-Addressable Prefab With Sprite Dependency Example 1:
-
-Instead of three Addressable textures, there are three Addressable sprite prefabs. Each prefab depends on its own sprite (about 500KB). Building the three prefabs separately results, as expected, in three AssetBundles of about 500KB each.
-
-Addressable Prefab With Sprite Dependency Example 2
-
-Taking the prefabs and textures from the previous example, all three textures are added to a SpriteAtlas, and that atlas is not marked as Addressable.  In this scenario, the SpriteAtlas texture is duplicated.  All three AssetBundles are approximately 1500KB. This is expected based on the general rules about duplication of dependencies, but goes against the behavior seen in "Addressable Sprite Example 2".
-
-Addressable Prefab With Sprite Dependency Example 3
-
-Taking the prefabs, textures, and SpriteAtlas form the above example, the SpriteAtlas is also marked as Addressable.  Conforming to the rules of explicit inclusion, the SpriteAtlas texture is included only in the AssetBundle containing the SpriteAtlas.  The AssetBundles with prefabs reference this fourth AssetBundle as a dependency.
-
-
-
-
-
-
+[Serialized file buffers]: #serialized-file-buffers
+[TypeTrees]: #typetrees
+[Table of contents]: #table-of-contents
+[Preload table]: #preload-table
+[Build Layout Report]: xref:addressables-build-layout-report
+[BuildAssetBundleOptions.DisableWriteTypeTree]: xref:UnityEditor.BuildAssetBundleOptions.DisableWriteTypeTree
+[Event Viewer]: xref:addressables-event-viewer
+[Resources.UnloadUnusedAssets]: xref:UnityEngine.Resources.UnloadUnusedAssets

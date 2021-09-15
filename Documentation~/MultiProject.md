@@ -1,3 +1,7 @@
+---
+uid: addressables-multiple-projects
+---
+
 # Loading from Multiple Projects
 
 Should your situation require a multi-project workflow, such as a large project broken up across multiple Unity projects that have the Addressables package installed, we have [`Addressables.LoadContentCatalogAsync`](LoadContentCatalogAsync.md) to link together code and content across the various projects.  Studios with teams that works on many facets of an application simultaneously may find benefit with this workflow.

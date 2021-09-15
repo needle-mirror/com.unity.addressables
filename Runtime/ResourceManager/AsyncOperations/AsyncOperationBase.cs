@@ -161,7 +161,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// Used for the implementation of WaitForCompletion in an IAsyncOperation.
         /// </summary>
         /// <returns>True if the operation has completed, otherwise false.</returns>
-        protected virtual bool InvokeWaitForCompletion() { return IsDone; }
+        protected virtual bool InvokeWaitForCompletion() { return true; }
 
         internal void DecrementReferenceCount()
         {

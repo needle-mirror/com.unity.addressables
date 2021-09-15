@@ -44,10 +44,10 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                     return true;
             }
 
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
             if (!IsDone && Result != null)
                 Execute();
-            m_RM?.Update(Time.deltaTime);
+            m_RM?.Update(Time.unscaledDeltaTime);
             return IsDone;
         }
 

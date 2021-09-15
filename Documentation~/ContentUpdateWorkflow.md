@@ -1,238 +1,324 @@
-# Content update workflow
-Addressables provides a content update workflow intended for games that will dynamically be downloading content from a CDN.  In this situation, a player (app, exe, apk, etc.) is built and deployed (such as through the Android app store).  While running, the app will contact a CDN to discover and download additional content.  
+---
+uid: addressables-content-update-builds
+---
 
-This is not the same as games that use platform provided patching systems (such as Switch or Steam).  For these games the every build of the game should be a complete fresh content build, completely bypassing the update flow.  In this instance, the _addressables_content_state.bin_ file that is generated after each build can be discarded or ignored. 
+# Content update builds
 
-## Project structure
-Unity recommends structuring your game content into two categories: 
+The Addressables package includes tools that you can use to reduce the size of updates to the content you distribute remotely. 
 
-* `Cannot Change Post Release`: Static content that you never expect to update. 
-* `Can Change Post Release`: Dynamic content that you expect to update. 
+The content update tools include:
 
-A `Release` in this context technically refers to a release of your built Addressable content, which likely happens alongside a player build and release if a player build hasn't already been released.  After a player build has been released, these game content categories are relevant to any content update releases.  New remote Addressable Groups can be built into a content update without the need to release a new player build.
+* __[Check for Content Update Restrictions]__ tool: prepares your group organization for a content update build based on group settings
+* __[Update a Previous Build]__ script: a build script that performs the content update build 
 
-In this structure, content marked as `Cannot Change Post Release` ships with the application (or downloads soon after install), and resides in very few large bundles. Content marked as `Can Change Post Release` resides online, ideally in smaller bundles to minimize the amount of data needed for each update. One of the goals of the Addressable Assets System is to make this structure easy to work with and modify without having to change your scripts. 
+> [!IMPORTANT]
+> You must save the **_addressables_content_state.bin_** file produced by the Default Build Script for each build that you intend to update in the future. This file is updated every time you run the build script. Be sure to save the version produced for the content build that you publish.  
 
-However, the Addressable Assets System can also accommodate situations that require changes to the content marked as `Cannot Change Post Release`, when you don't want to publish a whole new application build.  Modified assets and their dependencies (and dependents) will be duplicated in new bundles that will be used instead of the shipped content.  This can result in a much smaller update than replacing the entire bundle or rebuilding the game.  Once a build has been made, it is important to NOT change the state of a group from "Cannot Change Post Release" to "Can Change Post Release" or vice versa until an entirely new build is made.  If the groups change after a full content build but before a content update, Addressables will not be able to generate the correct changes needed for the update.
+For information on how to set up your Addressable groups for content updates, see [Group settings].
 
-Note that in cases that do not allow remote updates (such as many of the current video-game consoles, or games without a server), you should make a complete and fresh build every time.
+For information on how to perform a content update build, see [Building content updates].
 
-## How it works
-Addressables uses a content catalog to map an address to each Asset, specifying where and how to load it. In order to provide your app with the ability to modify that mapping, your original app must be aware of an online copy of this catalog. To set that up, enable the **Build Remote Catalog** setting on the [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) Inspector. This ensures that a copy of the catalog gets built to and loaded from the specified paths. This load path cannot change once your app has shipped. The content update process creates a new version of the catalog (with the same file name) to overwrite the file at the previously specified load path.
+For general information about how content updates work, including examples, see [Overview].  
 
-Building an application generates a unique app content version string, which identifies what content catalog each app should load. A given server can contain catalogs of multiple versions of your app without conflict. We store the data we need in the `addressables_content_state.bin` file.  The bin file is generated for new content builds only.  It includes the version string, along with hash information for any Asset that is contained in a group marked as `Cannot Change Post Release`.  By default, this is located in the `Assets/AddressableAssetsData/<platform>` Project directory, or path assigned to `AddressbleAssetSettings` value `ContentStateBuildPath` appended with `/<platform>`. Where `<platform>` is your target platform.
+> [!NOTE]
+> On platforms that provide their own patching systems (such as Switch or Steam) or that do not support remote content distribution, do not use content update builds. Every build of your game should be a complete fresh content build. (In this case you can discard or ignore the *addressables_content_state.bin* file that is generated after each build for the platform.)
 
-The `addressables_content_state.bin` file contains hash and dependency information for every `Cannot Change Post Release` Asset group in the Addressables system. All groups building to the `StreamingAssets` folder should be marked as `Cannot Change Post Release`, though large remote groups may also benefit from this designation. During the next step (preparing for content update, described below), this hash information determines if any `Cannot Change Post Release` groups contain changed Assets, and thus need those Assets moved elsewhere.
+## Overview
 
-For more information about the `addressables_content_state.bin`, check out the [FAQ page](AddressablesFAQ.md).
+When you distribute content remotely, you can make content changes without needing to rebuild and republish your entire application. When the Addressables system initializes at runtime, it checks for an updated content catalog. If one exists, the system downloads the new catalog and, when it loads assets, downloads the newer versions of all your AssetBundles.
 
-### Update life cycle
-The first step in the process of building content is always a fresh full build.  This can be triggered from within the **Addressables Groups** window in the Unity Editor (**Window** > **Asset Management** > **Addressables** > **Groups**).  Once there, selecting your build script from **Build** > **New Build**.  Unless you create a custom build, the only option will be **Default Build Script**.  
+However, when you rebuild all of your content with a new content catalog, installed players must also redownload all of your remote AssetBundles, whether the assets in them have changed or not. If you have a large amount of content, redownloading everything can take a significant amount of time and may hurt player retention. To make this process more efficient, the Addressables package provides tools that you can run to identify changed assets and to produce a content update build. 
 
-Every time a full player build is created (such as through **File** > **Build and Run**), this should be preceded by a full content build of Addressables.  After a player build is created, if you wish to update it's contents via a CDN, then it becomes time to do a content update build.
+The following diagram illustrates how you can use the Adressables tools to produce smaller content updates that only require your players to download new or changed content:
 
-#### Life cycle example
-This is a sample flow over the course of your game's existence.  More details of key steps are outlined later in this document.  
-1. Create and refine content until ready for initial release.
-2. Trigger initial addressables content build via the Groups window.
-3. Build a player, such as via Build and Run.  
-4. Continue to refine & iterate on content.
+![](images/addr_updatebuilds_0.png)
+*The workflow for reducing the size of content updates*
 
-If you do not have a CDN, and are not dynamically downloading content, after step 4, return to step 2 to create a fresh content build and fresh player.
+When you release your full application, you first build your Addressables content, as normal, and then make a player build. The player build contains your local AssetBundles and you upload your remote AssetBundles to your Content Delivery Network (CDN) or other hosting service.
 
-If you do distribute content via CDN, continued iteration involves more steps.  I will refer to the player built in step 3 above as "PlayerBuild1".  Steps continue as follows:
+The Default Build Script that produces your Addressables content build always creates the *addressables_content_state.bin* file, which is required to efficiently publish content-only updates. You must save this file for each published full application release (on every platform).
 
-5. Optionally trigger **Check for Content Update Restrictions** (see Identifying changed assets below).
-6. Trigger a content update build via **Update a Previous Build** (see Building for content updates below).
+Between full application releases, which require your users to download and install a new player build, you can make changes to your Addressable assets in the project. (Since AssetBundles do not include code, do not make code changes in the version of your project that you use to develop your asset changes.) You can change both local and remote assets. 
 
-At this point you can repeat steps 4-6 until you are ready to create a new player to submit to your platform of choice.
+When you are ready to publish a content update, run the __Check Content Update Restrictions__ tool. This tool examines the *addressables_content_state.bin* file and moves changed assets to a new remote group, according to the settings of the group they are in.
 
-7. Optionally save _addressables_content_state.bin_ file and branch content.
-8. Optionally create a new build destination on your CDN. Especially if changing Unity version. 
+To build the updated AssetBundles, run the __Update a Previous Build__ script. This tool also uses the *addressables_content_state.bin* file. It rebuilds all of your content, but produces a modified catalog that accesses unchanged content from their original AssetBundles and changed content from the new AssetBundles.
 
-When creating a new player, there are two scenarios to consider.  In the simplest case, you are never going to distribute new content for "PlayerBuild1".  The content you have released so far for "PlayerBuild1" is all users will get until they update to future player builds.  In this scenario, you do not do step 7, and simply return from step 6 back to step 2, this time creating "PlayerBuild2", and only making content updates for it.
+The final step is to upload the updated content to your CDN. (You can upload all the new AssetBundles produced or just those with changed names -- bundles that haven't changed use the same names as the originals and will overwrite them.)
 
-In the more complex scenario, you wish to build a "PlayerBuild2", but make a new content available to both players.  Here, you must do step 7, saving your _addressables_content_state.bin_.  The simplest way to handle this is to completely branch your content.  This ensures properly named catalogs and content for each build.  There are ways around this, but they involve leaving the standard catalog creation and naming systems.  
+You can make additional content updates following the same process. Always use the *addressables_content_state.bin* file from your original release.
 
-The purpose of step 8 is to ensure each player build has a clean space to download content.  Often this isn't needed, but is safer. One key example where it is an absolute must is when you have updated Unity version, but not some content.  If an AssetBundle is built with identical content, but two different Unity versions, the hash will be the same, but the CRC will be different.  This means, with any of our bundle naming schemes, the new bundle will have the same name as the old one (thus overwritting it).  As it also has a new CRC, the old player will not be able to download it successfully (we keep up with CRC's in our catalog for download safety).  
-
-## Planning for content updates
-When planning for a content update, there are a few items to ensure are set up correctly during the initial build (step 2 above).  First is that the correct groups are tagged with "Can" or "Cannot" change as described above.  The next is that the _addressables_content_state.bin_ file that is generated off of this build is saved.  By default this is built to `Assets/AddressableAssetsData/<platform>` Project directory, or path assigned to `AddressbleAssetSettings` value `ContentStateBuildPath` appended with `/<platform>`. Where `<platform>` is your target platform.  We recommend using version control to save the file at this point.  
+See [Building content updates] for step-by-step instructions.
 
 ### When a full rebuild is required
-Addressables can only distribute content, not code.  As such, a code change generally necessitates a fresh player build, and often a fresh build of content. In some instances a new player can download old content from a CDN, but this requires a careful analysis of what type tree was created during the initial build.  This is advanced territory to explored carefully. 
 
-Note that Addressables itself is code, so updating Addressables or Unity version likely requires creating a new player build and fresh content builds. 
+Addressables can only distribute content, not code. As such, a code change generally requires a fresh player build, and usually a fresh build of content. Although a new player build can sometimes reuse old, existing content from a CDN, you must carefully analyze whether the type trees in the existing AssetBundles are compatible with your new code. This is advanced territory to explore carefully.
 
-### Unique Bundle IDs
-Unique Bundle IDs is an advanced option that should only be enabled if you require the ability to load new versions of content while old versions are still in memory.  There is an extra cost associated with build and content refreshes if this option is on.
+Note that Addressables itself is code, so updating Addressables or Unity version likely requires that you create a new player build and fresh content builds.
 
-When loading AssetBundles into memory, Unity enforces that two bundles cannot be loaded with the same internal names.  This can put some limitations on updating bundles at runtime.  As Addressables supports updating the catalog outside of initialization, it's possible to update content that you have already loaded.
+## Settings
 
-To make this work, one of two things must happen.  One option is to unload all your Addressables content prior to updating the catalog.  This ensures new bundles with old names will not cause conflicts in memory.  The second option is to ensure that your updated AssetBundles have unique internal identifiers.  This would allow you to load new bundles, while the old are still in memory.  We have an option to enable this second option.  Turn on "Unique Bundle IDs" within the [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) Inspector.  The downside of this option is that it requires bundles to be rebuilt up the dependency chain.  Meaning if you changed a material in one group, by default only the material's bundle would be rebuilt.  With "Unique Bundle IDs" on, any Asset that references that material would also need rebuilding.
+To publish content updates, your application must already use a remote catalog and host its remote content on an accessible server. See [Enabling remote distribution] for information about setting up content hosting and distribution.
 
-## Identifying changed assets
-If you have modified Assets in any `Cannot Change Post Release` groups, you'll need to run the **Check for Content Update Restrictions** command (step 5 above). This will take any modified Asset, its dependencies if their bundle name was modified, and all other Assets that depend on the modified Asset out of the `Cannot Change Post Release` groups and move them to a new group. To generate the new Asset groups:
+In addition to enabling remote content distribution, you should also consider how to set each group's __Update Restriction__ settings. These settings determine how the __Check for Content Update Restriction__ tool treats changed content in your groups. Choose appropriate settings to help minimize the download size of your content updates. See [Group Update Restriction settings].
 
-1. Open the **Addressables Groups** window in the Unity Editor (**Window** > **Asset Management** > **Addressables** > **Groups**).
-2. In the **Addressables Groups** window, select **Tools** on the top menu bar, then **Check for Content Update Restrictions**.
-3. In the **Build Data File** dialog that opens, select the _addressables_content_state.bin_ file (by default, this is located in the `Assets/AddressableAssetsData/<platform>` Project directory, or path assigned to `AddressbleAssetSettings` value `ContentStateBuildPath` appended with `/<platform>`. Where `<platform>` is your target platform).
+Another setting to consider if you want to update content on the fly (rather than at application startup), is the __Unique Bundle IDs__ setting. Enabling this option can make it easier to load updated AssetBundles in the middle of an application session, but typically makes builds slower and updates larger. See [Unique Bundle IDs setting].
 
-This data is used to determine which Assets or dependencies have been modified since the application was last built. The system moves these Assets, their dependencies if their bundle name was modified, and all other Assets that depend on the modified Assets to a new group in preparation for the content update build. 
+### Group Update Restriction settings
 
-**Note**: This command will do nothing if all your changes are confined to `Can Change Post Release` groups.  
+For each group in your project, set the __Update Restriction__ setting to either:
 
-**Important**: Before running the prepare operation, Unity recommends branching your version control system. The prepare operation rearranges your Asset groups in a way suited for updating content. Branching ensures that next time you ship a new player, you can return to your preferred content arrangement.
+* Cannot Change Post Release: Static content that you expect to update infrequently, if at all. All local content should use this setting.
+* Can Change Post Release: Dynamic content that you expect to update often.
 
+Choose the setting based on the type of content in a group and how frequently you expect to update that content (between full player builds of your application).
 
-## Building for content updates
-To build for a content update:
+You can change content in a group no matter which setting you choose. The difference is how the __Check for Content Update__ and __Update Previous Build__ tools treat the assets in the group and ultimately, how the installed applications access the updated content.
 
-1. Open the **Addressables Groups** window in the Unity Editor (**Window** > **Asset Management** > **Addressables** > **Groups**).
-2. In the **Addressables Groups** window, select **Build** on the top menu, then **Update a Previous Build**.
-3. In the **Build Data File** dialog that opens, select the build folder of an existing application build. The build folder must contain an `addressables_content_state.bin` file (by default, this is located in the `Assets/AddressableAssetsData/<platform>` Project directory, or path assigned to `AddressbleAssetSettings` value `ContentStateBuildPath` appended with `/<platform>`. Where `<platform>` is your target platform). 
+> [!IMPORTANT]
+> Do NOT change the __Update Restriction__ setting of a group unless you are performing a full build. If you change your group settings before a content update, Addressables cannot generate the correct changes needed for the update build.
 
-The build generates a content catalog, a hash file, and the AssetBundles.
+#### Cannot Change Post Release (static content)
 
-The generated content catalog has the same name as the catalog in the selected application build, overwriting the old catalog and hash file. The application loads the hash file to determine if a new catalog is available. The system loads unmodified Assets from existing bundles that were shipped with the application or already downloaded.
+When you set a group as __Cannot Change Post Release__, the __Check for Content Updates__ tool moves any changed assets to a new group, which is set to build and load from your remote paths. When you subsequently build the updated content with the __Update a Previous Build__ tool, it sets up the remote catalog so that  the changed assets are accessed from the new bundles, but the unchanged assets are still accessed from the original bundles. 
 
-The system uses the content version string and location information from the `addressables_content_state.bin` file to create the AssetBundles. AssetBundles that do not contain updated content are written using the same file names as those in the build selected for the update. If an AssetBundle contains updated content, a new AssetBundle is generated that contains the updated content, with a new file name so that it can coexist with the original. Only AssetBundles with new file names must be copied to the location that hosts your content.  
+> [!NOTE]
+> Although the update build produces versions of the original bundles without the changed assets, installed applications do not download these bundles unless the locally cached version is deleted for some reason.  
 
-The system also builds AssetBundles for content that cannot change, but you do not need to upload them to the content hosting location, as no Addressables Asset entries reference them.
+Organize content that you don't expect to update frequently in groups set to __Cannot Change Post Release.__ You can safely set up these groups to produce fewer, larger bundles since your users usually won't need to download these bundles more than once.  
+
+Any groups that you intend to load from the local load path should always be set to __Cannot Change Post Release__. Likewise, any groups that produce large, remote bundles should also be set to __Cannot Change Post Release__ so that your users only need to download the changed assets if you do end up changing assets in these groups.
+
+#### Can Change Post Release (dynamic content)
+
+When you set a group as __Can Change Post Release__, then a content update rebuilds the entire bundle if any assets inside the group have changed. The __Update a Previous Build__ script sets the catalog up so that installed applications load all assets in the group from the new bundles.
+
+Organize content you expect to change frequently in groups set to __Can Change Post Release__. Since all the assets in these groups are republished when any single asset changes, you should typically set up these groups to produce smaller bundles containing fewer assets. 
+
+### Unique Bundle IDs setting
+
+The [Addressable Asset settings] contain an option, __Unique Bundle IDs__, that affect content update builds. You can evaluate whether you need to enable this option if you run into AssetBundle ID conflicts when updating your application catalog at runtime.
+
+Enabling the __Unique Bundle IDs__ option allows you to load a changed version of an AssetBundle while the original bundle is still in memory. Building your AssetBundles with unique internal IDs makes it easier to update content at runtime without running into AssetBundle ID conflicts. 
+
+The option is not without drawbacks, however. When enabled, any AssetBundles containing assets that reference a changed asset must also be rebuilt. More bundles must be updated for a content update and all builds are slower.
+
+You typically only need to use unique bundle IDs when you update content catalogs after the Addressable system has already initialized and you have started loading assets.
+
+You can avoid AssetBundle loading conflicts and the need to enable unique IDs using one of the following methods:
+
+* Update the content catalog as part of Addressables initialization. By default, Addressables checks for a new catalog at initialization (as long as you don't enable the [Disable Catalog Update on Startup] option in your Addressable Asset settings). Choosing this method does preclude updating your application content in mid-session.
+* Unload all remote AssetBundles before updating the content catalog. Unloading all your remote bundles and assets also avoids bundle name conflicts, but could interrupt your user's session while they wait for the new content to load. 
+
+## Building content updates
+
+To build a content update, run the __Update a Previous Build__ script:
+
+1. Run the [Check for Content Update Restrictions] tool.
+2. Open the __Addressables Groups__ window in the Unity Editor (__Window__ > __Asset Management__ > __Addressables__ > __Groups__).
+3. From the __Build__ menu on the toolbar, run the __Update a Previous Build__ script.
+4. In the __Build Data File__ dialog that opens, again select the `addressables_content_state.bin` file produced by the build you are updating.
+5. Click __Open__ to start the content update build.
+
+The build generates a content catalog, a hash file, and AssetBundles.
+
+The generated content catalog has the same name as the catalog in the original application build, overwriting the old catalog and hash file. The application loads the hash file at runtime to determine if a new catalog is available. The system loads unmodified assets from existing bundles that were shipped with the application or that the application has already downloaded.
+
+The system uses the content version string and location information from the addressables_content_state.bin file to create the AssetBundles. Asset bundles that do not contain updated content are written using the same file names as those in the build selected for the update. If an AssetBundle contains updated content, a new bundle is generated that contains the updated content, with a new file name so that it can coexist with the original on your content hosting service. Only AssetBundles with new file names must be copied to the location that hosts your content (though you can safely upload them all).
+
+The system also builds AssetBundles for content that cannot change, such as any local AssetBundles, but you do not need to upload them to the content hosting location, as no Addressables Asset entries reference them.
 
 Note that you should not change the build scripts between building a new player and making content updates (e.g., player code, addressables). This could cause unpredictable behavior in your application.
 
-Additionally if you delete the local content bundles created by your Addressables build from the Project Library folder, attempts to load Assets in those bundles fail when you run your game or application in the Editor and use the **Use Existing Build (requires built groups)** Play Mode script.
+Additionally, if you delete the local content bundles created by your Addressables build from the Project Library folder, attempts to load Assets in those bundles fail when you run your game or application in the Editor and use the __Use Existing Build (requires built groups)__ Play Mode script.
+
+
+### Check for Content Update Restrictions tool
+
+ The __Check for Content Update Restrictions__ tool prepares your group organization for a content update build. The tool examines the *addressables_content_state.bin* file and and group settings. If a group's __Update Restrictions__ option was set to __Cannot Change Post Release__ in the previous build, the tool moves any changed assets to a new remote group. When you create the update build, the new catalog maps the changed assets to their new, remote AssetBundles, while still mapping the unchanged assets to their original AssetBundles. Checking for content update restrictions does not modify groups set to __Can Change Post Release__.
+
+To run the tool:
+
+1. Open the __Addressables Groups__ window in the Unity Editor (__Window__ > __Asset Management__ > __Addressables__ > __Groups__).
+2. In the groups window, run the __Check for Content Update Restrictions__ from the toolbar __Tools__ menu.
+3. In the __Build Data File__ dialog that opens, select the addressables_content_state.bin file produced by the build you are updating. (By default, this is located in the Assets/AddressableAssetsData/\<platform\> Project directory, where \<platform\> is your target platform.)
+4. Click __Open__ to select the file and launch the tool.
+5. Review the group changes made by the tool, if desired. You can change the names of any new remote groups the tool created, but moving assets to different groups can have unintended consequences.
+
+__Important__: Before you run the __Check for Content Update Restrictions__ tool, you should make a branch with your version control system. The tool rearranges your asset groups in a way suited for updating content. Branching ensures that next time you ship a full player build, you can return to your preferred content arrangement.
+
 
 ## Checking for content updates at runtime
+
 You can add a custom script to periodically check whether there are new Addressables content updates. Use the following function call to start the update:
 
-[`public static AsyncOperationHandle<List<string>> CheckForCatalogUpdates(bool autoReleaseHandle = true)`](xref:UnityEngine.AddressableAssets.Addressables.CheckForCatalogUpdates(System.Boolean))
+[public static AsyncOperationHandle\<List\<string\>\> CheckForCatalogUpdates(bool autoReleaseHandle = true)]
 
-where `List<string>` contains the list of modified locator IDs.  You can filter this list to only update specific IDs, or pass it entirely into the UpdateCatalogs API.
+where List\<string\> contains the list of modified locator IDs. You can filter this list to only update specific IDs, or pass it entirely into the UpdateCatalogs API.
 
 If there is new content, you can either present the user with a button to perform the update, or do it automatically. Note that it is up to the developer to make sure that stale Assets are released.
 
 The list of catalogs can be null and if so, the following script updates all catalogs that need an update:
 
-[`public static AsyncOperationHandle<List<IResourceLocator>> UpdateCatalogs(IEnumerable<string> catalogs = null, bool autoReleaseHandle = true)`](xref:UnityEngine.AddressableAssets.Addressables.UpdateCatalogs(System.Collections.Generic.IEnumerable{System.String},System.Boolean))
+[public static AsyncOperationHandle\<List\<IResourceLocator\>\> UpdateCatalogs(IEnumerable\<string\> catalogs = null, bool autoReleaseHandle = true)]
 
 The return value is the list of updated locators.
 
+See [Unique Bundle IDs setting] for additional information about updating content at runtime.
+
 ## Content update examples
-In this example, a shipped application is aware of the following groups:
 
-| **`Local_Static`** | **`Remote_Static`** | **`Remote_NonStatic`** |
-|:---------|:---------|:---------|
-| `AssetA` | `AssetL` | `AssetX` |
-| `AssetB` | `AssetM` | `AssetY` |
-| `AssetC` | `AssetN` | `AssetZ` |
+The following discussion walks through a hypothetical example to illustrate how Addressable content is handled during a content update. In this example, consider a shipped application built with the following Addressables groups:
 
-Note that `Local_Static` and `Remote_Static` are part of the `Cannot Change Post Release` groups.
+| Local_Static| Remote_Static | Remote_NonStatic |
+|:---|:---|:---| 
+| AssetA| AssetL | AssetX |
+| AssetB| AssetM | AssetY |
+| AssetC| AssetN | AssetZ |
 
-As this version is live, there are players that have `Local_Static` on their devices, and potentially have either or both of the remote bundles cached locally. 
 
-If you modify one Asset from each group (`AssetA`, `AssetL`, and `AssetX`), then run **Check for Content Update Restrictions**, the results in your local Addressable settings are now:
 
-| **`Local_Static`** | **`Remote_Static`** | **`Remote_NonStatic`** | **`content_update_group (non-static)`** |
-|:---------|:---------|:---------|:---------|
-|  |  | `AssetX` | `AssetA` |
-| `AssetB` | `AssetM` | `AssetY` | `AssetL` |
-| `AssetC` | `AssetN` | `AssetZ` |  |
+Note that Local_Static and Remote_Static are part of the Cannot Change Post Release groups.
 
-Note that the prepare operation actually edits the `Cannot Change Post Release` groups, which may seem counterintuitive. The key, however, is that the system builds the above layout, but discards the build results for any such groups. As such, you end up with the following from a player's perspective:
+Since this version is live, existing players have Local_Static on their devices, and potentially have either or both of the remote bundles cached locally.
 
-| **`Local_Static`** |
-|:---------|
-| `AssetA` |
-| `AssetB` |
-| `AssetC` |
+If you modify one Asset from each group (AssetA, AssetL, and AssetX), then run __Check for Content Update Restrictions__, the results in your local Addressable settings are now:
 
-The `Local_Static` bundle is already on player devices, which you can't change. This old version of `AssetA` is no longer referenced. Instead, it is stuck on player devices as dead data.
+| Local_Static| Remote_Static | Remote_NonStatic | content_update_group (non-static) |
+|:---|:---|:---|:---| 
+| |  | AssetX | AssetA |
+| AssetB| AssetM | AssetY | AssetL |
+| AssetC| AssetN | AssetZ |  |
 
-| **`Remote_Static`** |
-|:---------|
-| `AssetL` |
-| `AssetM` |
-| `AssetN` |
 
-The `Remote_Static` bundle is unchanged. If it is not already cached on a player's device, it will download when `AssetM` or `AssetN` is requested. Like `AssetA`, this old version of `AssetL` is no longer referenced. 
 
-| **`Remote_NonStatic`** (old) |
-|:---------|
-| `AssetX` |
-| `AssetY` |
-| `AssetZ` |
+Note that the prepare operation actually edits the Cannot Change Post Release groups, which may seem counterintuitive. The key, however, is that the system builds the above layout, but discards the build results for any such groups. As such, you end up with the following from a player's perspective:
 
-The `Remote_NonStatic` bundle is now old. You could delete it from the server, but either way it will not be downloaded from this point forward. If cached, it will eventually leave the cache. Like `AssetA` and `AssetL`, this old version of `AssetX` is no longer referenced.
+| Local_Static
+|:---| 
+| AssetA
+| AssetB
+| AssetC
 
-| **`Remote_NonStatic`** (new) |
-|:---------|
-| `AssetX` |
-| `AssetY` |
-| `AssetZ` |
 
-The old `Remote_NonStatic` bundle is replaced with a new version, distinguished by its hash file. The modified version of `AssetX` is updated with this new bundle.
 
-| **`content_update_group`**  |
-|:---------|
-| `AssetA` |
-| `AssetL` |
+The Local_Static bundle is already on player devices, which you can't change. This old version of AssetA is no longer referenced. Instead, it is stuck on player devices as dead data.
 
-The `content_update_group` bundle consists of the modified Assets that will be referenced moving forward. 
+| Remote_Static
+|:---| 
+| AssetL
+| AssetM
+| AssetN
+
+
+
+The Remote_Static bundle is unchanged. If it is not already cached on a player's device, it will download when AssetM or AssetN is requested. Like AssetA, this old version of AssetL is no longer referenced.
+
+| Remote_NonStatic (old)
+|:---| 
+| AssetX
+| AssetY
+| AssetZ
+
+
+
+The Remote_NonStatic bundle is now old. You could delete it from the server, but either way it will not be downloaded from this point forward. If cached, it will eventually leave the cache. Like AssetA and AssetL, this old version of AssetX is no longer referenced.
+
+| Remote_NonStatic (new)
+|:---| 
+| AssetX
+| AssetY
+| AssetZ
+
+
+
+The old Remote_NonStatic bundle is replaced with a new version, distinguished by its hash file. The modified version of AssetX is updated with this new bundle.
+
+| content_update_group
+|:---| 
+| AssetA
+| AssetL
+
+
+
+The content_update_group bundle consists of the modified Assets that will be referenced moving forward.
 
 Note that the example above has the following implications:
 
-1. Any changed local Assets remain unused on the user's device forever.  
-2. If the user already cached a non-static bundle, they will need to re-download the bundle, including the unchanged Assets (in this instance, for example, `AssetY` and `AssetZ`). Ideally, the user has not cached the bundle, in which case they simply need to download the new `Remote_NonStatic` bundle.
-3. If the user has already cached the `Static_Remote` bundle, they only need to download the updated asset (in this instance, `AssetL` via `content_update_group`). This is ideal in this case. If the user has not cached the bundle, they must download both the new `AssetL` via `content_update_group` and the now-defunct `AssetL` via the untouched `Remote_Static` bundle. Regardless of the initial cache state, at some point the user will have the defunct `AssetL` on their device, cached indefinitely despite never being accessed. 
+1. Any changed local Assets remain unused on the user's device forever.
+2. If the user already cached a non-static bundle, they will need to re-download the bundle, including the unchanged Assets (in this instance, for example, AssetY and AssetZ). Ideally, the user has not cached the bundle, in which case they simply need to download the new Remote_NonStatic bundle.
+3. If the user has already cached the Static_Remote bundle, they only need to download the updated asset (in this instance, AssetL via content_update_group). This is ideal in this case. If the user has not cached the bundle, they must download both the new AssetL via content_update_group and the now-defunct AssetL via the untouched Remote_Static bundle. Regardless of the initial cache state, at some point the user will have the defunct AssetL on their device, cached indefinitely despite never being accessed.
 
 The best setup for your remote content will depend on your specific use case.
 
 ## How Content Update Handles Dependencies
-Directly changing an asset is not the only way to have it flagged as needing to be rebuilt as part of a content update.  Changing an assets dependencies is a less obvious factor that gets taken into account when building an update.
 
-Lets take part of the example above:
-| **`Local_Static`** |
-|:---------|
-| `AssetA` |
-| `AssetB` |
-| `AssetC` |
+Directly changing an asset is not the only way to have it flagged as needing to be rebuilt as part of a content update. Changing an asset's dependencies is a less obvious factor that gets taken into account when building an update.
 
-but now let us assume more information about a few of the assets.  Let's say we have a dependency chain that looks like this:
-`AssetA depends on Dependency1 which depends on Dependency2`
-`AssetB depends on Dependency2`
-`AssetC depends on Dependency3`
-Where all three dependencies are a mix of Addressable and non-Addressable assets.
+As an example, consider the Local_Static group from the example above:
 
-Now, if only `Dependency1` is changed and Check For Content Update Restriction is run, the resulting project structure looks like:
-| **`Local_Static`** | **`content_update_group`**  |
-|:---------|:---------|
-||`AssetA` |
-| `AssetB` ||
-| `AssetC` ||
-If only `Dependency2` is changed:
-| **`Local_Static`** | **`content_update_group`**  |
-|:---------|:---------|
-||`AssetA` |
-||`AssetB`|
-| `AssetC` ||
-Finally, if only `Dependency3` is changed:
-| **`Local_Static`** | **`content_update_group`**  |
-|:---------|:---------|
-|`AssetA` ||
-|`AssetB`||
-||`AssetC`|
+| Local_Static
+|:---| 
+| AssetA
+| AssetB
+| AssetC
 
-This is because when a dependency is changed the entire dependency tree needs to be rebuilt.  
-Let's take a look at one more example with the following dependency tree.
-`AssetA depends on AssetB which depends on Dependency2`
-`AssetB depends on Dependency2`
-`AssetC depends on Dependency3`
-Now, if `Dependency2` is changed, the project structure looks like:
-| **`Local_Static`** | **`content_update_group`**  |
-|:---------|:---------|
-||`AssetA` |
-||`AssetB`|
-| `AssetC` ||
-because `AssetA` relies on `AssetB` and `AssetB` relies on `Dependency2`.  Since the entire chain needs to be rebuilt both `AssetA` and `AssetB` will get put into the **`content_update_group`**.
+
+
+but now suppose the assets in this group have a dependency chain that looks like this: AssetA depends on Dependency1, which depends on Dependency2, AssetB depends on Dependency2, and  AssetC depends on Dependency3 and all three dependencies are a mix of Addressable and non-Addressable assets.
+
+Now, if only Dependency1 is changed and Check For Content Update Restriction is run, the resulting project structure looks like:
+
+| Local_Static| content_update_group |
+|:---|:---| 
+| | AssetA |
+| AssetB|  |
+| AssetC|  |
+
+
+
+If only Dependency2 is changed:
+
+| Local_Static| content_update_group |
+|:---|:---| 
+| | AssetA |
+| | AssetB |
+| AssetC|  |
+
+
+
+Finally, if only Dependency3 is changed:
+
+| Local_Static| content_update_group |
+|:---|:---| 
+| AssetA|  |
+| AssetB|  |
+| | AssetC |
+
+
+
+This is because when a dependency is changed the entire dependency tree needs to be rebuilt.
+
+Let's take a look at one more example with the following dependency tree. AssetA depends on AssetB, which depends on Dependency2, AssetB depends on Dependency2, and AssetC depends on Dependency3. Now, if Dependency2 is changed, the project structure looks like:
+
+| Local_Static| content_update_group |
+|:---|:---| 
+| | AssetA |
+| | AssetB |
+| AssetC|  |
+
+because AssetA relies on AssetB and AssetB relies on Dependency2. Since the entire chain needs to be rebuilt both AssetA and AssetB will get put into the __content_update_group__.
+
+
+[Addressable Asset settings]: xref:addressables-asset-settings
+[Building content updates]: #building-content-updates
+[Check for Content Update Restrictions]: #check-for-content-update-restrictions-tool
+[Disable Catalog Update on Startup]: xref:addressables-asset-settings#catalog
+[Enabling remote distribution]: xref:addressables-remote-content-distribution#enabling-remote-distribution
+[Group settings]: #settings
+[Group Update Restriction settings]: #group-update-restriction-settings
+[Overview]: #overview
+[public static AsyncOperationHandle\<List\<string\>\> CheckForCatalogUpdates(bool autoReleaseHandle = true)]: xref:UnityEngine.AddressableAssets.Addressables.CheckForCatalogUpdates*
+[Unique Bundle IDs setting]: #unique-bundle-ids-setting
+[Update a Previous Build]: #building-content-updates
+[public static AsyncOperationHandle\<List\<IResourceLocator\>\> UpdateCatalogs(IEnumerable\<string\> catalogs = null, bool autoReleaseHandle = true)]: xref:UnityEngine.AddressableAssets.Addressables.UpdateCatalogs(System.Collections.Generic.IEnumerable{System.String},System.Boolean)

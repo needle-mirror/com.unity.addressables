@@ -794,8 +794,13 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         GUIContent m_IncludeInBuildContent = new GUIContent("Include in Build", "If disabled, these bundles will not be included in the build.");
         GUIContent m_ForceUniqueProviderContent = new GUIContent("Force Unique Provider", "If enabled, this option forces bundles loaded from this group to use a unique provider.");
         GUIContent m_UseAssetBundleCacheContent = new GUIContent("Use Asset Bundle Cache", "If enabled and supported, the device will cache  asset bundles.");
-        GUIContent m_UseAssetBundleCrcContent = new GUIContent("Use Asset Bundle CRC", "If enabled, bundles will have their CRC checked when loading to ensure correct content.");
-        GUIContent m_UseAssetBundleCrcForCachedBundlesContent = new GUIContent("Use CRC for Cached Asset Bundles", "If enabled, bundled loaded from the cache will have their CRC checked when loading.");
+        GUIContent m_AssetBundleCrcContent = new GUIContent("Asset Bundle CRC", "Defines which Asset Bundles will have their CRC checked when loading to ensure correct content.");
+        private GUIContent[] m_CrcPopupContent = new GUIContent[]
+        {
+            new GUIContent("Disabled", "Bundles will not have their CRC checked when loading."),
+            new GUIContent("Enabled, Including Cached", "All Bundles will have their CRC checked when loading."),
+            new GUIContent("Enabled, Excluding Cached", "Bundles that have already been downloaded and cached will not have their CRC check when loading, otherwise CRC check will be performed.")
+        };
         GUIContent m_UseUWRForLocalBundlesContent = new GUIContent("Use UnityWebRequest for Local Asset Bundles", "If enabled, local asset bundles will load through UnityWebRequest.");
         GUIContent m_TimeoutContent = new GUIContent("Request Timeout", "The timeout (in seconds) for the Http request.");
         GUIContent m_ChunkedTransferContent = new GUIContent("Use Http Chunked Transfer", "If enabled, the Http request will use chunked transfers.");
@@ -822,8 +827,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeInBuild)), m_IncludeInBuildContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_ForceUniqueProvider)), m_ForceUniqueProviderContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_UseAssetBundleCache)), m_UseAssetBundleCacheContent, true);
-            EditorGUILayout.PropertyField(so.FindProperty(nameof(m_UseAssetBundleCrc)), m_UseAssetBundleCrcContent, true);
-            EditorGUILayout.PropertyField(so.FindProperty(nameof(m_UseAssetBundleCrcForCachedBundles)), m_UseAssetBundleCrcForCachedBundlesContent, true);
+            CRCPropertyPopupField(so);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_UseUWRForLocalBundles)), m_UseUWRForLocalBundlesContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_Timeout)), m_TimeoutContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_ChunkedTransfer)), m_ChunkedTransferContent, true);
@@ -841,6 +845,29 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_BundledAssetProviderType)), m_AssetProviderContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_AssetBundleProviderType)), m_BundleProviderContent, true);
         }
+        
+        void CRCPropertyPopupField(SerializedObject so)
+        {
+            int enumIndex = 0;
+            if (m_UseAssetBundleCrc)
+                enumIndex = m_UseAssetBundleCrcForCachedBundles ? 1 : 2;
+            
+            int newEnumIndex = EditorGUILayout.Popup(m_AssetBundleCrcContent, enumIndex, m_CrcPopupContent);
+            if (enumIndex != newEnumIndex)
+            {
+                if (newEnumIndex != 0)
+                {
+                    if (!m_UseAssetBundleCrc)
+                        so.FindProperty("m_UseAssetBundleCrc").boolValue = true;
+                    if (newEnumIndex == 1 && !m_UseAssetBundleCrcForCachedBundles)
+                        so.FindProperty("m_UseAssetBundleCrcForCachedBundles").boolValue = true;
+                    else if (newEnumIndex == 2 && m_UseAssetBundleCrcForCachedBundles)
+                        so.FindProperty("m_UseAssetBundleCrcForCachedBundles").boolValue = false;
+                }
+                else
+                    so.FindProperty("m_UseAssetBundleCrc").boolValue = false;
+            }
+        }
 
         void ShowAdvancedPropertiesMulti(SerializedObject so, List<AddressableAssetGroupSchema> otherBundledSchemas, ref List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>> queuedChanges)
         {
@@ -848,8 +875,8 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             ShowSelectedPropertyMulti(so, nameof(m_IncludeInBuild), m_IncludeInBuildContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.IncludeInBuild = src.IncludeInBuild, ref m_IncludeInBuild);
             ShowSelectedPropertyMulti(so, nameof(m_ForceUniqueProvider), m_ForceUniqueProviderContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.ForceUniqueProvider = src.ForceUniqueProvider, ref m_ForceUniqueProvider);
             ShowSelectedPropertyMulti(so, nameof(m_UseAssetBundleCache), m_UseAssetBundleCacheContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.UseAssetBundleCache = src.UseAssetBundleCache, ref m_UseAssetBundleCache);
-            ShowSelectedPropertyMulti(so, nameof(m_UseAssetBundleCrc), m_UseAssetBundleCrcContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.UseAssetBundleCrc = src.UseAssetBundleCrc, ref m_UseAssetBundleCrc);
-            ShowSelectedPropertyMulti(so, nameof(m_UseAssetBundleCrcForCachedBundles), m_UseAssetBundleCrcForCachedBundlesContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.UseAssetBundleCrcForCachedBundles = src.UseAssetBundleCrcForCachedBundles, ref m_UseAssetBundleCrcForCachedBundles);
+            ShowCustomGuiSelectedPropertyMulti(so, new string[]{nameof(m_UseAssetBundleCrc), nameof(m_UseAssetBundleCrcForCachedBundles)}, m_AssetBundleCrcContent, otherBundledSchemas, ref queuedChanges,
+                schema => CRCPropertyPopupField(so), (src, dst) => { dst.UseAssetBundleCrc = src.UseAssetBundleCrc; dst.UseAssetBundleCrcForCachedBundles = src.UseAssetBundleCrcForCachedBundles; });
             ShowSelectedPropertyMulti(so, nameof(m_UseUWRForLocalBundles), m_UseUWRForLocalBundlesContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.UseUnityWebRequestForLocalBundles = src.UseUnityWebRequestForLocalBundles, ref m_UseUWRForLocalBundles);
             ShowSelectedPropertyMulti(so, nameof(m_Timeout), m_TimeoutContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.Timeout = src.Timeout, ref m_Timeout);
             ShowSelectedPropertyMulti(so, nameof(m_ChunkedTransfer), m_ChunkedTransferContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.ChunkedTransfer = src.ChunkedTransfer, ref m_ChunkedTransfer);
@@ -899,6 +926,38 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 Undo.RecordObject(so.targetObject, so.targetObject.name + propertyName);
                 if (typeof(T) == typeof(bool) || typeof(T).IsEnum || typeof(T) == typeof(int))
                     propertyValue = newValue;
+                if (queuedChanges == null)
+                    queuedChanges = new List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>>();
+                queuedChanges.Add(a);
+                EditorUtility.SetDirty(this);
+            }
+            EditorGUI.showMixedValue = false;
+        }
+        
+        void ShowCustomGuiSelectedPropertyMulti(SerializedObject so, string[] propertyNames, GUIContent label, 
+            List<AddressableAssetGroupSchema> otherSchemas, 
+            ref List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>> queuedChanges,
+            Action<BundledAssetGroupSchema> guiAction,
+            Action<BundledAssetGroupSchema, BundledAssetGroupSchema> a)
+        {
+            if (label == null)
+                return;
+
+            SerializedProperty[] props = new SerializedProperty[propertyNames.Length];
+            for (int i=0; i<propertyNames.Length; ++i)
+                props[i] = so.FindProperty(propertyNames[i]);
+
+            for (int i = 0; i < propertyNames.Length; ++i)
+            {
+                if (EditorGUI.showMixedValue)
+                    break;
+                ShowMixedValue(props[i], otherSchemas, null, propertyNames[i]);
+            }
+            
+            EditorGUI.BeginChangeCheck();
+            guiAction.Invoke(this);
+            if (EditorGUI.EndChangeCheck())
+            {
                 if (queuedChanges == null)
                     queuedChanges = new List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>>();
                 queuedChanges.Add(a);

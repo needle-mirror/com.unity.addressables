@@ -79,7 +79,8 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.RemoveGroup(m_ParentGroup);
             Settings.RemoveGroup(m_ChildGroup);
 
-            AssetDatabase.DeleteAsset(m_AddrParentFolderPath);
+            AssetDatabase.DeleteAsset(m_TestFolderPath + "/");
+            AssetDatabase.Refresh();
         }
 
         List<string> GetValidAssetPaths(string path, AddressableAssetSettings settings)

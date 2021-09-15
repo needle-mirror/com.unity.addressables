@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Utilities;
 using UnityEditor.PackageManager;
@@ -34,6 +35,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             return true;
         }
+
         static HashSet<string> excludedExtensions = new HashSet<string>(new string[] { ".cs", ".js", ".boo", ".exe", ".dll", ".meta" });
         internal static bool IsPathValidForEntry(string path)
         {
@@ -276,7 +278,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             return result;
         }
-        
+
         internal static bool IsUsingVCIntegration()
         {
             return Provider.isActive && Provider.enabled;
@@ -285,7 +287,7 @@ namespace UnityEditor.AddressableAssets.Settings
         internal static bool IsVCAssetOpenForEdit(string path)
         {
             AssetList VCAssets = GetVCAssets(path);
-            foreach(Asset vcAsset in VCAssets)
+            foreach (Asset vcAsset in VCAssets)
             {
                 if (vcAsset.path == path)
                     return Provider.IsOpenForEdit(vcAsset);
@@ -299,7 +301,7 @@ namespace UnityEditor.AddressableAssets.Settings
             op.Wait();
             return op.assetList;
         }
-                
+
         private static bool MakeAssetEditable(Asset asset)
         {
 #if UNITY_2019_4_OR_NEWER
@@ -328,13 +330,13 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             if (!IsUsingVCIntegration() || string.IsNullOrEmpty(path))
                 return false;
-            
+
             AssetList assets = GetVCAssets(path);
-            var uneditableAssets = new List<Asset>();            
+            var uneditableAssets = new List<Asset>();
             string message = "Check out file(s)?\n\n";
-            foreach(Asset asset in assets)
+            foreach (Asset asset in assets)
             {
-                if(!Provider.IsOpenForEdit(asset))
+                if (!Provider.IsOpenForEdit(asset))
                 {
                     uneditableAssets.Add(asset);
                     message += $"{asset.path}\n";
@@ -347,7 +349,7 @@ namespace UnityEditor.AddressableAssets.Settings
             bool openedAsset = true;
             if (EditorUtility.DisplayDialog("Attempting to modify files that are uneditable", message, "Yes", "No"))
             {
-                foreach(Asset asset in uneditableAssets)
+                foreach (Asset asset in uneditableAssets)
                 {
                     if (!MakeAssetEditable(asset))
                         openedAsset = false;
@@ -357,11 +359,26 @@ namespace UnityEditor.AddressableAssets.Settings
                 GUIUtility.ExitGUI();
             return openedAsset;
         }
-
-        internal static List<PackageManager.PackageInfo> GetPackages()
+        
+        internal static ListRequest RequestPackageListAsync()
         {
-            ListRequest req = Client.List();
-            while (!req.IsCompleted) {}
+            ListRequest req = null;
+#if !UNITY_2021_1_OR_NEWER
+            req = Client.List(true);
+#endif
+            return req;
+        }
+
+        internal static List<PackageManager.PackageInfo> GetPackages(ListRequest req)
+        {
+#if UNITY_2021_1_OR_NEWER
+            var packagesList = new List<PackageManager.PackageInfo>(PackageManager.PackageInfo.GetAllRegisteredPackages());
+            return packagesList;
+#endif
+            while (!req.IsCompleted)
+            {
+                Thread.Sleep(5);
+            }
 
             var packages = new List<PackageManager.PackageInfo>();
             if (req.Status == StatusCode.Success)

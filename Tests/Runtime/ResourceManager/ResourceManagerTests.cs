@@ -319,8 +319,13 @@ namespace UnityEngine.ResourceManagement.Tests
                 exceptionWithRequestResultReceived |= ex is RemoteProviderException pEx && pEx.WebRequestResult != null;
             };
 
-            AsyncOperationHandle<IAssetBundleResource> handle = m_ResourceManager.ProvideResource<IAssetBundleResource>(location);
-            yield return handle;
+            AsyncOperationHandle<IAssetBundleResource> handle;
+
+            using (new IgnoreFailingLogMessage())
+            {
+                handle = m_ResourceManager.ProvideResource<IAssetBundleResource>(location);
+                yield return handle;
+            }
 
             ResourceManager.ExceptionHandler = prevHandler;
             Assert.AreEqual(AsyncOperationStatus.Failed, handle.Status);

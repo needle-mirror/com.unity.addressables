@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor.Build.Content;
-using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -50,7 +49,7 @@ namespace UnityEditor.AddressableAssets.Settings
         string m_GUID;
         [FormerlySerializedAs("m_address")]
         [SerializeField]
-        string m_Address;
+        internal string m_Address;
         [FormerlySerializedAs("m_readOnly")]
         [SerializeField]
         bool m_ReadOnly;
@@ -696,12 +695,13 @@ namespace UnityEditor.AddressableAssets.Settings
 
         static IEnumerable<string> GetResourceDirectories()
         {
+            ListRequest req = AddressableAssetUtility.RequestPackageListAsync();
+
             foreach (string path in GetResourceDirectoriesatPath("Assets"))
             {
                 yield return path;
             }
-
-            List<PackageManager.PackageInfo> packages = AddressableAssetUtility.GetPackages();
+            List<PackageManager.PackageInfo> packages = AddressableAssetUtility.GetPackages(req);
             foreach (PackageManager.PackageInfo package in packages)
             {
                 foreach (string path in GetResourceDirectoriesatPath(package.assetPath))
