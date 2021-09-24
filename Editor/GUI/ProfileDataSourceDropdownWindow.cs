@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
+using System.Threading.Tasks;
 
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
 using Unity.Services.CCD.Management.Models;
@@ -109,12 +110,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 stretchHeight = false
             };
 
-            using (System.Net.Http.HttpClient client = new System.Net.Http.HttpClient())
+            if (!string.IsNullOrEmpty(CloudProjectSettings.projectId))
             {
-                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + CloudProjectSettings.accessToken);
-                var response = await client.GetAsync(String.Format("https://api.unity.com/v1/core/api/orgs/{0}", CloudProjectSettings.organizationId));
-                var data = await response.Content.ReadAsStringAsync();
-                m_Organization = JsonUtility.FromJson<OrgData>(data);
+                m_Organization = await GetOrgData();
             }
 
             SyncProfileGroupTypes();
@@ -209,7 +207,6 @@ namespace UnityEditor.AddressableAssets.GUI
                                 {
                                     editorWindow.Close();
                                     AddressableAssetUtility.InstallCCDPackage();
-                                    Debug.Log("Installing CCD Management SDK Package");
                                 }
 #else
                                 scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.ExpandHeight(true));
@@ -315,6 +312,21 @@ namespace UnityEditor.AddressableAssets.GUI
         private void SyncProfileGroupTypes()
         {
             m_ProfileGroupTypes = dataSourceSettings.GetGroupTypesByPrefix("CCD" + ProfileGroupType.k_PrefixSeparator + CloudProjectSettings.projectId);
+        }
+
+        private async Task<OrgData> GetOrgData()
+        {
+            using (System.Net.Http.HttpClient client = new System.Net.Http.HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + CloudProjectSettings.accessToken);
+                var response = await client.GetAsync(String.Format("https://api.unity.com/v1/core/api/orgs/{0}", CloudProjectSettings.organizationId));
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new Exception("Failed to retrieve org data.");
+                }
+                var data = await response.Content.ReadAsStringAsync();
+                return OrgData.ParseOrgData(data);
+            }
         }
 
         protected virtual void OnValueChanged(DropdownWindowEventArgs e)
@@ -527,15 +539,5 @@ namespace UnityEditor.AddressableAssets.GUI
                 EditorGUI.LabelField(lastRect, "<a>______________________________</a>", menuOptionStyle);
             }
         }
-    }
-
-    internal class OrgData
-    {
-        internal string id;
-        internal string name;
-        internal string foreign_key;
-        internal string billable_user_fk;
-        internal string org_identifier;
-        internal string orgIdentifier;
     }
 }

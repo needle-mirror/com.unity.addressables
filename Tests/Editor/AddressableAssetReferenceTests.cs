@@ -1,9 +1,11 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using NUnit.Framework;
 using UnityEngine.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.U2D;
 using UnityEngine.U2D;
 
@@ -104,6 +106,36 @@ namespace UnityEditor.AddressableAssets.Tests
 
             //Test
             Assert.IsNotNull(atlasReference.editorAsset);
+        }
+        
+        [Test]
+        public void AssetReferenceNoAsset_CreatesCorrectLabelForType()
+        {
+            // Base Types
+            string expected = "None (Addressable Asset)";
+            string val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(AssetReference));
+            Assert.AreEqual(expected, val, "General Asset string expected for an unrestricted AssetReference");
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(AssetReference[]));
+            Assert.AreEqual(expected, val, "General Asset string expected for an unrestricted AssetReference");
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(List<AssetReference>));
+            Assert.AreEqual(expected, val, "General Asset string expected for an unrestricted AssetReference");
+
+            expected = "None (Addressable GameObject)";
+            // generic types
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(AssetReferenceT<GameObject>));
+            Assert.AreEqual(expected, val, "Type restricted is expected in display string shown");
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(AssetReferenceT<GameObject>[]));
+            Assert.AreEqual(expected, val, "Type restricted is expected in display string shown");
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(List<AssetReferenceT<GameObject>>));
+            Assert.AreEqual(expected, val, "Type restricted is expected in display string shown");
+            
+            // inherited types
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(AssetReferenceGameObject));
+            Assert.AreEqual(expected, val, "Type restricted is expected in display string shown");
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(AssetReferenceGameObject[]));
+            Assert.AreEqual(expected, val, "Type restricted is expected in display string shown");
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(List<AssetReferenceGameObject>));
+            Assert.AreEqual(expected, val, "Type restricted is expected in display string shown");
         }
     }
 }

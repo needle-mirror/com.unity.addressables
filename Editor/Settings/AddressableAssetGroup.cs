@@ -511,9 +511,10 @@ namespace UnityEditor.AddressableAssets.Settings
 
             if (includeImplicit)
             {
+                string assetPath = AssetDatabase.GUIDToAssetPath(guid);
                 foreach (var e in entries)
                 {
-                    var impEntry = e.GetImplicitEntry(guid);
+                    var impEntry = e.GetImplicitEntry(assetPath);
                     if (impEntry != null)
                         return impEntry;
                 }

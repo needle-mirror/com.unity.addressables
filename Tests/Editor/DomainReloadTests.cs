@@ -39,6 +39,7 @@ namespace UnityEditor.AddressableAssets.Tests
 #endif
         
         [Test]
+        [Ignore("https://jira.unity3d.com/browse/ADDR-2233")]
         public void DomainReloadTests_ReInitAddressablesFlagIsSetCorrectly_WhenExitingPlaymode()
         {
 #if !UNITY_2020_2_OR_NEWER

@@ -225,11 +225,11 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                     return;
                 }
             }
-
+            
             DrawToolBar(activeSession);
 
             var r = EditorGUILayout.GetControlRect();
-            Rect contentRect = new Rect(r.x, r.y, r.width, position.height - (r.y + r.x));
+            Rect contentRect = new Rect(r.x, r.y, r.width, position.height - r.y);
             var graphRect = m_GraphList.GraphRect;
             if (ShowEventPanel)
             {

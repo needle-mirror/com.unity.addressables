@@ -206,12 +206,70 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var updateOp = aa.UpdateCatalogs(null, false, true);
             yield return updateOp;
 
-            string fakePath = string.Format("{0}/{1}", Caching.currentCacheForWriting.path, hash);
-            Assert.IsFalse(Directory.Exists(fakePath));
+            string fakeCacheFolder = Path.GetDirectoryName(fakeCachePath);
+            Assert.IsFalse(Directory.Exists(fakeCacheFolder));
 
             aa.Release(updateOp);
 #else
             Assert.Ignore("Caching not enabled.");
+            yield return null;
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator UpdateContent_UpdatesCatalogs_WhenAutoCleanCacheDisabled_NoBundlesRemovedFromCache()
+        {
+#if ENABLE_CACHING
+            var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
+            var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
+            var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
+            var aa = new AddressablesImpl(null);
+            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
+            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
+            aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
+            aa.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
+
+            string cachedBundleName = "UpdatesCatalogsTestFakeBundle";
+            string hash = "123";
+            string fakeCachePath = AddressablesIntegrationTests.CreateFakeCachedBundle(cachedBundleName, hash);
+
+            var updateOp = aa.UpdateCatalogs(null, false, false);
+            yield return updateOp;
+
+            string fakeCacheFolder = Path.GetDirectoryName(fakeCachePath);
+            Assert.IsTrue(Directory.Exists(fakeCacheFolder));
+
+            aa.Release(updateOp);
+            Directory.Delete(fakeCacheFolder, true);
+#else
+            Assert.Ignore("Caching not enabled.");
+            yield return null;
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator UpdateContent_UpdatesCatalogs_WhenAutoCleanCacheEnabled_AndCachingDisabled_ReturnsException()
+        {
+#if !ENABLE_CACHING
+            var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
+            var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
+            var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
+            var aa = new AddressablesImpl(null);
+            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
+            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
+            aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
+            aa.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
+
+            var updateOp = aa.UpdateCatalogs(null, false, true);
+            yield return updateOp;
+
+            Assert.AreEqual(updateOp.OperationException.Message, "ChainOperation failed because dependent operation failed");
+            Assert.AreEqual(updateOp.OperationException.InnerException.Message, "CompletedOperation, status=Failed, result=False catalogs updated, but failed to clean bundle cache.");
+
+            aa.Release(updateOp);
+#else
+            Assert.Ignore("Caching is enabled, but test expects to run on caching-disabled platforms.");
+            yield return null;
 #endif
         }
 

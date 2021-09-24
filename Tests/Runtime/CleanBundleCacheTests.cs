@@ -82,7 +82,9 @@ namespace AddressableAssetsIntegrationTests
 
         protected override void OnRuntimeSetup()
         {
+#if ENABLE_CACHING
             Caching.ClearCache();
+#endif
             Assert.IsNull(m_Addressables);
         }
 
@@ -116,22 +118,6 @@ namespace AddressableAssetsIntegrationTests
             }
         }
 
-        HashSet<CachedAssetBundle> GetAllEntries(Func<int, string> keyNaming)
-        {
-            var cacheEntries = new HashSet<CachedAssetBundle>();
-            for (int i = 0; i < kAssetCount; i++)
-            {
-                var result = GetCacheEntries(keyNaming(i));
-                foreach (var entry in result)
-                {
-                    CachedAssetBundle cab = new CachedAssetBundle(entry.Key, Hash128.Parse(entry.Value));
-                    if (!cacheEntries.Contains(cab))
-                        cacheEntries.Add(cab);
-                }
-            }
-            return cacheEntries;
-        }
-
         Dictionary<string, string> GetCacheEntries(string key)
         {
             var cacheEntries = new Dictionary<string, string>();
@@ -152,6 +138,23 @@ namespace AddressableAssetsIntegrationTests
             return cacheEntries;
         }
 
+#if ENABLE_CACHING
+        HashSet<CachedAssetBundle> GetAllEntries(Func<int, string> keyNaming)
+        {
+            var cacheEntries = new HashSet<CachedAssetBundle>();
+            for (int i = 0; i < kAssetCount; i++)
+            {
+                var result = GetCacheEntries(keyNaming(i));
+                foreach (var entry in result)
+                {
+                    CachedAssetBundle cab = new CachedAssetBundle(entry.Key, Hash128.Parse(entry.Value));
+                    if (!cacheEntries.Contains(cab))
+                        cacheEntries.Add(cab);
+                }
+            }
+            return cacheEntries;
+        }
+
         void AssertEntriesAreRemoved(HashSet<CachedAssetBundle> entries)
         {
             foreach (CachedAssetBundle entry in entries)
@@ -167,6 +170,8 @@ namespace AddressableAssetsIntegrationTests
                 Assert.IsTrue(Caching.IsVersionCached(entry));
             }
         }
+
+#endif
 
         [UnityTest]
         public IEnumerator WhenValidCatalogId_RemovesNonReferencedBundlesFromCache()
@@ -195,6 +200,7 @@ namespace AddressableAssetsIntegrationTests
             ReleaseAddressables();
 #else
             Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 
@@ -224,6 +230,7 @@ namespace AddressableAssetsIntegrationTests
             ReleaseAddressables();
 #else
             Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 
@@ -249,6 +256,7 @@ namespace AddressableAssetsIntegrationTests
             ReleaseAddressables();
 #else
             Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 
@@ -274,6 +282,7 @@ namespace AddressableAssetsIntegrationTests
             ReleaseAddressables();
 #else
             Assert.Ignore("Caching not enabled.");
+            yield return null;
 #endif
         }
 
@@ -302,6 +311,32 @@ namespace AddressableAssetsIntegrationTests
             ReleaseAddressables();
 #else
             Assert.Ignore("Caching not enabled.");
+            yield return null;
+#endif
+        }
+
+        [UnityTest]
+        public IEnumerator WhenCachingDisabled_CleanBundleCache_ReturnsException()
+        {
+#if !ENABLE_CACHING
+            if (BuildScriptMode == TestBuildScriptMode.Fast)
+                Assert.Ignore("Bundle caching does not occur when using this playmode.");
+
+            yield return InitializeSettings(kOldBuildId);
+
+            var ifm = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+
+            var handle = m_Addressables.CleanBundleCache(null);
+            yield return handle;
+
+            Assert.AreEqual("Caching not enabled. There is no bundle cache to modify.", handle.OperationException.Message);
+            handle.Release();
+            LogAssert.ignoreFailingMessages = ifm;
+            ReleaseAddressables();
+#else
+            Assert.Ignore("Caching is enabled, but test expects to run on caching-disabled platforms.");
+            yield return null;
 #endif
         }
     }

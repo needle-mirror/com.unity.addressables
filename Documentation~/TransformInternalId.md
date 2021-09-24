@@ -1,58 +1,84 @@
 ---
 uid: addressables-api-transform-internal-id
 ---
-# TransformInternalId
-#### Returns
-`string` A transformation of a given location to a potentially different location used at runtime.
 
-#### Description
-`string Addressables.ResourceManager.TransformInternalId(IResourceLocation)` is a function that Addressables uses when evaluating internal IDs.  You can also manually pass in an IResourceLocation and return an ID based on a transformation function you specify.  You can specify the transformation used by the `ResourceManager` by assigning a `Func<IResourceLocation, string>` to `Addressables.ResourceManager.InternalIdTransformFunc`.  If no `InternalIdTransformFunc` is available, then the `IResourceLocation.InternalId` is returned.  `IResourceLocation.InternalId` is the default location assigned to an `IResourceLocation` at build time to locate an asset.
+<a name="modify-resoure-urls"></a>
+# Transforming resource URLs
 
-Using `TransformInternalId` grants a fair amount of flexability, especially in regards to remote hosting.  Given a single IResourceLocation, you can transform the ID to point towards a server specified at runtime.  This is particularly useful if your server IP address changes or to point at different servers for variant purposes.
+Addressables provides the following ways to modify the URLs it uses to load assets at runtime:
 
-If `Addressables.ResourceManager.InternalIdTransformFunc` is not assigned to or is assigned `null`, then the `IResourceLocation.InternalId` is used by `ResourceManager` without passing any transformation.
+* Static properties in a Profile variable
+* Implementing an ID transform function
 
-You do not need to call `TransformInternalId` manually in order for `ResourceManager` to use it.
+## Static Profile variables
 
-See [`ResourceManager`](xref:UnityEngine.ResourceManagement.ResourceManager)) for its full API documentation.
+You can use a static property when defining the [RemoteLoadPath Profile variable] to specify all or part of the URL from which your application loads remote content, including catalogs, catalog hash files, and AssetBundles. See [Profile variable syntax] for information about specifying a property name in a Profile variable. The value of your static property must be set before Addressables initializes. Changing the value after initialization has no effect. 
 
-#### Code Sample
-```
-void Start()
+## ID transform function
+
+You can assign a function to the [Addressables.ResourceManager] object's [InternalIdTransformFunc] property to individually change the URLs from which Addressables loads assets. You must assign the function before the relevant operation starts, otherwise the default URL is used.
+
+Using TransformInternalId grants a fair amount of flexibility, especially in regards to remote hosting. Given a single IResourceLocation, you can transform the ID to point towards a server specified at runtime. This is particularly useful if your server IP address changes or if you use different URLS to provide different variants of your application assets.
+
+The ResourceManager calls your TransformInternalId  function when it looks up an asset, passing the [IResourceLocation] instance for the asset to your function. You can change the [InternalId] property of this IResourceLocation and return the modified object to the ResourceManager.
+
+The follwoing example illustartes how you could append a query string to all URLs:
+
+[!code-cs[sample](../Samples/DocSampleCode/IDTransformer.cs#doc_Transformer)]
+
+<!--
+```csharp
+//Implement a method to transform the internal ids of locations
+string MyCustomTransform(IResourceLocation location)
 {
-    Addressables.ResourceManager.InternalIdTransformFunc = TransformFunc;
+    if (location.ResourceType == typeof(IAssetBundleResource) && location.InternalId.StartsWith("http"))
+        return location.InternalId + "?customQueryTag=customQueryValue";
+
+    return location.InternalId;
 }
 
-string TransformFunc(IResourceLocation location)
+//Override the Addressables transform method with your custom method.  This can be set to null to revert to default behavior.
+[RuntimeInitializeOnLoadMethod]
+static void SetInternalIdTransform()
 {
-    //Implement a method that gets the base url for a given location
-    string baseUrl = GetBaseURL(location);
-    
-    //Get the url you want to use to point to your current server
-    string currentUrlToUse = GetCurrentURL();
-    
-    return location.InternalId.Replace(baseUrl, currentUrlToUse);
+    Addressables.InternalIdTransformFunc = MyCustomTransform;
 }
 ```
-In the above code sample, `GetBaseURL` and `GetCurrentURL` can be any solution you find appropriate for your project; these are not methods implemented in Addressables.  The former can be your solution for acquiring the IP/url that was used at build time in the project and will be part of the `IResourceLocation.InternalId`.  The latter can be your solution to get a server that points to your new server IP/url or specifc variant/themed/scaled content.
+-->
 
-```
-void Start()
-{
-    Addressables.ResourceManager.InternalIdTransformFunc = TransformFunc;
-}
-
-string TransformFunc(IResourceLocation location)
-{
-    if(location.PrimaryKey.Contains("background") && MyQualityCheck.Resolution == Res.Low)
-        return location.InternalId.Replace("background", "bkg_low");
-
-    return irl.InternalId;
-}
-```
-This example shows how you could use information provided from the `IResourceLocation` among other settings to transform the `IResourceLocation.InternalId`.
-
-These are, of course, only a basic examples of the possibilities provided by assigning a custom implementation to `Addressables.ResourceManager.InternalIdTransformFunc`.
-
-#### Pitfalls
-If your first loads point to the wrong server, ensure that you assign `Addressables.ResourceManager.InternalIdTransformFunc` to your desired transform function prior to initiating your operation.
+[Addressables.CheckForCatalogUpdates]: xref:UnityEngine.AddressableAssets.Addressables.CheckForCatalogUpdates*
+[Addressables.InitializeAsync]: xref:UnityEngine.AddressableAssets.Addressables.InitializeAsync*
+[Addressables.LoadContentCatalogAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadContentCatalogAsync*
+[Addressables.ResourceManager]: xref:UnityEngine.AddressableAssets.Addressables.ResourceManager
+[Addressables.UpdateCatalogs]: xref:UnityEngine.AddressableAssets.Addressables.UpdateCatalogs*
+[Build Remote Catalog]: xref:addressables-asset-settings#catalog
+[Cache]: xref:UnityEngine.Cache
+[CacheInitializationSettings]: xref:UnityEditor.AddressableAssets.Settings.CacheInitializationSettings
+[Caching]: xref:UnityEngine.Caching
+[Catalog Download Timeout]: xref:addressables-asset-settings#downloads
+[Content update builds]: xref:addressables-content-update-builds
+[Custom certificate handler]: xref:addressables-asset-settings#downloads
+[Custom URL transform function]: #id-transform-function
+[Customizing initialization]: #customizing-initialization
+[Disable Catalog Update on Startup]: xref:addressables-asset-settings#catalog
+[Getting the address of an asset at runtime]: #getting-the-address-of-an-asset-at-runtime
+[initialization object list]: xref:addressables-asset-settings#initialization-object-list
+[initialization object]: xref:addressables-asset-settings#initialization-object-list
+[InternalId]: xref:UnityEngine.ResourceManagement.ResourceLocations.IResourceLocation.InternalId
+[IObjectInitializationDataProvider]: xref:UnityEngine.ResourceManagement.Util.IObjectInitializationDataProvider
+[IResourceLocation]: xref:UnityEngine.ResourceManagement.ResourceLocations.IResourceLocation
+[LoadContentCatalogAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadContentCatalogAsync*
+[Loading additional catalogs]: #loading-additional-catalogs
+[Loading Assets by Location]: xref:addressables-loading-assets#loading-assets-by-location
+[Modifying resource URLs at runtime]: #modifying-resource-urls-at-runtime
+[ObjectInitializationData]: xref:UnityEngine.ResourceManagement.Util.ObjectInitializationData
+[PrimaryKey]: xref:UnityEngine.ResourceManagement.ResourceLocations.IResourceLocation.PrimaryKey
+[Profile variable syntax]: xref:addressables-profiles#profile-variable-syntax
+[Profile variables]: xref:addressables-profiles#profile-variable-syntax
+[RemoteLoadPath Profile variable]: xref:addressables-profiles
+[ResourceLocators]: xref:UnityEngine.AddressableAssets.ResourceLocators
+[ResourceManager exception handler]: xref:UnityEngine.ResourceManagement.ResourceManager.ExceptionHandler
+[ResourceManager]: xref:UnityEngine.ResourceManagement.ResourceManager
+[InternalIdTransformFunc]: xref:UnityEngine.ResourceManagement.ResourceManager.InternalIdTransformFunc
+[Unique Bundle Ids]: xref:addressables-content-update-builds#unique-bundle-ids-setting
+[Updating catalogs]: #updating-catalogs

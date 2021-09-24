@@ -1,51 +1,138 @@
 ---
 uid: addressables-api-download-dependencies-async
 ---
-# Addressables.DownloadDependenciesAsync
-#### API
-- `static AsyncOperationHandle DownloadDependenciesAsync(object key, bool autoReleaseHandle = false)`
-- `static AsyncOperationHandle DownloadDependenciesAsync(IList<IResourceLocation> locations, bool autoReleaseHandle = false)`
-- `static AsyncOperationHandle DownloadDependenciesAsync(IEnumerable keys, MergeMode mode, bool autoReleaseHandle = false)`
 
-#### Returns
-`AsyncOperationHandle`: an async operation handle that encompasses all the operations used to download the requested dependencies.  Once complete, this handle can be safely released.
+# Preloading dependencies
 
-#### Description
-`Addressables.DownloadDependenciesAsync` is primarily designed to be used to download and cache remote `AssetBundles` prior to their use at runtime.  Caching `AssetBundles` early leads to improved performance on any initial call, such as a `LoadAssetAsync`, that would have otherwise needed to download the bundles as part of their operation.  After reading the `Result` of this operation, it is best practice to release the handle manually; though the memory footprint is low, should you keep it in memory.
+When you distribute content remotely, you can sometimes improve perceived performance by downloading dependencies in advance of when your application needs them. For example, you can download essential content on start up the first time a player launches your game to make sure that they don't have to wait for content in the middle of game play. 
 
-This operation can be safely released once it is complete or you can pass `true` in the `autoReleaseHandle` parameter to ensure it is released on completion.  Of note, if the handle is released you won't be able to check the success of the operation handle through the `Status` property since the release invalidates the operation handle.
+<a name="download-dependencies"></a>
+## Downloading dependencies
 
-Downloaded `AssetBundles` are stored in the engines `AssetBundle` cache.  `Addressables` provides a type of initialization object called a [`CacheInitializationSettings`](xref:UnityEditor.AddressableAssets.Settings.CacheInitializationSettings) which can be used to control the `AssetBundle` cache settings.
+Use the [Addressables.DownloadDependenciesAsync] method to make sure that all the dependencies needed to load an Addressable key are available either in local content installed with the app or the download cache.
 
-##### Related API
-[`AsyncOperationHandle.GetDownloadStatus()`](xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.GetDownloadStatus) will return information about how many bytes have been downloaded, and how many are needed. This is the API that should be used in place of `AsyncOperationHandle.PercentComplete` when working with any download operaion. See [AsyncOperationHandle](AddressableAssetsAsyncOperationHandle.md).
+[!code-cs[sample](../Samples/DocSampleCode/MiscellaneousTopics.cs#doc_Download)]
 
-`GetDownloadSizeAsync` checks the total size of all `AssetBundles` that need to be downloaded.  Cached `AssetBundles` return a size of 0.  Unlike most operations that don't load anything, `GetDownloadSizeAsync` does not autorelease.  It does not autorelease because the `Result` is needed which could not be accessed from a released handle.  Once you have read the size out of the `Result`, you are responsible for releasing the operation handle; not doing so has little impact on the memory footprint.
+> [!TIP]
+> if you have a set of assets that you want to pre-download, you can assign the same label, such as "preload", to the assets and use that label as the key when calling  [Addressables.DownloadDependenciesAsync]. Addressables downloads all the AssetBundles containing an asset with that label if not already available (along with any bundles containing the assets' dependencies).
 
-`ClearDependencyCacheAsync` clears any cached `AssetBundles` for a given key or list of keys and its dependencies.  It is also possible to use the [`UnityEngine.Caching`](https://docs.unity3d.com/ScriptReference/Caching.html) APIs to manipulate the cache used by Addressables.  Of note, `ClearDependencyCacheAsync` works off the current content catalog.  This means if an `AssetBundle` is downloaded and cached, and the content catalog is updated to point to a new version of that `AssetBundle`, and it is possible for the previously cached bundle to remain in the cache until the cache says it's expired.
+## Progress
 
-#### Code Sample
-```
-public IEnumerator Start()
+An [AsyncOperationHandle] instance provides two ways to get progress:
+
+* [AsyncOperationHandle.PercentComplete]\: reports the percentage of sub-operations that have finished. For example, if an operation uses six sub-operations to perform its task, the `PercentComplete` indicates the entire operation is 50% complete when three of those operations have finished (it doesn't matter how much data each operation loads).
+* [AsyncOperationHandle.GetDownloadStatus]: returns a [DownloadStatus] struct that reports the percentage in terms of total download size. For example, if an operation has six sub-operations, but the first operation represented 50% of the total download size, then `GetDownloadStatus` indicates the operation is 50% complete when the first operation finishes.
+
+The following example illustrates how you could use [GetDownloadStatus] to check the status and dispatch progress events during the download:
+
+[!code-cs[sample](../Samples/DocSampleCode/PreloadWithProgress.cs#doc_Preload)]
+
+<!--
+```csharp
+using System.Collections;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.Events;
+using UnityEngine.ResourceManagement.AsyncOperations;
+
+public class PreloadWithProgress : MonoBehaviour
 {
-    string key = "assetKey";
-    //Clear all cached AssetBundles
-    Addressables.ClearDependencyCacheAsync(key);
+    public string preloadLabel = "preload";
+    public UnityEvent<float> ProgressEvent;
+    public UnityEvent<bool> CompletionEvent;
+    private AsyncOperationHandle downloadHandle;
 
-    //Check the download size
-    AsyncOperationHandle<long> getDownloadSize = Addressables.GetDownloadSizeAsync(key);
-    yield return getDownloadSize;
+    IEnumerator Start() {
+        downloadHandle =  Addressables.DownloadDependenciesAsync(preloadLabel, false);
+        float progress = 0;
 
-    //If the download size is greater than 0, download all the dependencies.
-    if (getDownloadSize.Result > 0)
-    {
-        AsyncOperationHandle downloadDependencies = Addressables.DownloadDependenciesAsync(key);
-        yield return downloadDependencies;
+        while (downloadHandle.Status == AsyncOperationStatus.None) {
+            float percentageComplete = downloadHandle.GetDownloadStatus().Percent;
+            if (percentageComplete > progress * 1.1) // Report at most every 10% or so
+            {
+                progress = percentageComplete; // More accurate %
+                ProgressEvent.Invoke(progress);
+            }
+            yield return null;
+        }
+
+        CompletionEvent.Invoke(downloadHandle.Status == AsyncOperationStatus.Succeeded);
+        Addressables.Release(downloadHandle); //Release the operation handle
     }
-    
-    //...
 }
 ```
+-->
 
-#### Pitfalls
-Some platforms, such as PlayStation 4 and Nintendo Switch, do not support local `AssetBundle` caching.
+To discover how much data you need to download in order to load one or more assets, you can call [Addressables.GetDownloadSizeAsync]: 
+
+[!code-cs[sample](../Samples/DocSampleCode/PreloadWithProgress.cs#doc_DownloadSize)]
+
+<!--
+```csharp
+AsyncOperationHandle<long> getDownloadSize =  
+    Addressables.GetDownloadSizeAsync(key);
+```
+-->
+
+The Result of the completed operation is the number of bytes that must be downloaded. If Addressables has already cached all the required AssetBundles, then Result is zero.
+
+Always release the download operation handle after you have read the Result object. If you don't need to access the results of the download operation, you can automatically release the handle by setting the `autoReleaseHandle` parameter to true, as shown in the following example:
+
+[!code-cs[sample](../Samples/DocSampleCode/Preload.cs#doc_Preload)]
+
+<!--
+```csharp
+using System.Collections;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+
+public class Preload : MonoBehaviour
+{
+    public IEnumerator Start()
+    {
+        yield return Addressables.DownloadDependenciesAsync("preload", true);
+    }
+}
+```
+-->
+
+### Clearing the dependency cache
+
+If you want to clear any AssetBundles cached by Addressables, call [Addressables.ClearDependencyCacheAsync]. This function clears the cached AssetBundles containing the assets identified by a key along with any bundles containing those assets' dependencies. 
+
+Note that ClearDependencyCacheAsync only clears assets bundles related to the specified key. If you updated the content catalog such that the key no longer exists or it no longer depends on the same AssetBundles, then these no-longer-referenced bundles remain in the cache until they expire (based on [cache settings]).
+
+To clear all AssetBundles, you can use functions in the [UnityEngine.Caching] class.
+
+[Addressables.ClearDependencyCacheAsync]: xref:UnityEngine.AddressableAssets.Addressables.ClearDependencyCacheAsync*
+[Addressables.DownloadDependenciesAsync]: xref:UnityEngine.AddressableAssets.Addressables.DownloadDependenciesAsync*
+[Addressables.GetDownloadSizeAsync]: xref:UnityEngine.AddressableAssets.Addressables.GetDownloadSizeAsync*
+[Addressables]: xref:UnityEngine.AddressableAssets.Addressables
+[AssetReference]: xref:UnityEngine.AddressableAssets.AssetReference
+[AssetReferences]: xref:addressables-asset-references
+[AsyncOperation.priority]: xref:UnityEngine.AsyncOperation.priority
+[cache settings]: xref:UnityEngine.Cache
+[Check Duplicate Bundle Dependencies]: AnalyzeTool.md#check-duplicate-bundle-dependencies
+[GetDownloadStatus]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.GetDownloadStatus*
+[IResourceLocation]: xref:UnityEngine.ResourceManagement.ResourceLocations.IResourceLocation
+[LoadAssetAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadAssetAsync*
+[LoadAssetsAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadAssetsAsync*
+[LoadResourceLocationsAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadResourceLocationsAsync*
+[LoadSceneMode.Single]: xref:UnityEngine.SceneManagement.LoadSceneMode.Single
+[UnityEngine.Caching]: xref:UnityEngine.Caching
+[ResourceManager.ExceptionHandler]: xref:UnityEngine.ResourceManagement.ResourceManager.ExceptionHandler
+[Log Runtime Exceptions]: xref:addressables-asset-settings#diagnostics
+[Console]: xref:Console
+[Object.Instantiate]: xref:UnityEngine.Instantiate
+[Completed]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.Completed
+[AsyncOperation.allowSceneActivation]: xref:UnityEngine.AsyncOperation.allowSceneActivation
+[SceneInstance]: xref:UnityEngine.ResourceManagement.ResourceProviders.SceneInstance
+[LoadSceneAsync]: xref:UnityEngine.SceneManagement.SceneManager.LoadSceneAsync
+[Resources.UnloadAllAssets]: xref:UnityEngine.Resources.UnloadAllAssets
+[UnloadAsset]: xref:UnityEngine.Resources.UnloadAsset
+[Addressables.InstantiateAsync]: xref:UnityEngine.AddressableAssets.Addressables.InstantiateAsync*
+[AsyncOperationHandle]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle
+[AsyncOperationHandle.GetDownloadStatus]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.GetDownloadStatus
+[AsyncOperationHandle.PercentComplete]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.PercentComplete
+[DownloadStatus]: xref:UnityEngine.ResourceManagement.AsyncOperations.DownloadStatus
+[GetDownloadStatus]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.GetDownloadStatus

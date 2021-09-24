@@ -32,7 +32,8 @@ namespace UnityEngine.ResourceManagement.Exceptions
         /// <param name="context">Context related to the exception.</param>
         protected ResourceManagerException(SerializationInfo message, StreamingContext context) : base(message, context) {}
 
-        /// <inheritdoc />
+        /// <summary>Provides a new string object describing the exception.</summary>
+        /// <returns>A newly allocated managed string.</returns>
         public override string ToString() => $"{GetType().Name} : {base.Message}\n{InnerException}";
     }
     /// <summary>
@@ -76,7 +77,7 @@ namespace UnityEngine.ResourceManagement.Exceptions
         protected UnknownResourceProviderException(SerializationInfo message, StreamingContext context) : base(message, context) {}
 
         /// <summary>
-        /// Returns a string describing  this exception
+        /// Returns a string describing this exception.
         /// </summary>
         public override string Message
         {
@@ -107,7 +108,8 @@ namespace UnityEngine.ResourceManagement.Exceptions
         /// <param name="innerException">The exception that caused the error, if any.</param>
         public OperationException(string message, Exception innerException = null) : base(message, innerException) {}
 
-        /// <inheritdoc />
+        /// <summary>Provides a new string object describing the exception.</summary>
+        /// <returns>A newly allocated managed string.</returns>
         public override string ToString() => $"{GetType().Name} : {base.Message}\n{InnerException}";
     }
 
@@ -157,7 +159,8 @@ namespace UnityEngine.ResourceManagement.Exceptions
         /// </summary>
         public UnityWebRequestResult WebRequestResult { get; }
 
-        /// <inheritdoc />
+        /// <summary>Provides a new string object describing the exception.</summary>
+        /// <returns>A newly allocated managed string.</returns>
         public override string ToString()
         {
             if (WebRequestResult != null)

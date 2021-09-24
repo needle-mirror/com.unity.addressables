@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -24,7 +24,8 @@ namespace UnityEditor.AddressableAssets.Settings
     /// </summary>
     internal static class AssetReferenceDrawerUtilities
     {
-        internal const string noAssetString = "None (AddressableAsset)"; 
+        internal const string noAssetString = "None (Addressable Asset)";
+        internal const string noAssetTypeStringformat = "None (Addressable {0})";
         
         static internal bool ValidateAsset(AssetReference assetRefObject, List<AssetReferenceUIRestrictionSurrogate> restrictions, Object obj)
         {
@@ -340,9 +341,11 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             var currentRef =
                 property.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
-            var nameToUse = noAssetString;
-            if(currentRef.editorAsset != null)
-                nameToUse = currentRef.editorAsset.name;
+
+            string nameToUse = currentRef.editorAsset != null ? 
+                currentRef.editorAsset.name :
+                ConstructNoAssetLabel(propertyField.FieldType);
+            
             if (property.serializedObject.targetObjects.Length > 1)
             {
                 foreach (var t in property.serializedObject.targetObjects)
@@ -365,6 +368,31 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             return nameToUse;
+        }
+
+        internal static string ConstructNoAssetLabel(Type t)
+        {
+            if (t == null || t == typeof(AssetReference))
+                return FormatNoAssetString(string.Empty);
+            t = GetGenericType(t);
+            if (t == null || t == typeof(AssetReference))
+                return FormatNoAssetString(string.Empty);
+            return FormatNoAssetString(t.Name);
+        }
+
+        static string FormatNoAssetString(string n) => string.IsNullOrEmpty(n) ? noAssetString : string.Format(noAssetTypeStringformat, n);
+
+        private static Type GetGenericType(Type t)
+        {
+            if (t == null)
+                return null;
+            while (t.GenericTypeArguments.Length > 0)
+                t = t.GenericTypeArguments[0];
+            if (t.BaseType != null && t.BaseType.GenericTypeArguments.Length == 1)
+                t = GetGenericType(t.BaseType);
+            if (t.HasElementType)
+                t = GetGenericType(t.GetElementType());
+            return t;
         }
 
         static internal string FormatName(string name)

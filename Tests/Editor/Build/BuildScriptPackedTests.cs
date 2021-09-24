@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using NUnit.Framework.Interfaces;
+using UnityEngine.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
@@ -74,7 +75,7 @@ namespace UnityEditor.AddressableAssets.Tests
             switch (shaderBundleNaming)
             {
                 case ShaderBundleNaming.ProjectName:
-                    expectedValue = Hash128.Compute(m_BuildScript.GetProjectName()).ToString();
+                    expectedValue = Hash128.Compute(BuildScriptPackedMode.GetProjectName()).ToString();
                     break;
                 case ShaderBundleNaming.DefaultGroupGuid:
                     expectedValue = m_BuildContext.Settings.DefaultGroup.Guid;
@@ -85,7 +86,7 @@ namespace UnityEditor.AddressableAssets.Tests
             }
 
             //Test
-            string bundleName = m_BuildScript.GetBuiltInShaderBundleName(m_BuildContext);
+            string bundleName = BuildScriptPackedMode.GetBuiltInShaderBundleNamePrefix(m_BuildContext);
 
             //Assert
             Assert.AreEqual(expectedValue, bundleName);
@@ -112,7 +113,7 @@ namespace UnityEditor.AddressableAssets.Tests
             switch (monoScriptBundleNaming)
             {
                 case MonoScriptBundleNaming.ProjectName:
-                    expectedValue = Hash128.Compute(m_BuildScript.GetProjectName()).ToString();
+                    expectedValue = Hash128.Compute(BuildScriptPackedMode.GetProjectName()).ToString();
                     break;
                 case MonoScriptBundleNaming.DefaultGroupGuid:
                     expectedValue = m_BuildContext.Settings.DefaultGroup.Guid;
@@ -126,7 +127,7 @@ namespace UnityEditor.AddressableAssets.Tests
             }
 
             //Test
-            string bundleName = m_BuildScript.GetMonoScriptBundleName(m_BuildContext);
+            string bundleName = BuildScriptPackedMode.GetMonoScriptBundleNamePrefix(m_BuildContext);
 
             //Assert
             Assert.AreEqual(expectedValue, bundleName);
@@ -183,6 +184,65 @@ namespace UnityEditor.AddressableAssets.Tests
                                               $"If this is unexpected the AddressableGroup may have become corrupted.");
 
             input.AddressableSettings.RemoveGroup(group);
+        }
+        
+        [Test]
+        [TestCase(MonoScriptBundleNaming.Disabled, ShaderBundleNaming.ProjectName, "")]
+        [TestCase(MonoScriptBundleNaming.ProjectName, ShaderBundleNaming.ProjectName, "")]
+        [TestCase(MonoScriptBundleNaming.DefaultGroupGuid, ShaderBundleNaming.DefaultGroupGuid, "")]
+        [TestCase(MonoScriptBundleNaming.Custom, ShaderBundleNaming.Custom, "custom_name")]
+        public void GlobalSharedBundles_BuiltWithCorrectName(MonoScriptBundleNaming monoScriptBundleNaming, ShaderBundleNaming shaderNaming, string customName)
+        {
+            m_PersistedSettings = AddressableAssetSettings.Create(ConfigFolder, k_TestConfigName, true, true);
+            m_PersistedSettings.MonoScriptBundleNaming = monoScriptBundleNaming;
+            m_PersistedSettings.MonoScriptBundleCustomNaming = customName;
+            Setup();
+
+            string assetNamePrefix = "bundlePrefixTest_";
+            AddressableAssetGroup assetGroup = null;
+            BuildScriptPackedMode buildScript = null;
+            
+            try
+            {
+                buildScript = ScriptableObject.CreateInstance<BuildScriptPackedMode>();
+
+                assetGroup = Settings.CreateGroup("TestGroup", false, false, false,
+                    new List<AddressableAssetGroupSchema>(), typeof(BundledAssetGroupSchema));
+                var schema = assetGroup.GetSchema<BundledAssetGroupSchema>();
+                schema.BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.NoHash;
+                Settings.DefaultGroup = assetGroup;
+
+                var testObject = UnityEngine.AddressableAssets.Tests.TestObject.Create("TestScriptableObject", GetAssetPath(assetNamePrefix+"TestScriptableObject.asset"));
+                if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(testObject, out string guid, out long id))
+                    return;
+                Settings.CreateOrMoveEntry(guid, assetGroup, false, false);
+
+                var a = base.CreateAsset(GetAssetPath(assetNamePrefix + "prefabWithMaterial.prefab"));
+                Settings.CreateOrMoveEntry(a, assetGroup, false, false);
+                
+                buildScript.BuildData<AddressableAssetBuildResult>(m_BuilderInput);
+                
+                // test
+                string monoBundle = BuildScriptPackedMode.GetMonoScriptBundleNamePrefix(Settings);
+                if (monoScriptBundleNaming != MonoScriptBundleNaming.Disabled)
+                {
+                    Assert.IsFalse(string.IsNullOrEmpty(monoBundle), "MonoScript Bundle is enabled but no name recieved");
+                    monoBundle = Path.Combine(schema.BuildPath.GetValue(assetGroup.Settings), monoBundle + "_monoscripts.bundle");
+                    Assert.IsTrue(File.Exists(monoBundle), "MonoScript bundle not found at " + monoBundle);
+                }
+                else
+                    Assert.IsTrue(string.IsNullOrEmpty(monoBundle), "MonoScript Bundle is disabled but name recieved");
+                
+                string shaderBundle = BuildScriptPackedMode. GetBuiltInShaderBundleNamePrefix(assetGroup.Settings) + "_unitybuiltinshaders.bundle";
+                shaderBundle = Path.Combine(schema.BuildPath.GetValue(assetGroup.Settings), shaderBundle);
+                Assert.IsTrue(File.Exists(shaderBundle), "Built in Shaders bundle not found at " + shaderBundle);
+            }
+            finally
+            {
+                // cleanup
+                Settings.RemoveGroup(assetGroup);
+                UnityEngine.Object.DestroyImmediate(buildScript);
+            }
         }
         
         [Test]

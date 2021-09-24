@@ -1,26 +1,30 @@
 ---
 uid: addressables-home
 ---
-# Unity Addressable Asset system
 
-The Addressable Asset system provides an easy way to load assets by “address”. It handles asset management overhead by simplifying content pack creation and deployment.
+# Addressables
 
-The Addressable Asset system uses asynchronous loading to support loading from any location with any collection of dependencies. Whether you use direct references, traditional [AssetBundles](https://docs.unity3d.com/Manual/AssetBundlesIntro.html "AssetBundles"), or `Resource` folders for asset management, Addressable Assets provide a simpler way to make your game more dynamic.
+The Addressables system provides tools and scripts to organize and package content for your application and an API to load and release assets at runtime.
 
-## What is an asset?
-An asset is content that you use to create your game or app. Common examples of assets include Prefabs, textures, materials, audio clips, and animations.
+When you make an asset "Addressable," you can use that asset's address to load it from anywhere. Whether that asset resides in the local application or on a content delivery network, the Addressable system locates and returns it. 
 
-## What is an Addressable Asset?
-Making an asset "Addressable" allows you to use that asset's unique address to call it from anywhere. Whether that asset resides in the local application or on a content delivery network, the Addressable Asset System locates and returns it. You can load a single Addressable Asset via its address, or load many Addressable Assets using a custom group label that you define.
+Adopt the Addressables system to help improve your project in the following areas:
 
-## Why use Addressable Assets?
-Traditional means of structuring game assets make it challenging to efficiently load content. Addressables shorten your iteration cycles, allowing you to devote more time to designing, coding, and testing your application. 
+* __Flexibility__: Addressables give you the flexibility to adjust where you host your assets. You can install assets with your application or download them on demand. You can change where you access a specific asset at any stage in your project without rewriting any game code. 
+* __Dependency management__: The system automatically loads all dependencies of any assets you load, so that all meshes, shaders, animations, and other assets load before the system returns the content to you.
+* __Memory management__: The system unloads assets as well as loads them, counting references automatically and providing a robust profiler to help you spot potential memory problems.
+* __Content packing__: Because the system maps and understands complex dependency chains, it package AssetBundles efficiently, even when you move or rename assets. You can prepare assets for both local and remote deployment, to support downloadable content and reduced application size.
 
-* **Iteration time**: Referring to content by its address is extremely efficient. Optimizations to the content no longer require changes to your code.
-* **Dependency management**: The system returns all dependencies of the requested content, so that all meshes, shaders, animations, and so forth load before returning the content to you.
-* **Memory management**: The system unloads assets as well as loading them, counting references automatically and providing a robust profiler to help you spot potential memory problems.
-* **Content packing**: Because the system maps and understands complex dependency chains, it allows for efficient packing of bundles, even when moving or renaming assets. You can easily prepare assets for both local and remote deployment, to support downloadable content and reduced application size.
-* **Profiles**: The system allows you to create a set of string variables that more easily enables you to change how your content is built into bundles without modifying settings in multiple places.
+For an introduction to the Addressables system see [Simplify your content management with Addressables].
 
-## What about my existing game?
-The Addressable Asset System provides a [migration path](AddressableAssetsMigrationGuide.md) for upgrading, whether you use direct references, `Resource` folders, or AssetBundles.
+> [!NOTE]
+> The Addressables system builds upon Unity AssetBundles. If you want to use AssetBundles in your projects without writing your own detailed management code, you should use Addressables.
+
+## Adding Addressables to an existing Project
+
+You can adopt Addressables in an existing Unity Project by installing the Addressables package. To do this, you need to assign addresses to your assets and refactor any runtime loading code. See [Upgrading to the Addressables system] for more information. 
+
+Although you can integrate Addressables at any stage in a project’s development, Unity recommends that you start using Addressables immediately in new projects to avoid unnecessary code refactoring and content planning changes later in development.
+
+[Upgrading to the Addressables system]: xref:addressables-migration
+[Simplify your content management with Addressables]: https://unity.com/how-to/simplify-your-content-management-addressables

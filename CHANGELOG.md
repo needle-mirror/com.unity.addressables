@@ -4,6 +4,22 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.19.6] - 2021-09-24
+- Fixed issue where built-in shaders and MonoScript Bundles prefix option was not prefixed to Bundle filename.
+- Restructured and updated documentation.
+- Fixed an issue where graphs in the event viewer would sometimes scroll off the window
+- Fixed issue where an AssetReference field cannot be interacted with the tab and enter keys.
+- Fixed issue where an AssetReference label is displayed wrong where the AssetReferece is a child of the property being displayed.
+- Added documentation for Addressables.CleanBundleCache
+- Fixed issue where editing an open Prefab and saving the Prefab will deselect selected Objects.
+- Improved performance of displaying Addressables Inspector in a very large Project.
+- Fixed issue where buildlayout.txt would contain incorrect bundle names if a group's bundle naming scheme was set to filename
+- Fixed an issue where some platforms were caching catalogs that don't support caching
+- Fixed an issue where the popup windows for creating new profiles path variables would appear in seemingly random places. 
+- Fixed an issue where the popup window for creating a Build and Load path variable pair would not properly display its save button
+- Added note in Hosting Services docs about modifying firewall settings when testing on other devices.
+- Added handling of possible exceptions when caching catalog files.
+
 ## [1.19.4] - 2021-08-24
 - Removing support for 2018.4
 - Added options for building Addressables content as a prebuild step when building Player.

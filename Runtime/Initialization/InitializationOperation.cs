@@ -208,7 +208,8 @@ namespace UnityEngine.AddressableAssets.Initialization
             addressables.Release(op);
             if (data == null)
             {
-                return addressables.ResourceManager.CreateCompletedOperation<IResourceLocator>(null, new Exception("Failed to load content catalog.").Message);
+                var opException = op.OperationException != null ? new Exception("Failed to load content catalog.", op.OperationException) : new Exception("Failed to load content catalog.");
+                return addressables.ResourceManager.CreateCompletedOperationWithException<IResourceLocator>(null, opException);
             }
             else
             {
@@ -298,7 +299,10 @@ namespace UnityEngine.AddressableAssets.Initialization
                 {
                     Addressables.LogWarningFormat("Addressables - initialization failed.", op);
                     m_Addressables.RemoveResourceLocator(locMap);
-                    Complete(Result, false, op.OperationException != null ? op.OperationException.Message : "LoadContentCatalogInternal");
+                    if (op.OperationException != null)
+                        Complete(Result, false, op.OperationException);
+                    else
+                        Complete(Result, false, "LoadContentCatalogInternal");
                     m_Addressables.Release(op);
                 }
                 else

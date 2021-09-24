@@ -389,13 +389,26 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                     ccd.localHash = m_LocalHashValue;
                     if (!string.IsNullOrEmpty(m_RemoteHashValue) && !string.IsNullOrEmpty(m_LocalDataPath))
                     {
+#if ENABLE_CACHING
                         var dir = Path.GetDirectoryName(m_LocalDataPath);
                         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                             Directory.CreateDirectory(dir);
                         var localCachePath = m_LocalDataPath;
                         Addressables.LogFormat("Addressables - Saving cached content catalog to {0}.", localCachePath);
-                        File.WriteAllText(localCachePath, JsonUtility.ToJson(ccd));
-                        File.WriteAllText(localCachePath.Replace(".json", ".hash"), m_RemoteHashValue);
+                        try
+                        {
+                            File.WriteAllText(localCachePath, JsonUtility.ToJson(ccd));
+                            File.WriteAllText(localCachePath.Replace(".json", ".hash"), m_RemoteHashValue);
+                        }
+                        catch (Exception e)
+                        {
+                            string remoteInternalId = GetTransformedInternalId(m_ProviderInterface.Location.Dependencies[(int)DependencyHashIndex.Remote]);
+                            var errorMessage = $"Unable to load ContentCatalogData from location {remoteInternalId}. Failed to cache catalog to location {localCachePath}.";
+                            ccd = null;
+                            m_ProviderInterface.Complete(ccd, false, new Exception(errorMessage, e));
+                            return;
+                        }
+#endif
                         ccd.localHash = m_RemoteHashValue;
                     }
                     m_ProviderInterface.Complete(ccd, true, null);
@@ -413,7 +426,9 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                         {
                             try
                             {
+#if ENABLE_CACHING
                                 File.Delete(cachePath);
+#endif
                             }
                             catch (Exception)
                             {

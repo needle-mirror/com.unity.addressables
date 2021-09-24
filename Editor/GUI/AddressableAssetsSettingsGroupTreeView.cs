@@ -78,6 +78,19 @@ namespace UnityEditor.AddressableAssets.GUI
                     continue;
                 if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj.GetInstanceID(), out string guid, out long localId))
                 {
+                    if (obj is GameObject go)
+                    {
+#if UNITY_2021_2_OR_NEWER
+                        if (UnityEditor.SceneManagement.PrefabStageUtility.GetPrefabStage(go) != null)
+                            return;
+#else
+                        if (UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetPrefabStage(go) != null)
+                            return;
+#endif
+                        var containingScene = go.scene;
+                        if (containingScene.IsValid() && containingScene.isLoaded)
+                            return;
+                    }
                     m_ForceSelectionClear = true;
                     return;
                 }

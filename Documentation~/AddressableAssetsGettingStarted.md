@@ -1,227 +1,382 @@
 ---
 uid: addressables-getting-started
 ---
+
 # Getting started
-## Installing the Addressable Assets package
 
-**Important**: The Addressable Asset System requires Unity version 2018.3 or later.
+Once you have [installed the Addressables package] in your Unity Project, you can get started.
 
-To install this package, follow the instructions in the [Package Manager documentation](https://docs.unity3d.com/Packages/com.unity.package-manager-ui@1.7/manual/index.html).
+The basic steps to using Addressables include:
 
-## Preparing Addressable Assets
-### Marking assets as Addressable
-There are two ways to mark an asset as Addressable in the Unity Editor: 
+* Make your assets Addressable
+* Reference and load those assets in code using the Addressables API
+* Build your Addressable assets
 
-* In the object's Inspector.
-* In the **Addressables Groups** window. 
+See the [Space Shooter project] in the [Addressables-Sample] repository for an example of a project set up to use Addressable assets.
 
-#### Using the Inspector
-In your **Project** window, select the desired asset to view its Inspector. In the Inspector, click the **Addressable** checkbox and enter a name by which to identify the asset.
+> [!NOTE]
+> This Getting Started topic doesn't discuss the various ways you can organize your Addressable content. For information on that topic, see [Organizing Addressable Assets].  
 
-![Marking an asset as Addressable in the Inspector window.](images/inspectorcheckbox.png)</br>
-_Marking an asset as Addressable in the **Inspector** window._
+## Installation
 
-Pressing the `Select` button to the right of the inspector opens the Groups window as sown below. Focusing on the Addressables Entry for the selected Asset.
+To install the Addressables package in your project, use the Unity Package Manager:
 
-#### Using the Addressables window
-Select **Window** > **Asset Management** > **Addressables** > **Groups** to open the **Addressables Groups** window. Next, drag the desired asset from your **Project** window into one of the asset groups in the **Addressables Groups** window.
+1. Open the Package Manager (menu: __Window > Package Manager__).
+2. Set the package list to display packages from the __Unity Registry__.
+   <br/>![](images/addr_gettingstarted_pacman.png)<br/>
+3. Select the Addressables package in the list.
+4. Click __Install__ (at the bottom, right-hand side of the Package Manager window).
 
-![Marking an asset as Addressable in the Addressables Groups window.](images/addressableswindow.png)</br>
-_Marking an asset as Addressable in the **Addressables Groups** window._
+To set up the Addressables system in your Project after installation, open the __Addressables Groups__ window and click __Create Addressables Settings__. 
 
-### Specifying an address
-The default address for your asset is the path to the asset in your project (for example, `Assets/images/myImage.png`). To change the asset's address from the **Addressables Groups** window, right-click the asset and select **Change Address**. **Please Note:** The address cannot contain square brackets `[]`, and will fail the build if it does. This is meant to protect the runtime functionality that parses brackets to locate sub assets. For example, at runtime, loading `myAsset[mySubAsset]` will try to look up an asset at address `myAsset`, and then attempt to load the sub asset `mySubAsset` from that.
+![](images/addr_gettingstarted_firstuse.png)<br/>*Before initializing the Addressables system in a Project*
 
-When you first start using Addressable Assets, the system saves some edit-time and runtime data assets for your project in the `Assets/AddressableAssetsData` file, which should be added to your version control check-in.
+When you run the __Create Addressables Settings__ command, the Addressables system creates a folder called, `AddressableAssetsData`, in which it stores settings files and other assets it uses to keep track of your Addressables setup. You should add the files in this folder to your source control system. Note that Addressables can create additional files as you change your Addressables configuration. See [Addressables Settings] for more information about the settings themselves.
 
-### Building your Addressable content
-The Addressables Asset System needs to build your content into files that can be consumed by the running game before you build the application. This step is not automatic. You can build this content via the Editor or API:
+> [!NOTE]
+> For instructions on installing a specific version of Addressables or for general information about managing the packages in a Project, see [Packages].
 
-* To build content in the Editor, open the **Addressables Groups** window, then select **Build** > **New Build** > **Default Build Script**.
-* To build content using the API, use [`AddressableAssetSettings.BuildPlayerContent()`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.BuildPlayerContent).
+## Making an asset Addressable
 
-See [Build layout report](DiagnosticTools.md#build-layout-report) for information on how to generate a report about the layout of your built content.
+You can mark an asset as Addressable in the following ways:
 
-## Addressable Assets in Custom Packages
+* Check the __Addressable__ box in the asset's Inspector:
+  <br/>![](images/addr_gettingstarted_mark.png)<br/>
 
-**Important**: Marking package assets as Addressable requires Unity version 2019.4.10f1 or later and Asset Import Pipeline v2. For 2019.4 versions the pipeline version being used can be found in **Edit** > **Preferences** > **Cache Server (global)** > **Active Version**. On newer versions (2020.1 or later) Asset Import Pipeline v2 is enabled by default.
+* Drag or assign the asset to an AssetReference field in an Inspector:
+  <br/>![](images/addr_gettingstarted_ref.png)<br/>
 
-### Exporting Addressable Groups to packages 
-Create a group in the **Addressables Groups** window. When you are done modifying the group, save the project. Move the group asset and its respective schema assets into your package directory. In preparation for the import process keep the schema assets in one folder, separate from the group asset.
+* Drag the asset into a group on the __Addressables Groups__ window:
+  <br/>![](images/addr_gettingstarted_win.png)<br/>
 
-Any projects that use your package will need to have Addressables Assets package installed. In your `package.json` file, list `com.unity.addressables` as a dependency like so:
+* Put the asset in a Project folder that's marked as Addressable:
+  <br/>![](images/addr_gettingstarted_folder.png)<br/>
 
-```
-{
-    "name": "com.unity.example",
-    "version": "1.2.3",
-    "dependencies": {
-        "com.unity.addressables": "1.17.17"
-   }
-}
-```
+Once you make an asset Addressable, the Addressables system adds it to a default group (unless you place it in a specific group). Addressables packs assets in a group into [AssetBundles] according to your group settings when you make a [content build]. You can load these assets using the [Addressables API].
 
-### Importing Addressable Groups from packages
+> [!NOTE] 
+> If you make an asset in a [Resources folder] Addressable, Unity moves the asset out of the Resources folder. You can move the asset to a different folder in your Project, but you cannot store Addressable assets in a Resources folder.
 
-Importing a group from another project directly, including from a package doesn't set all the internal references correctly. You can either reset these references by creating a custom script or use the Import Groups tool available with the package samples.
+## Using an Addressable Asset
 
-#### Import Groups Tool
+To load an Addressable Asset, you can:
 
-The Addressables package comes with several code samples, including an *Import Groups* tool. The Samples folder can be added to the project through the Addressables page in Package Manager. 
+* [Use an AssetReference referencing the asset]
+* [Use its address string]
+* [Use a label assigned to the asset]
 
-1. Create the default settings object via the **Addressables Groups** Window. Group assets must always be linked to a settings object in order to build your Addressables content. 
-2. If Samples is installed correctly there will be new options in the top menu bar. Go to **Window** > **Asset Management** > **Addressables** > **Import Groups** to open the Import Groups Window. 
-3. Enter the group path (i.e. `Packages/com.unity.example/MyGroup.asset`) and click **Import Groups**. This will copy the group to the default location (`Assets/AddressableAssetsData`) and link the group to the default settings object. Using the copy will prevent any unintentional modifications to the original asset in the package. 
-4. Enter group name (i.e. `MyGroup`) if it's not already auto-populated and the schema folder path (i.e. `Packages/com.unity.example/Schemas`). Then click **Import Schemas**. This will copy the schemas to the default location (`Assets/AddressableAssetsData`) and link them to the specified group. It will also reset the build and load paths of a “Content Packing & Unloading” schema to the LocalBuildPath and LocalLoadPath. The references we just modified are stored internally as GUIDs, which are project-specific. Relinking the schemas and resetting the paths allow them to be properly evaluated in the current project. 
+See [Loading assets] for more detailed information about loading Addressable assets.
 
-At this point your group can now be included in the next Addressables build. If you want to modify the package group asset again, make sure to close all projects that use the package and reopen them once you save all modifications. This will reload the group asset. You will need to do the import process again for any projects that use the package.
+Loading Addressable assets uses asynchronous operations. See [Operations] for information about the different ways to tackle asynchronous programing in Unity scripts.
 
-## Using Addressable Assets
-### Loading or instantiating by address
-You can load or instantiate an Addressable Asset at runtime. Loading an asset loads all dependencies into memory (including the AssetBundle data if applicable), allowing you to use the asset when you need to.  This does not actually put the desired asset into your scene. To add the asset to your scene you must instantiate.  Using Addressables instantiation interfaces will load the asset, then immediately adds it to your Scene. 
+> [!TIP]
+> You can find more involved examples of how to use Addressable assets in the [Addressables-Sample repo].
 
-To access an asset from your game script using a string address, declare the [`UnityEngine.AddressableAssets`](xref:UnityEngine.AddressableAssets) namespace, then call the following methods:
+### Using AssetReferences
 
-```
-Addressables.LoadAssetAsync<GameObject>("AssetAddress");
-```
+To use an AssetReference, add an AssetReference field to a MonoBehaviour or ScriptableObject. After you create an object of that type, you can assign an asset to the field in your object's Inspector window. 
 
-This loads the asset with the specified address.
+> [!NOTE]
+> If you assign a non-Addressable asset to an AssetReference field, Unity automatically makes that asset Addressable and adds it to your default Addressables group. AssetReferences also let you use Addressable assets in a Scene that isn't itself Addressable.
 
-```
-Addressables.InstantiateAsync("AssetAddress");
-```
+Unity does not load or release the referenced asset automatically; you must load and release the asset using the Addressables API:
 
-This instantiates the asset with the specified address into your Scene.
+[!code-cs[sample](../Samples/DocSampleCode/LoadWithReference.cs#doc_LoadWithReference)]
 
-**Note**: [`LoadAssetAsync`](xref:UnityEngine.AddressableAssets.Addressables.LoadAssetAsync``1(System.Object)) and [`InstantiateAsync`](xref:UnityEngine.AddressableAssets.Addressables.InstantiateAsync(System.Object,UnityEngine.Transform,System.Boolean,System.Boolean)) are asynchronous operations. You may provide a callback to work with the asset when it finishes loading (see documentation on [**Async operation handling**](AddressableAssetsAsyncOperationHandle.md) for more information).
-
-```
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine.AddressableAssets;
+<!--
+``` csharp
 using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
-public class AddressablesExample : MonoBehaviour {
+public class LoadFromReference : MonoBehaviour
+{
+  // Assign in Editor
+  public AssetReference reference;
 
-    GameObject myGameObject;
-   
-        ...
-        Addressables.LoadAssetAsync<GameObject>("AssetAddress").Completed += OnLoadDone;
+  // Start the load operation on start
+  void Start() {
+    AsyncOperationHandle handle = reference.LoadAssetAsync<GameObject>();
+    handle.Completed += Handle_Completed;
+  }
+
+  // Instantiate the loaded prefab on complete
+  private void Handle_Completed(AsyncOperationHandle obj) {
+    if (obj.Status == AsyncOperationStatus.Succeeded) {
+      Instantiate(reference.Asset, transform);
+    } else {
+      Debug.LogError($"AssetReference {reference.RuntimeKey} failed to load.");
+    }
+  }
+
+  // Release asset when parent object is destroyed
+  private void OnDestroy() {
+    reference.ReleaseAsset();
+  }
+}
+```
+-->
+
+See [Loading an AssetReference] for additional information about loading AssetReferences.
+
+### Loading by address
+
+You can use the address string to load an Asset:
+
+[!code-cs[sample](../Samples/DocSampleCode/LoadWithAddress.cs#doc_LoadWithAddress)]
+
+<!--
+```csharp
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
+
+public class LoadFromAddress : MonoBehaviour { 
+    // Assign in Editor or in code
+    public string address;
+
+    // Retain handle to release asset and operation
+    private AsyncOperationHandle<GameObject> handle;
+
+    // Start the load operation on start
+    void Start() {
+        handle = Addressables.LoadAssetAsync<GameObject>(address);
+        handle.Completed += Handle_Completed;
     }
 
-    private void OnLoadDone(UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<GameObject> obj)
-    {
-        // In a production environment, you should add exception handling to catch scenarios such as a null result.
-        myGameObject = obj.Result;
+    // Instantiate the loaded prefab on complete
+    private void Handle_Completed(AsyncOperationHandle<GameObject> operation) {
+        if (operation.Status == AsyncOperationStatus.Succeeded) {
+            Instantiate(operation.Result, transform);
+        } else {
+            Debug.LogError($"Asset for {address} failed to load.");
+        }
+    }
+
+    // Release asset when parent object is destroyed
+    private void OnDestroy() {
+
+        Addressables.Release(handle);
     }
 }
 ```
+-->
 
-#### Sub-assets and components
-Sub-assets and components are special cases for asset loading.
+Remember that every time you load an Asset, you must also release it.
 
-##### Components 
-You cannot load a GameObject's component directly through Addressables. You must load or instantiate the GameObject, then retrieve the component reference from it. To see how you could extend Addressables to support component loading, see [our ComponentReference sample](https://github.com/Unity-Technologies/Addressables-Sample/tree/master/Basic/ComponentReference).
+See [Loading a single asset] for more information.
 
-##### Sub-assets
-The system supports loading sub-assets, but requires special syntax. Examples of potential sub-assets include sprites in a sprite sheet, or animation clips in an FBX file. For examples of loading sprites directly, see [our sprite loading sample](https://github.com/Unity-Technologies/Addressables-Sample/tree/master/Basic/Sprite%20Land)
+### Loading by label
 
-To load all sub-objects in an asset, you can use the following example syntax: 
-`Addressables.LoadAssetAsync<IList<Sprite>>("MySpriteSheetAddress");`
+You can load sets of assets that have the same label in one operation:
 
-To load a single sub-object in an asset, you could do this:
-`Addressables.LoadAssetAsync<Sprite>("MySpriteSheetAddress[MySpriteName]");`
+[!code-cs[sample](../Samples/DocSampleCode/LoadWithLabels.cs#doc_LoadWithLabels)]
 
-The names available within an asset are visible in the main Addressables group editor window. 
-In addition, you can use an [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) to access the sub-object of an asset.  See notes in the below section. 
+<!--
+```csharp
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
-For [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) objects specifically, note that the atlas inspector has a checkbox for **Include In Build**. This option does not determine whether the atlas itself is built into AssetBundles, rather it determines how items reference it. When you enable **Include in Build**, all dependency linkages remain intact. Thus, if you have an Addressable prefab sprite that is dependent on an atlas, the atlas will be pulled into an AssetBundle.  Similarly, if you explicilty mark the atlas as Addressable, the prefab will list the atlas bundle as a dependency, and things are hooked up properly at load time. If you disable **Include In Build**, the linkage is not preserved. When you load an Addressable prefab that is dependent on the atlas, the atlas will be requested, and you must load and manage the connection manually using [SpriteAtlasManager.atlasRequested](https://docs.unity3d.com/ScriptReference/U2D.SpriteAtlasManager-atlasRequested.html). In this scenario, you can still mark the atlas as Addressable to access each sprite manually. 
+public class LoadWithLabels : MonoBehaviour
+{
+    // Label strings to load
+    public List<string> keys = new List<string>(){"characters", "animals"};
 
-When viewing a [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) in the **Addressables Groups** window, ensure the [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) has been packed if you intend to view the sub-objects in the Window. This can be done by clicking **Pack Preview** in the inspector of the [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) object. If the [SpriteAtlas](https://docs.unity3d.com/Manual/class-SpriteAtlas.html) is packed and you still cannot see the sub-objects, check the **Show Sprite and Subobject Addresses** option is enabled; it is located in the **Tools** > **Groups View** menu of the **Addressables Groups** window.
+    // Operation handle used to load and release assets
+    AsyncOperationHandle<IList<GameObject>> loadHandle;
 
-### Using the AssetReference class
-The [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) class provides a way to access Addressable Assets without needing to know their addresses. To access an Addressable Asset using the `AssetReference` class:
+    // Load Addressables by Label
+    void Start() {
+        float x = 0, z = 0;
+        loadHandle = Addressables.LoadAssetsAsync<GameObject>(
+            keys, // Either a single key or a List of keys 
+            addressable => {
+                //Gets called for every loaded asset
+                if (addressable != null) {
+                    Instantiate<GameObject>(addressable,
+                        new Vector3(x++ * 2.0f, 0, z * 2.0f),
+                        Quaternion.identity,
+                        transform);
+                    if (x > 9) {
+                        x = 0;
+                        z++;
+                    }
+                }
+            }, Addressables.MergeMode.Union, // How to combine multiple labels 
+            false); // Whether to fail if any asset fails to load
+        loadHandle.Completed += LoadHandle_Completed;
+    }
 
-1. Select a GameObject from your Scene hierarchy or **Project** window.
-2. In the Inspector, click the **Add Component** button, then select the component type. Any serializable component can support an `AssetReference` variable (for example, a game script, ScriptableObject, or other serializable class).
-3. Add a public `AssetReference` variable in the component (for example, `public AssetReference explosion;`).
-4. In the Inspector, select which Addressable Asset to link to the object, by either dragging the asset from the **Project** window into the exposed `AssetReference` field, or choosing from the dropdown of previously defined Addressable Assets in your project (shown below).
+    private void LoadHandle_Completed(AsyncOperationHandle<IList<GameObject>> operation) {
+        if (operation.Status != AsyncOperationStatus.Succeeded)
+            Debug.LogWarning("Some assets did not load.");
+    }
 
-![Referencing an Addressable Asset via script component.](images/Inspectorreferenceselection2.png)</br>
-_Referencing an Addressable Asset via script component._
-
-To load or instantiate an [`AssetReference`](xref:UnityEngine.AddressableAssets.AssetReference) asset, call its corresponding method. For example:
-
+    private void OnDestroy() {
+        // Release all the loaded assets associated with loadHandle
+        Addressables.Release(loadHandle);
+    }
+}
 ```
-AssetRefMember.LoadAssetAsync<GameObject>();
-```
+-->
 
-or
+See [Loading multiple assets] for more information.
 
-```
-AssetRefMember.InstantiateAsync(pos, rot);
-```
+## Managing Addressable assets
 
-**Note**: As with normal Addressable Assets, [`LoadAssetAsync`](xref:UnityEngine.AddressableAssets.AssetReference.LoadAssetAsync``1) and [`InstantiateAsync`](xref:UnityEngine.AddressableAssets.AssetReference.InstantiateAsync(UnityEngine.Transform,System.Boolean)) are asynchronous operations. You may provide a callback to work with the asset when it finishes loading (see documentation on [**Async operation handling**](AddressableAssetsAsyncOperationHandle.md) for more information).
+To manage your Addressable assets, use the Addressables __Groups__ window. Use this window to create Addressables groups, move assets between groups, and assign addresses and labels to assets.
 
-##### Sub-assets
-If an asset that contains sub-assets (such as a SpriteAtlas or FBX) is added to an AssetReference, you are given the option to reference the asset itself, or a sub-asset.  The single dropdown you are used to seeing becomes two. The first selects the asset itself, and the second selects the sub-asset. If you select "<none>" in the second dropdown, that will be treated as a reference to the main asset. 
+When you first install and set up the Addressables package, it creates a default group for Addressable assets. The Addressables system assigns any assets you mark as Addressable to this group by default. In the early stages of a Project, you might find it acceptable to keep your assets in this single group, but as you add more content, you should consider creating additional groups so that you have better control over which resources your application loads and keeps in memory at any given time.
+
+Key group settings include:
+
+* Build path: where to save your content after a content build.
+* Load path: where your app or game looks for built content at runtime.
+
+> [!NOTE]
+> You can (and usually should) use Profile variables to set these paths. See [Profiles] for more information.
+
+* Bundle mode: how to package the content in the group into a bundle. You can choose the following options:
+    * One bundle containing all group assets
+    * A bundle for each entry in the group (particularly useful if you mark entire folders as Addressable and want their contents built together)
+    * A bundle for each unique combination of labels assigned to group assets
+* Content update restriction: Setting this value appropriately allows you to publish smaller content updates. See [Content update builds] for more information. If you always publish full builds to update your app and don't download content from a remote source, you can ignore this setting.
+
+For more information on strategies to consider when deciding how to organize your assets, see [Organizing Addressable assets].
+
+For more information on using the Addressables Groups window, see [Groups].
+
+## Building Addressable assets
+
+The Addressables content build step converts the assets in your Addressables groups into AssetBundles based on the [group settings] and the current platform set in the Editor.
+
+In Unity 2021.2+, you can configure the Addressables system to build your Addressables content as part of every Player build or you can build your content separately before making a Player build. See [Building Addressables content with Player builds] for more information about configuring these options.
+
+If you configure Unity to build your content as part of the Player build, use the normal __Build__ or __Build and Run__ buttons on the Editor [Build Settings] window to start a build. Unity builds your Addressables content as a pre-build step before it builds the Player.
+
+In earlier versions of Unity, or if you configure Unity to build your content separately, you must make an Addressables build using the __Build__ menu on the __Addressables Groups__ window as described in [Making builds]. The next time you build the Player for your project, it uses the artifacts produced by the last Addressables content build run for the current platform. See [Build scripting] for information about automating your Addressables build process.
+
+To initiate a content build from the Addressables Groups window:
+
+![](images/addr_gettingstarted_build.png)
+
+1. Open the Addressables Groups window (menu: __Windows > Asset Management > Addressables > Groups__).
+2. Choose an option from the __Build__ menu:
+    * __New Build__: perform a build with a specific build script. Use the __Default Build Script__ if you don't have your own custom one.
+    * __Update a Previous Build__: builds an update based on an existing build. To update a previous build, the Addressables system needs the `addressables_content_state.bin` file produced by the earlier build. You can find this file in the `Assets/AddressableAssetsData/Platform` folder of your Unity Project. See [Content Updates] for more information about updating content. 
+    * __Clean Build__: deletes cached build files. 
+
+By default, the build creates files in the locations defined in your [Profile] settings for the __LocalBuildPath__ and __RemoteBuildPath__ variables. The files that Unity uses for your player builds include AssetBundles (.bundle), catalog JSON and hash files, and settings files.
+
+> [!WARNING]
+> In most cases, you should not change the local build or load paths from their default values. If you do, you must copy the local build artifacts from your custom build location to the project's [StreamingAssets] folder before making a Player build. Altering these paths also precludes building your Addressables as part of the Player build. 
 
 
-## Build considerations
-### Local data in StreamingAssets
-The Addressable Asset System needs some files at runtime to know what to load and how to load it. Those files are generated when you build Addressables data and wind up in the `StreamingAssets` folder, which is a special folder in Unity that includes all its files in the build. When you build Addressables content, the system stages those files in the Library. Then, when you build the application, the system copies the required files over to `StreamingAssets`, builds, and deletes them from the folder. This way, you can build data for multiple platforms while only having the relevant data included in each build. 
+If you have groups that you build to the __RemoteBuildPath__, it is your responsibility to upload those AssetBundles, catalog, and hash files to your hosting server. (If your Project doesn't use remote content, set all groups to use the local build and load paths.)
 
-In addition to the Addressables-specific data, any groups that build their data for local use will also use the Library platform-specific staging location. To verify that this works, set your build path and load paths to [profile variables](./AddressableAssetsProfiles.md) starting with `[UnityEngine.AddressableAssets.Addressables.BuildPath]` and `{UnityEngine.AddressableAssets.Addressables.RuntimePath}` respectively. You can specify these settings in the `AddressableAssetSettings` Inspector (by default, this object is located in your project's `Assets/AddressableAssetsData` directory).
+A content build also creates the following files that Addressables doesn't use directly in a player build:
 
-### Downloading in advance
-Calling the [`Addressables.DownloadDependenciesAsync()`](xref:UnityEngine.AddressableAssets.Addressables.DownloadDependenciesAsync(System.Object,System.Boolean)) method loads the dependencies for the address or label that you pass in. Typically, this is the AssetBundle.
+* `addressables_content_state.bin`: used to make a content update build. If you support dynamic content updates, you must save this file after each content release. Otherwise, you can ignore this file.
+* `AddressablesBuildTEP.json`: logs build performance data. See [Build Profiling].
 
-The [`AsyncOperationHandle`](AddressableAssetsAsyncOperationHandle.md) struct returned by this call includes a `PercentComplete` attribute that you can use to monitor and display download progress. You can also have the app wait until the content has loaded.
+See [Building Addressable content] for more information about how to set up and perform a content build.
 
-##### Regarding `PercentComplete`
-`PercentComplete` takes into account several aspects of the underlying operations being handled by a single `AsyncOperationHandle`.  There may be instances where the progression isn't linear, or some semblance of linear.  This can be due to quick operations being weighted the same as operations that will take longer.
+### Starting a full content build
 
-For example, given an asset you wish to load from a remote location that takes a non-trival amount of time to download and is reliant on a local bundle as a dependcy you'll see your `PercentComplete` jump to 50% before continuing.  This is because the local bundle is able to be loaded much quicker than the remote bundle.  However, all the system is aware of is the need for two operations to be complete. 
+To make a full content build:
 
-If you wish to ask the user for consent prior to download, use [`Addressables.GetDownloadSize()`](xref:UnityEngine.AddressableAssets.Addressables.GetDownloadSize(System.Object)) to return how much space is needed to download the content from a given address or label. Note that this takes into account any previously downloaded bundles that are still in Unity's asset bundle cache.
+1. Set the desired __Platform Target__ on the __Build Settings__ window.
+2. Open the __Addressables Groups__ window (menu: __Asset Management > Addressables > Groups__).
+3. Choose the__ New Build > Default Build Script__ command from the Build menu of the __Groups__ window.
 
-While it can be advantageous to download assets for your app in advance, there are instances where you might choose not to do so. For example:
+The build process starts.
 
-* If your app has a large amount of online content, and you generally expect users to only ever interact with a portion of it.
-* You have an app that must be connected online to function. If all your app's content is in small bundles, you might choose to download content as needed.
+After the build is complete, you can perform a player build and upload any remote files from your __RemoteBuildPath__ to your hosting server.
 
-Rather than using the percent complete value to wait until the content is loaded, you can use the preload functionality to show that the download has started, then continue on. This implementation would require a loading or waiting screen to handle instances where the asset has not finished loading by the time it's needed.
+> [!Important]
+> If you plan to publish remote content updates without rebuilding your application, you must preserve the `addressables_content_state.bin` file for each published build. Without this file, you can only create a full content build and player build, not an update. See [Content update builds] for more information.
 
-### Building for multiple platforms
-The Addressable Asset System generates AssetBundles containing your Addressable Assets when building application content. AssetBundles are platform-dependant, and thus must be rebuilt for every unique platform you intend to support.
+## Remote content distribution
 
-By default, when building Addressables app data, data for your given platform is stored in platform-specific subdirectories of the Addressables build path(s). The runtime path accounts for these platform folders, and points to the applicable app data.  
+You can use Addressables to support remote distribution of content through a Content Delivery Network (CDN) or other hosting service. Unity provides the Unity Cloud Content Delivery (CCD) service for this purpose, but you can use any CDN or host you prefer.
 
-**Note**: If you use the Addressables [`BuildScriptPackedPlayMode`](xref:UnityEditor.AddressableAssets.Build.DataBuilders.BuildScriptPackedPlayMode) script in the Editor Play mode, Addressables will attempt to load data for your current active build target. As such, issues may arise if your current build target data isn't compatible with your current Editor platform. For more information, see documentation on [Play mode scripts](AddressableAssetsDevelopmentCycle.md#play-mode-scripts).
+Before building content for remote distribution, you must:
 
-**Note**: If a group has a “Content Packing & Unloading” schema, its **Compression** mode can be modified in the **Inspector** window. For optimal asset loading times regardless of platform, only use **LZ4** for local content and **LZMA** for online content.
+* Enable the __Build Remote Catalog__ option in your AddressableAssetSettings (access using menu: __Windows > Asset Management > Addressables > Settings__).
+* Configure the __RemoteLoadPath__ in the [Profile] you use to publish content to reflect the remote URL at which you plan to access the content. 
+* For each Addressables group containing assets you want to deliver remotely, set the __Build Path__ to __RemoteBuildPath__ and the __Load Path__ to __RemoteLoadPath__.
+* Set desired __Platform Target__ on the Unity __Build Settings__ window.
 
-### Grouping assets
-It is a good practice to logically collect assets into multiple groups rather than put them all in one large group. The key benefit of this method is to avoid conflicts in version control systems (VCS) when multiple contributors make edits to the same file. Having one large asset group might result in the VCS's inability to cleanly merge these various changes.
+After you make a content build (using the Addressables __Groups__ window) and a player build (using the __Build Settings__ window), you must upload the files created in the folder designated by your profile's __RemoteBuildPath__ to your hosting service. The files to upload include:
 
-### Building scenes that are packed together
-After running a build where you have multiple Scenes in an Addressable Assets group, those Scenes will become interdependent if:
-* Under `Packed Assets` in the **Project** window, the group's Bundle Mode is set to **Pack Together**.
-* The Scenes in that group all have the same asset label, and the Bundle Mode is set to **Pack Together By Label**.
+* AssetBundles (name.bundle)
+* Catalog (catalog_timestamp.json)
+* Hash (catalog_timestamp.hash)
 
-If you modify even one of these grouped Scenes then perform a [content update build](ContentUpdateWorkflow.md#building-for-content-updates), all the interdependent Scenes will move together into a new Content Update group.
+See [Distributing remote content] for more information.
 
-### Loading Content Catalogs
-Content Catalogs are the data stores Addressables uses to look up an asset's physical location based on the key(s) provided to the system.  By default, Addressables builds the local content catalog for local Addressable Groups.  If the Build Remote Catalogs option is turned on under the AddressableAssetSettings, then one additional catalog is built to store locations for remote Addressable Groups.  Ultimately Addressables only uses one of these catalogs.  If a remote catalog is built and it has a different hash than the local catalog, it is downloaded, cached, and used in place of the built-in local catalog.
+## Incremental content updates
 
-It is possible, however, to specify additional Content Catalogs to be loaded.  There are different reasons you might decide loading additional catalogs is right for your project, such as building an art-only project that you want to use across different projects.
+When you distribute content remotely, you can reduce the amount of data your users need to download for an update by publishing incremental content update builds. An incremental update build allows you to publish remote bundles which contain only the assets that have changed since you last published an update rather than republishing everything. The assets in these smaller, updated bundles override the existing assets. 
 
-Should you find that loading additional catalogs is right for you, there is a method that can assist in this regard, `LoadContentCatalogAsync`.  
+> [!IMPORTANT]
+> You must turn on the [Build Remote Catalog] option before you publish a player build if you want to have the option to publish incremental updates. Without a remote catalog, an installed application doesn't check for updates.
 
-For `LoadContentCatalogAsync`, all that is required is for you to supply the location of the catalog you wish to load.  However, this alone does not use catalog caching, so be careful if you're loading a catalog from a remote location.  You will incur that WebRequest every time you need to load that catalog.
+For more detailed information about content updates, including examples, see [Content update builds].
 
-To help prevent you from needing to download a remote catalog every time, if you provide a `.hash` file with the hash of the catalog alongside the catalog you're loading, we can use this to properly cache your Content Catalog.  **Please Note:** The hash file does need to be in the same location and have the same name as your catalog.  The only difference to the path should be the extension.
+### Starting a content update build
 
-One additional note: You'll notice this method comes with a parameter `autoReleaseHandle`.  In order for the system to download a new remote catalog, any prior calls to `LoadContentCatalogAsync` that point to the catalog you're attempting to load need to be released.  Otherwise, the system picks up the Content Catalog load operation from our operation cache.  If the cached operation is picked up, the new remote catalog is not downloaded.  If set to true, the parameter `autoReleaseHandle` can ensure that the operation doesn't stick around in our operation cache after completing.
+To make a content update, rather than a full build:
+
+1. On the __Build Settings__ window, set the __Platform Target__ to match the target of the previous content build that you are now updating.
+2. Open the __Addressables Groups__ window (menu: __Asset Management > Addressables > Groups__).
+3. From the __Tools__ menu, run the __Check for Content Update Restrictions__ command.
+   The __Build Data File__ browser window opens. 
+4. Locate the `addressables_content_state.bin` file produced by the previous build. This file is in a subfolder of `Assets/AddressableAssestsData` named for the target platform. 
+5. Click __Open__.
+   The __Content Update Preview__ window searches for changes and identifies assets that must be moved to a new group for the update. If you have not changed any assets in groups set to "Cannot Change Post Release," then no changes will be listed in the preview. (When you change an asset in a group set to "Can Change Post Release," then Addressables rebuilds all the AssetBundles for the group; Addressables does not move the changed assets to a new group in this case.)
+6. Click __Apply Changes__ to accept any changes.
+7. From the __Build__ menu, run the__ Update a Previous Build__ command.
+8. Open the `addressables_content_state.bin` file produced by the previous build.
+
+The build process starts.
+
+After the build is complete, you can upload the files from your __RemoteBuildPath__ to your hosting server.
+
+> [!Important]
+> Addressables uses the `addressables_content_state.bin` file to identify which assets you changed. You must preserve a copy of this file for each published build. Without the file, you can only create a full content build, not an update.
+
+[AssetBundles]: xref:AssetBundlesIntro
+[Addressables API]: xref:addressables-api-load-asset-async
+[Addressables Settings]: xref:addressables-asset-settings
+[Addressables-Sample repo]: https://github.com/Unity-Technologies/Addressables-Sample
+[Build Profiling]: xref:addressables-build-profile-log
+[Build Remote Catalog]: xref:addressables-asset-settings#catalog
+[Building Addressable content]: xref:addressables-builds
+[content build]: xref:addressables-builds
+[Content update builds]: xref:addressables-content-update-builds
+[Content Updates]: xref:addressables-content-update-builds
+[Distributing remote content]: xref:addressables-remote-content-distribution
+[group settings]: xref:addressables-group-settings
+[Groups]: xref:addressables-groups
+[installed the Addressables package]: #installation
+[Loading a single asset]: xref:addressables-api-load-asset-async#loading-a-single-asset
+[Loading an AssetReference]: xref:addressables-api-load-asset-async#loading-an-assetreference
+[Loading assets]: xref:addressables-api-load-asset-async
+[Loading multiple assets]: xref:addressables-api-load-asset-async#loading-multiple-assets
+[Operations]: xref:addressables-async-operation-handling
+[Organizing Addressable Assets]: xref:addressables-assets-development-cycle#organizing-addressable-assets
+[Packages]: xref:PackagesList
+[Profile]: xref:addressables-profiles
+[Profiles]: xref:addressables-profiles
+[Resources folder]: xref:SpecialFolders
+[StreamingAssets]: xref:StreamingAssets
+[Use a label assigned to the asset]: #loading-by-label
+[Use an AssetReference referencing the asset]: #using-assetreferences
+[Use its address string]: #loading-by-address
+[Space Shooter project]: https://github.com/Unity-Technologies/Addressables-Sample/tree/master/Basic/SpaceShooter
+[Addressables-Sample]: https://github.com/Unity-Technologies/Addressables-Sample
+[Building Addressables content with Player builds]: xref:addressables-builds#build-with-player
+[Build Settings]: xref:PublishingBuilds

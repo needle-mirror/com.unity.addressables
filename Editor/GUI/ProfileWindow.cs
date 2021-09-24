@@ -141,13 +141,6 @@ namespace UnityEditor.AddressableAssets.GUI
             return s;
         }
 
-        void DeleteVariable(AddressableAssetProfileSettings.ProfileIdData toBeDeleted)
-        {
-            Undo.RecordObject(settings, "Profile Variable Deleted");
-            settings.profileSettings.RemoveValue(toBeDeleted.Id);
-            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(settings);
-        }
-
         void TopToolbar(Rect toolbarPos)
         {
             if (m_ButtonStyle == null)
@@ -164,8 +157,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     var menu = new GenericMenu();
                     menu.AddItem(new GUIContent("Profile"), false, NewProfile);
-                    menu.AddItem(new GUIContent("Variable (All Profiles)"), false, () => EditorApplication.delayCall += NewVariable);
-                    menu.AddItem(new GUIContent("Build & Load Path Variables (All Profiles)"), false, () => EditorApplication.delayCall += NewPathPair);
+                    menu.AddItem(new GUIContent("Variable (All Profiles)"), false, () => NewVariable(rMode));
+                    menu.AddItem(new GUIContent("Build and Load Path Variables (All Profiles)"), false, () => NewPathPair(rMode));
                     menu.DropDown(rMode);
                 }
                 GUILayout.FlexibleSpace();
@@ -174,11 +167,12 @@ namespace UnityEditor.AddressableAssets.GUI
             GUILayout.EndArea();
         }
 
-        void NewVariable()
+        void NewVariable(Rect displayRect)
         {
             try
             {
-                PopupWindow.Show(new Rect(position.x, position.y + k_ToolbarHeight, position.width, k_ToolbarHeight),
+                displayRect.y += 22f;
+                PopupWindow.Show(displayRect,
                     new ProfileNewVariablePopup(position.width, position.height, 0, m_ProfileTreeView, settings));
             }
             catch (ExitGUIException)
@@ -187,11 +181,12 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        void NewPathPair()
+        void NewPathPair(Rect displayRect)
         {
             try
             {
-                PopupWindow.Show(new Rect(position.x, position.y + k_ToolbarHeight, position.width, k_ToolbarHeight),
+                displayRect.y += 22f;
+                PopupWindow.Show(displayRect,
                     new ProfileNewPathPairPopup(position.width, position.height, 0, m_ProfileTreeView, settings));
             }
             catch (ExitGUIException)
@@ -257,11 +252,14 @@ namespace UnityEditor.AddressableAssets.GUI
                 bool? foldout;
                 m_foldouts.TryGetValue(groupType.GroupTypePrefix, out foldout);
                 GUILayout.Space(5);
-                EditorGUILayout.BeginHorizontal(new GUILayoutOption[] { GUILayout.Width(fieldWidth + k_VariableItemPadding - k_SplitterThickness), GUILayout.MinWidth(fieldWidth + k_VariableItemPadding - k_SplitterThickness) });
+                Rect pathPairRect = EditorGUILayout.BeginHorizontal(new GUILayoutOption[] { GUILayout.Width(fieldWidth + k_VariableItemPadding - k_SplitterThickness), GUILayout.MinWidth(fieldWidth + k_VariableItemPadding - k_SplitterThickness) });
                 m_foldouts[groupType.GroupTypePrefix] = EditorGUILayout.Foldout(foldout != null ? foldout.Value : true, groupType.GroupTypePrefix, true);
                 Rect dsDropdownRect = EditorGUILayout.BeginHorizontal(new GUILayoutOption[] { GUILayout.Width(fieldWidth - m_LabelWidth), GUILayout.MinWidth(fieldWidth - m_LabelWidth) });
                 string dropdownText = DetermineOptionString(groupType);
                 bool dsDropdown = EditorGUILayout.DropdownButton(new GUIContent(dropdownText), FocusType.Keyboard, new GUILayoutOption[] { GUILayout.Width(fieldWidth - m_LabelWidth) });
+                if (evt.type == EventType.ContextClick)
+                    CreatePairPrefixContextMenu(variablesPaneRect, pathPairRect, groupType, evt);
+
                 EditorGUILayout.EndHorizontal();
                 EditorGUILayout.EndHorizontal();
                 DrawDataSourceDropDowns(dsDropdownRect, groupType, dsDropdown);
@@ -283,15 +281,11 @@ namespace UnityEditor.AddressableAssets.GUI
                     EditorGUI.indentLevel++;
 
                     //Displaying Path Groups
-                    foreach(var variable in pathVariables)
+                    foreach (var variable in pathVariables)
                     {
                         Rect newPathRect = EditorGUILayout.BeginVertical();
-                        string newPath = EditorGUILayout.TextField(groupType.GetName(variable), variable.Value, new GUILayoutOption[]{ GUILayout.Width(fieldWidth)});
+                        string newPath = EditorGUILayout.TextField(groupType.GetName(variable), variable.Value, new GUILayoutOption[] { GUILayout.Width(fieldWidth) });
                         EditorGUILayout.EndVertical();
-                        if (evt.type == EventType.ContextClick)
-                        {
-                            CreateVariableContextMenu(variablesPaneRect, newPathRect, settings.profileSettings.GetProfileDataByName(groupType.GetName(variable)), evt);
-                        }
                         if (newPath != variable.Value && ProfileIndex == m_ProfileTreeView.lastClickedProfile)
                         {
                             Undo.RecordObject(settings, "Variable value changed");
@@ -409,7 +403,19 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        
+        void CreatePairPrefixContextMenu(Rect parentWindow, Rect menuRect, ProfileGroupType groupType, Event evt)
+        {
+            if (menuRect.Contains(evt.mousePosition))
+            {
+                GenericMenu menu = new GenericMenu();
+                menu.AddDisabledItem(new GUIContent(groupType.GroupTypePrefix));
+                menu.AddSeparator("");
+                menu.AddItem(new GUIContent("Rename Path Prefix (All Profiles)"), false, () => { RenamePathPair(groupType, parentWindow, menuRect); });
+                menu.AddItem(new GUIContent("Delete Path Pair (All Profiles)"), false, () => { DeletePathPair(groupType); });
+                menu.ShowAsContext();
+                evt.Use();
+            }
+        }
 
         //Creates the context menu for the selected variable
         void CreateVariableContextMenu(Rect parentWindow, Rect menuRect, AddressableAssetProfileSettings.ProfileIdData variable, Event evt)
@@ -426,6 +432,20 @@ namespace UnityEditor.AddressableAssets.GUI
                 evt.Use();
             }
         }
+        
+        void RenamePathPair(ProfileGroupType groupType, Rect parentWindow, Rect displayRect)
+        {
+            try
+            {
+                //Determines the current variable rect location
+                Rect variableRect = new Rect(parentWindow.x + 2.5f, displayRect.y + 1.5f, m_LabelWidth, k_ToolbarHeight * 2);
+                PopupWindow.Show(variableRect, new PathPairRenamePopup(m_LabelWidth, groupType, settings));
+            }
+            catch (ExitGUIException)
+            {
+                // Exception not being caught through OnGUI call
+            }
+        }
 
         //Opens ProfileRenameVariablePopup
         void RenameVariable(AddressableAssetProfileSettings.ProfileIdData profileVariable, Rect parentWindow, Rect displayRect)
@@ -433,13 +453,35 @@ namespace UnityEditor.AddressableAssets.GUI
             try
             {
                 //Determines the current variable rect location
-                Rect variableRect = new Rect(position.x + parentWindow.x + displayRect.x, position.y + parentWindow.y + displayRect.y, position.width, k_ToolbarHeight);
-                PopupWindow.Show(variableRect, new ProfileRenameVariablePopup(displayRect, profileVariable, settings));
+                Rect variableRect = new Rect(parentWindow.x + 2.5f, displayRect.y + 1.5f, m_LabelWidth, k_ToolbarHeight * 2);
+                PopupWindow.Show(variableRect, new ProfileRenameVariablePopup(m_LabelWidth, profileVariable, settings));
             }
             catch (ExitGUIException)
             {
                 // Exception not being caught through OnGUI call
             }
+        }
+
+        void DeletePathPair(ProfileGroupType groupType)
+        {
+            var buildPathData = settings.profileSettings.GetProfileDataByName(groupType.GroupTypePrefix + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kBuildPath);
+            var loadPathData = settings.profileSettings.GetProfileDataByName(groupType.GroupTypePrefix + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kLoadPath);
+            if (loadPathData == default(AddressableAssetProfileSettings.ProfileIdData) || buildPathData == default(AddressableAssetProfileSettings.ProfileIdData))
+            {
+                Debug.LogError("An error occured while getting one of the path pair variables.");
+                return;
+            }
+            Undo.RecordObject(settings, "Profile Variable Deleted");
+            settings.profileSettings.RemoveValue(buildPathData.Id);
+            settings.profileSettings.RemoveValue(loadPathData.Id);
+            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(settings);
+        }
+
+        void DeleteVariable(AddressableAssetProfileSettings.ProfileIdData toBeDeleted)
+        {
+            Undo.RecordObject(settings, "Profile Variable Deleted");
+            settings.profileSettings.RemoveValue(toBeDeleted.Id);
+            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(settings);
         }
 
         //Returns the BuildProfile currently selected in the ProfilesPane
@@ -495,24 +537,26 @@ namespace UnityEditor.AddressableAssets.GUI
                 Repaint();
         }
 
-        class ProfileRenameVariablePopup : PopupWindowContent
+        class PathPairRenamePopup : PopupWindowContent
         {
             internal Rect m_WindowRect;
-            internal AddressableAssetProfileSettings.ProfileIdData m_ProfileVariable;
+            internal ProfileGroupType m_ProfileGroupType;
+            internal List<ProfileGroupType> m_AllProfileGroupTypes;
             internal AddressableAssetSettings m_Settings;
             internal string m_NewName;
-            public ProfileRenameVariablePopup(Rect fieldRect, AddressableAssetProfileSettings.ProfileIdData profileVariable, AddressableAssetSettings settings)
+            internal float m_LabelWidth;
+            public PathPairRenamePopup(float labelWidth, ProfileGroupType profileGroupType, AddressableAssetSettings settings)
             {
-                m_WindowRect = fieldRect;
-                m_ProfileVariable = profileVariable;
+                m_LabelWidth = labelWidth;
+                m_ProfileGroupType = profileGroupType;
                 m_Settings = settings;
-                m_NewName = m_ProfileVariable.ProfileName;
+                m_NewName = profileGroupType.GroupTypePrefix;
                 UnityEngine.GUI.enabled = true;
             }
 
             public override Vector2 GetWindowSize()
             {
-                return new Vector2(m_WindowRect.width, m_WindowRect.height);
+                return new Vector2(m_LabelWidth, 40);
             }
 
             public override void OnGUI(Rect windowRect)
@@ -523,10 +567,80 @@ namespace UnityEditor.AddressableAssets.GUI
                 bool hitEnter = evt.type == EventType.KeyDown && (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter);
 
                 m_NewName = GUILayout.TextField(m_NewName);
-                if (hitEnter)
+                if (GUILayout.Button("Save") || hitEnter)
+                {
+                    if (string.IsNullOrEmpty(m_NewName))
+                        Debug.LogError("Path pair prefix cannot be empty.");
+                    else if (m_NewName == m_ProfileGroupType.GroupTypePrefix)
+                        editorWindow.Close();
+                    else if (VariableWithNewPrefixAlreadyExists())
+                        Debug.LogError("One or more build or load path variables with prefix '" + m_NewName + "' already exist. Please rename them or pick a different prefix.");
+                    else if (m_NewName.Trim().Length == 0) // new name cannot only contain spaces
+                        Debug.LogError("Path pair prefix cannot be only spaces");
+                    else
+                    {
+                        var loadPathVariableData = m_Settings.profileSettings.GetProfileDataByName(m_ProfileGroupType.GroupTypePrefix + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kLoadPath);
+                        var buildPathVariableData = m_Settings.profileSettings.GetProfileDataByName(m_ProfileGroupType.GroupTypePrefix + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kBuildPath);
+                        if (loadPathVariableData == default(AddressableAssetProfileSettings.ProfileIdData) || buildPathVariableData == default(AddressableAssetProfileSettings.ProfileIdData))
+                            Debug.LogError("Valid path pair to rename not found.");
+                        else
+                        {
+                            Undo.RecordObject(m_Settings, "Path pair prefix Renamed");
+                            m_ProfileGroupType.GroupTypePrefix = m_NewName;
+                            loadPathVariableData.SetName(m_ProfileGroupType.GroupTypePrefix + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kLoadPath, m_Settings.profileSettings);
+                            buildPathVariableData.SetName(m_ProfileGroupType.GroupTypePrefix + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kBuildPath, m_Settings.profileSettings);
+                            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(m_Settings, true);
+                            editorWindow.Close();
+                        }
+                    }
+                }
+                GUILayout.EndArea();
+            }
+
+            bool VariableWithNewPrefixAlreadyExists()
+            {
+                bool loadPathAlreadyExists = m_Settings.profileSettings.GetProfileDataByName(m_NewName + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kLoadPath) 
+                    != default(AddressableAssetProfileSettings.ProfileIdData);
+                bool buildPathAlreadyExists = m_Settings.profileSettings.GetProfileDataByName(m_NewName + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kBuildPath)
+                    != default(AddressableAssetProfileSettings.ProfileIdData);
+                return loadPathAlreadyExists || buildPathAlreadyExists;
+            }
+        }
+
+        class ProfileRenameVariablePopup : PopupWindowContent
+        {
+            internal float m_LabelWidth;
+            internal AddressableAssetProfileSettings.ProfileIdData m_ProfileVariable;
+            internal AddressableAssetSettings m_Settings;
+            internal string m_NewName;
+            public ProfileRenameVariablePopup(float labelWidth, AddressableAssetProfileSettings.ProfileIdData profileVariable, AddressableAssetSettings settings)
+            {
+                m_LabelWidth = labelWidth;
+                m_ProfileVariable = profileVariable;
+                m_Settings = settings;
+                m_NewName = m_ProfileVariable.ProfileName;
+                UnityEngine.GUI.enabled = true;
+            }
+
+            public override Vector2 GetWindowSize()
+            {
+                return new Vector2(m_LabelWidth, 40);
+            }
+
+            public override void OnGUI(Rect windowRect)
+            {
+                GUILayout.BeginArea(windowRect);
+
+                Event evt = Event.current;
+                bool hitEnter = evt.type == EventType.KeyDown && (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter);
+
+                m_NewName = GUILayout.TextField(m_NewName);
+                if (GUILayout.Button("Save") || hitEnter)
                 {
                     if (string.IsNullOrEmpty(m_NewName))
                         Debug.LogError("Variable name cannot be empty.");
+                    else if (m_NewName == m_ProfileVariable.ProfileName)
+                        editorWindow.Close();
                     else if (m_NewName != m_Settings.profileSettings.GetUniqueProfileEntryName(m_NewName))
                         Debug.LogError("Profile variable '" + m_NewName + "' already exists.");
                     else if (m_NewName.Trim().Length == 0) // new name cannot only contain spaces
@@ -632,7 +746,7 @@ namespace UnityEditor.AddressableAssets.GUI
             public override Vector2 GetWindowSize()
             {
                 float width = Mathf.Clamp(m_WindowWidth * 0.375f, Mathf.Min(600, m_WindowWidth - m_xOffset), m_WindowWidth);
-                float height = Mathf.Clamp(65, Mathf.Min(65, m_WindowHeight), m_WindowHeight);
+                float height = Mathf.Clamp(85, Mathf.Min(85, m_WindowHeight), m_WindowHeight);
                 return new Vector2(width, height);
             }
 
@@ -660,8 +774,8 @@ namespace UnityEditor.AddressableAssets.GUI
                     else
                     {
                         Undo.RecordObject(m_Settings, "Profile Path Pair Created");
-                        m_Settings.profileSettings.CreateValue(m_Name + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kBuildPath, m_BuildPath);
-                        m_Settings.profileSettings.CreateValue(m_Name + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kLoadPath, m_LoadPath);
+                        m_Settings.profileSettings.CreateValue(buildPathName, m_BuildPath);
+                        m_Settings.profileSettings.CreateValue(loadPathName, m_LoadPath);
                         AddressableAssetUtility.OpenAssetIfUsingVCIntegration(m_Settings);
                         m_ProfileTreeView.Reload();
                         editorWindow.Close();

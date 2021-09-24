@@ -64,7 +64,8 @@ namespace UnityEngine.ResourceManagement.Util
             Url = request.url;
         }
 
-        /// <inheritdoc />
+        /// <summary>Provides a new string object describing the result.</summary>
+        /// <returns>A newly allocated managed string.</returns>
         public override string ToString()
         {
             var sb = new StringBuilder();

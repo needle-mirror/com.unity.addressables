@@ -1,101 +1,72 @@
 ---
 uid: addressables-assets-development-cycle
 ---
-# Addressable Assets development cycle
-One of the key benefits of Addressable Assets is decoupling how you arrange, build, and load your content. Traditionally, these facets of development are heavily tied together. 
 
-## Traditional asset management
-If you arrange content in `Resources` directories, it gets built into the base application and you must load the content using the [`Resources.Load`](https://docs.unity3d.com/ScriptReference/Resources.Load.html) method, supplying the path to the resource. To access content stored elsewhere, you would use direct references or [AssetBundles](https://docs.unity3d.com/Manual/AssetBundlesIntro.html "AssetBundles"). If you use AssetBundles, you would again load by path, tying your load and organization strategies together. If your AssetBundles are remote, or have dependencies on other bundles, you have to write code to manage downloading, loading, and unloading all of your bundles.
+# Managing Addressables in the Editor
 
-## Addressable Asset management
-Giving an Asset an address allows you to load it using that address, no matter where it is in your Project or how you built the Asset.  You can change an Addressable Asset’s path or filename without issue. You can also move the Addressable Asset from the `Resources` folder, or from a local build destination, to some other build location (including remote ones), without ever changing your loading code.
+While it's impossible to comprehensively catalog all the different ways you can organize the assets in your project, [Organizing Addressable assets] outlines several considerations to take into account when you plan your organizational strategy.
 
-### Asset group schemas
-Schemas define a set of data. You can attach schemas to Asset groups in the Inspector. The set of schemas attached to a group defines how the build processes its contents. For example, when building in packed mode, groups with the [`BundledAssetGroupSchema`](xref:UnityEditor.AddressableAssets.Settings.GroupSchemas.BundledAssetGroupSchema) schema attached to them act as sources for asset bundles. You can combine sets of schemas into templates that you use to define new groups. You can add schema templates via the [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) Inspector.
+You should also understand [How Addressables interact with your Project assets] while you consider how to manage your assets.
 
-## Build scripts
-Build scripts are represented as [`ScriptableObject`](https://docs.unity3d.com/Manual/class-ScriptableObject.html) Assets in the Project that implement the [`IDataBuilder`](xref:UnityEditor.AddressableAssets.Build.IDataBuilder) interface. Users can create their own build scripts and add them to the [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) object through its Inspector. To apply a build script in the **Addressables Groups** window (**Window** > **Asset Management** > **Addressables** > **Groups**), select **Play Mode Script**, and choose a dropdown option. Currently, there are three scripts implemented to support the full application build, and three Play mode scripts for iterating in the Editor.
+Addressable [Groups] are the primary unit of organization with which you manage Addressable assets. An important consideration when using Addressables are your options for [Packing groups into AssetBundles].
 
-### Play mode scripts
-The Addressable Assets package has three build scripts that create Play mode data to help you accelerate app development.
+In addition to your group settings, you can use the following to control how Addressables work in a project:
 
-#### Use Asset Database (faster)
-Use Asset Database mode ([`BuildScriptFastMode`](xref:UnityEditor.AddressableAssets.Build.DataBuilders.BuildScriptFastMode)) allows you to run the game quickly as you work through the flow of your game. It loads Assets directly through the Asset database for quick iteration with no analysis or AssetBundle creation.
+* [Addressable Asset Settings]\: the Project-level settings
+* [Profiles]: defines collections of build path settings that you can switch between depending on the purpose of a build. (Primarily of interest if you plan to distribute content remotely.)
+* [Labels]: edit the Addressable asset labels used in your project.  
+* [Play Mode Scripts]: choose how the Addressables system loads assets when you enter Play mode in the Editor.
 
-****Please Note****: Modification's to Serialised Assets (Such as Prefab's and ScriptableObject's) loaded using Asset Database mode modifies the source Asset in the Project.
+[AssetReferences] provide a UI-friendly way to use Addressable assets. You can include AssetReference fields in your MonoBehaviour and ScriptableObject classes and then assign assets to them in the Editor using drag-and-drop or the object picker dialog.
 
-#### Simulate Groups (advanced)
-Simulate Groups mode ([`BuildScriptVirtualMode`](xref:UnityEditor.AddressableAssets.Build.DataBuilders.BuildScriptVirtualMode)) analyzes content for layout and dependencies without creating AssetBundles. Assets load from the Asset database though the [`ResourceManager`](xref:UnityEngine.ResourceManagement.ResourceManager), as if they were loaded through bundles. To see when bundles load or unload during game play, view the Asset usage in the [**Addressables Event Viewer** window](MemoryManagement.md#the-addressables-event-viewer) (**Window** > **Asset Management** > **Addressables** > **Event Viewer**).
+The Addressables system provides the following additional tools to aid development:
 
-Simulate Groups mode helps you simulate load strategies and tweak your content groups to find the right balance for a production release.
+* [Analyze tool]\: provides various analysis rules that you can run to verify that you have organized your assets the way you want, including a report on how Addressables will package your assets into bundles.
+* [Event viewer]: provides a profile view that shows when your assets are loaded and released.  Use the Event viewer to verify that you are releasing assets and to monitor peak memory use.
+* [Hosting Service]: provides a simple asset server that you can use to host remote assets for local development.
+* [Build layout report]: provides a description of the AssetBundles produced by a build.
+* [Build profile log]: profides a log profiling the build process itself so that you can see which parts take the longest.
 
-****Please Note****: Modification's to Serialised Assets (Such as Prefab's and ScriptableObject's) loaded using Asset Database mode modifies the source Asset in the Project.
+## Organizing Addressable Assets
 
-#### Use Existing Build (requires built groups)
-Use Existing Build mode most closely matches a deployed application build, but it requires you to build the data as a separate step. If you aren't modifying Assets, this mode is the fastest since it does not process any data when entering Play mode. You must either build the content for this mode in the **Addressables Groups** window (**Window** > **Asset Management** > **Addressables** > **Groups**) by selecting **Build** > **New Build** > **Default Build Script**, or using the [`AddressableAssetSettings.BuildPlayerContent()`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.BuildPlayerContent) method in your game script.
+There’s no single best way to organize your assets; it depends on the specific requirements of each project. Aspects to consider when planning how to manage your assets in a project include:
 
-If under **New Build** there is an unclickable **No Build Script Available**, check [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) in the Inspector and see **Build and Play Mode Scripts** section. In order to show up under **New Build** in **Addressables Groups** window , there must be a build script [`ScriptableObject`](https://docs.unity3d.com/Manual/class-ScriptableObject.html) that is able to build type [`AddressablesPlayerBuildResult`](xref:UnityEditor.AddressableAssets.Build.AddressablesPlayerBuildResult) paired with an entry in the **Build and Play Mode Scripts** section of the Inspector window for `AddressableAssetSettings`.  
+* Logical organization: keeping assets in logical categories can make it easier to understand your organization and spot items that are out of place.
+* Runtime performance: performance bottlenecks can occur if your bundles become very large, or alternatively if you have a very large number of bundles.
+* Runtime memory management: keeping assets together that you use together can help lower peak memory requirements.
+* Scale: some ways of organizing assets might work well in small games, but not large ones, and vice versa.
+* Platform characteristics: the characteristics and requirements of a platform can be a large consideration in how to organize your assets. Some examples:
+  * Platforms that provide abundant virtual memory can handle large bundle sizes better than those with limited virtual memory. 
+  * Some platforms don't support downloading content, ruling out remote distribution of assets entirely. 
+  * Some platforms don't support AssetBundle caching, so putting assets in local bundles, when possible, is more efficient.
+* Distribution: whether you distribute your content remotely or not means, at the very least, that you must separate your remote content from your local content.  
+* How often assets are updated: keep assets that you expect to update frequently separate from those that you plan to rarely update.
+* Version control: the more people who work on the same assets and asset groups, the greater the chance for version control conflicts to occur in a project.
 
-To add a new Build or Play Mode script, click the `+` under the **Build and Play Mode Scripts** section and find your build mode asset. Once it is added, if the script is a Play Mode script it will show up under **Window** > **Asset Management** > **Addressables** > **Groups** > **Play Mode Script**.  If the script is able to build [`AddressablesPlayerBuildResult`](xref:UnityEditor.AddressableAssets.Build.AddressablesPlayerBuildResult) it will show up under **Window** > **Asset Management** > **Addressables** > **Groups** > **Build** > **New Build**. Build and Play Mode scripts provided by default, including `BuildSciptPackedMode`, are located under `Assets/AddressableAssetsData/DataBuilders`. See earlier section "Build scripts" for more information on custom build scripts.
+## Common strategies
 
-## Build Addressables Content on Player Build
-When you modify Addressable assets during development, you must rebuild your Addressables content before you build the Player. You can run the Addressables content build as a separate step before building a Player or you can run both the Addressables content build and the Player build together. 
+Typical strategies include:
 
-Building Addressables content together with the Player can be convenient, but does increase build time, especially on large projects, since this rebuilds the Addressables content even when you haven't modified any assets. If you don't change your Addressables content between most builds, consider disabling this option.
+* Concurrent usage: group assets that you load at the same time together, such as all the assets for a given level. This strategy is often the most effective in the long term and can help reduce peak memory use in a project.
+* Logical entity: group assets belonging to the same logical entity together. For example, UI layout assets, textures, sound effects. Or character models and animations.
+* Type: group assets of the same type together. For example, music files, textures.
 
-The __Build Addressables on Player Build__ setting in the Project [Addressable Asset Settings](AddressableAssetSettings.md#build) specifies which option to use for building Addressables content. You can choose the appropriate option for each Project or defer to the global Preferences setting (which you can find in the __Addressables__ section of your Unity Editor Preferences). When you set a Project-level setting, it applies to all contributors who build the Project. The Preferences setting applies to all Unity Projects that don't set a specific value.
+Depending on the needs of your project, one of these strategies might make more sense than the others. For example, in a game with many levels, organizing according to concurrent usage might be the most efficient both from a project management and from a runtime memory performance standpoint. At the same time, you might use different strategies for different types of assets. For example, your UI assets for menu screens might all be grouped together in a level-based game that otherwise groups its level data separately. You might also pack a group that contains the assets for a level into bundles that contain a particular type of asset.
 
-> [!NOTE] 
-> Building Addressables on Player Build requires Unity 2021.2+. In earlier versions of Unity, you must build your Addressables content as a separate step.
+See [Preparing Assets for AssetBundles] for additional information.
 
-## Analysis and debugging
-By default, Addressable Assets only logs warnings and errors. You can enable detailed logging by opening the **Player** settings window (**Edit** > **Project Settings...** > **Player**), navigating to the **Other Settings** > **Configuration** section, and adding "`ADDRESSABLES_LOG_ALL`" to the **Scripting Define Symbols** field. 
-
-You can also disable exceptions by unchecking the **Log Runtime Exceptions** option in the [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) object Inspector. You can implement the [`ResourceManager.ExceptionHandler`](xref:UnityEngine.ResourceManagement.ResourceManager.ExceptionHandler) property with your own exception handler if desired, but this should be done after Addressables finishes runtime initialization (see below).
-
-Enable the [build layout report](DiagnosticTools.md#build-layout-report) to get information and statistics about your content builds. You can use this report to help verify that your builds are creating your bundles as you expect.
-
-## Initialization objects
-You can attach objects to the Addressable Assets settings and pass them to the initialization process at runtime. The [`CacheInitializationSettings`](xref:UnityEditor.AddressableAssets.Settings.CacheInitializationSettings) object controls Unity's caching API at runtime. To create your own initialization object, create a ScriptableObject that implements the [`IObjectInitializationDataProvider`](xref:UnityEngine.ResourceManagement.Util.IObjectInitializationDataProvider) interface. This is the Editor component of the system responsible for creating the [`ObjectInitializationData`](xref:UnityEngine.ResourceManagement.Util.ObjectInitializationData) that is serialized with the runtime data.
-
-## Customizing URL Evaluation
-There are several scenarios where you will need to customize the path or URL of an Asset (an AssetBundle generally) at runtime.  The most common example is creating signed URLs.  Another might be dynamic host determination.  
-
-The code below is an example of appending a query string to all URLs:
-
-```
-//Implement a method to transform the internal ids of locations
-string MyCustomTransform(IResourceLocation location)
-{
-	if (location.ResourceType == typeof(IAssetBundleResource) && location.InternalId.StartsWith("http"))
-		return location.InternalId + "?customQueryTag=customQueryValue";
-	return location.InternalId;
-}
-
-//Override the Addressables transform method with your custom method.  This can be set to null to revert to default behavior.
-[RuntimeInitializeOnLoadMethod]
-static void SetInternalIdTransform()
-{
-	Addressables.InternalIdTransformFunc = MyCustomTransform;
-}
-```
-
-****Please Note****: When bundling video files into Addressables with the intent of loading them on the Android platform, you must create a [`CacheInitializationSettings`](xref:UnityEditor.AddressableAssets.Settings.CacheInitializationSettings) object, disable `Compress Bundles` on that object, then add it to the list of Initialization Objects on the [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) object if it has not been already.
-
-## Content update workflow
-Update workflow moved to a new page: [Content Update Workflow](ContentUpdateWorkflow.md)
-
-## Multiple Projects
-Some users find it beneficial to split their project into multiple Unity projects, such as isolating the artwork from the code to lessen import times.
-
-In order to take advantage of this multiple project setup you'll need to utilize [`Addressables.LoadContentCatalogAsync(...)`](xref:addressables-api-load-content-catalog-async) to load the content catalogs of your separate projects in your main project.
-
-A general multi-project workflow is as follows:
-1. Create your main project (Project A) and ancillary project(s) (Project(s) B, C, etc.).
-2. Add Addressables in each project and setup the desired Addressable Asset Entries.
-3. Build your Addressable Player Content for each project.
-4. In your main project, before attempting to load assets from the other projects, load the desired content catalogs from the other projects using `Addressables.LoadContentCatalogAsync(...)`
-5. Use Addressables as normal.
-
-Note: Ensure that the content catalogs and Asset Bundles of the other projects are reachable by the main project.  Setup any required hosting services beforehand.
-
+[Addressable Asset Settings]: xref:addressables-asset-settings
+[Analyze tool]: xref:addressables-analyze-tool
+[AssetReferences]: xref:addressables-asset-references
+[Event viewer]: xref:addressables-event-viewer
+[Groups]: xref:addressables-groups
+[Hosting Service]: xref:addressables-asset-hosting-services
+[How Addressables interact with your Project assets]: xref:addressables-managing-assets
+[Labels]: xref:addressables-labels
+[Organizing Addressable assets]: #organizing-addressable-assets
+[Play Mode Scripts]: xref:addressables-groups#play-mode-scripts
+[Profiles]: xref:addressables-profiles
+[Build layout report]: xref:addressables-build-layout-report
+[Build profile log]: xref:addressables-build-profile-log
+[Packing groups into AssetBundles]: xref:addressables-packing-groups
+[Preparing Assets for AssetBundles]: xref:AssetBundles-Preparing

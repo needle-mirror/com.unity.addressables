@@ -53,7 +53,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 }
 
                 var path = m_PI.ResourceManager.TransformInternalId(m_PI.Location);
-                if (File.Exists(path))
+                if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
+                {
+                    SendWebRequest(path);
+                }
+                else if (File.Exists(path))
                 {
 #if NET_4_6
                     if (path.Length >= 260)
@@ -63,10 +67,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     object result = ConvertText(text);
                     m_PI.Complete(result, result != null, result == null ? new Exception($"Unable to load asset of type {m_PI.Type} from location {m_PI.Location}.") : null);
                     m_Complete = true;
-                }
-                else if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
-                {
-                    SendWebRequest(path);
                 }
                 else
                 {

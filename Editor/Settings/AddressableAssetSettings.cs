@@ -1689,6 +1689,8 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <returns>The found entry or null.</returns>
         public AddressableAssetEntry FindAssetEntry(string guid, bool includeImplicit)
         {
+            if (includeImplicit && !AddressableAssetUtility.IsPathValidForEntry(AssetDatabase.GUIDToAssetPath(guid)))
+                return null;
             foreach (var g in groups)
             {
                 if (g != null)

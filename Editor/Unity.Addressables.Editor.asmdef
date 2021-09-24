@@ -21,7 +21,7 @@
         },
         {
             "name": "com.unity.services.ccd.management",
-            "expression": "",
+            "expression": "[1.0.0-pre.2,2.0.0)",
             "define": "ENABLE_CCD"
         }
     ]

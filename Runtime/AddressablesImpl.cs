@@ -1267,7 +1267,7 @@ namespace UnityEngine.AddressableAssets
             if (m_ActiveUpdateOperation.IsValid())
                 return m_ActiveUpdateOperation;
             if (catalogIds == null && !CatalogsWithAvailableUpdates.Any())
-                return m_ResourceManager.CreateChainOperation(CheckForCatalogUpdates(), depOp => UpdateCatalogs(CatalogsWithAvailableUpdates, autoReleaseHandle));
+                return m_ResourceManager.CreateChainOperation(CheckForCatalogUpdates(), depOp => UpdateCatalogs(CatalogsWithAvailableUpdates, autoReleaseHandle, autoCleanBundleCache));
 
             var op = new UpdateCatalogsOperation(this).Start(catalogIds == null ? CatalogsWithAvailableUpdates : catalogIds, autoCleanBundleCache);
             if (autoReleaseHandle)
@@ -1290,7 +1290,7 @@ namespace UnityEngine.AddressableAssets
         internal AsyncOperationHandle<bool> CleanBundleCache(IEnumerable<string> catalogIds)
         {
 #if !ENABLE_CACHING
-            return ResourceManager.CreateCompletedOperation(default(List<string>), "Caching not enabled. There is no bundle cache to modify.");
+            return ResourceManager.CreateCompletedOperation(false, "Caching not enabled. There is no bundle cache to modify.");
 #else
             if (catalogIds == null)
                 catalogIds = m_ResourceLocators.Select(s => s.Locator.LocatorId);
@@ -1314,10 +1314,14 @@ namespace UnityEngine.AddressableAssets
 
         internal AsyncOperationHandle<bool> CleanBundleCache(AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
         {
+#if !ENABLE_CACHING
+            return ResourceManager.CreateCompletedOperation(false, "Caching not enabled. There is no bundle cache to modify.");
+#else
             if (m_ActiveCleanBundleCacheOperation.IsValid() && !m_ActiveCleanBundleCacheOperation.IsDone)
                 return ResourceManager.CreateCompletedOperation(false, "Bundle cache is already being cleaned.");
             m_ActiveCleanBundleCacheOperation = new CleanBundleCacheOperation(this).Start(depOp);
             return m_ActiveCleanBundleCacheOperation;
+#endif
         }
     }
 }

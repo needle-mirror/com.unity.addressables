@@ -115,8 +115,10 @@ namespace UnityEngine.ResourceManagement
 
         /// <summary>
         /// Global exception handler.  This will be called whenever an IAsyncOperation.OperationException is set to a non-null value.
-        /// See the [ResourceManager.ExceptionHandler](xref:addressables-api-exception-handler) documentation for more details.
         /// </summary>
+        /// <example>
+        /// <code source="../../Samples/DocSampleCode/AddExceptionHandler.cs" region="doc_AddExceptionHandler" title="Adding a global exception hanlder"/>
+        /// </example>
         public static Action<AsyncOperationHandle, Exception> ExceptionHandler { get; set; }
 
         /// <summary>
@@ -129,7 +131,7 @@ namespace UnityEngine.ResourceManagement
         /// Checks for an internal id transform function and uses it to modify the internal id value.
         /// </summary>
         /// <param name="location">The location to transform the internal id of.</param>
-        /// <returns>If a transform func is set, use it to pull the local id. otheriwse the InternalId property of the location is used.</returns>
+        /// <returns>If a transform func is set, use it to pull the local id; otherwise, the InternalId property of the location is used.</returns>
         public string TransformInternalId(IResourceLocation location)
         {
             return InternalIdTransformFunc == null ? location.InternalId : InternalIdTransformFunc(location);

@@ -215,8 +215,17 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         {
             if (Event.current.type != EventType.Repaint)
                 return;
+            Rect drawRect = new Rect(rect);
+            if (state.scrollPos.y > drawRect.y)
+            {
+                drawRect.height = drawRect.height - (state.scrollPos.y - drawRect.y);
+                drawRect.y = drawRect.y + (state.scrollPos.y - drawRect.y);
+            }
 
-            rect = new Rect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2);
+            if (drawRect.height < 10)
+                return;
+            
+            drawRect = new Rect(drawRect.x + 1, drawRect.y + 1, drawRect.width - 2, drawRect.height - 2);
             GraphDefinition gd;
             if (!m_GraphDefinitions.TryGetValue(dataSet.Graph, out gd))
                 return;
@@ -232,7 +241,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             int maxValue = gd.GetMaxValue(dataSet);
             
             foreach (var l in gd.layers)
-                l.Draw(dataSet, rect, startTime, duration, m_InspectFrame, expanded, m_GraphMaterial, maxValue);
+                l.Draw(dataSet, drawRect, startTime, duration, m_InspectFrame, expanded, m_GraphMaterial, maxValue);
         }
 
         public static MultiColumnHeaderState CreateDefaultHeaderState()

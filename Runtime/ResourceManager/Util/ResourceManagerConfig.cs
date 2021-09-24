@@ -522,7 +522,25 @@ namespace UnityEngine.ResourceManagement.Util
         /// <returns>Returns true if path should use WebRequest.</returns>
         public static bool ShouldPathUseWebRequest(string path)
         {
+            if (PlatformCanLoadLocallyFromUrlPath() && File.Exists(path))
+                return false;
             return path != null && path.Contains("://");
+        }
+
+        /// <summary>
+        /// Checks if the current platform can use urls for load loads.
+        /// </summary>
+        /// <returns>True if the current platform can use urls for local loads, false otherwise.</returns>
+        private static bool PlatformCanLoadLocallyFromUrlPath()
+        {
+            //For something so simple, this is pretty over engineered.  But, if more platforms come up that do this, it'll be easy to account for them.
+            //Just add runtime platforms to this list that do the same thing Android does.
+            List<RuntimePlatform> platformsThatUseUrlForLocalLoads = new List<RuntimePlatform>()
+            {
+                RuntimePlatform.Android
+            };
+
+            return platformsThatUseUrlForLocalLoads.Contains((Application.platform));
         }
 
         /// <summary>

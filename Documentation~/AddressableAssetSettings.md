@@ -1,87 +1,175 @@
 ---
-uid: addressable-asset-settings
+uid: addressables-asset-settings
 ---
+
 # Addressable Asset Settings
-The **Addressable Asset Settings** object defines system settings for your project's Addressables setup.
 
-To access these settings, open the AddressableAssetSettings Inspector (menu: **Window** > **Asset Management** > **Addressables** > **Settings**). You can also select the settings object directly in your Project window at `Assets/AddressableAssetsData/AddressableAssetSettings` after initialising Addressable Assets in your project.
+You can access the main Addressable system option on the __Addressable Asset Settings__ Inspector (menu: __Window > Asset Management > Addressables > Settings__). 
 
-When you perform a content build, the build process saves the settings needed at runtime to the `settings.json` data file. When you run your application in the Editor using the `Use Existing Build (requires built groups)` Playmode Script, you must rebuild your Addressable content to update `settings.json` if you have made changes. If you enter Play mode using the `Use Asset Database (fastest)` or `Simulate Groups (advanced)` scripts, the Addressables system uses the current values in AddressableAssetSettings, so you do not need to rebuild.
+The Addressables system stores the settings asset in the AddressableSettingsData folder (under your Project Assets folder). If this folder doesn't exist yet, you must initialize the Addressables system from the __Groups__ window  (menu: __Window > Asset Management > Addressables > Groups__). 
 
-![Addressable Asset Settings Inspector](images/AddressableAssetSettings.png)<br/>
-*Addressable Asset Settings Inspector*
+![](images/addr_settings_0.png)
 
-#### Manage Groups
-The **Manage Groups** button opens the Groups window. You can also open the Groups window from the menu **Window** > **Asset Management** > **Addressables** > **Groups**. 
-For more information see [Getting Started](AddressableAssetsGettingStarted.md).
+*The Addressable Asset Settings Inspector*
 
-#### Profile
-| **Property:** | **Function:** |
-|:---|:---|
-| **Profile In Use** | The active profile used to evaluate all profile variables during a build and when entering play mode. |
+The Inspector contains the following sections:
 
-The **Manage Profiles** button opens the Profiles window. You can also open the Groups window from the menu **Window** > **Asset Management** > **Addressables** > **Profiles**. For more information see [Addressable Assets Profiles](AddressableAssetsProfiles.md).
+* [Profile](#profile)
+* [Diagnostics]
+* [Catalog]
+* [Content Update]
+* [Downloads]
+* [Build]
+* [Build and Play Mode Scripts]
+* [Asset Group Templates]
+* [Initialization object list]
 
-#### Diagnostics
-| **Property:** | **Function:** |
-|:---|:---|
-| **Send Profiler Events** | Turning this on enables the use of the [Addressables Event Viewer](MemoryManagement.md#the-addressables-event-viewer). |
-| **Log Runtime Exceptions** | When enabled, the Addressables system logs runtime exceptions to the [Unity console](xref:Console). Note that the Addressables system does not throw exceptions at runtime when it encounters loading issues, instead it adds to the error state of the IAsyncOperation and, if this flag is enabled, logs the exception. |
+You can click the __Manage Groups__ button to open the [Groups window].
 
-#### Catalog
-| **Property:** | **Function:** |
-|:---|:---|
-| **Player Version Override** | Overrides the player version used to generated catalog names.<br/>If left blank, the catalog version name is a timestamp of the current UTC time in the form of "Year.Month.Day.Hour.Minute.Second". |
-| **Compress Local Catalog** | Whether the local catalog should be serialized in an asset bundle (compressed) or as json (uncompressed). A compressed catalog uses less space on disk, but must be decompressed when loaded, which can increase CPU usage. |
-| **Optimize Catalog Size** | Enables size optimization of content catalogs. This can increase CPU usage when loading the catalog. |
+## Profile
 
-#### Content Update
-| **Property** | **Function:** |
-|:---|:---|
-| **Disable Catalog Update on Startup** | Whether the Addressables system should skip the check for an updated content catalog when the Addressables system [initializes](InitializeAsync.md). <br/>Note that you can update the catalog later using [Addressables.UpdateCatalogs](UpdateCatalogs.md). |
-| **Content State Build Path** | The path to the folder in which to save the addressables_content_state.bin file. If empty, the file is saved to Assets/AddressableAssetsData. |
-| **Build Remote Catalog** | Whether a remote catalog should be built-for and loaded-by the app. When enabled, content builds generate .json and .hash files for the catalog to **Build Path** and the Addressables system loads these files from **Load Path** at runtime. The system caches the catalog and compares the remote .hash file to the cached version to determine if the catalog itself should be updated (along with any changed AssetBundles). In order to update content in an existing, built app, you must build and host a remote catalog. Overwriting the catalog is how the app gets informed of the updated content. See [Profiles](AddressableAssetsProfiles.md) for more information of configuring build and load paths.|
-| **- Build & Load Paths** | The pair of paths that determine where to build the content catalog for online retreival and the path or URL from which to load the remote content catalog. <br>For the build path, typically, this path should be the same as the build path that you use for your remote Addresssables groups, such as the `RemoteBuildPath` profile variable. <br> For the load path, typically this path should be the same as the load path that you use for your remote Addressables groups, such as the `RemoteLoadPath` profile variable. It is your responsibility to copy or upload the remote catalog files so that your app can access them at the specifiedc location.
+![](images/addr_settings_profiles.png)<br/>*Profile settings*
 
-#### Downloads
-| **Property:** | **Function:** |
-|:---|:---|
-| **Custom Certificate Handler** | The class to use for custom certificate handling.  This type must inherit from [UnityEngine.Networking.CertificateHandler](xref:Networking.CertificateHandler). |
-| **Max Concurrent Web Requests** | The maximum number of concurrent web requests.  This value is be clamped from 1 to 1024. |
-| **Catalog Download Timeout** | The number of seconds to wait before a catalog .hash or .json download times out. Set to 0 for no timeout. See [UnityWebRequest.timeout](xref:UnityWebRequest.timeout) for more information.|
+Use the __Profile in Use__ list to choose the active profile. The active profile determines the value of variables used by the Addressables build scripts. 
 
-#### Build
-| **Property:** | **Function:** |
-|:---|:---|
-| **Build Addressables on Player Build** | Whether Unity builds Addressables content as part of your Player build.<br/>&#8226; __Build Addressables content on Player Build__: Always build Addressables content when building the Player.<br/>&#8226; __Do not Build Addressables content on Player Build__: Never build Addressables content when building the Player. (If you modify Addressables content, you must rebuild it manually before building the Player.)<br/>&#8226; __Use global Settings (stored in preferences)__: Use the value specified in the Unity Editor Preferences (under __Addressables__).<br/><br/>The first two options override the global Preference for the current Project and affect all contributors who build the Project. Otherwise, the global, Preferences value applies to all Unity projects. See [Addressable Assets Development Cycle](AddressableAssetsDevelopmentCycle.md#build-addressables-content-on-player-build) for more information. |
-| **Ignore Invalid/Unsupported Files in Build** |  Whether unsupported files during build should be ignored or treated as an error. |
-| **Unique Bundle IDs** | When enabled, AssetBundles are assigned unique, more complex internal identifiers. This may result in more bundles being rebuilt. See [Content Update Workflow](ContentUpdateWorkflow.md#unique-bundle-ids) for more information. |
-| **Contiguous Bundles** | When enabled, the Addressables build script packs assets in bundles contiguously based on the ordering of the source asset, which results in improved asset loading times. Unity recommends that you enable this option. However, enabling this option does result in binary differences in the bundles produced. Disable this option if you've built bundles with a version of Addressables older than 1.12.1 and you want to minimize bundle changes. |
-| **Non-recursive Dependency Calculation** | Calculate and build asset bundles using Non-Recursive Dependency calculation methods. This approach helps reduce asset bundle rebuilds and runtime memory consumption. Unity recommends that you enable this option. However, enabling this option does result in binary differences in the bundles produced.<br>**Requires Unity 2019.4.19f1 or above** |
-| **Shader Bundle Naming Prefix** | Sets the naming convention used for the Unity built in shader bundle at build time.<br/>The recommended setting is Project Name. |
-| **- Shader Bundle Custom Prefix** | Custom Unity built-in shader bundle prefix that is used if AddressableAssetSettings.ShaderBundleNaming is set to ShaderBundleNaming.Custom. |
-| **Mono Bundle Naming Prefix** | Sets the naming convention used for the MonoScript bundle at build time. A MonoScript contains information for loading the corresponding runtime class.<br/>The recommended setting is Project Name |
-| **- Mono Bundle Custom Prefix** | Custom MonoScript bundle prefix that is used if AddressableAssetSettings.MonoScriptBundleNaming is set to MonoScriptBundleNaming.Custom. |
-| **Strip Unity Version from AssetBundles** | When enabled, Unity Editor Version is stripped from the header of the AssetBundle during a build. |
+Click the __Manage Profiles__ button to open the __Profiles__ window where you can create new profiles and change profile variables.
 
-#### Build and Play Mode Scripts
-Displays an orderable list of Build Scripts available to use for building Addressables. When Addressables is first set up for a Project, four Build Scripts are included:
+See [Profiles] for more information about profiles.
 
-| **Build Script Name:** | **Function:** |
-|:---|:---|
-| **Use Asset Database (fastest)** | Editor Playmode Script, loads Assets directly from the Project when requested from Addressables. |
-| **Simulate Groups (advanced)** | Editor Playmode Script, analyzes content for layout and dependencies without creating AssetBundles. Loads assets from the Asset database through the ResourceManager as if they were loaded through bundles. Simulates download speeds for remote AssetBundles and file loading speeds for local bundles by introducing a time delay. You can use the Addressables [Event Viewer](MemoryManagement.md#the-addressables-event-viewer) with this Play mode script. |
-| **Use Existing Build (requires built groups)** | Editor Playmode Script, loads Assets from bundles created by an earlier content build. You must run a full build using a Build Script such as `Default Build Script` before using this option. Remote content must be hosted at the **RemoteLoadPath** of the [Profile](AddressablesProfiles.md) used to build the content. |
-| **Default Build Script** | Performs a full build of your Addressables content. |
+## Diagnostics
 
-#### Asset Group Templates
-Displays an orderable list of Group Templates. The templates added here are shown in the Groups window, `Create > Group > "Template Name"` when you create a new group. The chosen template determines which schemas are added to your new group. When Addressables is first set up for a Project, a single `Packed Assets` template is included.
+![](images/addr_settings_diagnostics.png)<br/>*Diagnostics settings*
 
-| **Template Name:** | **Function:** |
-|:---|:---|
-| **Packed Assets** | Template for a Group that is setup for default local behavior. |
+| Property| Function |
+|:---|:---| 
+| __Send Profiler Events__| Enables profiler events. You must enable this setting to use the Addressables [Event Viewer] window. |
+| __Log Runtime Exceptions__| Logs runtime exceptions for asset loading operations (in addition to recording the error to the [AsyncOperationHandle.OperationException] property). |
 
-#### Initialization Objects
-Displays an orderable list of [Initialization Objects](AddressableAssetsDevelopmentCycle.md#initialization-objects). You can use InitializationObjects when defining custom Addressables runtime initialization behavior. When Addressables is first set up for a Project no initialization objects are included.
+> [!TIP]
+> By default, Addressable Assets only logs warnings and errors. You can enable detailed logging by opening the **Player** settings window (menu: **Edit** > **Project Settings...** > **Player**), navigating to the **Other Settings** > **Configuration** section, and adding "`ADDRESSABLES_LOG_ALL`" to the **Scripting Define Symbols** field.
 
-See [`CacheInitializationSettings`](xref:UnityEditor.AddressableAssets.Settings.CacheInitializationSettings) for an example of an InitializationObject.
+## Catalog
+
+![](images/addr_settings_catalog.png)<br/>*Catalog settings*
+
+Settings related to the Addressables Catalog, which maps the address of an asset to its physical location.
+
+| Property| Function |
+|:---|:---| 
+| __Player Version Override__| Overrides the timestamp used to formulate the remote catalog name. If set, the remote catalog is named, `Catalog_<Player Version Override>.json`. If left blank, then the timestamp is used. Note that when you use a unique remote catalog name for every new build, you can host multiple versions of your content at the same base URL. If you use the same override string for every build, then all players will load the new catalog. Note also that player update builds always use the same remote catalog name as the build they are updating (see [Content update builds]). |
+| __Compress Local Catalog__| Builds the catalog in a compressed AssetBundle file.<br/>Reduces the storage size of the catalog, but increases the time to build and to load the catalog. |
+| _Optimize Catalog Size_| Reduces the size of the catalog by creating a lookup table for internal IDs. Can increase the time required to load the catalog. |
+
+## Content Update
+
+![](images/addr_settings_content_update.png)<br/>*Content update settings*
+
+Settings that control remote content builds and updates.
+
+| Property| Function |
+|:---|:---| 
+| __Disable Catalog Update on Startup__| Disables the automatic check for an updated remote catalog when the Addressables system initializes at runtime. You can manually [check for an updated catalog]. |
+| __Content State Build Path__|Where to build the content state file produced by the default build script.|
+| __Build Remote Catalog__| Enable to build a remote catalog. |
+| __Build & Load Paths__ | Where to build and load the remote catalog. Choose a [Profile] path pair from the list or select `<custom>` if you want to set the build and load paths separately.<br/>Only visible when you enable **Build Remote Catalog**.|
+| __Build Path__| Where to build the remote catalog. Typically, you should use the _RemoteBuildPath_ [Profile] variable.<br/></br/>Only shown if you set __Build & Load Paths__ to `<custom>`.|
+| __Load Path__| The URL at which to access the remote catalog. Typically, you should use the _RemoteLoadPath_ [Profile] variable.<br/></br/>Only shown if you set __Build & Load Paths__ to `<custom>`.|
+
+## Downloads
+
+![](images/addr_settings_downloads.png)<br/>*Download settings*
+
+Settings that affect catalog and AssetBundle download handling.
+
+| Property| Function |
+|:---|:---| 
+| __Custom certificate handler__| The class to use for custom certificate handling. The list contains all classes in the project that extend [UnityEngine.Networking.CertificateHandler]. |
+| __Max Concurrent Web Requests__| The system queues any requests beyond this limit. |
+| __Catalog Download Timeout__ | How many seconds to wait for a catalog file to download. |
+
+## Build
+
+![](images/addr_settings_builds.png)<br/>*Build settings*
+
+Settings that affect all builds.
+
+| Property| Function |
+|:---|:---| 
+| **Build Addressables on Player Build** | Whether Unity builds Addressables content as part of your Player build.<br/>&#8226; __Build Addressables content on Player Build__: Always build Addressables content when building the Player.<br/>&#8226; __Do not Build Addressables content on Player Build__: Never build Addressables content when building the Player. (If you modify Addressables content, you must rebuild it manually before building the Player.)<br/>&#8226; __Use global Settings (stored in preferences)__: Use the value specified in the [Unity Editor Preferences] \(under __Addressables__).<br/><br/>The first two options override the global Preference for the current Project and affect all contributors who build the Project. Otherwise, the global, Preferences value applies to all Unity projects. See [Building content] for more information. |
+| __Ignore Invalid/Unsupported Files in Build__| If enabled, the Addressables build script excludes invalid or unsupported files rather than aborting the build. |
+| __Unique Bundle IDs__| Whether to produce a unique name for a bundle in every build. See [Unique Bundle IDs] for more information. |
+| __Contiguous Bundles__| Produces a more efficient bundle layout. If you have bundles produced by Addressables 1.12.1 or earlier, disable this option to minimize bundle changes. |
+| __Non-Recursive Dependency Calculation__ | Calculate dependencies without recursion. |
+| __Shader Bundle Naming Prefix__ | How to name the bundle produced for Unity shaders. |
+| __MonoScript Bundle Naming Prefix__ | How to name the bundle containing MonoScripts. |
+| __Strip Unity Version From AssetBundles__ | Whether to remove the Unity version from the bundle header. |
+| __Disable Visible Sub Asset Representations__ | Enable this option to improve build times if you do not use subobjects directly (Sprites, submeshes, etc). |
+
+## Build and Play Mode Scripts
+
+![](images/addr_settings_build_scripts.png)<br/>*Configured build and Play mode scripts*
+
+Configures the [IDataBuilder] scripts available in the project. If you create a custom Build or Play Mode script, you must add it to this list before you can use it.
+
+
+The Addressables packages contains a few build scripts that handle the default build processes and provide different ways to access your data in Play mode. You can find these scripts in the AddressableAssetData/DataBuilders folder.
+
+To add a custom script, click the __+__ button and locate your script in the project. The custom script must extend [BuildScriptBase] or implement [IDataBuilder].
+
+> [!NOTE]
+> Build scripts and Play Mode scripts both implement __[IDataBuilder]__. The system distinguishes between them by the data type of the result they produce. A build script produces an __[AddressablesPlayerBuildResult]__, while a Play Mode script produces an __[AddressablesPlayModeBuildResult]__. In a custom script, implement the __[CanBuildData]__ method.
+
+## Asset Group Templates
+
+![](images/addr_settings_group_templates.png)<br/>*Configured group templates*
+
+Defines the list of templates that you can use to create new groups. When you create a new template, you must add it to this list before you can use it.
+
+The Addressables package contains one template that includes the schemas used by the default build scripts. You can find the template in the AddressableAssetData/AssetGroupTemplates folder. 
+
+To add a custom template, click the __+__ button and locate your custom template asset in your project.
+
+See [Group templates] for information on creating custom templates.
+
+## Initialization object list
+
+![](images/addr_settings_init_objects.png)<br/>*Configured InitializationObjects*
+
+Configures the initialization objects for the project. Initialization objects are ScriptableObject classes that implement the [IObjectInitializationDataProvider] interface. You can create these objects to pass data to the Addressables initialization process at runtime. 
+
+To add an initialization object, click the __+__ button and locate your initialization object asset in the project.
+
+See [Customizing initialization] for more information.
+
+
+[Diagnostics]: #diagnostics
+[Content Update]: #content-update
+[Customizing initialization]: xref:addressables-api-initialize-async
+[Downloads]: #downloads
+[Build]: #build
+[AddressablesPlayerBuildResult]: xref:UnityEditor.AddressableAssets.Build.AddressablesPlayerBuildResult
+[Asset Group Templates]: #asset-group-templates
+[Build and Play Mode Scripts]: #build-and-play-mode-scripts
+[Catalog]: #catalog
+[check for an updated catalog]: xref:addressables-api-load-content-catalog-async#updating-catalogs
+[IDataBuilder]: xref:UnityEditor.AddressableAssets.Build.IDataBuilder
+[BuildScriptBase]: xref:UnityEditor.AddressableAssets.Build.DataBuilders.BuildScriptBase
+[Event Viewer]: xref:addressables-event-viewer
+[General]: #general
+[Group templates]: xref:addressables-group-settings#group-templates
+[Groups window]: xref:addressables-groups#groups-window
+[Groups]: xref:addressables-groups
+[Initialization object list]: #initialization-object-list
+[Initialization objects list]: #initialization-object-list
+[Initialization objects]: #initialization-object-list
+[IObjectInitializationDataProvider]: xref:UnityEngine.ResourceManagement.Util.IObjectInitializationDataProvider
+[Profile]: xref:addressables-profiles
+[Profiles]: xref:addressables-profiles
+[Unique Bundle IDs]: xref:addressables-content-update-builds#unique-bundle-ids-setting
+[UnityEngine.Networking.CertificateHandler]: xref:UnityEngine.Networking.CertificateHandler
+[AddressablesPlayModeBuildResult]: xref:UnityEditor.AddressableAssets.Build.AddressablesPlayModeBuildResult
+[CanBuildData]: xref:UnityEditor.AddressableAssets.Build.IDataBuilder.CanBuildData*
+[AsyncOperationHandle.OperationException]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.OperationException
+[Content update builds]: xref:addressables-content-update-builds
+[Unity Editor Preferences]: xref:addressables-configuration#unity-preferences
+[Building content]: xref:addressables-builds#build-with-player

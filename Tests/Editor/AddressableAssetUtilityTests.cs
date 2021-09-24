@@ -153,6 +153,8 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Assets/file.boo"));
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Assets/file.exe"));
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Assets/file.dll"));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Assets/file.preset"));
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Assets/file.asmdef"));
         }
 
         [Test]

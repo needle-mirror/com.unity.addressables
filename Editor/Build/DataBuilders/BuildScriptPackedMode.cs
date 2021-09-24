@@ -138,19 +138,24 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
         }
 
-        internal string GetBuiltInShaderBundleName(AddressableAssetsBuildContext aaContext)
+        internal static string GetBuiltInShaderBundleNamePrefix(AddressableAssetsBuildContext aaContext)
+        {
+            return GetBuiltInShaderBundleNamePrefix(aaContext.Settings);
+        }
+        
+        internal static string GetBuiltInShaderBundleNamePrefix(AddressableAssetSettings settings)
         {
             string value = "";
-            switch (aaContext.Settings.ShaderBundleNaming)
+            switch (settings.ShaderBundleNaming)
             {
                 case ShaderBundleNaming.DefaultGroupGuid:
-                    value = aaContext.Settings.DefaultGroup.Guid;
+                    value = settings.DefaultGroup.Guid;
                     break;
                 case ShaderBundleNaming.ProjectName:
                     value = Hash128.Compute(GetProjectName()).ToString();
                     break;
                 case ShaderBundleNaming.Custom:
-                    value = aaContext.Settings.ShaderBundleCustomNaming;
+                    value = settings.ShaderBundleCustomNaming;
                     break;
             }
 
@@ -170,19 +175,24 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
         }
 
-        internal string GetMonoScriptBundleName(AddressableAssetsBuildContext aaContext)
+        internal static string GetMonoScriptBundleNamePrefix(AddressableAssetsBuildContext aaContext)
+        {
+            return GetMonoScriptBundleNamePrefix(aaContext.Settings);
+        }
+
+        internal static string GetMonoScriptBundleNamePrefix(AddressableAssetSettings settings)
         {
             string value = null;
-            switch (aaContext.Settings.MonoScriptBundleNaming)
+            switch (settings.MonoScriptBundleNaming)
             {
                 case MonoScriptBundleNaming.ProjectName:
                     value = Hash128.Compute(GetProjectName()).ToString();
                     break;
                 case MonoScriptBundleNaming.DefaultGroupGuid:
-                    value = aaContext.Settings.DefaultGroup.Guid;
+                    value = settings.DefaultGroup.Guid;
                     break;
                 case MonoScriptBundleNaming.Custom:
-                    value = aaContext.Settings.MonoScriptBundleCustomNaming;
+                    value = settings.MonoScriptBundleCustomNaming;
                     break;
             }
 
@@ -218,12 +228,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     buildTargetGroup,
                     aaContext.Settings.buildSettings.bundleBuildPath);
 
-                var builtinShaderBundleName = GetBuiltInShaderBundleName(aaContext) + "_unitybuiltinshaders.bundle";
+                var builtinShaderBundleName = GetBuiltInShaderBundleNamePrefix(aaContext) + "_unitybuiltinshaders.bundle";
 
                 var schema = aaContext.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>();
                 AddBundleProvider(schema);
 
-                string monoScriptBundleName = GetMonoScriptBundleName(aaContext);
+                string monoScriptBundleName = GetMonoScriptBundleNamePrefix(aaContext);
                 if (!string.IsNullOrEmpty(monoScriptBundleName))
                     monoScriptBundleName += "_monoscripts.bundle";
                 var buildTasks = RuntimeDataBuildTasks(builtinShaderBundleName, monoScriptBundleName);
@@ -270,17 +280,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     }
                 }
 
-                // We need to have the bundleRename map which is calculated in PostProcessBundles. It would be nice to move that process
-                // to a build task, but there are lots of dependencies and it is messy to move.
-                if (ProjectConfigData.GenerateBuildLayout)
-                {
-                    List<IBuildTask> tasks = new List<IBuildTask>();
-                    var buildLayoutTask = new BuildLayoutGenerationTask();
-                    buildLayoutTask.m_BundleNameRemap = bundleRenameMap;
-                    tasks.Add(buildLayoutTask);
-                    BuildTasksRunner.Run(tasks, extractData.m_BuildContext);
-                }
-
                 ProcessCatalogEntriesForBuild(aaContext, m_Log, groups, builderInput, extractData.WriteData, carryOverCachedState, m_BundleToInternalId);
                 foreach (var postUpdateCatalogCallback in postCatalogUpdateCallbacks)
                     postUpdateCatalogCallback.Invoke();
@@ -295,6 +294,20 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     if (resultValue.GetType().GetProperty("includedSerializeReferenceFQN") != null)
                         m_Linker.AddSerializedClass(resultValue.GetType().GetProperty("includedSerializeReferenceFQN").GetValue(resultValue) as System.Collections.Generic.IEnumerable<string>);
 #endif
+                }
+
+
+                if (ProjectConfigData.GenerateBuildLayout)
+                {
+                    using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+                    {
+                        progressTracker.UpdateTask("Generating Build Layout");
+                        List<IBuildTask> tasks = new List<IBuildTask>();
+                        var buildLayoutTask = new BuildLayoutGenerationTask();
+                        buildLayoutTask.m_BundleNameRemap = bundleRenameMap;
+                        tasks.Add(buildLayoutTask);
+                        BuildTasksRunner.Run(tasks, extractData.m_BuildContext);
+                    }
                 }
             }
 
@@ -467,7 +480,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return true;
         }
 
-        internal string GetProjectName()
+        internal static string GetProjectName()
         {
             return new DirectoryInfo(Path.GetDirectoryName(Application.dataPath)).Name;
         }
@@ -669,9 +682,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
 
 #if UNITY_2022_1_OR_NEWER
-            string loadPath = schema.LoadPath.GetValue(aaContext.Settings);
-            if (loadPath.StartsWith("http://"))
-                Addressables.LogWarning($"Addressable group {assetGroup.Name} uses insecure http for its load path.  By default UnityWebRequests no longer allow http connections.");
+           string loadPath = schema.LoadPath.GetValue(aaContext.Settings);
+           if (loadPath.StartsWith("http://") && PlayerSettings.insecureHttpOption == InsecureHttpOption.NotAllowed)
+                Addressables.LogWarning($"Addressable group {assetGroup.Name} uses insecure http for its load path.  To allow http connections for UnityWebRequests, change your settings in Edit > Project Settings > Player > Other Settings > Configuration > Allow downloads over HTTP.");
 #endif
 
             var bundleInputDefs = new List<AssetBundleBuild>();
@@ -1022,12 +1035,19 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         ClearOtherCachedVersionsWhenLoaded = schema.AssetBundledCacheClearBehavior == BundledAssetGroupSchema.CacheClearBehavior.ClearWhenWhenNewVersionLoaded
                     };
                     dataEntry.Data = requestOptions;
-
-                    int extensionLength = Path.GetExtension(outputBundles[i]).Length;
-                    string[] deconstructedBundleName = outputBundles[i].Substring(0, outputBundles[i].Length - extensionLength).Split('_');
-                    string reconstructedBundleName = string.Join("_", deconstructedBundleName, 1, deconstructedBundleName.Length - 1) + ".bundle";
-
-                    outputBundles[i] = ConstructAssetBundleName(assetGroup, schema, info, reconstructedBundleName);
+                    
+                    if (assetGroup == assetGroup.Settings.DefaultGroup && info.Dependencies.Length == 0 && !string.IsNullOrEmpty(info.FileName) && (info.FileName.EndsWith("_unitybuiltinshaders.bundle") || info.FileName.EndsWith("_monoscripts.bundle")))
+                    {
+                        outputBundles[i] = ConstructAssetBundleName(null, schema, info, outputBundles[i]);
+                    }
+                    else
+                    {
+                        int extensionLength = Path.GetExtension(outputBundles[i]).Length;
+                        string[] deconstructedBundleName = outputBundles[i].Substring(0, outputBundles[i].Length - extensionLength).Split('_');
+                        string reconstructedBundleName = string.Join("_", deconstructedBundleName, 1, deconstructedBundleName.Length - 1) + ".bundle";
+                        outputBundles[i] = ConstructAssetBundleName(assetGroup, schema, info, reconstructedBundleName);
+                    }
+                    
                     dataEntry.InternalId = dataEntry.InternalId.Remove(dataEntry.InternalId.Length - buildBundles[i].Length) + outputBundles[i];
                     dataEntry.Keys[0] = outputBundles[i];
                     ReplaceDependencyKeys(buildBundles[i], outputBundles[i], locations);
@@ -1047,9 +1067,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
                 var targetPath = Path.Combine(path, outputBundles[i]);
                 var srcPath = Path.Combine(assetGroup.Settings.buildSettings.bundleBuildPath, buildBundles[i]);
+                
+                if (assetGroup.GetSchema<BundledAssetGroupSchema>()?.BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash)
+                    outputBundles[i] = StripHashFromBundleLocation(outputBundles[i]);
+                
                 bundleRenameMap.Add(buildBundles[i], outputBundles[i]);
                 MoveFileToDestinationWithTimestampIfDifferent(srcPath, targetPath, m_Log);
-
                 AddPostCatalogUpdatesInternal(assetGroup, postCatalogUpdateCallbacks, dataEntry, targetPath, registry);
 
                 registry.AddFile(targetPath);
@@ -1108,12 +1131,15 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// <returns>Returns the asset bundle name with the provided information.</returns>
         protected virtual string ConstructAssetBundleName(AddressableAssetGroup assetGroup, BundledAssetGroupSchema schema, BundleDetails info, string assetBundleName)
         {
-            string groupName = assetGroup.Name.Replace(" ", "").Replace('\\', '/').Replace("//", "/").ToLower();
-            assetBundleName = groupName + "_" + assetBundleName;
+            if (assetGroup != null)
+            {
+                string groupName = assetGroup.Name.Replace(" ", "").Replace('\\', '/').Replace("//", "/").ToLower();
+                assetBundleName = groupName + "_" + assetBundleName;
+            }
+            
             string bundleNameWithHashing = BuildUtility.GetNameWithHashNaming(schema.BundleNaming, info.Hash.ToString(), assetBundleName);
             //For no hash, we need the hash temporarily for content update purposes.  This will be stripped later on.
-            if (assetGroup.GetSchema<BundledAssetGroupSchema>()?.BundleNaming ==
-                BundledAssetGroupSchema.BundleNamingStyle.NoHash)
+            if (schema.BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash)
             {
                 bundleNameWithHashing = bundleNameWithHashing.Replace(".bundle", "_" + info.Hash.ToString() + ".bundle");
             }

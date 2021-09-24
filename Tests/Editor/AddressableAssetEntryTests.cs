@@ -270,6 +270,52 @@ namespace UnityEditor.AddressableAssets.Tests
                 Assert.IsTrue(subObjects.Contains(entry.TargetAsset));
             }
         }
+        
+        [Test]
+        public void WhenGettingFolderSubEntry_OnlyReturnsIfValidSubEntry()
+        {
+            AddressableAssetEntry mainFolderEntry = null;
+            AddressableAssetEntry subFolderEntry = null;
+            string testAssetFolder = GetAssetPath("TestFolder");
+            
+            try
+            {
+                //Setup
+                string testAssetSubFolder = Path.Combine(testAssetFolder, "SubFolder");
+
+                string mainPrefabPath = Path.Combine(testAssetFolder, "mainFolder.prefab").Replace('\\', '/');
+                string subPrefabPath = Path.Combine(testAssetSubFolder, "subFolder.prefab").Replace('\\', '/');
+
+                Directory.CreateDirectory(testAssetFolder);
+                PrefabUtility.SaveAsPrefabAsset(new GameObject("mainFolderAsset"), mainPrefabPath);
+
+                Directory.CreateDirectory(testAssetSubFolder);
+                PrefabUtility.SaveAsPrefabAsset(new GameObject("subFolderAsset"), subPrefabPath);
+
+                string mainFolderGuid = AssetDatabase.AssetPathToGUID(testAssetFolder);
+                string subFolderGuid = AssetDatabase.AssetPathToGUID(testAssetSubFolder);
+                mainFolderEntry = Settings.CreateOrMoveEntry(mainFolderGuid, m_testGroup, false);
+                subFolderEntry = Settings.CreateOrMoveEntry(subFolderGuid, m_testGroup, false);
+
+                //Test
+                var entry = mainFolderEntry.GetFolderSubEntry(mainPrefabPath);
+                Assert.IsNotNull(entry, "Prefab in main folder is expected to be valid subAsset of main folder.");
+                entry = mainFolderEntry.GetFolderSubEntry(subPrefabPath);
+                Assert.IsNull(entry, "Prefab in addressable sub folder is not expected to be valid subAsset of main folder.");
+
+                entry = subFolderEntry.GetFolderSubEntry(mainPrefabPath);
+                Assert.IsNull(entry, "Prefab in main folder is not expected to be valid subAsset of sub folder.");
+                entry = subFolderEntry.GetFolderSubEntry(subPrefabPath);
+                Assert.IsNotNull(entry, "Prefab in addressable sub folder is expected to be valid subAsset of sub folder.");
+            }
+            finally
+            {
+                //Cleanup
+                Settings.RemoveAssetEntry(mainFolderEntry, false);
+                Settings.RemoveAssetEntry(subFolderEntry, false);
+                Directory.Delete(testAssetFolder, true);
+            }
+        }
 
         [Test]
         public void WhenClassReferencedByAddressableAssetEntryIsReloaded_CachedMainAssetTypeIsReset()

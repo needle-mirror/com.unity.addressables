@@ -21,6 +21,8 @@ public class AddressablesPlayerBuildProcessor : BuildPlayerProcessor
     /// </summary>
     /// <remarks>
     /// Functor is invoked where Addressables settings state to build Addressables content when performing a Player build.
+    ///
+    /// Available in Unity 2021.2 or later.
     /// </remarks>
     public static Func<AddressableAssetSettings, AddressablesPlayerBuildResult> BuildAddressablesOverride { get; set; }
     
