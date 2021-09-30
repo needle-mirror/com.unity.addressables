@@ -42,10 +42,13 @@ namespace UnityEditor.AddressableAssets.Tests
         [SetUp]
         protected void Setup()
         {
-            m_BuilderInput = new AddressablesDataBuilderInput(Settings);
-            m_BuildScript = ScriptableObject.CreateInstance<BuildScriptPackedMode>();
-            m_BuildScript.InitializeBuildContext(m_BuilderInput, out m_BuildContext);
-            m_RuntimeData = m_BuildContext.runtimeData;
+            using (new IgnoreFailingLogMessage())
+            {
+                m_BuilderInput = new AddressablesDataBuilderInput(Settings);
+                m_BuildScript = ScriptableObject.CreateInstance<BuildScriptPackedMode>();
+                m_BuildScript.InitializeBuildContext(m_BuilderInput, out m_BuildContext);
+                m_RuntimeData = m_BuildContext.runtimeData;
+            }
         }
 
         [TearDown]

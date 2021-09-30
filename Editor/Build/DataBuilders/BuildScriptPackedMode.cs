@@ -686,6 +686,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
            if (loadPath.StartsWith("http://") && PlayerSettings.insecureHttpOption == InsecureHttpOption.NotAllowed)
                 Addressables.LogWarning($"Addressable group {assetGroup.Name} uses insecure http for its load path.  To allow http connections for UnityWebRequests, change your settings in Edit > Project Settings > Player > Other Settings > Configuration > Allow downloads over HTTP.");
 #endif
+            if (schema.Compression == BundledAssetGroupSchema.BundleCompressionMode.LZMA && aaContext.runtimeData.BuildTarget == BuildTarget.WebGL.ToString())
+                Addressables.LogWarning($"Addressable group {assetGroup.Name} uses LZMA compression, which cannot be decompressed on WebGL. Use LZ4 compression instead.");
 
             var bundleInputDefs = new List<AssetBundleBuild>();
             var list = PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema);

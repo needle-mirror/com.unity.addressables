@@ -490,7 +490,19 @@ namespace UnityEditor.AddressableAssets.GUI
             var assetPath = EditorUtility.OpenFilePanelWithFilters("Assets Group Templates", "Assets", new[] { "Group Template Object", "asset" });
             if (string.IsNullOrEmpty(assetPath))
                 return;
-            var templateObj = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath.Substring(assetPath.IndexOf("Assets/")));
+            if (assetPath.StartsWith(Application.dataPath) == false)
+            {
+                Debug.LogWarningFormat("Path at {0} is not an Asset of this project.", assetPath);
+                return;
+            }
+            
+            string relativePath = assetPath.Remove(0, Application.dataPath.Length-7);
+            var templateObj = AssetDatabase.LoadAssetAtPath<ScriptableObject>(relativePath);
+            if (templateObj == null)
+            {
+                Debug.LogWarningFormat("Failed to load Asset at {0}.", assetPath);
+                return;
+            }
             if (!typeof(IGroupTemplate).IsAssignableFrom(templateObj.GetType()))
             {
                 Debug.LogWarningFormat("Asset at {0} does not implement the IGroupTemplate interface.", assetPath);

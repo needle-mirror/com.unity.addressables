@@ -22,6 +22,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         void SetWaitForCompletionCallback(Func<bool> callback);
     }
 
+    [UnityEngine.Scripting.Preserve]
     internal class ProviderOperation<TObject> : AsyncOperationBase<TObject>, IGenericProviderOperation, ICachable
     {
         private bool m_ReleaseDependenciesOnFailure = true;

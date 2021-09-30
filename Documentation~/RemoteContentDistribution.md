@@ -107,6 +107,8 @@ You can control whether the bundles produced by a group are cached or not with t
 
 See [AssetBundle compression] for additional information about AssetBundle caching. The Addressables system sets the cache-related parameters of the [UnityWebRequests] it uses to download Addressable bundles based on the group settings.
 
+Note that there are some limitations for WebGL AssetBundles. For more information, see [Building and running a WebGL project].
+
 ## Pre-downloading remote content
 
 In situations where you want to pre-download content so that it is cached on disk and faster to access when the application needs it, you can use the [Addressables.DownloadDependenciesAsync]  method. This method downloads an Addressable entity and any dependencies as a background task.
@@ -167,6 +169,7 @@ To help prevent you from needing to download a remote catalog every time, if you
 [AssetBundle compression]: xref:AssetBundles-Cache
 [AsyncOperationHandle]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle
 [Build Remote Catalogs]: xref:addressables-asset-settings#catalog
+[Building and running a WebGL project]: xref:webgl-building#AssetBundles
 [CacheInitializationSettings]: xref:UnityEditor.AddressableAssets.Settings.CacheInitializationSettings
 [Caching.ClearCache]: xref:UnityEngine.Caching.ClearCache
 [Checking for content updates at runtime]: xref:addressables-content-update-builds#checking-for-content-updates-at-runtime

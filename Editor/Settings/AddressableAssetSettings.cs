@@ -1314,8 +1314,12 @@ namespace UnityEditor.AddressableAssets.Settings
                 List<string> aecPaths = new List<string>();
                 foreach (AddressableAssetGroup assetGroup in groups)
                 {
+                    if (assetGroup == null)
+                        continue;
                     foreach (var assetEntry in assetGroup.entries)
                     {
+                        if (assetEntry == null)
+                            continue;
                         if (typeof(AddressableAssetEntryCollection).IsAssignableFrom(assetEntry.MainAssetType))
                         {
                             aecPaths.Add(assetEntry.AssetPath);

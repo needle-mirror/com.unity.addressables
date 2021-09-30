@@ -64,7 +64,9 @@ namespace AddressableTests.SyncAddressables
         [SetUp]
         public void Setup()
         {
+#if ENABLE_CACHING
             Caching.ClearCache();
+#endif
             if (m_Addressables != null)
                 m_Addressables.WebRequestOverride = null;
         }

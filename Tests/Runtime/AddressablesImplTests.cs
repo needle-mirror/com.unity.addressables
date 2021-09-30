@@ -251,8 +251,9 @@ namespace AddressableAssetsIntegrationTests
             {
                 Assert.Ignore($"Skipping test {nameof(AddressablesImpl_DownloadDependenciesAsync_CanDownloadDependenciesFromKey)} for {TypeName}");
             }
-
+#if ENABLE_CACHING
             Caching.ClearCache();
+#endif
             string label = AddressablesTestUtility.GetPrefabLabel("BASE");
             AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(label);
             yield return op;

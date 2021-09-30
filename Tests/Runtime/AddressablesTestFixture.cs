@@ -49,7 +49,9 @@ public abstract class AddressablesTestFixture : IPrebuildSetup, IPostBuildCleanu
     [UnitySetUp]
     public virtual IEnumerator RuntimeSetup()
     {
+#if ENABLE_CACHING
         Caching.ClearCache();
+#endif
         Assert.IsNull(m_Addressables);
         m_Addressables = new AddressablesImpl(new LRUCacheAllocationStrategy(1000, 1000, 100, 10));
         m_RuntimeSettingsPath = m_Addressables.ResolveInternalId(GetRuntimeAddressablesSettingsPath(m_UniqueTestName));
