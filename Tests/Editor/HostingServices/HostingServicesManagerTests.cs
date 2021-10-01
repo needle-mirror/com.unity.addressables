@@ -413,6 +413,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             Assert.IsFalse(ProfileStringEvalDelegateIsRegistered(m_Settings, svc));
         }
 
+        [Ignore("Katana instability https://jira.unity3d.com/browse/ADDR-2327")]
         [Test]
         public void OnDisableShould_StopAllServices()
         {

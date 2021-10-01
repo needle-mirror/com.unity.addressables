@@ -206,11 +206,13 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             string folderPath = m_TestFolderPath + "/TestFolder";
             AssetDatabase.CreateFolder(m_TestFolderPath, "TestFolder");
-            File.Create(folderPath + "/.hiddenfile");
+            string filePath = Path.Combine(folderPath, ".hiddenfile");
+            File.Create(filePath).Close();
 
             List<string> assetPaths = EnumerateAddressableFolder(folderPath, Settings, true);
             Assert.AreEqual(0, assetPaths.Count);
 
+            File.Delete(filePath);
             AssetDatabase.DeleteAsset(folderPath);
         }
 

@@ -4,12 +4,12 @@
         {
              "ValidationTest": "API Validation",
              "ExceptionError": "",
-             "PackageVersion": "1.18.16"
+             "PackageVersion": "1.18.19"
        },
 	   {
              "ValidationTest": "Package Lifecycle Validation",
              "ExceptionError": "",
-             "PackageVersion": "1.18.16"
+             "PackageVersion": "1.18.19"
        }
     ]
 }
