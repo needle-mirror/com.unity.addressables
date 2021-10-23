@@ -25,7 +25,10 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 m_Group = value;
                 if (m_Group != null)
+                {
                     OnSetGroup(m_Group);
+                    Validate();
+                }
             }
         }
 
@@ -37,6 +40,11 @@ namespace UnityEditor.AddressableAssets.Settings
         {
         }
 
+        internal virtual void Validate()
+        {
+            
+        }
+        
         /// <summary>
         /// Used to display the GUI of the schema.
         /// </summary>

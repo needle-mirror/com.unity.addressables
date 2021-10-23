@@ -21,7 +21,7 @@ namespace UnityEditor.AddressableAssets.Settings
     /// <summary>
     /// Scriptable Object that holds data source setting information for the profile data source dropdown window
     /// </summary>
-    public class ProfileDataSourceSettings : ScriptableObject
+    public class ProfileDataSourceSettings : ScriptableObject, ISerializationCallbackReceiver
     {
         const string DEFAULT_PATH = "Assets/AddressableAssetsData";
         const string DEFAULT_NAME = "ProfileDataSourceSettings";
@@ -57,7 +57,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 aa = CreateInstance<ProfileDataSourceSettings>();
                 AssetDatabase.CreateAsset(aa, assetPath);
                 aa = AssetDatabase.LoadAssetAtPath<ProfileDataSourceSettings>(assetPath);
-                aa.profileGroupTypes.AddRange(CreateDefaultGroupTypes());
+                aa.profileGroupTypes = CreateDefaultGroupTypes();
                 EditorUtility.SetDirty(aa);
             }
             return aa;
@@ -81,9 +81,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             aa = AssetDatabase.LoadAssetAtPath<ProfileDataSourceSettings>(assetPath);
             if (aa == null)
-            {
                 return Create();
-            }
             return aa;
         }
 
@@ -91,21 +89,22 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Creates a list of default group types that are automatically added on ProfileDataSourceSettings object creation
         /// </summary>
         /// <returns>List of ProfileGroupTypes: Built-In and Editor Hosted</returns>
-        public static List<ProfileGroupType> CreateDefaultGroupTypes()
+        public static List<ProfileGroupType> CreateDefaultGroupTypes() => new List<ProfileGroupType>{CreateBuiltInGroupType(), CreateEditorHostedGroupType()};
+
+        static ProfileGroupType CreateBuiltInGroupType()
         {
-            List<ProfileGroupType> groupTypes = new List<ProfileGroupType>();
-            ProfileGroupType defaultBuiltIn = new ProfileGroupType("Built-In");
+            ProfileGroupType defaultBuiltIn = new ProfileGroupType(AddressableAssetSettings.LocalGroupTypePrefix);
             defaultBuiltIn.AddVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kBuildPath, AddressableAssetSettings.kLocalBuildPathValue));
             defaultBuiltIn.AddVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kLoadPath, AddressableAssetSettings.kLocalLoadPathValue));
+            return defaultBuiltIn;
+        }
 
-            ProfileGroupType defaultRemote = new ProfileGroupType("Editor Hosted");
+        static ProfileGroupType CreateEditorHostedGroupType()
+        {
+            ProfileGroupType defaultRemote = new ProfileGroupType(AddressableAssetSettings.EditorHostedGroupTypePrefix);
             defaultRemote.AddVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kBuildPath, AddressableAssetSettings.kRemoteBuildPathValue));
-            defaultRemote.AddVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kLoadPath, AddressableAssetSettings.kRemoteLoadPathValue));
-
-            groupTypes.Add(defaultBuiltIn);
-            groupTypes.Add(defaultRemote);
-
-            return groupTypes;
+            defaultRemote.AddVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kLoadPath, AddressableAssetSettings.RemoteLoadPathValue));
+            return defaultRemote;
         }
 
         /// <summary>
@@ -157,8 +156,8 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             if (showInfoLog) Addressables.Log("Syncing CCD Buckets and Badges.");
             var settings = GetSettings();
-            settings.profileGroupTypes = new List<ProfileGroupType>();
-            settings.profileGroupTypes.AddRange(CreateDefaultGroupTypes());
+            var profileGroupTypes = new List<ProfileGroupType>();
+            profileGroupTypes.AddRange(CreateDefaultGroupTypes());
 
             await CCDManagementAPIService.SetConfigurationAuthHeader(CloudProjectSettings.accessToken);
             var bucketDictionary = await GetAllBucketsAsync(projectId);
@@ -166,7 +165,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 var bucket = kvp.Value;
                 var badges = await GetAllBadgesAsync(projectId, bucket.Id.ToString());
-                if (badges.Count == 0) continue;
+                if (badges.Count == 0) badges.Add(new CcdBadge(name: "latest"));
                 foreach (var badge in badges)
                 {
                     var groupType = new ProfileGroupType($"CCD{ProfileGroupType.k_PrefixSeparator}{projectId}{ProfileGroupType.k_PrefixSeparator}{bucket.Id}{ProfileGroupType.k_PrefixSeparator}{badge.Name}");
@@ -181,9 +180,10 @@ namespace UnityEditor.AddressableAssets.Settings
                     string loadPath = $"https://{projectId}.client-api.unity3dusercontent.com/client_api/v1/buckets/{bucket.Id}/release_by_badge/{badge.Name}/entry_by_path/content/?path=";
                     groupType.AddVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kLoadPath, loadPath));
 
-                    settings.profileGroupTypes.Add(groupType);
+                    profileGroupTypes.Add(groupType);
                 }
             }
+            settings.profileGroupTypes = profileGroupTypes;
             if (showInfoLog) Addressables.Log("Successfully synced CCD Buckets and Badges.");
             EditorUtility.SetDirty(settings);
             AddressableAssetUtility.OpenAssetIfUsingVCIntegration(settings);
@@ -236,5 +236,36 @@ namespace UnityEditor.AddressableAssets.Settings
             return badges;
         }
 #endif
+        void ISerializationCallbackReceiver.OnBeforeSerialize()
+        {
+        }
+
+        void ISerializationCallbackReceiver.OnAfterDeserialize()
+        {
+            // Ensure static Group types have the correct string
+            // Local
+            var types = GetGroupTypesByPrefix(AddressableAssetSettings.LocalGroupTypePrefix);
+            if (types == null || types.Count == 0)
+                profileGroupTypes.Add(CreateBuiltInGroupType());
+            else
+            {
+                types[0].AddOrUpdateVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kBuildPath, 
+                    AddressableAssetSettings.kLocalBuildPathValue));
+                types[0].AddOrUpdateVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kLoadPath,
+                    AddressableAssetSettings.kLocalLoadPathValue));
+            }
+            
+            // Editor Hosted
+            types = GetGroupTypesByPrefix(AddressableAssetSettings.EditorHostedGroupTypePrefix);
+            if (types.Count == 0)
+                profileGroupTypes.Add(CreateEditorHostedGroupType());
+            else
+            {
+                types[0].AddOrUpdateVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kBuildPath,
+                    AddressableAssetSettings.kRemoteBuildPathValue));
+                types[0].AddOrUpdateVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kLoadPath,
+                    AddressableAssetSettings.RemoteLoadPathValue));
+            }
+        }
     }
 }

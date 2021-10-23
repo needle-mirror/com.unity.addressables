@@ -4,6 +4,17 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.19.11] - 2021-10-23
+- Fixed issue with missing reference exception when using addressables where content has not been built.
+- Added warning that LZMA compression is not available for WebGL AssetBundles.
+- Fixed issue were getting a Group Template fails where the project name or parent directory ended in "Assets".
+- Fixed issue where option to build Addressables when building a Player where displayed for unsupported editor versions.
+- Fixed issue where hosting services filters ip addresses when entering playmode and no services are in use
+- Fixed "Editor Hosted" LoadPath, to work with active local Editor hosting service
+- Fixed error where creating new groups would lead to errors if the default build and load path variables were not present in one's profile settings.
+- Modified the behavior of AssetReference.editorAsset and AssetReference.SetEditorAsset to be more consistent and intuitive
+- Fixed issue where upgrading from versions that didn't have ProfileGroupTypes was causing issues during builds.
+
 ## [1.19.9] - 2021-09-30
 - Fixing a compile error on platforms where the Caching API is stripped.
 - Updating ScriptableBuildPipeline dependency
@@ -55,6 +66,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 	- UnloadSceneAsync APIs with exposed UnloadSceneOptions parameter
 	- Addressables.CleanBundleCache
 	- New parameter for Addressables.UpdateCatalogs to auto clean the bundle cache
+       - ProfileGroupType introduces a new workflow of grouping profile variables in the Addressables Profiles window, otherwise known as path pairs.
 
 ## [1.18.15] - 2021-07-26
 - Improved Addressables inspector for Assets.

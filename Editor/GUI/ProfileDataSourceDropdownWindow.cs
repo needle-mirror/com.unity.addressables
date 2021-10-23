@@ -31,11 +31,20 @@ namespace UnityEditor.AddressableAssets.GUI
         internal string m_BucketId;
         internal string m_BucketName;
         internal ProfileGroupType m_Bucket;
+        internal bool m_isRefreshingCCDDataSources;
+        
+        private ProfileDataSourceSettings m_ProfileDataSource;
 
         internal ProfileDataSourceSettings dataSourceSettings
         {
-            get { return ProfileDataSourceSettings.GetSettings(); }
+            get
+            {
+                if (m_ProfileDataSource == null)
+                    m_ProfileDataSource = ProfileDataSourceSettings.GetSettings();
+                return m_ProfileDataSource;
+            }
         }
+        
         static GUIStyle dropdownTitleStyle;
         static GUIStyle menuOptionStyle;
         static GUIStyle horizontalBarStyle;
@@ -179,10 +188,12 @@ namespace UnityEditor.AddressableAssets.GUI
                             if (CloudProjectSettings.projectId != String.Empty)
                             {
                                 EditorGUI.LabelField(refreshButtonRect, EditorGUIUtility.IconContent(refreshIcon));
-                                if (evt.type == EventType.MouseDown && refreshButtonRect.Contains(evt.mousePosition))
+                                if (evt.type == EventType.MouseDown && refreshButtonRect.Contains(evt.mousePosition) && !m_isRefreshingCCDDataSources)
                                 {
+                                    m_isRefreshingCCDDataSources = true;
                                     await ProfileDataSourceSettings.UpdateCCDDataSourcesAsync(CloudProjectSettings.projectId, true);
                                     SyncProfileGroupTypes();
+                                    m_isRefreshingCCDDataSources = false;
                                     return;
                                 }
                             }
@@ -246,8 +257,12 @@ namespace UnityEditor.AddressableAssets.GUI
                                 m_WindowRect.height = 120;
                             }
                             EditorGUI.LabelField(refreshButtonRect, EditorGUIUtility.IconContent(refreshIcon));
-                            if (evt.type == EventType.MouseDown && refreshButtonRect.Contains(evt.mousePosition))
+                            if (evt.type == EventType.MouseDown && refreshButtonRect.Contains(evt.mousePosition) && !m_isRefreshingCCDDataSources)
                             {
+                                m_isRefreshingCCDDataSources = true;
+                                await ProfileDataSourceSettings.UpdateCCDDataSourcesAsync(CloudProjectSettings.projectId, true);
+                                SyncProfileGroupTypes();
+                                m_isRefreshingCCDDataSources = false;
                                 return;
                             }
                             EditorGUILayout.LabelField(String.Format("{0} Badges", m_Bucket.GetVariableBySuffix($"{nameof(CcdBucket)}{nameof(CcdBucket.Name)}").Value), dropdownTitleStyle);
@@ -417,7 +432,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 OptionName = "Editor Hosted";
                 state = DropdownState.EditorHosted;
                 BuildPath = AddressableAssetSettings.kRemoteBuildPathValue;
-                LoadPath = AddressableAssetSettings.kRemoteLoadPathValue;
+                LoadPath = AddressableAssetSettings.RemoteLoadPathValue;
             }
 
             internal override void Draw(Action action)

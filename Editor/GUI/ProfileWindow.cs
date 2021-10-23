@@ -36,6 +36,8 @@ namespace UnityEditor.AddressableAssets.GUI
 
         float m_HorizontalSplitterRatio = k_DefaultHorizontalSplitterRatio;
 
+        private ProfileDataSourceSettings m_ProfileDataSource;
+
         internal AddressableAssetSettings settings
         {
             get { return AddressableAssetSettingsDefaultObject.Settings; }
@@ -43,7 +45,12 @@ namespace UnityEditor.AddressableAssets.GUI
 
         internal ProfileDataSourceSettings dataSourceSettings
         {
-            get { return ProfileDataSourceSettings.GetSettings(); }
+            get
+            {
+                if (m_ProfileDataSource == null)
+                    m_ProfileDataSource = ProfileDataSourceSettings.GetSettings();
+                return m_ProfileDataSource;
+            }
         }
 
         private ProfileTreeView m_ProfileTreeView;

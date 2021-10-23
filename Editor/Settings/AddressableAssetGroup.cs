@@ -400,6 +400,8 @@ namespace UnityEditor.AddressableAssets.Settings
                     }
                     if (m_SchemaSet.Schemas[i].Group == null)
                         m_SchemaSet.Schemas[i].Group = this;
+
+                    m_SchemaSet.Schemas[i].Validate();
                 }
             }
 

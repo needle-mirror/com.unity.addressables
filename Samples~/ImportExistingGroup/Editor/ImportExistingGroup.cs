@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
@@ -145,11 +146,22 @@ public class ImportExistingGroup : EditorWindow
             }
             if (schema is BundledAssetGroupSchema bundledSchema)
             {
-                bundledSchema.BuildPath.SetVariableByName(settings, AddressableAssetSettings.kLocalBuildPath);
-                bundledSchema.LoadPath.SetVariableByName(settings, AddressableAssetSettings.kLocalLoadPath);
+                List<string> variableNames = schema.Group.Settings.profileSettings.GetVariableNames();
+                SetBundledAssetGroupSchemaPaths(settings, bundledSchema.BuildPath, AddressableAssetSettings.kLocalBuildPath,"LocalBuildPath",  variableNames);
+                SetBundledAssetGroupSchemaPaths(settings, bundledSchema.LoadPath, AddressableAssetSettings.kLocalLoadPath,"LocalLoadPath",  variableNames);
             }
             group.AddSchema(schema);
         }
+    }
+
+    internal void SetBundledAssetGroupSchemaPaths(AddressableAssetSettings settings, ProfileValueReference pvr, string newVariableName, string oldVariableName, List<string> variableNames)
+    {
+        if (variableNames.Contains(newVariableName))
+            pvr.SetVariableByName(settings, newVariableName);
+        else if (variableNames.Contains(oldVariableName))
+            pvr.SetVariableByName(settings, oldVariableName);
+        else
+            Debug.LogWarning("Default path variable " + newVariableName + " not found when initializing BundledAssetGroupSchema. Please manually set the path via the groups window.");
     }
 }
 #endif

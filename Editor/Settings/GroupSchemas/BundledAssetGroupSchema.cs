@@ -536,19 +536,35 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         protected override void OnSetGroup(AddressableAssetGroup group)
         {
             //this can happen during the load of the addressables asset
-            if (group.Settings != null)
-            {
-                if (BuildPath == null || string.IsNullOrEmpty(BuildPath.GetValue(group.Settings)))
-                {
-                    m_BuildPath = new ProfileValueReference();
-                    BuildPath.SetVariableByName(group.Settings, AddressableAssetSettings.kLocalBuildPath);
-                }
+        }
 
-                if (LoadPath == null || string.IsNullOrEmpty(LoadPath.GetValue(group.Settings)))
+        internal void SetPathVariable(AddressableAssetSettings addressableAssetSettings, ref ProfileValueReference path, string newPathName, string oldPathName, List<string> variableNames)
+        {
+            if (path == null || !path.HasValue(addressableAssetSettings))
+            {
+                path = new ProfileValueReference();
+                if (variableNames.Contains(newPathName))
                 {
-                    m_LoadPath = new ProfileValueReference();
-                    LoadPath.SetVariableByName(group.Settings, AddressableAssetSettings.kLocalLoadPath);
+                    path.SetVariableByName(addressableAssetSettings, newPathName);
+                    SetDirty(true);
                 }
+                else if (variableNames.Contains(oldPathName))
+                {
+                    path.SetVariableByName(addressableAssetSettings, oldPathName);
+                    SetDirty(true);
+                }
+                else 
+                    Debug.LogWarning("Default path variable " + newPathName + " not found when initializing BundledAssetGroupSchema. Please manually set the path via the groups window.");
+            }
+        }
+
+        internal override void Validate()
+        {
+            if (Group != null && Group.Settings != null)
+            {
+                List<string> variableNames = Group.Settings.profileSettings.GetVariableNames();
+                SetPathVariable(Group.Settings, ref m_BuildPath, AddressableAssetSettings.kLocalBuildPath, "LocalBuildPath", variableNames);
+                SetPathVariable(Group.Settings, ref m_LoadPath, AddressableAssetSettings.kLocalLoadPath, "LocalLoadPath", variableNames);
             }
 
             if (m_AssetBundleProviderType.Value == null)

@@ -25,8 +25,12 @@ namespace UnityEngine.AddressableAssets
         /// Construct a new AssetReference object.
         /// </summary>
         /// <param name="guid">The guid of the asset.</param>
-        public AssetReferenceT(string guid) : base(guid)
+        public AssetReferenceT(string guid)
+            : base(guid)
         {
+#if UNITY_EDITOR
+            m_DerivedClassType = typeof(TObject);
+#endif
         }
 
         /// <summary>
@@ -83,6 +87,15 @@ namespace UnityEngine.AddressableAssets
             return false;
 #endif
         }
+        
+#if UNITY_EDITOR
+        internal TObject FetchAsset()
+        {
+            var assetPath = AssetDatabase.GUIDToAssetPath(AssetGUID);
+            var asset = AssetDatabase.LoadAssetAtPath(assetPath, typeof(TObject));
+            return (TObject) asset;
+        }
+#endif
 
 #if UNITY_EDITOR
         /// <summary>
@@ -93,10 +106,11 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
-                Object baseAsset = base.editorAsset;
-                TObject asset = baseAsset as TObject;
-                if (asset == null && baseAsset != null)
-                    Debug.Log("editorAsset cannot cast to " + typeof(TObject));
+                if (CachedAsset as TObject != null || string.IsNullOrEmpty(AssetGUID))
+                    return CachedAsset as TObject;
+                TObject asset = FetchAsset();
+                if (asset == null)
+                    Debug.LogWarning("Assigned editorAsset does not match type " + typeof(TObject) + ". EditorAsset will be null.");
                 return asset;
             }
         }
@@ -349,6 +363,17 @@ namespace UnityEngine.AddressableAssets
         {
             m_AssetGUID = guid;
 #if UNITY_EDITOR
+            EditorApplication.playModeStateChanged -= ReleaseHandleWhenPlaymodeStateChanged;
+            EditorApplication.playModeStateChanged += ReleaseHandleWhenPlaymodeStateChanged;
+#endif
+        }
+        
+        //Special constructor only used when constructing in a derived class
+        internal AssetReference(string guid, Type type)
+        {
+            m_AssetGUID = guid;
+#if UNITY_EDITOR
+            m_DerivedClassType = type;
             EditorApplication.playModeStateChanged -= ReleaseHandleWhenPlaymodeStateChanged;
             EditorApplication.playModeStateChanged += ReleaseHandleWhenPlaymodeStateChanged;
 #endif
@@ -629,8 +654,9 @@ namespace UnityEngine.AddressableAssets
 
         [SerializeField]
         #pragma warning disable CS0414
-        bool m_EditorAssetChanged;
-        #pragma warning restore CS0414
+        bool m_EditorAssetChanged; 
+        protected internal Type m_DerivedClassType;
+#pragma warning restore CS0414
         
         /// <summary>
         /// Used by the editor to represent the main asset referenced.
@@ -641,17 +667,32 @@ namespace UnityEngine.AddressableAssets
             {
                 if (CachedAsset != null || string.IsNullOrEmpty(m_AssetGUID))
                     return CachedAsset;
-                var assetPath = AssetDatabase.GUIDToAssetPath(m_AssetGUID);
-                var mainType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
-                return (CachedAsset = AssetDatabase.LoadAssetAtPath(assetPath, mainType));
+                
+                var asset = FetchEditorAsset();
+                
+                if (m_DerivedClassType == null)
+                    return CachedAsset = asset;
+                
+                if (asset == null)
+                    Debug.LogWarning("Assigned editorAsset does not match type " + m_DerivedClassType + ". EditorAsset will be null.");
+                return CachedAsset = asset;
             }
         }
+        
+        internal Object FetchEditorAsset()
+        {
+            var assetPath = AssetDatabase.GUIDToAssetPath(m_AssetGUID);
+            var asset = AssetDatabase.LoadAssetAtPath(assetPath, m_DerivedClassType ?? AssetDatabase.GetMainAssetTypeAtPath(assetPath));
+            return asset;
+        }
+        
         /// <summary>
         /// Sets the main asset on the AssetReference.  Only valid in the editor, this sets both the editorAsset attribute,
         ///   and the internal asset GUID, which drives the RuntimeKey attribute. If the reference uses a sub object,
         ///   then it will load the editor asset during edit mode and load the sub object during runtime. For example, if
         ///   the AssetReference is set to a sprite within a sprite atlas, the editorAsset is the atlas (loaded during edit mode)
-        ///   and the sub object is the sprite (loaded during runtime).
+        ///   and the sub object is the sprite (loaded during runtime). If called by AssetReferenceT, will set the editorAsset
+        ///   to the requested object if the object is of type T, and null otherwise.
         /// <param name="value">Object to reference</param>
         /// </summary>
         public virtual bool SetEditorAsset(Object value)
@@ -682,16 +723,53 @@ namespace UnityEngine.AddressableAssets
                 else
                 {
                     m_AssetGUID = AssetDatabase.AssetPathToGUID(path);
-                    var mainAsset = AssetDatabase.LoadMainAssetAtPath(path);
+                    Object mainAsset;
+                    if (m_DerivedClassType != null)
+                        mainAsset = LocateEditorAssetForTypedAssetReference(value, path);
+                    else
+                    {
+                        mainAsset = AssetDatabase.LoadMainAssetAtPath(path);
+                        if (value != mainAsset)
+                            SetEditorSubObject(value);
+                    }
                     CachedAsset = mainAsset;
-                    if (value != mainAsset)
-                        SetEditorSubObject(value);
                 }
             }
 
             m_EditorAssetChanged = true;
             return true;
         }
+
+        internal Object LocateEditorAssetForTypedAssetReference(Object value, string path)
+        {
+            Object mainAsset;
+            if (value.GetType() != m_DerivedClassType)
+            {
+                mainAsset = null;
+            }
+            else
+            {
+                mainAsset = AssetDatabase.LoadAssetAtPath(path, m_DerivedClassType);
+                if (mainAsset != value)
+                {
+                    mainAsset = null;
+                    var subAssets = AssetDatabase.LoadAllAssetRepresentationsAtPath(path);
+                    foreach (var asset in subAssets)
+                    {
+                        if (asset.GetType() == m_DerivedClassType && value == asset)
+                        {
+                            mainAsset = asset;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (mainAsset == null)
+                Debug.LogWarning( "Assigned editorAsset does not match type " + m_DerivedClassType + ". EditorAsset will be null.");
+
+            return mainAsset;
+        }
+            
 
         /// <summary>
         /// Sets the sub object for this asset reference.

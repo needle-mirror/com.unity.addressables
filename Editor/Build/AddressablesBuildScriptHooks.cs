@@ -24,11 +24,11 @@ namespace UnityEditor.AddressableAssets.Build
 
         static void OnEditorPlayModeChanged(PlayModeStateChange state)
         {
+            var settings = AddressableAssetSettingsDefaultObject.Settings;
+            if (settings == null)
+                return;
             if (state == PlayModeStateChange.ExitingEditMode)
             {
-                var settings = AddressableAssetSettingsDefaultObject.Settings;
-                if (settings == null)
-                    return;
                 if (settings.ActivePlayModeDataBuilder == null)
                 {
                     var err = "Active play mode build script is null.";
@@ -66,8 +66,11 @@ namespace UnityEditor.AddressableAssets.Build
                     if (BuildScript.buildCompleted != null)
                         BuildScript.buildCompleted(res);
                     settings.DataBuilderCompleted(settings.ActivePlayModeDataBuilder, res);
+                    settings.HostingServicesManager.exitingEditMode = true;
                 }
             }
+            else
+                settings.HostingServicesManager.exitingEditMode = false;
         }
     }
 }

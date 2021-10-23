@@ -78,9 +78,9 @@ namespace UnityEditor.AddressableAssets.Tests
         public void NonExistentGroupFindGroupType_Returns_Null()
         {
             ProfileGroupType nonexistentGroup = new ProfileGroupType("Test");
-            nonexistentGroup.AddVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kBuildPath, "Test Build Path"));
-            nonexistentGroup.AddVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kLoadPath, "Test Load Path"));
-
+            bool v1Added = nonexistentGroup.AddVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kBuildPath, "Test Build Path"));
+            bool v2Added = nonexistentGroup.AddVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kLoadPath, "Test Load Path"));
+            Assert.IsTrue(v1Added && v2Added, "Failed to add the variables for GroupTypes");
             var result = Settings.FindGroupType(nonexistentGroup);
             Assert.IsNull(result);
         }

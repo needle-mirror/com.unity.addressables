@@ -131,8 +131,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 currCount++;
                 var group = settings.CreateGroup(bundle, false, false, false, null);
                 var schema = group.AddSchema<BundledAssetGroupSchema>();
-                schema.BuildPath.SetVariableByName(settings, AddressableAssetSettings.kLocalBuildPath);
-                schema.LoadPath.SetVariableByName(settings, AddressableAssetSettings.kLocalLoadPath);
+                schema.Validate();
                 schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
                 group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
 
@@ -350,6 +349,9 @@ namespace UnityEditor.AddressableAssets.Settings
                         openedAsset = false;
                 }
             }
+            else
+                openedAsset = false;
+
             if (exitGUI)
                 GUIUtility.ExitGUI();
             return openedAsset;
@@ -366,22 +368,20 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal static List<PackageManager.PackageInfo> GetPackages(ListRequest req)
         {
-#if UNITY_2021_1_OR_NEWER
-            var packagesList = new List<PackageManager.PackageInfo>(PackageManager.PackageInfo.GetAllRegisteredPackages());
-            return packagesList;
-#endif
-            while (!req.IsCompleted)
-            {
-                Thread.Sleep(5);
-            }
-
             var packages = new List<PackageManager.PackageInfo>();
+#if UNITY_2021_1_OR_NEWER
+            packages.AddRange(PackageManager.PackageInfo.GetAllRegisteredPackages());
+#else
+            while (!req.IsCompleted)
+                Thread.Sleep(5);
+            
             if (req.Status == StatusCode.Success)
             {
                 PackageCollection collection = req.Result;
                 foreach (PackageManager.PackageInfo package in collection)
                     packages.Add(package);
             }
+#endif
             return packages;
         }
 

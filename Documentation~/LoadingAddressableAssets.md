@@ -405,7 +405,7 @@ When you call [InstantiateAsync] you have the same options as the [Object.Instan
 
 Because the Addressables system uses reference counting to determine whether an asset is in use, you must release every asset that you load or instantiate when you are done with it. See [Memory Management] for more information.
 
-When you unload a Scene, implicit assets in the Scene are not automatically unloaded. You must call [Resources.UnloadUnusedAssets] or [UnloadAsset] to free these assets. Note that the Unity runtime automatically calls `UnloadUnusedAssets` when you load a Scene using the 
+When you unload a Scene, implicit assets in the Scene are not automatically unloaded. You must call [Resources.UnloadUnusedAssets] or [UnloadAsset] to free these assets. Note that the Unity runtime automatically calls `UnloadUnusedAssets` when you load a Scene using the [LoadSceneMode.Single] mode.
 
 ## Using Addressables in a Scene
 

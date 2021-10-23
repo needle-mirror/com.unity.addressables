@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,6 +8,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading;
 using NUnit.Framework;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.HostingServices;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
@@ -354,12 +356,96 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
         }
 
         [Test]
-        public void OnEnableShould_RefreshGlobalProfileVariables()
+        public void OnEnableShould_RefreshGlobalProfileVariables_IfNotExitingEditMode()
         {
             m_Manager.Initialize(m_Settings);
             m_Manager.GlobalProfileVariables.Clear();
+            bool exitingExitMode = m_Manager.exitingEditMode;
+            m_Manager.exitingEditMode = false;
+
             m_Manager.OnEnable();
             Assert.GreaterOrEqual(m_Manager.GlobalProfileVariables.Count, 1);
+
+            m_Manager.exitingEditMode = exitingExitMode;
+        }
+
+        [Test]
+        public void OnEnableShould_RefreshGlobalProfileVariables_IfExitingEditMode_AndServiceEnabled_AndUsingPackedPlayMode()
+        {
+            m_Manager.Initialize(m_Settings);
+            m_Manager.GlobalProfileVariables.Clear();
+            bool exitingExitMode = m_Manager.exitingEditMode;
+            m_Manager.exitingEditMode = true;
+
+            var svc = m_Manager.AddHostingService(typeof(TestHostingService), "test");
+            svc.StartHostingService();
+
+            int activePlayerDataBuilderIndex = m_Settings.ActivePlayerDataBuilderIndex;
+            m_Settings.DataBuilders.Add(ScriptableObject.CreateInstance<BuildScriptPackedPlayMode>());
+            m_Settings.ActivePlayerDataBuilderIndex = m_Settings.DataBuilders.Count - 1;
+
+            m_Manager.OnEnable();
+            Assert.GreaterOrEqual(m_Manager.GlobalProfileVariables.Count, 1);
+            svc.StopHostingService();
+            
+            m_Settings.ActivePlayerDataBuilderIndex = activePlayerDataBuilderIndex;
+            m_Settings.DataBuilders.RemoveAt(m_Settings.DataBuilders.Count - 1);
+            m_Manager.exitingEditMode = exitingExitMode;
+        }
+
+        public class RefreshProfileVariablesNegativeTestFactory
+        {
+            public static IEnumerable RefreshProfileVariablesNegativeTestCases
+            {
+                get
+                {
+                    bool[,] testCases =
+                    {
+                        { true, false },
+                        { false, true },
+                        { false, false }
+                    };
+                    for (int i = 0; i < testCases.GetLength(0); i++)
+                    {
+                        string serviceStatusText = testCases[i, 0] ? "ServiceEnabled" : "ServiceDisabled";
+                        string playModeTypeText = testCases[i, 1] ? "UsingPackedPlayMode" : "NotUsingPackedPlayMode";
+                        string name = $"OnEnableShouldNot_RefreshGlobalProfileVariables_IfExitingEditMode_And{serviceStatusText}_And{playModeTypeText}";
+                        yield return new TestCaseData(testCases[i, 0], testCases[i, 1]).SetName(name);
+                    }
+                }
+            }
+        }
+
+        [Test]
+        [TestCaseSource(typeof(RefreshProfileVariablesNegativeTestFactory), "RefreshProfileVariablesNegativeTestCases")]
+        public void OnEnableShouldNot_RefreshGlobalProfileVariables_IfExitingEditMode_AndConditionsAreMet(bool serviceEnabled, bool usingPackedPlayMode)
+        {
+            m_Manager.Initialize(m_Settings);
+            m_Manager.GlobalProfileVariables.Clear();
+            bool exitingExitMode = m_Manager.exitingEditMode;
+            m_Manager.exitingEditMode = true;
+
+            var svc = m_Manager.AddHostingService(typeof(TestHostingService), "test");
+            if (serviceEnabled)
+                svc.StartHostingService();
+
+            int activePlayerDataBuilderIndex = m_Settings.ActivePlayerDataBuilderIndex;
+            if (usingPackedPlayMode)
+            {
+                m_Settings.DataBuilders.Add(ScriptableObject.CreateInstance<BuildScriptPackedPlayMode>());
+                m_Settings.ActivePlayerDataBuilderIndex = m_Settings.DataBuilders.Count - 1;
+            }
+
+            m_Manager.OnEnable();
+            Assert.AreEqual(0, m_Manager.GlobalProfileVariables.Count);
+
+            if (serviceEnabled)
+                svc.StopHostingService();
+
+            m_Settings.ActivePlayerDataBuilderIndex = activePlayerDataBuilderIndex;
+            if (usingPackedPlayMode)
+                m_Settings.DataBuilders.RemoveAt(m_Settings.DataBuilders.Count - 1);
+            m_Manager.exitingEditMode = exitingExitMode;
         }
 
         // OnDisable
@@ -413,6 +499,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             Assert.IsFalse(ProfileStringEvalDelegateIsRegistered(m_Settings, svc));
         }
 
+        [Ignore("Katana instability https://jira.unity3d.com/browse/ADDR-2327")]
         [Test]
         public void OnDisableShould_StopAllServices()
         {
@@ -501,6 +588,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
         [Test]
         public void RefreshGlobalProfileVariablesShould_AddOrUpdatePrivateIpAddressVar()
         {
+            m_Manager.Initialize(m_Settings);
             m_Manager.GlobalProfileVariables.Clear();
             Assert.IsEmpty(m_Manager.GlobalProfileVariables);
             m_Manager.RefreshGlobalProfileVariables();
@@ -510,6 +598,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
         [Test]
         public void RefreshGlobalProfileVariablesShould_RemoveUnknownVars()
         {
+            m_Manager.Initialize(m_Settings);
             m_Manager.GlobalProfileVariables.Add("test", "test");
             Assert.IsTrue(m_Manager.GlobalProfileVariables.ContainsKey("test"));
             m_Manager.RefreshGlobalProfileVariables();

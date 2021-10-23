@@ -22,7 +22,7 @@ namespace UnityEditor.AddressableAssets.Tests
     public class ContentUpdateTests : AddressableAssetTestBase
     {
         protected override bool PersistSettings { get { return true; } }
-
+        [Ignore("Editor crash https://jira.unity3d.com/browse/BPSBP-142")]
         [Test]
         public void CanCreateContentStateData()
         {

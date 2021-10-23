@@ -154,9 +154,11 @@ namespace UnityEditor.AddressableAssets.GUI
 #if UNITY_2019_4_OR_NEWER
         GUIContent m_CCDEnabled = new GUIContent("Enable Experimental CCD Features", "If enabled, will unlock experimental CCD features");
 #endif
+#if UNITY_2021_2_OR_NEWER
         GUIContent m_BuildAddressablesWithPlayerBuild =
             new GUIContent("Build Addressables on Player Build", "Determines if a new Addressables build will be built with a Player Build.");
-
+#endif
+        
         public override void OnInspectorGUI()
         {
             m_QueuedChanges.Clear();
@@ -276,6 +278,7 @@ namespace UnityEditor.AddressableAssets.GUI
             m_BuildFoldout = EditorGUILayout.Foldout(m_BuildFoldout, "Build");
             if (m_BuildFoldout)
             {
+#if UNITY_2021_2_OR_NEWER
                 int index = (int) m_AasTarget.BuildAddressablesWithPlayerBuild;
                 int newIndex = EditorGUILayout.Popup(m_BuildAddressablesWithPlayerBuild, index, new[]
                 {
@@ -293,6 +296,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         EditorGUILayout.TextField(" ", enabled ? "Enabled" : "Disabled");
                     }
                 }
+#endif
                 
                 bool ignoreUnsupportedFilesInBuild = EditorGUILayout.Toggle(m_IgnoreUnsupportedFilesInBuild, m_AasTarget.IgnoreUnsupportedFilesInBuild);
                 if (ignoreUnsupportedFilesInBuild != m_AasTarget.IgnoreUnsupportedFilesInBuild)

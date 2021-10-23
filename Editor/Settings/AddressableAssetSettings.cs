@@ -91,6 +91,9 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Default name of remote load path.
         /// </summary>
         public const string kRemoteLoadPath = "Remote.LoadPath";
+
+        private const string kLocalGroupTypePrefix = "Built-In";
+        internal static string LocalGroupTypePrefix => kLocalGroupTypePrefix; 
         /// <summary>
         /// Default value of local build path.
         /// </summary>
@@ -99,6 +102,9 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Default value of local load path.
         /// </summary>
         public const string kLocalLoadPathValue = "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]";
+
+        private const string kEditorHostedGroupTypePrefix = "Editor Hosted";
+        internal static string EditorHostedGroupTypePrefix => kEditorHostedGroupTypePrefix; 
         /// <summary>
         /// Default value of remote build path.
         /// </summary>
@@ -107,6 +113,16 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Default value of remote load path.
         /// </summary>
         public const string kRemoteLoadPathValue = "http://localhost/[BuildTarget]";
+        internal static string RemoteLoadPathValue
+        {
+            get
+            {
+                // Fix for case ADDR-2314. kRemoteLoadPathValue is incorrect, "http://localhost/[BuildTarget]" does not work with local hosting service
+                return "http://[PrivateIpAddress]:[HostingServicePort]";
+                // kRemoteLoadPathValue will be fixed to the correct path in Addressables 1.20.0
+            }
+        }
+
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
         /// <summary>
         /// Default path of build assets that are uploaded to CCD.
@@ -641,8 +657,9 @@ namespace UnityEditor.AddressableAssets.Settings
         
         [SerializeField]
         private PlayerBuildOption m_BuildAddressablesWithPlayerBuild = PlayerBuildOption.DoNotBuildWithPlayer;
+        
         /// <summary>
-        /// Defines if Addressables content will be built along with a Player build.
+        /// Defines if Addressables content will be built along with a Player build. (Requires 2021.2 or above)
         /// </summary>
         /// <remarks>
         /// Build with Player, will build Addressables with a Player build, this overrides preferences value.
@@ -1302,10 +1319,14 @@ namespace UnityEditor.AddressableAssets.Settings
             return true;
         }
 
-        void OnEnable()
+        void Awake()
         {
             profileSettings.OnAfterDeserialize(this);
             buildSettings.OnAfterDeserialize(this);
+        }
+
+        void OnEnable()
+        {
             HostingServicesManager.OnEnable();
 
 #pragma warning disable 0618
@@ -1423,7 +1444,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 // TODO: Uncomment after initial opt-in testing period
                 //aa.ContiguousBundles = true;
                 aa.BuildAddressablesWithPlayerBuild = PlayerBuildOption.PreferencesValue;
-
+                
                 if (isPersisted)
                 {
                     Directory.CreateDirectory(configFolder);

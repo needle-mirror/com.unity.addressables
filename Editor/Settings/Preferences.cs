@@ -6,7 +6,9 @@ namespace UnityEditor.AddressableAssets
 {
     internal static class AddressablesPreferences
     {
-        internal const string kBuildAddressablesWithPlayerBuildKey = "Addressables.BuildAddressablesWithPlayerBuild"; 
+#if UNITY_2021_2_OR_NEWER
+        internal const string kBuildAddressablesWithPlayerBuildKey = "Addressables.BuildAddressablesWithPlayerBuild";
+ #endif
         private class GUIScope : UnityEngine.GUI.Scope
         {
             float m_LabelWidth;
@@ -36,8 +38,10 @@ namespace UnityEditor.AddressableAssets
         {
             public static readonly GUIContent buildSettings = EditorGUIUtility.TrTextContent("Build Settings");
             public static readonly GUIContent buildLayoutReport = EditorGUIUtility.TrTextContent("Debug Build Layout", $"A debug build layout file will be generated as part of the build process. The file will put written to {BuildLayoutGenerationTask.m_LayoutTextFile}");
+#if UNITY_2021_2_OR_NEWER
             public static readonly GUIContent playerBuildSettings = EditorGUIUtility.TrTextContent("Player Build Settings");
             public static readonly GUIContent enableAddressableBuildPreprocessPlayer = EditorGUIUtility.TrTextContent("Build Addressables on build Player", $"If enabled, will perform a new Addressables build before building a Player. Addressable Asset Settings value can override the user global preferences.");
+#endif
         }
 
         static AddressablesPreferences()

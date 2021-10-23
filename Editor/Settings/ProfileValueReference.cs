@@ -83,6 +83,17 @@ namespace UnityEditor.AddressableAssets.Settings
             return pid == null ? string.Empty : pid.ProfileName;
         }
 
+        internal bool HasValue(AddressableAssetSettings settings)
+        {
+            if (settings == null)
+            {
+                Debug.LogWarning("ProfileValueReference: HasValue() - AddressableAssetSettings object is null.");
+                return false;
+            }
+            
+            return !string.IsNullOrEmpty(settings.profileSettings.GetValueById(settings.activeProfileId, m_Id));
+        }
+
         /// <summary>
         /// Set the profile variable id using the id of the variable.
         /// </summary>

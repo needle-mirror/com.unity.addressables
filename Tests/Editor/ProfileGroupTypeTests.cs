@@ -31,8 +31,9 @@ namespace UnityEditor.AddressableAssets.Tests
             ProfileGroupType.GroupTypeVariable buildPath = new ProfileGroupType.GroupTypeVariable("BuildPath", "Test Build Path");
             ProfileGroupType.GroupTypeVariable loadPath = new ProfileGroupType.GroupTypeVariable("LoadPath", "Test Load Path");
             ProfileGroupType profileGroupType = new ProfileGroupType("prefix");
-            profileGroupType.AddVariable(buildPath);
-            profileGroupType.AddVariable(loadPath);
+            bool aAdded = profileGroupType.AddVariable(buildPath);
+            bool bAdded = profileGroupType.AddVariable(loadPath);
+            Assert.IsTrue(aAdded && bAdded, "Failed to Add variables");
             Assert.True(profileGroupType.IsValidGroupType());
         }
 
@@ -41,7 +42,8 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             ProfileGroupType.GroupTypeVariable buildPath = new ProfileGroupType.GroupTypeVariable("BuildPath", "Test Build Path");
             ProfileGroupType profileGroupType = new ProfileGroupType("prefix");
-            profileGroupType.AddVariable(buildPath);
+            bool variableAdded = profileGroupType.AddVariable(buildPath);
+            Assert.IsTrue(variableAdded, "Failed to add GroupType variable");
             Assert.AreEqual("Test Build Path", profileGroupType.GetVariableBySuffix(buildPath.Suffix).Value);
         }
 
@@ -50,31 +52,69 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             ProfileGroupType.GroupTypeVariable buildPath = new ProfileGroupType.GroupTypeVariable("BuildPath", "Test Build Path");
             ProfileGroupType profileGroupType = new ProfileGroupType("prefix");
-            profileGroupType.AddVariable(buildPath);
+            bool gtAdded = profileGroupType.AddVariable(buildPath);
+            Assert.IsTrue(gtAdded, $"Failed to add groupType {gtAdded}");
             Assert.AreEqual("prefix.BuildPath", profileGroupType.GetName(buildPath));
         }
 
         [Test]
-        public void AddVariableToGroupType_Returns_ExpectedNotNullVariable()
+        public void AddVariableToGroupType_AddsVariable()
         {
             ProfileGroupType.GroupTypeVariable buildPath = new ProfileGroupType.GroupTypeVariable("BuildPath", "Test Build Path");
             ProfileGroupType.GroupTypeVariable loadPath = new ProfileGroupType.GroupTypeVariable("LoadPath", "Test Load Path");
             ProfileGroupType profileGroupType = new ProfileGroupType("prefix");
 
-            Assert.NotNull(profileGroupType.AddVariable(buildPath));
-            Assert.NotNull(profileGroupType.AddVariable(loadPath));
+            Assert.IsTrue(profileGroupType.AddVariable(buildPath));
+            Assert.IsTrue(profileGroupType.AddVariable(loadPath));
             Assert.True(profileGroupType.Variables.Count == 2);
         }
 
         [Test]
-        public void AddDuplicateVariableToGroupType_Returns_NullVariable()
+        public void AddDuplicateVariableToGroupType_FailsToAddVariable()
         {
             ProfileGroupType.GroupTypeVariable buildPath = new ProfileGroupType.GroupTypeVariable("BuildPath", "Test Build Path");
             ProfileGroupType profileGroupType = new ProfileGroupType("prefix");
 
-            Assert.NotNull(profileGroupType.AddVariable(buildPath));
+            Assert.IsTrue(profileGroupType.AddVariable(buildPath));
             LogAssert.Expect(LogType.Error, "prefix.BuildPath already exists.");
-            Assert.Null(profileGroupType.AddVariable(buildPath));
+            Assert.IsFalse(profileGroupType.AddVariable(buildPath));
+        }
+        
+        [Test]
+        public void AddOrUpdateVariableToGroupType_AddsVariable()
+        {
+            ProfileGroupType profileGroupType = new ProfileGroupType("TestPrefix");
+            var bp = profileGroupType.GetVariableBySuffix("TestSuffix");
+            Assert.IsNull(bp);
+            
+            profileGroupType.AddOrUpdateVariable(new ProfileGroupType.GroupTypeVariable("TestSuffix", "TestValue"));
+            
+            bp = profileGroupType.GetVariableBySuffix("TestSuffix");
+            Assert.IsNotNull(bp);
+            Assert.AreEqual(bp.m_Value, "TestValue", "Unexpected GroupTypeVariable, variable value should be TestValue");
+            Assert.True(profileGroupType.Variables.Count == 1);
+        }
+        
+        [Test]
+        public void AddOrUpdateVariableToGroupType_UpdatesVariable()
+        {
+            ProfileGroupType profileGroupType = new ProfileGroupType("TestPrefix");
+            var bp = profileGroupType.GetVariableBySuffix("TestSuffix");
+            Assert.IsNull(bp);
+            
+            profileGroupType.AddOrUpdateVariable(new ProfileGroupType.GroupTypeVariable("TestSuffix", "TestValue"));
+            
+            bp = profileGroupType.GetVariableBySuffix("TestSuffix");
+            Assert.IsNotNull(bp);
+            Assert.AreEqual(bp.m_Value, "TestValue", "Unexpected GroupTypeVariable, variable value should be TestValue");
+            Assert.True(profileGroupType.Variables.Count == 1);
+            
+            profileGroupType.AddOrUpdateVariable(new ProfileGroupType.GroupTypeVariable("TestSuffix", "UpdatedTestValue"));
+            
+            bp = profileGroupType.GetVariableBySuffix("TestSuffix");
+            Assert.IsNotNull(bp);
+            Assert.AreEqual(bp.m_Value, "UpdatedTestValue", "Unexpected GroupTypeVariable, variable value should be UpdatedTestValue");
+            Assert.True(profileGroupType.Variables.Count == 1);
         }
 
         [Test]

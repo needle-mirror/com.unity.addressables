@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -105,20 +105,33 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Adds a variable in the group
         /// </summary>
         /// <param name="variable"></param>
-        /// <returns>the added variable</returns>
-        internal GroupTypeVariable AddVariable(GroupTypeVariable variable)
+        /// <returns>True if the variable was added, false if the variable already exists</returns>
+        internal bool AddVariable(GroupTypeVariable variable)
         {
             GroupTypeVariable exists = m_Variables.Where(ps => ps.Suffix == variable.Suffix).FirstOrDefault();
             if (exists != null)
             {
                 Addressables.LogErrorFormat("{0} already exists.", GetName(variable));
-                return null;
+                return false;
             }
-            else
+            m_Variables.Add(variable);
+            return true;
+        }
+
+        
+        // Adds a variable to the group, or updates the value if already exists
+        internal void AddOrUpdateVariable(GroupTypeVariable variable)
+        {
+            foreach (GroupTypeVariable typeVariable in m_Variables)
             {
-                m_Variables.Add(variable);
+                if (typeVariable.Suffix == variable.Suffix)
+                {
+                    typeVariable.Value = variable.Value;
+                    return;
+                }
             }
-            return variable;
+
+            m_Variables.Add(variable);
         }
 
         /// <summary>
