@@ -189,6 +189,7 @@ public abstract class InitializationObjectsAsyncTests : AddressablesTestFixture
     }
 
     [UnityTest]
+    [UnityPlatform(exclude = new []{RuntimePlatform.XboxOne})]
     public IEnumerator CacheInitializationObject_FullySetsCachingData()
     {
 #if ENABLE_CACHING

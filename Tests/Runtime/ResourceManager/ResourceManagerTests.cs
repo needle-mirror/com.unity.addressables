@@ -355,5 +355,18 @@ namespace UnityEngine.ResourceManagement.Tests
 
             Assert.AreEqual(totalOperations, numberOfCompletedOperations);
         }
+
+#if UNITY_EDITOR
+        [Test]
+        public void AssetDatabaseProvider_LoadAssetAtPath_WhenNotInAssetDatabase_DoesNotThrow()
+        {
+            var loc = new ResourceLocationBase("name", "id", "providerId", typeof(object));
+            ProviderOperation<Object> op = new ProviderOperation<Object>();
+            op.Init(m_ResourceManager, null, loc, new AsyncOperationHandle<IList<AsyncOperationHandle>>());
+            ProvideHandle handle = new ProvideHandle(m_ResourceManager, op);
+
+            Assert.DoesNotThrow(() => AssetDatabaseProvider.LoadAssetAtPath("doesnotexist", handle));
+        }
+#endif
     }
 }

@@ -21,16 +21,16 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             ProvideHandle m_ProvideHandle;
             string subObjectName = null;
             
-            internal static AssetBundleResource LoadBundleFromDependecies(IList<object> results)
+            internal static T LoadBundleFromDependecies<T>(IList<object> results) where T : class, IAssetBundleResource
             {
                 if (results == null || results.Count == 0)
-                    return null;
+                    return default(T);
 
-                AssetBundleResource bundle = null;
+                IAssetBundleResource bundle = null;
                 bool firstBundleWrapper = true;
                 for (int i = 0; i < results.Count; i++)
                 {
-                    var abWrapper = results[i] as AssetBundleResource;
+                    var abWrapper = results[i] as IAssetBundleResource;
                     if (abWrapper != null)
                     {
                         //only use the first asset bundle, even if it is invalid
@@ -40,7 +40,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                         firstBundleWrapper = false;
                     }
                 }
-                return bundle;
+
+                return bundle as T;
             }
 
             public void Start(ProvideHandle provideHandle)
@@ -52,7 +53,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_RequestOperation = null;
                 List<object> deps = new List<object>(); // TODO: garbage. need to pass actual count and reuse the list
                 m_ProvideHandle.GetDependencies(deps);
-                var bundleResource = LoadBundleFromDependecies(deps);
+                var bundleResource = LoadBundleFromDependecies<IAssetBundleResource>(deps);
                 if (bundleResource == null)
                 {
                     m_ProvideHandle.Complete<AssetBundle>(null, false, new Exception("Unable to load dependent bundle from location " + m_ProvideHandle.Location));
@@ -65,8 +66,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                         m_ProvideHandle.Complete<AssetBundle>(null, false, new Exception("Unable to load dependent bundle from location " + m_ProvideHandle.Location));
                         return;
                     }
-                    
-                    m_PreloadRequest = bundleResource.GetAssetPreloadRequest();
+
+                    var assetBundleResource = bundleResource as AssetBundleResource;
+                    if(assetBundleResource != null)
+                        m_PreloadRequest = assetBundleResource.GetAssetPreloadRequest();
                     if (m_PreloadRequest == null || m_PreloadRequest.isDone)
                         BeginAssetLoad();
                     else

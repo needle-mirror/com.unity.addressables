@@ -1257,6 +1257,11 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a given key.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
+        /// <remarks>
+        /// Clear all cached AssetBundles
+        /// WARNING: This will cause all asset bundles represented by the passed-in
+        /// parameters to be cleared and require re-downloading.
+        /// </remarks>
         /// <param name="key">The key to clear the cache for.</param>
         public static void ClearDependencyCacheAsync(object key)
         {
@@ -1267,6 +1272,11 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a list of Addressable locations.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
+        /// <remarks>
+        /// Clear all cached AssetBundles
+        /// WARNING: This will cause all asset bundles represented by the passed-in
+        /// parameters to be cleared and require re-downloading.
+        /// </remarks>
         /// <param name="locations">The locations to clear the cache for.</param>
         public static void ClearDependencyCacheAsync(IList<IResourceLocation> locations)
         {
@@ -1277,6 +1287,11 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
+        /// <remarks>
+        /// Clear all cached AssetBundles
+        /// WARNING: This will cause all asset bundles represented by the passed-in
+        /// parameters to be cleared and require re-downloading.
+        /// </remarks>
         /// <param name="keys">The keys to clear the cache for.</param>
         [Obsolete]
         public static void ClearDependencyCacheAsync(IList<object> keys)
@@ -1288,6 +1303,11 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
+        /// <remarks>
+        /// Clear all cached AssetBundles
+        /// WARNING: This will cause all asset bundles represented by the passed-in
+        /// parameters to be cleared and require re-downloading.
+        /// </remarks>
         /// <param name="keys">The keys to clear the cache for.</param>
         public static void ClearDependencyCacheAsync(IEnumerable keys)
         {
@@ -1298,6 +1318,11 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
+        /// <remarks>
+        /// Clear all cached AssetBundles
+        /// WARNING: This will cause all asset bundles represented by the passed-in
+        /// parameters to be cleared and require re-downloading.
+        /// </remarks>
         /// <param name="key">The key to clear the cache for.</param>
         public static void ClearDependencyCacheAsync(string key)
         {
@@ -1308,6 +1333,11 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a given key.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
+        /// <remarks>
+        /// Clear all cached AssetBundles
+        /// WARNING: This will cause all asset bundles represented by the passed-in
+        /// parameters to be cleared and require re-downloading.
+        /// </remarks>
         /// <param name="key">The key to clear the cache for.</param>
         /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
         /// <returns>The operation handle for the request.</returns>
@@ -1320,6 +1350,11 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a list of Addressable locations.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
+        /// <remarks>
+        /// Clear all cached AssetBundles
+        /// WARNING: This will cause all asset bundles represented by the passed-in
+        /// parameters to be cleared and require re-downloading.
+        /// </remarks>
         /// <param name="locations">The locations to clear the cache for.</param>
         /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
         /// <returns>The operation handle for the request.</returns>
@@ -1332,6 +1367,11 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
+        /// <remarks>
+        /// Clear all cached AssetBundles
+        /// WARNING: This will cause all asset bundles represented by the passed-in
+        /// parameters to be cleared and require re-downloading.
+        /// </remarks>
         /// <param name="keys">The keys to clear the cache for.</param>
         /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
         /// <returns>The operation handle for the request.</returns>
@@ -1345,6 +1385,11 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
+        /// <remarks>
+        /// Clear all cached AssetBundles
+        /// WARNING: This will cause all asset bundles represented by the passed-in
+        /// parameters to be cleared and require re-downloading.
+        /// </remarks>
         /// <param name="keys">The keys to clear the cache for.</param>
         /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
         /// <returns>The operation handle for the request.</returns>
@@ -1357,6 +1402,11 @@ namespace UnityEngine.AddressableAssets
         /// Clear the cached AssetBundles for a list of Addressable keys.  Operation may be performed async if Addressables
         /// is initializing or updating.
         /// </summary>
+        /// <remarks>
+        /// Clear all cached AssetBundles
+        /// WARNING: This will cause all asset bundles represented by the passed-in
+        /// parameters to be cleared and require re-downloading.
+        /// </remarks>
         /// <param name="key">The keys to clear the cache for.</param>
         /// <param name="autoReleaseHandle">If true, the returned AsyncOperationHandle will be released on completion.</param>
         /// <returns>The operation handle for the request.</returns>

@@ -316,6 +316,39 @@ namespace UnityEditor.AddressableAssets.Tests
                 Directory.Delete(testAssetFolder, true);
             }
         }
+        
+        [TestCase(true)]
+        [TestCase(false)]
+        public void WhenGatherFolderEntries_ReturnsCorrectAssetObjects(bool includeSubObjects)
+        {
+            AddressableAssetEntry addrFolderEntry = null;
+            string addressableFolderPath = GetAssetPath("TestFolder");
+            
+            try
+            {
+                //Setup
+                string folderGuid = CreateFolderDeep(addressableFolderPath);
+                addrFolderEntry = Settings.CreateOrMoveEntry(folderGuid, m_testGroup, false);
+                
+                string testAssetPath = Path.Combine(addressableFolderPath, "testObject.asset").Replace('\\', '/');
+                var testAsset = TestObject.Create("testObject", testAssetPath);
+                testAsset.AddTestSubObject();
+
+                //Test
+                List<AddressableAssetEntry> entries = new List<AddressableAssetEntry>();
+                addrFolderEntry.GatherFolderEntries(entries, true, includeSubObjects, null);
+                if (includeSubObjects)
+                    Assert.AreEqual(entries.Count, 2, "GatherFolder entries was expected to return the Asset added and its subObject");
+                else
+                    Assert.AreEqual(entries.Count, 1, "GatherFolder entries was expected to only return the Asset added and not its subObject");
+            }
+            finally
+            {
+                //Cleanup
+                Settings.RemoveAssetEntry(addrFolderEntry, false);
+                AssetDatabase.DeleteAsset(addressableFolderPath);
+            }
+        }
 
         [Test]
         public void WhenClassReferencedByAddressableAssetEntryIsReloaded_CachedMainAssetTypeIsReset()
@@ -623,29 +656,41 @@ namespace UnityEditor.AddressableAssets.Tests
             var resourcePath = GetAssetPath("Resources");
             string testAssetFolder = GetAssetPath("TestFolder");
             var subFolderPath = testAssetFolder + "/resources";
-            Directory.CreateDirectory(subFolderPath);
-            if (!Directory.Exists(resourcePath))
-                Directory.CreateDirectory(resourcePath);
+            
+            string r1GUID = null;
+            string r2GUID = null;
+            
+            try
+            {
+                CreateFolderDeep(subFolderPath);
+                if (!Directory.Exists(resourcePath))
+                    CreateFolderDeep(resourcePath);
 
-            var r1GUID = CreateAsset(resourcePath + "/testResourceupper.prefab", "testResourceupper");
-            var r2GUID = CreateAsset(subFolderPath + "/testResourcelower.prefab", "testResourcelower");
+                r1GUID = CreateAsset(resourcePath + "/testResourceupper.prefab", "testResourceupper");
+                r2GUID = CreateAsset(subFolderPath + "/testResourcelower.prefab", "testResourcelower");
 
-            var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
-            var resourceEntry = Settings.CreateOrMoveEntry(AddressableAssetEntry.ResourcesName, group, false);
+                var group = Settings.FindGroup(AddressableAssetSettings.PlayerDataGroupName);
+                var resourceEntry = Settings.CreateOrMoveEntry(AddressableAssetEntry.ResourcesName, group, false);
 
-            var entries = new List<AddressableAssetEntry>();
-            resourceEntry.GatherResourcesEntries(entries, true, null);
+                var entries = new List<AddressableAssetEntry>();
+                resourceEntry.GatherResourcesEntries(entries, true, null);
 
-            // Assert
-            Assert.IsTrue(entries.Any(e => e.guid == r1GUID));
-            Assert.IsTrue(entries.Any(e => e.guid == r2GUID));
-
-            // Cleanup
-            Directory.Delete(resourcePath, true);
-            Directory.Delete(subFolderPath, true);
-            Settings.RemoveAssetEntry(r1GUID);
-            Settings.RemoveAssetEntry(r2GUID);
-            Settings.RemoveAssetEntry(AddressableAssetEntry.ResourcesName);
+                // Assert
+                Assert.IsTrue(entries.Any(e => e.guid == r1GUID));
+                Assert.IsTrue(entries.Any(e => e.guid == r2GUID));
+            }
+            finally
+            {
+                // Cleanup
+                if (!string.IsNullOrEmpty(r1GUID))
+                    Settings.RemoveAssetEntry(r1GUID);
+                if (!string.IsNullOrEmpty(r2GUID))
+                    Settings.RemoveAssetEntry(r2GUID);
+                if (!string.IsNullOrEmpty(AddressableAssetEntry.ResourcesName))
+                    Settings.RemoveAssetEntry(AddressableAssetEntry.ResourcesName);
+                AssetDatabase.DeleteAsset(resourcePath);
+                AssetDatabase.DeleteAsset(testAssetFolder);
+            }
         }
 
         [Test]

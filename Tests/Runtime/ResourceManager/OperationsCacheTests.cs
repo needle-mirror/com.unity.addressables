@@ -28,6 +28,7 @@ namespace UnityEngine.ResourceManagement.Tests
         [Test]
         public void OperationCache_CollisionsAreProperlyHandled()
         {
+#if ENABLE_CACHING
             Assert.Zero(m_ResourceManager.OperationCacheCount);
             var provType = typeof(InstanceProvider);
             var loc1 = new TestResourceLocation("asset1", "asset1", provType.FullName, typeof(GameObject));
@@ -43,6 +44,9 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.IsFalse(m_ResourceManager.IsOperationCached(key2));
 
             Assert.IsTrue(m_ResourceManager.RemoveOperationFromCache(key1));
+#else
+            Assert.Ignore("Caching not enabled.");
+#endif
         }
 
         class TestOperation : AsyncOperationBase<GameObject>, ICachable

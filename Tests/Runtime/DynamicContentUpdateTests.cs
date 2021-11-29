@@ -250,7 +250,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
         [UnityTest]
         public IEnumerator UpdateContent_UpdatesCatalogs_WhenAutoCleanCacheEnabled_AndCachingDisabled_ReturnsException()
         {
-#if !ENABLE_CACHING
+#if !ENABLE_CACHING && !PLATFORM_SWITCH
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
@@ -259,16 +259,18 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
             aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
             aa.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
-
+            LogAssert.Expect(LogType.Error, "System.Exception: Caching not enabled. There is no bundle cache to modify.");
             var updateOp = aa.UpdateCatalogs(null, false, true);
             yield return updateOp;
 
+            LogAssert.Expect(LogType.Error,
+                "OperationException : CompletedOperation, status=Failed, result=False catalogs updated, but failed to clean bundle cache.");
             Assert.AreEqual(updateOp.OperationException.Message, "ChainOperation failed because dependent operation failed");
             Assert.AreEqual(updateOp.OperationException.InnerException.Message, "CompletedOperation, status=Failed, result=False catalogs updated, but failed to clean bundle cache.");
 
             aa.Release(updateOp);
 #else
-            Assert.Ignore("Caching is enabled, but test expects to run on caching-disabled platforms.");
+            Assert.Ignore("Caching is enabled, but test expects to run on caching-disabled platforms or platform was skipped.");
             yield return null;
 #endif
         }

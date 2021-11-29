@@ -42,9 +42,13 @@ Be aware that when you reference an asset in another bundle, then that bundle mu
 > [!TIP]
 > Use the [Analyze tool] to identify unwanted asset duplication resulting from your project content organization.
 
-### SpriteAtlas dependencies
+### SpriteAtlas
 
-Addressables handles SpriteAtlases a bit differently than other assets, as illustrated by the following examples:
+Some SpriteAtlas options can change how Sprites are loaded. This is important to consider when using the **Use Asset Database** [Play Mode Script].
+* [Sprite Packer Mode] 
+* SpriteAtlas [Include In Build]
+
+Additionally Addressables handles SpriteAtlases a bit differently than other assets, as illustrated by the following examples:
 
 #### Addressable Sprites 
 
@@ -78,3 +82,6 @@ Taking the prefabs, textures, and SpriteAtlas from the above example, the Sprite
 [Analyze tool]: xref:addressables-analyze-tool
 [Asset bundle dependencies]: xref:addressables-memory-management#assetbundle-dependencies
 [Builds]: xref:addressables-builds
+[Include In Build]: https://docs.unity3d.com/Manual/SpriteAtlasDistribution.html#Dontinclbuild
+[Play Mode Script]: xref:addressables-groups#play-mode-scripts
+[Sprite Packer Mode]: https://docs.unity3d.com/Manual/SpritePackerModes.html

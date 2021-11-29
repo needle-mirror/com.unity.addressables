@@ -1030,8 +1030,6 @@ namespace UnityEngine.ResourceManagement
             m_InsideExecuteDeferredCallbacksMethod = true;
             for (int i = 0; i < m_DeferredCompleteCallbacks.Count; i++)
             {
-                if (!m_DeferredCompleteCallbacks[i].IsDone)
-                    Debug.LogWarning("Executing complete callback for a released operation.");
                 m_DeferredCompleteCallbacks[i].InvokeCompletionEvent();
                 m_DeferredCompleteCallbacks[i].DecrementReferenceCount();
             }

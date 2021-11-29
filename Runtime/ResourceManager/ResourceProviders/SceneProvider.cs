@@ -56,13 +56,18 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 if (!HasExecuted)
                     InvokeExecute();
 
-                //We need the operation to complete but it'll take a frame to activate the scene.
-                m_Inst.m_Operation.allowSceneActivation = false;
+                
                 while (!IsDone)
+                {
                     ((IUpdateReceiver)this).Update(Time.unscaledDeltaTime);
-
-                //Reset value on scene load operation so we don't activate a scene that a user doesn't want to activate on load.
-                m_Inst.m_Operation.allowSceneActivation = m_ActivateOnLoad;
+                    //We need the operation to complete but it'll take a frame to activate the scene (post 0.9 progress).
+                    if (m_Inst.m_Operation.allowSceneActivation && Mathf.Approximately(m_Inst.m_Operation.progress, .9f))
+                    {
+                        Result = m_Inst; // Set result so WaitForCompletion returns the SceneInstance
+                        return true;
+                    }
+                }
+                
                 return IsDone;
             }
 
@@ -210,6 +215,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_RM?.Update(Time.unscaledDeltaTime);
                 if (!HasExecuted)
                     InvokeExecute();
+                Debug.LogWarning("Cannot unload a Scene with WaitForCompletion. Scenes must be unloaded asynchronously.");
                 return true;
             }
 

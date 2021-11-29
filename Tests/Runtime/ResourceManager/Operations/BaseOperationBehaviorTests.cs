@@ -8,7 +8,10 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
 using System.Linq;
+using UnityEngine.Scripting;
 using UnityEngine.TestTools.Constraints;
+
+[assembly: Preserve]
 
 namespace UnityEngine.ResourceManagement.Tests
 {

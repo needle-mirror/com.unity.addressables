@@ -71,7 +71,7 @@ Select one or more assets in the Groups window, then click on the label field fo
 
 To assign labels, check or uncheck the boxes for the desired labels.
 
-Click the __Manage Labels__ button to add, remove, or rename your labels. See [Labels] for more information on how labels can be used.
+Click the top left __Plus__ button, then __Manage Labels__ to add, remove, or rename your labels. Or the top left __Plus__ button, then __New Label__ to add a new label. See [Labels] for more information on how labels can be used.
 
 
 ## Groups window

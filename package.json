@@ -1,7 +1,7 @@
 {
   "name": "com.unity.addressables",
   "displayName": "Addressables",
-  "version": "1.19.11",
+  "version": "1.19.13",
   "unity": "2019.4",
   "description": "The Addressable Asset System allows the developer to ask for an asset via its address. Once an asset (e.g. a prefab) is marked \"addressable\", it generates an address which can be called from anywhere. Wherever the asset resides (local or remote), the system will locate it and its dependencies, then return it.\n\nUse 'Window->Asset Management->Addressables' to begin working with the system.\n\nAddressables use asynchronous loading to support loading from any location with any collection of dependencies. Whether you have been using direct references, traditional asset bundles, or Resource folders, addressables provide a simpler way to make your game more dynamic. Addressables simultaneously opens up the world of asset bundles while managing all the complexity.\n\nFor usage samples, see github.com/Unity-Technologies/Addressables-Sample",
   "keywords": [
@@ -12,7 +12,7 @@
     "assetbundles"
   ],
   "dependencies": {
-    "com.unity.scriptablebuildpipeline": "1.19.3",
+    "com.unity.scriptablebuildpipeline": "1.19.4",
     "com.unity.modules.assetbundle": "1.0.0",
     "com.unity.modules.imageconversion": "1.0.0",
     "com.unity.modules.jsonserialize": "1.0.0",
@@ -22,16 +22,21 @@
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/Addressables.git",
     "type": "git",
-    "revision": "461277c23420bea0d6e57f13919a4f40b7efca75"
+    "revision": "c1efa1cfd8c5d9fe3dabf5a3f1c124f55a9da3a8"
   },
   "upmCi": {
-    "footprint": "26fb878eb2d384ec16e99a5c37c10db52455fe71"
+    "footprint": "034a43f97aed757bba6233814599966361fffaa1"
   },
   "samples": [
     {
       "displayName": "Addressables Utility",
       "description": "This sample contains a set of utility functions for Addressables.",
       "path": "Samples~/AddressablesUtility"
+    },
+    {
+      "displayName": "Custom Build and Playmode Scripts",
+      "description": "Example custom build and play mode scripts provided.  Along with a README discussing how to add them to the Addressables system.",
+      "path": "Samples~/CustomBuildAndPlaymodeScripts"
     },
     {
       "displayName": "Disable AssetImport on Build",

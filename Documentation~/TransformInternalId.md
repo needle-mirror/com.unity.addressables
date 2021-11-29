@@ -9,6 +9,7 @@ Addressables provides the following ways to modify the URLs it uses to load asse
 
 * Static properties in a Profile variable
 * Implementing an ID transform function
+* Implementing a WebRequestOverride method
 
 ## Static Profile variables
 
@@ -22,7 +23,7 @@ Using TransformInternalId grants a fair amount of flexibility, especially in reg
 
 The ResourceManager calls your TransformInternalId  function when it looks up an asset, passing the [IResourceLocation] instance for the asset to your function. You can change the [InternalId] property of this IResourceLocation and return the modified object to the ResourceManager.
 
-The follwoing example illustartes how you could append a query string to all URLs:
+The following example illustrates how you could append a query string to all URLs for AssetBundles:
 
 [!code-cs[sample](../Samples/DocSampleCode/IDTransformer.cs#doc_Transformer)]
 
@@ -46,6 +47,47 @@ static void SetInternalIdTransform()
 ```
 -->
 
+## WebRequest override
+
+You can assign a function to the [Addressables] object's [WebRequestOverride] property to individually modify the [UnityWebRequest] from which is used to download files, such as an AssetBundle or catalog json file. You must assign the function before the relevant operation starts, otherwise the default UnityWebRequest is used.
+
+The ResourceManager calls your [WebRequestOverride] function before [UnityWebRequest.SendWebRequest] is called. Passing the UnityWebRequest for the download to your function.
+
+The following example illustrates how you could append a query string to all URLs for AssetBundles and catalogs:
+
+[!code-cs[sample](../Samples/DocSampleCode/WebRequestOverride.cs#doc_TransformerWebRequest)]
+
+<!--
+```csharp
+using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.AddressableAssets;
+
+public class WebRequestOverride : MonoBehaviour
+{
+    //Register to override WebRequests Addressables creates
+    //The UnityWebRequests will default to the standard behaviour
+    private void Start()
+    {
+        Addressables.WebRequestOverride = EditWebRequestURL;
+    }
+    
+    //Override the url of the WebRequest
+    private void EditWebRequestURL(UnityWebRequest request)
+    {
+         if (request.url.EndsWith(".bundle"))
+            request.url = request.url + "?customQueryTag=customQueryValue";
+        else if (request.url.EndsWith(".json") || request.url.EndsWith(".hash"))
+            request.url = request.url + "?customQueryTag=customQueryValue";
+    }
+}
+```
+-->
+
+[Addressables]: xref:UnityEngine.AddressableAssets.Addressables
+[WebRequestOverride]: xref:UnityEngine.AddressableAssets.Addressables.WebRequestOverride
+[UnityWebRequest]: xref:UnityEngine.Networking.UnityWebRequest
+[UnityWebRequest.SendWebRequest]: xref:UnityEngine.Networking.UnityWebRequest.SendWebRequest
 [Addressables.CheckForCatalogUpdates]: xref:UnityEngine.AddressableAssets.Addressables.CheckForCatalogUpdates*
 [Addressables.InitializeAsync]: xref:UnityEngine.AddressableAssets.Addressables.InitializeAsync*
 [Addressables.LoadContentCatalogAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadContentCatalogAsync*

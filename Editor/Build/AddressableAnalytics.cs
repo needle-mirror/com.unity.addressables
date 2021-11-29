@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine.Analytics;
 
@@ -9,6 +10,7 @@ namespace UnityEditor.AddressableAssets
         private const string VendorKey = "unity.addressables";
         private const string EventName = "addressables";
         private static bool _eventRegistered = false;
+        static readonly HashSet<string> builtInBuildScriptNames = new HashSet<string>{"Default Build Script", "Use Asset Database (fastest)", "Use Existing Build (requires built groups)", "Simulate Groups (advanced)"};
 
         [Serializable]
         private struct AnalyticsData
@@ -21,7 +23,7 @@ namespace UnityEditor.AddressableAssets
         {
             //The event shouldn't be able to report if this is disabled but if we know we're not going to report
             //Lets early out and not waste time gathering all the data
-            if (!UnityEngine.Analytics.Analytics.enabled)
+            if (!EditorAnalytics.enabled)
                 return;
 
             ReportImpl(currentSettings);
@@ -41,9 +43,11 @@ namespace UnityEditor.AddressableAssets
             foreach (var group in currentSettings.groups)
                 numberOfAddressableAssets += group.entries.Count;
 
+            string buildScriptName = currentSettings.ActivePlayerDataBuilder.Name;
+            
             AnalyticsData data = new AnalyticsData()
             {
-                BuildScriptName = currentSettings.ActivePlayerDataBuilder.Name,
+                BuildScriptName = builtInBuildScriptNames.Contains(buildScriptName) ? buildScriptName : "Custom Build Script",
                 NumberOfAddressableAssets = numberOfAddressableAssets,
             };
 

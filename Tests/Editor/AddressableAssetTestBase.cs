@@ -136,5 +136,24 @@ namespace UnityEditor.AddressableAssets.Tests
             UnityEngine.Object.DestroyImmediate(go, false);
             return AssetDatabase.AssetPathToGUID(assetPath);
         }
+
+        protected string CreateFolderDeep(string path)
+        {
+            if (!path.StartsWith("Assets/"))
+                return null;
+            var split = path.Split('/');
+            string fullPath = "Assets";
+            string parentFolder;
+            string guid = null;
+            for (int i = 1; i < split.Length; ++i)
+            {
+                parentFolder = fullPath;
+                fullPath += "/" + split[i];
+                if (!AssetDatabase.IsValidFolder(fullPath))
+                    guid = AssetDatabase.CreateFolder(parentFolder, split[i]);
+            }
+
+            return guid;
+        }
     }
 }

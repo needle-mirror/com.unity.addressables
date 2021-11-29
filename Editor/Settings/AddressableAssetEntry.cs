@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor.Build.Content;
-using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -504,7 +502,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (AssetDatabase.IsValidFolder(AssetPath))
                 {
                     IsFolder = true;
-                    GatherFolderEntries(assets, recurseAll, entryFilter);
+                    GatherFolderEntries(assets, recurseAll, includeSubObjects, entryFilter);
                     SubAssets = assets;
                 }
                 else
@@ -525,20 +523,16 @@ namespace UnityEditor.AddressableAssets.Settings
                         {
                             var mainType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath);
                             if (mainType == typeof(SpriteAtlas))
-                            {
-                                GatherSpriteAtlasEntries(assets, AssetPath);
-                            }
+                                GatherSpriteAtlasEntries(assets);
                             else
-                            {
-                                GatherSubObjectEntries(assets, AssetPath);
-                            }
+                                GatherSubObjectEntries(assets);
                         }
                     }
                 }
             }
         }
 
-        void GatherSubObjectEntries(List<AddressableAssetEntry> assets, string path)
+        void GatherSubObjectEntries(List<AddressableAssetEntry> assets)
         {
             var objs = AssetDatabase.LoadAllAssetRepresentationsAtPath(AssetPath);
             for (int i = 0; i < objs.Length; i++)
@@ -547,9 +541,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 var namedAddress = string.Format("{0}[{1}]", address, o == null ? "missing reference" : o.name);
                 if (o == null)
                 {
-                    if (string.IsNullOrEmpty(AssetPath) && IsSubAsset)
-                        path = ParentEntry.AssetPath;
-                    Debug.LogWarning(string.Format("NullReference in entry {0}\nAssetPath: {1}\nAddressableAssetGroup: {2}", address, path, parentGroup.Name));
+                    Debug.LogWarning(string.Format("NullReference in entry {0}\nAssetPath: {1}\nAddressableAssetGroup: {2}", address, AssetPath, parentGroup.Name));
                     assets.Add(new AddressableAssetEntry("", namedAddress, parentGroup, true));
                 }
                 else
@@ -564,7 +556,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        void GatherSpriteAtlasEntries(List<AddressableAssetEntry> assets, string path)
+        void GatherSpriteAtlasEntries(List<AddressableAssetEntry> assets)
         {
             var settings = parentGroup.Settings;
             var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(AssetPath);
@@ -576,9 +568,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 var spriteName = sprites[i] == null ? "missing reference" : sprites[i].name;
                 if (sprites[i] == null)
                 {
-                    if (string.IsNullOrEmpty(AssetPath) && IsSubAsset)
-                        path = ParentEntry.AssetPath;
-                    Debug.LogWarning(string.Format("NullReference in entry {0}\nAssetPath: {1}\nAddressableAssetGroup: {2}", address, path, parentGroup.Name));
+                    Debug.LogWarning(string.Format("NullReference in entry {0}\nAssetPath: {1}\nAddressableAssetGroup: {2}", address, AssetPath, parentGroup.Name));
                     assets.Add(new AddressableAssetEntry("", spriteName, parentGroup, true));
                 }
                 else
@@ -621,7 +611,7 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 #pragma warning restore 0618
 
-        void GatherFolderEntries(List<AddressableAssetEntry> assets, bool recurseAll, Func<AddressableAssetEntry, bool> entryFilter)
+        internal void GatherFolderEntries(List<AddressableAssetEntry> assets, bool recurseAll, bool includeSubObjects, Func<AddressableAssetEntry, bool> entryFilter)
         {
             var path = AssetPath;
             var settings = parentGroup.Settings;
@@ -637,6 +627,15 @@ namespace UnityEditor.AddressableAssets.Settings
                     entry.m_Labels = m_Labels;
                     if (entryFilter == null || entryFilter(entry))
                         assets.Add(entry);
+                    
+                    if (includeSubObjects)
+                    {
+                        var mainType = AssetDatabase.GetMainAssetTypeAtPath(entry.AssetPath);
+                        if (mainType == typeof(SpriteAtlas))
+                            entry.GatherSpriteAtlasEntries(assets);
+                        else
+                            entry.GatherSubObjectEntries(assets);
+                    }
                 }
             }
 
@@ -751,36 +750,14 @@ namespace UnityEditor.AddressableAssets.Settings
 
         static IEnumerable<string> GetResourceDirectories()
         {
-            ListRequest req = AddressableAssetUtility.RequestPackageListAsync();
-
-            foreach (string path in GetResourceDirectoriesatPath("Assets"))
+            string[] resourcesGuids = AssetDatabase.FindAssets("Resources", new string[] { "Assets", "Packages" });
+            foreach (string resourcesGuid in resourcesGuids)
             {
-                yield return path;
-            }
-            List<PackageManager.PackageInfo> packages = AddressableAssetUtility.GetPackages(req);
-            foreach (PackageManager.PackageInfo package in packages)
-            {
-                foreach (string path in GetResourceDirectoriesatPath(package.assetPath))
+                string resourcesAssetPath = AssetDatabase.GUIDToAssetPath(resourcesGuid);
+                if (resourcesAssetPath.EndsWith("/resources", StringComparison.OrdinalIgnoreCase) && AssetDatabase.IsValidFolder(resourcesAssetPath) && Directory.Exists(resourcesAssetPath))
                 {
-                    yield return path;
+                    yield return resourcesAssetPath;
                 }
-            }
-        }
-
-        static IEnumerable<string> GetResourceDirectoriesatPath(string rootPath)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                foreach (string dir in Directory.EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories))
-                {
-                    if (dir.EndsWith("/resources", StringComparison.OrdinalIgnoreCase))
-                        yield return dir;
-                }
-            }
-            else
-            {
-                foreach (string dir in Directory.EnumerateDirectories(rootPath, "Resources", SearchOption.AllDirectories))
-                    yield return dir;
             }
         }
 
@@ -872,7 +849,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             if (AssetDatabase.IsValidFolder(path))
             {
-                GatherFolderEntries(implicitEntries, true, null);
+                GatherFolderEntries(implicitEntries, true, false, null);
             }
 #pragma warning disable 0618
             else if (MainAssetType == typeof(AddressableAssetEntryCollection))

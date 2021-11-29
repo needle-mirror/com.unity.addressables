@@ -208,16 +208,25 @@ namespace AddressableAssetsIntegrationTests
             public bool autoReleaseHandle = false;
             public bool done = false;
             public AsyncOperationHandle<IResourceLocator> operation;
+            public string errorMsg;
             async void Start()
             {
-                operation = addressables.LoadContentCatalogAsync(location.InternalId, autoReleaseHandle);
-                await operation.Task;
-                operation.Completed += handle => done = true;
+                try
+                {
+                    operation = addressables.LoadContentCatalogAsync(location.InternalId, autoReleaseHandle);
+                    await operation.Task;
+                    operation.Completed += handle => done = true;
+                }
+                catch (Exception e)
+                {
+                    errorMsg = e.Message;
+                    done = true;
+                }
             }
         }
 
         [UnityTest]
-        public IEnumerator AddressablesImpl_LoadContentCatalogAsync_WhenAutoReleaseHandleEnabled_ExecutingCompleteCallback_LogsWarning()
+        public IEnumerator AddressablesImpl_LoadContentCatalogAsync_WhenOpReleased_RegisteringCompleteCallback_ThrowsException()
         {
             // Setup
             yield return Init();
@@ -225,7 +234,6 @@ namespace AddressableAssetsIntegrationTests
             if (TypeName == "BuildScriptFastMode")
                 Assert.Ignore($"Skipping test {nameof(AddressablesImpl_LoadContentCatalogAsync_CanLoad)} for {TypeName}");
 
-            // Setup
             var go = new GameObject("test", typeof(AsyncAwaitLoadContentCatalog));
             var comp = go.GetComponent<AsyncAwaitLoadContentCatalog>();
             comp.addressables = m_Addressables;
@@ -233,11 +241,36 @@ namespace AddressableAssetsIntegrationTests
             comp.autoReleaseHandle = true;
 
             // Test
-            LogAssert.Expect(LogType.Warning, "Executing complete callback for a released operation.");
             while (!comp.done)
                 yield return null;
+            Assert.AreEqual("Attempting to use an invalid operation handle", comp.errorMsg);
 
             // Cleanup
+            GameObject.Destroy(go);
+        }
+
+        [UnityTest]
+        public IEnumerator AddressablesImpl_LoadContentCatalogAsync_WhenOpNotReleased_RegisteringCompleteCallback_DoesNotThrow()
+        {
+            // Setup
+            yield return Init();
+
+            if (TypeName == "BuildScriptFastMode")
+                Assert.Ignore($"Skipping test {nameof(AddressablesImpl_LoadContentCatalogAsync_CanLoad)} for {TypeName}");
+
+            var go = new GameObject("test", typeof(AsyncAwaitLoadContentCatalog));
+            var comp = go.GetComponent<AsyncAwaitLoadContentCatalog>();
+            comp.addressables = m_Addressables;
+            comp.location = m_Addressables.m_ResourceLocators[0].CatalogLocation;
+            comp.autoReleaseHandle = false;
+
+            // Test
+            while (!comp.done)
+                yield return null;
+            Assert.IsTrue(string.IsNullOrEmpty(comp.errorMsg), comp.errorMsg);
+
+            // Cleanup
+            comp.operation.Release();
             GameObject.Destroy(go);
         }
 

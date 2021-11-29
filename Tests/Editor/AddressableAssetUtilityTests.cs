@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Utilities;
-using UnityEditor.PackageManager;
-using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -49,15 +46,6 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsEmpty(actualPath);
             Assert.IsEmpty(actualGUID);
             Assert.IsEmpty(actualGUID);
-        }
-
-        [Test]
-        public void GetPackages_ReturnsUnityPackages()
-        {
-            ListRequest req = Client.List(true);
-            var packages = AddressableAssetUtility.GetPackages(req);
-            var addressablesPackage = packages.FirstOrDefault(p => p.name == $"com.unity.addressables");
-            Assert.IsNotNull(addressablesPackage);
         }
 
         [Test]
@@ -143,6 +131,18 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(CommonStrings.UnityEditorResourcePath));
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(CommonStrings.UnityDefaultResourcePath));
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(CommonStrings.UnityBuiltInExtraPath));
+        }
+
+        [Test]
+        [TestCase("Assets/Editor/Resources/fake_asset.png")]
+        [TestCase("Assets/Editor/Resources/fake_asset.png")]
+        [TestCase("Assets/Editor/Editor/fake_asset.png")]
+        [TestCase("Assets\\Editor\\Resources\\fake_asset.png")]
+        [TestCase("Assets\\Editor\\Editor\\Resources\\fake_asset.png")]
+        [TestCase("Assets\\Editor\\Resources\\Editor\\Resources\\fake_asset.png")]
+        public void IsPathValidBlocksEditorPaths(string path)
+        {
+            Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry(path));
         }
 
         [Test]

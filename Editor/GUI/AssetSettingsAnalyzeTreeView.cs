@@ -6,6 +6,8 @@ using UnityEditor.AddressableAssets.Build.AnalyzeRules;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
@@ -169,6 +171,28 @@ namespace UnityEditor.AddressableAssets.GUI
                 menu.ShowAsContext();
                 Repaint();
             }
+            else
+            {
+                var selectedIds = this.GetSelection();
+                List<AnalyzeResultsTreeViewItem> items = new List<AnalyzeResultsTreeViewItem>();
+                foreach (int id in selectedIds)
+                {
+                    var item = FindItem(id, rootItem) as AnalyzeResultsTreeViewItem;
+                    if (item != null)
+                        items.Add(item);
+                }
+                
+                if (items.Count > 0)
+                    AnalyzeResultsTreeViewItem.ContextClicked(items);
+            }
+            
+        }
+
+        protected override void DoubleClickedItem(int id)
+        {
+            var item = FindItem(id, rootItem) as AnalyzeResultsTreeViewItem;
+            if (item != null)
+                item.DoubleClicked();
         }
 
         protected override TreeViewItem BuildRoot()
@@ -237,69 +261,38 @@ namespace UnityEditor.AddressableAssets.GUI
         void BuildResults(TreeViewItem root, List<AnalyzeRule.AnalyzeResult> ruleResults)
         {
             hashToTreeViewItems.Clear();
-            LinkedList<TreeViewItem> treeViewItems = new LinkedList<TreeViewItem>();
-
             hashToTreeViewItems.Add(root.id, root);
-            float index = 0;
+            int updateFrequency = Mathf.Max(ruleResults.Count / 10, 1);
 
-
-            //preprocess nodes
-            foreach (var result in ruleResults)
+            for (int index=0; index < ruleResults.Count; ++index)
             {
+                var result = ruleResults[index];
+                if (index == 0 || index % updateFrequency == 0)
+                    EditorUtility.DisplayProgressBar("Building Results Tree...", result.resultName, (float)index / hashToTreeViewItems.Keys.Count);
+                
                 var resPath = result.resultName.Split(AnalyzeRule.kDelimiter);
                 string name = string.Empty;
-
+                TreeViewItem parent = root;
+                
                 for (int i = 0; i < resPath.Length; i++)
                 {
-                    int parentHash = name.GetHashCode();
-                    if (string.IsNullOrEmpty(name))
-                        parentHash = root.id;
                     name += resPath[i];
                     int hash = name.GetHashCode();
 
-                    if (hash == root.id)
-                        treeViewItems.AddLast(root);
+                    if (!hashToTreeViewItems.ContainsKey(hash))
+                    {
+                        AnalyzeResultsTreeViewItem item = new AnalyzeResultsTreeViewItem(hash, i + m_CurrentDepth, resPath[i], result.severity, result);
+                        hashToTreeViewItems.Add(item.id, item);
+                        parent.AddChild(item);
+                        parent = item;
+                    }
                     else
                     {
-                        AnalyzeResultsTreeViewItem item = new AnalyzeResultsTreeViewItem(hash, i + m_CurrentDepth, resPath[i], parentHash, result.severity);
-                        item.children = new List<TreeViewItem>();
-                        treeViewItems.AddLast(item);
+                        var targetItem = hashToTreeViewItems[hash] as AnalyzeResultsTreeViewItem;
+                        targetItem.results.Add(result);
+                        parent = targetItem;
                     }
                 }
-
-                index++;
-            }
-
-            //create dictionary
-            foreach (var item in treeViewItems)
-            {
-                if (item != null)
-                {
-                    if (!hashToTreeViewItems.ContainsKey(item.id))
-                        hashToTreeViewItems.Add(item.id, item);
-                }
-            }
-
-            //Build results tree
-            index = 0;
-            int updateFrequency = Mathf.Max(hashToTreeViewItems.Keys.Count / 10, 1);
-            foreach (var hash in hashToTreeViewItems.Keys)
-            {
-                TreeViewItem item;
-                if (hashToTreeViewItems.TryGetValue(hash, out item))
-                {
-                    if (index == 0 || index % updateFrequency == 0)
-                        EditorUtility.DisplayProgressBar("Building Results Tree...", item.displayName, (index / hashToTreeViewItems.Keys.Count));
-                    if ((item as AnalyzeResultsTreeViewItem) != null && hashToTreeViewItems.ContainsKey((item as AnalyzeResultsTreeViewItem).parentHash))
-                    {
-                        var parent = hashToTreeViewItems[(item as AnalyzeResultsTreeViewItem).parentHash];
-
-                        if (parent.id != item.id)
-                            parent.AddChild(item);
-                    }
-                }
-
-                index++;
             }
 
             EditorUtility.ClearProgressBar();
@@ -415,18 +408,84 @@ namespace UnityEditor.AddressableAssets.GUI
     class AnalyzeResultsTreeViewItem : AnalyzeTreeViewItemBase
     {
         public MessageType severity { get; set; }
-        public int parentHash { get; set; }
+        public HashSet<AnalyzeRule.AnalyzeResult> results { get; }
 
         public bool IsError
         {
             get { return !displayName.Contains("No issues found"); }
         }
 
-        public AnalyzeResultsTreeViewItem(int id, int depth, string displayName, int parent, MessageType type) : base(id, depth,
-                                                                                                                      displayName)
+        public AnalyzeResultsTreeViewItem(int id, int depth, string displayName, MessageType type)
+            : base(id, depth, displayName)
         {
             severity = type;
-            parentHash = parent;
+            results = new HashSet<AnalyzeRule.AnalyzeResult>();
+        }
+        
+        public AnalyzeResultsTreeViewItem(int id, int depth, string displayName, MessageType type, AnalyzeRule.AnalyzeResult analyzeResult)
+            : base(id, depth, displayName)
+        {
+            severity = type;
+            results = new HashSet<AnalyzeRule.AnalyzeResult>() {analyzeResult};
+        }
+
+        internal static void ContextClicked(List<AnalyzeResultsTreeViewItem> items)
+        {
+            HashSet<UnityEngine.Object> objects = new HashSet<Object>();
+            
+            foreach (AnalyzeResultsTreeViewItem viewItem in items)
+            {
+                foreach (var itemResult in viewItem.results)
+                {
+                    Object o = GetResultObject(itemResult.resultName);
+                    if (o != null)
+                        objects.Add(o);
+                }
+            }
+
+            if (objects.Count > 0)
+            {
+                GenericMenu menu = new GenericMenu();
+                menu.AddItem(new GUIContent(objects.Count > 0 ? "Select Assets" : "Select Asset"), false, () =>
+                {
+                    Selection.objects = objects.ToArray();
+                    foreach (Object o in objects)
+                        EditorGUIUtility.PingObject(o);
+                });
+                menu.ShowAsContext();
+            }
+        }
+
+        static UnityEngine.Object GetResultObject(string resultName)
+        {
+            int li = resultName.LastIndexOf(AnalyzeRule.kDelimiter);
+            if (li >= 0)
+            {
+                string assetPath = resultName.Substring(li + 1);
+                string guid = AssetDatabase.AssetPathToGUID(assetPath);
+                if (!string.IsNullOrEmpty(guid))
+                    return AssetDatabase.LoadMainAssetAtPath(assetPath);
+            }
+
+            return null;
+        }
+
+        internal void DoubleClicked()
+        {
+            HashSet<UnityEngine.Object> objects = new HashSet<Object>();
+            foreach (var itemResult in results)
+            {
+                Object o = GetResultObject(itemResult.resultName);
+                if (o != null)
+                    objects.Add(o);
+            }
+
+            if (objects.Count > 0)
+            {
+                Selection.objects = objects.ToArray();
+                foreach (Object o in objects)
+                    EditorGUIUtility.PingObject(o);
+            }
         }
     }
 

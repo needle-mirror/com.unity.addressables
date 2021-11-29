@@ -351,6 +351,31 @@ namespace AddressableAssetsIntegrationTests
             Assert.AreEqual(2, op.Result.Count);
             op.Release();
         }
+        
+        [UnityTest]
+        public IEnumerator CanUseCustomAssetBundleResource_LoadFromCustomProvider()
+        {
+            //Setup
+            yield return Init();
+            if (string.IsNullOrEmpty(TypeName) || TypeName == "BuildScriptFastMode")
+            {
+                Assert.Ignore($"Skipping test {nameof(CanUseCustomAssetBundleResource_LoadFromCustomProvider)} for {TypeName}, AssetBundle based test.");
+            }
+            string hash = "123456789";
+            string bundleName = $"test_{hash}";
+            string key = "lockey_key";
+            
+            ResourceLocationBase location = null;
+            TestCatalogProviderCustomAssetBundleResource testProvider;
+            SetupBundleForProviderTests(bundleName, "bundle", key, out location, out testProvider);
+
+            var op = m_Addressables.LoadAssetAsync<object>(key);
+            yield return op;
+
+            Assert.IsTrue(testProvider.TestInternalOp.Result.WasUsed);
+            
+            op.Release();
+        }
 
         string TransFunc(IResourceLocation loc)
         {
@@ -2195,7 +2220,7 @@ namespace AddressableAssetsIntegrationTests
                 manualDepNameHashSum += h.DebugName.GetHashCode();
             Assert.AreEqual(manualDepNameHashSum, dependencyNameHashSum, "Calculation of hashcode was not completed as expected.");
         }
-        
+
         [UnityTest]
         public IEnumerator ResourceManagerDiagnostics_CalculateCompletedOperationHashcode_DoesNotErrorOnNullResult()
         {
@@ -2215,7 +2240,7 @@ namespace AddressableAssetsIntegrationTests
             int hashcode = rmd.CalculateCompletedOperationHashcode(completedOp);
             Assert.NotNull(hashcode, "CalculateCompletedOperationHashcode should not error when a completedOperation with an empty list is passed in.");
         }
-        
+
         [UnityTest]
         public IEnumerator ResourceManagerDiagnostics_GenerateCompletedOperationDisplayName_DoesNotErrorOnEmptyResultList()
         {
@@ -2225,7 +2250,7 @@ namespace AddressableAssetsIntegrationTests
             string displayName = rmd.GenerateCompletedOperationDisplayName(completedOp);
             Assert.NotNull(displayName, "GenerateCompletedOperationDisplayName should not run into issues when an empty string is passed in.");
         }
-        
+
         [UnityTest]
         public IEnumerator ResourceManagerDiagnostics_GenerateCompletedOperationDisplayName_DoesNotErrorOnTrivialList()
         {
@@ -2237,7 +2262,7 @@ namespace AddressableAssetsIntegrationTests
             string displayName = rmd.GenerateCompletedOperationDisplayName(completedOp);
             Assert.NotNull(displayName, "GenerateCompletedOperationDisplayName should not run into issues when a simple string is passed in.");
         }
-        
+
         [UnityTest]
         public IEnumerator ResourceManagerDiagnostics_GenerateCompletedOperationDisplayName_DoesNotErrorOnListWithEmptyElement()
         {
@@ -2249,20 +2274,20 @@ namespace AddressableAssetsIntegrationTests
             string displayName = rmd.GenerateCompletedOperationDisplayName(completedOp);
             Assert.NotNull(displayName, "GenerateCompletedOperationDisplayName should not run into issues when an empty string is passed in.");
         }
-        
+
         [UnityTest]
         public IEnumerator ResourceManagerDiagnostics_GenerateCompletedOperationDisplayName_DoesNotErrorOnListWithManyEmptyElements()
         {
             yield return Init();
             var rmd = new ResourceManagerDiagnostics(m_Addressables.ResourceManager);
             var list = new List<string>();
-            for(int i = 0; i < 20; i++)
+            for (int i = 0; i < 20; i++)
                 list.Add("");
             var completedOp = m_Addressables.ResourceManager.CreateCompletedOperation<List<string>>(list, null);
             string displayName = rmd.GenerateCompletedOperationDisplayName(completedOp);
             Assert.NotNull(displayName, "GenerateCompletedOperationDisplayName should not run into issues when many empty strings are passed in.");
         }
-        
+
         [UnityTest]
         public IEnumerator ResourceManagerDiagnostics_CalculateCompletedOperationDisplayName_DoesNotErrorOnNullResult()
         {
@@ -2272,7 +2297,7 @@ namespace AddressableAssetsIntegrationTests
             string displayName = rmd.GenerateCompletedOperationDisplayName(completedOp);
             Assert.NotNull(displayName, "GenerateCompletedOperationDisplayName should not error when a completedOperation with a null result is passed in.");
         }
-        
+
         [UnityTest]
         public IEnumerator ResourceManagerDiagnostics_GenerateCompletedOperationDisplayName_DoesNotErrorOnReallyLongList()
         {
@@ -2315,7 +2340,7 @@ namespace AddressableAssetsIntegrationTests
 
             protected override string DebugName
             {
-                get { return m_DebugName;}
+                get { return m_DebugName; }
             }
         }
 
@@ -2464,6 +2489,75 @@ namespace AddressableAssetsIntegrationTests
             };
         }
 
+        class TestCatalogProviderCustomAssetBundleResource : BundledAssetProvider
+        {
+            public TestAssetBundleResourceInternalOp TestInternalOp;
+            internal class TestAssetBundleResourceInternalOp : AsyncOperationBase<TestAssetBundleResource>
+            {
+                TestAssetBundleResource m_Resource;
+                public TestAssetBundleResourceInternalOp(TestAssetBundleResource resource)
+                {
+                    m_Resource = resource;
+                }
+
+                protected override void Execute()
+                {
+                    Complete(m_Resource, m_Resource != null, m_Resource != null ? "" : "TestAssetBundleResource was null");
+                }
+            }
+
+            /// <inheritdoc/>
+            public override string ProviderId
+            {
+                get
+                {
+                    if (string.IsNullOrEmpty(m_ProviderId))
+                        m_ProviderId = typeof(TestCatalogProviderCustomAssetBundleResource).FullName;
+
+                    return m_ProviderId;
+                }
+            }
+
+            public override void Provide(ProvideHandle provideHandle)
+            {
+                ProviderOperation<Object> op = new ProviderOperation<Object>();
+                GroupOperation group = new GroupOperation();
+                TestInternalOp = new TestAssetBundleResourceInternalOp(new TestAssetBundleResource());
+                provideHandle.ResourceManager.Acquire(TestInternalOp.Handle);
+                provideHandle.ResourceManager.Acquire(TestInternalOp.Handle);
+                group.Init(new List<AsyncOperationHandle>(){ new AsyncOperationHandle(TestInternalOp) });
+                op.Init(provideHandle.ResourceManager, null, provideHandle.Location, group.Handle);
+                ProvideHandle handle = new ProvideHandle(provideHandle.ResourceManager, op);
+                TestInternalOp.InvokeExecute();
+                base.Provide(handle);
+            }
+
+            internal class TestAssetBundleResource : IAssetBundleResource
+            {
+                public bool WasUsed = false;
+
+                public AssetBundle GetAssetBundle()
+                {
+                    WasUsed = true;
+                    return null;
+                }
+            }
+        }
+        
+        private void SetupBundleForProviderTests(string bundleName, string depName, string key, out ResourceLocationBase location, out TestCatalogProviderCustomAssetBundleResource testProvider)
+        {
+            testProvider = new TestCatalogProviderCustomAssetBundleResource();
+            m_Addressables.ResourceManager.ResourceProviders.Add(testProvider);
+            location = new ResourceLocationBase(key, bundleName, typeof(TestCatalogProviderCustomAssetBundleResource).FullName, typeof(TestCatalogProviderCustomAssetBundleResource.TestAssetBundleResource),
+                new ResourceLocationBase(depName, bundleName, typeof(TestCatalogProviderCustomAssetBundleResource).FullName, typeof(TestCatalogProviderCustomAssetBundleResource.TestAssetBundleResource)));
+            (location.Dependencies[0] as ResourceLocationBase).Data = location.Data = new AssetBundleRequestOptions()
+            {
+                BundleName = bundleName
+            };
+
+            GetRLM(m_Addressables).Add(key, new List<IResourceLocation>(){location});
+        }
+
         [UnityTest]
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForKey()
         {
@@ -2526,7 +2620,7 @@ namespace AddressableAssetsIntegrationTests
                 BundleName = bundleName
             };
 
-            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() {location});
+            rlm.Add(location.PrimaryKey, new List<IResourceLocation>() { location });
 
             yield return m_Addressables.ClearDependencyCacheAsync((object)key, true);
 
@@ -3022,6 +3116,54 @@ __data");
 #else
             return null;
 #endif
+        }
+
+        class AsyncWaitForCompletion : MonoBehaviour
+        {
+            public string key1;
+            public string key2;
+            public bool done = false;
+            public AsyncOperationHandle<IList<IResourceLocation>> op;
+            public AsyncOperationHandle<GameObject> op2;
+            public AddressablesImpl addressables;
+            public string errorMsg;
+            async void Start()
+            {
+                try
+                {
+                    op = addressables.LoadResourceLocationsAsync(key1, typeof(Texture2D));
+                    await op.Task;
+                    op2 = addressables.LoadAssetAsync<GameObject>(key2);
+                    op2.WaitForCompletion();
+                }
+                catch (Exception e)
+                {
+                    errorMsg = e.Message;
+                }
+                finally
+                {
+                    done = true;
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator WhenCallingWaitForCompletion_InAsyncMethod_NoExceptionIsThrown()
+        {
+            yield return Init();
+            var go = new GameObject("test", typeof(AsyncWaitForCompletion));
+            var comp = go.GetComponent<AsyncWaitForCompletion>();
+            comp.addressables = m_Addressables;
+            comp.key1 = "prefabs_evenBASE";
+            comp.key2 = AddressablesTestUtility.GetPrefabLabel("BASE");
+
+            while (!comp.done)
+                yield return null;
+            Assert.IsTrue(string.IsNullOrEmpty(comp.errorMsg), comp.errorMsg);
+
+            comp.op.Release();
+            comp.op2.Release();
+            GameObject.Destroy(go);
         }
     }
 }

@@ -24,6 +24,13 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
         HostingServicesManager m_Manager;
         AddressableAssetSettings m_Settings;
 
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            // calling EditorSceneManager.NewScene from other tests will call HostingServicesManager.OnDisable and save the keys
+            HostingServicesManager.EraseSessionStateKeys();
+        }
+
         [SetUp]
         public void Setup()
         {
@@ -32,12 +39,13 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             m_Settings.HostingServicesManager = m_Manager;
             var group = m_Settings.CreateGroup("testGroup", false, false, false, null);
             group.AddSchema<BundledAssetGroupSchema>();
-            m_Settings.groups.Add(group);
+            m_Settings.groups.Add(group); 
         }
 
         [TearDown]
         public void TearDown()
         {
+            Assert.AreEqual(0, SessionState.GetInt(HostingServicesManager.k_GlobalProfileVariablesCountKey, 0));
             var services = m_Manager.HostingServices.ToArray();
             foreach (var svc in services)
             {
@@ -380,22 +388,22 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             var svc = m_Manager.AddHostingService(typeof(TestHostingService), "test");
             svc.StartHostingService();
 
-            int activePlayerDataBuilderIndex = m_Settings.ActivePlayerDataBuilderIndex;
+            int activePlayerDataBuilderIndex = m_Settings.ActivePlayModeDataBuilderIndex;
             m_Settings.DataBuilders.Add(ScriptableObject.CreateInstance<BuildScriptPackedPlayMode>());
-            m_Settings.ActivePlayerDataBuilderIndex = m_Settings.DataBuilders.Count - 1;
+            m_Settings.ActivePlayModeDataBuilderIndex = m_Settings.DataBuilders.Count - 1;
 
             m_Manager.OnEnable();
             Assert.GreaterOrEqual(m_Manager.GlobalProfileVariables.Count, 1);
             svc.StopHostingService();
-            
-            m_Settings.ActivePlayerDataBuilderIndex = activePlayerDataBuilderIndex;
+
+            m_Settings.ActivePlayModeDataBuilderIndex = activePlayerDataBuilderIndex;
             m_Settings.DataBuilders.RemoveAt(m_Settings.DataBuilders.Count - 1);
             m_Manager.exitingEditMode = exitingExitMode;
         }
 
-        public class RefreshProfileVariablesNegativeTestFactory
+        public class OnEnableTestFactory
         {
-            public static IEnumerable RefreshProfileVariablesNegativeTestCases
+            public static IEnumerable LoadGlobalProfileVariablesTestCases
             {
                 get
                 {
@@ -409,7 +417,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
                     {
                         string serviceStatusText = testCases[i, 0] ? "ServiceEnabled" : "ServiceDisabled";
                         string playModeTypeText = testCases[i, 1] ? "UsingPackedPlayMode" : "NotUsingPackedPlayMode";
-                        string name = $"OnEnableShouldNot_RefreshGlobalProfileVariables_IfExitingEditMode_And{serviceStatusText}_And{playModeTypeText}";
+                        string name = $"OnEnableShould_LoadGlobalProfileVariables_IfExitingEditMode_And{serviceStatusText}_And{playModeTypeText}";
                         yield return new TestCaseData(testCases[i, 0], testCases[i, 1]).SetName(name);
                     }
                 }
@@ -417,11 +425,13 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
         }
 
         [Test]
-        [TestCaseSource(typeof(RefreshProfileVariablesNegativeTestFactory), "RefreshProfileVariablesNegativeTestCases")]
-        public void OnEnableShouldNot_RefreshGlobalProfileVariables_IfExitingEditMode_AndConditionsAreMet(bool serviceEnabled, bool usingPackedPlayMode)
+        [TestCaseSource(typeof(OnEnableTestFactory), "LoadGlobalProfileVariablesTestCases")]
+        public void OnEnableShould_LoadSessionStateKeys_IfExitingEditMode_AndConditionsAreMet(bool serviceEnabled, bool usingPackedPlayMode)
         {
+            string ipAddressKey = m_Manager.GetPrivateIpAddressKey();
+            string ipAddressVal = "123.1.2.3";
+
             m_Manager.Initialize(m_Settings);
-            m_Manager.GlobalProfileVariables.Clear();
             bool exitingExitMode = m_Manager.exitingEditMode;
             m_Manager.exitingEditMode = true;
 
@@ -429,23 +439,31 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             if (serviceEnabled)
                 svc.StartHostingService();
 
-            int activePlayerDataBuilderIndex = m_Settings.ActivePlayerDataBuilderIndex;
+            int activePlayerDataBuilderIndex = m_Settings.ActivePlayModeDataBuilderIndex;
             if (usingPackedPlayMode)
             {
                 m_Settings.DataBuilders.Add(ScriptableObject.CreateInstance<BuildScriptPackedPlayMode>());
-                m_Settings.ActivePlayerDataBuilderIndex = m_Settings.DataBuilders.Count - 1;
+                m_Settings.ActivePlayModeDataBuilderIndex = m_Settings.DataBuilders.Count - 1;
             }
 
+            m_Manager.GlobalProfileVariables.Clear();
+            m_Manager.GlobalProfileVariables.Add(ipAddressKey, ipAddressVal);
+            m_Manager.SaveSessionStateKeys();
+            m_Manager.GlobalProfileVariables.Clear();
+
             m_Manager.OnEnable();
-            Assert.AreEqual(0, m_Manager.GlobalProfileVariables.Count);
+            Assert.AreEqual(1, m_Manager.GlobalProfileVariables.Count);
+            Assert.IsTrue(m_Manager.GlobalProfileVariables.ContainsKey(ipAddressKey));
+            Assert.AreEqual(ipAddressVal, m_Manager.GlobalProfileVariables[ipAddressKey]);
 
             if (serviceEnabled)
                 svc.StopHostingService();
 
-            m_Settings.ActivePlayerDataBuilderIndex = activePlayerDataBuilderIndex;
+            m_Settings.ActivePlayModeDataBuilderIndex = activePlayerDataBuilderIndex;
             if (usingPackedPlayMode)
                 m_Settings.DataBuilders.RemoveAt(m_Settings.DataBuilders.Count - 1);
             m_Manager.exitingEditMode = exitingExitMode;
+            HostingServicesManager.EraseSessionStateKeys();
         }
 
         // OnDisable
@@ -461,6 +479,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             Assert.Greater(m_Settings.OnModification.GetInvocationList().Length, len);
             m_Manager.OnDisable();
             Assert.AreEqual(len, m_Settings.OnModification.GetInvocationList().Length);
+            HostingServicesManager.EraseSessionStateKeys();
         }
 
         [Test]
@@ -471,6 +490,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             Assert.IsTrue(ProfileStringEvalDelegateIsRegistered(m_Settings, m_Manager));
             m_Manager.OnDisable();
             Assert.IsFalse(ProfileStringEvalDelegateIsRegistered(m_Settings, m_Manager));
+            HostingServicesManager.EraseSessionStateKeys();
         }
 
         [Test]
@@ -484,6 +504,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             Assert.IsNotNull(svc.Logger);
             m_Manager.OnDisable();
             Assert.IsNull(svc.Logger);
+            HostingServicesManager.EraseSessionStateKeys();
         }
 
         [Test]
@@ -497,6 +518,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             Assert.IsTrue(ProfileStringEvalDelegateIsRegistered(m_Settings, svc));
             m_Manager.OnDisable();
             Assert.IsFalse(ProfileStringEvalDelegateIsRegistered(m_Settings, svc));
+            HostingServicesManager.EraseSessionStateKeys();
         }
 
         [Ignore("Katana instability https://jira.unity3d.com/browse/ADDR-2327")]
@@ -515,6 +537,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
 
             foreach (var svc in m_Manager.HostingServices)
                 Assert.IsFalse(svc.IsHostingServiceRunning);
+            HostingServicesManager.EraseSessionStateKeys();
         }
 
         [Test]
@@ -548,6 +571,28 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
                 Assert.IsTrue(svc.IsHostingServiceRunning, $"Service '{svc.DescriptiveName}' not running after manager.OnEnable() (iteration {i}");
             }
             Assert.AreEqual(expectedPort, svc.HostingServicePort);
+            HostingServicesManager.EraseSessionStateKeys();
+        }
+
+        [Test]
+        public void OnDisableShould_SaveSessionStateKeys()
+        {
+            string ipAddressKey = m_Manager.GetPrivateIpAddressKey(0);
+            string ipAddressVal = "123.1.2.3";
+
+            m_Manager.Initialize(m_Settings);
+            m_Manager.GlobalProfileVariables.Clear();
+            m_Manager.GlobalProfileVariables.Add(ipAddressKey, ipAddressVal);
+
+            m_Manager.OnDisable();
+            m_Manager.GlobalProfileVariables.Clear();
+            m_Manager.LoadSessionStateKeys();
+
+            Assert.AreEqual(1, m_Manager.GlobalProfileVariables.Count);
+            Assert.IsTrue(m_Manager.GlobalProfileVariables.ContainsKey(ipAddressKey));
+            Assert.AreEqual(ipAddressVal, m_Manager.GlobalProfileVariables[ipAddressKey]);
+
+            HostingServicesManager.EraseSessionStateKeys();
         }
 
         // RegisterLogger
@@ -668,6 +713,99 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
         {
             public List<HostingServicesManager.HostingServiceInfo> Infos;
             public List<string> TypeRefs;
+        }
+
+        [Test]
+        public void CanSaveAndLoadSessionStateKeys()
+        {
+            m_Manager.Initialize(m_Settings);
+            m_Manager.GlobalProfileVariables.Clear();
+            var customIps = new Dictionary<string, string>()
+            {
+                { m_Manager.GetPrivateIpAddressKey(0), "111.1.1.1" },
+                { m_Manager.GetPrivateIpAddressKey(1), "222.2.2.2" },
+                { m_Manager.GetPrivateIpAddressKey(2), "333.3.3.3" },
+            };
+            foreach (KeyValuePair<string, string> pair in customIps)
+            {
+                m_Manager.GlobalProfileVariables.Add(pair.Key, pair.Value);
+            }
+
+            m_Manager.SaveSessionStateKeys();
+            m_Manager.GlobalProfileVariables.Clear();
+
+            m_Manager.LoadSessionStateKeys();
+            Assert.AreEqual(customIps.Count, m_Manager.GlobalProfileVariables.Count);
+            foreach (KeyValuePair<string, string> pair in customIps)
+            {
+                Assert.IsTrue(m_Manager.GlobalProfileVariables.ContainsKey(pair.Key));
+                Assert.AreEqual(pair.Value, m_Manager.GlobalProfileVariables[pair.Key]);
+            }
+
+            HostingServicesManager.EraseSessionStateKeys();
+        }
+
+        [Test]
+        public void LoadSessionStateKeys_ExcludesMissingKeys()
+        {
+            string ipAddressKey = m_Manager.GetPrivateIpAddressKey(1);
+
+            m_Manager.Initialize(m_Settings);
+            m_Manager.GlobalProfileVariables.Clear();
+            m_Manager.GlobalProfileVariables.Add(m_Manager.GetPrivateIpAddressKey(0), "111.1.1.1");
+            m_Manager.GlobalProfileVariables.Add(ipAddressKey, "222.2.2.2");
+            m_Manager.GlobalProfileVariables.Add(m_Manager.GetPrivateIpAddressKey(2), "333.3.3.3");
+
+            m_Manager.SaveSessionStateKeys();
+            m_Manager.GlobalProfileVariables.Clear();
+            
+            SessionState.EraseString(HostingServicesManager.GetSessionStateKey(1));
+            m_Manager.LoadSessionStateKeys();
+            Assert.AreEqual(2, m_Manager.GlobalProfileVariables.Count);
+            Assert.IsFalse(m_Manager.GlobalProfileVariables.ContainsKey(ipAddressKey));
+
+            HostingServicesManager.EraseSessionStateKeys();
+        }
+
+        [Test]
+        public void CanEraseSessionStateKeys()
+        {
+            m_Manager.Initialize(m_Settings);
+            m_Manager.GlobalProfileVariables.Clear();
+            m_Manager.GlobalProfileVariables.Add(m_Manager.GetPrivateIpAddressKey(0), "111.1.1.1");
+            m_Manager.GlobalProfileVariables.Add(m_Manager.GetPrivateIpAddressKey(1), "222.2.2.2");
+            m_Manager.GlobalProfileVariables.Add(m_Manager.GetPrivateIpAddressKey(2), "333.3.3.3");
+
+            m_Manager.SaveSessionStateKeys();
+
+            HostingServicesManager.EraseSessionStateKeys();
+            Assert.AreEqual(string.Empty, SessionState.GetString(HostingServicesManager.GetSessionStateKey(0), string.Empty));
+            Assert.AreEqual(string.Empty, SessionState.GetString(HostingServicesManager.GetSessionStateKey(1), string.Empty));
+            Assert.AreEqual(string.Empty, SessionState.GetString(HostingServicesManager.GetSessionStateKey(2), string.Empty));
+        }
+
+        [Test]
+        public void SaveSessionStateKeys_ErasesOldSessionStateKeys()
+        {
+            string ipAddressKey = m_Manager.GetPrivateIpAddressKey(0);
+            string ipAddressVal = "444.4.4.4";
+
+            m_Manager.Initialize(m_Settings);
+            m_Manager.GlobalProfileVariables.Clear();
+            m_Manager.GlobalProfileVariables.Add(ipAddressKey, "111.1.1.1");
+            m_Manager.GlobalProfileVariables.Add(m_Manager.GetPrivateIpAddressKey(1), "222.2.2.2");
+            m_Manager.GlobalProfileVariables.Add(m_Manager.GetPrivateIpAddressKey(2), "333.3.3.3");
+            
+            m_Manager.SaveSessionStateKeys();
+            m_Manager.GlobalProfileVariables.Clear();
+            m_Manager.GlobalProfileVariables.Add(ipAddressKey, ipAddressVal);
+
+            m_Manager.SaveSessionStateKeys();
+            Assert.AreEqual(ipAddressVal, SessionState.GetString(HostingServicesManager.GetSessionStateKey(0), string.Empty));
+            Assert.AreEqual(string.Empty, SessionState.GetString(HostingServicesManager.GetSessionStateKey(1), string.Empty));
+            Assert.AreEqual(string.Empty, SessionState.GetString(HostingServicesManager.GetSessionStateKey(2), string.Empty));
+
+            HostingServicesManager.EraseSessionStateKeys();
         }
     }
 }

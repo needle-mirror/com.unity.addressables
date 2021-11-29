@@ -20,6 +20,12 @@ namespace UnityEditor.AddressableAssets.HostingServices
     public class HostingServicesManager : ISerializationCallbackReceiver
     {
         internal const string KPrivateIpAddressKey = "PrivateIpAddress";
+        internal string GetPrivateIpAddressKey(int id = 0)
+        {
+            if (id == 0)
+                return KPrivateIpAddressKey;
+            return $"{KPrivateIpAddressKey}_{id}";
+        }
 
         [Serializable]
         internal class HostingServiceInfo
@@ -54,21 +60,13 @@ namespace UnityEditor.AddressableAssets.HostingServices
 
         internal bool exitingEditMode = false;
 
-        [Serializable]
-        internal class ProfileVariablesInfo
-        {
-            [SerializeField]
-            internal string key;
-            [SerializeField]
-            internal string value;
-        }
-        [SerializeField]
-        List<ProfileVariablesInfo> m_GlobalProfileVariablesInfos;
-
         /// <summary>
         /// Key/Value pairs valid for profile variable substitution
         /// </summary>
         public Dictionary<string, string> GlobalProfileVariables { get; private set; }
+
+        internal static readonly string k_GlobalProfileVariablesCountKey = $"com.unity.addressables.{nameof(GlobalProfileVariables)}Count";
+        internal static string GetSessionStateKey(int id) { return $"com.unity.addressables.{nameof(GlobalProfileVariables)}{id}"; }
 
         /// <summary>
         /// Direct logging output of all managed services
@@ -160,7 +158,6 @@ namespace UnityEditor.AddressableAssets.HostingServices
         /// </summary>
         public HostingServicesManager()
         {
-            m_GlobalProfileVariablesInfos = new List<ProfileVariablesInfo>();
             GlobalProfileVariables = new Dictionary<string, string>();
             m_HostingServiceInfos = new List<HostingServiceInfo>();
             m_HostingServiceInfoMap = new Dictionary<IHostingService, HostingServiceInfo>();
@@ -249,7 +246,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             m_Settings.profileSettings.RegisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
 
             m_HostingServiceInfoMap.Add(svc, info);
-            m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true, true);            
+            m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true, true);
             AddressableAssetUtility.OpenAssetIfUsingVCIntegration(m_Settings);
 
             m_NextInstanceId++;
@@ -298,6 +295,8 @@ namespace UnityEditor.AddressableAssets.HostingServices
 
             if (!exitingEditMode || exitingEditMode && hasAnEnabledService && IsUsingPackedPlayMode())
                 RefreshGlobalProfileVariables();
+            else
+                LoadSessionStateKeys();
         }
 
         bool IsUsingPackedPlayMode()
@@ -320,6 +319,47 @@ namespace UnityEditor.AddressableAssets.HostingServices
                 svc.Logger = null;
                 m_Settings.profileSettings.UnregisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
                 (svc as BaseHostingService)?.OnDisable();
+            }
+            SaveSessionStateKeys();
+        }
+
+        internal void LoadSessionStateKeys()
+        {
+            int numKeys = SessionState.GetInt(k_GlobalProfileVariablesCountKey, 0);
+            for (int i = 0; i < numKeys; i++)
+            {
+                string profileVar = SessionState.GetString(GetSessionStateKey(i), string.Empty);
+                if (!string.IsNullOrEmpty(profileVar))
+                    GlobalProfileVariables.Add(GetPrivateIpAddressKey(i), profileVar);
+            }
+        }
+
+        internal void SaveSessionStateKeys()
+        {
+            int prevNumKeys = SessionState.GetInt(k_GlobalProfileVariablesCountKey, 0);
+            SessionState.SetInt(k_GlobalProfileVariablesCountKey, GlobalProfileVariables.Count);
+
+            int profileVarIdx = 0;
+            foreach (KeyValuePair<string, string> pair in GlobalProfileVariables)
+            {
+                SessionState.SetString(GetSessionStateKey(profileVarIdx), pair.Value);
+                profileVarIdx++;
+            }
+            EraseSessionStateKeys(profileVarIdx, prevNumKeys);
+        }
+
+        internal static void EraseSessionStateKeys()
+        {
+            int numKeys = SessionState.GetInt(k_GlobalProfileVariablesCountKey, 0);
+            EraseSessionStateKeys(0, numKeys);
+            SessionState.EraseInt(k_GlobalProfileVariablesCountKey);
+        }
+
+        static void EraseSessionStateKeys(int min, int max)
+        {
+            for (int i = min; i < max; i++)
+            {
+                SessionState.EraseString(GetSessionStateKey(i));
             }
         }
 
@@ -344,15 +384,6 @@ namespace UnityEditor.AddressableAssets.HostingServices
             m_RegisteredServiceTypeRefs.Clear();
             foreach (var type in m_RegisteredServiceTypes)
                 m_RegisteredServiceTypeRefs.Add(TypeToClassRef(type));
-
-            m_GlobalProfileVariablesInfos.Clear();
-            foreach (var profileVar in GlobalProfileVariables)
-            {
-                var info = new ProfileVariablesInfo();
-                info.key = profileVar.Key;
-                info.value = profileVar.Value;
-                m_GlobalProfileVariablesInfos.Add(info);
-            }
         }
 
         /// <summary> Ensure object is ready for serialization, and calls <see cref="IHostingService.OnBeforeSerialize"/> methods
@@ -376,12 +407,6 @@ namespace UnityEditor.AddressableAssets.HostingServices
                 var type = Type.GetType(typeRef, false);
                 if (type == null) continue;
                 m_RegisteredServiceTypes.Add(type);
-            }
-
-            GlobalProfileVariables = new Dictionary<string, string>();
-            foreach (var profileVar in m_GlobalProfileVariablesInfos)
-            {
-                GlobalProfileVariables.Add(profileVar.key, profileVar.value);
             }
         }
 
@@ -409,8 +434,6 @@ namespace UnityEditor.AddressableAssets.HostingServices
                         vars.Add(KPrivateIpAddressKey + "_" + i, ipAddressList[i].ToString());
                 }
             }
-            m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true, true);
-            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(m_Settings);
         }
 
         // Internal for unit tests

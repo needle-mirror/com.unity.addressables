@@ -812,8 +812,8 @@ namespace UnityEditor.AddressableAssets.Tests
             {
                 var resourcesPaths = new[]
                 {
-                    k_SchemaTestFolderPath + "/Resources/testResource1.prefab",
-                    k_SchemaTestFolderPath + "/OtherFolder/Resources/testResource2.prefab"
+                    k_SchemaTestFolderPath + "/OtherFolder/Resources/testResource2.prefab",
+                    k_SchemaTestFolderPath + "/Resources/testResource1.prefab"
                 };
                 foreach (string resourcePath in resourcesPaths)
                 {

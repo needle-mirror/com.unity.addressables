@@ -1328,34 +1328,6 @@ namespace UnityEditor.AddressableAssets.Settings
         void OnEnable()
         {
             HostingServicesManager.OnEnable();
-
-#pragma warning disable 0618
-            if (!SessionState.GetBool("com.unity.addressables.updateAssetEntryCollections", false))
-            {
-                List<string> aecPaths = new List<string>();
-                foreach (AddressableAssetGroup assetGroup in groups)
-                {
-                    if (assetGroup == null)
-                        continue;
-                    foreach (var assetEntry in assetGroup.entries)
-                    {
-                        if (assetEntry == null)
-                            continue;
-                        if (typeof(AddressableAssetEntryCollection).IsAssignableFrom(assetEntry.MainAssetType))
-                        {
-                            aecPaths.Add(assetEntry.AssetPath);
-                        }
-                    }
-                }
-
-                if (aecPaths.Count > 0)
-                {
-                    if (ConvertAssetEntryCollectionsWithPermissionRequest(aecPaths))
-                        SetDirty(ModificationEvent.BatchModification, null, true, false);
-                }
-                SessionState.SetBool("com.unity.addressables.updateAssetEntryCollections", true);
-            }
-#pragma warning restore 0618
         }
 
         void OnDisable()

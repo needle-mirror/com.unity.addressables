@@ -31,6 +31,24 @@ void Start()
     Addressables.Release(op);
 }
 ```
+
+### Scenes
+Due to engine limitations scenes cannot be completed synchronously. Calling WaitForCompletion on an operation returned from [Addressables.LoadSceneAsync] will not completely load the scene, even if activateOnLoad is set to true. It will wait for dependencies and assets to complete but the scene activation must be done asynchronously. This can be done using the sceneHandle, or by the [AsyncOperation] from ActivateAsync on the SceneInstance as shown below.
+
+```c#
+IEnumerator LoadScene(string myScene)
+{
+    var sceneHandle = Addressables.LoadSceneAsync(myScene, LoadSceneMode.Additive);
+    SceneInstance sceneInstance = sceneHandle.WaitForCompletion();
+    yield return sceneInstance.ActivateAsync();
+    
+    //Do work... the scene is now complete and integrated
+}
+```
+
+> [!NOTE]
+> Unloading a scene cannot be completed synchronously. Calling WaitForCompleted on a scene unload will not unload the scene or any assets, and a warning will be logged to the console.
+
 ### Synchronous Addressables with Custom Operations
 Addressables supports custom `AsyncOperations` which support unique implementations of `InvokeWaitForCompletion`.  This overridable method is what you'll use to implement custom synchronous operations.
 
@@ -40,3 +58,8 @@ Custom operations work with `ChainOperations` and `GroupsOperations`.  If you re
 WebGL does not support `WaitForCompletion`.  On WebGL, all files are loaded using a web request.  On other platforms, a web request gets started on a background thread and the main thread spins in a tight loop while waiting for the web request to finish.  This is how Addressables does it for `WaitForCompletion` when a web request is used.
 
 Since WebGL is single-threaded, the tight loop blocks the web request and the operation is never allowed to finish.  If a web request finishes the same frame it was created, then `WaitForCompletion` wouldn't have any issue.  However, we cannot guarantee this to be the case, and likely it isn't the case for most instances.
+
+[AsyncOperation.allowSceneActivation]: xref:UnityEngine.AsyncOperation.allowSceneActivation
+[AsyncOperation]: xref:UnityEngine.AsyncOperation
+[Addressables.LoadSceneAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadSceneAsync
+[Addressables.UnloadSceneAsync]: xref:UnityEngine.AddressableAssets.Addressables.UnloadSceneAsync

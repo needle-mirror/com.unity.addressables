@@ -46,13 +46,15 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             if (string.IsNullOrEmpty(path))
                 return false;
+            path = path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
             if (!path.StartsWith("assets", StringComparison.OrdinalIgnoreCase) && !IsPathValidPackageAsset(path))
                 return false;
             if (path == CommonStrings.UnityEditorResourcePath ||
                 path == CommonStrings.UnityDefaultResourcePath ||
                 path == CommonStrings.UnityBuiltInExtraPath)
                 return false;
-            if (path.EndsWith("/Editor") || path.Contains("/Editor/"))
+            if (path.EndsWith($"{Path.DirectorySeparatorChar}Editor") || path.Contains($"{Path.DirectorySeparatorChar}Editor{Path.DirectorySeparatorChar}") 
+                || path.EndsWith("/Editor") || path.Contains("/Editor/"))
                 return false;
             if (path == "Assets")
                 return false;
@@ -64,8 +66,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal static bool IsPathValidPackageAsset(string path)
         {
-            string convertPath = path.ToLower().Replace("\\", "/");
-            string[] splitPath = convertPath.Split('/');
+            string[] splitPath = path.ToLower().Split(Path.DirectorySeparatorChar);
 
             if (splitPath.Length < 3)
                 return false;
@@ -355,34 +356,6 @@ namespace UnityEditor.AddressableAssets.Settings
             if (exitGUI)
                 GUIUtility.ExitGUI();
             return openedAsset;
-        }
-
-        internal static ListRequest RequestPackageListAsync()
-        {
-            ListRequest req = null;
-#if !UNITY_2021_1_OR_NEWER
-            req = Client.List(true);
-#endif
-            return req;
-        }
-
-        internal static List<PackageManager.PackageInfo> GetPackages(ListRequest req)
-        {
-            var packages = new List<PackageManager.PackageInfo>();
-#if UNITY_2021_1_OR_NEWER
-            packages.AddRange(PackageManager.PackageInfo.GetAllRegisteredPackages());
-#else
-            while (!req.IsCompleted)
-                Thread.Sleep(5);
-            
-            if (req.Status == StatusCode.Success)
-            {
-                PackageCollection collection = req.Result;
-                foreach (PackageManager.PackageInfo package in collection)
-                    packages.Add(package);
-            }
-#endif
-            return packages;
         }
 
         internal static bool InstallCCDPackage()

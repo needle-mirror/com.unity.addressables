@@ -71,6 +71,24 @@ It is recommended to profile loading performance for your specific content and p
 On loading the first Asset with `All Packed Assets and Dependencies`, all Assets are loaded into memory. Later LoadAssetAsync calls for Assets from that pack will return the preloaded Asset without needing to load it. 
 Even though all the Assets in a group and any dependencies are loaded in memory when you use the All Packed Assets and Dependencies option, the reference count of an individual asset is not incremented unless you explicitly load it (or it is a dependency of an asset that you load explicitly). If you later call [`Resources.UnloadUnusedAssets`](https://docs.unity3d.com/ScriptReference/Resources.UnloadUnusedAssets.html), or you load a new Scene using [`LoadSceneMode.Single`](https://docs.unity3d.com/ScriptReference/SceneManagement.LoadSceneMode.html), then any unused assets (those with a reference count of zero) are unloaded.
 
+<a name="faq-internal-naming"></a>
+### What are the Internal naming mode implications?
+In the [Group Settings](GroupSetting.md) "Internal Asset Naming Mode" and "Internal Bundle ID Mode", can be used to determine how assets and bundles are identified. This affects the bundle data in different ways.
+
+`Internal Asset Naming Mode` determines the identification of assets in AssetBundles and is used to load the asset from the bundle. This value is used as the internalId of the asset Location.
+Changing this setting affects a bundles CRC and Hash value.
+
+* `Full Path` is recommended to use during development. This option is the path of the asset in your project. This allows you to identify Assets being loaded by their ID if needed.
+* `Filename` can also be used to identify an asset as with the full path. **Note**: You cannot have multiple assets with the same name.
+* `GUID` is a deterministic value for the asset.
+* `Dynamic` is recommended to use for release. This option generates the smallest unique length of the asset GUID. Resulting in a reduction of data in the AssetBundle and catalog, and lower runtime memory overhead.
+
+`Internal Bundle Id Mode` determines how an AssetBundle is identified internally. This affects how an AssetBundle locates dependencies that are contained in other bundles. Changing this value affects the CRC and Hash of this bundle and all other bundles that reference it.
+
+* `Group Guid` is recommended, this is unique per Group and does not change.
+* `Group Guid Project Id Hash` uses a combination of the Group GUID and the Cloud Project Id (if Cloud Services are enabled). This changes if the Project is bound to a different Cloud Project Id.
+* `Group Guid Project Id Entries Hash` includes all the asset entries in the Group, and can change where adding or removing entries to the Group occurs. This setting should be used with caution.
+
 <a name="faq-edit-loaded-assets"></a>
 ### Is it safe to edit loaded Assets?
 When editing Assets loaded from Bundles, in a Player or when using "Use Existing Build (requires built groups)" playmode setting. The Assets are loaded from the Bundle and only exist in memory. Changes cannot be written back to the Bundle on disk, and any modifications to the Object in memory do not persist between sessions.
@@ -208,3 +226,24 @@ public class BuildWithScriptingDefinesExample
 }
 ``` 
 
+<a name="faq-monoscript-changes"></a>
+### What changes to scripts require rebuilding Addressables?
+Classes in Addressables content are referenced using a MonoScript object. Which defines a class using the Assembly name, [Namespace], and class name or the referenced class.
+
+When loading content at runtime the MonoScript is used to load and create and instance of the runtime class from the player assemblies.
+Changes to MonoScripts need to be consistent between the Player and the built Addressables content. Both the player and Addressables content must be rebuilt in order to load the classes correctly.
+
+The following can result in changes to the MonoScript data:
+- Moving the script file to a location that comes under another [Assembly Definition File]
+- Changing the name of the [Assembly Definition File] containing the class
+- Adding or Changing the class [Namespace]
+- Changing the class name
+
+#### How to minimise changes to bundles
+Content bundles can be large, and having to update the whole bundle for small changes can result in a large amount of data being updated for a small change to the MonoScript.
+Enabling the "MonoScript Bundle Naming Prefix" option in the [Addressables settings] will build an asset bundle that contains the MonoScript objects, separate to your serialised data.
+If there are no changes to the serialised class data then only the MonoScript bundle will have changed and other bundles will not need to be updated.
+
+[Addressables settings]: #addressables-asset-settings
+[Assembly Definition File]: https://docs.unity3d.com/Manual/ScriptCompilationAssemblyDefinitionFiles.html
+[Namespace]: https://docs.unity3d.com/Manual/Namespaces.html

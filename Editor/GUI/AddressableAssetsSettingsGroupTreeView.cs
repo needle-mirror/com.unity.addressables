@@ -622,7 +622,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             }
                         }
                         SetSelection(newSelection);
-                        PopupWindow.Show(cellRect, new LabelMaskPopupContent(m_Editor.settings, entries, labelCounts));
+                        PopupWindow.Show(cellRect, new LabelMaskPopupContent(cellRect, m_Editor.settings, entries, labelCounts));
                     }
                     break;
             }

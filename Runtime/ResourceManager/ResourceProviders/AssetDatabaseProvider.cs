@@ -43,8 +43,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         internal static object LoadAssetAtPath(string assetPath, ProvideHandle provideHandle)
         {
             Object obj = AssetDatabase.LoadAssetAtPath(assetPath, provideHandle.Location.ResourceType);
-            Type objType = obj.GetType();
-            obj = obj != null && provideHandle.Type.IsAssignableFrom(objType) ? obj : null;
+            obj = obj != null && provideHandle.Type.IsAssignableFrom(obj.GetType()) ? obj : null;
             return obj;
         }
 

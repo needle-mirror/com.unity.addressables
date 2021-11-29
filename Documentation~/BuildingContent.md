@@ -27,6 +27,11 @@ A [Profile] defines separate variables for the build and load paths of local ver
 
 For most Projects, you only need multiple profiles when you support remote content distribution. You don't typically need to change the local paths at different stages of your development process. Most projects should build local content to the default local build path and load it from the default local load path (which resolves to the StreamingAssets folder).
 
+> [!WARNING]
+> Windows has a file path limit of 260 characters.  If the build path of your content ends up creating a path that meets or exceeds the limit on Windows, the build fails. 
+It is also possible to run into this issue if your project is located in a directory that is close to the character limit.  The Scriptable Build Pipeline creates AssetBundles in a temporary directory during the build.  This temporary path is a sub-directory of your project and can end up generating a `string` that goes over the Windows limit.
+If the Addressables content build fails with a `Could not find a part of the path` error, and you're on Windows, this is a likely culprit.
+
 #### Default local paths
 
 The local build path defaults to the path provided by [Addressables.BuildPath], which is within the Library folder of your Unity project. Addressables appends a folder to the local build path based on your current platform build target setting. When you build for multiple platforms, the build places the artifacts for each platform in a different subfolder.

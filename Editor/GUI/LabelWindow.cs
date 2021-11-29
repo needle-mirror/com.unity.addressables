@@ -119,7 +119,7 @@ namespace UnityEditor.AddressableAssets.GUI
             PopupWindow.Show(buttonRect, new LabelNamePopup(position.width, m_LabelNamesRl.elementHeight, m_Settings));
         }
 
-        class LabelNamePopup : PopupWindowContent
+        internal class LabelNamePopup : PopupWindowContent
         {
             internal float windowWidth;
             internal float rowHeight;

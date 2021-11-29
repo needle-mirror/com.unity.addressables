@@ -209,7 +209,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             {
                 if (m_taskCompletionSource == null)
                 {
-                    m_taskCompletionSource = new TaskCompletionSource<TObject>();
+                    m_taskCompletionSource = new TaskCompletionSource<TObject>(TaskCreationOptions.RunContinuationsAsynchronously);
                     if (IsDone && !CompletedEventHasListeners)
                         m_taskCompletionSource.SetResult(Result);
                 }
@@ -224,7 +224,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             {
                 if (m_taskCompletionSourceTypeless == null)
                 {
-                    m_taskCompletionSourceTypeless = new TaskCompletionSource<object>();
+                    m_taskCompletionSourceTypeless = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     if (IsDone && !CompletedEventHasListeners)
                         m_taskCompletionSourceTypeless.SetResult(Result);
                 }
