@@ -70,8 +70,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                     from item in bundle.Value
                     select new AnalyzeResult
                     {
-                        resultName = ruleName + kDelimiter +
-                                     issueGroup.Key + kDelimiter +
+                        resultName = issueGroup.Key + kDelimiter +
                                      ConvertBundleName(bundle.Key, issueGroup.Key) + kDelimiter +
                                      item,
                         severity = MessageType.Warning
@@ -84,8 +83,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                              from item in bundle.Value
                              select new AnalyzeResult
                              {
-                                 resultName = ruleName + kDelimiter +
-                                              item + kDelimiter +
+                                 resultName = item + kDelimiter +
                                               ConvertBundleName(bundle.Key, issueGroup.Key) + kDelimiter +
                                               issueGroup.Key,
                                  severity = MessageType.Warning

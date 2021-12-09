@@ -257,18 +257,17 @@ namespace UnityEditor.AddressableAssets.GUI
             return root;
         }
 
-        private readonly Dictionary<int, TreeViewItem> hashToTreeViewItems = new Dictionary<int, TreeViewItem>();
+        private readonly Dictionary<int, AnalyzeResultsTreeViewItem> hashToAnalyzeResults = new Dictionary<int, AnalyzeResultsTreeViewItem>();
         void BuildResults(TreeViewItem root, List<AnalyzeRule.AnalyzeResult> ruleResults)
         {
-            hashToTreeViewItems.Clear();
-            hashToTreeViewItems.Add(root.id, root);
+            hashToAnalyzeResults.Clear();
             int updateFrequency = Mathf.Max(ruleResults.Count / 10, 1);
 
             for (int index=0; index < ruleResults.Count; ++index)
             {
                 var result = ruleResults[index];
                 if (index == 0 || index % updateFrequency == 0)
-                    EditorUtility.DisplayProgressBar("Building Results Tree...", result.resultName, (float)index / hashToTreeViewItems.Keys.Count);
+                    EditorUtility.DisplayProgressBar("Building Results Tree...", result.resultName, (float)index / hashToAnalyzeResults.Keys.Count);
                 
                 var resPath = result.resultName.Split(AnalyzeRule.kDelimiter);
                 string name = string.Empty;
@@ -279,16 +278,16 @@ namespace UnityEditor.AddressableAssets.GUI
                     name += resPath[i];
                     int hash = name.GetHashCode();
 
-                    if (!hashToTreeViewItems.ContainsKey(hash))
+                    if (!hashToAnalyzeResults.ContainsKey(hash))
                     {
                         AnalyzeResultsTreeViewItem item = new AnalyzeResultsTreeViewItem(hash, i + m_CurrentDepth, resPath[i], result.severity, result);
-                        hashToTreeViewItems.Add(item.id, item);
+                        hashToAnalyzeResults.Add(item.id, item);
                         parent.AddChild(item);
                         parent = item;
                     }
                     else
                     {
-                        var targetItem = hashToTreeViewItems[hash] as AnalyzeResultsTreeViewItem;
+                        var targetItem = hashToAnalyzeResults[hash];
                         targetItem.results.Add(result);
                         parent = targetItem;
                     }
