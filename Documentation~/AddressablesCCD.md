@@ -94,6 +94,7 @@ Configure groups to use __Remote__ as their __Build & Load Path__ in the inspect
 
 See [Groups] for information about how to modify groups.
 
+<a name="build-upload-release"></a>
 ## Build, upload and release Addressable content
 ### Using to CCD Dashboard/CLI
 
@@ -134,7 +135,7 @@ Finally, the management package will a create release for those remote target an
 [Addressable Asset system]: xref:addressables-home
 [Asset Hosting Services]: ./AddressableAssetsHostingServices.md
 [AssetBundles]: xref:AssetBundlesIntro
-[Build your AssetBundles, then upload them to CCD]: #build-and-upload-addressable-content-to-ccd
+[Build your AssetBundles, then upload them to CCD]: #build-upload-release
 [Building for content updates]: ./ContentUpdateWorkflow.md#building-content-updates
 [Building your Addressable content]: xref:addressables-building-content
 [Configure a profile to include your CCD URL]: #configure-profile-with-ccd-url

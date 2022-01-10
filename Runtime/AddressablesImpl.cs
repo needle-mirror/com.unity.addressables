@@ -1245,12 +1245,21 @@ namespace UnityEngine.AddressableAssets
 
         internal AsyncOperationHandle<List<string>> CheckForCatalogUpdates(bool autoReleaseHandle = true)
         {
+            if (ShouldChainRequest)
+                return CheckForCatalogUpdatesWithChain(autoReleaseHandle);
+
             if (m_ActiveCheckUpdateOperation.IsValid())
                 Release(m_ActiveCheckUpdateOperation);
+
             m_ActiveCheckUpdateOperation = new CheckCatalogsOperation(this).Start(m_ResourceLocators);
             if (autoReleaseHandle)
                 AutoReleaseHandleOnTypelessCompletion(m_ActiveCheckUpdateOperation);
             return m_ActiveCheckUpdateOperation;
+        }
+
+        internal AsyncOperationHandle<List<string>> CheckForCatalogUpdatesWithChain(bool autoReleaseHandle)
+        {
+            return ResourceManager.CreateChainOperation(ChainOperation, op => CheckForCatalogUpdates(autoReleaseHandle));
         }
 
         internal ResourceLocatorInfo GetLocatorInfo(string c)
@@ -1287,7 +1296,7 @@ namespace UnityEngine.AddressableAssets
             return loc.PrimaryKey.GetHashCode() * 31 + loc.ResourceType.GetHashCode();
         }
 
-        internal AsyncOperationHandle<bool> CleanBundleCache(IEnumerable<string> catalogIds)
+        internal AsyncOperationHandle<bool> CleanBundleCache(IEnumerable<string> catalogIds, bool forceSingleThreading)
         {
 #if !ENABLE_CACHING
             return ResourceManager.CreateCompletedOperation(false, "Caching not enabled. There is no bundle cache to modify.");
@@ -1308,18 +1317,18 @@ namespace UnityEngine.AddressableAssets
             if (locations.Count == 0)
                 return ResourceManager.CreateCompletedOperation(false, "Provided catalogs do not load data from a catalog file. This can occur when using the \"Use Asset Database (fastest)\" playmode script. Bundle cache was not modified.");
 
-            return CleanBundleCache(ResourceManager.CreateGroupOperation<object>(locations));
+            return CleanBundleCache(ResourceManager.CreateGroupOperation<object>(locations), forceSingleThreading);
 #endif
         }
 
-        internal AsyncOperationHandle<bool> CleanBundleCache(AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
+        internal AsyncOperationHandle<bool> CleanBundleCache(AsyncOperationHandle<IList<AsyncOperationHandle>> depOp, bool forceSingleThreading)
         {
 #if !ENABLE_CACHING
             return ResourceManager.CreateCompletedOperation(false, "Caching not enabled. There is no bundle cache to modify.");
 #else
             if (m_ActiveCleanBundleCacheOperation.IsValid() && !m_ActiveCleanBundleCacheOperation.IsDone)
                 return ResourceManager.CreateCompletedOperation(false, "Bundle cache is already being cleaned.");
-            m_ActiveCleanBundleCacheOperation = new CleanBundleCacheOperation(this).Start(depOp);
+            m_ActiveCleanBundleCacheOperation = new CleanBundleCacheOperation(this, forceSingleThreading).Start(depOp);
             return m_ActiveCleanBundleCacheOperation;
 #endif
         }

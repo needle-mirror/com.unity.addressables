@@ -1,8 +1,7 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEngine.ResourceManagement
 {
@@ -60,19 +59,41 @@ namespace UnityEngine.ResourceManagement
                         OnWebAsyncOpComplete(webRequestAsyncOp);
                     else
                         webRequestAsyncOp.completed += OnWebAsyncOpComplete;
-                    
                 }
                 catch (Exception e)
                 {
                     Debug.LogError(e.Message);
                 }
-                
+
                 queueOperation.Complete(webRequestAsyncOp);
             }
             else
                 s_QueuedOperations.Enqueue(queueOperation);
 
             return queueOperation;
+        }
+
+        internal static void WaitForRequestToBeActive(WebRequestQueueOperation request, int millisecondsTimeout)
+        {
+            var completedRequests = new List<UnityWebRequestAsyncOperation>();
+            while (s_QueuedOperations.Contains(request))
+            {
+                completedRequests.Clear();
+                foreach (UnityWebRequestAsyncOperation webRequestAsyncOp in s_ActiveRequests)
+                {
+                    if (UnityWebRequestUtilities.IsAssetBundleDownloaded(webRequestAsyncOp))
+                        completedRequests.Add(webRequestAsyncOp);
+                }
+                foreach (UnityWebRequestAsyncOperation webRequestAsyncOp in completedRequests)
+                {
+                    bool requestIsActive = s_QueuedOperations.Peek() == request;
+                    webRequestAsyncOp.completed -= OnWebAsyncOpComplete;
+                    OnWebAsyncOpComplete(webRequestAsyncOp);
+                    if (requestIsActive)
+                        return;
+                }
+                System.Threading.Thread.Sleep(millisecondsTimeout);
+            }
         }
 
         private static void OnWebAsyncOpComplete(AsyncOperation operation)

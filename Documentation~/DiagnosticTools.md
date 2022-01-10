@@ -10,7 +10,7 @@ The Addressables packages provides the following tools for analyzing your Addres
   * Check Duplicate Bundle Dependencies
   * Check Resources to Addressable Duplicate Dependencies
   * Check Scene to Addressable Duplicate Dependencies
-  * Build Bundle Layout
+  * Bundle Layout Preview
 * [Event viewer]: provides a runtime profile view of your Addressable operations, including asset loading and unloading.
 * [Build layout report]: describes how Addressables packs the assets in your groups into AssetBundles.
 * [Build profile log]: provides a build-time profiling file that you can view in a Chromium-based browser.

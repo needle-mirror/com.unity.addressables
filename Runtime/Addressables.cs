@@ -181,11 +181,11 @@ namespace UnityEngine.AddressableAssets
         /// Functor to transform internal ids before being used by the providers.
         /// </summary>
         /// <remarks>
-        /// The <see cref="ResourceManager"/> calls your transorm function when it looks up an asset, 
-        /// passing the <see cref="IResourceLocation"/> instance for the asset to your function. 
-        /// You can change the <see cref="IResourceLocation.InternalId"/> property of this instance 
+        /// The <see cref="ResourceManager"/> calls your transorm function when it looks up an asset,
+        /// passing the <see cref="IResourceLocation"/> instance for the asset to your function.
+        /// You can change the <see cref="IResourceLocation.InternalId"/> property of this instance
         /// and return the modified object as the return value of your function.
-        /// 
+        ///
         /// See also: [Transforming resource URLs](xref:addressables-api-transform-internal-id)
         /// </remarks>
         static public Func<IResourceLocation, string> InternalIdTransformFunc
@@ -410,29 +410,29 @@ namespace UnityEngine.AddressableAssets
         /// Initialize the Addressables system, if needed.
         /// </summary>
         /// <remarks>
-        /// The Addressables system initializes itself at runtime the first time you call an Addressables API function. 
-        /// You can call this function explicitly to initialize Addressables earlier. This function does nothing if 
+        /// The Addressables system initializes itself at runtime the first time you call an Addressables API function.
+        /// You can call this function explicitly to initialize Addressables earlier. This function does nothing if
         /// initialization has already occurred.
-        /// 
+        ///
         /// The initialization process:
         /// * Sets up the <see cref="ResourceManager"/> and <see cref="ResourceLocators"/>
         /// * Loads the <see cref="Initialization.ResourceManagerRuntimeData"/> object, which is created by the Addressables build
-        /// * Executes <see cref="IInitializableObject"/> operations 
+        /// * Executes <see cref="IInitializableObject"/> operations
         /// * Optionally, checks for an updated content catalog (`true` by default)
         /// * Loads the content catalog
-        /// 
-        /// The `Result` object contained in the <see cref="AsyncOperationHandle{TObject}"/> returned by this function 
+        ///
+        /// The `Result` object contained in the <see cref="AsyncOperationHandle{TObject}"/> returned by this function
         /// contains a list of Addressable keys and a method that can be used to gather the <see cref="IResourceLocation"/>
         /// instances for a given key and asset type. You must access the `Result` object in a <see cref="AsyncOperationHandle{TObject}.Completed"/>
-        /// event handler. To access the handle in a coroutine or Task-based function, pass `false` to the 
-        /// <see cref="InitializeAsync(bool)"/> overload of this function. Otherwise, the Addressables system 
+        /// event handler. To access the handle in a coroutine or Task-based function, pass `false` to the
+        /// <see cref="InitializeAsync(bool)"/> overload of this function. Otherwise, the Addressables system
         /// releases the <see cref="AsyncOperationHandle{TObject}"/> object before control returns to your code.
-        /// 
-        /// Initializing Addressables manually can improve performance of your first loading operations since they do not 
+        ///
+        /// Initializing Addressables manually can improve performance of your first loading operations since they do not
         /// need to wait for initialization to complete. In addition, it can help when debugging early loading operations
         /// by separating out the initialization process.
-        /// 
-        /// See also: 
+        ///
+        /// See also:
         /// * [Customizing initialization](xref:addressables-api-initialize-async)
         /// * [Managing catalogs at runtime](xref:addressables-api-load-content-catalog-async)
         /// </remarks>
@@ -446,27 +446,27 @@ namespace UnityEngine.AddressableAssets
         /// Initialize the Addressables system, if needed.
         /// </summary>
         /// <remarks>
-        /// The Addressables system initializes itself at runtime the first time you call an Addressables API function. 
-        /// You can call this function explicitly to initialize Addressables earlier. This function does nothing if 
+        /// The Addressables system initializes itself at runtime the first time you call an Addressables API function.
+        /// You can call this function explicitly to initialize Addressables earlier. This function does nothing if
         /// initialization has already occurred.
-        /// 
+        ///
         /// The initialization process:
         /// * Sets up the <see cref="ResourceManager"/> and <see cref="ResourceLocators"/>
         /// * Loads the <see cref="Initialization.ResourceManagerRuntimeData"/> object, which is created by the Addressables build
-        /// * Executes <see cref="IInitializableObject"/> operations 
+        /// * Executes <see cref="IInitializableObject"/> operations
         /// * Optionally, checks for an updated content catalog (`true` by default)
         /// * Loads the content catalog
-        /// 
-        /// The `Result` object contained in the <see cref="AsyncOperationHandle{TObject}"/> returned by this function 
+        ///
+        /// The `Result` object contained in the <see cref="AsyncOperationHandle{TObject}"/> returned by this function
         /// contains a list of Addressable keys and a method that can be used to gather the <see cref="IResourceLocation"/>
         /// instances for a given key and asset type. To access the `Result` object, use a <see cref="AsyncOperationHandle{TObject}.Completed"/>
         /// event handler or set <paramref name="autoReleaseHandle"/> to `false`.
-        /// 
-        /// Initializing Addressables manually can improve performance of your first loading operations since they do not 
+        ///
+        /// Initializing Addressables manually can improve performance of your first loading operations since they do not
         /// need to wait for initialization to complete. In addition, it can help when debugging early loading operations
         /// by separating out the initialization process.
-        /// 
-        /// See also: 
+        ///
+        /// See also:
         /// * [Customizing initialization](xref:addressables-api-initialize-async)
         /// * [Managing catalogs at runtime](xref:addressables-api-load-content-catalog-async)
         /// </remarks>
@@ -493,13 +493,13 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Additively load catalogs from runtime data.
         /// </summary>
-        /// <remarks> 
-        /// You can cache content catalog by providing the hash file created for the catalog by the Addressables content build 
+        /// <remarks>
+        /// You can cache content catalog by providing the hash file created for the catalog by the Addressables content build
         /// at the same URL as the catalog JSON file. The Addressables system uses this hash file to determine if the cached catalog
         /// needs to be updated. If the value in the hash file has not changed since the last time you loaded the same catalog,
-        /// this function loads the cached version instead of downloading the catalog. If the hash value has changed or if no 
+        /// this function loads the cached version instead of downloading the catalog. If the hash value has changed or if no
         /// hash file is provided, Addressables downloads the catalog from the specified path before loading it into memory.
-        /// 
+        ///
         /// See also: [Managing catalogs at runtime](xref:addressables-api-load-content-catalog-async)
         /// </remarks>
         /// <param name="catalogPath">The path to the runtime data.</param>
@@ -513,17 +513,17 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Additively load catalogs from runtime data.
         /// </summary>
-        /// <remarks> 
-        /// You can cache content catalog by providing the hash file created for the catalog by the Addressables content build 
+        /// <remarks>
+        /// You can cache content catalog by providing the hash file created for the catalog by the Addressables content build
         /// at the same URL as the catalog JSON file. The Addressables system uses this hash file to determine if the cached catalog
         /// needs to be updated. If the value in the hash file has not changed since the last time you loaded the same catalog,
-        /// this function loads the cached version instead of downloading the catalog. If the hash value has changed or if no 
+        /// this function loads the cached version instead of downloading the catalog. If the hash value has changed or if no
         /// hash file is provided, Addressables downloads the catalog from the specified path before loading it into memory.
-        /// 
+        ///
         /// See also: [Managing catalogs at runtime](xref:addressables-api-load-content-catalog-async)
         /// </remarks>
         /// <param name="catalogPath">The path to the runtime data.</param>
-        /// <param name="autoReleaseHandle">If true, the async operation handle will be automatically released on completion. Typically, 
+        /// <param name="autoReleaseHandle">If true, the async operation handle will be automatically released on completion. Typically,
         /// there is no reason to hold on to the handle for this operation.</param>
         /// <param name="providerSuffix">This value, if not null or empty, will be appended to all provider ids loaded from this data.</param>
         /// <returns>The operation handle for the request.</returns>
@@ -567,7 +567,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads a single Addressable asset identified by an <see cref="IResourceLocation"/>.
         /// </summary>
-        /// <remarks> 
+        /// <remarks>
         /// When you load an Addressable asset, the system:
         /// * Gathers the asset's dependencies
         /// * Downloads any remote AssetBundles needed to load the asset or its dependencies
@@ -575,9 +575,9 @@ namespace UnityEngine.AddressableAssets
         /// * Populates the `Result` object of the <see cref="AsyncOperationHandle{TObject}"/> instance returned by this function.
         ///
         /// Use the `Result` object to access the loaded assets.
-        /// 
+        ///
         /// See [Loading Addressable Assets](xref:addressables-api-load-asset-async) for more information and examples.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -592,7 +592,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads a single Addressable asset identified by a key such as an address or label.
         /// </summary>
-        /// <remarks> 
+        /// <remarks>
         /// When you load an Addressable asset, the system:
         /// * Gathers the asset's dependencies
         /// * Downloads any remote AssetBundles needed to load the asset or its dependencies
@@ -600,13 +600,13 @@ namespace UnityEngine.AddressableAssets
         /// * Populates the `Result` object of the <see cref="AsyncOperationHandle{TObject}"/> instance returned by this function.
         ///
         /// Use the `Result` object to access the loaded assets.
-        /// 
+        ///
         /// Note that if you provide a key, such as a label, that maps to more than one asset, only the first object encountered by the
-        /// loading operation is returned. Use <see cref="LoadAssetsAsync{TObject}(object, Action{TObject})"/> or one of its overloads 
+        /// loading operation is returned. Use <see cref="LoadAssetsAsync{TObject}(object, Action{TObject})"/> or one of its overloads
         /// to load multiple assets in a single operation.
-        /// 
+        ///
         /// See [Loading Addressable Assets](xref:addressables-api-load-asset-async) for more information and examples.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -637,11 +637,11 @@ namespace UnityEngine.AddressableAssets
         /// Loads the resource locations specified by a list of keys.
         /// </summary>
         /// <remarks>
-        /// The operation always completes successfully and the operation handle's `Result` object always contains a valid IList instance. 
+        /// The operation always completes successfully and the operation handle's `Result` object always contains a valid IList instance.
         /// If no assets matched the specified keys, the list in `Result` is empty.
-        /// 
+        ///
         /// See [Loading assets by location](xref:addressables-api-load-asset-async#loading-assets-by-location) for more information.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -659,11 +659,11 @@ namespace UnityEngine.AddressableAssets
         /// Loads the resource locations specified by a set of keys.
         /// </summary>
         /// <remarks>
-        /// The operation always completes successfully and the operation handle's `Result` object always contains a valid IList instance. 
+        /// The operation always completes successfully and the operation handle's `Result` object always contains a valid IList instance.
         /// If no assets matched the specified keys, the list in `Result` is empty.
-        /// 
+        ///
         /// See [Loading assets by location](xref:addressables-api-load-asset-async#loading-assets-by-location) for more information.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -694,11 +694,11 @@ namespace UnityEngine.AddressableAssets
         /// Loads the resource locations specified by a key.
         /// </summary>
         /// <remarks>
-        /// The operation always completes successfully and the operation handle's `Result` object always contains a valid IList instance. 
+        /// The operation always completes successfully and the operation handle's `Result` object always contains a valid IList instance.
         /// If no assets matched the specified key, the list in `Result` is empty.
-        /// 
+        ///
         /// See [Loading assets by location](xref:addressables-api-load-asset-async#loading-assets-by-location) for more information.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -727,7 +727,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads multiple assets, based on the list of locations provided.
         /// </summary>
-        /// <remarks> 
+        /// <remarks>
         /// When you load Addressable assets, the system:
         /// * Gathers the dependencies of the asset
         /// * Downloads any remote AssetBundles needed to load the assets or their dependencies
@@ -735,12 +735,12 @@ namespace UnityEngine.AddressableAssets
         /// * Populates the `Result` object of the <see cref="AsyncOperationHandle{TObject}"/> instance returned by this function
         ///
         /// Use the `Result` object to access the loaded assets.
-        /// 
+        ///
         /// If any assets cannot be loaded, the entire operation fails. The operation releases any assets and dependencies it had already loaded.
         /// The `Status` of the operation handle is set to <see cref="AsyncOperationStatus.Failed"/> and the `Result` is set to null.
-        /// 
+        ///
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -756,7 +756,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads multiple assets, based on the list of locations provided.
         /// </summary>
-        /// <remarks> 
+        /// <remarks>
         /// When you load Addressable assets, the system:
         /// * Gathers the dependencies of the assets
         /// * Downloads any remote AssetBundles needed to load the assets or their dependencies
@@ -764,12 +764,12 @@ namespace UnityEngine.AddressableAssets
         /// * Populates the `Result` object of the <see cref="AsyncOperationHandle{TObject}"/> instance returned by this function
         ///
         /// Use the `Result` object to access the loaded assets.
-        /// 
+        ///
         /// If any assets cannot be loaded, the entire operation fails. The operation releases any assets and dependencies it had already loaded.
         /// The `Status` of the operation handle is set to <see cref="AsyncOperationStatus.Failed"/> and the `Result` is set to null.
-        /// 
+        ///
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -780,12 +780,12 @@ namespace UnityEngine.AddressableAssets
         /// If all matching locations succeed, this parameter is ignored.
         /// When true, if any assets cannot be loaded, the entire operation fails. The operation releases any assets and dependencies it had already loaded.
         /// The `Status` of the operation handle is set to <see cref="AsyncOperationStatus.Failed"/> and the `Result` is set to null.
-        /// 
-        /// When false, if any matching location fails, the `Result` instance in the returned operation handle contains an IList of size equal to the number of 
+        ///
+        /// When false, if any matching location fails, the `Result` instance in the returned operation handle contains an IList of size equal to the number of
         /// locations that the operation attempted to load. The entry in the result list corresponding to a location that failed to load is null.
         /// The entries for locations that successfully loaded are set to a valid TObject. The `Status` of the operation handle is still <see cref="AsyncOperationStatus.Failed"/>
         /// if any single asset failed to load.
-        /// 
+        ///
         /// When <paramref name="releaseDependenciesOnFailure"/> is true, you do not need to release the <see cref="AsyncOperationHandle"/> instance on failure.
         /// When false, you must always release it.
         /// </param>
@@ -813,10 +813,10 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads multiple assets identified by a list of keys.
         /// </summary>
-        /// <remarks> 
+        /// <remarks>
         /// The keys in <paramref name="keys"/> are translated into lists of locations, which are merged into a single list based on
         /// the value in <paramref name="mode"/>.
-        /// 
+        ///
         /// When you load Addressable assets, the system:
         /// * Gathers the dependencies of the assets
         /// * Downloads any remote AssetBundles needed to load the assets or their dependencies
@@ -824,12 +824,12 @@ namespace UnityEngine.AddressableAssets
         /// * Populates the `Result` object of the <see cref="AsyncOperationHandle{TObject}"/> instance returned by this function
         ///
         /// Use the `Result` object to access the loaded assets.
-        /// 
+        ///
         /// If any assets cannot be loaded, the entire operation fails. The operation releases any assets and dependencies it had already loaded.
         /// The `Status` of the operation handle is set to <see cref="AsyncOperationStatus.Failed"/> and the `Result` is set to null.
-        /// 
+        ///
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -847,10 +847,10 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads multiple assets identified by a list of keys.
         /// </summary>
-        /// <remarks> 
+        /// <remarks>
         /// The keys in <paramref name="keys"/> are translated into lists of locations, which are merged into a single list based on
         /// the value in <paramref name="mode"/>.
-        /// 
+        ///
         /// When you load Addressable assets, the system:
         /// * Gathers the dependencies of the assets
         /// * Downloads any remote AssetBundles needed to load the assets or their dependencies
@@ -858,12 +858,12 @@ namespace UnityEngine.AddressableAssets
         /// * Populates the `Result` object of the <see cref="AsyncOperationHandle{TObject}"/> instance returned by this function
         ///
         /// Use the `Result` object to access the loaded assets.
-        /// 
+        ///
         /// If any assets cannot be loaded, the entire operation fails. The operation releases any assets and dependencies it had already loaded.
         /// The `Status` of the operation handle is set to <see cref="AsyncOperationStatus.Failed"/> and the `Result` is set to null.
-        /// 
+        ///
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -889,12 +889,12 @@ namespace UnityEngine.AddressableAssets
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
         /// <param name="releaseDependenciesOnFailure">
         /// If all matching locations succeed, this parameter is ignored.
-        /// 
+        ///
         /// When true, if any matching location fails, all loads and dependencies will be released.  The returned .Result will be null, and .Status will be Failed.
-        /// 
+        ///
         /// When false, if any matching location fails, the returned .Result will be an IList of size equal to the number of locations attempted.  Any failed location will
         /// correlate to a null in the IList, while successful loads will correlate to a TObject in the list. The .Status will still be Failed.
-        /// 
+        ///
         /// When true, op does not need to be released if anything fails, when false, it must always be released.
         /// </param>
         /// <returns>The operation handle for the request.</returns>
@@ -907,10 +907,10 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads multiple assets, identified by a set of keys.
         /// </summary>
-        /// <remarks> 
+        /// <remarks>
         /// The keys in <paramref name="keys"/> are translated into lists of locations, which are merged into a single list based on
         /// the value in <paramref name="mode"/>.
-        /// 
+        ///
         /// When you load Addressable assets, the system:
         /// * Gathers the dependencies of the assets
         /// * Downloads any remote AssetBundles needed to load the assets or their dependencies
@@ -918,12 +918,12 @@ namespace UnityEngine.AddressableAssets
         /// * Populates the `Result` object of the <see cref="AsyncOperationHandle{TObject}"/> instance returned by this function
         ///
         /// Use the `Result` object to access the loaded assets.
-        /// 
+        ///
         /// If any assets cannot be loaded, the entire operation fails. The operation releases any assets and dependencies it had already loaded.
         /// The `Status` of the operation handle is set to <see cref="AsyncOperationStatus.Failed"/> and the `Result` is set to null.
-        /// 
+        ///
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -933,15 +933,15 @@ namespace UnityEngine.AddressableAssets
         /// <param name="mode">Method for merging the results of key matches.  See <see cref="MergeMode"/> for specifics</param>
         /// <param name="releaseDependenciesOnFailure">
         /// If all matching locations succeed, this parameter is ignored.
-        /// 
+        ///
         /// When true, if any assets cannot be loaded, the entire operation fails. The operation releases any assets and dependencies it had already loaded.
         /// The `Status` of the operation handle is set to <see cref="AsyncOperationStatus.Failed"/> and the `Result` is set to null.
-        /// 
-        /// When false, if any matching location fails, the `Result` instance in the returned operation handle contains an IList of size equal to the number of 
+        ///
+        /// When false, if any matching location fails, the `Result` instance in the returned operation handle contains an IList of size equal to the number of
         /// locations that the operation attempted to load. The entry in the result list corresponding to a location that failed to load is null.
         /// The entries for locations that successfully loaded are set to a valid TObject. The `Status` of the operation handle is still <see cref="AsyncOperationStatus.Failed"/>
         /// if any single asset failed to load.
-        /// 
+        ///
         /// When <paramref name="releaseDependenciesOnFailure"/> is true, you do not need to release the <see cref="AsyncOperationHandle"/> instance on failure.
         /// When false, you must always release it.
         /// </param>
@@ -969,9 +969,9 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads multiple assets identified by a single key.
         /// </summary>
-        /// <remarks> 
+        /// <remarks>
         /// The key in <paramref name="key"/> is translated into a list of locations that are then loaded.
-        /// 
+        ///
         /// When you load Addressable assets, the system:
         /// * Gathers the dependencies of the assets
         /// * Downloads any remote AssetBundles needed to load the assets or their dependencies
@@ -979,12 +979,12 @@ namespace UnityEngine.AddressableAssets
         /// * Populates the `Result` object of the <see cref="AsyncOperationHandle{TObject}"/> instance returned by this function
         ///
         /// Use the `Result` object to access the loaded assets.
-        /// 
+        ///
         /// If any assets cannot be loaded, the entire operation fails. The operation releases any assets and dependencies it had already loaded.
         /// The `Status` of the operation handle is set to <see cref="AsyncOperationStatus.Failed"/> and the `Result` is set to null.
-        /// 
+        ///
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -1000,9 +1000,9 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Loads multiple assets identified by a single key.
         /// </summary>
-        /// <remarks> 
+        /// <remarks>
         /// The key in <paramref name="key"/> is translated into a list of locations that are then loaded.
-        /// 
+        ///
         /// When you load Addressable assets, the system:
         /// * Gathers the dependencies of the assets
         /// * Downloads any remote AssetBundles needed to load the assets or their dependencies
@@ -1010,9 +1010,9 @@ namespace UnityEngine.AddressableAssets
         /// * Populates the `Result` object of the <see cref="AsyncOperationHandle{TObject}"/> instance returned by this function
         ///
         /// Use the `Result` object to access the loaded assets.
-        /// 
+        ///
         /// See the [Loading Addressable Assets](xref:addressables-api-load-asset-async) documentation for more details.
-        /// 
+        ///
         /// See [Operations](xref:addressables-async-operation-handling) for information on handling the asynchronous operations used
         /// to load Addressable assets.
         /// </remarks>
@@ -1021,15 +1021,15 @@ namespace UnityEngine.AddressableAssets
         /// <param name="callback">Callback Action that is called per load operation (per loaded asset).</param>
         /// <param name="releaseDependenciesOnFailure">
         /// If all matching locations succeed, this parameter is ignored.
-        /// 
+        ///
         /// When true, if any assets cannot be loaded, the entire operation fails. The operation releases any assets and dependencies it had already loaded.
         /// The `Status` of the operation handle is set to <see cref="AsyncOperationStatus.Failed"/> and the `Result` is set to null.
-        /// 
-        /// When false, if any matching location fails, the `Result` instance in the returned operation handle contains an IList of size equal to the number of 
+        ///
+        /// When false, if any matching location fails, the `Result` instance in the returned operation handle contains an IList of size equal to the number of
         /// locations that the operation attempted to load. The entry in the result list corresponding to a location that failed to load is null.
         /// The entries for locations that successfully loaded are set to a valid TObject. The `Status` of the operation handle is still <see cref="AsyncOperationStatus.Failed"/>
         /// if any single asset failed to load.
-        /// 
+        ///
         /// When <paramref name="releaseDependenciesOnFailure"/> is true, you do not need to release the <see cref="AsyncOperationHandle"/> instance on failure.
         /// When false, you must always release it.
         /// </param>
@@ -1181,10 +1181,10 @@ namespace UnityEngine.AddressableAssets
         /// <remarks>
         /// Call this function to make sure that the dependencies of assets you plan to load in
         /// performance-critical sections of code are downloaded and available beforehand.
-        /// 
-        /// You can use the <see cref="AsyncOperationHandle"/> returned by this function to monitor and 
+        ///
+        /// You can use the <see cref="AsyncOperationHandle"/> returned by this function to monitor and
         /// provide feedback on the download progress.
-        /// 
+        ///
         /// See [Preloading dependencies](xref:addressables-api-download-dependencies-async) for more details.
         /// </remarks>
         /// <param name="key">The key of the assets to load dependencies for.</param>
@@ -1201,10 +1201,10 @@ namespace UnityEngine.AddressableAssets
         /// <remarks>
         /// Call this function to make sure that the dependencies of assets you plan to load in
         /// performance-critical sections of code are downloaded and available beforehand.
-        /// 
-        /// You can use the <see cref="AsyncOperationHandle"/> returned by this function to monitor and 
+        ///
+        /// You can use the <see cref="AsyncOperationHandle"/> returned by this function to monitor and
         /// provide feedback on the download progress.
-        /// 
+        ///
         /// See [Preloading dependencies](xref:addressables-api-download-dependencies-async) for more details.
         /// </remarks>
         /// <param name="locations">The locations of the assets.</param>
@@ -1235,13 +1235,13 @@ namespace UnityEngine.AddressableAssets
         /// <remarks>
         /// The keys in <paramref name="keys"/> are translated into lists of locations, which are merged into a single list based on
         /// the value in <paramref name="mode"/>.
-        /// 
+        ///
         /// Call this function to make sure that the dependencies of assets you plan to load in
         /// performance-critical sections of code are downloaded and available beforehand.
-        /// 
-        /// You can use the <see cref="AsyncOperationHandle"/> returned by this function to monitor and 
+        ///
+        /// You can use the <see cref="AsyncOperationHandle"/> returned by this function to monitor and
         /// provide feedback on the download progress.
-        /// 
+        ///
         /// See [Preloading dependencies](xref:addressables-api-download-dependencies-async) for more details.
         /// </remarks>
         /// <param name="keys">List of keys for the locations.</param>
@@ -1506,11 +1506,11 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Instantiate a single object. 
+        /// Instantiate a single object.
         /// </summary>
         /// <remarks>
         /// Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// 
+        ///
         /// See [Instantiating objects from Addressables](xref:addressables-api-load-asset-async#instantiate) documentation for more details.
         /// </remarks>
         /// <param name="location">The location of the Object to instantiate.</param>
@@ -1524,11 +1524,11 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Instantiate a single object. 
+        /// Instantiate a single object.
         /// </summary>
         /// <remarks>
         /// Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// 
+        ///
         /// See [Instantiating objects from Addressables](xref:addressables-api-load-asset-async#instantiate) documentation for more details.
         /// </remarks>
         /// <param name="location">The location of the Object to instantiate.</param>
@@ -1543,11 +1543,11 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Instantiate a single object. 
+        /// Instantiate a single object.
         /// </summary>
         /// <remarks>
         /// Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// 
+        ///
         /// See [Instantiating objects from Addressables](xref:addressables-api-load-asset-async#instantiate) documentation for more details.
         /// </remarks>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
@@ -1561,11 +1561,11 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Instantiate a single object. 
+        /// Instantiate a single object.
         /// </summary>
         /// <remarks>
         /// Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// 
+        ///
         /// See [Instantiating objects from Addressables](xref:addressables-api-load-asset-async#instantiate) documentation for more details.
         /// </remarks>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
@@ -1580,11 +1580,11 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Instantiate a single object. 
+        /// Instantiate a single object.
         /// </summary>
         /// <remarks>
         /// Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// 
+        ///
         /// See [Instantiating objects from Addressables](xref:addressables-api-load-asset-async#instantiate) documentation for more details.
         /// </remarks>
         /// <param name="key">The key of the location of the Object to instantiate.</param>
@@ -1597,11 +1597,11 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Instantiate a single object. 
+        /// Instantiate a single object.
         /// </summary>
         /// <remarks>
         /// Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
-        /// 
+        ///
         /// See [Instantiating objects from Addressables](xref:addressables-api-load-asset-async#instantiate) documentation for more details.
         /// </remarks>
         /// <param name="location">The location of the Object to instantiate.</param>
@@ -1650,7 +1650,7 @@ namespace UnityEngine.AddressableAssets
         /// The <paramref name="loadMode"/>, <paramref name="activateOnLoad"/>, and <paramref name="priority"/> parameters correspond to
         /// the parameters used in the Unity [SceneManager.LoadSceneAsync](https://docs.unity3d.com/ScriptReference/SceneManagement.SceneManager.LoadSceneAsync.html)
         /// method.
-        /// 
+        ///
         /// See [Loading Scenes](xref:addressables-api-load-asset-async#loading-scenes) for more details.
         /// </remarks>
         /// <param name="key">The key of the location of the scene to load.</param>
@@ -1670,7 +1670,7 @@ namespace UnityEngine.AddressableAssets
         /// The <paramref name="loadMode"/>, <paramref name="activateOnLoad"/>, and <paramref name="priority"/> parameters correspond to
         /// the parameters used in the Unity [SceneManager.LoadSceneAsync](https://docs.unity3d.com/ScriptReference/SceneManagement.SceneManager.LoadSceneAsync.html)
         /// method.
-        /// 
+        ///
         /// See [Loading Scenes](xref:addressables-api-load-asset-async#loading-scenes) for more details.
         /// </remarks>
         /// <param name="location">The location of the scene to load.</param>
@@ -1807,21 +1807,21 @@ namespace UnityEngine.AddressableAssets
         /// Update the specified catalogs.
         /// </summary>
         /// <remarks>
-        /// When you call the UpdateCatalog function, all other Addressable requests are blocked until the operation is finished. 
-        /// You can release the operation handle returned by UpdateCatalogs immediately after the operation finishes (or set the 
+        /// When you call the UpdateCatalog function, all other Addressable requests are blocked until the operation is finished.
+        /// You can release the operation handle returned by UpdateCatalogs immediately after the operation finishes (or set the
         /// autoRelease parameter to true).
-        /// 
-        /// If you call UpdateCatalog without providing a list of catalogs, the Addressables system checks all of the currently 
+        ///
+        /// If you call UpdateCatalog without providing a list of catalogs, the Addressables system checks all of the currently
         /// loaded catalogs for updates.
-        /// 
-        /// If you update a catalog when you have already loaded content from the related AssetBundles, you can encounter conflicts 
+        ///
+        /// If you update a catalog when you have already loaded content from the related AssetBundles, you can encounter conflicts
         /// between the loaded AssetBundles and the updated versions. To avoid conflicts, update the catalog before loading assets or unload
-        /// the AssetBundles before the updating the catalog. You can enable the 
+        /// the AssetBundles before the updating the catalog. You can enable the
         /// [Unique Bundle Ids](xref:addressables-content-update-builds#unique-bundle-ids-setting)
-        /// option in your Addressable settings to avoid conflicts, but that can increase memory consumption since you will still 
-        /// have the original AssetBundles in memory after loading the updated ones. Enabling this option can also make the download size of content 
+        /// option in your Addressable settings to avoid conflicts, but that can increase memory consumption since you will still
+        /// have the original AssetBundles in memory after loading the updated ones. Enabling this option can also make the download size of content
         /// updates larger because typically more AssetBundles must be rebuilt.
-        /// 
+        ///
         /// See [Updating catalogs](xref:addressables-api-load-content-catalog-async#updating-catalogs) for more details.
         /// </remarks>
         /// <param name="catalogs">The set of catalogs to update.  If null, all catalogs that have an available update will be updated.</param>
@@ -1836,21 +1836,21 @@ namespace UnityEngine.AddressableAssets
         /// Update the specified catalogs.
         /// </summary>
         /// <remarks>
-        /// When you call the UpdateCatalog function, all other Addressable requests are blocked until the operation is finished. 
-        /// You can release the operation handle returned by UpdateCatalogs immediately after the operation finishes (or set the 
+        /// When you call the UpdateCatalog function, all other Addressable requests are blocked until the operation is finished.
+        /// You can release the operation handle returned by UpdateCatalogs immediately after the operation finishes (or set the
         /// autoRelease parameter to true).
-        /// 
-        /// If you call UpdateCatalog without providing a list of catalogs, the Addressables system checks all of the currently 
+        ///
+        /// If you call UpdateCatalog without providing a list of catalogs, the Addressables system checks all of the currently
         /// loaded catalogs for updates.
-        /// 
-        /// If you update a catalog when you have already loaded content from the related AssetBundles, you can encounter conflicts 
+        ///
+        /// If you update a catalog when you have already loaded content from the related AssetBundles, you can encounter conflicts
         /// between the loaded AssetBundles and the updated versions. To avoid conflicts, update the catalog before loading assets or unload
-        /// the AssetBundles before the updating the catalog. You can enable the 
+        /// the AssetBundles before the updating the catalog. You can enable the
         /// [Unique Bundle Ids](xref:addressables-content-update-builds#unique-bundle-ids-setting)
-        /// option in your Addressable settings to avoid conflicts, but that can increase memory consumption since you will still 
-        /// have the original AssetBundles in memory after loading the updated ones. Enabling this option can also make the download size of content 
+        /// option in your Addressable settings to avoid conflicts, but that can increase memory consumption since you will still
+        /// have the original AssetBundles in memory after loading the updated ones. Enabling this option can also make the download size of content
         /// updates larger because typically more AssetBundles must be rebuilt.
-        /// 
+        ///
         /// See [Updating catalogs](xref:addressables-api-load-content-catalog-async#updating-catalogs) for more details.
         /// </remarks>
         /// <param name="autoCleanBundleCache">If true, removes any nonreferenced bundles in the cache.</param>
@@ -1896,14 +1896,14 @@ namespace UnityEngine.AddressableAssets
         /// <remarks>
         /// Note, that only AssetBundles loaded through UnityWebRequest are cached. If you want to purge the entire cache, use Caching.ClearCache instead.
         /// In the Editor CleanBundleCache should only be called when using the "Use Existing Build (requires built groups)" playmode script as it loads content from bundles.
-        /// 
+        ///
         /// See [AssetBundle caching](xref:addressables-remote-content-distribution#assetbundle-caching) for more details.
         /// </remarks>
         /// <param name="catalogsIds">The ids of catalogs whose bundle cache entries we want to preserve. If null, entries for all currently loaded catalogs will be preserved.</param>
         /// <returns>The operation handle for the request. Note, that it is user's responsibility to release the returned operation; this can be done before or after the operation completes.</returns>
         public static AsyncOperationHandle<bool> CleanBundleCache(IEnumerable<string> catalogsIds = null)
         {
-            return m_Addressables.CleanBundleCache(catalogsIds);
+            return m_Addressables.CleanBundleCache(catalogsIds, false);
         }
     }
 }

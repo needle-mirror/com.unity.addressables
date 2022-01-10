@@ -99,7 +99,7 @@ namespace UnityEngine.AddressableAssets
                 Complete(catalogs, true, null);
             else
             {
-                m_CleanCacheOp = m_Addressables.CleanBundleCache(m_DepOp);
+                m_CleanCacheOp = m_Addressables.CleanBundleCache(m_DepOp, false);
                 OnCleanCacheCompleted(m_CleanCacheOp, catalogs);
             }
         }

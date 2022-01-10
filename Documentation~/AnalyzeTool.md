@@ -58,7 +58,7 @@ This rule detects any assets or asset dependencies that are shared between the S
 
 **Resolution**: It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any. One example of a possible manual fix is to pull the built-in Scene(s) with duplicated references out of Build Settings and make it an Addressable Scene.
 
-#### Build Bundle Layout
+#### Bundle Layout Preview
 This rule will show how assets explicitly marked as Addressable will be laid out in the Addressable build.  Given these explicit assets, we also show what assets are implicitly referenced by, and therefore will be pulled into, the build.
 
 Data gathered by this rule does not indicate any particular issues.  It is purely informational. 
@@ -98,7 +98,7 @@ This is your clear operation. Any data you cached in the analyze step can be cle
 ### Adding custom rules to the GUI
 A custom rule must register itself with the GUI class using `AnalyzeSystem.RegisterNewRule<RuleType>()`, in order to show up in the **Analyze** window. For example:
 
-[!code-cs[sample](../Samples/DocSampleCode/MyRule.cs#doc_CustomRule)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/MyRule.cs#doc_CustomRule)]
 
 <!--
 ```

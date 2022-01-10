@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.SceneManagement;
@@ -126,34 +127,50 @@ namespace UnityEditor.AddressableAssets.Tests
 
         protected string CreateAsset(string assetPath, string objectName = null)
         {
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             if (string.IsNullOrEmpty(objectName))
                 objectName = Path.GetFileNameWithoutExtension(assetPath);
+            
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = objectName;
             //this is to ensure that bundles are different for every run.
             go.transform.localPosition = UnityEngine.Random.onUnitSphere;
-            PrefabUtility.SaveAsPrefabAsset(go, assetPath);
+            
+            string directoryName = Path.GetDirectoryName(assetPath);
+            CreateFolderDeep(directoryName);
+            try
+            {
+                Assert.IsTrue(AssetDatabase.IsValidFolder(directoryName), "Attempting to save prefab to invalid Folder : " + directoryName);
+                Assert.IsTrue(Directory.Exists(directoryName), "Folder is not in FileSystem, but is in ADB : " + directoryName);
+                Assert.IsNotNull(go, "Attempting to save null GameObject to Prefab");
+                PrefabUtility.SaveAsPrefabAsset(go, assetPath);
+            }
+            catch(Exception e)
+            {
+                Debug.LogError($"Error while attempting to save prefab {objectName} to {assetPath} with Exception message {e.Message}");
+                throw e;
+            }
+            
             UnityEngine.Object.DestroyImmediate(go, false);
             return AssetDatabase.AssetPathToGUID(assetPath);
         }
 
         protected string CreateFolderDeep(string path)
         {
+            path = path.Replace('\\', '/');
             if (!path.StartsWith("Assets/"))
                 return null;
-            var split = path.Split('/');
-            string fullPath = "Assets";
-            string parentFolder;
-            string guid = null;
-            for (int i = 1; i < split.Length; ++i)
+            
+            if (Directory.Exists(path))
             {
-                parentFolder = fullPath;
-                fullPath += "/" + split[i];
-                if (!AssetDatabase.IsValidFolder(fullPath))
-                    guid = AssetDatabase.CreateFolder(parentFolder, split[i]);
+                if (AssetDatabase.IsValidFolder(path))
+                    return AssetDatabase.AssetPathToGUID(path);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+                return AssetDatabase.AssetPathToGUID(path);
             }
-
-            return guid;
+            
+            Directory.CreateDirectory(path);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            return AssetDatabase.AssetPathToGUID(path);
         }
     }
 }

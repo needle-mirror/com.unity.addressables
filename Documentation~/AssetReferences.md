@@ -41,7 +41,7 @@ The types of AssetReference include:
 
 Add an [AssetReference], or one of its subclasses, to a MonoBehaviour or ScriptableObject by declaring it as a serializable field to the class: 
 
-[!code-cs[sample](../Samples/DocSampleCode/DeclaringReferences.cs#doc_DeclaringReferences)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/DeclaringReferences.cs#doc_DeclaringReferences)]
 
 <!--
 ```csharp
@@ -102,7 +102,7 @@ The [AssetReference] class provides its own methods to load, instantiate, and re
 
 The following example instantiates an AssetReference as a child of the current GameObject and releases it when the parent is destroyed:
 
-[!code-cs[sample](../Samples/DocSampleCode/InstantiateReference.cs#doc_InstantiateReference)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/InstantiateReference.cs#doc_InstantiateReference)]
 
 <!--
 ```csharp
@@ -136,7 +136,7 @@ Use the [AssetReferenceUILabelRestriction] attribute to restrict the assets you 
 
 The following example prevents someone from assigning an Addressable asset to a reference that does not have either the label, "animals", or the label, "characters":
 
-[!code-cs[sample](../Samples/DocSampleCode/DeclaringReferences.cs#doc_RestrictionAttribute)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/DeclaringReferences.cs#doc_RestrictionAttribute)]
 
 <!--
 ```csharp
@@ -155,7 +155,7 @@ For those cases in which you cannot use the generic form of the [AssetReference]
 
 To create a concrete subclass, inherit from the [AssetReferenceT] class and specify the asset type. You must also pass the GUID string to the base class constructor:
 
-[!code-cs[sample](../Samples/DocSampleCode/DeclaringReferences.cs#doc_ConcreteSubclass)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/DeclaringReferences.cs#doc_ConcreteSubclass)]
 
 <!--
 ```csharp
@@ -169,7 +169,7 @@ To create a concrete subclass, inherit from the [AssetReferenceT] class and spec
 
 You can use your custom AssetReference subclass in another script the same way as other AssetReference types:
 
-[!code-cs[sample](../Samples/DocSampleCode/DeclaringReferences.cs#doc_UseConcreteSubclass)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/DeclaringReferences.cs#doc_UseConcreteSubclass)]
 
 <!--
 ```csharp

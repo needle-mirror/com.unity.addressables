@@ -176,8 +176,8 @@ namespace UnityEngine.ResourceManagement
 
             if (!m_WrappedOp.IsValid())
                 return m_WrappedOp.IsDone;
-            m_WrappedOp.WaitForCompletion();
-            return m_WrappedOp.IsDone;
+            Result = m_WrappedOp.WaitForCompletion();
+            return true;
         }
 
         protected override void Execute()

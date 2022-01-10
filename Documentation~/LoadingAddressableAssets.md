@@ -32,7 +32,7 @@ See [Operations] for more information about asynchronous operations and writing 
 
 Use the [LoadAssetAsync] method to load a single Addressable asset, typically with an address as the key:
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadSingle.cs#doc_Load)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadSingle.cs#doc_Load)]
 
 <!--
 ``` csharp
@@ -79,7 +79,7 @@ When you specify multiple keys, you can specify a [merge mode] to determine how 
 * __Intersection __: include assets that match every key
 * __UseFirst__: include assets only from the first key that resolves to a valid location
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadMultiple.cs#doc_Load)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadMultiple.cs#doc_Load)]
 
 <!--
 ```csharp
@@ -146,7 +146,7 @@ The IResourceLocation object contains the key information so you can, for exampl
 
 The following example loads the assets for a list of keys and inserts them into a dictionary by their address ([PrimaryKey]). The example first loads the resource locations for the specified keys. When that operation is complete, it loads the asset for each location, using the Completed event to insert the individual operation handles into the dictionary. The operation handles can be used to instantiate the assets, and, when the assets are no longer needed, to release them.
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadLocation.cs#doc_Load)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadLocation.cs#doc_Load)]
 
 <!--
 ``` csharp
@@ -222,7 +222,7 @@ Note that the loading function creates a group operation with [ResourceManager.C
 
 The [AssetReference] class has its own load method, [LoadAssetAsync].
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadReference.cs#doc_Load)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadReference.cs#doc_Load)]
 
 <!--
 ``` csharp
@@ -278,7 +278,7 @@ The remaining parameters of the method correspond to those used with the Unity E
 
 The following example loads a scene additively. The Component that loads the Scene, stores the operation handle and uses it to unload and release the Scene when the parent GameObject is destroyed.
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadScene.cs#doc_Load)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadScene.cs#doc_Load)]
 
 <!--
 ``` csharp
@@ -323,7 +323,7 @@ The [LoadResourceLocationsAsync] method never fails. If it cannot resolve the sp
 
 The following example loads locations for all assets labeled with "knight" or "villager":
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadLocation.cs#doc_LoadLocations)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadLocation.cs#doc_LoadLocations)]
 
 <!--
 ```csharp
@@ -362,7 +362,7 @@ Which scenario is better, depends on how you organize your object code. For exam
 
 The following example calls [InstantiateAsync] to instantiate a Prefab. The example adds a component to the instantiated GameObject that releases the asset when the GameObject is destroyed.
 
-[!code-cs[sample](../Samples/DocSampleCode/InstantiateAsset.cs#doc_Instantiate)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/InstantiateAsset.cs#doc_Instantiate)]
 
 <!--
 ```csharp

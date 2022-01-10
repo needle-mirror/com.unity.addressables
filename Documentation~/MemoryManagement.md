@@ -41,24 +41,16 @@ You can use the [Event Viewer] to help detect asset churn by monitoring asset lo
 
 When you load an AssetBundle, Unity allocates memory to store the bundle's internal data, which is in addition to the memory used for the assets it contains. The main types of internal data for a loaded AssetBundle include: 
 
-* [Serialized file buffers]: used to load data from a bundle
-* [TypeTrees]: defines the serialized layout of your objects
-* [Table of contents]: lists the assets in a bundle
-* [Preload table]: lists the dependencies of each asset
+* Loading cache: Stores recently accessed pages of an AssetBundle file. Use [AssetBundle.memoryBudgetKB] to control its size.
+* [TypeTrees]: Defines the serialized layout of your objects.
+* [Table of contents]: Lists the assets in a bundle.
+* [Preload table]: Lists the dependencies of each asset.
 
 When you organize your Addressable groups and AssetBundles, you typically must make tradeoffs between the size and the number of AssetBundles you create and load. On the one hand, fewer, larger bundles can minimize the total memory usage of your AssetBundles. On the other hand, using a larger number of small bundles can minimize the peak memory usage because you can unload assets and AssetBundles more easily.  
 
 While the size of an AssetBundle on disk is not the same as its size at runtime, you can use the disk size as an approximate guide to the memory overhead of the AssetBundles in a build. You can get bundle size and other information you can use to help analyze your AssetBundles from the [Build Layout Report].
 
 The following sections discuss the internal data used by AssetBundles and how you can minimize the amount of memory they require, where possible. 
-
-### Serialized file buffers
-
-When Unity loads an AssetBundle, it allocates an internal buffer for each serialized file in the bundle and keeps this buffer for the lifetime of the AssetBundle. A non-scene AssetBundle contains one serialized file, but a scene AssetBundle can contain up to two serialized files for each scene in the bundle. 
-
-Because file buffers are allocated per loaded AssetBundle, you can reduce the amount of memory used for them by keeping the number of bundles loaded at a given time to a minimum. In addition, if your AssetBundle sizes are small enough that the size of the file buffers becomes a significant percentage of the total memory used for your loaded bundles, then consider whether it makes more sense to use larger bundles.
-
-The buffer sizes are optimized per platform. Switch, Playstation, and Windows RT use 128k buffers. All other platforms use 14k buffers. You can use the [Build Layout Report] to determine how many serialized files are in an AssetBundle. 
 
 ### TypeTrees
 
@@ -107,7 +99,6 @@ To avoid loading more bundles than are required, you should strive to keep the d
 > [!NOTE]
 > Prior to Addressables 1.13.0, the dependency graph was not as thorough as it is now. In the example above, RootAsset1 would not have had a dependency on BundleB. This previous behavior resulted in references breaking when an AssetBundle being referenced by another AssetBundle was unloaded and reloaded. This fix may result in additional data remaining in memory if the dependency graph is complex enough.
 
-[Serialized file buffers]: #serialized-file-buffers
 [TypeTrees]: #typetrees
 [Table of contents]: #table-of-contents
 [Preload table]: #preload-table
@@ -115,3 +106,4 @@ To avoid loading more bundles than are required, you should strive to keep the d
 [BuildAssetBundleOptions.DisableWriteTypeTree]: xref:UnityEditor.BuildAssetBundleOptions.DisableWriteTypeTree
 [Event Viewer]: xref:addressables-event-viewer
 [Resources.UnloadUnusedAssets]: xref:UnityEngine.Resources.UnloadUnusedAssets
+[AssetBundle.memoryBudgetKB]: xref:UnityEngine.AssetBundle.memoryBudgetKB

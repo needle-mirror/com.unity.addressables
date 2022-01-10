@@ -34,6 +34,16 @@ namespace UnityEngine.ResourceManagement.Util
             return isError;
 #endif
         }
+
+        internal static bool IsAssetBundleDownloaded(UnityWebRequestAsyncOperation op)
+        {
+#if ENABLE_ASYNC_ASSETBUNDLE_UWR
+            var handler = (DownloadHandlerAssetBundle)op.webRequest.downloadHandler;
+            if (handler != null && handler.autoLoadAssetBundle)
+                return handler.isDownloadComplete;
+#endif
+            return op.isDone;
+        }
     }
 
     /// <summary>

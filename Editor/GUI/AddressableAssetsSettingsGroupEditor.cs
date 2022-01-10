@@ -62,13 +62,13 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             List<int> selectedIDs = new List<int>(entries.Count);
             Stack<AssetEntryTreeViewItem> items = new Stack<AssetEntryTreeViewItem>();
-            
+
             if (m_EntryTree == null || m_EntryTree.Root == null)
                 InitialiseEntryTree();
-            
+
             foreach (TreeViewItem item in m_EntryTree.Root.children)
             {
-                if(item is AssetEntryTreeViewItem i)
+                if (item is AssetEntryTreeViewItem i)
                     items.Push(i);
             }
             while (items.Count > 0)
@@ -88,7 +88,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         }
                     }
                 }
-                
+
                 if (!i.IsGroup && contains)
                 {
                     selectedIDs.Add(i.id);
@@ -97,7 +97,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     foreach (TreeViewItem child in i.children)
                     {
-                        if(child is AssetEntryTreeViewItem c)
+                        if (child is AssetEntryTreeViewItem c)
                             items.Push(c);
                     }
                 }
@@ -204,7 +204,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
                         });
                         menu.AddItem(new GUIContent("Check for Content Update Restrictions"), false, OnPrepareUpdate);
-                        
+
                         menu.AddItem(new GUIContent("Window/Profiles"), false, () => EditorWindow.GetWindow<ProfileWindow>().Show(true));
                         menu.AddItem(new GUIContent("Window/Labels"), false, () => EditorWindow.GetWindow<LabelWindow>(true).Intialize(settings));
                         menu.AddItem(new GUIContent("Window/Analyze"), false, AnalyzeWindow.ShowWindow);
@@ -237,7 +237,12 @@ namespace UnityEditor.AddressableAssets.GUI
                         {
                             var m = settings.GetDataBuilder(i);
                             if (m.CanBuildData<AddressablesPlayModeBuildResult>())
-                                menu.AddItem(new GUIContent(m.Name), i == settings.ActivePlayModeDataBuilderIndex, OnSetActivePlayModeScript, i);
+                            {
+                                string text = m is Build.DataBuilders.BuildScriptPackedPlayMode ?
+                                    $"Use Existing Build ({PlatformMappingService.GetAddressablesPlatformPathInternal(EditorUserBuildSettings.activeBuildTarget)})" :
+                                    m.Name;
+                                menu.AddItem(new GUIContent(text), i == settings.ActivePlayModeDataBuilderIndex, OnSetActivePlayModeScript, i);
+                            }
                         }
                         menu.DropDown(rMode);
                     }
@@ -278,7 +283,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
 
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
-                //Build & Release 
+                //Build & Release
                 var guiBuildAndRelease = new GUIContent("Build & Release");
                 if (GUILayout.Button(guiBuildAndRelease, EditorStyles.toolbarButton))
                 {
@@ -343,6 +348,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             await AddressableAssetSettings.BuildAndReleasePlayerContent();
         }
+
 #endif
 
         void OnBuildScript(object context)

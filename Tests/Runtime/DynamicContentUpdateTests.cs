@@ -10,12 +10,17 @@ using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
+
+#if UNITY_EDITOR
+using UnityEditor.AddressableAssets.Settings;
+#endif
 
 namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
 {
     [TestFixture]
-    public class DynamicContentUpdateTests
+    public abstract class DynamicContentUpdateTests : AddressablesTestFixture
     {
         class TestLocator : IResourceLocator
         {
@@ -78,17 +83,17 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", nameof(TestCatalogProvider), typeof(IResourceLocator), remoteHashLoc, localHashLoc);
-            var aa = new AddressablesImpl(null);
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "same"));
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
-            aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
-            aa.AddResourceLocator(new TestLocator(kLocatorId), "same", catalogLoc);
-            var op = aa.CheckForCatalogUpdates(false);
+  
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "same"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
+            m_Addressables.AddResourceLocator(new TestLocator(kLocatorId), "same", catalogLoc);
+            var op = m_Addressables.CheckForCatalogUpdates(false);
             yield return op;
             Assert.IsNotNull(op.Result);
             Assert.AreEqual(0, op.Result.Count);
-            Assert.AreEqual(0, aa.CatalogsWithAvailableUpdates.Count());
-            aa.Release(op);
+            Assert.AreEqual(0, m_Addressables.CatalogsWithAvailableUpdates.Count());
+            m_Addressables.Release(op);
         }
 
         [UnityTest]
@@ -97,17 +102,25 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", nameof(TestCatalogProvider), typeof(IResourceLocator), remoteHashLoc, localHashLoc);
-            var aa = new AddressablesImpl(null);
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
-            aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
-            aa.AddResourceLocator(new TestLocator(kLocatorId), "same", catalogLoc);
-            var op = aa.CheckForCatalogUpdates(false);
+  
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
+            m_Addressables.AddResourceLocator(new TestLocator(kLocatorId), "same", catalogLoc);
+            var op = m_Addressables.CheckForCatalogUpdates(false);
             yield return op;
             Assert.IsNotNull(op.Result);
             Assert.AreEqual(1, op.Result.Count);
-            Assert.AreEqual(1, aa.CatalogsWithAvailableUpdates.Count());
-            aa.Release(op);
+            Assert.AreEqual(1, m_Addressables.CatalogsWithAvailableUpdates.Count());
+            m_Addressables.Release(op);
+        }
+
+        [UnityTest]
+        public IEnumerator CheckForUpdates_Initializes_Addressables()
+        {
+            m_Addressables.hasStartedInitialization = false;
+            yield return m_Addressables.CheckForCatalogUpdates();
+            Assert.IsTrue(m_Addressables.hasStartedInitialization);
         }
 
         [UnityTest]
@@ -121,23 +134,22 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var localHashLoc2 = new ResourceLocationBase("LocalHash2", "Local", kLocalHashProviderId + 2, typeof(string));
             var catalogLoc2 = new ResourceLocationBase("cat2", "cat_id", nameof(TestCatalogProvider), typeof(IResourceLocator), remoteHashLoc2, localHashLoc2);
 
-            var aa = new AddressablesImpl(null);
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId + 1, "same"));
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId + 1, "same"));
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId + 2, "different"));
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId + 2, "same"));
-            aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
-            aa.AddResourceLocator(new TestLocator(kLocatorId), "same", catalogLoc);
-            aa.AddResourceLocator(new TestLocator(kLocatorId + 2), "same", catalogLoc2);
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId + 1, "same"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId + 1, "same"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId + 2, "different"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId + 2, "same"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
+            m_Addressables.AddResourceLocator(new TestLocator(kLocatorId), "same", catalogLoc);
+            m_Addressables.AddResourceLocator(new TestLocator(kLocatorId + 2), "same", catalogLoc2);
 
-            var op = aa.CheckForCatalogUpdates(false);
+            var op = m_Addressables.CheckForCatalogUpdates(false);
             yield return op;
             Assert.IsNotNull(op.Result);
             Assert.AreEqual(1, op.Result.Count);
             Assert.AreEqual(kLocatorId + 2, op.Result[0]);
-            Assert.AreEqual(1, aa.CatalogsWithAvailableUpdates.Count());
-            Assert.AreEqual(kLocatorId + 2, aa.CatalogsWithAvailableUpdates.First());
-            aa.Release(op);
+            Assert.AreEqual(1, m_Addressables.CatalogsWithAvailableUpdates.Count());
+            Assert.AreEqual(kLocatorId + 2, m_Addressables.CatalogsWithAvailableUpdates.First());
+            m_Addressables.Release(op);
         }
 
         [UnityTest]
@@ -146,23 +158,23 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
-            var aa = new AddressablesImpl(null);
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
-            aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
-            aa.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
-            var op = aa.CheckForCatalogUpdates(false);
+    
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
+            m_Addressables.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
+            var op = m_Addressables.CheckForCatalogUpdates(false);
             yield return op;
             Assert.IsNotNull(op.Result);
             Assert.AreEqual(1, op.Result.Count);
-            var updateOp = aa.UpdateCatalogs(op.Result, false);
-            aa.Release(op);
+            var updateOp = m_Addressables.UpdateCatalogs(op.Result, false);
+            m_Addressables.Release(op);
 
             yield return updateOp;
             Assert.IsNotNull(updateOp.Result);
             Assert.AreEqual(1, updateOp.Result.Count);
             Assert.AreEqual(kNewLocatorId, updateOp.Result[0].LocatorId);
-            aa.Release(updateOp);
+            m_Addressables.Release(updateOp);
         }
 
         [UnityTest]
@@ -171,19 +183,19 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
-            var aa = new AddressablesImpl(null);
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
-            aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
-            aa.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
+  
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
+            m_Addressables.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
 
-            var updateOp = aa.UpdateCatalogs(null, false);
+            var updateOp = m_Addressables.UpdateCatalogs(null, false);
 
             yield return updateOp;
             Assert.IsNotNull(updateOp.Result);
             Assert.AreEqual(1, updateOp.Result.Count);
             Assert.AreEqual(kNewLocatorId, updateOp.Result[0].LocatorId);
-            aa.Release(updateOp);
+            m_Addressables.Release(updateOp);
         }
 
         [UnityTest]
@@ -193,23 +205,23 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
-            var aa = new AddressablesImpl(null);
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
-            aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
-            aa.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
+
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
+            m_Addressables.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
 
             string cachedBundleName = "UpdatesCatalogsTestFakeBundle";
             string hash = "123";
             string fakeCachePath = AddressablesIntegrationTests.CreateFakeCachedBundle(cachedBundleName, hash);
 
-            var updateOp = aa.UpdateCatalogs(null, false, true);
+            var updateOp = m_Addressables.UpdateCatalogs(null, false, true);
             yield return updateOp;
 
             string fakeCacheFolder = Path.GetDirectoryName(fakeCachePath);
             Assert.IsFalse(Directory.Exists(fakeCacheFolder));
 
-            aa.Release(updateOp);
+            m_Addressables.Release(updateOp);
 #else
             Assert.Ignore("Caching not enabled.");
             yield return null;
@@ -223,23 +235,23 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
-            var aa = new AddressablesImpl(null);
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
-            aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
-            aa.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
+ 
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
+            m_Addressables.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
 
             string cachedBundleName = "UpdatesCatalogsTestFakeBundle";
             string hash = "123";
             string fakeCachePath = AddressablesIntegrationTests.CreateFakeCachedBundle(cachedBundleName, hash);
 
-            var updateOp = aa.UpdateCatalogs(null, false, false);
+            var updateOp = m_Addressables.UpdateCatalogs(null, false, false);
             yield return updateOp;
 
             string fakeCacheFolder = Path.GetDirectoryName(fakeCachePath);
             Assert.IsTrue(Directory.Exists(fakeCacheFolder));
 
-            aa.Release(updateOp);
+            m_Addressables.Release(updateOp);
             Directory.Delete(fakeCacheFolder, true);
 #else
             Assert.Ignore("Caching not enabled.");
@@ -254,13 +266,14 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
-            var aa = new AddressablesImpl(null);
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
-            aa.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
-            aa.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
-            aa.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
+
+            m_Addressables.RuntimePath = m_RuntimeSettingsPath;
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
+            m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
+            m_Addressables.AddResourceLocator(new TestLocator(kLocatorId, remoteHashLoc, localHashLoc, catalogLoc), "same", catalogLoc);
             LogAssert.Expect(LogType.Error, "System.Exception: Caching not enabled. There is no bundle cache to modify.");
-            var updateOp = aa.UpdateCatalogs(null, false, true);
+            var updateOp = m_Addressables.UpdateCatalogs(null, false, true);
             yield return updateOp;
 
             LogAssert.Expect(LogType.Error,
@@ -268,7 +281,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             Assert.AreEqual(updateOp.OperationException.Message, "ChainOperation failed because dependent operation failed");
             Assert.AreEqual(updateOp.OperationException.InnerException.Message, "CompletedOperation, status=Failed, result=False catalogs updated, but failed to clean bundle cache.");
 
-            aa.Release(updateOp);
+            m_Addressables.Release(updateOp);
 #else
             Assert.Ignore("Caching is enabled, but test expects to run on caching-disabled platforms or platform was skipped.");
             yield return null;
@@ -428,4 +441,38 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             Assert.IsNull(result, "Result list should be null if every operation contained within fails.");
         }
     }
+
+#if UNITY_EDITOR
+    class DynamicContentUpdateTests_FastMode : DynamicContentUpdateTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Fast; } } }
+    class DynamicContentUpdateTests_VirtualMode : DynamicContentUpdateTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Virtual; } } }
+    class DynamicContentUpdateTests_PackedPlaymode : DynamicContentUpdateTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.PackedPlaymode; } } }
+#endif
+    [UnityPlatform(exclude = new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor })]
+    class DynamicContentUpdateTests_Packed : DynamicContentUpdateTests
+    {
+        protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Packed; } }
+#if UNITY_EDITOR
+        protected override void RunBuilder(AddressableAssetSettings settings)
+        {
+            //Because we're testing an API that indirectly inits Addr, we need to build using the regular naming convention.
+            RunBuilder(settings, "");
+        }
+#endif
+        [UnitySetUp]
+        public override IEnumerator RuntimeSetup()
+        {
+#if ENABLE_CACHING
+            Caching.ClearCache();
+#endif
+            Assert.IsNull(m_Addressables);
+            m_Addressables = new AddressablesImpl(new LRUCacheAllocationStrategy(1000, 1000, 100, 10));
+            var op = m_Addressables.InitializeAsync(false);
+            yield return op;
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
+            OnRuntimeSetup();
+            if (op.IsValid())
+                op.Release();
+        }
+    }
+
 }

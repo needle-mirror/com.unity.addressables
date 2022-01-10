@@ -234,7 +234,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
             else
                 webRequest = UnityWebRequestAssetBundle.GetAssetBundle(url, m_Options.Crc);
-            
+
             if (m_Options.RedirectLimit > 0)
                 webRequest.redirectLimit = m_Options.RedirectLimit;
             if (m_ProvideHandle.ResourceManager.CertificateHandlerInstance != null)
@@ -333,11 +333,19 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         private bool WaitForCompletionHandler()
         {
             if (m_RequestOperation == null)
-                return false;
+            {
+                if (m_WebRequestQueueOperation == null)
+                    return false;
+                else
+                    WebRequestQueue.WaitForRequestToBeActive(m_WebRequestQueueOperation, k_WaitForWebRequestMainThreadSleep);
+            }
 
             //We don't want to wait for request op to complete if it's a LoadFromFileAsync. Only UWR will complete in a tight loop like this.
-            if (!(m_RequestOperation is AssetBundleCreateRequest))
-                while (!m_RequestOperation.isDone) { System.Threading.Thread.Sleep(k_WaitForWebRequestMainThreadSleep); }
+            if (m_RequestOperation is UnityWebRequestAsyncOperation op)
+            {
+                while (!UnityWebRequestUtilities.IsAssetBundleDownloaded(op))
+                    System.Threading.Thread.Sleep(k_WaitForWebRequestMainThreadSleep);
+            }
 
             if (m_RequestOperation is UnityWebRequestAsyncOperation && !m_WebRequestCompletedCallbackCalled)
             {
@@ -447,7 +455,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_RequestOperation.completed += WebRequestOperationCompleted;
             }
         }
-        
+
         public void Update(float unscaledDeltaTime)
         {
             if (m_RequestOperation != null && m_RequestOperation is UnityWebRequestAsyncOperation operation && !operation.isDone)
@@ -490,7 +498,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
             if (m_Options.Timeout > 0)
                 m_ProvideHandle.ResourceManager.RemoveUpdateReciever(this);
-            
+
             m_WebRequestCompletedCallbackCalled = true;
             UnityWebRequestAsyncOperation remoteReq = op as UnityWebRequestAsyncOperation;
             var webReq = remoteReq?.webRequest;

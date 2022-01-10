@@ -298,14 +298,14 @@ namespace UnityEditor.AddressableAssets.Tests
                 subFolderEntry = Settings.CreateOrMoveEntry(subFolderGuid, m_testGroup, false);
 
                 //Test
-                var entry = mainFolderEntry.GetFolderSubEntry(mainPrefabPath);
+                var entry = mainFolderEntry.GetFolderSubEntry(AssetDatabase.AssetPathToGUID(mainPrefabPath), mainPrefabPath);
                 Assert.IsNotNull(entry, "Prefab in main folder is expected to be valid subAsset of main folder.");
-                entry = mainFolderEntry.GetFolderSubEntry(subPrefabPath);
+                entry = mainFolderEntry.GetFolderSubEntry(AssetDatabase.AssetPathToGUID(subPrefabPath), subPrefabPath);
                 Assert.IsNull(entry, "Prefab in addressable sub folder is not expected to be valid subAsset of main folder.");
 
-                entry = subFolderEntry.GetFolderSubEntry(mainPrefabPath);
+                entry = subFolderEntry.GetFolderSubEntry(AssetDatabase.AssetPathToGUID(mainPrefabPath), mainPrefabPath);
                 Assert.IsNull(entry, "Prefab in main folder is not expected to be valid subAsset of sub folder.");
-                entry = subFolderEntry.GetFolderSubEntry(subPrefabPath);
+                entry = subFolderEntry.GetFolderSubEntry(AssetDatabase.AssetPathToGUID(subPrefabPath), subPrefabPath);
                 Assert.IsNotNull(entry, "Prefab in addressable sub folder is expected to be valid subAsset of sub folder.");
             }
             finally
@@ -459,7 +459,13 @@ namespace UnityEditor.AddressableAssets.Tests
 
             // Assert
             var subFolderGUID = AssetDatabase.AssetPathToGUID(subFolderPath);
-            Assert.AreEqual(2, entries.Count);
+            string csvEntries = "";
+            if (entries.Count != 2)
+            {
+                foreach (AddressableAssetEntry assetEntry in entries)
+                    csvEntries += assetEntry.AssetPath + ", ";
+            }
+            Assert.AreEqual(2, entries.Count, $"Expected 2 (testAsset1_gatherAllAssets and testAsset2_gatherAllAssets), but was {entries.Count}: ({csvEntries})");
             Assert.IsTrue(entries.Any(e => e.guid == a1GUID));
             Assert.IsFalse(entries.Any(e => e.guid == a2GUID));
             Assert.IsTrue(entries.Any(e => e.guid == subFolderGUID));
@@ -662,10 +668,6 @@ namespace UnityEditor.AddressableAssets.Tests
             
             try
             {
-                CreateFolderDeep(subFolderPath);
-                if (!Directory.Exists(resourcePath))
-                    CreateFolderDeep(resourcePath);
-
                 r1GUID = CreateAsset(resourcePath + "/testResourceupper.prefab", "testResourceupper");
                 r2GUID = CreateAsset(subFolderPath + "/testResourcelower.prefab", "testResourcelower");
 
@@ -692,80 +694,6 @@ namespace UnityEditor.AddressableAssets.Tests
                 AssetDatabase.DeleteAsset(testAssetFolder);
             }
         }
-
-        [Test]
-        public void GatherImplicitAssets_ReturnsEntriesInAddressableFolders()
-        {
-            var folderPath = GetAssetPath("aaFolder");
-            Directory.CreateDirectory(folderPath);
-            AssetDatabase.Refresh();
-            var folderGuid = AssetDatabase.AssetPathToGUID(folderPath);
-            Assert.IsFalse(string.IsNullOrEmpty(folderGuid));
-
-            var asset1GUID = CreateAsset(Path.Combine(folderPath, "asset1.prefab").Replace('\\', '/'));
-            var asset2GUID = CreateAsset(Path.Combine(folderPath, "asset2.prefab").Replace('\\', '/'));
-            Assert.IsNotNull(m_testGroup);
-            var folderEntry = Settings.CreateOrMoveEntry(folderGuid, m_testGroup, false);
-            Assert.IsNotNull(folderEntry);
-
-            var implicitEntries = new List<AddressableAssetEntry>();
-            folderEntry.GatherImplicitEntries(implicitEntries);
-
-            // Assert
-            Assert.AreEqual(2, implicitEntries.Count);
-            Assert.IsTrue(implicitEntries.Any(e => e.guid == asset1GUID));
-            Assert.IsTrue(implicitEntries.Any(e => e.guid == asset2GUID));
-
-            // Cleanup
-            Directory.Delete(folderPath, true);
-            Settings.RemoveAssetEntry(folderEntry, false);
-        }
-
-#pragma warning disable 0618
-        [Test]
-        public void GatherImplicitAssets_ReturnsEntriesInEntryCollection()
-        {
-            var testFolderPath = GetAssetPath("ImplicitAssetTests");
-            Directory.CreateDirectory(testFolderPath);
-            AssetDatabase.Refresh();
-            var asset1GUID = CreateAsset(Path.Combine(testFolderPath, "asset1.prefab").Replace('\\', '/'));
-            var asset2GUID = CreateAsset(Path.Combine(testFolderPath, "asset2.prefab").Replace('\\', '/'));
-
-            Assert.IsNotNull(m_testGroup);
-            var entry1 = Settings.CreateOrMoveEntry(asset1GUID, m_testGroup, false);
-            var entry2 = Settings.CreateOrMoveEntry(asset2GUID, m_testGroup, false);
-            Assert.IsNotNull(entry1);
-            Assert.IsNotNull(entry2);
-
-            // creating entry collection
-            Settings.DenyEntryCollectionPermission = true;
-            var collectionPath = Path.Combine(testFolderPath, "entryCollection.asset").Replace('\\', '/');
-            var col = ScriptableObject.CreateInstance<AddressableAssetEntryCollection>();
-            col.Entries.Add(entry1);
-            col.Entries.Add(entry2);
-            Settings.RemoveAssetEntry(entry1, false);
-            Settings.RemoveAssetEntry(entry2, false);
-            AssetDatabase.CreateAsset(col, collectionPath);
-            AssetDatabase.Refresh();
-            Settings.DenyEntryCollectionPermission = false;
-
-            var guid = AssetDatabase.AssetPathToGUID(collectionPath);
-            var collectionEntry = Settings.CreateOrMoveEntry(guid, m_testGroup);
-            Assert.IsNotNull(collectionEntry);
-
-            var implicitEntries = new List<AddressableAssetEntry>();
-            collectionEntry.GatherImplicitEntries(implicitEntries);
-
-            // Assert
-            Assert.AreEqual(2, implicitEntries.Count);
-            Assert.IsTrue(implicitEntries.Any(e => e.guid == asset1GUID));
-            Assert.IsTrue(implicitEntries.Any(e => e.guid == asset2GUID));
-
-            // Cleanup
-            Directory.Delete(testFolderPath, true);
-            Settings.RemoveAssetEntry(collectionEntry, false);
-        }
-#pragma warning restore 0618
 
         [Test]
         public void GetRuntimeProviderType_HandlesEmptyProviderString()

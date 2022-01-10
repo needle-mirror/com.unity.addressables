@@ -10,6 +10,7 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.Initialization;
+using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -174,7 +175,7 @@ namespace AddressableAssetsIntegrationTests
 #endif
 
         [UnityTest]
-        public IEnumerator WhenValidCatalogId_RemovesNonReferencedBundlesFromCache()
+        public IEnumerator WhenValidCatalogId_RemovesNonReferencedBundlesFromCache([Values(true, false)] bool forceSingleThreading)
         {
 #if ENABLE_CACHING
             if (BuildScriptMode == TestBuildScriptMode.Fast)
@@ -190,7 +191,7 @@ namespace AddressableAssetsIntegrationTests
             entriesToRemove.ExceptWith(entriesToPreserve);
 
             string locatorId = m_Addressables.m_ResourceLocators[0].Locator.LocatorId;
-            var handle = m_Addressables.CleanBundleCache(new List<string> { locatorId });
+            var handle = m_Addressables.CleanBundleCache(new List<string> { locatorId }, forceSingleThreading);
             yield return handle;
             handle.Release();
 
@@ -220,7 +221,7 @@ namespace AddressableAssetsIntegrationTests
             HashSet<CachedAssetBundle> entriesToPreserve = GetAllEntries(GetRefAsset);
             entriesToRemove.ExceptWith(entriesToPreserve);
 
-            var handle = m_Addressables.CleanBundleCache(null);
+            var handle = m_Addressables.CleanBundleCache(null, false);
             yield return handle;
             handle.Release();
 
@@ -246,7 +247,7 @@ namespace AddressableAssetsIntegrationTests
             var ifm = LogAssert.ignoreFailingMessages;
             LogAssert.ignoreFailingMessages = true;
 
-            var handle = m_Addressables.CleanBundleCache(null);
+            var handle = m_Addressables.CleanBundleCache(null, false);
             yield return handle;
 
             Assert.AreEqual("Provided catalogs do not load data from a catalog file. This can occur when using the \"Use Asset Database (fastest)\" playmode script. Bundle cache was not modified.", handle.OperationException.Message);
@@ -272,7 +273,7 @@ namespace AddressableAssetsIntegrationTests
             var ifm = LogAssert.ignoreFailingMessages;
             LogAssert.ignoreFailingMessages = true;
 
-            var handle = m_Addressables.CleanBundleCache(new List<string> { "invalidId" });
+            var handle = m_Addressables.CleanBundleCache(new List<string> { "invalidId" }, false);
             yield return handle;
 
             Assert.AreEqual("Provided catalogs do not load data from a catalog file. This can occur when using the \"Use Asset Database (fastest)\" playmode script. Bundle cache was not modified.", handle.OperationException.Message);
@@ -298,8 +299,8 @@ namespace AddressableAssetsIntegrationTests
             var ifm = LogAssert.ignoreFailingMessages;
             LogAssert.ignoreFailingMessages = true;
 
-            var handle = m_Addressables.CleanBundleCache(null);
-            var handle2 = m_Addressables.CleanBundleCache(null);
+            var handle = m_Addressables.CleanBundleCache(null, false);
+            var handle2 = m_Addressables.CleanBundleCache(null, false);
             yield return handle2;
 
             Assert.AreEqual("Bundle cache is already being cleaned.", handle2.OperationException.Message);
@@ -327,7 +328,7 @@ namespace AddressableAssetsIntegrationTests
             var ifm = LogAssert.ignoreFailingMessages;
             LogAssert.ignoreFailingMessages = true;
 
-            var handle = m_Addressables.CleanBundleCache(null);
+            var handle = m_Addressables.CleanBundleCache(null, false);
             yield return handle;
 
             Assert.AreEqual("Caching not enabled. There is no bundle cache to modify.", handle.OperationException.Message);

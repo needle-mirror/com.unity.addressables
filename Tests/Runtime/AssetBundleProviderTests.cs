@@ -86,6 +86,32 @@ namespace AddressableTests.SyncAddressables
         }
 
         [UnityTest]
+        public IEnumerator WhenUWRExceedsMaxLimit_CompletesSynchronously()
+        {
+            List<AsyncOperationHandle<GameObject>> loadOps =
+                Enumerable.Range(0, kForceUWRBundleCount).Select(x => m_Addressables.LoadAssetAsync<GameObject>(GetForceUWRAddrName(x))).ToList();
+
+            AsyncOperationHandle<GameObject> lastHandle = loadOps[kForceUWRBundleCount - 1];
+            lastHandle.WaitForCompletion();
+            lastHandle.Release();
+
+            for (int i = 0; i < kForceUWRBundleCount - 1; i++)
+            {
+                AsyncOperationHandle<GameObject> handle = loadOps[i];
+                yield return loadOps[i];
+                handle.Release();
+            }
+        }
+
+        [Test]
+        public void WhenUWRIsUsed_CompletesSynchronously()
+        {
+            AsyncOperationHandle<GameObject> h = m_Addressables.LoadAssetAsync<GameObject>(GetForceUWRAddrName(0));
+            h.WaitForCompletion();
+            h.Release();
+        }
+
+        [UnityTest]
         public IEnumerator WhenAssetBundleIsLocal_AndForceUWRIsEnabled_UWRIsUsed()
         {
             AsyncOperationHandle<GameObject> h = m_Addressables.LoadAssetAsync<GameObject>(GetForceUWRAddrName(0));
@@ -120,6 +146,7 @@ namespace AddressableTests.SyncAddressables
             }
             h.Release();
         }
+
 #endif
 
         [UnityTest]
@@ -141,7 +168,7 @@ namespace AddressableTests.SyncAddressables
             LogAssert.ignoreFailingMessages = prev;
             Assert.IsTrue(webRequestOverrideCalled);
         }
-        
+
         [UnityTest]
         public IEnumerator WhenWebRequestFails_RetriesCorrectAmount_AssetBundleProvider()
         {
@@ -163,7 +190,7 @@ namespace AddressableTests.SyncAddressables
             if (h.IsValid()) h.Release();
             LogAssert.ignoreFailingMessages = prev;
         }
-        
+
         [Test]
         [TestCase("Relative/Local/Path", true, false)]
         [TestCase("Relative/Local/Path", true, true)]
@@ -174,7 +201,7 @@ namespace AddressableTests.SyncAddressables
         {
             if (internalId.StartsWith("jar") && Application.platform != RuntimePlatform.Android)
                 Assert.Ignore($"Skipping test {TestContext.CurrentContext.Test.Name} due jar based tests are only for running on Android Platform.");
-            
+
             var loc = new ResourceLocationBase("dummy", internalId, "dummy", typeof(Object));
             loc.Data = new AssetBundleRequestOptions { UseUnityWebRequestForLocalBundles = useUnityWebRequestForLocalBundles };
             ProviderOperation<Object> op = new ProviderOperation<Object>();

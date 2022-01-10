@@ -11,7 +11,7 @@ When you distribute content remotely, you can sometimes improve perceived perfor
 
 Use the [Addressables.DownloadDependenciesAsync] method to make sure that all the dependencies needed to load an Addressable key are available either in local content installed with the app or the download cache.
 
-[!code-cs[sample](../Samples/DocSampleCode/MiscellaneousTopics.cs#doc_Download)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/MiscellaneousTopics.cs#doc_Download)]
 
 > [!TIP]
 > if you have a set of assets that you want to pre-download, you can assign the same label, such as "preload", to the assets and use that label as the key when calling  [Addressables.DownloadDependenciesAsync]. Addressables downloads all the AssetBundles containing an asset with that label if not already available (along with any bundles containing the assets' dependencies).
@@ -25,7 +25,7 @@ An [AsyncOperationHandle] instance provides two ways to get progress:
 
 The following example illustrates how you could use [GetDownloadStatus] to check the status and dispatch progress events during the download:
 
-[!code-cs[sample](../Samples/DocSampleCode/PreloadWithProgress.cs#doc_Preload)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/PreloadWithProgress.cs#doc_Preload)]
 
 <!--
 ```csharp
@@ -65,7 +65,7 @@ public class PreloadWithProgress : MonoBehaviour
 
 To discover how much data you need to download in order to load one or more assets, you can call [Addressables.GetDownloadSizeAsync]: 
 
-[!code-cs[sample](../Samples/DocSampleCode/PreloadWithProgress.cs#doc_DownloadSize)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/PreloadWithProgress.cs#doc_DownloadSize)]
 
 <!--
 ```csharp
@@ -78,7 +78,7 @@ The Result of the completed operation is the number of bytes that must be downlo
 
 Always release the download operation handle after you have read the Result object. If you don't need to access the results of the download operation, you can automatically release the handle by setting the `autoReleaseHandle` parameter to true, as shown in the following example:
 
-[!code-cs[sample](../Samples/DocSampleCode/Preload.cs#doc_Preload)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/Preload.cs#doc_Preload)]
 
 <!--
 ```csharp

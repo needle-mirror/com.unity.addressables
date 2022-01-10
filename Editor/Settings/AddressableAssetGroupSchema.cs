@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using UnityEditor.AddressableAssets.GUI;
 using UnityEngine;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
@@ -12,7 +13,7 @@ namespace UnityEditor.AddressableAssets.Settings
     /// </summary>
     public class AddressableAssetGroupSchema : ScriptableObject
     {
-        [FormerlySerializedAs("m_group")] [HideInInspector] [SerializeField]
+        [FormerlySerializedAs("m_group")] [AddressableReadOnly] [SerializeField]
         AddressableAssetGroup m_Group;
 
         /// <summary>

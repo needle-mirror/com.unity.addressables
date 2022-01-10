@@ -15,4 +15,4 @@ apiRules:
       uidRegex: Unity.*\.Tests\..*$
   - exclude: 
       type: Namespace
-      uidRegex: DocSampleCode$
+      uidRegex: DocExampleCode$

@@ -244,6 +244,6 @@ Content bundles can be large, and having to update the whole bundle for small ch
 Enabling the "MonoScript Bundle Naming Prefix" option in the [Addressables settings] will build an asset bundle that contains the MonoScript objects, separate to your serialised data.
 If there are no changes to the serialised class data then only the MonoScript bundle will have changed and other bundles will not need to be updated.
 
-[Addressables settings]: #addressables-asset-settings
+[Addressables settings]: xref:addressables-asset-settings#build
 [Assembly Definition File]: https://docs.unity3d.com/Manual/ScriptCompilationAssemblyDefinitionFiles.html
 [Namespace]: https://docs.unity3d.com/Manual/Namespaces.html

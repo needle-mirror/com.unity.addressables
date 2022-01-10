@@ -61,5 +61,5 @@ Since WebGL is single-threaded, the tight loop blocks the web request and the op
 
 [AsyncOperation.allowSceneActivation]: xref:UnityEngine.AsyncOperation.allowSceneActivation
 [AsyncOperation]: xref:UnityEngine.AsyncOperation
-[Addressables.LoadSceneAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadSceneAsync
+[Addressables.LoadSceneAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadSceneAsync*
 [Addressables.UnloadSceneAsync]: xref:UnityEngine.AddressableAssets.Addressables.UnloadSceneAsync

@@ -353,14 +353,15 @@ namespace AddressableTests.SyncAddressables
             m_Addressables.Release(depOp);
         }
 
-        [Test]
-        public void CleanBundleCache_CompletesSynchronously()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void CleanBundleCache_CompletesSynchronously(bool forceSingleThreading)
         {
 #if ENABLE_CACHING
             if (BuildScriptMode == TestBuildScriptMode.Fast || BuildScriptMode == TestBuildScriptMode.Virtual)
                 Assert.Ignore("Bundle caching does not occur when using this playmode.");
 
-            var cleanOp = m_Addressables.CleanBundleCache(null);
+            var cleanOp = m_Addressables.CleanBundleCache(null, forceSingleThreading);
             cleanOp.WaitForCompletion();
 
             Assert.AreEqual(AsyncOperationStatus.Succeeded, cleanOp.Status);
@@ -392,7 +393,7 @@ namespace AddressableTests.SyncAddressables
             bool callbackCompleted = false;
             loadOp.Completed += handle => callbackCompleted = true;
             var result = loadOp.WaitForCompletion();
-            
+
             Assert.IsTrue(callbackCompleted, "When activateOnLoad is disabled, scene load operation expected to complete in WaitForCompletion");
             Assert.AreEqual(AsyncOperationStatus.Succeeded, loadOp.Status);
             Assert.IsNotNull(result);
@@ -403,13 +404,13 @@ namespace AddressableTests.SyncAddressables
             // complete the activation step
             yield return result.ActivateAsync();
             yield return loadOp;
-            
+
             //Cleanup
             var unloadHandle = m_Addressables.UnloadSceneAsync(loadOp);
             yield return unloadHandle;
             ReleaseOp(loadOp);
         }
-        
+
         [UnityTest]
         public IEnumerator LoadingScene_Synchronously_ActivateOnLoad_CompletesAsynchronously()
         {
@@ -429,7 +430,7 @@ namespace AddressableTests.SyncAddressables
             Assert.AreEqual(AsyncOperationStatus.Succeeded, loadOp.Status);
             Assert.IsTrue(result.m_Operation.isDone);
             Assert.AreEqual(loadOp.Result.Scene, result.Scene);
-            
+
             //Cleanup
             var unloadHandle = m_Addressables.UnloadSceneAsync(loadOp);
             yield return unloadHandle;
@@ -447,10 +448,10 @@ namespace AddressableTests.SyncAddressables
             LogAssert.Expect(LogType.Warning, "Cannot unload a Scene with WaitForCompletion. Scenes must be unloaded asynchronously.");
             unloadOp.WaitForCompletion();
             yield return unloadOp;
-            
+
             Assert.IsFalse(unloadOp.IsValid());
             Assert.IsTrue(unloadOp.IsDone);
-            
+
             ReleaseOp(loadOp);
         }
 
@@ -465,7 +466,7 @@ namespace AddressableTests.SyncAddressables
             LogAssert.Expect(LogType.Warning, "Cannot unload a Scene with WaitForCompletion. Scenes must be unloaded asynchronously.");
             unloadOp.WaitForCompletion();
             yield return unloadOp;
-            
+
             Assert.AreEqual(AsyncOperationStatus.Succeeded, unloadOp.Status);
             Assert.IsTrue(unloadOp.IsValid());
             Assert.IsTrue(unloadOp.IsDone);
@@ -502,7 +503,7 @@ namespace AddressableTests.SyncAddressables
 
     class SyncAddressableTests_PackedPlaymodeMode : SyncAddressablesWithSceneTests
     {
-        protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.PackedPlaymode; } } 
+        protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.PackedPlaymode; } }
         [Test]
         public void DownloadDependencies_CompletesSynchronously_WhenAutoReleased()
         {
@@ -511,12 +512,12 @@ namespace AddressableTests.SyncAddressables
             Assert.IsTrue(downloadDependencies.IsDone);
         }
     }
-#endif 
+#endif
 
     [UnityPlatform(exclude = new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor })]
     class SyncAddressableTests_PackedMode : SyncAddressableTests
     {
-        protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Packed; } } 
+        protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.Packed; } }
 
         [Test]
         public void DownloadDependencies_CompletesSynchronously_WhenAutoReleased()

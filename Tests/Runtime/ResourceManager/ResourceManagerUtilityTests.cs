@@ -215,5 +215,12 @@ namespace UnityEngine.ResourceManagement.Tests
             Assert.AreEqual(expectedMainKey, mainKey);
             Assert.AreEqual(expectedSubKey, subKey);
         }
+
+        [TestCase(RuntimePlatform.WebGLPlayer, false)]
+        [TestCase(RuntimePlatform.OSXEditor, true)]
+        public void CanIdentifyMultiThreadedPlatforms(RuntimePlatform platform, bool usesMultiThreading)
+        {
+            Assert.AreEqual(usesMultiThreading, PlatformUtilities.PlatformUsesMultiThreading(platform));
+        }
     }
 }

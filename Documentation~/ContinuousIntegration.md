@@ -12,7 +12,7 @@ One of the main choices when building Addressables content is selecting a conten
 
 If you've implemented your own custom [IDataBuilder] and want to use it for your CI builds, set the [ActivePlayerDataBuilderIndex] property of [AddressableAssetSettings]. By default, you can access the correct settings instance through [AddressableAssetSettingsDefaultObject.Settings]. This index refers to the position of the `IDataBuilder` in the list of [AddressableAssetSettings.DataBuilders]. The following code sample demonstrates how to set a custom `IDataBuilder`:
 
-[!code-cs[sample](../Samples/DocSampleCode/CustomDataBuilder.cs#doc_SetCustomBuilder)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/CustomDataBuilder.cs#doc_SetCustomBuilder)]
 
 <!--
 ``` csharp

@@ -8,6 +8,7 @@ using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
 using static UnityEngine.ResourceManagement.ResourceProviders.AssetBundleResource;
 
 namespace UnityEngine.AddressableAssets
@@ -21,9 +22,12 @@ namespace UnityEngine.AddressableAssets
         Thread m_EnumerationThread;
         string m_BaseCachePath;
 
-        public CleanBundleCacheOperation(AddressablesImpl aa)
+        bool m_UseMultiThreading;
+
+        public CleanBundleCacheOperation(AddressablesImpl aa, bool forceSingleThreading)
         {
             m_Addressables = aa;
+            m_UseMultiThreading = forceSingleThreading ? false : PlatformUtilities.PlatformUsesMultiThreading(Application.platform);
         }
 
         public AsyncOperationHandle<bool> Start(AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
@@ -69,7 +73,7 @@ namespace UnityEngine.AddressableAssets
 
         protected override void Execute()
         {
-            Assert.AreEqual(null, m_EnumerationThread);
+            Assert.AreEqual(null, m_EnumerationThread, "CleanBundleCacheOperation has already executed. A worker thread has already been created.");
 
             if (m_DepOp.Status == AsyncOperationStatus.Failed)
                 CompleteInternal(false, false, "Could not clean cache because a dependent catalog operation failed.");
@@ -81,14 +85,22 @@ namespace UnityEngine.AddressableAssets
                     CompleteInternal(false, false, "Cache is not ready to be accessed.");
 
                 m_BaseCachePath = Caching.currentCacheForWriting.path;
-                m_EnumerationThread = new Thread(DetermineCacheDirsNotInUse);
-                m_EnumerationThread.Start(cacheDirsInUse);
+                if (m_UseMultiThreading)
+                {
+                    m_EnumerationThread = new Thread(DetermineCacheDirsNotInUse);
+                    m_EnumerationThread.Start(cacheDirsInUse);
+                }
+                else
+                {
+                    DetermineCacheDirsNotInUse(cacheDirsInUse);
+                    RemoveCacheEntries();
+                }
             }
         }
 
         void IUpdateReceiver.Update(float unscaledDeltaTime)
         {
-            if (!m_EnumerationThread.IsAlive)
+            if (m_UseMultiThreading && !m_EnumerationThread.IsAlive)
             {
                 m_EnumerationThread = null;
                 RemoveCacheEntries();
@@ -108,7 +120,11 @@ namespace UnityEngine.AddressableAssets
 
         void DetermineCacheDirsNotInUse(object data)
         {
-            var cacheDirsInUse = (HashSet<string>)data;
+            DetermineCacheDirsNotInUse((HashSet<string>)data);
+        }
+
+        void DetermineCacheDirsNotInUse(HashSet<string> cacheDirsInUse)
+        {
             m_CacheDirsForRemoval = new List<string>();
             foreach (var cacheDir in Directory.EnumerateDirectories(m_BaseCachePath, "*", SearchOption.TopDirectoryOnly))
             {

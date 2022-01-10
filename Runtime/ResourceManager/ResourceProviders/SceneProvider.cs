@@ -63,7 +63,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     //We need the operation to complete but it'll take a frame to activate the scene (post 0.9 progress).
                     if (m_Inst.m_Operation.allowSceneActivation && Mathf.Approximately(m_Inst.m_Operation.progress, .9f))
                     {
-                        Result = m_Inst; // Set result so WaitForCompletion returns the SceneInstance
+                        Result = m_Inst;
                         return true;
                     }
                 }
@@ -169,7 +169,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             {
                 if (m_Inst.m_Operation != null)
                 {
-                    if (m_Inst.m_Operation.isDone || (!m_Inst.m_Operation.allowSceneActivation && m_Inst.m_Operation.progress == .9f))
+                    if (m_Inst.m_Operation.isDone || (!m_Inst.m_Operation.allowSceneActivation && Mathf.Approximately(m_Inst.m_Operation.progress, .9f)))
                     {
                         m_ResourceManager.RemoveUpdateReciever(this);
                         Complete(m_Inst, true, null);
@@ -210,7 +210,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
 
             ///<inheritdoc />
-            protected  override bool InvokeWaitForCompletion()
+            protected override bool InvokeWaitForCompletion()
             {
                 m_RM?.Update(Time.unscaledDeltaTime);
                 if (!HasExecuted)

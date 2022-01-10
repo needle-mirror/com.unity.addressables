@@ -36,6 +36,10 @@ namespace UnityEditor.AddressableAssets.Settings
     [Serializable]
     public class AddressableAssetEntry : ISerializationCallbackReceiver, IReferenceEntryData
     {
+#pragma warning disable 0618
+        static Type typeof_AddressableAssetEntryCollection = typeof(AddressableAssetEntryCollection);
+#pragma warning restore 0618
+        
         internal const string EditorSceneListName = "EditorSceneList";
         internal const string EditorSceneListPath = "Scenes In Build";
 
@@ -502,13 +506,15 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (AssetDatabase.IsValidFolder(AssetPath))
                 {
                     IsFolder = true;
-                    GatherFolderEntries(assets, recurseAll, includeSubObjects, entryFilter);
-                    SubAssets = assets;
+                    List<AddressableAssetEntry> folderEntries = new List<AddressableAssetEntry>();
+                    GatherFolderEntries(folderEntries, recurseAll, includeSubObjects, entryFilter);
+                    SubAssets = folderEntries;
+                    assets.AddRange(folderEntries);
                 }
                 else
                 {
 #pragma warning disable 0618
-                    bool isEntryCollection = MainAssetType == typeof(AddressableAssetEntryCollection);
+                    bool isEntryCollection = MainAssetType == typeof_AddressableAssetEntryCollection;
 #pragma warning restore 0618
                     if (isEntryCollection)
                     {
@@ -660,14 +666,21 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        internal AddressableAssetEntry GetFolderSubEntry(string subAssetPath)
+        /// <summary>
+        /// Gets an entry for this folder entry
+        /// </summary>
+        /// <param name="subAssetGuid"></param>
+        /// <param name="subAssetPath"></param>
+        /// <returns></returns>
+        /// <remarks>Assumes that this asset entry is a valid folder asset</remarks>
+        internal AddressableAssetEntry GetFolderSubEntry(string subAssetGuid, string subAssetPath)
         {
-            if (!subAssetPath.StartsWith(AssetPath))
+            string assetPath = AssetPath;
+            if (string.IsNullOrEmpty(assetPath) || !subAssetPath.StartsWith(assetPath))
                 return null;
             var settings = parentGroup.Settings;
 
-            string assetGuid = AssetDatabase.AssetPathToGUID(subAssetPath);
-            AddressableAssetEntry assetEntry = settings.FindAssetEntry(assetGuid);
+            AddressableAssetEntry assetEntry = settings.FindAssetEntry(subAssetGuid);
             if (assetEntry != null)
             {
                 if (assetEntry.IsSubAsset && assetEntry.ParentEntry == this)
@@ -675,16 +688,16 @@ namespace UnityEditor.AddressableAssets.Settings
                 return null;
             }
             
-            string relativePath = subAssetPath.Remove(0, AssetPath.Length+1);
+            string relativePath = subAssetPath.Remove(0, assetPath.Length+1);
             string[] splitRelativePath = relativePath.Split('/');
-            string folderPath = AssetPath;
+            string folderPath = assetPath;
             for (int i = 0; i < splitRelativePath.Length - 1; ++i)
             {
                 folderPath = folderPath + "/" + splitRelativePath[i];
                 string folderGuid = AssetDatabase.AssetPathToGUID(folderPath);
                 if (!AddressableAssetUtility.IsPathValidForEntry(folderPath))
                     return null;
-                var folderEntry = settings.CreateSubEntryIfUnique(folderGuid, address + "/" + folderPath.Remove(AssetPath.Length), this);
+                var folderEntry = settings.CreateSubEntryIfUnique(folderGuid, address + "/" + folderPath.Remove(assetPath.Length), this);
                 if (folderEntry != null)
                 {
                     folderEntry.IsInResources = IsInResources;
@@ -695,11 +708,25 @@ namespace UnityEditor.AddressableAssets.Settings
                     return null;
             }
             
-            assetEntry = settings.CreateSubEntryIfUnique(assetGuid, address + relativePath, this);
+            assetEntry = settings.CreateSubEntryIfUnique(subAssetGuid, address + relativePath, this);
             if (assetEntry == null || assetEntry.IsSubAsset == false)
                 return null;
             return assetEntry;
         }
+
+#pragma warning disable 0618
+        internal AddressableAssetEntry GetAssetCollectionSubEntry(string subAssetGuid)
+        {
+            if (AssetPath.EndsWith(".asset") && MainAssetType == typeof_AddressableAssetEntryCollection)
+            {
+                List<AddressableAssetEntry> implicitEntries = new List<AddressableAssetEntry>();
+                GatherAssetEntryCollectionEntries(implicitEntries, null);
+                return implicitEntries.FirstOrDefault(ie => ie.guid == subAssetGuid);
+            }
+
+            return null;
+        }
+#pragma warning restore 0618
 
         internal void GatherResourcesEntries(List<AddressableAssetEntry> assets, bool recurseAll, Func<AddressableAssetEntry, bool> entryFilter)
         {
@@ -817,7 +844,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
             }
 #pragma warning disable 0618
-            else if (MainAssetType == typeof(AddressableAssetEntryCollection))
+            else if (MainAssetType == typeof_AddressableAssetEntryCollection)
             {
                 var col = AssetDatabase.LoadAssetAtPath<AddressableAssetEntryCollection>(AssetPath);
                 if (col != null)
@@ -841,43 +868,10 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        internal void GatherImplicitEntries(List<AddressableAssetEntry> implicitEntries)
+        internal AddressableAssetEntry GetImplicitEntry(string implicitAssetGuid, string implicitAssetPath)
         {
-            var path = AssetPath;
-            if (string.IsNullOrEmpty(path))
-                return;
-
-            if (AssetDatabase.IsValidFolder(path))
-            {
-                GatherFolderEntries(implicitEntries, true, false, null);
-            }
-#pragma warning disable 0618
-            else if (MainAssetType == typeof(AddressableAssetEntryCollection))
-            {
-                GatherAssetEntryCollectionEntries(implicitEntries, null);
-            }
-#pragma warning restore 0618
-        }
-
-        internal AddressableAssetEntry GetImplicitEntry(string implicitAssetPath)
-        {
-            var path = AssetPath;
-            if (string.IsNullOrEmpty(path))
-                return null;
-            
-            List<AddressableAssetEntry> implicitEntries = new List<AddressableAssetEntry>();
-            if (AssetDatabase.IsValidFolder(path))
-            {
-                return GetFolderSubEntry(implicitAssetPath);
-            }
-#pragma warning disable 0618
-            if (MainAssetType == typeof(AddressableAssetEntryCollection))
-            {
-                GatherAssetEntryCollectionEntries(implicitEntries, null);
-            }
-#pragma warning restore 0618
-            
-            return implicitEntries.FirstOrDefault(ie => ie.AssetPath == implicitAssetPath);
+            var e = GetAssetCollectionSubEntry(implicitAssetGuid);
+            return e != null ? e : GetFolderSubEntry(implicitAssetGuid, implicitAssetPath);
         }
 
         string GetRelativePath(string file, string path)
@@ -905,6 +899,11 @@ namespace UnityEditor.AddressableAssets.Settings
                 m_Labels.Add(s);
             m_SerializedLabels = null;
             m_cachedMainAssetType = null;
+            m_cachedAssetPath = null;
+            m_CheckedIsScene = false;
+            m_MainAsset = null;
+            m_TargetAsset = null;
+            SubAssets?.Clear();
         }
 
         /// <summary>

@@ -117,7 +117,7 @@ namespace UnityEngine.ResourceManagement
         /// Global exception handler.  This will be called whenever an IAsyncOperation.OperationException is set to a non-null value.
         /// </summary>
         /// <example>
-        /// <code source="../../Samples/DocSampleCode/AddExceptionHandler.cs" region="doc_AddExceptionHandler" title="Adding a global exception hanlder"/>
+        /// <code source="../../Tests/Editor/DocExampleCode/AddExceptionHandler.cs" region="doc_AddExceptionHandler" title="Adding a global exception hanlder"/>
         /// </example>
         public static Action<AsyncOperationHandle, Exception> ExceptionHandler { get; set; }
 

@@ -8,7 +8,7 @@ By default, Addressables uses the address you assign to an asset as the [Primary
 
 The following example gets the address of the asset assigned to an [AssetReference] object named `MyRef1`:
 
-[!code-cs[sample](../Samples/DocSampleCode/MiscellaneousTopics.cs#doc_AddressFromReference)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/MiscellaneousTopics.cs#doc_AddressFromReference)]
 
 <!--
 ```csharp
@@ -26,7 +26,7 @@ if (op.Status == AsyncOperationStatus.Succeeded &&
 
 Labels often refer to multiple assets. The following example illustrates how to load multiple Prefab assets and use their primary key value to add them to a dictionary:
 
-[!code-cs[sample](../Samples/DocSampleCode/MiscellaneousTopics.cs#doc_PreloadHazards)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/MiscellaneousTopics.cs#doc_PreloadHazards)]
 
 <!--
 ```csharp

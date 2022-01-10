@@ -20,7 +20,7 @@ Once you load a catalog, you cannot unload it. You can, however, update a loaded
 
 In general, there is no reason to hold on to the operation handle after loading a catalog. You can release it automatically by setting the `autoReleaseHandle` parameter to true when loading a catalog, as shown in the following example: 
 
-[!code-cs[sample](../Samples/DocSampleCode/MiscellaneousTopics.cs#doc_LoadAdditionalCatalog)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/MiscellaneousTopics.cs#doc_LoadAdditionalCatalog)]
 
 <!--
 ```csharp
@@ -46,7 +46,7 @@ When you call the UpdateCatalog function, all other Addressable requests are blo
 
 If you call UpdateCatalog without providing a list of catalogs, Addressables checks all of the currently loaded catalogs for updates. 
 
-[!code-cs[sample](../Samples/DocSampleCode/MiscellaneousTopics.cs#doc_UpdateCatalog)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/MiscellaneousTopics.cs#doc_UpdateCatalog)]
 
 <!--
 ```csharp
@@ -63,7 +63,7 @@ IEnumerator UpdateCatalogs()
 
 You can also call [Addressables.CheckForCatalogUpdates] directly to get the list of catalogs that have updates and then perform the update:
 
-[!code-cs[sample](../Samples/DocSampleCode/MiscellaneousTopics.cs#doc_CheckCatalog)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/MiscellaneousTopics.cs#doc_CheckCatalog)]
 
 <!--
 ```csharp

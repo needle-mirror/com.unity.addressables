@@ -25,7 +25,7 @@ The ResourceManager calls your TransformInternalId  function when it looks up an
 
 The following example illustrates how you could append a query string to all URLs for AssetBundles:
 
-[!code-cs[sample](../Samples/DocSampleCode/IDTransformer.cs#doc_Transformer)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/IDTransformer.cs#doc_Transformer)]
 
 <!--
 ```csharp
@@ -55,7 +55,7 @@ The ResourceManager calls your [WebRequestOverride] function before [UnityWebReq
 
 The following example illustrates how you could append a query string to all URLs for AssetBundles and catalogs:
 
-[!code-cs[sample](../Samples/DocSampleCode/WebRequestOverride.cs#doc_TransformerWebRequest)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/WebRequestOverride.cs#doc_TransformerWebRequest)]
 
 <!--
 ```csharp

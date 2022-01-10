@@ -4,6 +4,21 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.19.17] - 2022-1-6
+- New Projects use hierarchical search mode as the default option for Group search.
+- Group referenced by Addressable Schema can now be viewed, but not edited, in the inspector
+- Fixed issue where calling Addressables.CleanBundleCache freezes the WebGL player.
+- Fixed API inconsistency in CheckForCatalogUpdates.  The API wasn't initializing Addressables if it was the first point of contact in the system.
+- Fix issue where opening the Analyze window logs null exceptions after running the "Check Duplicate Bundle Dependencies" rule.
+- Add platform type to ""Use Existing Build"" display name in the Addressables Groups > Play Mode Script menu."
+- Fixed issue where Scene loading after a content update could result in "RemoteProviderException : Invalid path in AssetBundleProvider: ''.". Fix require a new addressables_content_state.bin to be created."
+- Tests for the addressables package are no longer included. These can still be accessed upon request.
+- Fixed an issue where calling WaitForCompletion on LoadSceneAsync would sometimes cause a freeze
+- Mentioned the AssetBundle loading cache in the docs
+- Fixed issue where using WaitForCompletion and loading an AssetBundle through a UnityWebRequest freezes the editor when using 2021.2+.
+- Fixed issue where using WaitForCompletion and exceeding the max number of concurrent web requests freezes the editor."
+- Updated the docs to use the correct name for the Analyze rule "Bundle Layout Preview"
+- Fixed issue where Addressable Asset Entry cached data is not cleared during external changes in some editor versions.
 ## [1.19.15] - 2021-12-2
 - Fix issue where opening the Analyze window logs null exceptions after running the "Check Duplicate Bundle Dependencies" rule.
 
@@ -1069,5 +1084,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.0.8-preview] - 2018-02-08
 - Initial submission for package distribution
+
+
 
 

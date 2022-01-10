@@ -34,7 +34,7 @@ The [AsyncOperationHandle] implements the [IEnumerator] interface and will conti
 
 The following script loads a Prefab as a child of its GameObject using a Start function coroutine. It yields the AsyncOperationHandle until the operation finishes and then uses the same handle to instantiate the Prefab.
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadWithIEnumerator.cs#doc_LoadWithIEnumerator)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadWithIEnumerator.cs#doc_LoadWithIEnumerator)]
 
 <!--
 ```csharp
@@ -88,7 +88,7 @@ You can add a delegate function to the [Completed] event of an [AsyncOperationHa
 
 The following script performs the same function as the example in [Coroutine- and IEnumerator-based operation handling], but uses an event delegate instead of a coroutine. 
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadWithEvent.cs#doc_LoadWithEvent)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadWithEvent.cs#doc_LoadWithEvent)]
 
 <!--
 ```csharp
@@ -131,7 +131,7 @@ The [AsyncOperationHandle] provides a [Task] object that you can use with the C#
 
 The following example loads Addressable assets using a list of keys. The differences between this task-based approach and the coroutine or event-based approaches are in the signature of the calling function, which must include the [async] keyword and the use of the [await] keyword with the operation handle’s Task property. The calling function, Start() in this case, suspends operation while the task finishes. Execution then resumes and the example instantiates all the loaded Prefabs (in a grid pattern).
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadWithTask.cs#doc_LoadWithTask)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadWithTask.cs#doc_LoadWithTask)]
 
 <!--
 ```csharp
@@ -190,7 +190,7 @@ public class LoadWithTask : MonoBehaviour
 
 When you use Task-based operation handling, you can use the C# [Task] class methods such as [WhenAll] to control which operations you run in parallel and which you want to run in sequence. The following example illustrates how to wait for more than one operation to finish before moving onto the next task:
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadWithTask.cs#doc_useWhenAll)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadWithTask.cs#doc_useWhenAll)]
 
 <!--
 ```csharp
@@ -215,7 +215,7 @@ In Unity 2020.1 or earlier, Unity also waits for all other pending asynchronous 
 
 The following example loads a Prefab asset by address, waits for the operation to complete, and then instantiates the Prefab:
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadSynchronously.cs#doc_LoadSynchronously)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadSynchronously.cs#doc_LoadSynchronously)]
 
 <!--
 ```csharp
@@ -271,7 +271,7 @@ Most [Addressables] methods that start an operation return a generic [AsyncOpera
 
 Note that a runtime exception occurs if you attempt to cast a non-generic handle to a generic handle of an incorrect type. For example:
 
-[!code-cs[sample](../Samples/DocSampleCode/OperationHandleTypes.cs#doc_ConvertTypes)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/OperationHandleTypes.cs#doc_ConvertTypes)]
 
 <!--
 ```csharp

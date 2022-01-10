@@ -1686,18 +1686,77 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <returns>The found entry or null.</returns>
         public AddressableAssetEntry FindAssetEntry(string guid, bool includeImplicit)
         {
-            if (includeImplicit && !AddressableAssetUtility.IsPathValidForEntry(AssetDatabase.GUIDToAssetPath(guid)))
-                return null;
-            foreach (var g in groups)
+            AddressableAssetEntry foundEntry = null;
+            if (includeImplicit)
             {
-                if (g != null)
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!AddressableAssetUtility.IsPathValidForEntry(path))
+                    return null;
+                
+                // try find non-implicit first
+                foreach (var g in groups)
                 {
-                    var e = g.GetAssetEntry(guid, includeImplicit);
-                    if (e != null)
-                        return e;
+                    if (g != null)
+                    {
+                        foundEntry = g.GetAssetEntry(guid);
+                        if (foundEntry != null)
+                            return foundEntry;
+                    }
+                }
+                
+                // go through all collections
+                foreach (var g in groups)
+                {
+                    if (g != null)
+                    {
+                        foreach (AddressableAssetEntry addressableAssetEntry in g.AssetCollectionEntries)
+                        {
+                            var e = addressableAssetEntry.GetAssetCollectionSubEntry(guid);
+                            if (e != null)
+                                return e;
+                        }
+                    }
+                }
+
+                // find an explicit parent folder entry within groups
+                string directory = Path.GetDirectoryName(path);
+                AddressableAssetEntry folderEntry = null;
+                while (!string.IsNullOrEmpty(directory))
+                {
+                    string folderGuid = AssetDatabase.AssetPathToGUID(directory);
+                    foreach (var g in groups)
+                    {
+                        if (g != null)
+                        {
+                            folderEntry = g.GetAssetEntry(folderGuid);
+                            if (folderEntry != null)
+                                break;
+                        }
+                    }
+
+                    if (folderEntry != null)
+                    {
+                        foundEntry = folderEntry.GetFolderSubEntry(guid, path);
+                        if (foundEntry != null)
+                            return foundEntry;
+                        Debug.LogError($"Explicit AssetEntry for {directory} unable to find subEntry {path}");
+                    }
+                    directory = Path.GetDirectoryName(directory);
                 }
             }
-            return null;
+            else
+            {
+                foreach (var g in groups)
+                {
+                    if (g != null)
+                    {
+                        foundEntry = g.GetAssetEntry(guid);
+                        if (foundEntry != null)
+                            break;
+                    }
+                }
+            }
+            return foundEntry;
         }
 
         internal bool IsAssetPathInAddressableDirectory(string assetPath, out string assetName)

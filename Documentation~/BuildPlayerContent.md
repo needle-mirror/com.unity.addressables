@@ -28,7 +28,7 @@ To access the settings that you see in the Editor (menu: __Window > Asset Manage
 
 To load a custom settings object in a build:
 
-[!code-cs[sample](../Samples/DocSampleCode/BuildLauncher.cs#getSettingsObject)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/BuildLauncher.cs#getSettingsObject)]
 
 <!--
 ```csharp
@@ -53,7 +53,7 @@ A build started with BuildContent uses the variable settings of the active Profi
 
 The [AddressableAssetSettings] object contains the list of profiles. Use the name of the desired profile to look up its ID value and then assign the ID to the [activeProfileId] variable:
 
-[!code-cs[sample](../Samples/DocSampleCode/BuildLauncher.cs#setProfile)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/BuildLauncher.cs#setProfile)]
 
 <!--
 ```csharp
@@ -78,7 +78,7 @@ The BuildContent method launches the build based on the current [ActivePlayerDat
 
 The build script must be a ScriptableObject that implements [IDataBuilder] and you must add it to the [DataBuilders] list in the [AddressableAssetSettings] instance. Once added to the list, use the standard [List.IndexOf] method to get the index of the object.
 
-[!code-cs[sample](../Samples/DocSampleCode/BuildLauncher.cs#setBuilder)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/BuildLauncher.cs#setBuilder)]
 
 <!--
 ```csharp
@@ -103,7 +103,7 @@ static void setBuilder(IDataBuilder builder)
 
 After setting the profile and builder to use (if desired), you can launch the build:
 
-[!code-cs[sample](../Samples/DocSampleCode/BuildLauncher.cs#buildAddressableContent)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/BuildLauncher.cs#buildAddressableContent)]
 
 <!--
 ```csharp
@@ -129,7 +129,7 @@ The following example adds a couple of menu commands to the Asset Management > A
 
 Note that if your build script makes setting changes that require a domain reload, you should run the build script using Unity command line options, instead of running it interactively in the Editor. See [Domain reloads and Addressable builds] for more information.
 
-[!code-cs[sample](../Samples/DocSampleCode/BuildLauncher.cs#doc_BuildLauncher)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/BuildLauncher.cs#doc_BuildLauncher)]
 
 <!--
 ```csharp
@@ -244,7 +244,7 @@ Waiting for the domain reload to finish is relatively straightforward when you r
 
 The following example script defines two functions that can be invoked when running Unity on the command line. The `ChangeSettings` example sets the specified define symbols. The `BuildContentAndPlayer` function runs the Addressables build and the Player build.
 
-[!code-cs[sample](../Samples/DocSampleCode/BatchBuild.cs#doc_BatchBuild)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/BatchBuild.cs#doc_BatchBuild)]
 
 <!--
 ```csharp

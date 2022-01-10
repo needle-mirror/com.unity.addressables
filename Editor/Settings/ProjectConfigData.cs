@@ -26,7 +26,7 @@ namespace UnityEditor.AddressableAssets.Settings
             internal long remoteLoadSpeedInternal = 1024 * 1024 * 1;
             [FormerlySerializedAs("m_hierarchicalSearch")]
             [SerializeField]
-            internal bool hierarchicalSearchInternal;
+            internal bool hierarchicalSearchInternal = true;
             [SerializeField]
             internal int activePlayModeIndex = 0;
             [SerializeField]

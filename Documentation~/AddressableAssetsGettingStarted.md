@@ -81,7 +81,7 @@ To use an AssetReference, add an AssetReference field to a MonoBehaviour or Scri
 
 Unity does not load or release the referenced asset automatically; you must load and release the asset using the Addressables API:
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadWithReference.cs#doc_LoadWithReference)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadWithReference.cs#doc_LoadWithReference)]
 
 <!--
 ``` csharp
@@ -123,7 +123,7 @@ See [Loading an AssetReference] for additional information about loading AssetRe
 
 You can use the address string to load an Asset:
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadWithAddress.cs#doc_LoadWithAddress)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadWithAddress.cs#doc_LoadWithAddress)]
 
 <!--
 ```csharp
@@ -170,7 +170,7 @@ See [Loading a single asset] for more information.
 
 You can load sets of assets that have the same label in one operation:
 
-[!code-cs[sample](../Samples/DocSampleCode/LoadWithLabels.cs#doc_LoadWithLabels)]
+[!code-cs[sample](../Tests/Editor/DocExampleCode/LoadWithLabels.cs#doc_LoadWithLabels)]
 
 <!--
 ```csharp
