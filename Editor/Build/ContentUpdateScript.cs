@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
@@ -320,17 +319,15 @@ namespace UnityEditor.AddressableAssets.Build
                     remoteCatalogLoadPath = remoteCatalogPath,
                     cachedBundles = cachedBundleInfos.ToArray()
                 };
-                var formatter = new BinaryFormatter();
+
                 if (File.Exists(path))
                     File.Delete(path);
                 var dir = Path.GetDirectoryName(path);
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
-                var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write);
-                formatter.Serialize(stream, cacheData);
-                stream.Flush();
-                stream.Close();
-                stream.Dispose();
+				string data = JsonUtility.ToJson(cacheData);
+				File.WriteAllText(path, data);
+
                 return true;
             }
             catch (UnauthorizedAccessException uae)
@@ -398,7 +395,7 @@ namespace UnityEditor.AddressableAssets.Build
                 if (string.IsNullOrEmpty(assetPath))
                     assetPath = Application.dataPath;
 
-                assetPath = EditorUtility.OpenFilePanel("Build Data File", Path.GetDirectoryName(assetPath), "bin");
+                assetPath = EditorUtility.OpenFilePanel("Build Data File", Path.GetDirectoryName(assetPath), "json");
 
                 if (string.IsNullOrEmpty(assetPath))
                     return null;
@@ -423,7 +420,7 @@ namespace UnityEditor.AddressableAssets.Build
             else
                 Directory.CreateDirectory(assetPath);
 
-            var path = Path.Combine(assetPath, "addressables_content_state.bin");
+            var path = Path.Combine(assetPath, "addressables_content_state.json");
             return path;
         }
 
@@ -439,15 +436,15 @@ namespace UnityEditor.AddressableAssets.Build
                 Debug.LogErrorFormat("Unable to load cache data from {0}.", contentStateDataPath);
                 return null;
             }
-            var stream = new FileStream(contentStateDataPath, FileMode.Open, FileAccess.Read);
-            var formatter = new BinaryFormatter();
-            var cacheData = formatter.Deserialize(stream) as AddressablesContentState;
+
+			string data = File.ReadAllText(contentStateDataPath);
+            var cacheData = JsonUtility.FromJson<AddressablesContentState>(data);
             if (cacheData == null)
             {
-                Addressables.LogError("Invalid hash data file.  This file is usually named addressables_content_state.bin and is saved in the same folder as your source AddressableAssetsSettings.asset file.");
+                Addressables.LogError("Invalid hash data file.  This file is usually named addressables_content_state.json and is saved in the same folder as your source AddressableAssetsSettings.asset file.");
                 return null;
             }
-            stream.Dispose();
+
             return cacheData;
         }
 

@@ -210,7 +210,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             ExtractDataTask extractData = new ExtractDataTask();
             List<CachedAssetState> carryOverCachedState = new List<CachedAssetState>();
-            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/" + Addressables.LibraryPath + PlatformMappingService.GetPlatformPathSubFolder() + "/addressables_content_state.bin";
+            var tempPath = Path.GetDirectoryName(Application.dataPath) + "/" + Addressables.LibraryPath + PlatformMappingService.GetPlatformPathSubFolder() + "/addressables_content_state.json";
 
             var playerBuildVersion = builderInput.PlayerVersion;
             if (m_AllBundleInputDefs.Count > 0)

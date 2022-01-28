@@ -92,7 +92,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (GUILayout.Button("Create Addressables Settings"))
                 {
                     m_GroupEditor = null;
-                    AddressableAssetSettingsDefaultObject.Settings = AddressableAssetSettings.Create(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, AddressableAssetSettingsDefaultObject.kDefaultConfigAssetName, true, true);
+                    AddressableAssetSettingsDefaultObject.Settings = AddressableAssetSettings.Create(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, AddressableAssetSettingsDefaultObject.Instance.kDefaultConfigAssetName, true, true);
                     OfferToConvert(AddressableAssetSettingsDefaultObject.Settings);
                 }
                 //if (GUILayout.Button("Import Addressables Settings"))
@@ -136,7 +136,7 @@ namespace UnityEditor.AddressableAssets.GUI
                                 if (!string.IsNullOrEmpty(guid))
                                 {
                                     if (AddressableAssetSettingsDefaultObject.Settings == null)
-                                        AddressableAssetSettingsDefaultObject.Settings = AddressableAssetSettings.Create(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, AddressableAssetSettingsDefaultObject.kDefaultConfigAssetName, true, true);
+                                        AddressableAssetSettingsDefaultObject.Settings = AddressableAssetSettings.Create(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, AddressableAssetSettingsDefaultObject.Instance.kDefaultConfigAssetName, true, true);
                                     Undo.RecordObject(AddressableAssetSettingsDefaultObject.Settings, "AddressableAssetSettings");
                                     AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(guid, AddressableAssetSettingsDefaultObject.Settings.DefaultGroup);
                                 }
