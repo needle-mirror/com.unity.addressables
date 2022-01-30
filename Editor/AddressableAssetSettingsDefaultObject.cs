@@ -56,7 +56,7 @@ namespace UnityEditor.AddressableAssets
 			}
 
 			m_LoadingSettingsObject = true;
-			var settingsPair = settingsCollection.Where(s => s.isDefault).FirstOrDefault(); 
+			var settingsPair = settingsCollection.Where(s => s.isDefault).FirstOrDefault();
 			if (settingsPair == null)
 			{
 				settingsPair = settingsCollection[0];
@@ -92,6 +92,19 @@ namespace UnityEditor.AddressableAssets
 				if (EditorBuildSettings.TryGetConfigObject(kDefaultConfigObjectName, out so))
 					return so.settingsCollection.Count > 0;
 				return false;
+			}
+		}
+
+		public static List<AddressableAssetSettings> SettingsCollection
+		{
+			get
+			{
+				List<AddressableAssetSettings> temp = new List<AddressableAssetSettings>();
+				foreach (var setting in Instance.settingsCollection)
+				{
+					temp.Add(setting.addressableAssetSettings);
+				}
+				return temp;
 			}
 		}
 

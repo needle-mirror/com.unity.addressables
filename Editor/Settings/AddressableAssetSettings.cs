@@ -2638,7 +2638,8 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal AsyncOperationHandle<IResourceLocator> CreatePlayModeInitializationOperation(AddressablesImpl addressables)
         {
-            return addressables.ResourceManager.StartOperation(new FastModeInitializationOperation(addressables, this), default);
+			//kind of a hack I have to do
+            return addressables.ResourceManager.StartOperation(new FastModeInitializationOperation(addressables, AddressableAssetSettingsDefaultObject.SettingsCollection), default);
         }
 
         static Dictionary<string, Action<IEnumerable<AddressableAssetEntry>>> s_CustomAssetEntryCommands = new Dictionary<string, Action<IEnumerable<AddressableAssetEntry>>>();
