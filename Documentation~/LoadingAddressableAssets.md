@@ -342,9 +342,9 @@ AsyncOperationHandle<IList<IResourceLocation>> handle
 ```
 -->
 
-## Loading locations of sub-objects 
+## Loading locations of subobjects 
 
-Locations for Sub-Objects are generated at runtime to reduce the size of the content catalogs and improve runtime performance. When you call [LoadResourceLocationsAsync] with the key of an asset with sub-objects and don't specify a type, then the function generates IResourceLocation instances for all of the sub-objects as well as the main object (if applicable). Likewise, if you do not specify which sub-object to use for an AssetReference that points to an asset with sub-objects, then the system generates IResourceLocations for every sub-object.
+Locations for SubObjects are generated at runtime to reduce the size of the content catalogs and improve runtime performance. When you call [LoadResourceLocationsAsync] with the key of an asset with subobjects and don't specify a type, then the function generates IResourceLocation instances for all of the subobjects as well as the main object (if applicable). Likewise, if you do not specify which subobject to use for an AssetReference that points to an asset with subobjects, then the system generates IResourceLocations for every subobject.
 
 For example, if you load the locations for an FBX asset, with the address, "myFBXObject", you might get locations for three assets: a GameObject, a Mesh, and a Material. If, instead, you specified the type in the address, "myFBXObject[Mesh]", you would only get the Mesh object. You can also specify the type using the `type` parameter of the LoadResourceLocationsAsync function.
 
@@ -356,7 +356,7 @@ You can load an asset, such as a Prefab, and then create an instance of it with 
 
 When you use InstantiateAsync, the reference counts of the loaded assets are incremented each time you call the method. Thus if you instantiate a Prefab five times, the reference count for the Prefab asset and any of its dependencies are incremented by five. You can then release each instance separately as they are destroyed in the game.
 
-When you use LoadAssetAsync and Object.Instantiate, then the asset reference counts are only incremented once, for the initial load. If you release the loaded asset (or its operation handle) and the reference count drops to zero, then the asset is unloaded and all the additional instantiated copies lose their sub-assets as well -- they still exist as GameObjects in the scene, but without Meshes, Materials, or other assets that they depend on.
+When you use LoadAssetAsync and Object.Instantiate, then the asset reference counts are only incremented once, for the initial load. If you release the loaded asset (or its operation handle) and the reference count drops to zero, then the asset is unloaded and all the additional instantiated copies lose their subassets as well -- they still exist as GameObjects in the scene, but without Meshes, Materials, or other assets that they depend on.
 
 Which scenario is better, depends on how you organize your object code. For example, if you have a single manager object that supplies a pool of Prefab enemies to spawn into a game level, it might be most convenient to release them all at the completion of the level with a single operation handle stored in the manager class. In other situations, you might want to instantiate and release assets individually.  
 
@@ -401,6 +401,19 @@ When you call [InstantiateAsync] you have the same options as the [Object.Instan
 * __instantiationParameters__: this parameter takes a [InstantiationParameters] struct that you can use to specify the instantiation options instead of specifying them in every call to the InstantiateAsync call. This can be convenient if you use the same values for multiple instantiations.
 * __trackHandle__:  If true, which is the default, then the Addressables system keeps track of the operation handle for the instantiated instance. This allows you to release the asset with the [Addressables.ReleaseInstance] method. If false, then the operation handle is not tracked for you and you must store a reference to the handle returned by InstantiateAsync in order to release the instance when you destroy it.
 
+## Asynchronous Loading
+
+The Addressables system API is asynchronous and returns an [AsyncOperationHandle] for use with managing operation progress and completion.
+Addressables is designed to content location agnostic. The content may need to be downloaded first or use other methods that can take a long time. To force synchronous execution, See [Synchronous Addressables] for more information.
+
+When loading an asset for the first time, the handle is done after a minimum of one frame. You can wait until the load has completed using different methods as shown below.
+If the content has already been loaded, execution times may differ between the various asynchronous loading options shown below.
+* [Coroutine]: Always be delayed at minimum of one frame before execution continues.
+* [Completed callback]: Is a minimum of one frame if the content has not already been loaded, otherwise the callback is invoked in the same frame.
+* Awaiting [AsyncOperationHandle.Task]: Is a minimum of one frame if the content has not already been loaded, otherwise the execution continues in the same frame.
+
+[!code-cs[sample](../Tests/Editor/DocExampleCode/AsynchronousLoading.cs#doc_asyncload)]
+
 ## Releasing Addressable assets
 
 Because the Addressables system uses reference counting to determine whether an asset is in use, you must release every asset that you load or instantiate when you are done with it. See [Memory Management] for more information.
@@ -439,6 +452,10 @@ In custom component classes, you can use [AssetReference] fields to allow the as
 [InstantiateAsync]: xref:UnityEngine.AddressableAssets.Addressables.InstantiateAsync*
 [InstantiationParameters]: xref:UnityEngine.ResourceManagement.ResourceProviders.InstantiationParameters
 [IResourceLocation]: xref:UnityEngine.ResourceManagement.ResourceLocations.IResourceLocation
+[AsyncOperationHandle]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle-1
+[AsyncOperationHandle.Task]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle-1.Task.html
+[Completed callback]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle-1.Completed.html
+[Coroutine]: xref:UnityEngine.Coroutine*
 [LoadAssetAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadAssetAsync*
 [LoadAssetsAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadAssetsAsync*
 [LoadResourceLocationsAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadResourceLocationsAsync*
@@ -468,3 +485,4 @@ In custom component classes, you can use [AssetReference] fields to allow the as
 [Addressables.InstantiateAsync]: xref:UnityEngine.AddressableAssets.Addressables.InstantiateAsync*
 [Scene loading project]: https://github.com/Unity-Technologies/Addressables-Sample/tree/master/Basic/Scene%20Loading
 [Addressables-Sample]: https://github.com/Unity-Technologies/Addressables-Sample
+[Synchronous Addressables]: xref:synchronous-addressables

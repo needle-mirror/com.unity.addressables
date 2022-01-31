@@ -66,7 +66,7 @@ using UnityEngine.AddressableAssets;
 public class WebRequestOverride : MonoBehaviour
 {
     //Register to override WebRequests Addressables creates
-    //The UnityWebRequests will default to the standard behaviour
+    //The UnityWebRequests will default to the standard behavior
     private void Start()
     {
         Addressables.WebRequestOverride = EditWebRequestURL;

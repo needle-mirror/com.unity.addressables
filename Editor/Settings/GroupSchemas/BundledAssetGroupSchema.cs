@@ -724,7 +724,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         }
 
         private bool m_ShowPaths = true;
-        private bool m_ShowAdvanced = false;
 
         /// <summary>
         /// Used for drawing properties in the inspector.
@@ -732,7 +731,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         public override void ShowAllProperties()
         {
             m_ShowPaths = true;
-            m_ShowAdvanced = true;
+            AdvancedOptionsFoldout.IsActive = true;
         }
 
         /// <inheritdoc/>
@@ -742,8 +741,12 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
             ShowSelectedPropertyPathPair(so);
 
-            m_ShowAdvanced = EditorGUILayout.Foldout(m_ShowAdvanced, "Advanced Options");
-            if (m_ShowAdvanced)
+            AdvancedOptionsFoldout.IsActive = GUI.AddressablesGUIUtility.FoldoutWithHelp(AdvancedOptionsFoldout.IsActive, new GUIContent("Advanced Options"), () =>
+             {
+                 string url = AddressableAssetUtility.GenerateDocsURL("GroupSettings.html#advanced-options");
+                 Application.OpenURL(url);
+             });
+            if (AdvancedOptionsFoldout.IsActive)
                 ShowAdvancedProperties(so);
             so.ApplyModifiedProperties();
         }
@@ -766,16 +769,16 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 (src, dst) => { dst.m_BuildPath.Id = src.BuildPath.Id; dst.m_LoadPath.Id = src.LoadPath.Id; dst.m_UseCustomPaths = src.m_UseCustomPaths;  dst.SetDirty(true); });
 
             EditorGUI.BeginChangeCheck();
-            m_ShowAdvanced = EditorGUILayout.Foldout(m_ShowAdvanced, "Advanced Options");
-            if (EditorGUI.EndChangeCheck())
+            AdvancedOptionsFoldout.IsActive = GUI.AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(AdvancedOptionsFoldout.IsActive, new GUIContent("Advanced Options"), () =>
             {
-                foreach (var schema in otherBundledSchemas)
-                    schema.m_ShowAdvanced = m_ShowAdvanced;
-            }
-            if (m_ShowAdvanced)
+                string url = AddressableAssetUtility.GenerateDocsURL("GroupSettings.html#advanced-options");
+                Application.OpenURL(url);
+            }, 10);
+            if (AdvancedOptionsFoldout.IsActive)
             {
                 ShowAdvancedPropertiesMulti(so, otherSchemas, ref queuedChanges);
             }
+            EditorGUI.EndFoldoutHeaderGroup();
 
             so.ApplyModifiedProperties();
             if (queuedChanges != null)
@@ -805,6 +808,8 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             ShowSelectedPropertyMulti(so, nameof(m_BuildPath), null, otherBundledSchemas, ref queuedChanges, (src, dst) => { dst.m_BuildPath.Id = src.BuildPath.Id; dst.SetDirty(true); }, m_BuildPath.Id, ref m_BuildPath);
             ShowSelectedPropertyMulti(so, nameof(m_LoadPath), null, otherBundledSchemas, ref queuedChanges, (src, dst) => { dst.m_LoadPath.Id = src.LoadPath.Id; dst.SetDirty(true); }, m_LoadPath.Id, ref m_LoadPath);
         }
+        
+        static GUI.FoldoutSessionStateValue AdvancedOptionsFoldout = new GUI.FoldoutSessionStateValue("Addressables.BundledAssetGroup.AdvancedOptions");
 
         GUIContent m_CompressionContent = new GUIContent("Asset Bundle Compression", "Compression method to use for asset bundles.");
         GUIContent m_IncludeInBuildContent = new GUIContent("Include in Build", "If disabled, these bundles will not be included in the build.");

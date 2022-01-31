@@ -52,7 +52,7 @@ namespace UnityEditor.AddressableAssets.GUI
             multiColumnHeader.sortingChanged += OnSortingChanged;
 
             BuiltinSceneCache.sceneListChanged += OnScenesChanged;
-            AddressablesAssetPostProcessor.OnPostProcess += OnPostProcessAllAssets;
+            AddressablesAssetPostProcessor.OnPostProcess.Register(OnPostProcessAllAssets, 1);
         }
 
         internal TreeViewItem Root => rootItem;

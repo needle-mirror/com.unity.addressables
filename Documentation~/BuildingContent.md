@@ -99,6 +99,16 @@ Note that updating a previous build does not change the `addressables_content_st
 
 See [Content Update Builds] for information on how and when to use content update builds.
 
+#### Shared AssetBundles
+When building Addressable's content, there are two possible options for what we call "shared bundles".  These shared bundles are the `unitybuiltinshaders` AssetBundle, and the `MonoScript` AssetBundle.  
+
+The former is generated if any built-in shaders are used by assets included in the build.  All Addressable assets that reference a shader that is built-in with the Unity Editor, such as the Standard Shader, do so by referencing this specialized shader AssetBundle..  
+
+The latter can be toggled on or off by changing the **AddressableAssetSettings > MonoScript Bundle Naming Prefix** option.  The `MonoScript` bundle has naming options listed here, which are typically used in multi-project situations.  It is used to build `MonoScript` behaviors into AssetBundles that can be referenced as a dependency.
+
+For both of these specialized AssetBundles, some build options are derived from the default `AddressableAssetGroup`.  If you plan on making content changes in the future, your default group, and by association the location of the shared bundles, should be remote.
+
+If the shared bundles are built locally, they cannot be updated as part of a Content Update.  In the Content Update workflow, these bundles remain unchanged since they're generated at build time.  Essentially, once the `MonoScript` or build-in shaders bundle are included locally, they can never be changed without a new player build.
 
 [Addressables.BuildPath]: xref:UnityEngine.AddressableAssets.Addressables.BuildPath
 [Addressables.RuntimePath]: xref:UnityEngine.AddressableAssets.Addressables.RuntimePath

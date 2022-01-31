@@ -111,7 +111,7 @@ Note that there are some limitations for WebGL AssetBundles. For more informatio
 
 ## Pre-downloading remote content
 
-In situations where you want to pre-download content so that it is cached on disk and faster to access when the application needs it, you can use the [Addressables.DownloadDependenciesAsync]  method. This method downloads an Addressable entity and any dependencies as a background task.
+In situations where you want to predownload content so that it is cached on disk and faster to access when the application needs it, you can use the [Addressables.DownloadDependenciesAsync]  method. This method downloads an Addressable entity and any dependencies as a background task.
 
 Calling the [Addressables.DownloadDependenciesAsync] method loads the dependencies for the address or label that you pass in. Typically, this is the AssetBundle.
 

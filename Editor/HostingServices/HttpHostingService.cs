@@ -219,6 +219,11 @@ namespace UnityEditor.AddressableAssets.HostingServices
             if (HostingServicePort <= 0)
             {
                 HostingServicePort = GetAvailablePort();
+                if (HostingServicePort == 0)
+                {
+                    LogError("Failed to get an available port, cannot start service!");
+                    return;
+                }
             }
             else if (!IsPortAvailable(HostingServicePort))
             {

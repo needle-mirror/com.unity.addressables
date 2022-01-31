@@ -17,10 +17,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
         List<VirtualAssetBundle> m_SimulatedAssetBundles = new List<VirtualAssetBundle>();
         [FormerlySerializedAs("m_remoteLoadSpeed")]
         [SerializeField]
-        long m_RemoteLoadSpeed = 1234567890123456;//good default once we expose this to the user: 1024 * 100;
+        long m_RemoteLoadSpeed = 1234567890123456; //once we expose this to the user a good default value would be 1024 * 100;
         [FormerlySerializedAs("m_localLoadSpeed")]
         [SerializeField]
-        long m_LocalLoadSpeed = 1234567890123456;//good default once we expose this to the user: 1024 * 1024 * 10;
+        long m_LocalLoadSpeed = 1234567890123456; //once we expose this to the user a good default value would be 1024 * 1024 * 10;
         /// <summary>
         /// The list of asset bundles to simulate.
         /// </summary>

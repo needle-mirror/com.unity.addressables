@@ -85,18 +85,46 @@ namespace UnityEditor.AddressableAssets.Tests
             return AssetDatabase.AssetPathToGUID(path);
         }
 
-        void AssertLocateResult(IResourceLocator locator, object key, Type type, params string[] expectedInternalIds)
+        void AssertLocateResult<T>(IResourceLocator locator, object key, params string[] expectedInternalIds)
         {
+            var type = typeof(T);
             Assert.IsTrue(locator.Locate(key, type, out var locations));
             Assert.IsNotNull(locations);
-            if (type != null)
+            if (type != typeof(object))
             {
                 foreach (var l in locations)
-                    Assert.AreEqual(l.ResourceType, type);
+                    Assert.IsTrue(type.IsAssignableFrom(l.ResourceType));
             }
             Assert.AreEqual(expectedInternalIds.Length, locations.Count);
             foreach (var e in expectedInternalIds)
                 Assert.NotNull(locations.FirstOrDefault(s => s.InternalId == e), $"Locations do not contain entry with internal id of {e}");
+        }
+
+        [UnityTest]
+        public IEnumerator CanLoadAssetAsync_InEditMode()
+        {
+            var entry = m_Settings.CreateOrMoveEntry(CreateAsset("x", GetPath("x.asset")), m_Settings.DefaultGroup).address = "x";
+            Addressables.Instance.hasStartedInitialization = false;
+            Addressables.Instance.InitializeAsync($"GUID:{AssetDatabase.AssetPathToGUID(m_Settings.AssetPath)}");
+            var op = Addressables.LoadAssetAsync<UnityEngine.AddressableAssets.Tests.TestObject>("x");
+            while (!op.IsDone)
+                yield return null;
+            Assert.IsNotNull(op.Result);
+            op.Release();
+            m_Settings.RemoveAssetEntry(entry);
+        }
+
+        [Test]
+        public void CanLoadAssetSync_InEditMode()
+        {
+            var entry = m_Settings.CreateOrMoveEntry(CreateAsset("y", GetPath("y.asset")), m_Settings.DefaultGroup).address = "y";
+            Addressables.Instance.hasStartedInitialization = false;
+            Addressables.Instance.InitializeAsync($"GUID:{AssetDatabase.AssetPathToGUID(m_Settings.AssetPath)}");
+            var op = Addressables.LoadAssetAsync<UnityEngine.AddressableAssets.Tests.TestObject>("y");
+            op.WaitForCompletion();
+            Assert.IsNotNull(op.Result);
+            op.Release();
+            m_Settings.RemoveAssetEntry(entry);
         }
 
         [Test]
@@ -104,7 +132,26 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             var path = GetPath("asset1.asset");
             m_Settings.CreateOrMoveEntry(CreateAsset("asset1", path), m_Settings.DefaultGroup).address = "address1";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "address1", null, path);
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "address1", path);
+        }
+
+        [Test]
+        public void WhenLocatorWithSingleMonoscript_LocateReturnsSingleLocation()
+        {
+            string id = "mono";
+            var path = GetPath("mono.asset");
+            AssetDatabase.CreateAsset(UnityEngine.AddressableAssets.Tests.TestObjectWithSerializableField.Create(id), path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+            m_Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(path), m_Settings.DefaultGroup).address = id;
+            var locator = new AddressableAssetSettingsLocator(m_Settings);
+
+            Assert.IsTrue(locator.Locate(id, null, out var locs));
+            Assert.IsNotNull(locs);
+            Assert.AreEqual(1, locs.Count);
+            Assert.AreEqual(path, locs[0].InternalId, $"Locations do not contain entry with internal id of {path}");
         }
 
         [Test]
@@ -114,7 +161,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var e = m_Settings.CreateOrMoveEntry(CreateAsset("asset1", path), m_Settings.DefaultGroup);
             e.address = "address1";
             e.SetLabel("address1", true, true);
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "address1", null, path);
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "address1", path);
         }
 
         [Test]
@@ -131,7 +178,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             var guid = CreateAsset("asset1", GetPath("asset1.asset"));
             m_Settings.CreateOrMoveEntry(guid, m_Settings.DefaultGroup).address = "address1";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), guid, null, GetPath("asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), guid, GetPath("asset1.asset"));
         }
 
         [Test]
@@ -139,7 +186,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             m_Settings.CreateOrMoveEntry(CreateAsset("asset1", GetPath("asset1.asset")), m_Settings.DefaultGroup).address = "address1";
             m_Settings.CreateOrMoveEntry(CreateAsset("asset2", GetPath("asset2.asset")), m_Settings.DefaultGroup).address = "address2";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "address1", null, GetPath("asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "address1", GetPath("asset1.asset"));
         }
 
         [Test]
@@ -147,7 +194,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             m_Settings.CreateOrMoveEntry(CreateAsset("asset1", GetPath("asset1.asset")), m_Settings.DefaultGroup).address = "address1";
             m_Settings.CreateOrMoveEntry(CreateAsset("asset2", GetPath("asset2.asset")), m_Settings.DefaultGroup).address = "address1";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "address1", null, GetPath("asset1.asset"), GetPath("asset2.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "address1", GetPath("asset1.asset"), GetPath("asset2.asset"));
         }
 
         [Test]
@@ -155,25 +202,23 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             m_Settings.CreateOrMoveEntry(CreateAsset("asset1", GetPath("asset1.asset")), m_Settings.DefaultGroup).SetLabel("label", true, true);
             m_Settings.CreateOrMoveEntry(CreateAsset("asset2", GetPath("asset2.asset")), m_Settings.DefaultGroup).SetLabel("label", true, true);
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "label", null, GetPath("asset1.asset"), GetPath("asset2.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "label", GetPath("asset1.asset"), GetPath("asset2.asset"));
         }
 
-#if !(UNITY_2021_2_OR_NEWER)
         [Test]
         public void WhenLocatorWithAssetsThatMatchAssetsInFolderAndResources_LocateAllMatches()
         {
             CreateFolder("Resources/TestFolder", new string[] { "asset1.asset"});
-            var folderGUID = CreateFolder("TestFolder", new string[] { "asset1" });
+            var folderGUID = CreateFolder("TestFolder", new string[] { "asset1.asset" });
             m_Settings.CreateOrMoveEntry(folderGUID, m_Settings.DefaultGroup).address = "TestFolder";
-            var assetGUID = CreateAsset("asset1", GetPath("asset1"));
-            m_Settings.CreateOrMoveEntry(assetGUID, m_Settings.DefaultGroup).address = "TestFolder/asset1";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "TestFolder/asset1", null,
+            var assetGUID = CreateAsset("asset1", GetPath("asset1.asset"));
+            m_Settings.CreateOrMoveEntry(assetGUID, m_Settings.DefaultGroup).address = "TestFolder/asset1.asset";
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "TestFolder/asset1.asset",
                 "TestFolder/asset1",
-                GetPath("TestFolder/asset1"),
-                GetPath("asset1")
+                GetPath("TestFolder/asset1.asset"),
+                GetPath("asset1.asset")
             );
         }
-#endif
 
         [Test]
         public void WhenLocatorWithAssetsInMarkedFolder_LocateWithAssetReferenceSucceeds()
@@ -182,7 +227,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var folderGUID = AssetDatabase.AssetPathToGUID(GetPath("TestFolder1"));
             m_Settings.CreateOrMoveEntry(folderGUID, m_Settings.DefaultGroup).address = "TF1";
             var assetRef = m_Settings.CreateAssetReference(AssetDatabase.AssetPathToGUID(GetPath("TestFolder1/TestFolder2/asset1.asset")));
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), assetRef.RuntimeKey, null, GetPath("TestFolder1/TestFolder2/asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), assetRef.RuntimeKey, GetPath("TestFolder1/TestFolder2/asset1.asset"));
         }
 
         [Test]
@@ -190,9 +235,9 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             var folderGUID = CreateFolder("TestFolder", new string[] { "asset1.asset", "asset2.asset", "asset3.asset" });
             m_Settings.CreateOrMoveEntry(folderGUID, m_Settings.DefaultGroup).address = "TF";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1.asset", null, GetPath("TestFolder/asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1.asset", GetPath("TestFolder/asset1.asset"));
         }
-        
+
         [Test]
         public void WhenLocatorWithAssetsInMatchingFolders_LocateWithAssetKeySucceeds()
         {
@@ -200,10 +245,10 @@ namespace UnityEditor.AddressableAssets.Tests
             var folderGUID2 = CreateFolder("TestFolder2", new string[] { "asset1_2.asset", "asset2_2.asset", "asset3_2.asset" });
             m_Settings.CreateOrMoveEntry(folderGUID1, m_Settings.DefaultGroup).address = "TF";
             m_Settings.CreateOrMoveEntry(folderGUID2, m_Settings.DefaultGroup).address = "TF";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1_1.asset", null, GetPath("TestFolder1/asset1_1.asset"));
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1_2.asset", null, GetPath("TestFolder2/asset1_2.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1_1.asset", GetPath("TestFolder1/asset1_1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1_2.asset", GetPath("TestFolder2/asset1_2.asset"));
         }
-        
+
         [Test]
         public void WhenLocatorWithAssetsInMatchingFolderAndAssets_LocateWithAssetKeySucceeds()
         {
@@ -211,22 +256,23 @@ namespace UnityEditor.AddressableAssets.Tests
             var folderGUID2 = CreateFolder("TestFolder2", new string[] { "asset1.asset", "asset2.asset", "asset3.asset" });
             m_Settings.CreateOrMoveEntry(folderGUID1, m_Settings.DefaultGroup).address = "TF";
             m_Settings.CreateOrMoveEntry(folderGUID2, m_Settings.DefaultGroup).address = "TF";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1.asset", null, GetPath("TestFolder1/asset1.asset"), GetPath("TestFolder2/asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1.asset", GetPath("TestFolder1/asset1.asset"), GetPath("TestFolder2/asset1.asset"));
         }
-        
+
         [Test]
         public void WhenLocatorWithAssetAndFolderNameMatch_LocateWithAssetKeySucceeds()
         {
             var folderGUID = CreateFolder("TestName", new string[] { "TestName.asset" });
             m_Settings.CreateOrMoveEntry(folderGUID, m_Settings.DefaultGroup).address = "TF";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "TF/TestName.asset", null, GetPath("TestName/TestName.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "TF/TestName.asset", GetPath("TestName/TestName.asset"));
         }
+
         [Test]
         public void WhenLocatorWithAssetAndFolderAddrMatch_LocateWithAssetKeySucceeds()
         {
             var folderGUID = CreateFolder("TestName", new string[] { "TF.asset" });
             m_Settings.CreateOrMoveEntry(folderGUID, m_Settings.DefaultGroup).address = "TF";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "TF/TF.asset", null, GetPath("TestName/TF.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "TF/TF.asset", GetPath("TestName/TF.asset"));
         }
 
         [Test]
@@ -245,7 +291,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var folderEntry = m_Settings.CreateOrMoveEntry(folderGUID, m_Settings.DefaultGroup);
             folderEntry.address = "TF";
             folderEntry.SetLabel("FolderLabel", true, true, true);
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "FolderLabel", null, GetPath("TestFolder/asset1.asset"), GetPath("TestFolder/asset2.asset"), GetPath("TestFolder/asset3.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "FolderLabel", GetPath("TestFolder/asset1.asset"), GetPath("TestFolder/asset2.asset"), GetPath("TestFolder/asset3.asset"));
         }
 
         [Test]
@@ -253,7 +299,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             var folderGUID = CreateFolder("TestFolder", new string[] { "asset1.asset", "asset.asset", "asset1_more.asset" });
             m_Settings.CreateOrMoveEntry(folderGUID, m_Settings.DefaultGroup).address = "TF";
-            AssertLocateResult(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1.asset", null, GetPath("TestFolder/asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(new AddressableAssetSettingsLocator(m_Settings), "TF/asset1.asset", GetPath("TestFolder/asset1.asset"));
         }
 
         [Test]
@@ -264,9 +310,9 @@ namespace UnityEditor.AddressableAssets.Tests
             var folderGUID3 = CreateFolder("TestFolder/TestSubFolder1/TestSubFolder2", new string[] { "asset1.asset", "asset2.asset", "asset3.asset" });
             m_Settings.CreateOrMoveEntry(folderGUID1, m_Settings.DefaultGroup).address = "TF";
             var locator = new AddressableAssetSettingsLocator(m_Settings);
-            AssertLocateResult(locator, "TF/asset1.asset", null, GetPath("TestFolder/asset1.asset"));
-            AssertLocateResult(locator, "TF/TestSubFolder1/asset1.asset", null, GetPath("TestFolder/TestSubFolder1/asset1.asset"));
-            AssertLocateResult(locator, "TF/TestSubFolder1/TestSubFolder2/asset1.asset", null, GetPath("TestFolder/TestSubFolder1/TestSubFolder2/asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(locator, "TF/asset1.asset", GetPath("TestFolder/asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(locator, "TF/TestSubFolder1/asset1.asset", GetPath("TestFolder/TestSubFolder1/asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(locator, "TF/TestSubFolder1/TestSubFolder2/asset1.asset", GetPath("TestFolder/TestSubFolder1/TestSubFolder2/asset1.asset"));
         }
 
         [Test]
@@ -278,9 +324,9 @@ namespace UnityEditor.AddressableAssets.Tests
             m_Settings.CreateOrMoveEntry(folderGUID1, m_Settings.DefaultGroup).address = "TF";
             m_Settings.CreateOrMoveEntry(folderGUID2, m_Settings.DefaultGroup).address = "TF2";
             var locator = new AddressableAssetSettingsLocator(m_Settings);
-            AssertLocateResult(locator, "TF/asset1.asset", null, GetPath("TestFolder/asset1.asset"));
-            AssertLocateResult(locator, "TF2/asset1.asset", null, GetPath("TestFolder/TestSubFolder1/asset1.asset"));
-            AssertLocateResult(locator, "TF2/TestSubFolder2/asset1.asset", null, GetPath("TestFolder/TestSubFolder1/TestSubFolder2/asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(locator, "TF/asset1.asset", GetPath("TestFolder/asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(locator, "TF2/asset1.asset", GetPath("TestFolder/TestSubFolder1/asset1.asset"));
+            AssertLocateResult<UnityEngine.AddressableAssets.Tests.TestObject>(locator, "TF2/TestSubFolder2/asset1.asset", GetPath("TestFolder/TestSubFolder1/TestSubFolder2/asset1.asset"));
         }
 
         void CreateAndAddScenesToEditorBuildSettings(string scenePrefix, int count, HashSet<object> guids = null)
@@ -304,7 +350,7 @@ namespace UnityEditor.AddressableAssets.Tests
             CreateAndAddScenesToEditorBuildSettings("testScene", 3);
             var locator = new AddressableAssetSettingsLocator(m_Settings);
             for (int i = 0; i < 3; i++)
-                AssertLocateResult(locator, i, typeof(SceneInstance), GetPath($"testScene{i}.unity"));
+                AssertLocateResult<SceneInstance>(locator, i, GetPath($"testScene{i}.unity"));
         }
 
         [Test]
@@ -313,7 +359,7 @@ namespace UnityEditor.AddressableAssets.Tests
             CreateAndAddScenesToEditorBuildSettings("testScene", 3);
             var locator = new AddressableAssetSettingsLocator(m_Settings);
             for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
-                AssertLocateResult(locator, EditorBuildSettings.scenes[i].guid.ToString(), typeof(SceneInstance), GetPath($"testScene{i}.unity"));
+                AssertLocateResult<SceneInstance>(locator, EditorBuildSettings.scenes[i].guid.ToString(), GetPath($"testScene{i}.unity"));
         }
 
         [Test]
@@ -322,7 +368,7 @@ namespace UnityEditor.AddressableAssets.Tests
             CreateAndAddScenesToEditorBuildSettings("testScene", 3);
             var locator = new AddressableAssetSettingsLocator(m_Settings);
             for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
-                AssertLocateResult(locator, $"testScene{i}", typeof(SceneInstance), GetPath($"testScene{i}.unity"));
+                AssertLocateResult<SceneInstance>(locator, $"testScene{i}", GetPath($"testScene{i}.unity"));
         }
 
         [Test]
@@ -336,7 +382,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(1, locations.Count);
             Assert.AreEqual(typeof(SceneInstance), locations[0].ResourceType);
         }
-        
+
         [Test]
         public void LocateWithSceneInstanceType_ReturnsLocationsWhenTypeNull()
         {
@@ -367,7 +413,7 @@ namespace UnityEditor.AddressableAssets.Tests
             CreateAndAddScenesToEditorBuildSettings("testScene", 3);
             var locator = new AddressableAssetSettingsLocator(m_Settings);
             for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
-                AssertLocateResult(locator, $"testScene{i}", typeof(SceneInstance), GetPath($"testScene{i}.unity"));
+                AssertLocateResult<SceneInstance>(locator, $"testScene{i}", GetPath($"testScene{i}.unity"));
         }
 
         public void RunResourcesTestWithAsset(bool IncludeResourcesFolders)
@@ -402,7 +448,7 @@ namespace UnityEditor.AddressableAssets.Tests
             RunResourcesTestWithAsset(false);
         }
 
-        static HashSet<object> ExpectedKeys = new HashSet<object>(new object[] 
+        static HashSet<object> ExpectedKeys = new HashSet<object>(new object[]
         {
             "TestScene0",   //scene name in build settings
             0,              //index if TestScene0
@@ -411,7 +457,7 @@ namespace UnityEditor.AddressableAssets.Tests
             "TestScene2",
             2,
             //assets in a folder with an address
-            "AssetAddress", 
+            "AssetAddress",
             "AssetLabel",
             "TF/asset2.asset",
             "TF/asset3.asset",
@@ -513,7 +559,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
                 //Get our baseline
                 Assert.AreEqual(ExpectedKeys.Count, fastModeKeys.Count());
-                foreach(var key in fastModeKeys)
+                foreach (var key in fastModeKeys)
                     Assert.IsTrue(ExpectedKeys.Contains(key));
 
                 //Transitive property to check other build scripts

@@ -6,7 +6,7 @@ uid: addressables-build-profile-log
 
 The Addressables build process always creates a .json log file that contains build performance information. You can find the log file in your project folder at `Library/com.unity.addressables/AddressablesBuildTEP.json`.
 
-View the log file ith the chrome://tracing tool in Google Chrome or another [Chromium]-based browser.
+View the log file with the chrome://tracing tool in Google Chrome or another [Chromium]-based browser.
 
 ![](images/addr_diagnostics_1.png)
 

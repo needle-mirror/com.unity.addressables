@@ -6,7 +6,7 @@ uid: addressables-async-operation-handling
 
 Many tasks in the Addressables need to load or download information before they can return a result. To avoid blocking program execution, Addressables implements such tasks as asynchronous operations.
 
-In contrast to a synchronous operation, which doesn’t return control until the result is available, an asynchronous operation returns control to the calling function almost immediately. However, the results may not be available until some time in the future. When you call a function, such as [LoadAssetAsync], it doesn't return the loaded assets directly. Instead, it returns an [AsyncOperationHandle] object, which you can use to access the loaded assets when they become available. 
+In contrast to a synchronous operation, which doesn’t return control until the result is available, an asynchronous operation returns control to the calling function almost immediately. However, the results may not be available until some time in the future. When you call a function, such as [LoadAssetAsync], it doesn't return the loaded assets directly. Instead, it returns an [AsyncOperationHandle] object, which you can use to access the loaded assets when they become available.
 
 You can use the following techniques to wait for the results of an asynchronous operation (while allowing other scripts to continue processing).
 
@@ -71,6 +71,7 @@ public class LoadWithIEnumerator : MonoBehaviour
 }
 ```
 -->
+Note that [Addressables.LoadAssetsAsync] is not able to be canceled once started. However, releasing the handle before it has finished will decrement the handle reference count and it will automatically release when the load is complete.
 
 See [Coroutines] for more information.
 
@@ -86,7 +87,7 @@ Another option is to use the [ResourceManager.CreateGenericGroupOperation] to cr
 
 You can add a delegate function to the [Completed] event of an [AsyncOperationHandle]. The operation calls the delegate function when it's finished.
 
-The following script performs the same function as the example in [Coroutine- and IEnumerator-based operation handling], but uses an event delegate instead of a coroutine. 
+The following script performs the same function as the example in [Coroutine- and IEnumerator-based operation handling], but uses an event delegate instead of a coroutine.
 
 [!code-cs[sample](../Tests/Editor/DocExampleCode/LoadWithEvent.cs#doc_LoadWithEvent)]
 
@@ -151,11 +152,11 @@ public class LoadWithTask : MonoBehaviour
 
     public async void Start(){
         loadHandle = Addressables.LoadAssetsAsync<GameObject>(
-            keys, // Either a single key or a List of keys 
+            keys, // Either a single key or a List of keys
             addressable => {
                 // Called for every loaded asset
                 Debug.Log(addressable.name);
-            }, Addressables.MergeMode.Union, // How to combine multiple labels 
+            }, Addressables.MergeMode.Union, // How to combine multiple labels
             false); // Whether to fail if any asset fails to load
 
         // Wait for the operation to finish in the background
@@ -207,11 +208,11 @@ When you use Task-based operation handling, you can use the C# [Task] class meth
 
 ## Using operations synchronously
 
-You can wait for an operation to finish without yielding, waiting for an event, or using `async await` by calling an operation’s [WaitForCompletion] method. This method blocks the current program execution thread while it waits for the operation to finish before continuing in the current scope. 
+You can wait for an operation to finish without yielding, waiting for an event, or using `async await` by calling an operation’s [WaitForCompletion] method. This method blocks the current program execution thread while it waits for the operation to finish before continuing in the current scope.
 
 Avoid calling WaitForCompletion on operations that can take a significant amount of time, such as those that must download data. Calling WaitForCompletion can cause frame hitches and interrupt UI responsiveness.
 
-In Unity 2020.1 or earlier, Unity also waits for all other pending asynchronous operations to finish, so the delay in execution can be much longer than that required for just the single operation for which you call this method. In Unity 2020.2 or later, the performance impact can be less pronounced, at least when loading assets that have already been downloaded. 
+In Unity 2020.1 or earlier, Unity also waits for all other pending asynchronous operations to finish, so the delay in execution can be much longer than that required for just the single operation for which you call this method. In Unity 2020.2 or later, the performance impact can be less pronounced, at least when loading assets that have already been downloaded.
 
 The following example loads a Prefab asset by address, waits for the operation to complete, and then instantiates the Prefab:
 
@@ -250,7 +251,7 @@ public class LoadSynchronously : MonoBehaviour
 
 To create a custom operation, extend the [AsyncOperationBase] class and override its virtual methods.
 
-You can pass the derived operation to the [ResourceManager.StartOperation] method to start the operation and receive an [AsyncOperationHandle] struct. The [ResourceManager] registers operations started this wayand show them in the Addressables [Event Viewer].
+You can pass the derived operation to the [ResourceManager.StartOperation] method to start the operation and receive an [AsyncOperationHandle] struct. The [ResourceManager] registers operations started this way and shows them in the Addressables [Event Viewer].
 
 ### Executing the operation
 
@@ -292,7 +293,7 @@ AsyncOperationHandle<Texture> textureHandle3 = nonGenericHandle.Convert<Texture>
 
 [AsyncOperationHandle] has two methods that you can use to monitor and report the progress of the operation:
 
-* [GetDownloadStatus] returns a [DownloadStatus] struct. This struct contains information about how many bytes have been downloaded and how many bytes still need to be downloaded. The [DownloadStatus.Percent] reports the percentage of bytes downloaded. 
+* [GetDownloadStatus] returns a [DownloadStatus] struct. This struct contains information about how many bytes have been downloaded and how many bytes still need to be downloaded. The [DownloadStatus.Percent] reports the percentage of bytes downloaded.
 * [AsyncOperationHandle.PercentComplete] returns an equally-weighted aggregate percentage of all the sub-operations that are complete. For example, if an operation has five sub-operations, each of them represents 20% of the total. The value doesn't factor in the amount of data that must be downloaded by the individual sub-operations.
 
 For example, if you called [Addressables.DownloadDependenciesAsync] and five AssetBundles needed to be downloaded, GetDownloadStatus would tell you what percentage of the total number of bytes for all sub-operations had been downloaded so far. PercentComplete would tell you what percentage of the number of operations had finished, regardless of their size.

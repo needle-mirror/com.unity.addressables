@@ -21,7 +21,7 @@ Open the Addressables Groups window (menu: __Window > Asset Management > Address
 
 To create a group:
 
-1. Open the Adressables Group window (menu: __Window > Asset Management > Addressables > Groups__).
+1. Open the Addressables Group window (menu: __Window > Asset Management > Addressables > Groups__).
 2. Click __Create__ in the toolbar at the top of the window to open the Create menu.
 3. Select __Group > Packed Asset__ to create a new group. (If you have created your own [Group Templates] they are also displayed in the menu.)
 4. Select the new group and open its context menu (right- or cmd click on the name).

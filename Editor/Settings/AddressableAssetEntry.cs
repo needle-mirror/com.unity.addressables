@@ -39,7 +39,7 @@ namespace UnityEditor.AddressableAssets.Settings
 #pragma warning disable 0618
         static Type typeof_AddressableAssetEntryCollection = typeof(AddressableAssetEntryCollection);
 #pragma warning restore 0618
-        
+
         internal const string EditorSceneListName = "EditorSceneList";
         internal const string EditorSceneListPath = "Scenes In Build";
 
@@ -67,7 +67,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Flag indicating if an AssetEntry is a folder or not.
         /// </summary>
         public bool IsFolder { get; set; }
-        
+
         /// <summary>
         /// List of AddressableAssetEntries that are considered sub-assets of a main Asset.  Typically used for Folder entires.
         /// </summary>
@@ -615,6 +615,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
             }
         }
+
 #pragma warning restore 0618
 
         internal void GatherFolderEntries(List<AddressableAssetEntry> assets, bool recurseAll, bool includeSubObjects, Func<AddressableAssetEntry, bool> entryFilter)
@@ -633,7 +634,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     entry.m_Labels = m_Labels;
                     if (entryFilter == null || entryFilter(entry))
                         assets.Add(entry);
-                    
+
                     if (includeSubObjects)
                     {
                         var mainType = AssetDatabase.GetMainAssetTypeAtPath(entry.AssetPath);
@@ -687,8 +688,8 @@ namespace UnityEditor.AddressableAssets.Settings
                     return assetEntry;
                 return null;
             }
-            
-            string relativePath = subAssetPath.Remove(0, assetPath.Length+1);
+
+            string relativePath = subAssetPath.Remove(0, assetPath.Length + 1);
             string[] splitRelativePath = relativePath.Split('/');
             string folderPath = assetPath;
             for (int i = 0; i < splitRelativePath.Length - 1; ++i)
@@ -707,7 +708,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 else
                     return null;
             }
-            
+
             assetEntry = settings.CreateSubEntryIfUnique(subAssetGuid, address + relativePath, this);
             if (assetEntry == null || assetEntry.IsSubAsset == false)
                 return null;
@@ -726,6 +727,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             return null;
         }
+
 #pragma warning restore 0618
 
         internal void GatherResourcesEntries(List<AddressableAssetEntry> assets, bool recurseAll, Func<AddressableAssetEntry, bool> entryFilter)
@@ -975,7 +977,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 ObjectIdentifier[] ids = depInfo != null ? depInfo[new GUID(guid)].includedObjects.ToArray() :
                     ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(guid), EditorUserBuildSettings.activeBuildTarget);
-                foreach (var t in GatherSubObjectTypes(ids, guid))
+                foreach (var t in GatherMainAndReferencedSerializedTypes(ids))
                     entries.Add(new ContentCatalogDataEntry(t, assetPath, providerType, keyList, dependencies, extraData));
             }
             else if (mainType != null && mainType != typeof(DefaultAsset))
@@ -984,7 +986,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        static internal IEnumerable<Type> GatherSubObjectTypes(ObjectIdentifier[] ids, string guid)
+        static internal IEnumerable<Type> GatherMainAndReferencedSerializedTypes(ObjectIdentifier[] ids)
         {
             if (ids.Length > 0)
             {
@@ -1002,6 +1004,21 @@ namespace UnityEditor.AddressableAssets.Settings
                     }
                 }
             }
+        }
+
+        static internal List<Type> GatherMainObjectTypes(ObjectIdentifier[] ids)
+        {
+            List<Type> typesSeen = new List<Type>();
+            foreach (ObjectIdentifier id in ids)
+            {
+                Type objType = ContentBuildInterface.GetTypeForObject(id);
+                if (typeof(Component).IsAssignableFrom(objType))
+                    continue;
+                Type rtType = AddressableAssetUtility.MapEditorTypeToRuntimeType(objType, false);
+                if (rtType != null && rtType != typeof(DefaultAsset) && !typesSeen.Contains(rtType))
+                    typesSeen.Add(rtType);
+            }
+            return typesSeen;
         }
 
         internal Type GetRuntimeProviderType(string providerType, Type mainEntryType)

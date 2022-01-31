@@ -283,6 +283,30 @@ namespace UnityEditor.AddressableAssets.Settings
 
             return result;
         }
+        
+        struct PackageData
+        {
+            public string version;
+        }
+        private static string m_Version = null;
+        internal static string GetVersionFromPackageData()
+        {
+            if (string.IsNullOrEmpty(m_Version))
+            {
+                var jsonFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Packages/com.unity.addressables/package.json");
+                var packageData = JsonUtility.FromJson<PackageData>(jsonFile.text);
+                var split = packageData.version.Split('.');
+                if (split.Length < 2)
+                    throw new Exception("Could not get correct version data for Addressables package");
+                m_Version = $"{split[0]}.{split[1]}";
+            }
+            return m_Version;
+        }
+
+        public static string GenerateDocsURL(string page)
+        {
+            return $"https://docs.unity3d.com/Packages/com.unity.addressables@{GetVersionFromPackageData()}/manual/{page}";
+        }
 
         internal static bool IsUsingVCIntegration()
         {
@@ -417,6 +441,121 @@ namespace UnityEditor.AddressableAssets.Settings
                     .GetPartitions(dop)
                     .AsParallel()
                     .Select(p => AwaitPartition(p)));
+        }
+
+        internal class SortedDelegate<T1, T2, T3, T4>
+        {
+            struct BufferedValues
+            {
+                public T1 arg1;
+                public T2 arg2;
+                public T3 arg3;
+                public T4 arg4;
+            }
+
+            List<BufferedValues> m_Buffer;
+            
+            public delegate void Delegate(T1 arg1, T2 arg2, T3 arg3, T4 arg4);
+            private SortedList<int, Delegate> m_SortedInvocationList = new SortedList<int, Delegate>();
+
+            public void Unregister(Delegate toUnregister)
+            {
+                IList<int> keys = m_SortedInvocationList.Keys;
+                for (int i = 0; i < keys.Count; ++i)
+                {
+                    m_SortedInvocationList[keys[i]] -= toUnregister;
+                    if (m_SortedInvocationList[keys[i]] == null)
+                        m_SortedInvocationList.Remove(keys[i]);
+                }
+            }
+            
+            public void Register(Delegate toRegister, int order)
+            {
+                Unregister(toRegister);
+                if (m_SortedInvocationList.ContainsKey(order))
+                    m_SortedInvocationList[order] += toRegister;
+                else
+                    m_SortedInvocationList.Add(order, toRegister);
+                
+                if (m_Buffer != null)
+                {
+                    foreach (var b in m_Buffer)
+                        Invoke(b.arg1, b.arg2, b.arg3, b.arg4);
+                    m_Buffer = null;
+                }
+            }
+
+            public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+            {
+                foreach (var invocationList in m_SortedInvocationList)
+                    invocationList.Value?.Invoke(arg1,arg2,arg3,arg4);
+            }
+            
+            public void BufferInvoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+            {
+                if (m_SortedInvocationList.Count == 0)
+                {
+                    if (m_Buffer == null)
+                        m_Buffer = new List<BufferedValues>();
+                    m_Buffer.Add(new BufferedValues { arg1 = arg1, arg2 = arg2, arg3 = arg3, arg4 = arg4 });
+                }
+                else
+                {
+                    Invoke(arg1, arg2, arg3, arg4);
+                }
+            }
+
+            public static SortedDelegate<T1, T2, T3, T4> operator +(SortedDelegate<T1, T2, T3, T4> self, Delegate delegateToAdd)
+            {
+                int lastInOrder = self.m_SortedInvocationList.Keys[self.m_SortedInvocationList.Count - 1];
+                self.Register(delegateToAdd, lastInOrder + 1);
+                return self;
+            }
+            
+            public static SortedDelegate<T1, T2, T3, T4> operator -(SortedDelegate<T1, T2, T3, T4> self, Delegate delegateToRemove)
+            {
+                self.Unregister(delegateToRemove);
+                return self;
+            }
+            
+            public static bool operator ==(SortedDelegate<T1, T2, T3, T4> obj1, SortedDelegate<T1, T2, T3, T4> obj2)
+            {
+                bool aNull = ReferenceEquals(obj1, null);
+                bool bNull = ReferenceEquals(obj2, null);
+                
+                if (aNull && bNull)
+                    return true;
+                if (!aNull && bNull)
+                    return obj1.m_SortedInvocationList.Count == 0;
+                if (aNull && !bNull)
+                    return obj2.m_SortedInvocationList.Count == 0;
+                if (ReferenceEquals(obj1, obj2))
+                    return true;
+                return obj1.Equals(obj2);
+            }
+            
+            public static bool operator !=(SortedDelegate<T1, T2, T3, T4> lhs, SortedDelegate<T1, T2, T3, T4> rhs)
+            {
+                return !(lhs == rhs);
+            }
+            
+            protected bool Equals(SortedDelegate<T1, T2, T3, T4> other)
+            {
+                return Equals(m_SortedInvocationList, other.m_SortedInvocationList);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((SortedDelegate<T1, T2, T3, T4>) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return (m_SortedInvocationList != null ? m_SortedInvocationList.GetHashCode() : 0);
+            }
         }
     }
 }

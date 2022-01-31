@@ -190,6 +190,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
         /// The assets contained in the bundle.
         /// </summary>
         public List<VirtualAssetBundleEntry> Assets { get { return m_SerializedAssets; } }
+        
+        const long k_SynchronousBytesPerSecond = (long) 1024 * 1024 * 1024 * 10; // 10 Gb/s
 
         /// <summary>
         /// Construct a new VirtualAssetBundle object.
@@ -469,7 +471,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders.Simulation
                 //TODO: this needs to just wait on the resourcemanager update loop to ensure proper loading order
                 while (!IsDone)
                 {
-                    Load(10000, 100000, .1f);
+                    Load(k_SynchronousBytesPerSecond, k_SynchronousBytesPerSecond, .1f);
                     System.Threading.Thread.Sleep(100);
                 }
                 return true;

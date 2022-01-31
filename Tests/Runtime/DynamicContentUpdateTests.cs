@@ -83,7 +83,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", nameof(TestCatalogProvider), typeof(IResourceLocator), remoteHashLoc, localHashLoc);
-  
+
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "same"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
@@ -102,7 +102,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", nameof(TestCatalogProvider), typeof(IResourceLocator), remoteHashLoc, localHashLoc);
-  
+
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
@@ -158,7 +158,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
-    
+
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
@@ -183,7 +183,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
-  
+
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
@@ -219,9 +219,10 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             yield return updateOp;
 
             string fakeCacheFolder = Path.GetDirectoryName(fakeCachePath);
-            Assert.IsFalse(Directory.Exists(fakeCacheFolder));
+            Assert.AreEqual(0, Directory.GetDirectories(fakeCacheFolder).Length);
 
             m_Addressables.Release(updateOp);
+            Directory.Delete(fakeCacheFolder);
 #else
             Assert.Ignore("Caching not enabled.");
             yield return null;
@@ -235,7 +236,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var remoteHashLoc = new ResourceLocationBase("RemoteHash", "Remote", kRemoteHashProviderId, typeof(string));
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
- 
+
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));
@@ -249,7 +250,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             yield return updateOp;
 
             string fakeCacheFolder = Path.GetDirectoryName(fakeCachePath);
-            Assert.IsTrue(Directory.Exists(fakeCacheFolder));
+            Assert.IsTrue(Directory.GetDirectories(fakeCacheFolder).Length > 0);
 
             m_Addressables.Release(updateOp);
             Directory.Delete(fakeCacheFolder, true);
@@ -457,6 +458,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             //Because we're testing an API that indirectly inits Addr, we need to build using the regular naming convention.
             RunBuilder(settings, "");
         }
+
 #endif
         [UnitySetUp]
         public override IEnumerator RuntimeSetup()
@@ -474,5 +476,4 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
                 op.Release();
         }
     }
-
 }

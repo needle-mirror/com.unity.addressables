@@ -37,7 +37,7 @@ Note that the hardware characteristics of a platform can mean that uncompressed 
 More information on Unity's compression selection is available in the [Asset Bundle documentation](https://docs.unity3d.com/Manual/AssetBundles-Cache.html).  
 
 <a name="faq-minimize-catalog-size"></a>
-### Are there ways to miminize the catalog size?
+### Are there ways to minimize the catalog size?
 Currently there are two optimizations available.
 1. Compress the local catalog.  If your primary concern is how big the catalog is in your build, there is an option in the inspector for the top level settings of **Compress Local Catalog**. This option builds catalog that ships with your game into an AssetBundle. Compressing the catalog makes the file itself smaller, but note that this does increase catalog load time.  
 2. Disable built-in scenes and Resources.  Addressables provides the ability to load content from Resources and from the built-in scenes list. By default this feature is on, which can bloat the catalog if you do not need this feature.  To disable it, select the "Built In Data" group within the Groups window (**Window** > **Asset Management** > **Addressables** > **Groups**). From the settings for that group, you can uncheck "Include Resources Folders" and "Include Build Settings Scenes". Unchecking these options only removes the references to those asset types from the Addressables catalog.  The content itself is still built into the player you create, and you can still load it via legacy API. 
@@ -52,7 +52,7 @@ If you are planning to do content updates, you will need the version of this fil
 ### What are possible scale implications?
 As your project grows larger, keep an eye on the following aspects of your assets and bundles:
 * Total bundle size - Historically Unity has not supported files larger than 4GB.  This has been fixed in some recent editor versions, but there can still be issues. It is recommended to keep the content of a given bundle under this limit for best compatibility across all platforms.  
-* Sub assets affecting UI performance - There is no hard limit here, but if you have many assets, and those assets have many sub-assets, it may be best to turn off sub-asset display. This option only affects how the data is displayed in the Groups window, and does not affect what you can and cannot load at runtime.  The option is available in the groups window under **Tools** > **Groups View** > **Show Sprite and Subobject Addresses**.  Disabling this will make the UI more responsive.
+* Sub assets affecting UI performance - There is no hard limit here, but if you have many assets, and those assets have many subassets, it may be best to turn off sub-asset display. This option only affects how the data is displayed in the Groups window, and does not affect what you can and cannot load at runtime.  The option is available in the groups window under **Tools** > **Groups View** > **Show Sprite and Subobject Addresses**.  Disabling this will make the UI more responsive.
 * Group hierarchy display - Another UI-only option to help with scale is **Group Hierarchy with Dashes**.  The option is available in the groups window under **Tools** > **Groups View** > **Group Hierarchy with Dashes**. With this enabled, groups that contain dashes '-' in their names will display as if the dashes represented folder hierarchy. This does not affect the actual group name, or the way things are built.  For example, two groups called "x-y-z" and "x-y-w" would display as if inside a folder called "x", there was a folder called "y".  Inside that folder were two groups, called "x-y-z" and "x-y-w". This will not really affect UI responsiveness, but simply makes it easier to browse a large collection of groups. 
 * Bundle layout at scale - For more information about how best to set up your layout, see the earlier question: [_Is it better to have many small bundles or a few bigger ones_](AddressablesFAQ.md#faq-bundle-size)
 
@@ -62,7 +62,7 @@ For most platforms and collection of content, it is recommended to use `Requeste
 This prevents situations where Assets are loaded into memory that are not used.
 
 Performance in situations where you will load all Assets that are packed together, such as a loading screen. Most types of content will have either have similar or improved performance when loading each individually using `Requested Asset and Dependencies` mode.
-Loading performance can vary between content type. As an example, large counts of serialised data such as Prefabs or ScriptableObjects with direct references to other serialised data will load faster using `All Packed Assets and Dependencies`. With some other Assets like Textures, it is often more performant to load each Asset individually.
+Loading performance can vary between content type. As an example, large counts of serialized data such as Prefabs or ScriptableObjects with direct references to other serialized data will load faster using `All Packed Assets and Dependencies`. With some other Assets like Textures, you can often achieve better performance when you load each Asset individually..
 If using [Synchronous Addressables](SynchronousAddressables.md), there is little performance between between Asset load modes. Because of greater flexibility it is recommended to use `Requested Asset and Dependencies` where you know the content will be loaded synchronously.
 
 **Note**: The above examples are taken for Desktop and Mobile. Performance may differ between platforms. `All Packed Assets and Dependencies` mode typically performs better than loading assets individually on the Nintendo Switch.
@@ -73,7 +73,7 @@ Even though all the Assets in a group and any dependencies are loaded in memory 
 
 <a name="faq-internal-naming"></a>
 ### What are the Internal naming mode implications?
-In the [Group Settings](GroupSetting.md) "Internal Asset Naming Mode" and "Internal Bundle ID Mode", can be used to determine how assets and bundles are identified. This affects the bundle data in different ways.
+In the [Group Settings](GroupSettings.md) "Internal Asset Naming Mode" and "Internal Bundle ID Mode", can be used to determine how assets and bundles are identified. This affects the bundle data in different ways.
 
 `Internal Asset Naming Mode` determines the identification of assets in AssetBundles and is used to load the asset from the bundle. This value is used as the internalId of the asset Location.
 Changing this setting affects a bundles CRC and Hash value.
@@ -114,7 +114,7 @@ if (op.Result != null)
 
 <a name="faq-get-address"></a>
 ### Is it possible to retrieve the address of an asset or reference at runtime?
-In the most general case, loaded assets no longer have a tie to their address or `IResourceLocation`. There are ways, however, to get the properly associated `IResourceLocation` and use that to read the field PrimaryKey. The PrimaryKey field will be set to the assets's address unless "Include Address In Catalog" is disabled for the group this object came from. In that case, the PrimaryKey will be the next item in the list of keys (probably a GUID, but possibly a Label or empty string). 
+In the most general case, loaded assets no longer have a tie to their address or `IResourceLocation`. There are ways, however, to get the properly associated `IResourceLocation` and use that to read the field PrimaryKey. The PrimaryKey field will be set to the assets' address unless "Include Address In Catalog" is disabled for the group this object came from. In that case, the PrimaryKey will be the next item in the list of keys (probably a GUID, but possibly a Label or empty string). 
 
 #### Examples
 
@@ -170,7 +170,7 @@ private IEnumerator PreloadHazards()
 ### Can I build Addressables when recompiling scripts?
 If you have a pre-build step that triggers a domain reload, then you must take special care that the Addressables build itself does not start until after the domain reload is finished.
 
-Using methods such as setting scripting define symbols ([PlayerSettings.SetScriptingDefineSymbolsForGroup](https://docs.unity3d.com/ScriptReference/PlayerSettings.SetScriptingDefineSymbolsForGroup.html)) or switching active build target ([EditorUserBuildSettings.SwitchActiveBuildTarget](https://docs.unity3d.com/ScriptReference/EditorUserBuildSettings.SwitchActiveBuildTarget.html)), triggers scripts to recompile and reload. The execution of the Editor code will continue with the currently loaded domain until the domain reloads and execution stops. Any [platform dependant compilation](https://docs.unity3d.com/Manual/PlatformDependentCompilation.html) or custom defines will not be set until after the domain reloads. This can lead to unexpected issues where code relies on these defines to build correctly, and can be easily missed.
+Using methods such as setting scripting define symbols ([PlayerSettings.SetScriptingDefineSymbolsForGroup](https://docs.unity3d.com/ScriptReference/PlayerSettings.SetScriptingDefineSymbolsForGroup.html)) or switching active build target ([EditorUserBuildSettings.SwitchActiveBuildTarget](https://docs.unity3d.com/ScriptReference/EditorUserBuildSettings.SwitchActiveBuildTarget.html)), triggers scripts to recompile and reload. The execution of the Editor code will continue with the currently loaded domain until the domain reloads and execution stops. Any [platform dependent compilation](https://docs.unity3d.com/Manual/PlatformDependentCompilation.html) or custom defines will not be set until after the domain reloads. This can lead to unexpected issues where code relies on these defines to build correctly, and can be easily missed.
 
 #### Best Practice
 When building via commandline arguments or CI, Unity recommends restarting the Editor for each desired platform using [command line arguments](https://docs.unity3d.com/Manual/CommandLineArguments.html). This ensures that scripts are compiled for a platform before -executeMethod is invoked.
@@ -178,7 +178,7 @@ When building via commandline arguments or CI, Unity recommends restarting the E
 #### Is there a safe way to change scripts before building?
 To switch Platform, or modify Editor scripts in code and then continue with the defines set, a domain reload must be performed. Note in this case, -quit argument should not be used or the Editor will exit immediately after execution of the invoked method.
 
-When the domain reloads, InitialiseOnLoad is invoked. The code below demonstrates how to set scripting define symbols and react to those in the Editor code, building Addressables after the domain reload completes. The same process can be done for switching platforms and [platform dependant compilation](https://docs.unity3d.com/Manual/PlatformDependentCompilation.html).
+When the domain reloads, InitialiseOnLoad is invoked. The code below demonstrates how to set scripting define symbols and react to those in the Editor code, building Addressables after the domain reload completes. The same process can be done for switching platforms and [platform dependent compilation](https://docs.unity3d.com/Manual/PlatformDependentCompilation.html).
 
 ```
 [InitializeOnLoad]
@@ -239,10 +239,15 @@ The following can result in changes to the MonoScript data:
 - Adding or Changing the class [Namespace]
 - Changing the class name
 
-#### How to minimise changes to bundles
+#### How to minimize changes to bundles
 Content bundles can be large, and having to update the whole bundle for small changes can result in a large amount of data being updated for a small change to the MonoScript.
-Enabling the "MonoScript Bundle Naming Prefix" option in the [Addressables settings] will build an asset bundle that contains the MonoScript objects, separate to your serialised data.
-If there are no changes to the serialised class data then only the MonoScript bundle will have changed and other bundles will not need to be updated.
+Enabling the "MonoScript Bundle Naming Prefix" option in the [Addressables settings] will build an asset bundle that contains the MonoScript objects, separate to your serialized data.
+If there are no changes to the serialized class data then only the MonoScript bundle will have changed and other bundles will not need to be updated.
+
+#### Referencing Subobjects
+What gets included in a content build relies heavily on how your assets, and scripts, reference each other.  This can be tricky when subobjects get involved.  
+
+If an `AssetReference` points to a subobject of an Asset that is Addressable, the entire object is built into the `AssetBundle` at build time.  If, instead, the `AssetReference` points to an Addressable object, such as a `GameObject`, `ScriptableObject`, or `Scene`, that in turn directly refrences a subobject, only the subobject is pulled into the `AssetBundle` as an implicit dependency.
 
 [Addressables settings]: xref:addressables-asset-settings#build
 [Assembly Definition File]: https://docs.unity3d.com/Manual/ScriptCompilationAssemblyDefinitionFiles.html

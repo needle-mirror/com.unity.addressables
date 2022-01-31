@@ -217,9 +217,34 @@ namespace AddressableTests.SyncAddressables
                 expectedPath = internalId.StartsWith("jar") ? internalId : "file:///" + Path.GetFullPath(internalId);
             }
             Assert.AreEqual(expectedPath, path);
+		}
+
+        [UnityTest]
+        public IEnumerator LoadBundleAsync_WithUnfinishedUnload_WaitsForUnloadAndCompletes()
+        {
+            var h = m_Addressables.LoadAssetAsync<GameObject>("testprefab");
+            yield return h;
+            Assert.IsNotNull(h.Result);
+            h.Release();
+            h = m_Addressables.LoadAssetAsync<GameObject>("testprefab");
+            yield return h;
+            Assert.IsNotNull(h.Result);
+            h.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator LoadBundleSync_WithUnfinishedUnload_WaitsForUnloadAndCompletes()
+        {
+            var h = m_Addressables.LoadAssetAsync<GameObject>("testprefab");
+            yield return h;
+            Assert.IsNotNull(h.Result);
+            h.Release();
+            h = m_Addressables.LoadAssetAsync<GameObject>("testprefab");
+            h.WaitForCompletion();
+            Assert.IsNotNull(h.Result);
+            h.Release();
         }
     }
-
 #if UNITY_EDITOR
     class AssetBundleProviderTests_PackedPlaymodeMode : AssetBundleProviderTests { protected override TestBuildScriptMode BuildScriptMode { get { return TestBuildScriptMode.PackedPlaymode; } } }
 #endif

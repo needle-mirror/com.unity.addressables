@@ -65,11 +65,11 @@ The data passed with this event is the `string` label that was added.
 - LabelRemoved
 The data passed with this event is the `string` label that was removed.
 - ProfileAdded
-The data passed with this event is [`BuildProfile`](xref:UnityEditor.AddressableAssets.Settings.BuildProfile) that was added.
+The data passed with this event is [`BuildProfile`] that was added.
 - ProfileRemoved
 The data passed with this event is the `string` of the profile ID that was removed.
 - ProfileModified
-The data passed with this event is [`BuildProfile`](xref:UnityEditor.AddressableAssets.Settings.BuildProfile) that was modified, or `null` if a batch of `BuildProfiles` were modified.
+The data passed with this event is [`BuildProfile`] that was modified, or `null` if a batch of `BuildProfiles` were modified.
 - ActiveProfileSet
 The data passed with this event if the `string` of the profile ID that is set as the active profile.
 - EntryModified

@@ -29,7 +29,7 @@ When you distribute content remotely, you can make content changes without needi
 
 However, when you rebuild all of your content with a new content catalog, installed players must also redownload all of your remote AssetBundles, whether the assets in them have changed or not. If you have a large amount of content, redownloading everything can take a significant amount of time and may hurt player retention. To make this process more efficient, the Addressables package provides tools that you can run to identify changed assets and to produce a content update build. 
 
-The following diagram illustrates how you can use the Adressables tools to produce smaller content updates that only require your players to download new or changed content:
+The following diagram illustrates how you can use the Addressables tools to produce smaller content updates that only require your players to download new or changed content:
 
 ![](images/addr_updatebuilds_0.png)
 *The workflow for reducing the size of content updates*
@@ -128,7 +128,7 @@ The system uses the content version string and location information from the add
 
 The system also builds AssetBundles for content that cannot change, such as any local AssetBundles, but you do not need to upload them to the content hosting location, as no Addressables Asset entries reference them.
 
-Note that you should not change the build scripts between building a new player and making content updates (e.g., player code, addressables). This could cause unpredictable behavior in your application.
+Note that you should not change the build scripts between building a new player and making content updates (e.g., player code, Addressables). This could cause unpredictable behavior in your application.
 
 Additionally, if you delete the local content bundles created by your Addressables build from the Project Library folder, attempts to load Assets in those bundles fail when you run your game or application in the Editor and use the __Use Existing Build (requires built groups)__ Play Mode script.
 
@@ -252,7 +252,7 @@ The content_update_group bundle consists of the modified Assets that will be ref
 Note that the example above has the following implications:
 
 1. Any changed local Assets remain unused on the user's device forever.
-2. If the user already cached a non-static bundle, they will need to re-download the bundle, including the unchanged Assets (in this instance, for example, AssetY and AssetZ). Ideally, the user has not cached the bundle, in which case they simply need to download the new Remote_NonStatic bundle.
+2. If the user already cached a non-static bundle, they will need to redownload the bundle, including the unchanged Assets (in this instance, for example, AssetY and AssetZ). Ideally, the user has not cached the bundle, in which case they simply need to download the new Remote_NonStatic bundle.
 3. If the user has already cached the Static_Remote bundle, they only need to download the updated asset (in this instance, AssetL via content_update_group). This is ideal in this case. If the user has not cached the bundle, they must download both the new AssetL via content_update_group and the now-defunct AssetL via the untouched Remote_Static bundle. Regardless of the initial cache state, at some point the user will have the defunct AssetL on their device, cached indefinitely despite never being accessed.
 
 The best setup for your remote content will depend on your specific use case.

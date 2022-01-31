@@ -377,5 +377,78 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual("827ccb0eea8a706c4c34a16891f84e7b", hashString);
 
         }
+        
+        [Test]
+        public void GetPackageVersion_ReturnsAValidVersion()
+        {
+            string v = AddressableAssetUtility.GetVersionFromPackageData();
+            Assert.IsTrue(v.StartsWith("1."), $"Failed to get a valid version from package.json data. Expected 1.X but was {v}");
+            Assert.IsTrue(v.Split('.').Length == 2, 
+                $"Format from GetVersionFromPackageData, produced {v} which is incorrectly formatted");
+        }
+        
+        [Test]
+        public void SortedDelegate_InvokesMultipleRegisters()
+        {
+            AddressableAssetUtility.SortedDelegate<string[], string[], string[], string[]> handler =
+                new AddressableAssetUtility.SortedDelegate<string[], string[], string[], string[]>();
+            
+            calledOrder.Clear();
+            handler.Register(Callback1, 0);
+            handler.Register(Callback2, 0);
+            handler.Invoke(null,null,null,null);
+            Assert.AreEqual(2, calledOrder.Count, "Expected to have had two callbacks triggered");
+        }
+
+        private List<int> calledOrder = new List<int>();
+        [Test]
+        public void SortedDelegate_InvokesMultipleRegisters_CorrectOrder()
+        {
+            AddressableAssetUtility.SortedDelegate<string[], string[], string[], string[]> handler =
+                new AddressableAssetUtility.SortedDelegate<string[], string[], string[], string[]>();
+
+            calledOrder.Clear();
+            handler.Register(Callback1, 1);
+            handler.Register(Callback2, 0);
+            
+            handler.Invoke(null,null,null,null);
+            Assert.AreEqual(2, calledOrder.Count, "Expected to have had two callbacks triggered");
+            Assert.AreEqual(2, calledOrder[0], "Callback2 was expected to be called first, but was not");
+            Assert.AreEqual(1, calledOrder[1], "Callback1 was expected to be called second, but was not");
+        }
+        
+        [Test]
+        public void SortedDelegate_InvokesMultipleRegisters_RemovesCallbacks()
+        {
+            AddressableAssetUtility.SortedDelegate<string[], string[], string[], string[]> handler =
+                new AddressableAssetUtility.SortedDelegate<string[], string[], string[], string[]>();
+
+            calledOrder.Clear();
+            handler.Register(Callback1, 0);
+            handler.Register(Callback2, 0);
+            handler.Invoke(null,null,null,null);
+            Assert.AreEqual(2, calledOrder.Count, "Expected to have two callbacks Invoked");
+            
+            calledOrder.Clear();
+            handler.Unregister(Callback1);
+            handler.Invoke(null,null,null,null);
+            Assert.AreEqual(1, calledOrder.Count, "Expected to have one callbacks Invoked");
+            
+            calledOrder.Clear();
+            handler -= Callback2;
+            handler.Invoke(null,null,null,null);
+            Assert.AreEqual(0, calledOrder.Count, "Expected to have no callbacks Invoked");
+            Assert.IsTrue(handler == null, "Equalto to return true to null when no callbacks are available"); // doesn't work with Assert.IsNull
+        }
+
+        private void Callback1(string[] arg1, string[] arg2, string[] arg3, string[] arg4)
+        {
+            calledOrder.Add(1);
+        }
+
+        private void Callback2(string[] arg1, string[] arg2, string[] arg3, string[] arg4)
+        {
+            calledOrder.Add(2);
+        }
     }
 }

@@ -61,7 +61,7 @@ namespace UnityEditor.AddressableAssets
             m_LoadingSettingsObject = true;
             var settings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
             if (settings != null)
-                AddressablesAssetPostProcessor.OnPostProcess = settings.OnPostprocessAllAssets;
+                AddressablesAssetPostProcessor.OnPostProcess.Register(settings.OnPostprocessAllAssets, 0);
             m_LoadingSettingsObject = false;
             return settings;
         }
@@ -79,7 +79,7 @@ namespace UnityEditor.AddressableAssets
                 Debug.LogErrorFormat("Unable to determine path for default AddressableAssetSettings object with guid {0}.", m_AddressableAssetSettingsGuid);
                 return;
             }
-            AddressablesAssetPostProcessor.OnPostProcess = settings.OnPostprocessAllAssets;
+            AddressablesAssetPostProcessor.OnPostProcess.Register(settings.OnPostprocessAllAssets, 0);
             m_AddressableAssetSettingsGuid = AssetDatabase.AssetPathToGUID(path);
         }
 

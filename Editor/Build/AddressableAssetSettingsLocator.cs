@@ -13,21 +13,24 @@ namespace UnityEditor.AddressableAssets.Settings
 {
     internal class AddressableAssetSettingsLocator : IResourceLocator
     {
-	    private static Type m_SpriteType = typeof(Sprite);
-	    private static Type m_SpriteAtlasType = typeof(SpriteAtlas);
-	    
+        private static Type m_SpriteType = typeof(Sprite);
+        private static Type m_SpriteAtlasType = typeof(SpriteAtlas);
+
         public string LocatorId { get; private set; }
         public Dictionary<object, HashSet<AddressableAssetEntry>> m_keyToEntries;
         public Dictionary<CacheKey, IList<IResourceLocation>> m_Cache;
         public AddressableAssetTree m_AddressableAssetTree;
         HashSet<object> m_Keys = null;
         AddressableAssetSettings m_Settings;
+        bool m_includeResourcesFolders = false;
+        bool m_dirty = true;
 
         public IEnumerable<object> Keys
         {
             get
             {
-                
+                if (m_dirty)
+                    RebuildInternalData();
                 if (m_Keys == null)
                 {
                     var visitedFolders = new HashSet<string>();
@@ -64,7 +67,7 @@ namespace UnityEditor.AddressableAssets.Settings
                         if (m_includeResourcesFolders)
                         {
                             var resourcesEntry = m_Settings.FindAssetEntry(AddressableAssetEntry.ResourcesName);
-                            resourcesEntry.GatherResourcesEntries(null, true, entry => 
+                            resourcesEntry.GatherResourcesEntries(null, true, entry =>
                             {
                                 m_Keys.Add(entry.address);
                                 m_Keys.Add(entry.guid);
@@ -90,11 +93,17 @@ namespace UnityEditor.AddressableAssets.Settings
             public override int GetHashCode() => m_key.GetHashCode() * 31 + (m_type == null ? 0 : m_type.GetHashCode());
         }
 
-        bool m_includeResourcesFolders = false;
         public AddressableAssetSettingsLocator(AddressableAssetSettings settings)
         {
             m_Settings = settings;
             LocatorId = m_Settings.name;
+            m_dirty = true;
+            m_Settings.OnModification += Settings_OnModification;
+        }
+
+        void RebuildInternalData()
+        {
+            m_Keys = null;
             m_AddressableAssetTree = BuildAddressableTree(m_Settings);
             m_Cache = new Dictionary<CacheKey, IList<IResourceLocation>>();
             m_keyToEntries = new Dictionary<object, HashSet<AddressableAssetEntry>>(m_Settings.labelTable.labelNames.Count);
@@ -128,6 +137,25 @@ namespace UnityEditor.AddressableAssets.Settings
                         }
                     }
                 }
+            }
+            m_dirty = false;
+        }
+
+        private void Settings_OnModification(AddressableAssetSettings settings, AddressableAssetSettings.ModificationEvent evt, object arg3)
+        {
+            switch (evt)
+            {
+                case AddressableAssetSettings.ModificationEvent.EntryAdded:
+                case AddressableAssetSettings.ModificationEvent.EntryCreated:
+                case AddressableAssetSettings.ModificationEvent.EntryModified:
+                case AddressableAssetSettings.ModificationEvent.EntryMoved:
+                case AddressableAssetSettings.ModificationEvent.EntryRemoved:
+                case AddressableAssetSettings.ModificationEvent.GroupRemoved:
+                case AddressableAssetSettings.ModificationEvent.LabelAdded:
+                case AddressableAssetSettings.ModificationEvent.LabelRemoved:
+                case AddressableAssetSettings.ModificationEvent.BatchModification:
+                    m_dirty = true;
+                    break;
             }
         }
 
@@ -170,7 +198,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 {
                     if (e.IsScene)
                     {
-                        if(type == null || type == typeof(object) || type == typeof(SceneInstance) || AddressableAssetUtility.MapEditorTypeToRuntimeType(e.MainAssetType, false) == type )
+                        if (type == null || type == typeof(object) || type == typeof(SceneInstance) || AddressableAssetUtility.MapEditorTypeToRuntimeType(e.MainAssetType, false) == type)
                             locations.Add(new ResourceLocationBase(e.address, e.AssetPath, typeof(SceneProvider).FullName, typeof(SceneInstance)));
                     }
                     else if (type == null || (type.IsAssignableFrom(e.MainAssetType) && type != typeof(object)))
@@ -183,7 +211,7 @@ namespace UnityEditor.AddressableAssets.Settings
                         ObjectIdentifier[] ids = ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(e.guid), EditorUserBuildSettings.activeBuildTarget);
                         if (ids.Length > 0)
                         {
-                            foreach (var t in AddressableAssetEntry.GatherSubObjectTypes(ids, e.guid))
+                            foreach (var t in AddressableAssetEntry.GatherMainAndReferencedSerializedTypes(ids))
                             {
                                 if (type.IsAssignableFrom(t))
                                     locations.Add(new ResourceLocationBase(e.address, e.AssetPath, typeof(AssetDatabaseProvider).FullName, AddressableAssetUtility.MapEditorTypeToRuntimeType(t, false)));
@@ -198,6 +226,8 @@ namespace UnityEditor.AddressableAssets.Settings
 
         public bool Locate(object key, Type type, out IList<IResourceLocation> locations)
         {
+            if (m_dirty)
+                RebuildInternalData();
             CacheKey cacheKey = new CacheKey() { m_key = key, m_type = type };
             if (m_Cache.TryGetValue(cacheKey, out locations))
                 return locations != null;
@@ -217,11 +247,11 @@ namespace UnityEditor.AddressableAssets.Settings
                             ObjectIdentifier[] ids =
                                 ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(e.guid),
                                     EditorUserBuildSettings.activeBuildTarget);
-                            IEnumerable<Type> subObjectTypes = AddressableAssetEntry.GatherSubObjectTypes(ids, e.guid);
+                            List<Type> mainObjectTypes = AddressableAssetEntry.GatherMainObjectTypes(ids);
 
-                            if (subObjectTypes.Any())
+                            if (mainObjectTypes.Count > 0)
                             {
-                                foreach (Type t in subObjectTypes)
+                                foreach (Type t in mainObjectTypes)
                                     GatherEntryLocations(e, t, locations, m_AddressableAssetTree);
                             }
                             else
@@ -240,7 +270,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     }
                 }
             }
-            
+
             if (type == null)
                 type = typeof(UnityEngine.Object);
 
@@ -288,29 +318,32 @@ namespace UnityEditor.AddressableAssets.Settings
                         slash = keyPath.LastIndexOf('/');
                     }
                 }
-                
+
                 //check resources folders
                 if (m_includeResourcesFolders)
                 {
-	                string resPath = keyStr;
-	                UnityEngine.Object obj = Resources.Load(resPath, type);
-	                if (obj == null && keyStr.Length == 32)
-	                {
-		                resPath = AssetDatabase.GUIDToAssetPath(keyStr);
-		                if (!string.IsNullOrEmpty(resPath))
-		                {
-			                int index = resPath.IndexOf("Resources/", StringComparison.Ordinal);
-			                if (index >= 0)
-			                {
-				                int start = index + 10;
-				                int length = resPath.Length - (start + System.IO.Path.GetExtension(resPath).Length);
-				                resPath = resPath.Substring(index + 10, length);
-				                obj = Resources.Load(resPath, type);
-			                }
-		                }
-	                }
-	                if (obj != null)
-		                locations.Add(new ResourceLocationBase(keyStr, resPath, typeof(LegacyResourcesProvider).FullName, type));
+                    string resPath = keyStr;
+                    var ext = System.IO.Path.GetExtension(resPath);
+                    if (!string.IsNullOrEmpty(ext))
+                        resPath = resPath.Substring(0, resPath.Length - ext.Length);
+                    UnityEngine.Object obj = Resources.Load(resPath, type);
+                    if (obj == null && keyStr.Length == 32)
+                    {
+                        resPath = AssetDatabase.GUIDToAssetPath(keyStr);
+                        if (!string.IsNullOrEmpty(resPath))
+                        {
+                            int index = resPath.IndexOf("Resources/", StringComparison.Ordinal);
+                            if (index >= 0)
+                            {
+                                int start = index + 10;
+                                int length = resPath.Length - (start + System.IO.Path.GetExtension(resPath).Length);
+                                resPath = resPath.Substring(index + 10, length);
+                                obj = Resources.Load(resPath, type);
+                            }
+                        }
+                    }
+                    if (obj != null)
+                        locations.Add(new ResourceLocationBase(keyStr, resPath, typeof(LegacyResourcesProvider).FullName, type));
                 }
             }
 
@@ -324,7 +357,7 @@ namespace UnityEditor.AddressableAssets.Settings
             m_Cache.Add(cacheKey, locations);
             return true;
         }
-        
+
         internal static void AddLocations(IList<IResourceLocation> locations, Type type, string keyStr, string internalId)
         {
             if (!string.IsNullOrEmpty(internalId) && !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(internalId)))

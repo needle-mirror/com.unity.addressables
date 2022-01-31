@@ -24,18 +24,21 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void CleanupEventCollector()
         {
+            var currentECCount = CountResourcesByName("EventCollector");
             EditorApplication.isPlaying = true;
             Assert.NotNull(DiagnosticEventCollectorSingleton.Instance);
             Assert.True(DiagnosticEventCollectorSingleton.Exists);
             EditorApplication.isPlaying = false;
 
             Assert.False(DiagnosticEventCollectorSingleton.Exists);
-            Assert.AreEqual(0, CountResourcesByName("EventCollector"));
+            Assert.AreEqual(currentECCount, CountResourcesByName("EventCollector"));
         }
 
         [Test]
         public void CleanupDelayedActionManager()
         {
+            var currentDAMCount = CountResourcesByName("DelayedActionManager");
+
             EditorApplication.isPlaying = true;
             DelayedActionManager.AddAction(new Action(() => {}));
             Assert.True(DelayedActionManager.Exists);
@@ -43,7 +46,7 @@ namespace UnityEditor.AddressableAssets.Tests
             EditorApplication.isPlaying = false;
             Assert.False(DelayedActionManager.Exists);
 
-            Assert.AreEqual(0, CountResourcesByName("DelayedActionManager"));
+            Assert.AreEqual(currentDAMCount, CountResourcesByName("DelayedActionManager"));
         }
     }
 }

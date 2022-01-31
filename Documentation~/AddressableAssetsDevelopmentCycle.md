@@ -25,7 +25,7 @@ The Addressables system provides the following additional tools to aid developme
 * [Event viewer]: provides a profile view that shows when your assets are loaded and released.  Use the Event viewer to verify that you are releasing assets and to monitor peak memory use.
 * [Hosting Service]: provides a simple asset server that you can use to host remote assets for local development.
 * [Build layout report]: provides a description of the AssetBundles produced by a build.
-* [Build profile log]: profides a log profiling the build process itself so that you can see which parts take the longest.
+* [Build profile log]: provides a log profiling the build process itself so that you can see which parts take the longest.
 
 ## Organizing Addressable Assets
 

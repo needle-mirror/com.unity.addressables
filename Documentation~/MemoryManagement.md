@@ -46,7 +46,7 @@ When you load an AssetBundle, Unity allocates memory to store the bundle's inter
 * [Table of contents]: Lists the assets in a bundle.
 * [Preload table]: Lists the dependencies of each asset.
 
-When you organize your Addressable groups and AssetBundles, you typically must make tradeoffs between the size and the number of AssetBundles you create and load. On the one hand, fewer, larger bundles can minimize the total memory usage of your AssetBundles. On the other hand, using a larger number of small bundles can minimize the peak memory usage because you can unload assets and AssetBundles more easily.  
+When you organize your Addressable groups and AssetBundles, you typically must make trade-offs between the size and the number of AssetBundles you create and load. On the one hand, fewer, larger bundles can minimize the total memory usage of your AssetBundles. On the other hand, using a larger number of small bundles can minimize the peak memory usage because you can unload assets and AssetBundles more easily.  
 
 While the size of an AssetBundle on disk is not the same as its size at runtime, you can use the disk size as an approximate guide to the memory overhead of the AssetBundles in a build. You can get bundle size and other information you can use to help analyze your AssetBundles from the [Build Layout Report].
 
@@ -63,7 +63,7 @@ All the TypeTrees are loaded when the AssetBundle is loaded and held in memory f
 You can reduce the memory requirements of AssetBundle TypeTrees in the following ways:
 
 * Keep assets of the same types together in the same bundles.  
-* Turn off TypeTrees -- turning off TypeTrees makes your AssetBundles smaller by excluding this information from a bundle. However, without TypeTree information, you may encounter serialization errors or undefined behaviour when loading older bundles with a newer version of Unity or after making even small script changes in your project. 
+* Turn off TypeTrees -- turning off TypeTrees makes your AssetBundles smaller by excluding this information from a bundle. However, without TypeTree information, you may encounter serialization errors or undefined behavior when loading older bundles with a newer version of Unity or after making even small script changes in your project. 
 *  Prefer simpler data types to reduce TypeTree complexity.
 
 You can test the impact that TypeTrees have on the size of your AssetBundles by building them with and without TypeTrees disabled and comparing the sizes. Use [BuildAssetBundleOptions.DisableWriteTypeTree] to disable TypeTrees in your AssetBundles. Note that not all platforms support TypeTrees and some platforms require TypeTrees (and ignore this setting).

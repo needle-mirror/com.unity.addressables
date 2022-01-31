@@ -67,7 +67,7 @@ To load an Addressable Asset, you can:
 
 See [Loading assets] for more detailed information about loading Addressable assets.
 
-Loading Addressable assets uses asynchronous operations. See [Operations] for information about the different ways to tackle asynchronous programing in Unity scripts.
+Loading Addressable assets uses asynchronous operations. See [Operations] for information about the different ways to tackle asynchronous programming in Unity scripts.
 
 > [!TIP]
 > You can find more involved examples of how to use Addressable assets in the [Addressables-Sample repo].

@@ -14,7 +14,11 @@ Outside of the Addressables system, Unity provides a few "traditional" ways to r
 * __AssetBundles__: Assets you package in AssetBundles and load with the AssetBundle API. See [Converting AssetBundles].
 * __StreamingAssets__: Files you place in the StreamingAssets folder. Unity includes any files in the StreamingAssets folder in your built player application as is. See [Files in StreamingAssets]
 
-## Converting Scenes
+## Converting to Addressables
+
+Content built using Addressables only reference other assets built in that Addressables build. Content that is used or referenced to that is included within both Addressables, and the Player build through the __Scene data__ and __Resource folders__ is duplicated on disk and in memory if they are both loaded. Due to this limitation the recommended best practice is to convert all __Scene data__ and __Resource folders__ to the Addressables build system. Reducing the memory overhead due to duplication and allowing all content to be managed using Addressables. Allowing for the content to be either local or remote as well as updatable through [Content Update] builds.
+
+### Converting Scenes
 
 The easiest way to integrate Addressables into a project is to move your Scenes out of the __[Build Settings]__ list and make those scenes Addressable. You do need to have one Scene in the list, which is the Scene Unity loads at application startup. You can make a new Scene for this that does nothing else than load your first Addressable Scene.
 
@@ -27,12 +31,12 @@ To convert your Scenes:
 5. Click on each Scene in the project list and check the Addressable option in its Inspector window. Alternatively, you can drag Scene assets to a group in the Addressables Groups window. (Don't make your new initialization Scene Addressable.)
 6. Update the code you use to load Scenes to use the [Addressables] class Scene loading methods rather than the SceneManager methods.
 
-At this point, you have included all the assets you have in your Scenes in an Addressable group and the Addressables system will package them in an AssetBundle when you build your Addressables content. If you only use one group for all your Scenes, the runtime loading and memory performance should be roughly equivalent to your project’s pre-Addressables state. 
+At this point, you have included all the assets you have in your Scenes in an Addressable group and the Addressables system packages them in an AssetBundle when you build your Addressables content. If you only use one group for all your Scenes, the runtime loading and memory performance should be roughly equivalent to your project’s pre-Addressables state. 
 
 You can now split your one, large Addressable Scene group into multiple groups. The best way to do that depends on the project goals. To proceed, you can move your Scenes into their own groups so that you can load and unload each of them independently of each other. As you do this, you can use the [Analyze tool] to check for duplicated assets that are shared between multiple Scenes. You can avoid duplicating an asset referenced from two different bundles by making the asset itself Addressable. It's often better to move shared assets to their own group as well to reduce interdependencies among your AssetBundles. 
 
 <a name="addressables-in-regular-scenes"></a>
-## Using Addressable assets in non-Addressable Scenes
+#### Using Addressable assets in non-Addressable Scenes
 
 For Scenes that you don't want to make Addressable, you can still use Addressable assets as part of the Scene data through [AssetReferences].
 
@@ -52,7 +56,7 @@ See [Asset References] for more information about using AssetReference fields.
 
 See [Loading Addressable assets] for more information about loading Addressable assets.
 
-## Converting Prefabs
+### Converting Prefabs
 
 To convert a Prefab into an Addressable asset, check the __Addressables__ option in its Inspector window or drag it to a group in the Addressables [Groups] window.
 
@@ -61,7 +65,7 @@ You don't always need to make Prefabs Addressable when used in an Addressable Sc
 > [!NOTE]
 > If you use a Prefab in a non-Addressable Scene, Unity copies the Prefab data into the built-in Scene data whether the Prefab is Addressable or not. You can identify assets duplicated between your Addressable asset groups and your non-Addressable Scene data using the __Check Scene to Addressable Duplicate Dependencies__ rule in the [Analyze tool]. 
 
-## Converting Resources folders
+### Converting Resources folders
 
 If your project loads assets in Resources folders, you can migrate those assets to the Addressables system:
 
@@ -86,7 +90,7 @@ You might have to implement some functionality of the [Resources] class differen
 
 For example, consider the [Resources.LoadAll] function. Previously, if you had assets in a folder Resources/MyPrefabs/, and ran Resources.LoadAll\<SampleType\>("MyPrefabs");, it would have loaded all the assets in Resources/MyPrefabs/ matching type `SampleType`. The Addressables system doesn't support this exact functionality, but you can achieve similar results using Addressable [labels].
 
-## Converting AssetBundles
+### Converting AssetBundles
 
 When you first open the __Addressables Groups__ window, Unity offers to convert all AssetBundles into Addressables groups. This is the easiest way to migrate your AssetBundle setup to the Addressables system. You must still update your runtime code to load and release assets using the [Addressables] API.
 
@@ -128,3 +132,4 @@ The Addressables system does place its runtime configuration files and local Ass
 [labels]: xref:addressables-labels
 [Using Addressable assets in non-Addressable Scenes]: #addressables-in-regular-scenes
 [UnityWebRequestAssetBundle]: xref:UnityEngine.Networking.UnityWebRequestAssetBundle
+[Content Update]: xref:addressables-content-update-builds

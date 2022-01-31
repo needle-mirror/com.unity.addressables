@@ -35,6 +35,8 @@ _The updated **Addressables Hosting** window after adding a service._
 
 The HTTP Hosting Service automatically assigns a port number when it starts. The service saves the port number and reuses it between Unity sessions. To choose a different port, either assign a specific port number in the **Port** field, or click the **Reset** button to assign a different, random port number.
 
+In Editor versions 2022.1 and above, HTTP downloads are disallowed by default.  In order for the default `HTTPHostingService` to work correctly, you need to set the **Allow downloads over HTTP** setting in **Edit** > **Project Settings...** > **Player** > **Other Settings** > **Allow downloads over HTTP** to something other than **Not allowed**.
+
 > [!WARNING]
 > If you reset the port number, you must execute a full application build to generate and embed the correct URL.
 
@@ -93,7 +95,7 @@ To create a new custom service:
 2. Drag the applicable script into its field, or select it from the object picker. The dialog validates that the selected script implements the [IHostingService] interface. 
 3. To finish adding the service, click the **Add** button. 
 
-Moving forward, your custom service will appear in the **Service Type** dropdown options.
+Moving forward, your custom service will appear in the **Service Type** drop-down options.
 
 ![Adding a custom Asset Hosting Service.](images/HostingServicesAddService_2.png)</br>
 _Adding a custom Asset Hosting Service._

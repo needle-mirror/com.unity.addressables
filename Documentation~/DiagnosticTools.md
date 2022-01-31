@@ -6,7 +6,7 @@ uid: addressables-diagnostic-tools
 
 The Addressables packages provides the following tools for analyzing your Addressables setup, performance, and build results:
 
-* [Analyze tool]\: provides a set of utilities and reports that you can use to find and fix asset duplication and to see how the system packs the assets in your groups into bundles. The reports and utilites include the following (you can also create your own analyze rule classes to produce additional reports): 
+* [Analyze tool]\: provides a set of utilities and reports that you can use to find and fix asset duplication and to see how the system packs the assets in your groups into bundles. The reports and utilities include the following (you can also create your own analyze rule classes to produce additional reports): 
   * Check Duplicate Bundle Dependencies
   * Check Resources to Addressable Duplicate Dependencies
   * Check Scene to Addressable Duplicate Dependencies

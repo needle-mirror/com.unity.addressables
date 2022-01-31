@@ -156,7 +156,7 @@ namespace UnityEngine.AddressableAssets
 
         static void SetAddressablesReInitFlagOnExitPlayMode(PlayModeStateChange change)
         {
-            if (change == PlayModeStateChange.EnteredEditMode)
+            if (change == PlayModeStateChange.EnteredEditMode || change == PlayModeStateChange.ExitingPlayMode)
                 reinitializeAddressables = true;
         }
 

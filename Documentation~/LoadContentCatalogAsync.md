@@ -8,7 +8,7 @@ By default, the Addressables system manages the catalog automatically at runtime
 
 You can load additional catalogs at runtime. For example, you could load a catalog produced by a separate, compatible project to load Addressable assets built by that project. (See [Loading Content from Multiple Projects].)
 
-If you want to change the default catalog update behavior of the Addressables stystem, you can turn off the automatic check and check for updates manually. See [Updating catalogs].
+If you want to change the default catalog update behavior of the Addressables system, you can turn off the automatic check and check for updates manually. See [Updating catalogs].
 
 ## Loading additional catalogs
 

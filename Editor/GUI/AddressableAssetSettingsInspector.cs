@@ -15,32 +15,28 @@ namespace UnityEditor.AddressableAssets.GUI
     {
         AddressableAssetSettings m_AasTarget;
 
-        [FormerlySerializedAs("m_profilesFoldout")]
-        [SerializeField]
-        bool m_ProfilesFoldout = true;
-        [SerializeField]
-        bool m_DiagnosticsFoldout = true;
-        [SerializeField]
-        bool m_CatalogFoldout = true;
-        [SerializeField]
-        bool m_ContentUpdateFoldout = true;
-        [SerializeField]
-        bool m_DownloadsFoldout = true;
-        [SerializeField]
-        bool m_BuildFoldout = true;
-        [FormerlySerializedAs("m_dataBuildersFoldout")]
-        [SerializeField]
-        bool m_DataBuildersFoldout = true;
-        [SerializeField]
-        bool m_GroupTemplateObjectsFoldout = true;
-        [FormerlySerializedAs("m_initObjectsFoldout")]
-        [SerializeField]
-        bool m_InitObjectsFoldout = true;
-
+        static FoldoutSessionStateValue ProfilesFoldout = new FoldoutSessionStateValue("Addressables.ProfilesFoldout");
+        GUIContent m_ProfilesHeader;
+        static FoldoutSessionStateValue DiagnosticsFoldout = new FoldoutSessionStateValue("Addressables.DiagnosticsFoldout");
+        GUIContent m_DiagnosticsHeader;
+        static FoldoutSessionStateValue CatalogFoldout = new FoldoutSessionStateValue("Addressables.CatalogFoldout");
+        GUIContent m_CatalogsHeader;
+        static FoldoutSessionStateValue ContentUpdateFoldout = new FoldoutSessionStateValue("Addressables.ContentUpdateFoldout");
+        GUIContent m_ContentUpdateHeader;
+        static FoldoutSessionStateValue DownloadsFoldout = new FoldoutSessionStateValue("Addressables.DownloadsFoldout");
+        GUIContent m_DownloadsHeader;
+        static FoldoutSessionStateValue BuildFoldout = new FoldoutSessionStateValue("Addressables.BuildFoldout");
+        GUIContent m_BuildHeader;
+        static FoldoutSessionStateValue DataBuildersFoldout = new FoldoutSessionStateValue("Addressables.DataBuildersFoldout");
+        GUIContent m_DataBuildersHeader;
+        static FoldoutSessionStateValue GroupTemplateObjectsFoldout = new FoldoutSessionStateValue("Addressables.GroupTemplateObjectsFoldout");
+        GUIContent m_GroupTemplateObjectsHeader;
+        static FoldoutSessionStateValue InitObjectsFoldout = new FoldoutSessionStateValue("Addressables.InitObjectsFoldout");
+        GUIContent m_InitObjectsHeader;
 #if UNITY_2019_4_OR_NEWER
-        [SerializeField]
-        bool m_CCDEnabledFoldout = true;
-#endif 
+        static FoldoutSessionStateValue CCDEnabledFoldout = new FoldoutSessionStateValue("Addressables.CCDEnabledFoldout");
+        GUIContent m_CCDEnabledHeader;
+#endif
 
         //Used for displaying path pairs
         bool m_UseCustomPaths = false;
@@ -94,6 +90,20 @@ namespace UnityEditor.AddressableAssets.GUI
             m_InitObjectsRl.headerHeight = 0;
             m_InitObjectsRl.onAddDropdownCallback = OnAddInitializationObject;
             m_InitObjectsRl.onRemoveCallback = OnRemoveInitializationObject;
+
+            m_ProfilesHeader = new GUIContent("Profiles", "Settings affect profiles.");
+            m_DiagnosticsHeader = new GUIContent("Diagnostics", "Settings affect profiles.");
+            m_CatalogsHeader = new GUIContent("Catalog", "Settings affect profiles.");
+            m_ContentUpdateHeader = new GUIContent("Content Update", "Settings affect profiles.");
+            m_DownloadsHeader = new GUIContent("Downloads", "Settings affect profiles.");
+            m_BuildHeader = new GUIContent("Build", "Settings affect profiles.");
+            
+            m_DataBuildersHeader = new GUIContent("Build and Play Mode Scripts", "Settings affect profiles.");
+            m_GroupTemplateObjectsHeader = new GUIContent("Asset Group Templates", "Settings affect profiles.");
+            m_InitObjectsHeader = new GUIContent("Initialization Objects", "Settings affect profiles.");
+#if UNITY_2019_4_OR_NEWER
+            m_CCDEnabledHeader = new GUIContent("Cloud Content Delivery", "Settings affect profiles.");
+#endif
         }
 
         GUIContent m_SendProfilerEvents =
@@ -158,12 +168,18 @@ namespace UnityEditor.AddressableAssets.GUI
         GUIContent m_BuildAddressablesWithPlayerBuild =
             new GUIContent("Build Addressables on Player Build", "Determines if a new Addressables build will be built with a Player Build.");
 #endif
+
+        public override bool RequiresConstantRepaint()
+        {
+            return true;
+        }
         
         public override void OnInspectorGUI()
         {
             m_QueuedChanges.Clear();
             serializedObject.UpdateIfRequiredOrScript(); // use updated values
             EditorGUI.BeginChangeCheck();
+            float postBlockContentSpace = 10;
 
             GUILayout.Space(8);
             if (GUILayout.Button("Manage Groups", "Minibutton", GUILayout.ExpandWidth(true)))
@@ -172,8 +188,12 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             GUILayout.Space(12);
-            m_ProfilesFoldout = EditorGUILayout.Foldout(m_ProfilesFoldout, "Profile");
-            if (m_ProfilesFoldout)
+            ProfilesFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(ProfilesFoldout.IsActive, m_ProfilesHeader, () =>
+            {
+                string url = AddressableAssetUtility.GenerateDocsURL("AddressableAssetSettings.html#profile");
+                Application.OpenURL(url);
+            });
+            if (ProfilesFoldout.IsActive)
             {
                 if (m_AasTarget.profileSettings.profiles.Count > 0)
                 {
@@ -207,22 +227,32 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     EditorGUILayout.LabelField("No valid profiles found");
                 }
+                GUILayout.Space(postBlockContentSpace);
             }
+            EditorGUI.EndFoldoutHeaderGroup();
 
-            GUILayout.Space(6);
-            m_DiagnosticsFoldout = EditorGUILayout.Foldout(m_DiagnosticsFoldout, "Diagnostics");
-            if (m_DiagnosticsFoldout)
+            DiagnosticsFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(DiagnosticsFoldout.IsActive, m_DiagnosticsHeader, () =>
+            {
+                string url = AddressableAssetUtility.GenerateDocsURL("AddressableAssetSettings.html#diagnostics");
+                Application.OpenURL(url);
+            });
+            if (DiagnosticsFoldout.IsActive)
             {
                 ProjectConfigData.PostProfilerEvents = EditorGUILayout.Toggle(m_SendProfilerEvents, ProjectConfigData.PostProfilerEvents);
                 bool logResourceManagerExceptions = EditorGUILayout.Toggle(m_LogRuntimeExceptions, m_AasTarget.buildSettings.LogResourceManagerExceptions);
 
                 if (logResourceManagerExceptions != m_AasTarget.buildSettings.LogResourceManagerExceptions)
                     m_QueuedChanges.Add(() => m_AasTarget.buildSettings.LogResourceManagerExceptions = logResourceManagerExceptions);
+                GUILayout.Space(postBlockContentSpace);
             }
+            EditorGUI.EndFoldoutHeaderGroup();
 
-            GUILayout.Space(6);
-            m_CatalogFoldout = EditorGUILayout.Foldout(m_CatalogFoldout, "Catalog");
-            if (m_CatalogFoldout)
+            CatalogFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(CatalogFoldout.IsActive, m_CatalogsHeader, () =>
+            {
+                string url = AddressableAssetUtility.GenerateDocsURL("AddressableAssetSettings.html#catalog");
+                Application.OpenURL(url);
+            });
+            if (CatalogFoldout.IsActive)
             {
                 string overridePlayerVersion = EditorGUILayout.TextField(m_OverridePlayerVersion, m_AasTarget.OverridePlayerVersion);
                 if (overridePlayerVersion != m_AasTarget.OverridePlayerVersion)
@@ -235,11 +265,16 @@ namespace UnityEditor.AddressableAssets.GUI
                 bool optimizeCatalogSize = EditorGUILayout.Toggle(m_OptimizeCatalogSize, m_AasTarget.OptimizeCatalogSize);
                 if (optimizeCatalogSize != m_AasTarget.OptimizeCatalogSize)
                     m_QueuedChanges.Add(() => m_AasTarget.OptimizeCatalogSize = optimizeCatalogSize);
+                GUILayout.Space(postBlockContentSpace);
             }
+            EditorGUI.EndFoldoutHeaderGroup();
 
-            GUILayout.Space(6);
-            m_ContentUpdateFoldout = EditorGUILayout.Foldout(m_ContentUpdateFoldout, "Content Update");
-            if (m_ContentUpdateFoldout)
+            ContentUpdateFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(ContentUpdateFoldout.IsActive, m_ContentUpdateHeader, () =>
+            {
+                string url = AddressableAssetUtility.GenerateDocsURL("AddressableAssetSettings.html#content-update");
+                Application.OpenURL(url);
+            });
+            if (ContentUpdateFoldout.IsActive)
             {
                 bool disableCatalogOnStartup = EditorGUILayout.Toggle(m_CheckForCatalogUpdateOnInit, m_AasTarget.DisableCatalogUpdateOnStartup);
                 if (disableCatalogOnStartup != m_AasTarget.DisableCatalogUpdateOnStartup)
@@ -257,11 +292,16 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     DrawRemoteCatalogPaths();
                 }
+                GUILayout.Space(postBlockContentSpace);
             }
+            EditorGUI.EndFoldoutHeaderGroup();
 
-            GUILayout.Space(6);
-            m_DownloadsFoldout = EditorGUILayout.Foldout(m_DownloadsFoldout, "Downloads");
-            if (m_DownloadsFoldout)
+            DownloadsFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(DownloadsFoldout.IsActive, m_DownloadsHeader, () =>
+            {
+                string url = AddressableAssetUtility.GenerateDocsURL("AddressableAssetSettings.html#downloads");
+                Application.OpenURL(url);
+            });
+            if (DownloadsFoldout.IsActive)
             {
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("m_CertificateHandlerType"), m_CertificateHandlerType);
 
@@ -272,11 +312,16 @@ namespace UnityEditor.AddressableAssets.GUI
                 var catalogTimeouts = EditorGUILayout.IntField(m_CatalogTimeout, m_AasTarget.CatalogRequestsTimeout);
                 if (catalogTimeouts != m_AasTarget.CatalogRequestsTimeout)
                     m_QueuedChanges.Add(() => m_AasTarget.CatalogRequestsTimeout = catalogTimeouts);
+                GUILayout.Space(postBlockContentSpace);
             }
+            EditorGUI.EndFoldoutHeaderGroup();
 
-            GUILayout.Space(6);
-            m_BuildFoldout = EditorGUILayout.Foldout(m_BuildFoldout, "Build");
-            if (m_BuildFoldout)
+            BuildFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(BuildFoldout.IsActive, m_BuildHeader, () =>
+            {
+                string url = AddressableAssetUtility.GenerateDocsURL("AddressableAssetSettings.html#build");
+                Application.OpenURL(url);
+            });
+            if (BuildFoldout.IsActive)
             {
 #if UNITY_2021_2_OR_NEWER
                 int index = (int) m_AasTarget.BuildAddressablesWithPlayerBuild;
@@ -349,27 +394,53 @@ namespace UnityEditor.AddressableAssets.GUI
                 bool disableVisibleSubAssetRepresentations = EditorGUILayout.Toggle(m_DisableVisibleSubAssetRepresentations, m_AasTarget.DisableVisibleSubAssetRepresentations);
                 if (disableVisibleSubAssetRepresentations != m_AasTarget.DisableVisibleSubAssetRepresentations)
                     m_QueuedChanges.Add(() => m_AasTarget.DisableVisibleSubAssetRepresentations = disableVisibleSubAssetRepresentations);
+                GUILayout.Space(postBlockContentSpace);
             }
+            EditorGUI.EndFoldoutHeaderGroup();
 
-            GUILayout.Space(6);
-            m_DataBuildersFoldout = EditorGUILayout.Foldout(m_DataBuildersFoldout, "Build and Play Mode Scripts");
-            if (m_DataBuildersFoldout)
+            DataBuildersFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(DataBuildersFoldout.IsActive, m_DataBuildersHeader, () =>
+            {
+                string url = AddressableAssetUtility.GenerateDocsURL("AddressableAssetSettings.html#build-and-play-mode-scripts");
+                Application.OpenURL(url);
+            });
+            if (DataBuildersFoldout.IsActive)
+            {
                 m_DataBuildersRl.DoLayoutList();
+                GUILayout.Space(postBlockContentSpace);
+            }
+            EditorGUI.EndFoldoutHeaderGroup();
 
-            GUILayout.Space(6);
-            m_GroupTemplateObjectsFoldout = EditorGUILayout.Foldout(m_GroupTemplateObjectsFoldout, "Asset Group Templates");
-            if (m_GroupTemplateObjectsFoldout)
+            GroupTemplateObjectsFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(GroupTemplateObjectsFoldout.IsActive, m_GroupTemplateObjectsHeader, () =>
+            {
+                string url = AddressableAssetUtility.GenerateDocsURL("AddressableAssetSettings.html#asset-group-templates");
+                Application.OpenURL(url);
+            });
+            if (GroupTemplateObjectsFoldout.IsActive)
+            {
                 m_GroupTemplateObjectsRl.DoLayoutList();
+                GUILayout.Space(postBlockContentSpace);
+            }
+            EditorGUI.EndFoldoutHeaderGroup();
 
-            GUILayout.Space(6);
-            m_InitObjectsFoldout = EditorGUILayout.Foldout(m_InitObjectsFoldout, "Initialization Objects");
-            if (m_InitObjectsFoldout)
+            InitObjectsFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(InitObjectsFoldout.IsActive, m_InitObjectsHeader, () =>
+            {
+                string url = AddressableAssetUtility.GenerateDocsURL("AddressableAssetSettings.html#initialization-object-list");
+                Application.OpenURL(url);
+            });
+            if (InitObjectsFoldout.IsActive)
+            {
                 m_InitObjectsRl.DoLayoutList();
+                GUILayout.Space(postBlockContentSpace);
+            }
+            EditorGUI.EndFoldoutHeaderGroup();
 
 #if UNITY_2019_4_OR_NEWER
-            GUILayout.Space(6);
-            m_CCDEnabledFoldout = EditorGUILayout.Foldout(m_CCDEnabledFoldout, "Cloud Content Delivery");
-            if (m_CCDEnabledFoldout)
+            CCDEnabledFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(CCDEnabledFoldout.IsActive, m_CCDEnabledHeader,() =>
+            {
+                string url = AddressableAssetUtility.GenerateDocsURL("AddressablesCCD.html");
+                Application.OpenURL(url);
+            });
+            if (CCDEnabledFoldout.IsActive)
             {
                 var toggle = EditorGUILayout.Toggle(m_CCDEnabled, m_AasTarget.CCDEnabled);
                 if (toggle != m_AasTarget.CCDEnabled)
@@ -384,7 +455,9 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                     m_QueuedChanges.Add(() => m_AasTarget.CCDEnabled = toggle);
                 }
+                GUILayout.Space(postBlockContentSpace);
             }
+            EditorGUI.EndFoldoutHeaderGroup();
 #endif
 
             if (EditorGUI.EndChangeCheck() || m_QueuedChanges.Count > 0)
@@ -500,7 +573,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 return;
             }
             
-            string relativePath = assetPath.Remove(0, Application.dataPath.Length-7);
+            string relativePath = assetPath.Remove(0, Application.dataPath.Length-6);
             var templateObj = AssetDatabase.LoadAssetAtPath<ScriptableObject>(relativePath);
             if (templateObj == null)
             {

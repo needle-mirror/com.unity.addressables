@@ -51,7 +51,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             //if the Library folder has been deleted, this will be null and it will have to be set on the first access of the settings object
             if (AddressableAssetSettingsDefaultObject.Settings != null)
-                AddressablesAssetPostProcessor.OnPostProcess = AddressableAssetSettingsDefaultObject.Settings.OnPostprocessAllAssets;
+                AddressablesAssetPostProcessor.OnPostProcess.Register(AddressableAssetSettingsDefaultObject.Settings.OnPostprocessAllAssets, 0);
             else
                 EditorApplication.update += TryAddAssetPostprocessorOnNextUpdate;
         }
@@ -59,7 +59,7 @@ namespace UnityEditor.AddressableAssets.Settings
         private static void TryAddAssetPostprocessorOnNextUpdate()
         {
             if (AddressableAssetSettingsDefaultObject.Settings != null)
-                AddressablesAssetPostProcessor.OnPostProcess = AddressableAssetSettingsDefaultObject.Settings.OnPostprocessAllAssets;
+                AddressablesAssetPostProcessor.OnPostProcess.Register(AddressableAssetSettingsDefaultObject.Settings.OnPostprocessAllAssets, 0);
             EditorApplication.update -= TryAddAssetPostprocessorOnNextUpdate;
         }
 

@@ -23,7 +23,7 @@ See [Unity Cloud Content Delivery] for more information about CCD.
 ## Configure profile with CCD URL
 
 > [!TIP]
-> The `BuildPath` and `LoadPath` variables stored in [Profiles] specify where the Addressables system creates your build artifacts and where it looks for your assets at runtime. Configure the remote paths to work with CCD. (Leave the local paths with their standard, default values, unless you have a specifc reason to change them.)
+> The `BuildPath` and `LoadPath` variables stored in [Profiles] specify where the Addressables system creates your build artifacts and where it looks for your assets at runtime. Configure the remote paths to work with CCD. (Leave the local paths with their standard, default values, unless you have a specific reason to change them.)
 
 If necessary, create a new profile for publishing builds to CCD on the [Profiles] window. Configure the remote path variables in this profile to access your content at the correct URL.
 
@@ -121,7 +121,7 @@ To generate, upload, and release Addressable content to your CCD project:
 2. Use the __Build & Release__ option.
 
 The CCD Management package will use the default build script behavior to generate the Addressable bundles.
-Then, all groups associated with a path pair that is connected to a CCD bucket and badge via the dropdown window will have their generated bundles uploaded by the management package to those remote target.
+Then, all groups associated with a path pair that is connected to a CCD bucket and badge via the drop-down window will have their generated bundles uploaded by the management package to those remote target.
 Finally, the management package will a create release for those remote target and update their badge.
 
 <br/>![](images/addr_ccd_build_and_release.png)<br/>*Build & Release option*

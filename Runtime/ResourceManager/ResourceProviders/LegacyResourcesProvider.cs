@@ -15,7 +15,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     {
         internal class InternalOp
         {
-            AsyncOperation m_RequestOperation;
+            ResourceRequest m_RequestOperation;
             ProvideHandle m_ProvideHandle;
 
             public void Start(ProvideHandle provideHandle)
@@ -23,8 +23,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_ProvideHandle = provideHandle;
 
                 provideHandle.SetProgressCallback(PercentComplete);
+                provideHandle.SetWaitForCompletionCallback(WaitForCompletionHandler);
                 m_RequestOperation = Resources.LoadAsync(m_ProvideHandle.ResourceManager.TransformInternalId(m_ProvideHandle.Location), m_ProvideHandle.Type);
                 m_RequestOperation.completed += AsyncOperationCompleted;
+            }
+
+            private bool WaitForCompletionHandler()
+            {
+                return m_RequestOperation != null && m_RequestOperation.isDone;
             }
 
             private void AsyncOperationCompleted(AsyncOperation op)

@@ -1,14 +1,20 @@
+#if UNITY_2022_1_OR_NEWER
+#define UNLOAD_BUNDLE_ASYNC
+#endif
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.Exceptions;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
+
 
 namespace UnityEngine.ResourceManagement.ResourceProviders
 {
@@ -184,6 +190,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         long m_BytesToDownload;
         long m_DownloadedBytes;
         bool m_Completed = false;
+#if UNLOAD_BUNDLE_ASYNC
+        AssetBundleUnloadOperation m_UnloadOperation;
+#endif
         const int k_WaitForWebRequestMainThreadSleep = 1;
         string m_TransformedInternalId;
         AssetBundleRequest m_PreloadRequest;
@@ -313,8 +322,19 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
             return m_AssetBundle;
         }
+#if UNLOAD_BUNDLE_ASYNC
+        void OnUnloadOperationComplete(AsyncOperation op)
+        {
+            m_UnloadOperation = null;
+            BeginOperation();
+        }
+#endif
 
+#if UNLOAD_BUNDLE_ASYNC
+        internal void Start(ProvideHandle provideHandle, AssetBundleUnloadOperation unloadOp)
+#else
         internal void Start(ProvideHandle provideHandle)
+#endif
         {
             m_Retries = 0;
             m_AssetBundle = null;
@@ -327,11 +347,27 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             m_ProvideHandle.SetProgressCallback(PercentComplete);
             m_ProvideHandle.SetDownloadProgressCallbacks(GetDownloadStatus);
             m_ProvideHandle.SetWaitForCompletionCallback(WaitForCompletionHandler);
-            BeginOperation();
+#if UNLOAD_BUNDLE_ASYNC
+            m_UnloadOperation = unloadOp;
+            if (m_UnloadOperation != null && !m_UnloadOperation.isDone)
+                m_UnloadOperation.completed += OnUnloadOperationComplete;
+            else
+#endif
+                BeginOperation();
         }
 
         private bool WaitForCompletionHandler()
         {
+#if UNLOAD_BUNDLE_ASYNC
+            if (m_UnloadOperation != null && !m_UnloadOperation.isDone)
+            {
+                m_UnloadOperation.completed -= OnUnloadOperationComplete;
+                m_UnloadOperation.WaitForCompletion();
+                m_UnloadOperation = null;
+                BeginOperation();
+            }
+#endif
+
             if (m_RequestOperation == null)
             {
                 if (m_WebRequestQueueOperation == null)
@@ -346,13 +382,13 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 while (!UnityWebRequestUtilities.IsAssetBundleDownloaded(op))
                     System.Threading.Thread.Sleep(k_WaitForWebRequestMainThreadSleep);
             }
-
+            
             if (m_RequestOperation is UnityWebRequestAsyncOperation && !m_WebRequestCompletedCallbackCalled)
             {
                 WebRequestOperationCompleted(m_RequestOperation);
                 m_RequestOperation.completed -= WebRequestOperationCompleted;
             }
-
+            
             var assetBundle = GetAssetBundle();
             if (!m_Completed && m_RequestOperation.isDone)
             {
@@ -569,19 +605,35 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <summary>
         /// Unloads all resources associated with this asset bundle.
         /// </summary>
+#if UNLOAD_BUNDLE_ASYNC
+        public bool Unload(out AssetBundleUnloadOperation unloadOp)
+#else
         public void Unload()
+#endif
         {
+#if UNLOAD_BUNDLE_ASYNC
+            unloadOp = null;
+            if (m_AssetBundle != null)
+            {
+                unloadOp = m_AssetBundle.UnloadAsync(true);
+                m_AssetBundle = null;
+            }
+#else
             if (m_AssetBundle != null)
             {
                 m_AssetBundle.Unload(true);
                 m_AssetBundle = null;
             }
+#endif
             if (m_downloadHandler != null)
             {
                 m_downloadHandler.Dispose();
                 m_downloadHandler = null;
             }
             m_RequestOperation = null;
+#if UNLOAD_BUNDLE_ASYNC
+            return unloadOp != null;
+#endif
         }
     }
 
@@ -591,10 +643,37 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     [DisplayName("AssetBundle Provider")]
     public class AssetBundleProvider : ResourceProviderBase
     {
+#if UNLOAD_BUNDLE_ASYNC
+        static Dictionary<string, AssetBundleUnloadOperation> m_UnloadingBundles = new Dictionary<string, AssetBundleUnloadOperation>();
+        internal static int UnloadingAssetBundleCount => m_UnloadingBundles.Count;
+        internal static int AssetBundleCount => AssetBundle.GetAllLoadedAssetBundles().Count() - UnloadingAssetBundleCount;
+        internal static void WaitForAllUnloadingBundlesToComplete()
+        {
+            if (UnloadingAssetBundleCount > 0)
+            {
+                var bundles = m_UnloadingBundles.Values.ToArray();
+                foreach(var b in bundles)
+                    b.WaitForCompletion();
+            }
+        }
+#else
+        internal static void WaitForAllUnloadingBundlesToComplete() { }
+#endif
+
         /// <inheritdoc/>
         public override void Provide(ProvideHandle providerInterface)
         {
+#if UNLOAD_BUNDLE_ASYNC
+            if (m_UnloadingBundles.TryGetValue(providerInterface.Location.InternalId, out var unloadOp))
+            {
+                if (unloadOp.isDone)
+                    unloadOp = null;
+            }
+            new AssetBundleResource().Start(providerInterface, unloadOp);
+#else
             new AssetBundleResource().Start(providerInterface);
+#endif
+
         }
 
         /// <inheritdoc/>
@@ -620,7 +699,15 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             var bundle = asset as AssetBundleResource;
             if (bundle != null)
             {
+#if UNLOAD_BUNDLE_ASYNC
+                if (bundle.Unload(out var unloadOp))
+                {
+                    m_UnloadingBundles.Add(location.InternalId, unloadOp);
+                    unloadOp.completed += op => m_UnloadingBundles.Remove(location.InternalId);
+                }
+#else
                 bundle.Unload();
+#endif
                 return;
             }
         }

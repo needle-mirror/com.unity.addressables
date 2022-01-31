@@ -1875,7 +1875,7 @@ namespace AddressableAssetsIntegrationTests
         // TODO: this doesn't actually check that something was downloaded. It is more: can load dependencies.
         // We really need to address the downloading feature
         [UnityTest]
-        public IEnumerator DownloadDependnecies_CanDownloadDependencies()
+        public IEnumerator DownloadDependencies_CanDownloadDependencies()
         {
             yield return Init();
             string label = AddressablesTestUtility.GetPrefabLabel("BASE");
@@ -1885,7 +1885,7 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
-        public IEnumerator DownloadDependnecies_AutoReleaseHandle_ReleasesOnCompletion()
+        public IEnumerator DownloadDependencies_AutoReleaseHandle_ReleasesOnCompletion()
         {
             yield return Init();
             string label = AddressablesTestUtility.GetPrefabLabel("BASE");
@@ -1895,7 +1895,7 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
-        public IEnumerator DownloadDependneciesWithAddress_AutoReleaseHandle_ReleasesOnCompletion()
+        public IEnumerator DownloadDependenciesWithAddress_AutoReleaseHandle_ReleasesOnCompletion()
         {
             yield return Init();
             AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(m_PrefabKeysList[0], true);
@@ -1904,13 +1904,14 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
-        public IEnumerator DownloadDependnecies_DoesNotRetainLoadedBundles_WithAutoRelease()
+        public IEnumerator DownloadDependencies_DoesNotRetainLoadedBundles_WithAutoRelease()
         {
             yield return Init();
             int bundleCountBefore = AssetBundle.GetAllLoadedAssetBundles().Count();
             string label = AddressablesTestUtility.GetPrefabLabel("BASE");
             AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(label, true);
             yield return op;
+            AssetBundleProvider.WaitForAllUnloadingBundlesToComplete();
             Assert.AreEqual(bundleCountBefore, AssetBundle.GetAllLoadedAssetBundles().Count());
         }
 

@@ -41,7 +41,7 @@ See [Profiles] for more information about profiles.
 ![](images/addr_settings_diagnostics.png)<br/>*Diagnostics settings*
 
 | Property| Function |
-|:---|:---| 
+|:---|:---|
 | __Send Profiler Events__| Enables profiler events. You must enable this setting to use the Addressables [Event Viewer] window. |
 | __Log Runtime Exceptions__| Logs runtime exceptions for asset loading operations (in addition to recording the error to the [AsyncOperationHandle.OperationException] property). |
 
@@ -55,7 +55,7 @@ See [Profiles] for more information about profiles.
 Settings related to the Addressables Catalog, which maps the address of an asset to its physical location.
 
 | Property| Function |
-|:---|:---| 
+|:---|:---|
 | __Player Version Override__| Overrides the timestamp used to formulate the remote catalog name. If set, the remote catalog is named, `Catalog_<Player Version Override>.json`. If left blank, then the timestamp is used. Note that when you use a unique remote catalog name for every new build, you can host multiple versions of your content at the same base URL. If you use the same override string for every build, then all players will load the new catalog. Note also that player update builds always use the same remote catalog name as the build they are updating (see [Content update builds]). |
 | __Compress Local Catalog__| Builds the catalog in a compressed AssetBundle file.<br/>Reduces the storage size of the catalog, but increases the time to build and to load the catalog. |
 | _Optimize Catalog Size_| Reduces the size of the catalog by creating a lookup table for internal IDs. Can increase the time required to load the catalog. |
@@ -67,7 +67,7 @@ Settings related to the Addressables Catalog, which maps the address of an asset
 Settings that control remote content builds and updates.
 
 | Property| Function |
-|:---|:---| 
+|:---|:---|
 | __Disable Catalog Update on Startup__| Disables the automatic check for an updated remote catalog when the Addressables system initializes at runtime. You can manually [check for an updated catalog]. |
 | __Content State Build Path__|Where to build the content state file produced by the default build script.|
 | __Build Remote Catalog__| Enable to build a remote catalog. |
@@ -82,7 +82,7 @@ Settings that control remote content builds and updates.
 Settings that affect catalog and AssetBundle download handling.
 
 | Property| Function |
-|:---|:---| 
+|:---|:---|
 | __Custom certificate handler__| The class to use for custom certificate handling. The list contains all classes in the project that extend [UnityEngine.Networking.CertificateHandler]. |
 | __Max Concurrent Web Requests__| The system queues any requests beyond this limit. |
 | __Catalog Download Timeout__ | How many seconds to wait for a catalog file to download. |
@@ -94,16 +94,16 @@ Settings that affect catalog and AssetBundle download handling.
 Settings that affect all builds.
 
 | Property| Function |
-|:---|:---| 
+|:---|:---|
 | **Build Addressables on Player Build** | Whether Unity builds Addressables content as part of your Player build.<br/>&#8226; __Build Addressables content on Player Build__: Always build Addressables content when building the Player.<br/>&#8226; __Do not Build Addressables content on Player Build__: Never build Addressables content when building the Player. (If you modify Addressables content, you must rebuild it manually before building the Player.)<br/>&#8226; __Use global Settings (stored in preferences)__: Use the value specified in the [Unity Editor Preferences] \(under __Addressables__).<br/><br/>The first two options override the global Preference for the current Project and affect all contributors who build the Project. Otherwise, the global, Preferences value applies to all Unity projects. See [Building content] for more information. |
 | __Ignore Invalid/Unsupported Files in Build__| If enabled, the Addressables build script excludes invalid or unsupported files rather than aborting the build. |
 | __Unique Bundle IDs__| Whether to produce a unique name for a bundle in every build. See [Unique Bundle IDs] for more information. |
 | __Contiguous Bundles__| Produces a more efficient bundle layout. If you have bundles produced by Addressables 1.12.1 or earlier, disable this option to minimize bundle changes. |
-| __Non-Recursive Dependency Calculation__ | Calculate dependencies without recursion. |
+| __Non-Recursive Dependency Calculation__ | Enable this option to improve build times and reduce runtime memory overhead when assets have circular dependencies. Examples:<br/>&#8226; A prefab assigned to Bundle A references a material assigned to Bundle B. If this option is disabled, Unity needs to calculate the material's dependencies twice, once for each bundle. If this option is enabled, Unity only needs to calculate the material's dependencies once, for Bundle B.<br/>&#8226; Many scenes reference the same material. If this option is disabled, Unity opens each scene to calculate shader usage, which is a costly operation. If this option is enabled, Unity only loads the material and doesn't need to open any scenes for dependency calculation.<br/><br/>This option is enabled by default when using Unity version 2021.2 or later. Disabling this option invalidates previously built bundles because the rebuilt bundles will have a different build layout. Therefore this option should remain enabled unless builds have been shipped.<br/><br/>Some circular dependencies can fail to load when the option is enabled because the referenced asset is always assigned to the same bundle location, even when more content is added to the build. This issue often occurs for Monoscripts. Building the MonoScript bundle (see **MonoScript Bundle Naming Prefix**) can help resolve these load failures. |
 | __Shader Bundle Naming Prefix__ | How to name the bundle produced for Unity shaders. |
-| __MonoScript Bundle Naming Prefix__ | How to name the bundle containing MonoScripts. |
+| __MonoScript Bundle Naming Prefix__ | How to name the bundle containing all MonoScripts. The bundle ensures that Unity loads all Monoscripts before any MonoBehaviors can reference them. It also decreases the number of duplicated or complex Monoscript dependencies and so, reduces runtime memory overhead. |
 | __Strip Unity Version From AssetBundles__ | Whether to remove the Unity version from the bundle header. |
-| __Disable Visible Sub Asset Representations__ | Enable this option to improve build times if you do not use subobjects directly (Sprites, submeshes, etc). |
+| __Disable Visible Sub Asset Representations__ | Enable this option to improve build times if you do not use subobjects directly (Sprites, sub-meshes, etc). |
 
 ## Build and Play Mode Scripts
 

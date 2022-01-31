@@ -86,7 +86,7 @@ To create a path pair, select __Create__ > __Build Load Path Variables__. At the
 
 ![](images/addr_profiles_pair_prompt.png) <br/>*A new path pair*
 
-The new path pair uses the __Custom__ __Bundle Location__ setting with your inital values. You can change to a different __Bundle Location__ if needed.
+The new path pair uses the __Custom__ __Bundle Location__ setting with your initial values. You can change to a different __Bundle Location__ if needed.
 
 > [!TIP]
 > You can "convert" two regular variables for the build and load paths into a path pair by renaming them in the Profile window. Set one to `VariableName.BuildPath` and the other to `VariableName.LoadPath`.
@@ -109,7 +109,7 @@ If you distribute content remotely, you must modify the the remote load path to 
 
 ## Profile variable syntax
 
-All variables are of type "string". You can type in a fixed path or value. You can also use two syntax designators to derive the all or part of a variable's value from static properties or other variables:
+All variables are of type "string". You can type in a fixed path or value. You can also use two syntax designations to derive the all or part of a variable's value from static properties or other variables:
 
 * __Square brackets [ ]__:  Addressables evaluates entries surrounded by square brackets at build time. The entries can be other profile variables (such as [BuildTarget]) or code variables (such as [UnityEditor.EditorUserBuildSettings.activeBuildTarget]). During a build, as it process your groups, Addressables evaluates the strings inside square brackets and writes the result into the catalog.
 * __Curly brackets { }__: Addressables evaluates entries surrounded by curly brackets at runtime. You can use code variables of runtime classes (such as {UnityEngine.AddressableAssets.Addressables.RuntimePath}).

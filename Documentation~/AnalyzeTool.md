@@ -47,14 +47,14 @@ Also note that duplicate assets may not always be an issue. If assets will never
 #### Check Resources to Addressable Duplicate Dependencies
 This rule detects if any assets or asset dependencies are duplicated between built Addressable data and assets residing in a `Resources` folder. 
 
-**Issues**: These duplications mean that data will be included in both the application build and the Addressables build.
+**Issues**: These duplicates mean that data will be included in both the application build and the Addressables build.
 
 **Resolution**: This rule is unfixable, because no appropriate action exists. It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any. One example of a possible manual fix is to move the offending asset(s) out of the `Resources` folder, and make them Addressable.
 
 #### Check Scene to Addressable Duplicate Dependencies
 This rule detects any assets or asset dependencies that are shared between the Scenes in the Editor Scene list and Addressables. 
 
-**Issues**: These duplications mean that data will be included in both the application build and the Addressables build.
+**Issues**: These duplicates mean that data will be included in both the application build and the Addressables build.
 
 **Resolution**: It is purely informational, alerting you to the redundancy. You must decide how to proceed and what action to take, if any. One example of a possible manual fix is to pull the built-in Scene(s) with duplicated references out of Build Settings and make it an Addressable Scene.
 

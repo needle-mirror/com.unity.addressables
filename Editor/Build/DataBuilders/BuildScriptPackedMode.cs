@@ -267,128 +267,159 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     {
                         if (aaContext.assetGroupToBundles.TryGetValue(assetGroup, out List<string> buildBundles))
                         {
-                            List<string> outputBundles = new List<string>();
-                            for (int i = 0; i < buildBundles.Count; ++i)
+                            using (m_Log.ScopedStep(LogLevel.Info, assetGroup.name))
                             {
-                                var b = m_AllBundleInputDefs.FindIndex(inputDef =>
-                                    buildBundles[i].StartsWith(inputDef.assetBundleName));
-                                outputBundles.Add(b >= 0 ? m_OutputAssetBundleNames[b] : buildBundles[i]);
-                            }
+                                List<string> outputBundles = new List<string>();
+                                for (int i = 0; i < buildBundles.Count; ++i)
+                                {
+                                    var b = m_AllBundleInputDefs.FindIndex(inputDef =>
+                                        buildBundles[i].StartsWith(inputDef.assetBundleName));
+                                    outputBundles.Add(b >= 0 ? m_OutputAssetBundleNames[b] : buildBundles[i]);
+                                }
 
-                            PostProcessBundles(assetGroup, buildBundles, outputBundles, results, aaContext.runtimeData, aaContext.locations, builderInput.Registry, primaryKeyToCatalogEntry, bundleRenameMap, postCatalogUpdateCallbacks);
+                                PostProcessBundles(assetGroup, buildBundles, outputBundles, results,
+                                    aaContext.runtimeData, aaContext.locations, builderInput.Registry,
+                                    primaryKeyToCatalogEntry, bundleRenameMap, postCatalogUpdateCallbacks);
+                            }
                         }
                     }
                 }
 
-                ProcessCatalogEntriesForBuild(aaContext, m_Log, groups, builderInput, extractData.WriteData, carryOverCachedState, m_BundleToInternalId);
-                foreach (var postUpdateCatalogCallback in postCatalogUpdateCallbacks)
-                    postUpdateCatalogCallback.Invoke();
-
-                foreach (var r in results.WriteResults)
+                using (m_Log.ScopedStep(LogLevel.Info, "Process Catalog Entries"))
                 {
-                    var resultValue = r.Value;
-                    m_Linker.AddTypes(resultValue.includedTypes);
+                    ProcessCatalogEntriesForBuild(aaContext, groups, builderInput, extractData.WriteData,
+                        carryOverCachedState, m_BundleToInternalId);
+                    foreach (var postUpdateCatalogCallback in postCatalogUpdateCallbacks)
+                        postUpdateCatalogCallback.Invoke();
+
+                    foreach (var r in results.WriteResults)
+                    {
+                        var resultValue = r.Value;
+                        m_Linker.AddTypes(resultValue.includedTypes);
 #if UNITY_2021_1_OR_NEWER
-                    m_Linker.AddSerializedClass(resultValue.includedSerializeReferenceFQN);
+                        m_Linker.AddSerializedClass(resultValue.includedSerializeReferenceFQN);
 #else
                     if (resultValue.GetType().GetProperty("includedSerializeReferenceFQN") != null)
                         m_Linker.AddSerializedClass(resultValue.GetType().GetProperty("includedSerializeReferenceFQN").GetValue(resultValue) as System.Collections.Generic.IEnumerable<string>);
 #endif
+                    }
                 }
 
-
-                if (ProjectConfigData.GenerateBuildLayout)
+                using (m_Log.ScopedStep(LogLevel.Info, "Generate Build Layout"))
                 {
-                    using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+                    if (ProjectConfigData.GenerateBuildLayout)
                     {
-                        progressTracker.UpdateTask("Generating Build Layout");
-                        List<IBuildTask> tasks = new List<IBuildTask>();
-                        var buildLayoutTask = new BuildLayoutGenerationTask();
-                        buildLayoutTask.m_BundleNameRemap = bundleRenameMap;
-                        tasks.Add(buildLayoutTask);
-                        BuildTasksRunner.Run(tasks, extractData.m_BuildContext);
+                        using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+                        {
+                            progressTracker.UpdateTask("Generating Build Layout");
+                            List<IBuildTask> tasks = new List<IBuildTask>();
+                            var buildLayoutTask = new BuildLayoutGenerationTask();
+                            buildLayoutTask.m_BundleNameRemap = bundleRenameMap;
+                            tasks.Add(buildLayoutTask);
+                            BuildTasksRunner.Run(tasks, extractData.m_BuildContext);
+                        }
                     }
                 }
             }
 
-            var contentCatalog = new ContentCatalogData(ResourceManagerRuntimeData.kCatalogAddress);
-            contentCatalog.SetData(aaContext.locations.OrderBy(f => f.InternalId).ToList(), aaContext.Settings.OptimizeCatalogSize);
-
-            contentCatalog.ResourceProviderData.AddRange(m_ResourceProviderData);
-            foreach (var t in aaContext.providerTypes)
-                contentCatalog.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(t));
-
-            contentCatalog.InstanceProviderData = ObjectInitializationData.CreateSerializedInitializationData(instanceProviderType.Value);
-            contentCatalog.SceneProviderData = ObjectInitializationData.CreateSerializedInitializationData(sceneProviderType.Value);
-
-            //save catalog
-            var jsonText = JsonUtility.ToJson(contentCatalog);
-            CreateCatalogFiles(jsonText, builderInput, aaContext);
-
-            foreach (var pd in contentCatalog.ResourceProviderData)
+            ContentCatalogData contentCatalog;
+            using (m_Log.ScopedStep(LogLevel.Info, "Generate Catalog"))
             {
-                m_Linker.AddTypes(pd.ObjectType.Value);
-                m_Linker.AddTypes(pd.GetRuntimeTypes());
+                contentCatalog = new ContentCatalogData(ResourceManagerRuntimeData.kCatalogAddress);
+                contentCatalog.SetData(aaContext.locations.OrderBy(f => f.InternalId).ToList(), aaContext.Settings.OptimizeCatalogSize);
+
+                contentCatalog.ResourceProviderData.AddRange(m_ResourceProviderData);
+                foreach (var t in aaContext.providerTypes)
+                    contentCatalog.ResourceProviderData.Add(ObjectInitializationData.CreateSerializedInitializationData(t));
+
+                contentCatalog.InstanceProviderData = ObjectInitializationData.CreateSerializedInitializationData(instanceProviderType.Value);
+                contentCatalog.SceneProviderData = ObjectInitializationData.CreateSerializedInitializationData(sceneProviderType.Value);
+
+                //save catalog
+                var jsonText = JsonUtility.ToJson(contentCatalog);
+                CreateCatalogFiles(jsonText, builderInput, aaContext);
             }
-            m_Linker.AddTypes(contentCatalog.InstanceProviderData.ObjectType.Value);
-            m_Linker.AddTypes(contentCatalog.InstanceProviderData.GetRuntimeTypes());
-            m_Linker.AddTypes(contentCatalog.SceneProviderData.ObjectType.Value);
-            m_Linker.AddTypes(contentCatalog.SceneProviderData.GetRuntimeTypes());
 
-            foreach (var io in aaContext.Settings.InitializationObjects)
+            using (m_Log.ScopedStep(LogLevel.Info, "Generate link"))
             {
-                var provider = io as IObjectInitializationDataProvider;
-                if (provider != null)
+                foreach (var pd in contentCatalog.ResourceProviderData)
                 {
-                    var id = provider.CreateObjectInitializationData();
-                    aaContext.runtimeData.InitializationObjects.Add(id);
-                    m_Linker.AddTypes(id.ObjectType.Value);
-                    m_Linker.AddTypes(id.GetRuntimeTypes());
+                    m_Linker.AddTypes(pd.ObjectType.Value);
+                    m_Linker.AddTypes(pd.GetRuntimeTypes());
                 }
+
+                m_Linker.AddTypes(contentCatalog.InstanceProviderData.ObjectType.Value);
+                m_Linker.AddTypes(contentCatalog.InstanceProviderData.GetRuntimeTypes());
+                m_Linker.AddTypes(contentCatalog.SceneProviderData.ObjectType.Value);
+                m_Linker.AddTypes(contentCatalog.SceneProviderData.GetRuntimeTypes());
+
+                foreach (var io in aaContext.Settings.InitializationObjects)
+                {
+                    var provider = io as IObjectInitializationDataProvider;
+                    if (provider != null)
+                    {
+                        var id = provider.CreateObjectInitializationData();
+                        aaContext.runtimeData.InitializationObjects.Add(id);
+                        m_Linker.AddTypes(id.ObjectType.Value);
+                        m_Linker.AddTypes(id.GetRuntimeTypes());
+                    }
+                }
+
+                m_Linker.AddTypes(typeof(Addressables));
+                Directory.CreateDirectory(Addressables.BuildPath + "/AddressablesLink/");
+                m_Linker.Save(Addressables.BuildPath + "/AddressablesLink/link.xml");
             }
-
-            m_Linker.AddTypes(typeof(Addressables));
-            Directory.CreateDirectory(Addressables.BuildPath + "/AddressablesLink/");
-            m_Linker.Save(Addressables.BuildPath + "/AddressablesLink/link.xml");
+            
             var settingsPath = Addressables.BuildPath + "/" + builderInput.RuntimeSettingsFilename;
-            WriteFile(settingsPath, JsonUtility.ToJson(aaContext.runtimeData), builderInput.Registry);
+            
+            using (m_Log.ScopedStep(LogLevel.Info, "Generate Settings"))
+                WriteFile(settingsPath, JsonUtility.ToJson(aaContext.runtimeData), builderInput.Registry);
 
-            var opResult = AddressableAssetBuildResult.CreateResult<TResult>(settingsPath, aaContext.locations.Count);
             if (extractData.BuildCache != null && builderInput.PreviousContentState == null)
             {
-                var allEntries = new List<AddressableAssetEntry>();
-                aaContext.Settings.GetAllAssets(allEntries, false, ContentUpdateScript.GroupFilter);
-                var remoteCatalogLoadPath = aaContext.Settings.BuildRemoteCatalog ? aaContext.Settings.RemoteCatalogLoadPath.GetValue(aaContext.Settings) : string.Empty;
-                if (ContentUpdateScript.SaveContentState(aaContext.locations, tempPath, allEntries, extractData.DependencyData, playerBuildVersion, remoteCatalogLoadPath, carryOverCachedState))
+                using (m_Log.ScopedStep(LogLevel.Info, "Generate Content Update State"))
                 {
-                    string contentStatePath = ContentUpdateScript.GetContentStateDataPath(false);
-                    try
+                    var remoteCatalogLoadPath = aaContext.Settings.BuildRemoteCatalog
+                        ? aaContext.Settings.RemoteCatalogLoadPath.GetValue(aaContext.Settings)
+                        : string.Empty;
+                    
+                    var allEntries = new List<AddressableAssetEntry>();
+                    using (m_Log.ScopedStep(LogLevel.Info, "Get Assets"))
+                        aaContext.Settings.GetAllAssets(allEntries, false, ContentUpdateScript.GroupFilter);
+                    
+                    if (ContentUpdateScript.SaveContentState(aaContext.locations, tempPath, allEntries,
+                            extractData.DependencyData, playerBuildVersion, remoteCatalogLoadPath,
+                            carryOverCachedState))
                     {
-                        File.Copy(tempPath, contentStatePath, true);
-                        builderInput.Registry.AddFile(contentStatePath);
-                    }
-                    catch (UnauthorizedAccessException uae)
-                    {
-                        if (!AddressableAssetUtility.IsVCAssetOpenForEdit(contentStatePath))
-                            Debug.LogErrorFormat("Cannot access the file {0}. It may be locked by version control.", contentStatePath);
-                        else
-                            Debug.LogException(uae);
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogException(e);
+                        string contentStatePath = ContentUpdateScript.GetContentStateDataPath(false);
+                        try
+                        {
+                            File.Copy(tempPath, contentStatePath, true);
+                            builderInput.Registry.AddFile(contentStatePath);
+                        }
+                        catch (UnauthorizedAccessException uae)
+                        {
+                            if (!AddressableAssetUtility.IsVCAssetOpenForEdit(contentStatePath))
+                                Debug.LogErrorFormat("Cannot access the file {0}. It may be locked by version control.",
+                                    contentStatePath);
+                            else
+                                Debug.LogException(uae);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                        }
                     }
                 }
             }
 
-            return opResult;
+            return AddressableAssetBuildResult.CreateResult<TResult>(settingsPath, aaContext.locations.Count);
         }
 
-        private static void ProcessCatalogEntriesForBuild(AddressableAssetsBuildContext aaContext, IBuildLogger log,
+        private static void ProcessCatalogEntriesForBuild(AddressableAssetsBuildContext aaContext,
             IEnumerable<AddressableAssetGroup> validGroups, AddressablesDataBuilderInput builderInput, IBundleWriteData writeData,
             List<CachedAssetState> carryOverCachedState, Dictionary<string, string> bundleToInternalId)
         {
-            using (log.ScopedStep(LogLevel.Info, "Catalog Entries."))
             using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
             {
                 progressTracker.UpdateTask("Post Processing Catalog Entries");

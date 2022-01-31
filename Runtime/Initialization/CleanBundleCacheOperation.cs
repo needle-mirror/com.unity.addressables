@@ -113,7 +113,6 @@ namespace UnityEngine.AddressableAssets
             {
                 string bundlename = Path.GetFileName(cacheDir);
                 Caching.ClearAllCachedVersions(bundlename);
-                Directory.Delete(cacheDir); // Caching.ClearAllCachedVersions leaves empty directories
             }
             CompleteInternal(true, true, null);
         }

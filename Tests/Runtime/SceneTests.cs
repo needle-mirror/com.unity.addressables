@@ -523,6 +523,7 @@ namespace SceneTests
             // Cleanup
             Assert.IsFalse(activeScene.IsValid());
             Addressables.Release(instOp);
+            AssetBundleProvider.WaitForAllUnloadingBundlesToComplete();
             int bundleCountEndTest = AssetBundle.GetAllLoadedAssetBundles().Count();
             Assert.AreEqual(bundleCountBeforeTest,bundleCountEndTest);
             Assert.IsFalse(instOp.IsValid());

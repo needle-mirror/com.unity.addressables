@@ -76,7 +76,7 @@ The asset lifespan chart shows when an asset or operation is created, its curren
 
 To expand the display line showing the lifespan of an asset or operation, click the __+__ button for the entry in the __Assets__ list.
 
-To view the sub-operations or sub-assets of an entry, click the expand icon (__>__) of the parent object.
+To view the sub-operations or subassets of an entry, click the expand icon (__>__) of the parent object.
 
 You can remove the lifeline of an asset or operation from the chart by right-clicking it and choosing __Hide Selected Events__ on the context menu. Click the __Unhide All Hidden Events__ button on the toolbar to reveal the lifelines of any hidden events.
 

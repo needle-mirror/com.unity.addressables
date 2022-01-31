@@ -12,7 +12,7 @@ Use the AssetReference class in a MonoBehaviour or ScriptableObject. When you ad
 
 To assign a value, drag an asset to the field or click on the object picker icon to open a dialog that lets you choose an Addressable asset.
 
-If you drag a non-Addressable asset to an AssetReference field, the system automatically makes the asset Addressable and adds it to your default Addressables group. Sprite and SpriteAtlas assets can have sub-objects. AssetReferences assigned these types of asset display an additional object picker that allows you to specify which sub-object to reference.
+If you drag a non-Addressable asset to an AssetReference field, the system automatically makes the asset Addressable and adds it to your default Addressables group. Sprite and SpriteAtlas assets can have subobjects. AssetReferences assigned these types of asset display an additional object picker that allows you to specify which subobject to reference.
 
 See the [Basic AssetReference], [Component Reference], and [Sprite Land] projects in the [Addressables-Sample] repository for examples of using AssetReferences in a project.
 

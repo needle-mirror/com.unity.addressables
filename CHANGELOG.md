@@ -4,6 +4,20 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.19.18] - 2022-1-31
+- Fixed issue where WaitForCompletion would take too long when used in virtual mode.
+- Updated the documentation to include information on methods of waiting on asynchronous operations to complete.
+- Fixed issue where IOException occurs when autoCleanBundleCache has value of 'true' in Addressables.UpdateCatalogs.
+- Improved Addressables class Inspector headers with documentation links.
+- Fixed issue in Editor where a large number of AssetReferences causes performance spikes
+- Documentation has been added for shared bundles, HTTP restrictions in 2022 editor versions, Samples, and various cleanup
+- Fixed issue with missing trace events in build profile trace log
+- Fixed issue where adding a AddressablesGroupTemplate could not be added, throwing an Exception
+- Added better logging when built in Editor Hosting Service fails to acquire a port
+- Improved ordering of when OnPostprocessAllAssets occurs for Addressables settings and windows to ensure Addressable settings are processed first.
+- Fixed issue where "Unable to load assets of type" error occurs when loading asset with classes referenced by value in "Use Asset Database" mode.
+- Add more documentation about the "Non-Recursive Dependency Calculation" and "MonoScript Bundle Naming Prefix" options in AddressableAssetSettings.
+
 ## [1.19.17] - 2022-1-6
 - New Projects use hierarchical search mode as the default option for Group search.
 - Group referenced by Addressable Schema can now be viewed, but not edited, in the inspector
@@ -19,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed issue where using WaitForCompletion and exceeding the max number of concurrent web requests freezes the editor."
 - Updated the docs to use the correct name for the Analyze rule "Bundle Layout Preview"
 - Fixed issue where Addressable Asset Entry cached data is not cleared during external changes in some editor versions.
+
 ## [1.19.15] - 2021-12-2
 - Fix issue where opening the Analyze window logs null exceptions after running the "Check Duplicate Bundle Dependencies" rule.
 
@@ -1084,6 +1099,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.0.8-preview] - 2018-02-08
 - Initial submission for package distribution
+
 
 
 
