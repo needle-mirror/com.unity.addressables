@@ -154,6 +154,9 @@ namespace UnityEngine.ResourceManagement.Exceptions
             WebRequestResult = uwrResult;
         }
 
+        ///<inheritdoc/>
+        public override string Message => this.ToString();
+
         /// <summary>
         /// The result of the unity web request, if any.
         /// </summary>
@@ -164,7 +167,7 @@ namespace UnityEngine.ResourceManagement.Exceptions
         public override string ToString()
         {
             if (WebRequestResult != null)
-                return $"{GetType().Name} : {Message}\nUnityWebRequest result : {WebRequestResult}\n{InnerException}";
+                return $"{GetType().Name} : {base.Message}\nUnityWebRequest result : {WebRequestResult}\n{InnerException}";
             else
                 return base.ToString();
         }

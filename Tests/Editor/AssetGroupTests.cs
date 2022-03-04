@@ -48,6 +48,18 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void RenameAlwaysSetsObjectName()
+        {
+            var group = Settings.FindGroup(AddressableAssetSettings.DefaultLocalGroupName);
+            var oldName = group.Name;
+            group.name = "mismatchName";
+            Assert.AreNotEqual(oldName, group.name);
+            group.Name = oldName;
+            Assert.AreEqual(oldName, group.name);
+            Assert.AreEqual(oldName, group.Name);
+        }
+        
+        [Test]
         public void DedupeEntries_WhenGroupsHaveOverlappingAssetEntries_RemovesEntries()
         {
             const string guid = "0000";

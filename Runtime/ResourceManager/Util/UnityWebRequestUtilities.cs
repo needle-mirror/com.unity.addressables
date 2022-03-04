@@ -119,5 +119,56 @@ namespace UnityEngine.ResourceManagement.Util
         /// The target url of the request.
         /// </summary>
         public string Url { get; }
+        
+        internal bool ShouldRetryDownloadError()
+        {
+            if (string.IsNullOrEmpty(Error))
+                return true;
+            
+            if (Error == "Request aborted" ||
+                Error == "Unable to write data" ||
+                Error == "Malformed URL" ||
+                Error == "Out of memory" ||
+                Error == "Encountered invalid redirect (missing Location header?)" ||
+                Error == "Cannot modify request at this time" ||
+                Error == "Unsupported Protocol" ||
+                Error == "Destination host has an erroneous SSL certificate" ||
+                Error == "Unable to load SSL Cipher for verification" ||
+                Error == "SSL CA certificate error" ||
+                Error == "Unrecognized content-encoding" ||
+                Error == "Request already transmitted" ||
+                Error == "Invalid HTTP Method" ||
+                Error == "Header name contains invalid characters" ||
+                Error == "Header value contains invalid characters" ||
+                Error == "Cannot override system-specified headers"
+               )
+                return false;
+            
+            /* Errors that can be retried:
+                "Unknown Error":
+                "No Internet Connection"
+                "Backend Initialization Error":
+                "Cannot resolve proxy":
+                "Cannot resolve destination host":
+                "Cannot connect to destination host":
+                "Access denied":
+                "Generic/unknown HTTP error":
+                "Unable to read data":
+                "Request timeout":
+                "Error during HTTP POST transmission":
+                "Unable to complete SSL connection":
+                "Redirect limit exceeded":
+                "Received no data in response":
+                "Destination host does not support SSL":
+                "Failed to transmit data":
+                "Failed to receive data":
+                "Login failed":
+                "SSL shutdown failed":
+                "Redirect limit is invalid":
+                "Not implemented":
+                "Data Processing Error, see Download Handler error":
+             */
+            return true;
+        }
     }
 }

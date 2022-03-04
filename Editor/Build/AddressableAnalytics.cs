@@ -41,7 +41,12 @@ namespace UnityEditor.AddressableAssets
             //Gather how many addressable assets we have
             int numberOfAddressableAssets = 0;
             foreach (var group in currentSettings.groups)
+            {
+                if (group == null)
+                    continue;
                 numberOfAddressableAssets += group.entries.Count;
+            }
+                
 
             string buildScriptName = currentSettings.ActivePlayerDataBuilder.Name;
             

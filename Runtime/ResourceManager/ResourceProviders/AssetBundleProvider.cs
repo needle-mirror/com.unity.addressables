@@ -585,7 +585,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 #endif
                 if (!forcedRetry)
                 {
-                    if (m_Retries < m_Options.RetryCount && uwrResult.Error != "Request aborted")
+                    if (m_Retries < m_Options.RetryCount && uwrResult.ShouldRetryDownloadError())
                     {
                         m_Retries++;
                         Debug.LogFormat(message);

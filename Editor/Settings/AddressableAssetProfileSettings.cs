@@ -69,7 +69,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
             }
             [NonSerialized]
-            AddressableAssetProfileSettings m_ProfileParent;
+            internal AddressableAssetProfileSettings m_ProfileParent;
 
             [FormerlySerializedAs("m_inheritedParent")]
             [SerializeField]
@@ -134,7 +134,9 @@ namespace UnityEditor.AddressableAssets.Settings
 
 
                 if (m_ProfileParent == null)
+                {
                     return null;
+                }
 
                 return m_ProfileParent.GetValueById(m_InheritedParent, variableId);
             }
@@ -714,7 +716,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             return newName;
         }
-        
+
         internal void CreateDuplicateVariableWithNewName(AddressableAssetSettings addressableAssetSettings, string newVariableName, string variableNameToCopyFrom)
         {
             var activeProfileId = addressableAssetSettings.activeProfileId;

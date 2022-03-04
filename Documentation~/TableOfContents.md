@@ -39,6 +39,8 @@
   * [Build profile log](BuildProfileLog.md)
 * [Samples](SamplesOverview.md)
   * [AddressablesUtility](AddressablesUtility.md)
+  * [ComponentReference](ComponentReference.md)
+  * [Custom Analyze Rules](CustomAnalyzeRules.md)
   * [Custom Build and Playmode Scripts](CustomBuildAndPlaymodeScripts.md)
   * [Disable Asset Import on Build](DisableAssetImportOnBuild.md)
   * [Import Existing Group](ImportExistingGroup.md)

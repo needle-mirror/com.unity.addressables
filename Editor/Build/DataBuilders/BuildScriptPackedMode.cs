@@ -598,8 +598,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 {
                     string file = files[0];
                     string fullBundleName = writeData.FileToBundle[file];
-                    string convertedLocation = bundleNameToInternalBundleIdMap[fullBundleName];
-
+                    string convertedLocation;
+                    
+                    if (!bundleNameToInternalBundleIdMap.TryGetValue(fullBundleName, out convertedLocation))
+                    {
+                        Debug.LogException(new Exception($"Unable to find bundleId for key: {fullBundleName}."));
+                    }
                     if (locationIdToCatalogEntryMap.TryGetValue(convertedLocation,
                         out ContentCatalogDataEntry catalogEntry))
                     {

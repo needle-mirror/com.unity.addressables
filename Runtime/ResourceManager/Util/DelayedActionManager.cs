@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using UnityEditor;
-
-[assembly: InternalsVisibleTo("Unity.Addressables.Editor.Tests")]
 
 namespace UnityEngine.ResourceManagement.Util
 {

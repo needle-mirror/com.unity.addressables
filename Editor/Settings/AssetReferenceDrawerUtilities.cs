@@ -4,16 +4,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using UnityEditor.AddressableAssets.GUI;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.U2D;
-
-[assembly: InternalsVisibleTo("Unity.Addressables.Editor.Tests")]
-[assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
-[assembly: InternalsVisibleTo("PerformanceTests.Editor")]
 
 namespace UnityEditor.AddressableAssets.Settings
 {

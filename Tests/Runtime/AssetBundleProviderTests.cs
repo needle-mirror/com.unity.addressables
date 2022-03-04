@@ -10,10 +10,12 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 #endif
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Networking;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -243,6 +245,20 @@ namespace AddressableTests.SyncAddressables
             h.WaitForCompletion();
             Assert.IsNotNull(h.Result);
             h.Release();
+        }
+
+        [Test]
+        // Only testing against important errors instead of full list
+        [TestCase("", true)]
+        [TestCase("Unknown error", true)]
+        [TestCase("Request aborted", false)]
+        [TestCase("Unable to write data", false)]
+        public void UnityWebRequestResult_ShouldRetryReturnsExpected(string error, bool expected)
+        {
+            UnityWebRequestResult rst = new UnityWebRequestResult(new UnityWebRequest());
+            rst.Error = error;
+            bool result = rst.ShouldRetryDownloadError();
+            Assert.AreEqual(expected, result, "Unexpected retry value for the input error.");
         }
     }
 #if UNITY_EDITOR

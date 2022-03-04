@@ -52,7 +52,7 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
-        /// Creates a template with the specified name, descriptionm and schema types.
+        /// Creates a template with the specified name, description and schema types.
         /// </summary>
         /// <param name="name">The name of the template.</param>
         /// <param name="descr">The template description.</param>

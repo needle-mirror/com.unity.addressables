@@ -10,12 +10,11 @@ using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
-using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
 
 namespace AddressableAssetsIntegrationTests
 {
-    internal abstract partial class AddressablesIntegrationTests : IPrebuildSetup
+    internal abstract partial class AddressablesIntegrationTests
     {
         Action<AsyncOperationHandle, Exception> m_prevHandler;
 

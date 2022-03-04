@@ -11,13 +11,11 @@ using UnityEngine.SceneManagement;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
-using UnityEngine.ResourceManagement.Util;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.AddressableAssets.Utility;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using System.Text.RegularExpressions;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using UnityEngine.AddressableAssets.ResourceProviders.Tests;
@@ -147,35 +145,190 @@ namespace AddressableAssetsIntegrationTests
             yield return op;
             Assert.IsNull(op.Result);
         }
+        
+        const string InvalidKeyExceptionBaseMessage = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown.";
 
         [UnityTest]
-        public IEnumerator LoadAsset_InvalidKeyThrowsInvalidKeyException()
+        public IEnumerator InvalidKeyException_LoadAsset_NoKeyFound()
         {
             //Setup
             yield return Init();
-
-            //Test
+            string keyString = "noSuchLabel";
             AsyncOperationHandle handle = default(AsyncOperationHandle);
-            using (new IgnoreFailingLogMessage())
+
+            try
             {
-                handle = m_Addressables.LoadAssetAsync<GameObject>("noSuchLabel");
+                //Test
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetAsync<GameObject>(keyString);
+                    yield return handle;
+                }
+
+                string message = $"{InvalidKeyExceptionBaseMessage} No Location found for Key={keyString}";
+                Assert.AreEqual(message, handle.OperationException.Message, "InvalidKeyException message not the same as expected for when the Location does not exist");
             }
+            finally
+            {
+                //Cleanup
+                if (handle.IsValid())
+                    handle.Release();
+            }
+        }
+        
+        [UnityTest]
+        public IEnumerator InvalidKeyException_LoadAsset_KeyFoundWithOtherType()
+        {
+            //Setup
+            yield return Init();
+            string keyString = "test0BASE";
+            AsyncOperationHandle<TextAsset> handle = new AsyncOperationHandle<TextAsset>();
 
-            Assert.AreEqual("Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown., Key=noSuchLabel, Type=UnityEngine.GameObject", handle.OperationException.Message);
-            yield return handle;
+            try
+            {
+                //Test
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetAsync<TextAsset>(keyString);
+                    yield return handle;
+                }
+                
+                string message = $"{InvalidKeyExceptionBaseMessage} No Asset found with for Key={keyString}. Key exists as Type={typeof(GameObject)}, which is not assignable from the requested Type={typeof(TextAsset)}";
+                Assert.AreEqual(message, handle.OperationException.Message, "InvalidKeyException message not the same as expected for when a similar Location exists with same key and a different type");
+            }
+            finally
+            {
+                //Cleanup
+                if (handle.IsValid())
+                    handle.Release();
+            }
+        }
+        
+        [UnityTest]
+        public IEnumerator InvalidKeyException_LoadAsset_KeyFoundWithMultipleOtherType()
+        {
+            //Setup
+            yield return Init();
+            string keyString = "mixed";
+            string otherAvailableTypesForKey = "UnityEngine.GameObject, UnityEngine.AddressableAssets.Tests.TestObject";
+            AsyncOperationHandle<TextAsset> handle = new AsyncOperationHandle<TextAsset>();
 
-            //Cleanup
-            handle.Release();
+            try //Test
+            {
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetAsync<TextAsset>(keyString);
+                    yield return handle;
+                }
+
+                string message = $"{InvalidKeyExceptionBaseMessage} No Asset found with for Key={keyString}. Key exists as multiple Types={otherAvailableTypesForKey}, which is not assignable from the requested Type={typeof(TextAsset)}";
+                bool isEqual = message == handle.OperationException.Message;
+                if (!isEqual)
+                {
+                    // order isn't guaranteed
+                    message = message.Replace("UnityEngine.GameObject, UnityEngine.AddressableAssets.Tests.TestObject", "UnityEngine.AddressableAssets.Tests.TestObject, UnityEngine.GameObject");
+                    isEqual = message == handle.OperationException.Message;
+                }
+                Assert.IsTrue(isEqual, $"InvalidKeyException message not the same as expected for when a similar Location exists with same key and a different type. Was expecting {message.ToString()}, but was {handle.OperationException.Message}");
+            }
+            finally // Cleanup
+            {
+                if (handle.IsValid())
+                    handle.Release();
+            }
+        }
+        
+
+        [UnityTest]
+        public IEnumerator InvalidKeyException_LoadAsset__AssetFromGUIDFoundWithDifferentType()
+        {
+            if (string.IsNullOrEmpty(TypeName) || TypeName != "BuildScriptFastMode" || TypeName == "BuildScriptVirtualMode")
+            {
+                Assert.Ignore($"Skipping test {nameof(InvalidKeyException_LoadAsset__AssetFromGUIDFoundWithDifferentType)} for {TypeName}, Editor AssetDatabase based test.");
+            }
+            
+
+            //Setup
+            yield return Init();
+#if UNITY_EDITOR
+            string keyString = "test0BASE";
+
+            AsyncOperationHandle<TextAsset> handle = new AsyncOperationHandle<TextAsset>();
+            AsyncOperationHandle<GameObject> goLoadHandle = new AsyncOperationHandle<GameObject>();
+
+            try
+            {
+                //Test
+                goLoadHandle = m_Addressables.LoadAssetAsync<GameObject>(keyString);
+                yield return goLoadHandle;
+                Assert.AreEqual(goLoadHandle.Status, AsyncOperationStatus.Succeeded);
+                bool foundGuid =
+                    UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(goLoadHandle.Result, out string guid,
+                        out long id);
+                Assert.IsTrue(foundGuid, "Failed to get the Guid for loaded Object");
+                goLoadHandle.Release();
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetAsync<TextAsset>(guid);
+                    yield return handle;
+                }
+
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                string message =
+                    $"{InvalidKeyExceptionBaseMessage} Could not load Asset with GUID={guid}, Path={path}. Asset exists with main Type={typeof(GameObject)}, which is not assignable from the requested Type={typeof(TextAsset)}";
+                Assert.AreEqual(message, handle.OperationException.Message,
+                    "InvalidKeyException message not the same as expected for when a similar Location exists with same key and a different type");
+            }
+            finally
+            {
+                //Cleanup
+                if (handle.IsValid())
+                    handle.Release();
+                if (goLoadHandle.IsValid())
+                    goLoadHandle.Release();
+            }
+#endif
+        }
+
+        
+        [UnityTest]
+        public IEnumerator InvalidKeyException_LoadAssets_MixedTypesGivesCorrectError()
+        {
+            //Setup
+            yield return Init();
+            object[] keys = new object[] {"noSuchKey", 123};
+            AsyncOperationHandle handle = default(AsyncOperationHandle);
+            
+            //Test
+            try
+            {
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetsAsync<GameObject>(keys, null, Addressables.MergeMode.Union, true);
+                }
+
+                string message = handle.OperationException.Message;
+                string types = "Types=System.String, System.Int32";
+                string expected = $"{InvalidKeyExceptionBaseMessage} Enumerable key contains multiple Types. {types}, all Keys are expected to be strings";
+                
+                bool equalOne = message == expected;
+                bool equalTwo = message == expected.Replace("Types=System.String, System.Int32", "System.Int32, Types=System.String");
+                Assert.IsTrue(equalOne || equalTwo, $"Failed to get correct message for mixedTypes being requested. was {message}. But expected {expected}");
+                yield return handle;
+            }
+            finally
+            {
+                //Cleanup
+                handle.Release();
+            }
         }
 
         [UnityTest]
-        [TestCase("noSuchKey", ExpectedResult = null)]
-        [TestCase("noSuchKey1, noSuchKey2", ExpectedResult = null)]
-        public IEnumerator LoadAsset_InvalidKeyThrowsInvalidKeyException_MultipleKeys(string keys)
+        public IEnumerator InvalidKeyException_LoadAsset_MultipleKeysNoMergeMode()
         {
             //Setup
             yield return Init();
-            string[] keysArray = keys.Replace(" ", "").Split(',');
+            string[] keysArray = new string[] {"noSuchKey1", "noSuchKey2"};
 
             //Test
             AsyncOperationHandle handle = default(AsyncOperationHandle);
@@ -184,60 +337,229 @@ namespace AddressableAssetsIntegrationTests
                 handle = m_Addressables.LoadAssetAsync<GameObject>(keysArray);
             }
 
-            string keysErrorString = keysArray.Length > 1 ? $"Keys={keys}" : $"Key={keys}";
-            Assert.AreEqual(
-                $"Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown., {keysErrorString}, Type=UnityEngine.GameObject", handle.OperationException.Message);
+            string keysErrorString = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. No MergeMode is set to merge the multiple keys requested. Keys=noSuchKey1, noSuchKey2, Type=UnityEngine.GameObject";
+            Assert.AreEqual(keysErrorString, handle.OperationException.Message);
             yield return handle;
 
             //Cleanup
             handle.Release();
         }
-
+        
+        
         [UnityTest]
-        [TestCase("noSuchKey", ExpectedResult = null)]
-        [TestCase("noSuchKey1, noSuchKey2", ExpectedResult = null)]
-        public IEnumerator LoadAssets_InvalidKeyThrowsInvalidKeyException_MultipleKeys(string keys)
+        public IEnumerator InvalidKeyException_LoadAssets_Union_NoKeysFound()
         {
             //Setup
             yield return Init();
-            string[] keysArray = keys.Replace(" ", "").Split(',');
-
-            //Test
+            string[] keysArray = new[] {"noSuchKey1", "noSuchKey2"};
             AsyncOperationHandle handle = default(AsyncOperationHandle);
-            using (new IgnoreFailingLogMessage())
+
+            try
             {
-                handle = m_Addressables.LoadAssetsAsync<GameObject>(keysArray, null, Addressables.MergeMode.Union, true);
+                //Test
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetsAsync<TextAsset>(keysArray, null, Addressables.MergeMode.Union, true);
+                }
+
+                string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
+                                  "No Union of Assets between Keys=noSuchKey1, noSuchKey2 with Type=UnityEngine.TextAsset" +
+                                  "\nNo Location found for Key=noSuchKey1" +
+                                  "\nNo Location found for Key=noSuchKey2";
+                
+                Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform the two locations have for other type");
+                yield return handle;
             }
-
-            string keysErrorString = keysArray.Length > 1 ? $"Keys={keys}" : $"Key={keys}";
-            Assert.AreEqual($"Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown., {keysErrorString}, Type=UnityEngine.GameObject, MergeMode=Union", handle.OperationException.Message);
-            yield return handle;
-
-            //Cleanup
-            handle.Release();
+            finally
+            {
+                //Cleanup
+                handle.Release();
+            }
         }
 
         [UnityTest]
-        public IEnumerator LoadAssets_InvalidKeyThrowsInvalidKeyException_MixedKeys()
+        public IEnumerator InvalidKeyException_LoadAssets_Union_IncorrectType()
         {
             //Setup
             yield return Init();
-            object[] keys = new object[] {"noSuchKey", 123};
-
-            //Test
+            string[] keysArray = new[] {"test0BASE", "test1BASE"};
             AsyncOperationHandle handle = default(AsyncOperationHandle);
-            using (new IgnoreFailingLogMessage())
+
+            try
             {
-                handle = m_Addressables.LoadAssetsAsync<GameObject>(keys, null, Addressables.MergeMode.Union, true);
+                //Test
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetsAsync<TextAsset>(keysArray, null, Addressables.MergeMode.Union, true);
+                }
+
+                string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
+                                  "No Union of Assets between Keys=test0BASE, test1BASE with Type=UnityEngine.TextAsset" +
+                                  "\nUnion of Type=UnityEngine.GameObject found with Keys=test0BASE, test1BASE";
+                
+                Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform the two locations have for other type");
+                yield return handle;
             }
+            finally
+            {
+                //Cleanup
+                handle.Release();
+            }
+        }
+        
+        [UnityTest]
+        public IEnumerator InvalidKeyException_LoadAssets_Union_MultipleTypesAvailable()
+        {
+            //Setup
+            yield return Init();
+            string[] keysArray = new[] {"test0BASE", "assetWithSubObjects"};
+            AsyncOperationHandle handle = default(AsyncOperationHandle);
 
-            Assert.AreEqual($"Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown., Keys=noSuchKey, 123, Type=UnityEngine.GameObject, MergeMode=Union", handle.OperationException.Message);
-            yield return handle;
+            try
+            {
+                //Test
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetsAsync<TextAsset>(keysArray, null, Addressables.MergeMode.Union, true);
+                }
 
-            //Cleanup
-            handle.Release();
+                string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
+                                  "No Union of Assets between Keys=test0BASE, assetWithSubObjects with Type=UnityEngine.TextAsset" +
+                                  "\nUnion of Type=UnityEngine.GameObject found with Key=test0BASE. Without Key=assetWithSubObjects" +
+                                  "\nUnion of Type=UnityEngine.AddressableAssets.Tests.TestObject found with Key=assetWithSubObjects. Without Key=test0BASE";
+                
+                Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform that a merge could be made for two different types");
+                yield return handle;
+            }
+            finally
+            {
+                //Cleanup
+                handle.Release();
+            }
         }
 
+        [UnityTest]
+        public IEnumerator InvalidKeyException_LoadAssets_Intersection_OneMissingKey()
+        {
+            //Setup
+            yield return Init();
+            string[] keysArray = new[] {"test0BASE", "noSuchKey"};
+            AsyncOperationHandle handle = default(AsyncOperationHandle);
+
+            try
+            {
+                //Test
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetsAsync<GameObject>(keysArray, null, Addressables.MergeMode.Intersection, true);
+                }
+
+                string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
+                                  "No Intersection of Assets between Keys=test0BASE, noSuchKey with Type=UnityEngine.GameObject" +
+                                  "\nNo Location found for Key=noSuchKey";
+                
+                Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to error due to noSuchKey");
+                yield return handle;
+            }
+            finally
+            {
+                //Cleanup
+                handle.Release();
+            }
+        }
+        
+        [UnityTest]
+        public IEnumerator InvalidKeyException_LoadAssets_Intersection_PossibleForAnotherType()
+        {
+            //Setup
+            yield return Init();
+            string[] keysArray = new[] {"test0BASE", "mixed"};
+            AsyncOperationHandle handle = default(AsyncOperationHandle);
+
+            try
+            {
+                //Test
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetsAsync<TextAsset>(keysArray, null, Addressables.MergeMode.Intersection, true);
+                }
+
+                string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
+                                  "No Intersection of Assets between Keys=test0BASE, mixed with Type=UnityEngine.TextAsset" +
+                                  "\nAn Intersection exists for Type=UnityEngine.GameObject";
+                
+                Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform that an intersection exists with GameObject");
+                yield return handle;
+            }
+            finally
+            {
+                //Cleanup
+                handle.Release();
+            }
+        }
+        
+        [UnityTest]
+        public IEnumerator InvalidKeyException_LoadAssets_UseFirst_NoLocations()
+        {
+            //Setup
+            yield return Init();
+            string[] keysArray = new[] {"noSuchKey1", "noSuchKey2"};
+            AsyncOperationHandle handle = default(AsyncOperationHandle);
+
+            try
+            {
+                //Test
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetsAsync<GameObject>(keysArray, null, Addressables.MergeMode.UseFirst, true);
+                }
+
+                string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
+                                  "No UseFirst Asset within Keys=noSuchKey1, noSuchKey2 with Type=UnityEngine.GameObject" +
+                                  "\nNo Location found for Key=noSuchKey1" +
+                                  "\nNo Location found for Key=noSuchKey2";
+                
+                Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform that all keys have no location");
+                yield return handle;
+            }
+            finally
+            {
+                //Cleanup
+                handle.Release();
+            }
+        }
+        
+        [UnityTest]
+        public IEnumerator InvalidKeyException_LoadAssets_UseFirst_PossibleForAnotherType()
+        {
+            //Setup
+            yield return Init();
+            string[] keysArray = new[] {"test0BASE", "noSuchKey"};
+            AsyncOperationHandle handle = default(AsyncOperationHandle);
+
+            try
+            {
+                //Test
+                using (new IgnoreFailingLogMessage())
+                {
+                    handle = m_Addressables.LoadAssetsAsync<TextAsset>(keysArray, null, Addressables.MergeMode.UseFirst, true);
+                }
+
+                string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
+                                  "No UseFirst Asset within Keys=test0BASE, noSuchKey with Type=UnityEngine.TextAsset" +
+                                  "\nNo Location found for Key=noSuchKey" +
+                                  "\nType=UnityEngine.GameObject exists for Key=test0BASE";
+                
+                Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform that one key has no location and the other can be loaded with GameObject");
+                yield return handle;
+            }
+            finally
+            {
+                //Cleanup
+                handle.Release();
+            }
+        }
+        
         [UnityTest]
         public IEnumerator CanLoadTextureAsSprite()
         {
@@ -626,7 +948,8 @@ namespace AddressableAssetsIntegrationTests
             Assert.IsNotNull(data);
             Assert.AreEqual(data.WebRequestTimeout, m_Addressables.CatalogRequestsTimeout);
         }
-
+        
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator LoadingContentCatalogTwice_DoesNotThrowException_WhenHandleIsntReleased()
         {
@@ -636,16 +959,12 @@ namespace AddressableAssetsIntegrationTests
             Directory.CreateDirectory(kCatalogFolderPath);
             if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
             {
-#if UNITY_EDITOR
+
                 ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>
                 {
                     new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
                 }, "test_catalog");
                 File.WriteAllText(fullRemotePath, JsonUtility.ToJson(data));
-#else
-                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalogTwice_DoesNotThrowException_WhenHandleIsntReleased)} due to missing CatalogLocation.");
-                yield break;
-#endif
             }
             else
             {
@@ -669,7 +988,9 @@ namespace AddressableAssetsIntegrationTests
             if (Directory.Exists(kCatalogFolderPath))
                 Directory.Delete(kCatalogFolderPath, true);
         }
-
+#endif
+        
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator LoadingContentCatalogWithCacheTwice_DoesNotThrowException_WhenHandleIsntReleased()
         {
@@ -679,16 +1000,12 @@ namespace AddressableAssetsIntegrationTests
             Directory.CreateDirectory(kCatalogFolderPath);
             if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
             {
-#if UNITY_EDITOR
+
                 ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>
                 {
                     new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
                 }, "test_catalog");
                 File.WriteAllText(fullRemotePath, JsonUtility.ToJson(data));
-#else
-                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalogWithCacheTwice_DoesNotThrowException_WhenHandleIsntReleased)} due to missing CatalogLocation.");
-                yield break;
-#endif
             }
             else
             {
@@ -713,6 +1030,7 @@ namespace AddressableAssetsIntegrationTests
             if (Directory.Exists(kCatalogFolderPath))
                 Directory.Delete(kCatalogFolderPath, true);
         }
+#endif
 
         [UnityTest]
         public IEnumerator LoadingContentCatalog_WithInvalidCatalogPath_Fails()
@@ -782,7 +1100,8 @@ namespace AddressableAssetsIntegrationTests
             m_Addressables.ResourceManager.ResourceProviders.Add(jsonAssetProviderStub);
             m_Addressables.ResourceManager.m_providerMap.Clear();
         }
-
+        
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator LoadingContentCatalog_CachesCatalogData_IfValidHashFound()
         {
@@ -792,16 +1111,11 @@ namespace AddressableAssetsIntegrationTests
             Directory.CreateDirectory(kCatalogFolderPath);
             if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
             {
-#if UNITY_EDITOR
                 ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>
                 {
                     new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
                 }, "test_catalog");
                 File.WriteAllText(fullRemotePath, JsonUtility.ToJson(data));
-#else
-                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalog_CachesCatalogData_IfValidHashFound)} due to missing CatalogLocation.");
-                yield break;
-#endif
             }
             else
             {
@@ -827,7 +1141,9 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cachedDataPath);
             File.Delete(cachedHashPath);
         }
-
+#endif
+        
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator LoadingContentCatalog_CachesCatalogData_IfValidHashFoundAndRemotePathContainsQueryParameters()
         {
@@ -858,6 +1174,7 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cachedDataPath);
             File.Delete(cachedHashPath);
         }
+        
 
         [UnityTest]
         public IEnumerator LoadingContentCatalog_CachesCatalogData_ForTwoCatalogsWithSameName()
@@ -870,17 +1187,13 @@ namespace AddressableAssetsIntegrationTests
             Directory.CreateDirectory(Path.Combine(kCatalogFolderPath, "secondCatalog"));
             if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
             {
-#if UNITY_EDITOR
+
                 ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>
                 {
                     new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
                 }, "test_catalog");
                 File.WriteAllText(fullRemotePath, JsonUtility.ToJson(data));
                 File.WriteAllText(fullRemotePathTwo, JsonUtility.ToJson(data));
-#else
-                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalog_CachesCatalogData_IfValidHashFound)} due to missing CatalogLocation.");
-                yield break;
-#endif
             }
             else
             {
@@ -889,8 +1202,7 @@ namespace AddressableAssetsIntegrationTests
                     baseCatalogPath = new Uri(m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId).AbsolutePath;
                 File.Copy(baseCatalogPath, fullRemotePath);
             }
-
-#if UNITY_EDITOR
+            
             ContentCatalogData catalogData = new ContentCatalogData(new List<ContentCatalogDataEntry>
             {
                 new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
@@ -899,10 +1211,6 @@ namespace AddressableAssetsIntegrationTests
 
             WriteHashFileForCatalog(fullRemotePath, "123");
             WriteHashFileForCatalog(fullRemotePathTwo, "123");
-#else
-            UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalog_CachesCatalogData_IfValidHashFound)} due to missing CatalogLocation.");
-            yield break;
-#endif
 
             var op1 = m_Addressables.LoadContentCatalogAsync(fullRemotePath, false);
             yield return op1;
@@ -931,7 +1239,9 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cachedDataPathTwo);
             File.Delete(cachedHashPathTwo);
         }
+#endif
 
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator LoadingContentCatalog_IfNoCachedHashFound_Succeeds()
         {
@@ -942,16 +1252,12 @@ namespace AddressableAssetsIntegrationTests
             Directory.CreateDirectory(kCatalogFolderPath);
             if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
             {
-#if UNITY_EDITOR
+
                 ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>
                 {
                     new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
                 }, "test_catalog");
                 File.WriteAllText(fullRemotePath, JsonUtility.ToJson(data));
-#else
-                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalog_IfNoCachedHashFound_Succeeds)} due to missing CatalogLocation.");
-                yield break;
-#endif
             }
             else
             {
@@ -986,22 +1292,18 @@ namespace AddressableAssetsIntegrationTests
         public IEnumerator LoadingContentCatalog_IfNoHashFileForCatalog_DoesntThrowException()
         {
             yield return Init();
-
             ResourceManager.ExceptionHandler = m_PrevHandler;
             string fullRemotePath = Path.Combine(kCatalogFolderPath, kCatalogRemotePath);
             Directory.CreateDirectory(kCatalogFolderPath);
             if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
             {
-#if UNITY_EDITOR
+
                 ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>
                 {
                     new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
                 }, "test_catalog");
                 File.WriteAllText(fullRemotePath, JsonUtility.ToJson(data));
-#else
-                UnityEngine.Debug.Log($"Skipping test {nameof(LoadingContentCatalog_IfNoCachedHashFound_Succeeds)} due to missing CatalogLocation.");
-                yield break;
-#endif
+
             }
             else
             {
@@ -1010,6 +1312,7 @@ namespace AddressableAssetsIntegrationTests
                     baseCatalogPath = new Uri(m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId).AbsolutePath;
                 File.Copy(baseCatalogPath, fullRemotePath);
             }
+
 
             string cachedDataPath = m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + Path.GetFileName(kCatalogRemotePath));
             string cachedHashPath = cachedDataPath.Replace(".json", ".hash");
@@ -1031,7 +1334,7 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cachedDataPath);
             File.Delete(cachedHashPath);
         }
-
+#endif
         [UnityTest]
         public IEnumerator IResourceLocationComparing_SameKeySameTypeDifferentInternalId_ReturnsFalse()
         {
@@ -1054,6 +1357,7 @@ namespace AddressableAssetsIntegrationTests
             Assert.IsTrue(m_Addressables.Equals(loc1, loc2));
         }
 
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator LoadingContentCatalog_UpdatesCachedData_IfHashFileUpdates()
         {
@@ -1096,6 +1400,7 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cachedDataPath);
             File.Delete(cachedHashPath);
         }
+
 
         [UnityTest]
         public IEnumerator UpdateContentCatalog_UpdatesCachedData_IfCacheCorrupted()
@@ -1198,6 +1503,7 @@ namespace AddressableAssetsIntegrationTests
 
             PostTearDownEvent = ResetAddressables;
         }
+#endif
 
         internal bool CatalogDataWasCleaned(ContentCatalogData data)
         {
@@ -1212,6 +1518,7 @@ namespace AddressableAssetsIntegrationTests
                 data.m_resourceTypes == null;
         }
 
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator ContentCatalogData_IsCleared_ForCorrectCatalogLoadOp_WhenOpIsReleased()
         {
@@ -1256,6 +1563,7 @@ namespace AddressableAssetsIntegrationTests
 
             PostTearDownEvent = ResetAddressables;
         }
+        #endif
 
         [UnityTest]
         public IEnumerator ContentCatalogProvider_RemovesEntryFromMap_WhenOperationHandleReleased()

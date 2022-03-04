@@ -6,6 +6,7 @@ using System.Reflection.Emit;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.Build.Layout;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline.Utilities;
@@ -1304,6 +1305,18 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void AssetGroupSchemaTemplate_CreateTemplate()
+        {
+            string description = "This is a Test Schema";
+            string groupName = "testGroup";
+            var testSchemaTemplate = AddressableAssetGroupSchemaTemplate.Create(
+                groupName, description, typeof(CustomTestSchema));
+            Assert.AreEqual(testSchemaTemplate.Description, description);
+            Assert.AreEqual(testSchemaTemplate.DisplayName, groupName);
+            Assert.IsNotNull(testSchemaTemplate.GetTypes());
+        }
+
+            [Test]
         public void NullifyBundleFileIds_SetsBundleFileIdsToNull()
         {
             AddressableAssetSettings.NullifyBundleFileIds(Settings);

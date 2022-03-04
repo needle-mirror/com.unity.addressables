@@ -184,7 +184,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsTrue(group.RemoveSchema<CustomTestSchema>());
         }
     }
-    
+
     class BundledAssetGroupSchemaTests : EditorAddressableAssetsTestFixture
     {
         [Test]
@@ -207,7 +207,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 m_Settings.profileSettings.CreateValue(AddressableAssetSettings.kLocalLoadPath, AddressableAssetSettings.kLocalLoadPathValue);
             }
         }
-        
+
         [Test]
         public void BundledAssetGroupSchema_BuildLoadPathsCanBeSetByReference()
         {
@@ -219,17 +219,17 @@ namespace UnityEditor.AddressableAssets.Tests
                 m_Settings.profileSettings.RemoveValue(m_Settings.profileSettings.GetVariableId(AddressableAssetSettings.kLocalBuildPath));
                 m_Settings.profileSettings.CreateValue("LocalLoadPath", "loadDefault1");
                 m_Settings.profileSettings.CreateValue("LocalBuildPath", "buildDefault1");
-                
+
                 //Create group with BundledAssetGroupSchema
                 group = m_Settings.CreateGroup("Group1", false, false, false, null, typeof(BundledAssetGroupSchema));
                 var schema = group.GetSchema<BundledAssetGroupSchema>();
                 List<string> variableNames = m_Settings.profileSettings.GetVariableNames();
-                SetBundledAssetGroupSchemaPaths(m_Settings, schema.BuildPath,  AddressableAssetSettings.kLocalBuildPath, "LocalBuildPath",variableNames);
-                SetBundledAssetGroupSchemaPaths(m_Settings, schema.LoadPath, AddressableAssetSettings.kLocalLoadPath,"LocalLoadPath",  variableNames);
-                
+                SetBundledAssetGroupSchemaPaths(m_Settings, schema.BuildPath,  AddressableAssetSettings.kLocalBuildPath, "LocalBuildPath", variableNames);
+                SetBundledAssetGroupSchemaPaths(m_Settings, schema.LoadPath, AddressableAssetSettings.kLocalLoadPath, "LocalLoadPath",  variableNames);
+
                 var expectedLoadPath = m_Settings.profileSettings.GetValueByName(m_Settings.activeProfileId, "LocalLoadPath");
                 var expectedBuildPath = m_Settings.profileSettings.GetValueByName(m_Settings.activeProfileId, "LocalBuildPath");
-                
+
                 Assert.AreEqual(expectedLoadPath, schema.LoadPath.GetValue(m_Settings), "Load path was not properly set within BundledAssetGroupSchema.OnSetGroup");
                 Assert.AreEqual(expectedBuildPath, schema.BuildPath.GetValue(m_Settings), "Build path was not properly set within BundledAssetGroupSchema.OnSetGroup");
             }
@@ -243,7 +243,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 m_Settings.profileSettings.RemoveValue("LocalBuildPath");
             }
         }
-        
+
         internal void SetBundledAssetGroupSchemaPaths(AddressableAssetSettings settings, ProfileValueReference pvr, string newVariableName, string oldVariableName, List<string> variableNames)
         {
             if (variableNames.Contains(newVariableName))
@@ -253,7 +253,7 @@ namespace UnityEditor.AddressableAssets.Tests
             else
                 Debug.LogWarning("Default path variable not found when initializing BundledAssetGroupSchema. Please manually set the path via the groups window.");
         }
-        
+
         [Test]
         public void BundledAssetGroupSchema_OnSetGroup_DefaultsToOldVariablesIfNewNotPresent()
         {
@@ -271,13 +271,14 @@ namespace UnityEditor.AddressableAssets.Tests
 
                 //Create group with BundledAssetGroupSchema
                 group = m_Settings.CreateGroup("Group1", false, false, false, null, typeof(BundledAssetGroupSchema));
-                
+
                 Assert.AreEqual("loadDefault1", m_Settings.profileSettings.GetValueByName(profile1Id, "LocalLoadPath"), "Old variables value was not properly transferred over to new variable.");
                 Assert.AreEqual("buildDefault1", m_Settings.profileSettings.GetValueByName(profile1Id, "LocalBuildPath"), "Old variables value was not properly transferred over to new variable.");
-                var schema = group.GetSchema<BundledAssetGroupSchema>(); 
+                var schema = group.GetSchema<BundledAssetGroupSchema>();
+
                 var expectedLoadPath = m_Settings.profileSettings.GetValueByName(m_Settings.activeProfileId, "LocalLoadPath");
                 var expectedBuildPath = m_Settings.profileSettings.GetValueByName(m_Settings.activeProfileId, "LocalBuildPath");
-                
+
                 Assert.AreEqual(expectedLoadPath, schema.LoadPath.GetValue(m_Settings), "Load path was not properly set within BundledAssetGroupSchema.OnSetGroup");
                 Assert.AreEqual(expectedBuildPath, schema.BuildPath.GetValue(m_Settings), "Build path was not properly set within BundledAssetGroupSchema.OnSetGroup");
             }
@@ -291,7 +292,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 m_Settings.profileSettings.RemoveValue("LocalBuildPath");
             }
         }
-        
+
         [Test]
         public void BundledAssetGroupSchema_OnSetGroup_GivenChoiceOfNewAndOldVariablesChoosesNew()
         {
@@ -306,14 +307,14 @@ namespace UnityEditor.AddressableAssets.Tests
 
                 //Create group with BundledAssetGroupSchema
                 group = m_Settings.CreateGroup("BundledAssetGroupSchemaTestGroup1", false, false, false, null, typeof(BundledAssetGroupSchema));
-                
-                var schema = group.GetSchema<BundledAssetGroupSchema>(); 
+
+                var schema = group.GetSchema<BundledAssetGroupSchema>();
                 var expectedLoadPath = m_Settings.profileSettings.GetValueByName(m_Settings.activeProfileId, "Local.LoadPath");
                 var expectedBuildPath = m_Settings.profileSettings.GetValueByName(m_Settings.activeProfileId, "Local.BuildPath");
 
                 var loadValue = schema.LoadPath.GetValue(m_Settings);
                 var buildValue = schema.BuildPath.GetValue(m_Settings);
-                
+
                 Assert.AreEqual(expectedLoadPath, loadValue, "Load path was not properly set within BundledAssetGroupSchema.OnSetGroup");
                 Assert.AreEqual(expectedBuildPath, buildValue, "Build path was not properly set within BundledAssetGroupSchema.OnSetGroup");
                 Assert.AreEqual("CorrectLoadValue", loadValue, "Path value is correctly set to the value of Local.LoadPath");
@@ -360,7 +361,7 @@ namespace UnityEditor.AddressableAssets.Tests
             BundledAssetGroupSchema schema = null;
             try
             {
-                Type[] types = new Type[]{};
+                Type[] types = new Type[] {};
                 group = m_Settings.CreateGroup("Group1", false, false, false, null, types);
                 List<string> variableNames = new List<string>();
                 variableNames.Add("LocalBuildPath");
@@ -374,6 +375,121 @@ namespace UnityEditor.AddressableAssets.Tests
                     m_Settings.RemoveGroupInternal(group, true, false);
                 if (schema != null)
                     ScriptableObject.DestroyImmediate(schema);
+            }
+        }
+
+        [Test]
+        [TestCase(null, null)]
+        [TestCase("", "")]
+        [TestCase(null, "")]
+        [TestCase("", null)]
+        public void BundledAssetGroupSchema_Validate_PreservesOldPathCustomValues(string loadId, string buildId)
+        {
+            AddressableAssetGroup group = null;
+            AddressableAssetProfileSettings.BuildProfile profile = m_Settings.profileSettings.GetProfile(m_Settings.activeProfileId);
+            AddressableAssetProfileSettings profileParent = profile.m_ProfileParent;
+
+            profileParent.CreateValue("LocalLoadPath", "loadpath");
+            profileParent.CreateValue("LocalBuildPath", "buildpath");
+
+            profileParent.RemoveValue(profileParent.GetVariableId(AddressableAssetSettings.kLocalLoadPath));
+            profileParent.RemoveValue(profileParent.GetVariableId(AddressableAssetSettings.kLocalBuildPath));
+
+            try
+            {
+                group = m_Settings.CreateGroup("BundledAssetGroupSchemaTestGroup1", false, false, false, null, typeof(BundledAssetGroupSchema));
+
+                string expectedLoadPath = m_Settings.profileSettings.GetVariableId("LocalLoadPath");
+                string expectedBuildPath = m_Settings.profileSettings.GetVariableId("LocalBuildPath");
+                var schema = group.GetSchema<BundledAssetGroupSchema>();
+                schema.LoadPath.Id = loadId;
+                schema.BuildPath.Id = buildId;
+
+                profile.m_ProfileParent = null;
+                schema.Validate();
+
+                var loadValue = schema.LoadPath.Id;
+                var buildValue = schema.BuildPath.Id;
+                Assert.AreEqual(expectedLoadPath, loadValue, $"Load path not properly set in BundledAssetGroupSchema.Validate");
+                Assert.AreEqual(expectedBuildPath, buildValue, $"Build path not properly set in BundledAssetGroupSchema.Validate");
+            }
+            finally
+            {
+                if (group != null)
+                    m_Settings.RemoveGroupInternal(group, true, false);
+                profile.m_ProfileParent = profileParent;
+                profile.m_ProfileParent.RemoveValue(profileParent.GetVariableId("LocalLoadPath"));
+                profile.m_ProfileParent.RemoveValue(profileParent.GetVariableId("LocalBuildPath"));
+                profile.m_ProfileParent.CreateValue(AddressableAssetSettings.kLocalLoadPath, AddressableAssetSettings.kLocalLoadPathValue);
+                profile.m_ProfileParent.CreateValue(AddressableAssetSettings.kLocalBuildPath, AddressableAssetSettings.kLocalBuildPathValue);
+            }
+        }
+
+        [Test]
+        [TestCase(null, null)]
+        [TestCase("", "")]
+        [TestCase(null, "")]
+        [TestCase("", null)]
+        public void BundledAssetGroupSchema_Validate_PreservesNewPathCustomValues(string loadId, string buildId)
+        {
+            AddressableAssetGroup group = null;
+            AddressableAssetProfileSettings.BuildProfile profile = m_Settings.profileSettings.GetProfile(m_Settings.activeProfileId);
+            AddressableAssetProfileSettings profileParent = profile.m_ProfileParent;
+            try
+            {
+                group = m_Settings.CreateGroup("BundledAssetGroupSchemaTestGroup1", false, false, false, null, typeof(BundledAssetGroupSchema));
+
+                string expectedLoadPath = m_Settings.profileSettings.GetVariableId(AddressableAssetSettings.kLocalLoadPath);
+                string expectedBuildPath = m_Settings.profileSettings.GetVariableId(AddressableAssetSettings.kLocalBuildPath);
+                var schema = group.GetSchema<BundledAssetGroupSchema>();
+                schema.LoadPath.Id = loadId;
+                schema.BuildPath.Id = buildId;
+
+                profile.m_ProfileParent = null;
+                schema.Validate();
+
+                var loadValue = schema.LoadPath.Id;
+                var buildValue = schema.BuildPath.Id;
+                Assert.AreEqual(expectedLoadPath, loadValue, $"Load path not properly set in BundledAssetGroupSchema.Validate");
+                Assert.AreEqual(expectedBuildPath, buildValue, $"Build path not properly set in BundledAssetGroupSchema.Validate");
+            }
+            finally
+            {
+                if (group != null)
+                    m_Settings.RemoveGroupInternal(group, true, false);
+                profile.m_ProfileParent = profileParent;
+            }
+        }
+
+        [Test]
+        public void BundledAssetGroupSchema_Validate_PreservesCustomPaths()
+        {
+            AddressableAssetGroup group = null;
+            AddressableAssetProfileSettings.BuildProfile profile = m_Settings.profileSettings.GetProfile(m_Settings.activeProfileId);
+            AddressableAssetProfileSettings profileParent = profile.m_ProfileParent;
+            try
+            {
+                group = m_Settings.CreateGroup("BundledAssetGroupSchemaTestGroup1", false, false, false, null, typeof(BundledAssetGroupSchema));
+
+                string expectedLoadPath = "<undefined>";
+                string expectedBuildPath = "C://special/path";
+                var schema = group.GetSchema<BundledAssetGroupSchema>();
+                schema.LoadPath.Id = expectedLoadPath;
+                schema.BuildPath.Id = expectedBuildPath;
+
+                profile.m_ProfileParent = null;
+                schema.Validate();
+
+                var loadValue = schema.LoadPath.Id;
+                var buildValue = schema.BuildPath.Id;
+                Assert.AreEqual(expectedLoadPath, loadValue, $"Load path reset to {AddressableAssetSettings.kLocalLoadPath} in BundledAssetGroupSchema.Validate");
+                Assert.AreEqual(expectedBuildPath, buildValue, $"Build path reset to {AddressableAssetSettings.kLocalBuildPath} in BundledAssetGroupSchema.Validate");
+            }
+            finally
+            {
+                if (group != null)
+                    m_Settings.RemoveGroupInternal(group, true, false);
+                profile.m_ProfileParent = profileParent;
             }
         }
     }

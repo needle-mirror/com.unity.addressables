@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.Exceptions;
@@ -8,13 +7,6 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.SceneManagement;
-
-[assembly: InternalsVisibleTo("Unity.ResourceManager.Tests")]
-[assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
-[assembly: InternalsVisibleTo("Unity.Addressables")]
-#if UNITY_EDITOR
-[assembly: InternalsVisibleTo("Unity.Addressables.Editor")]
-#endif
 
 namespace UnityEngine.ResourceManagement
 {

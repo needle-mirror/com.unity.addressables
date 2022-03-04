@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
@@ -33,9 +32,6 @@ using Unity.Services.CCD.Management.Releases;
 using Unity.Services.CCD.Management.Badges;
 using Unity.Services.CCD.Management.Models;
 #endif
-[assembly: InternalsVisibleTo("Unity.Addressables.Editor.Tests")]
-[assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
-[assembly: InternalsVisibleTo("PerformanceTests.Editor")]
 
 namespace UnityEditor.AddressableAssets.Settings
 {

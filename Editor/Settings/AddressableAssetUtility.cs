@@ -20,7 +20,7 @@ namespace UnityEditor.AddressableAssets.Settings
 {
     using Object = UnityEngine.Object;
 
-    static class AddressableAssetUtility
+    internal static class AddressableAssetUtility
     {
         internal static bool IsInResources(string path)
         {
@@ -454,7 +454,9 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             List<BufferedValues> m_Buffer;
-            
+            bool m_IsInvoking;
+            private List<(int, Delegate)> m_RegisterQueue = new List<(int, Delegate)>();
+
             public delegate void Delegate(T1 arg1, T2 arg2, T3 arg3, T4 arg4);
             private SortedList<int, Delegate> m_SortedInvocationList = new SortedList<int, Delegate>();
 
@@ -465,18 +467,65 @@ namespace UnityEditor.AddressableAssets.Settings
                 {
                     m_SortedInvocationList[keys[i]] -= toUnregister;
                     if (m_SortedInvocationList[keys[i]] == null)
+                    {
                         m_SortedInvocationList.Remove(keys[i]);
+                        break;
+                    }
+                }
+                
+                if (m_IsInvoking)
+                {
+                    for (int i = m_RegisterQueue.Count - 1; i >= 0; --i)
+                    {
+                        if (m_RegisterQueue[i].Item2 == toUnregister)
+                        {
+                            m_RegisterQueue.RemoveAt(i);
+                            break;
+                        }
+                    }
                 }
             }
             
             public void Register(Delegate toRegister, int order)
             {
+                if (m_IsInvoking)
+                {
+                    m_RegisterQueue.Add((order, toRegister));
+                    return;
+                }
+                
                 Unregister(toRegister);
                 if (m_SortedInvocationList.ContainsKey(order))
                     m_SortedInvocationList[order] += toRegister;
                 else
                     m_SortedInvocationList.Add(order, toRegister);
+                InvokeBuffer_Internal();
+            }
+
+            public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+            {
+                if (m_IsInvoking)
+                    return;
                 
+                m_IsInvoking = true;
+                foreach (var invocationList in m_SortedInvocationList)
+                    invocationList.Value?.Invoke(arg1,arg2,arg3,arg4);
+
+                if (m_RegisterQueue.Count > 0)
+                {
+                    m_IsInvoking = false;
+                    foreach (var toRegister in m_RegisterQueue)
+                        Register(toRegister.Item2, toRegister.Item1);
+                    m_RegisterQueue.Clear();
+                    m_IsInvoking = true;
+                }
+                
+                InvokeBuffer_Internal();
+                m_IsInvoking = false;
+            }
+
+            void InvokeBuffer_Internal()
+            {
                 if (m_Buffer != null)
                 {
                     foreach (var b in m_Buffer)
@@ -484,16 +533,10 @@ namespace UnityEditor.AddressableAssets.Settings
                     m_Buffer = null;
                 }
             }
-
-            public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-            {
-                foreach (var invocationList in m_SortedInvocationList)
-                    invocationList.Value?.Invoke(arg1,arg2,arg3,arg4);
-            }
             
             public void BufferInvoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
             {
-                if (m_SortedInvocationList.Count == 0)
+                if (m_SortedInvocationList.Count == 0 || m_IsInvoking)
                 {
                     if (m_Buffer == null)
                         m_Buffer = new List<BufferedValues>();

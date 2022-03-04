@@ -10,6 +10,7 @@ using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Injector;
 using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEngine;
 using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
@@ -252,6 +253,12 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 // create groups
                 foreach (AddressableAssetGroup group in aaContext.Settings.groups)
                 {
+                    if (group.Name != group.name)
+                    {
+                        Debug.LogWarningFormat("Group name in settings does not match name in group asset, reset group name: \"{0}\" to \"{1}\"", group.name, group.Name);
+                        group.Name = group.Name;
+                    }
+                    
                     var grp = new BuildLayout.Group();
                     grp.Name = group.Name;
                     grp.Guid = group.Guid;

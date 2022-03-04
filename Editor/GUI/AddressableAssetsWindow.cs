@@ -37,6 +37,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var window = GetWindow<AddressableAssetsWindow>();
             window.titleContent = new GUIContent("Addressables Groups");
+            window.minSize = new Vector2(430, 250);
             window.Show();
         }
 

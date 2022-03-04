@@ -69,6 +69,7 @@ static class AddressablesTestUtility
             entry.SetLabel(GetPrefabLabel(suffix), true, true);
             entry.SetLabel(GetPrefabAlternatingLabel(suffix, i), true, true);
             entry.SetLabel(GetPrefabUniqueLabel(suffix, i), true, true);
+            entry.SetLabel("mixed", true, true, false);
         }
 
         var texture = new Texture2D(32, 32);
@@ -106,7 +107,9 @@ static class AddressablesTestUtility
         string assetRefGuid = CreateAsset(RootFolder + "/testIsReference.prefab", "IsReference");
         GameObject go = new GameObject("AssetReferenceBehavior");
         AssetReferenceTestBehavior aRefTestBehavior = go.AddComponent<AssetReferenceTestBehavior>();
-        settings.CreateOrMoveEntry(assetWithSubObjectsGUID, settings.DefaultGroup).address = "assetWithSubObjects";
+        var scriptableObject = settings.CreateOrMoveEntry(assetWithSubObjectsGUID, settings.DefaultGroup);
+        scriptableObject.address = "assetWithSubObjects";
+        scriptableObject.SetLabel("mixed", true, true, false);
         aRefTestBehavior.Reference = settings.CreateAssetReference(assetRefGuid);
         aRefTestBehavior.ReferenceWithSubObject = settings.CreateAssetReference(assetWithSubObjectsGUID);
         aRefTestBehavior.ReferenceWithSubObject.SubObjectName = "sub-shown";

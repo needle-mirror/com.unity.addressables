@@ -56,9 +56,12 @@ namespace AddressableAssetsIntegrationTests
         [TearDown]
         public void TearDown()
         {
-            Assert.AreEqual(m_StartingOpCount, m_Addressables.ResourceManager.OperationCacheCount);
-            Assert.AreEqual(m_StartingTrackedHandleCount, m_Addressables.TrackedHandleCount, $"Starting tracked handle count [{m_StartingInstanceCount}], not equal to current tracked handle count [{m_Addressables.TrackedHandleCount}]");
-            Assert.AreEqual(m_StartingInstanceCount, m_Addressables.ResourceManager.InstanceOperationCount);
+            if (m_Addressables != null)
+            {
+                Assert.AreEqual(m_StartingOpCount, m_Addressables.ResourceManager.OperationCacheCount);
+                Assert.AreEqual(m_StartingTrackedHandleCount, m_Addressables.TrackedHandleCount, $"Starting tracked handle count [{m_StartingInstanceCount}], not equal to current tracked handle count [{m_Addressables.TrackedHandleCount}]");
+                Assert.AreEqual(m_StartingInstanceCount, m_Addressables.ResourceManager.InstanceOperationCount);
+            }
 
             PostTearDownEvent?.Invoke();
             PostTearDownEvent = null;

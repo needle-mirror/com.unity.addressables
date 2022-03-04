@@ -1,6 +1,3 @@
-using System.Runtime.CompilerServices;
-[assembly: InternalsVisibleTo("Unity.Localization.Editor")]
-
 namespace UnityEditor.AddressableAssets.Settings
 {
     internal class AddressablesAssetPostProcessor : AssetPostprocessor

@@ -1,15 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using UnityEngine.ResourceManagement.Exceptions;
-using UnityEngine.ResourceManagement.ResourceLocations;
-using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 
 // ReSharper disable DelegateSubtraction
-
-[assembly: InternalsVisibleTo("Unity.ResourceManager.Tests")]
 
 namespace UnityEngine.ResourceManagement.AsyncOperations
 {

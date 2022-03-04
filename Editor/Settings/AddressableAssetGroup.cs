@@ -123,6 +123,11 @@ namespace UnityEditor.AddressableAssets.Settings
 
                     SetDirty(AddressableAssetSettings.ModificationEvent.GroupRenamed, this, true, true);
                 }
+                else if (name != newName)
+                {
+                    name = m_GroupName;
+                    SetDirty(AddressableAssetSettings.ModificationEvent.GroupRenamed, this, true, true);
+                }
             }
         }
         /// <summary>

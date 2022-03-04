@@ -26,16 +26,15 @@ To enable remote distribution of your content, you must enable the remote catalo
 Enable the remote catalog in your __Addressable Asset Settings__ Inspector (menu: __Window > Asset Management > Addressables > Settings__).
 
 * __Build Remote Catalog__: enabled
-* __Build Path__: RemoteBuildPath
-* __Load Path__: RemoteLoadPath
+* __Build & Load Paths__: Remote
 
 ![](images/addr_rcd_0.png)<br/>*Enabling the remote catalog*
 
- The catalog and its accompanying hash file are built to the folder specified by the __Build Path__ setting. You must upload these files so that they can be accessed at the URL specified by your __Load Path__ setting. Unless you have a specific reason not to, use the __RemoteBuildPath__ and __RemoteLoadPath__ variables from the active Profile so that the catalog is built to and loaded from the same paths as your remote bundles.
+ The catalog and its accompanying hash file are built to the folder specified by the __Build Path__ setting. You must upload these files so that they can be accessed at the URL specified by your __Load Path__ setting. Unless you have a specific reason not to, use the __Remote__ location so that the catalog is built to and loaded from the same paths as your remote bundles.
 
 ### Setting up a remote group
 
-To set up a group so that the assets in it can be hosted remotely, set the __Build__ and __Load Paths__ using the __RemoteBuildPath__ and __RemoteLoadPath__ Profile variables:
+To set up a group so that the assets in it can be hosted remotely, set the __Build & Load Paths__ using the __Remote__ location:
 
 ![](images/addr_rcd_1.png)
 
@@ -57,7 +56,7 @@ When you distribute content remotely, you typically need to set different URLS (
 
 __Builds for testing general game play and function__
 
-Early in development or when you need to test without access to a host, you might find it convenient to treat all your content as local content. For this situation you can create a Profile that builds and loads your remote content using the same paths as your local content. 
+Early in development or when you need to test without access to a host, you might find it convenient to treat all your content as local content. For this situation set the __Local__ and __Remote__ profile variables using the __Built-In__ location. 
 
 ![](images/addr_rcd_2.png)
 
@@ -65,14 +64,14 @@ Early in development or when you need to test without access to a host, you migh
 
 __Builds for local hosting__
 
-Later, when you set up a host on your local network (or localhost), you will need to change the Load Path for your remote groups to reflect the URL of the host. Rather than editing an existing Profile or group settings, you can create a new Profile specifically for this situation. 
+Later, when you set up a host on your local network (or localhost), you will need to change the Load Path for your remote groups to reflect the URL of the host. For example if using [Editor Hosting], set the __Remote__ profile variable using the __Editor Hosting__ location.
 
 ![](images/addr_rcd_3.png)
-*Remote content served from localhost URL*
+*Remote content served from Editor Hosting*
 
 __Builds for CDN__
 
-As you get closer to production, you might use a staging server and then, your production Content Delivery Network (CDN). You can create a Profile for each of these situations.
+As you get closer to production, you might use a staging server and then, your production Content Delivery Network (CDN). For example if using [Cloud Content Delivery], set the __Remote__ profile variable using the __Cloud Content Delivery__ location.
 
 ![](images/addr_rcd_4.png)  
 *Remote content hosted on the Unity Cloud Content Delivery service*
@@ -173,11 +172,13 @@ To help prevent you from needing to download a remote catalog every time, if you
 [CacheInitializationSettings]: xref:UnityEditor.AddressableAssets.Settings.CacheInitializationSettings
 [Caching.ClearCache]: xref:UnityEngine.Caching.ClearCache
 [Checking for content updates at runtime]: xref:addressables-content-update-builds#checking-for-content-updates-at-runtime
+[Cloud Content Delivery]: xref:addressables-ccd
 [content build]: xref:addressables-builds
 [content update build]: xref:addressables-content-update-builds
 [Content update builds]: xref:addressables-content-update-builds
 [Customizing Addressables initialization]: xref:addressables-api-initialize-async
 [Custom URL evaluation]: xref:addressables-api-transform-internal-id
+[Editor Hosting]: xref:addressables-asset-hosting-services
 [enabling remote distribution]: #enabling-remote-distribution
 [Enabling the remote catalog]: #enabling-the-remote-catalog
 [Managing catalogs at runtime]: xref:addressables-api-load-content-catalog-async

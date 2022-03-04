@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
@@ -17,11 +16,6 @@ using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.SceneManagement;
 
-#if UNITY_EDITOR
-[assembly: InternalsVisibleTo("Unity.Addressables.Editor.Tests")]
-#endif
-[assembly: InternalsVisibleTo("Unity.Addressables.Tests")]
-[assembly: InternalsVisibleTo("Unity.Addressables.Samples.Tests")]
 namespace UnityEngine.AddressableAssets
 {
     internal class AddressablesImpl : IEqualityComparer<IResourceLocation>
@@ -620,7 +614,7 @@ namespace UnityEngine.AddressableAssets
                     }
                 }
             }
-            return ResourceManager.CreateCompletedOperationWithException<TObject>(default(TObject), new InvalidKeyException(key, t));
+            return ResourceManager.CreateCompletedOperationWithException<TObject>(default(TObject), new InvalidKeyException(key, t, this));
         }
 
         class LoadResourceLocationKeyOp : AsyncOperationBase<IList<IResourceLocation>>
@@ -746,7 +740,7 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(keys, typeof(TObject), mode, out locations))
-                return ResourceManager.CreateCompletedOperationWithException<IList<TObject>>(null, new InvalidKeyException(keys, typeof(TObject), mode));
+                return ResourceManager.CreateCompletedOperationWithException<IList<TObject>>(null, new InvalidKeyException(keys, typeof(TObject), mode, this));
 
             return LoadAssetsAsync(locations, callback, releaseDependenciesOnFailure);
         }
@@ -765,7 +759,7 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, typeof(TObject), out locations))
-                return ResourceManager.CreateCompletedOperationWithException<IList<TObject>>(null, new InvalidKeyException(key, typeof(TObject)));
+                return ResourceManager.CreateCompletedOperationWithException<IList<TObject>>(null, new InvalidKeyException(key, typeof(TObject), this));
 
             return LoadAssetsAsync(locations, callback, releaseDependenciesOnFailure);
         }
@@ -882,7 +876,7 @@ namespace UnityEngine.AddressableAssets
                     };
                 }
                 else if (!GetResourceLocations(key, typeof(object), out locations))
-                    return ResourceManager.CreateCompletedOperationWithException<long>(0, new InvalidKeyException(key, typeof(object)));
+                    return ResourceManager.CreateCompletedOperationWithException<long>(0, new InvalidKeyException(key, typeof(object), this));
 
                 foreach (var loc in locations)
                 {
@@ -945,7 +939,7 @@ namespace UnityEngine.AddressableAssets
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, typeof(object), out locations))
             {
-                var handle = ResourceManager.CreateCompletedOperationWithException<IList<IAssetBundleResource>>(null, new InvalidKeyException(key, typeof(object)));
+                var handle = ResourceManager.CreateCompletedOperationWithException<IList<IAssetBundleResource>>(null, new InvalidKeyException(key, typeof(object), this));
                 if (autoReleaseHandle)
                     AutoReleaseHandleOnCompletion(handle);
                 return handle;
@@ -1000,14 +994,16 @@ namespace UnityEngine.AddressableAssets
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(keys, typeof(object), mode, out locations))
             {
-                var handle = ResourceManager.CreateCompletedOperationWithException<IList<IAssetBundleResource>>(null, new InvalidKeyException(keys, typeof(object), mode));
+                var handle = ResourceManager.CreateCompletedOperationWithException<IList<IAssetBundleResource>>(null, new InvalidKeyException(keys, typeof(object), mode, this));
                 if (autoReleaseHandle)
                     AutoReleaseHandleOnCompletion(handle);
                 return handle;
             }
             else
             {
-                var handle = LoadAssetsAsync<IAssetBundleResource>(GatherDependenciesFromLocations(locations), null, true);
+                List<IResourceLocation> dlLocations = GatherDependenciesFromLocations(locations);
+                WrapAsDownloadLocations(dlLocations);
+                var handle = LoadAssetsAsync<IAssetBundleResource>(dlLocations, null, true);
                 if (autoReleaseHandle)
                     AutoReleaseHandleOnCompletion(handle);
                 return handle;
@@ -1172,7 +1168,7 @@ namespace UnityEngine.AddressableAssets
                 if (locator.Locate(key, typeof(GameObject), out locs))
                     return InstantiateAsync(locs[0], instantiateParameters, trackHandle);
             }
-            return ResourceManager.CreateCompletedOperationWithException<GameObject>(null, new InvalidKeyException(key, typeof(GameObject)));
+            return ResourceManager.CreateCompletedOperationWithException<GameObject>(null, new InvalidKeyException(key, typeof(GameObject), this));
         }
 
         AsyncOperationHandle<GameObject> InstantiateWithChain(AsyncOperationHandle dep, IResourceLocation location, InstantiationParameters instantiateParameters, bool trackHandle = true)
@@ -1226,7 +1222,7 @@ namespace UnityEngine.AddressableAssets
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, typeof(SceneInstance), out locations))
-                return ResourceManager.CreateCompletedOperationWithException<SceneInstance>(default(SceneInstance), new InvalidKeyException(key, typeof(SceneInstance)));
+                return ResourceManager.CreateCompletedOperationWithException<SceneInstance>(default(SceneInstance), new InvalidKeyException(key, typeof(SceneInstance), this));
 
             return LoadSceneAsync(locations[0], loadMode, activateOnLoad, priority, trackHandle);
         }

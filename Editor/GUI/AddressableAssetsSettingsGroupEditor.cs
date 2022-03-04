@@ -173,7 +173,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
 
                 {
-                    var guiMode = new GUIContent("Create");
+                    var guiMode = new GUIContent("New");
                     Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
                     if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
                     {
@@ -181,15 +181,16 @@ namespace UnityEditor.AddressableAssets.GUI
                         foreach (var templateObject in settings.GroupTemplateObjects)
                         {
                             if (templateObject != null)
-                                menu.AddItem(new GUIContent("Group/" + templateObject.name), false, m_EntryTree.CreateNewGroup, templateObject);
+                                menu.AddItem(new GUIContent(templateObject.name), false, m_EntryTree.CreateNewGroup, templateObject);
                         }
                         menu.AddSeparator(string.Empty);
-                        menu.AddItem(new GUIContent("Group/Blank (no schema)"), false, m_EntryTree.CreateNewGroup, null);
+                        menu.AddItem(new GUIContent("Blank (no schema)"), false, m_EntryTree.CreateNewGroup, null);
                         menu.DropDown(rMode);
                     }
                 }
 
-                CreateProfileDropdown();
+                if (toolbarPos.width > 430)
+                    CreateProfileDropdown();
 
                 {
                     var guiMode = new GUIContent("Tools");
@@ -224,11 +225,12 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
 
                 GUILayout.FlexibleSpace();
-                GUILayout.Space(spaceBetween * 2f);
+                if (toolbarPos.width > 300)
+                    GUILayout.Space((spaceBetween * 2f)+8);
 
                 {
-                    GUILayout.Space(8);
-                    var guiMode = new GUIContent("Play Mode Script");
+                    string playmodeButtonName = toolbarPos.width < 300 ? "Play Mode" : "Play Mode Script";
+                    var guiMode = new GUIContent(playmodeButtonName);
                     Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
                     if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
                     {

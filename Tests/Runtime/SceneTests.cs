@@ -167,7 +167,7 @@ namespace SceneTests
             yield return instOp;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, instOp.Status);
             Assert.AreEqual(sceneKeys[0], instOp.Result.scene.name);
-
+            
             yield return UnloadSceneFromHandler(op, m_Addressables);
             Assert.IsFalse(instOp.IsValid());
         }
@@ -250,6 +250,7 @@ namespace SceneTests
 
             // Cleanup
             yield return internalInstanceOp2;
+            yield return instOp2;
             instOp2.Release();
         }
 

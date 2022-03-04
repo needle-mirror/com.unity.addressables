@@ -4,6 +4,19 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.19.19] - 2022-3-1
+- Improved message of InvalidKeyException errors.
+- Improved exception message of RemoteProviderExceptions
+- Fixed issue where Clear Cache Behavior setting was getting reverted when changed while multi-selecting schemas
+- Fixed an issue where when building with Missing References in the groups window a NullRefException would occur
+- Added documentation explaining why the user might hit a deadlock when calling WaitForCompletion when loading multiple scenes in succession
+- Fixed issue where DownloadDependenciesAsync with merge mode did not unload AssetBundles correctly
+- Added ComponentReference and Custom Analyze Rule to Samples folder.
+- Fixed issue where BundledAssetGroupSchema custom paths reset to default local paths after a domain reload.
+- Added assemblyInfo to manage visible internals
+- Fixed issue causing InvalidOperationException when loading Addressable Settings from OnPostProcessAllAsset during a project load without a cached AssetDatabase
+- Fixed an issue where calling LoadSceneAsync.WaitForCompletion immediately after loading a scene singly would cause a freeze
+
 ## [1.19.18] - 2022-1-31
 - Fixed issue where WaitForCompletion would take too long when used in virtual mode.
 - Updated the documentation to include information on methods of waiting on asynchronous operations to complete.
@@ -1099,6 +1112,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.0.8-preview] - 2018-02-08
 - Initial submission for package distribution
+
 
 
 
