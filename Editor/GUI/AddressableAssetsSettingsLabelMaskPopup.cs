@@ -44,27 +44,16 @@ namespace UnityEditor.AddressableAssets.GUI
             m_SearchField = new SearchField();
             m_ActivatorRect = activatorRect;
             m_SearchStyles = new List<GUIStyle>();
-            m_SearchStyles.Add(GetStyle("ToolbarSeachTextField"));
-            m_SearchStyles.Add(GetStyle("ToolbarSeachCancelButton"));
-            m_SearchStyles.Add(GetStyle("ToolbarSeachCancelButtonEmpty"));
+            m_SearchStyles.Add(AddressablesGUIUtility.GetStyle("ToolbarSeachTextField"));
+            m_SearchStyles.Add(AddressablesGUIUtility.GetStyle("ToolbarSeachCancelButton"));
+            m_SearchStyles.Add(AddressablesGUIUtility.GetStyle("ToolbarSeachCancelButtonEmpty"));
             
             m_HintLabelStyle = new GUIStyle(UnityEngine.GUI.skin.label);
             m_HintLabelStyle.fontSize = 10;
             m_HintLabelStyle.fontStyle = FontStyle.Italic;
             m_HintLabelStyle.richText = true;
         }
-        GUIStyle GetStyle(string styleName)
-        {
-            GUIStyle s = UnityEngine.GUI.skin.FindStyle(styleName);
-            if (s == null)
-                s = EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).FindStyle(styleName);
-            if (s == null)
-            {
-                Addressables.LogError("Missing built-in guistyle " + styleName);
-                s = new GUIStyle();
-            }
-            return s;
-        }
+        
 
         public override Vector2 GetWindowSize()
         {

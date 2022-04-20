@@ -105,6 +105,8 @@ internal class DelegateList<T>
 
     public static DelegateList<T> CreateWithGlobalCache()
     {
+        if (!GlobalLinkedListNodeCache<Action<T>>.CacheExists)
+            GlobalLinkedListNodeCache<Action<T>>.SetCacheSize(32);
         return new DelegateList<T>(GlobalLinkedListNodeCache<Action<T>>.Acquire, GlobalLinkedListNodeCache<Action<T>>.Release);
     }
 }

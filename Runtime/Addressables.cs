@@ -19,6 +19,72 @@ using UnityEditor;
 namespace UnityEngine.AddressableAssets
 {
     /// <summary>
+    /// A container for data pertaining to a specific Resource Locator.  Used mainly to determine if a content catalog
+    /// needs to be updated.
+    /// </summary>
+    public class ResourceLocatorInfo
+    {
+        /// <summary>
+        /// The Resource Locator that has been loaded into the Addressables system.
+        /// </summary>
+        public IResourceLocator Locator { get; private set; }
+        /// <summary>
+        /// The local hash for this Resource Locator.  If a remote content catalog is updated and the remote hash changes,
+        /// this locator info is used to determine if a new content catalog needs to be updated.
+        /// </summary>
+        public string LocalHash { get; private set; }
+        /// <summary>
+        /// The Content Catalog location this Resource Locator was loaded from.  Catalog locations typically contain
+        /// exactly two dependencies.  The first dependency is the remote location of the content catalog hash file, the 
+        /// second is the local path of the hash file.
+        /// </summary>
+        public IResourceLocation CatalogLocation { get; private set; }
+        internal bool ContentUpdateAvailable { get; set; }
+        /// <summary>
+        /// Contstruct a ResourceLocatorInfo for a given Resource Locator.
+        /// </summary>
+        /// <param name="loc">The IResourceLocator to track.</param>
+        /// <param name="localHash">The local hash of the content catalog.</param>
+        /// <param name="remoteCatalogLocation">The location for the remote catalog.  Typically this location contains exactly two dependeices, 
+        /// the first one pointing to the remote hash file.  The second dependency pointing to the local hash file.</param>
+        public ResourceLocatorInfo(IResourceLocator loc, string localHash, IResourceLocation remoteCatalogLocation)
+        {
+            Locator = loc;
+            LocalHash = localHash;
+            CatalogLocation = remoteCatalogLocation;
+        }
+
+        /// <summary>
+        /// The remote hash location of the content catalog used by the resource locator
+        /// </summary>
+        public IResourceLocation HashLocation
+        {
+            get
+            {
+                return CatalogLocation.Dependencies[0];
+            }
+        }
+
+        /// <summary>
+        /// Checks to see if the provided CatalogLocation contains the expected amount of dependencies to check for catalog updates
+        /// </summary>
+        public bool CanUpdateContent
+        {
+            get
+            {
+                return !string.IsNullOrEmpty(LocalHash) && CatalogLocation != null && CatalogLocation.HasDependencies && CatalogLocation.Dependencies.Count == 2;
+            }
+        }
+
+        internal void UpdateContent(IResourceLocator locator, string hash, IResourceLocation loc)
+        {
+            LocalHash = hash;
+            CatalogLocation = loc;
+            Locator = locator;
+        }
+    }
+
+    /// <summary>
     /// Exception to encapsulate invalid key errors.
     /// </summary>
     public class InvalidKeyException : Exception
@@ -1615,6 +1681,27 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
+        /// Given the Id of an IResourceLocator, get the relevant content catalog data associated with it.
+        /// </summary>
+        /// <param name="locatorId">The Id of the IResourceLocator</param>
+        /// <returns>Data pertaining to the content catalog used by the provided IResourceLocator</returns>
+        public static ResourceLocatorInfo GetLocatorInfo(string locatorId)
+        {
+            return m_Addressables.GetLocatorInfo(locatorId);
+        }
+
+        /// <summary>
+        /// Given the Id of an IResourceLocator, get the relevant content catalog data associated with it.
+        /// </summary>
+        /// <param name="locator">The resource locator you want to get content catalog data for.</param>
+        /// <returns>Data pertaining to the content catalog used by the provided IResourceLocator</returns>
+        public static ResourceLocatorInfo GetLocatorInfo(IResourceLocator locator)
+        {
+            return m_Addressables.GetLocatorInfo(locator.LocatorId);
+        }
+
+
+        /// <summary>
         /// Instantiate a single object. Note that the dependency loading is done asynchronously, but generally the actual instantiate is synchronous.
         /// </summary>
         /// <param name="location">The location of the Object to instantiate.</param>
@@ -1859,7 +1946,27 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<SceneInstance> LoadSceneAsync(object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
         {
-            return m_Addressables.LoadSceneAsync(key, loadMode, activateOnLoad, priority);
+            return m_Addressables.LoadSceneAsync(key, new LoadSceneParameters(loadMode), activateOnLoad, priority);
+        }
+        
+        /// <summary>
+        /// Loads an Addressable Scene asset.
+        /// </summary>
+        /// <remarks>
+        /// The <paramref name="loadSceneParameters"/>, <paramref name="activateOnLoad"/>, and <paramref name="priority"/> parameters correspond to
+        /// the parameters used in the Unity [SceneManager.LoadSceneAsync](https://docs.unity3d.com/ScriptReference/SceneManagement.SceneManager.LoadSceneAsync.html)
+        /// method.
+        ///
+        /// See [Loading Scenes](xref:addressables-api-load-asset-async#loading-scenes) for more details.
+        /// </remarks>
+        /// <param name="key">The key of the location of the scene to load.</param>
+        /// <param name="loadSceneParameters">Scene load mode.</param>
+        /// <param name="activateOnLoad">If false, the scene will load but not activate (for background loading).  The SceneInstance returned has an Activate() method that can be called to do this at a later point.</param>
+        /// <param name="priority">Async operation priority for scene loading.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<SceneInstance> LoadSceneAsync(object key, LoadSceneParameters loadSceneParameters, bool activateOnLoad = true, int priority = 100)
+        {
+            return m_Addressables.LoadSceneAsync(key, loadSceneParameters, activateOnLoad, priority);
         }
 
         /// <summary>
@@ -1879,7 +1986,27 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<SceneInstance> LoadSceneAsync(IResourceLocation location, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
         {
-            return m_Addressables.LoadSceneAsync(location, loadMode, activateOnLoad, priority);
+            return m_Addressables.LoadSceneAsync(location, new LoadSceneParameters(loadMode), activateOnLoad, priority);
+        }
+        
+        /// <summary>
+        /// Loads an Addressable Scene asset.
+        /// </summary>
+        /// <remarks>
+        /// The <paramref name="loadSceneParameters"/>, <paramref name="activateOnLoad"/>, and <paramref name="priority"/> parameters correspond to
+        /// the parameters used in the Unity [SceneManager.LoadSceneAsync](https://docs.unity3d.com/ScriptReference/SceneManagement.SceneManager.LoadSceneAsync.html)
+        /// method.
+        ///
+        /// See [Loading Scenes](xref:addressables-api-load-asset-async#loading-scenes) for more details.
+        /// </remarks>
+        /// <param name="location">The location of the scene to load.</param>
+        /// <param name="loadSceneParameters">Scene load parameters.</param>
+        /// <param name="activateOnLoad">If false, the scene will load but not activate (for background loading).  The SceneInstance returned has an Activate() method that can be called to do this at a later point.</param>
+        /// <param name="priority">Async operation priority for scene loading.</param>
+        /// <returns>The operation handle for the request.</returns>
+        public static AsyncOperationHandle<SceneInstance> LoadSceneAsync(IResourceLocation location, LoadSceneParameters loadSceneParameters, bool activateOnLoad = true, int priority = 100)
+        {
+            return m_Addressables.LoadSceneAsync(location, loadSceneParameters, activateOnLoad, priority);
         }
 
         /// <summary>
@@ -2103,6 +2230,51 @@ namespace UnityEngine.AddressableAssets
         public static AsyncOperationHandle<bool> CleanBundleCache(IEnumerable<string> catalogsIds = null)
         {
             return m_Addressables.CleanBundleCache(catalogsIds, false);
+        }
+
+        /// <summary>
+        /// Given a location path that points to a remote content catalog, create a location with the assumed dependencies
+        /// that point to remote, and local, hash files respectively.  The first dependency, remote, assumes that the .hash file
+        /// is located beside the provided location of the .json catalog file.  The second dependency, local, points to a location
+        /// inside the Addressables local cache data folder.  The Addressables local cache data folder is meant for content catalogs
+        /// and is not the same cache location for AssetBundles.
+        /// </summary>
+        /// <typeparam name="T">The type of provider you want to load your given catalog.  By default, Addressables uses the ContentCatalogProvider.</typeparam>
+        /// <param name="remoteCatalogPath">The path of the remote content catalog.</param>
+        /// <returns>A resource location with exactly 2 dependencies.  The first points to the assumed remote hash file location.  The second points to the local hash file location.</returns>
+        public static ResourceLocationBase CreateCatalogLocationWithHashDependencies<T>(string remoteCatalogPath) where T : IResourceProvider
+        {
+            return m_Addressables.CreateCatalogLocationWithHashDependencies<T>(remoteCatalogPath);
+        }
+
+        /// <summary>
+        /// Given a location path that points to a remote content catalog, create a location with the assumed dependencies
+        /// that point to remote, and local, hash files respectively.  The first dependency, remote, assumes that the .hash file
+        /// is located beside the provided location of the .json catalog file.  The second dependency, local, points to a location
+        /// inside the Addressables local cache data folder.  The Addressables local cache data folder is meant for content catalogs
+        /// and is not the same cache location for AssetBundles.
+        /// </summary>
+        /// <typeparam name="T">The type of provider you want to load your given catalog.  By default, Addressables uses the ContentCatalogProvider.</typeparam>
+        /// <param name="remoteCatalogLocation">A resource location that points to the remote content catalog file.</param>
+        /// <returns>A resource location with exactly 2 dependencies.  The first points to the assumed remote hash file location.  The second points to the local hash file location.</returns>
+        public static ResourceLocationBase CreateCatalogLocationWithHashDependencies<T>(IResourceLocation remoteCatalogLocation) where T : IResourceProvider
+        {
+            return m_Addressables.CreateCatalogLocationWithHashDependencies<T>(remoteCatalogLocation);
+        }
+
+        /// <summary>
+        /// Given a location path that points to a remote content catalog and its corresponding remote hash file, create a location with the dependencies
+        /// that point to remote, and local, hash files respectively.  The first dependency, remote, uses the provided remote hash location.  
+        /// The second dependency, local, points to a location inside the Addressables local cache data folder.  The Addressables local cache data folder is meant for content catalogs
+        /// and is not the same cache location for AssetBundles. 
+        /// </summary>
+        /// <typeparam name="T">The type of provider you want to load your given catalog.  By default, Addressables uses the ContentCatalogProvider.</typeparam>
+        /// <param name="remoteCatalogPath">The path of the remote content catalog.</param>
+        /// <param name="remoteHashPath">The path of the remote catalog .hash file.</param>
+        /// <returns>A resource location with exactly 2 dependencies.  The first points to the assumed remote hash file location.  The second points to the local hash file location.</returns>
+        public static ResourceLocationBase CreateCatalogLocationWithHashDependencies<T>(string remoteCatalogPath, string remoteHashPath) where T : IResourceProvider
+        {
+            return m_Addressables.CreateCatalogLocationWithHashDependencies<T>(remoteCatalogPath, remoteHashPath);
         }
     }
 }

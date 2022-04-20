@@ -212,10 +212,9 @@ namespace UnityEditor.AddressableAssets.Build.Layout
                 TabWriter writer = new TabWriter(sw);
 
                 writer.WriteLine("WARNING! The formatting in this file may change in future package versions.");
-                writer.WriteLine($"Unity Version: {UnityEngine.Application.unityVersion}");
-                PackageManager.PackageInfo info = PackageManager.PackageInfo.FindForAssembly(typeof(BuildLayoutPrinter).Assembly);
-                if (info != null)
-                    writer.WriteLine($"{info.name}: {info.version}");
+                writer.WriteLine($"Unity Version: {layout.UnityVersion}");
+                if (!string.IsNullOrEmpty(layout.PackageVersion))
+                    writer.WriteLine(layout.PackageVersion);
 
                 WriteSummary(writer, layout);
                 writer.WriteLine("");

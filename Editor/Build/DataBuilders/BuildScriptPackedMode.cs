@@ -60,8 +60,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         protected override TResult BuildDataImplementation<TResult>(AddressablesDataBuilderInput builderInput)
         {
             TResult result = default(TResult);
+            m_IncludedGroupsInBuild?.Clear();
 
             var timer = new Stopwatch();
+
             timer.Start();
             InitializeBuildContext(builderInput, out AddressableAssetsBuildContext aaContext);
 
@@ -79,6 +81,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             if (result != null)
                 result.Duration = timer.Elapsed.TotalSeconds;
+            
+            if(result != null && string.IsNullOrEmpty(result.Error))
+            {
+                foreach(var group in m_IncludedGroupsInBuild)
+                    ClearContentUpdateNotifications(group);
+            }
 
             return result;
         }
@@ -208,6 +216,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// <returns></returns>
         protected virtual TResult DoBuild<TResult>(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext) where TResult : IDataBuilderResult
         {
+            var genericResult = AddressableAssetBuildResult.CreateResult<TResult>();
+            AddressablesPlayerBuildResult addrResult = genericResult as AddressablesPlayerBuildResult;
+
             ExtractDataTask extractData = new ExtractDataTask();
             List<CachedAssetState> carryOverCachedState = new List<CachedAssetState>();
             var tempPath = Path.GetDirectoryName(Application.dataPath) + "/" + Addressables.LibraryPath + PlatformMappingService.GetPlatformPathSubFolder() + "/addressables_content_state.bin";
@@ -243,7 +254,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 using (m_Log.ScopedStep(LogLevel.Info, "ContentPipeline.BuildAssetBundles"))
                 using (new SBPSettingsOverwriterScope(ProjectConfigData.GenerateBuildLayout)) // build layout generation requires full SBP write results
                 {
-                    var exitCode = ContentPipeline.BuildAssetBundles(buildParams, new BundleBuildContent(m_AllBundleInputDefs), out results, buildTasks, aaContext, m_Log);
+                    var buildContent = new BundleBuildContent(m_AllBundleInputDefs);
+                    var exitCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out results, buildTasks, aaContext, m_Log);
 
                     if (exitCode < ReturnCode.Success)
                         return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, "SBP Error" + exitCode);
@@ -277,7 +289,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                                     outputBundles.Add(b >= 0 ? m_OutputAssetBundleNames[b] : buildBundles[i]);
                                 }
 
-                                PostProcessBundles(assetGroup, buildBundles, outputBundles, results,
+                                PostProcessBundles(assetGroup, buildBundles, outputBundles, results, addrResult,
                                     aaContext.runtimeData, aaContext.locations, builderInput.Registry,
                                     primaryKeyToCatalogEntry, bundleRenameMap, postCatalogUpdateCallbacks);
                             }
@@ -391,10 +403,26 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                             extractData.DependencyData, playerBuildVersion, remoteCatalogLoadPath,
                             carryOverCachedState))
                     {
-                        string contentStatePath = ContentUpdateScript.GetContentStateDataPath(false);
+                        string contentStatePath = ContentUpdateScript.GetContentStateDataPath(false, aaContext.Settings);
+                        if (ResourceManagerConfig.ShouldPathUseWebRequest(contentStatePath))
+                        {
+#if ENABLE_CCD
+                            contentStatePath = Path.Combine(aaContext.Settings.RemoteCatalogBuildPath.GetValue(aaContext.Settings), Path.GetFileName(tempPath));
+#else
+                            contentStatePath = ContentUpdateScript.PreviousContentStateFileCachePath;
+#endif
+                        }
                         try
                         {
+                            string directory = Path.GetDirectoryName(contentStatePath);
+                            if (!Directory.Exists(directory))
+                                Directory.CreateDirectory(directory);
+                            if (File.Exists(contentStatePath))
+                                File.Delete(contentStatePath);
+
                             File.Copy(tempPath, contentStatePath, true);
+                            if(addrResult != null)
+                                addrResult.ContentStateFilePath = contentStatePath;
                             builderInput.Registry.AddFile(contentStatePath);
                         }
                         catch (UnauthorizedAccessException uae)
@@ -413,7 +441,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 }
             }
 
-            return AddressableAssetBuildResult.CreateResult<TResult>(settingsPath, aaContext.locations.Count);
+            if(addrResult != null)
+                addrResult.IsUpdateContentBuild = builderInput.PreviousContentState != null;
+            
+            genericResult.LocationCount = aaContext.locations.Count;
+            genericResult.OutputPath = settingsPath;
+            return genericResult;
         }
 
         private static void ProcessCatalogEntriesForBuild(AddressableAssetsBuildContext aaContext,
@@ -669,6 +702,21 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             return string.Empty;
         }
 
+        void ClearContentUpdateNotifications(AddressableAssetGroup assetGroup)
+        {
+            if (assetGroup == null)
+                return;
+
+            if(assetGroup.FlaggedDuringContentUpdateRestriction)
+            {
+                foreach (var e in assetGroup.entries)
+                {
+                    if(e != null)
+                        e.FlaggedDuringContentUpdateRestriction = false;
+                }
+            }
+        }
+
         internal string ProcessPlayerDataSchema(
             PlayerDataGroupSchema schema,
             AddressableAssetGroup assetGroup,
@@ -685,6 +733,11 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             return string.Empty;
         }
+
+        /// <summary>
+        /// A temporary list of the groups that get processed during a build.
+        /// </summary>
+        List<AddressableAssetGroup> m_IncludedGroupsInBuild = new List<AddressableAssetGroup>();
 
         /// <summary>
         /// The processing of the bundled asset schema.  This is where the bundle(s) for a given group are actually setup.
@@ -704,6 +757,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             var errorStr = ErrorCheckBundleSettings(schema, assetGroup, aaContext.Settings);
             if (!string.IsNullOrEmpty(errorStr))
                 return errorStr;
+
+            m_IncludedGroupsInBuild?.Add(assetGroup);
 
             AddBundleProvider(schema);
 
@@ -1041,7 +1096,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
         }
 
-        void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> buildBundles, List<string> outputBundles, IBundleBuildResults buildResult, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry, Dictionary<string, ContentCatalogDataEntry> primaryKeyToCatalogEntry, Dictionary<string, string> bundleRenameMap, List<Action> postCatalogUpdateCallbacks)
+        void PostProcessBundles(AddressableAssetGroup assetGroup, List<string> buildBundles, List<string> outputBundles, IBundleBuildResults buildResult, AddressablesPlayerBuildResult addrResult, ResourceManagerRuntimeData runtimeData, List<ContentCatalogDataEntry> locations, FileRegistry registry, Dictionary<string, ContentCatalogDataEntry> primaryKeyToCatalogEntry, Dictionary<string, string> bundleRenameMap, List<Action> postCatalogUpdateCallbacks)
         {
             var schema = assetGroup.GetSchema<BundledAssetGroupSchema>();
             if (schema == null)
@@ -1053,9 +1108,15 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             for (int i = 0; i < buildBundles.Count; ++i)
             {
+                AddressablesPlayerBuildResult.BundleBuildResult bundleResultInfo = new AddressablesPlayerBuildResult.BundleBuildResult();
+                bundleResultInfo.SourceAssetGroup = assetGroup;
+                
+                
                 if (primaryKeyToCatalogEntry.TryGetValue(buildBundles[i], out ContentCatalogDataEntry dataEntry))
                 {
                     var info = buildResult.BundleInfos[buildBundles[i]];
+                    bundleResultInfo.Crc = info.Crc;
+                    bundleResultInfo.Hash = info.Hash.ToString();
                     var requestOptions = new AssetBundleRequestOptions
                     {
                         Crc = schema.UseAssetBundleCrc ? info.Crc : 0,
@@ -1072,6 +1133,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         ClearOtherCachedVersionsWhenLoaded = schema.AssetBundledCacheClearBehavior == BundledAssetGroupSchema.CacheClearBehavior.ClearWhenWhenNewVersionLoaded
                     };
                     dataEntry.Data = requestOptions;
+                    bundleResultInfo.InternalBundleName = requestOptions.BundleName;
                     
                     if (assetGroup == assetGroup.Settings.DefaultGroup && info.Dependencies.Length == 0 && !string.IsNullOrEmpty(info.FileName) && (info.FileName.EndsWith("_unitybuiltinshaders.bundle") || info.FileName.EndsWith("_monoscripts.bundle")))
                     {
@@ -1103,6 +1165,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 }
 
                 var targetPath = Path.Combine(path, outputBundles[i]);
+                bundleResultInfo.FilePath = targetPath;
                 var srcPath = Path.Combine(assetGroup.Settings.buildSettings.bundleBuildPath, buildBundles[i]);
                 
                 if (assetGroup.GetSchema<BundledAssetGroupSchema>()?.BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash)
@@ -1112,6 +1175,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 MoveFileToDestinationWithTimestampIfDifferent(srcPath, targetPath, m_Log);
                 AddPostCatalogUpdatesInternal(assetGroup, postCatalogUpdateCallbacks, dataEntry, targetPath, registry);
 
+                if(addrResult != null)
+                    addrResult.AssetBundleBuildResults.Add(bundleResultInfo);
+                
                 registry.AddFile(targetPath);
             }
         }

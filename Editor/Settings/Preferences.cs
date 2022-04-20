@@ -1,6 +1,6 @@
-using UnityEngine;
-using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEngine;
 
 namespace UnityEditor.AddressableAssets
 {
@@ -37,7 +37,8 @@ namespace UnityEditor.AddressableAssets
         internal class Properties
         {
             public static readonly GUIContent buildSettings = EditorGUIUtility.TrTextContent("Build Settings");
-            public static readonly GUIContent buildLayoutReport = EditorGUIUtility.TrTextContent("Debug Build Layout", $"A debug build layout file will be generated as part of the build process. The file will put written to {BuildLayoutGenerationTask.m_LayoutTextFile}");
+            public static readonly GUIContent buildLayoutReport = EditorGUIUtility.TrTextContent("Debug Build Layout", $"A debug build layout file will be generated as part of the build process. The file will put written to {BuildLayoutGenerationTask.m_LayoutFilePath}");
+            public static readonly GUIContent buildLayoutReportFileFormat = EditorGUIUtility.TrTextContent("File Format", $"The file format of the debug build layout file.");
 #if UNITY_2021_2_OR_NEWER
             public static readonly GUIContent playerBuildSettings = EditorGUIUtility.TrTextContent("Player Build Settings");
             public static readonly GUIContent enableAddressableBuildPreprocessPlayer = EditorGUIUtility.TrTextContent("Build Addressables on build Player", $"If enabled, will perform a new Addressables build before building a Player. Addressable Asset Settings value can override the user global preferences.");
@@ -69,9 +70,19 @@ namespace UnityEditor.AddressableAssets
             GUILayout.Label(Properties.buildSettings, EditorStyles.boldLabel);
 
             ProjectConfigData.GenerateBuildLayout = EditorGUILayout.Toggle(Properties.buildLayoutReport, ProjectConfigData.GenerateBuildLayout);
+            if (ProjectConfigData.GenerateBuildLayout)
+            {
+                EditorGUI.indentLevel++;
+                ProjectConfigData.ReportFileFormat buildLayoutReportFileFormat = ProjectConfigData.BuildLayoutReportFileFormat;
+                int formatOldIndex = (int)buildLayoutReportFileFormat;
+                int formatNewIndex = EditorGUILayout.Popup(Properties.buildLayoutReportFileFormat, formatOldIndex, new[] {"TXT", "JSON"});
+                if (formatNewIndex != formatOldIndex)
+                    ProjectConfigData.BuildLayoutReportFileFormat = (ProjectConfigData.ReportFileFormat)formatNewIndex;
+                EditorGUI.indentLevel--;
+            }
 
             GUILayout.Space(15);
-            
+
 #if UNITY_2021_2_OR_NEWER
             bool buildWithPlayerValue = EditorPrefs.GetBool(kBuildAddressablesWithPlayerBuildKey, true);
 
@@ -91,12 +102,12 @@ namespace UnityEditor.AddressableAssets
             {
                 using (new EditorGUI.DisabledScope(true))
                 {
-                    if (settings.BuildAddressablesWithPlayerBuild == AddressableAssetSettings.PlayerBuildOption.BuildWithPlayer && 
+                    if (settings.BuildAddressablesWithPlayerBuild == AddressableAssetSettings.PlayerBuildOption.BuildWithPlayer &&
                         buildWithPlayerValue == false)
                     {
                         EditorGUILayout.TextField(" ", "Enabled in AddressableAssetSettings (priority)");
                     }
-                    else if (settings.BuildAddressablesWithPlayerBuild == AddressableAssetSettings.PlayerBuildOption.DoNotBuildWithPlayer && 
+                    else if (settings.BuildAddressablesWithPlayerBuild == AddressableAssetSettings.PlayerBuildOption.DoNotBuildWithPlayer &&
                              buildWithPlayerValue)
                     {
                         EditorGUILayout.TextField(" ", "Disabled in AddressableAssetSettings (priority)");

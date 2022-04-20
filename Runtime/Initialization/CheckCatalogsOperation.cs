@@ -10,16 +10,16 @@ namespace UnityEngine.AddressableAssets
     {
         AddressablesImpl m_Addressables;
         List<string> m_LocalHashes;
-        List<AddressablesImpl.ResourceLocatorInfo> m_LocatorInfos;
+        List<ResourceLocatorInfo> m_LocatorInfos;
         AsyncOperationHandle<IList<AsyncOperationHandle>> m_DepOp;
         public CheckCatalogsOperation(AddressablesImpl aa)
         {
             m_Addressables = aa;
         }
 
-        public AsyncOperationHandle<List<string>> Start(List<AddressablesImpl.ResourceLocatorInfo> locatorInfos)
+        public AsyncOperationHandle<List<string>> Start(List<ResourceLocatorInfo> locatorInfos)
         {
-            m_LocatorInfos = new List<AddressablesImpl.ResourceLocatorInfo>(locatorInfos.Count);
+            m_LocatorInfos = new List<ResourceLocatorInfo>(locatorInfos.Count);
             m_LocalHashes = new List<string>(locatorInfos.Count);
             var locations = new List<IResourceLocation>(locatorInfos.Count);
             foreach (var rl in locatorInfos)
@@ -70,7 +70,7 @@ namespace UnityEngine.AddressableAssets
         }
 
         internal static List<string> ProcessDependentOpResults(IList<AsyncOperationHandle> results,
-            List<AddressablesImpl.ResourceLocatorInfo> locatorInfos, List<string> localHashes, out string errorString, out bool success)
+            List<ResourceLocatorInfo> locatorInfos, List<string> localHashes, out string errorString, out bool success)
         {
             var result = new List<string>();
             List<string> errorMsgList = new List<string>();

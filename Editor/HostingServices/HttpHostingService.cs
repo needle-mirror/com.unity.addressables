@@ -131,6 +131,10 @@ namespace UnityEditor.AddressableAssets.HostingServices
 
         GUIContent m_UploadSpeedGUI =
             new GUIContent("Upload Speed (Kb/s)", "Speed in Kb/s the hosting service will upload content. 0 for no limit");
+        GUIContent m_PortNumberGUI =
+            new GUIContent("Port", "Port number used by the service");
+        GUIContent m_ResetPortGUI =
+            new GUIContent("Reset", "Selects the next available port. Value is unchanged if the current port is still available");
 
         // ReSharper disable once MemberCanBePrivate.Global
         /// <summary>
@@ -294,7 +298,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         {
             EditorGUILayout.BeginHorizontal();
             {
-                var newPort = EditorGUILayout.DelayedIntField("Port", HostingServicePort);
+                var newPort = EditorGUILayout.DelayedIntField(m_PortNumberGUI, HostingServicePort);
                 if (newPort != HostingServicePort)
                 {
                     if (IsPortAvailable(newPort))
@@ -308,7 +312,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
                         LogError("Cannot listen on port {0}; port is in use", newPort);
                 }
 
-                if (GUILayout.Button("Reset", GUILayout.ExpandWidth(false)))
+                if (GUILayout.Button(m_ResetPortGUI, GUILayout.ExpandWidth(false)))
                     ResetListenPort();
 
                 //GUILayout.Space(rect.width / 2f);
@@ -416,7 +420,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
             relativePath = relativePath.TrimStart('\\');
             foreach (var root in HostingServiceContentRoots)
             {
-                var fullPath = Path.Combine(root, relativePath).Replace('\\','/');
+                var fullPath = Path.Combine(root, relativePath).Replace('\\', '/');
                 if (File.Exists(fullPath))
                     return fullPath;
             }

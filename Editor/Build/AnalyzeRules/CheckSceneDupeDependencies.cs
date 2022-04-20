@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.AddressableAssets.Settings;
-using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 {
@@ -11,15 +10,21 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
     public class CheckSceneDupeDependencies : BundleRuleBase
     {
         /// <inheritdoc />
+        public override string ruleName
+        {
+            get { return "Check Scene to Addressable Duplicate Dependencies"; }
+        }
+
+        /// <inheritdoc />
         public override bool CanFix
         {
             get { return false; }
         }
 
         /// <inheritdoc />
-        public override string ruleName
+        public override void FixIssues(AddressableAssetSettings settings)
         {
-            get { return "Check Scene to Addressable Duplicate Dependencies"; }
+            //Do nothing, there's nothing to fix.
         }
 
         /// <summary>
@@ -31,16 +36,22 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         {
             ClearAnalysis();
 
-            string[] scenePaths = (from editorScene in EditorBuildSettings.scenes 
+            string[] scenePaths = (from editorScene in EditorBuildSettings.scenes
                  where editorScene.enabled select editorScene.path).ToArray();
-
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.RunCheckSceneDupeDependenciesRule);
             return CalculateBuiltInResourceDependenciesToBundleDependecies(settings, scenePaths);
         }
 
         /// <inheritdoc />
-        public override void FixIssues(AddressableAssetSettings settings)
+        internal protected override string[] GetResourcePaths()
         {
-            //Do nothing.  There's nothing to fix.
+            List<string> scenes = new List<string>(EditorBuildSettings.scenes.Length);
+            foreach (EditorBuildSettingsScene settingsScene in EditorBuildSettings.scenes)
+            {
+                if (settingsScene.enabled)
+                    scenes.Add(settingsScene.path);
+            }
+            return scenes.ToArray();
         }
     }
 

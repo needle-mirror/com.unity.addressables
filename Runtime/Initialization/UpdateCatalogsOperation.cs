@@ -10,7 +10,7 @@ namespace UnityEngine.AddressableAssets
     class UpdateCatalogsOperation : AsyncOperationBase<List<IResourceLocator>>
     {
         AddressablesImpl m_Addressables;
-        List<AddressablesImpl.ResourceLocatorInfo> m_LocatorInfos;
+        List<ResourceLocatorInfo> m_LocatorInfos;
         AsyncOperationHandle<IList<AsyncOperationHandle>> m_DepOp;
         AsyncOperationHandle<bool> m_CleanCacheOp;
         bool m_AutoCleanBundleCache = false;
@@ -22,7 +22,7 @@ namespace UnityEngine.AddressableAssets
 
         public AsyncOperationHandle<List<IResourceLocator>> Start(IEnumerable<string> catalogIds, bool autoCleanBundleCache)
         {
-            m_LocatorInfos = new List<AddressablesImpl.ResourceLocatorInfo>();
+            m_LocatorInfos = new List<ResourceLocatorInfo>();
             var locations = new List<IResourceLocation>();
             foreach (var c in catalogIds)
             {

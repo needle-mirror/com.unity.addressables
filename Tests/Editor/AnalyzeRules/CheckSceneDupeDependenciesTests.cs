@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
@@ -43,6 +44,39 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             PrefabUtility.SaveAsPrefabAsset(prefabB, k_CheckDupePrefabB);
             PrefabUtility.SaveAsPrefabAsset(prefabWithMaterial, k_PrefabWithMaterialPath);
             AssetDatabase.Refresh();
+        }
+        
+        [Test]
+        public void CheckSceneDupe_GetsCorrectResourcePaths()
+        {
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+            EditorSceneManager.SaveScene(scene, k_ScenePath);
+            EditorBuildSettingsScene editorScene = new EditorBuildSettingsScene(k_ScenePath, true);
+
+            var sceneBU = EditorBuildSettings.scenes;
+            EditorBuildSettings.scenes = new EditorBuildSettingsScene[1] {editorScene};
+            try
+            {
+                var rule = new CheckSceneDupeDependencies();
+                var paths = rule.GetResourcePaths();
+                bool success = false;
+                foreach (var p in paths)
+                {
+                    if (p.Contains(editorScene.path))
+                    {
+                        success = true;
+                        break;
+                    }
+                }
+                Assert.IsTrue(success, "CheckSceneDupeDependencies ResourcePaths did not find the created Scene for test as expected.");
+            }
+            finally
+            {
+                //Cleanup
+                EditorBuildSettings.scenes = sceneBU;
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+                AssetDatabase.DeleteAsset(k_ScenePath);
+            }
         }
 
         [Test]

@@ -245,7 +245,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// be chained with InitializeAsync and have multiple dependent operations that download and load content.
         /// In that scenario, PercentComplete would reflect how far the overal operation was, and would not accurately
         /// represent just percent downloaded or percent loaded into memory.
-        /// For accurate download percentages, use GetDownloadStatus(). 
+        /// For accurate download percentages, use GetDownloadStatus().
         /// </summary>
         public float PercentComplete
         {
@@ -320,13 +320,16 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
     {
 #if !UNITY_2021_1_OR_NEWER
         private static bool m_IsWaitingForCompletion = false;
-        internal static bool IsWaitingForCompletion
+        /// <summary>
+        /// Indicates that the async operation is in the process of being completed synchronously.
+        /// </summary>
+        public static bool IsWaitingForCompletion
         {
             get { return m_IsWaitingForCompletion; }
-            set { m_IsWaitingForCompletion = value; }
+            internal set { m_IsWaitingForCompletion = value; }
         }
 #endif
-        
+
         internal IAsyncOperation m_InternalOp;
         int m_Version;
         string m_LocationName;
@@ -486,7 +489,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// be chained with InitializeAsync and have multiple dependent operations that download and load content.
         /// In that scenario, PercentComplete would reflect how far the overal operation was, and would not accurately
         /// represent just percent downloaded or percent loaded into memory.
-        /// For accurate download percentages, use GetDownloadStatus(). 
+        /// For accurate download percentages, use GetDownloadStatus().
         /// </summary>
         public float PercentComplete
         {
@@ -509,6 +512,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 visited = new HashSet<object>();
             return visited.Add(InternalOp) ? InternalOp.GetDownloadStatus(visited) : new DownloadStatus() { IsDone = IsDone };
         }
+
         /// <summary>
         /// The current reference count of the internal operation.
         /// </summary>

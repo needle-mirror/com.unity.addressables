@@ -13,6 +13,16 @@ namespace UnityEditor.AddressableAssets.Build.Layout
     public class BuildLayout
     {
         /// <summary>
+        /// Version of the Unity edtior used to perform the build.
+        /// </summary>
+        public string UnityVersion;
+
+        /// <summary>
+        /// Version of the Addressables package used to perform the build.
+        /// </summary>
+        public string PackageVersion;
+
+        /// <summary>
         /// Information about the AssetBundleObject
         /// </summary>
         [Serializable]

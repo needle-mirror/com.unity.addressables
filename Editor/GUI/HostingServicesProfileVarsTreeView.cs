@@ -36,7 +36,7 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 new MultiColumnHeaderState.Column
                 {
-                    headerContent = new GUIContent("Variable Name"),
+                    headerContent = new GUIContent("Variable Name", $"Name of the hosting service variable"),
                     headerTextAlignment = TextAlignment.Left,
                     sortedAscending = true,
                     sortingArrowAlignment = TextAlignment.Right,
@@ -46,7 +46,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 },
                 new MultiColumnHeaderState.Column
                 {
-                    headerContent = new GUIContent("Value"),
+                    headerContent = new GUIContent("Value", "Value of the hosting service variable"),
                     headerTextAlignment = TextAlignment.Left,
                     sortedAscending = true,
                     sortingArrowAlignment = TextAlignment.Right,

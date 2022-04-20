@@ -351,6 +351,76 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void GetFolderSubEntry_SetsLabelsCorrectlyOnShortPath()
+        {
+            AddressableAssetEntry mainFolderEntry = null;
+            string testAssetFolder = GetAssetPath("TestFolder");
+            
+            try
+            {
+                //Setup
+                string mainPrefabPath = Path.Combine(testAssetFolder, "mainFolder.prefab").Replace('\\', '/');
+
+                Directory.CreateDirectory(testAssetFolder);
+                PrefabUtility.SaveAsPrefabAsset(new GameObject("mainFolderAsset"), mainPrefabPath);
+
+                string mainFolderGuid = AssetDatabase.AssetPathToGUID(testAssetFolder);
+                mainFolderEntry = Settings.CreateOrMoveEntry(mainFolderGuid, m_testGroup, false);
+
+                mainFolderEntry.SetLabel("testlabel", true);
+                
+                //Test
+                var entry = mainFolderEntry.GetFolderSubEntry(AssetDatabase.AssetPathToGUID(mainPrefabPath), mainPrefabPath);
+                Assert.IsNotNull(entry, "Prefab in main folder is expected to be valid subAsset of main folder.");
+                Assert.AreEqual(1, entry.labels.Count, "Labels should be correctly copied over when using GetFolderSubEntry");
+                Assert.AreEqual(testAssetFolder + "/mainFolder.prefab", entry.AssetPath, "Asset path should be correctly set when using GetFolderSubEntry");
+                
+            }
+            finally
+            {
+                //Cleanup
+                Settings.RemoveAssetEntry(mainFolderEntry, false);
+                Directory.Delete(testAssetFolder, true);
+            }
+        }
+        
+        [Test]
+        public void GetFolderSubEntry_SetsLabelsCorrectlyOnLongPath()
+        {
+            AddressableAssetEntry mainFolderEntry = null;
+            string testAssetFolder = GetAssetPath("TestFolder");
+            
+            try
+            {
+                //Setup
+                string extraFolderPath = Path.Combine(testAssetFolder, "secondaryFolder").Replace('\\', '/');
+                string mainPrefabPath = Path.Combine(extraFolderPath, "mainFolder.prefab").Replace('\\', '/');
+
+                Directory.CreateDirectory(testAssetFolder);
+                Directory.CreateDirectory(extraFolderPath);
+                PrefabUtility.SaveAsPrefabAsset(new GameObject("mainFolderAsset"), mainPrefabPath);
+
+                string mainFolderGuid = AssetDatabase.AssetPathToGUID(testAssetFolder);
+                mainFolderEntry = Settings.CreateOrMoveEntry(mainFolderGuid, m_testGroup, false);
+
+                mainFolderEntry.SetLabel("testlabel", true);
+                
+                //Test
+                var entry = mainFolderEntry.GetFolderSubEntry(AssetDatabase.AssetPathToGUID(mainPrefabPath), mainPrefabPath);
+                Assert.IsNotNull(entry, "Prefab in main folder is expected to be valid subAsset of main folder.");
+                Assert.AreEqual(1, entry.labels.Count, "Labels should be correctly copied over when using GetFolderSubEntry");
+                Assert.AreEqual(extraFolderPath + "/mainFolder.prefab", entry.AssetPath, "Asset path should be correctly set when using GetFolderSubEntry");
+                
+            }
+            finally
+            {
+                //Cleanup
+                Settings.RemoveAssetEntry(mainFolderEntry, false);
+                Directory.Delete(testAssetFolder, true);
+            }
+        }
+
+        [Test]
         public void WhenClassReferencedByAddressableAssetEntryIsReloaded_CachedMainAssetTypeIsReset()
         {
             // Setup

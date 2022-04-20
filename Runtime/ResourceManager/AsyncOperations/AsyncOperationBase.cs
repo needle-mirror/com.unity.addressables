@@ -99,9 +99,19 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
 
         Action<IAsyncOperation> m_OnDestroyAction;
         internal Action<IAsyncOperation> OnDestroy { set { m_OnDestroyAction = value; } }
-        internal int ReferenceCount { get { return m_referenceCount; } }
+        
         Action<AsyncOperationHandle> m_dependencyCompleteAction;
+        
+        /// <summary>
+        /// True, If the operation has been executed, else false
+        /// </summary>
         protected internal bool HasExecuted = false;
+        
+        /// <summary>
+        /// The number of references that are using this operation.
+        /// When the ReferenceCount reaches 0, this operation is Destroyed.
+        /// </summary>
+        protected internal int ReferenceCount { get { return m_referenceCount; } }
 
         /// <summary>
         /// True if the current op has begun but hasn't yet reached completion.  False otherwise.
@@ -131,16 +141,6 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             return p;
         }
 
-        internal void IncrementReferenceCount()
-        {
-            if (m_referenceCount == 0)
-                throw new Exception(string.Format("Cannot increment reference count on operation {0} because it has already been destroyed", this));
-
-            m_referenceCount++;
-            if (m_RM != null && m_RM.postProfilerEvents)
-                m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount));
-        }
-
         /// <summary>
         /// Synchronously complete the async operation.
         /// </summary>
@@ -158,7 +158,25 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         /// <returns>True if the operation has completed, otherwise false.</returns>
         protected virtual bool InvokeWaitForCompletion() { return true; }
 
-        internal void DecrementReferenceCount()
+        /// <summary>
+        /// Increments the reference count for this operation.
+        /// </summary>
+        /// <exception cref="Exception">Thrown if the operation has already been destroyed after reaching 0 reference count.</exception>
+        protected internal void IncrementReferenceCount()
+        {
+            if (m_referenceCount == 0)
+                throw new Exception(string.Format("Cannot increment reference count on operation {0} because it has already been destroyed", this));
+
+            m_referenceCount++;
+            if (m_RM != null && m_RM.postProfilerEvents)
+                m_RM.PostDiagnosticEvent(new ResourceManager.DiagnosticEventContext(new AsyncOperationHandle(this), ResourceManager.DiagnosticEventType.AsyncOperationReferenceCount, m_referenceCount));
+        }
+        
+        /// <summary>
+        /// Reduces the reference count for this operation by 1. If the reference count is reduced to 0, the operation is destroyed.
+        /// </summary>
+        /// <exception cref="Exception">Thrown if the operation has already been destroyed after reaching 0 reference count.</exception>
+        protected internal void DecrementReferenceCount()
         {
             if (m_referenceCount <= 0)
                 throw new Exception(string.Format("Cannot decrement reference count for operation {0} because it is already 0", this));

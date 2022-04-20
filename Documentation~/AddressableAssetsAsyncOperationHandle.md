@@ -263,7 +263,7 @@ When your custom operation completes, call [AsyncOperationBase.Complete] on your
 
 ### Terminating the operation
 
-The [ResourceManager] invokes the [AsyncOperationBase.Destroy] method for your custom operation when you release the [AsyncOperationHandle] that references it. This is where you should release any memory or resources associated with your custom operation.
+The [ResourceManager] invokes the [AsyncOperationBase.Destroy] method for your custom operation when the operation [AsyncOperationBase.ReferenceCount] reaches zero. The [AsyncOperationBase.ReferenceCount] is decreased when the [AsyncOperationHandle] that references it is released using [Addressables.Release] or when [AsyncOperationBase.DecrementReferenceCount] is called by a custom operation internally. [AsyncOperationBase.Destroy] is where you should release any memory or resources associated with your custom operation.
 
 <a name="using-typed-versus-typeless-operation-handles"></a>
 ## Using typed versus typeless operation handles
@@ -308,6 +308,8 @@ On the other hand, if you called [LoadAssetAsync], and one bundle had to be down
 [AsyncOperationHandles]:   xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle
 [AsyncOperationBase.Complete]:    xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationBase`1.Complete*
 [AsyncOperationBase.Destroy]:     xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationBase`1.Destroy*
+[AsyncOperationBase.DecrementReferenceCount]:     xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationBase`1.DecrementReferenceCount*
+[AsyncOperationBase.ReferenceCount]:     xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationBase`1.ReferenceCount*
 [AsyncOperationBase.Execute]:     xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationBase`1.Execute*
 [AsyncOperationBase]:             xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationBase`1
 [AsyncOperationHandle.Completed]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.Completed

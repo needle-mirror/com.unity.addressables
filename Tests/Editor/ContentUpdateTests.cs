@@ -1,19 +1,16 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
-using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
-using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.TestTools;
 
@@ -96,6 +93,16 @@ namespace UnityEditor.AddressableAssets.Tests
             ccd.SetData(new List<ContentCatalogDataEntry>());
             ResourceLocationMap map = ccd.CreateCustomLocator("test");
             Assert.AreEqual("test", map.LocatorId);
+        }
+
+        [Test]
+        public void DownloadBinFileToTempLocation_DoesNotThrowError_WhenDownloadFails()
+        {
+            Assert.DoesNotThrow(() =>
+            {
+                var returnValue = ContentUpdateScript.DownloadBinFileToTempLocation("http://notarealurl.com/addressable_state.bin");
+                Assert.AreEqual(ContentUpdateScript.PreviousContentStateFileCachePath, returnValue);
+            });
         }
 
         [Test]
@@ -1184,6 +1191,120 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Settings.RemoveGroup(group);
             Settings.RemoveGroup(depGroup);
+        }
+
+        [Test]
+        public void RevertBundleDataCorrectlyReplacesToCacheLoadingData()
+        {
+            string bundleName = "cachedBundleName_containKey";
+            string assetBundleProvider = "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider";
+            ContentUpdateScript.ContentUpdateContext updateContext = new ContentUpdateScript.ContentUpdateContext();
+            updateContext.ContentState = new AddressablesContentState();
+            AssetBundleRequestOptions cachedRequestOptions = new AssetBundleRequestOptions() {Crc = 123, Hash = "abc", BundleName = bundleName, BundleSize = 10};
+            updateContext.ContentState.cachedBundles = new CachedBundleState[]
+            {
+                new CachedBundleState() {bundleFileId = "cachedInternalId", data = cachedRequestOptions}
+            };
+
+            AddressableAssetsBuildContext aaContext = new AddressableAssetsBuildContext();
+            aaContext.locations = new List<ContentCatalogDataEntry>(2);
+            List<object> keys = new List<object>();
+            keys.Add("stringLoadKey");
+            
+            AssetBundleRequestOptions newLocationData1 = new AssetBundleRequestOptions(){Crc = 456, Hash = "def", BundleName = bundleName, BundleSize = 20};
+            aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), "newInternalID", assetBundleProvider, keys, null, newLocationData1));
+            AssetBundleRequestOptions newLocationData2 = new AssetBundleRequestOptions(){Crc = 456, Hash = "def", BundleName = "nonCachedBundleName", BundleSize = 20};
+            aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), "newInternalID", assetBundleProvider, keys, null, newLocationData2));
+            
+            bool reverted = RevertUnchangedAssetsToPreviousAssetState.RevertBundleByNameContains("_containKey", updateContext, aaContext);
+            Assert.IsTrue(reverted, "Failed to revert the bundle containing _containsKey");
+            
+            // first entry is reverted
+            AssetBundleRequestOptions catalogRequestOptions = aaContext.locations[0].Data as AssetBundleRequestOptions;
+            Assert.AreEqual(cachedRequestOptions.Crc, catalogRequestOptions.Crc, "Reverted Catalog CRC expected to be the same as the cached value");
+            Assert.AreEqual(cachedRequestOptions.Hash, catalogRequestOptions.Hash, "Reverted Catalog Hash expected to be the same as the cached value");
+            Assert.AreEqual(cachedRequestOptions.BundleName, catalogRequestOptions.BundleName, "Reverted Catalog BundleName expected to be the same as the cached value");
+            Assert.AreEqual(cachedRequestOptions.BundleSize, catalogRequestOptions.BundleSize, "Reverted Catalog BundleSize expected to be the same as the cached value");
+            
+            // second entry is not reverted
+            catalogRequestOptions = aaContext.locations[1].Data as AssetBundleRequestOptions;
+            Assert.AreNotEqual(cachedRequestOptions.Crc, catalogRequestOptions.Crc, "Noncached Catalog CRC expected to be different as the cached value");
+            Assert.AreNotEqual(cachedRequestOptions.Hash, catalogRequestOptions.Hash, "Noncached Catalog Hash expected to be different as the cached value");
+            Assert.AreNotEqual(cachedRequestOptions.BundleName, catalogRequestOptions.BundleName, "Noncached Catalog BundleName expected to be different as the cached value");
+            Assert.AreNotEqual(cachedRequestOptions.BundleSize, catalogRequestOptions.BundleSize, "Noncached Catalog BundleSize expected to be different as the cached value");
+        }
+        
+        // not found in cache
+        // not found in catalog
+        // bundeOptions missing
+        
+        [Test]
+        public void RevertBundleFails_WhenBundleMissingFromCacheButInCatalog()
+        {
+            string assetBundleProvider = "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider";
+            ContentUpdateScript.ContentUpdateContext updateContext = new ContentUpdateScript.ContentUpdateContext();
+            updateContext.ContentState = new AddressablesContentState();
+            
+            AssetBundleRequestOptions cachedRequestOptions = new AssetBundleRequestOptions() {Crc = 123, Hash = "abc", BundleName = "cachedBundleName", BundleSize = 10};
+            updateContext.ContentState.cachedBundles = new CachedBundleState[]
+            {
+                new CachedBundleState() {bundleFileId = "cachedInternalId", data = cachedRequestOptions}
+            };
+
+            AddressableAssetsBuildContext aaContext = new AddressableAssetsBuildContext();
+            aaContext.locations = new List<ContentCatalogDataEntry>(1);
+            List<object> keys = new List<object>(); keys.Add("stringLoadKey");
+            AssetBundleRequestOptions locData = new AssetBundleRequestOptions(){Crc = 456, Hash = "def", BundleName = "catalogBundleName", BundleSize = 20};
+            string internalId = "catalogInternalId";
+            aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), internalId, assetBundleProvider, keys, null, locData));
+            
+            LogAssert.Expect(LogType.Error, $"Matching cached update state for {internalId} failed. Content not found in original build.");
+            bool reverted = RevertUnchangedAssetsToPreviousAssetState.RevertBundleByNameContains("catalogBundleName", updateContext, aaContext);
+            Assert.IsFalse(reverted, "Expected to Fail finding \"_containsKey\" where cached content does not have an entry with that bundle Name");
+        }
+        
+        [Test]
+        public void RevertBundleSucceeds_WhenBundleMissingFromCatalogButInCache()
+        {
+            string assetBundleProvider = "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider";
+            ContentUpdateScript.ContentUpdateContext updateContext = new ContentUpdateScript.ContentUpdateContext();
+            updateContext.ContentState = new AddressablesContentState();
+            
+            AssetBundleRequestOptions cachedRequestOptions = new AssetBundleRequestOptions() {Crc = 123, Hash = "abc", BundleName = "cachedBundleName", BundleSize = 10};
+            updateContext.ContentState.cachedBundles = new CachedBundleState[]
+            {
+                new CachedBundleState() {bundleFileId = "cachedInternalId", data = cachedRequestOptions}
+            };
+
+            AddressableAssetsBuildContext aaContext = new AddressableAssetsBuildContext();
+            aaContext.locations = new List<ContentCatalogDataEntry>(1);
+            List<object> keys = new List<object>(); keys.Add("stringLoadKey");
+            AssetBundleRequestOptions locData = new AssetBundleRequestOptions(){Crc = 456, Hash = "def", BundleName = "catalogBundleName", BundleSize = 20};
+            aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), "newInternalID", assetBundleProvider, keys, null, locData));
+            
+            bool reverted = RevertUnchangedAssetsToPreviousAssetState.RevertBundleByNameContains("cachedBundleName", updateContext, aaContext);
+            Assert.IsTrue(reverted, "Expected to succeed where cache exists but not included in current build to be reverted");
+        }
+        
+        [Test]
+        public void RevertBundleSucceeds_WhenBundleMissingFromCacheAndCatalog()
+        {
+            string assetBundleProvider = "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider";
+            ContentUpdateScript.ContentUpdateContext updateContext = new ContentUpdateScript.ContentUpdateContext();
+            updateContext.ContentState = new AddressablesContentState();
+            
+            updateContext.ContentState.cachedBundles = new CachedBundleState[]
+            {
+                new CachedBundleState() {bundleFileId = "cachedInternalId", data = null}
+            };
+
+            AddressableAssetsBuildContext aaContext = new AddressableAssetsBuildContext();
+            aaContext.locations = new List<ContentCatalogDataEntry>(1);
+            List<object> keys = new List<object>(); keys.Add("stringLoadKey");
+            aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), "newInternalID", assetBundleProvider, keys, null, null));
+            
+            bool reverted = RevertUnchangedAssetsToPreviousAssetState.RevertBundleByNameContains("catalogBundleName", updateContext, aaContext);
+            Assert.IsTrue(reverted, "Expected to succeed where bundle to revert was not in either cache or current builds");
         }
 
         [Test]

@@ -21,7 +21,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             bool m_ActivateOnLoad;
             SceneInstance m_Inst;
             IResourceLocation m_Location;
-            LoadSceneMode m_LoadMode;
+            LoadSceneParameters m_LoadSceneParameters;
             int m_Priority;
             private AsyncOperationHandle<IList<AsyncOperationHandle>> m_DepOp;
             ResourceManager m_ResourceManager;
@@ -35,14 +35,19 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 return m_DepOp.IsValid() ? m_DepOp.InternalGetDownloadStatus(visited) : new DownloadStatus() { IsDone = IsDone };
             }
 
-            public void Init(IResourceLocation location, LoadSceneMode loadMode, bool activateOnLoad, int priority, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
+            public void Init(IResourceLocation location, LoadSceneMode loadSceneMode, bool activateOnLoad, int priority, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
+            {
+                Init(location, new LoadSceneParameters(loadSceneMode), activateOnLoad, priority, depOp);
+            }
+            
+            public void Init(IResourceLocation location, LoadSceneParameters loadSceneParameters, bool activateOnLoad, int priority, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
             {
                 m_DepOp = depOp;
                 if (m_DepOp.IsValid())
                     m_DepOp.Acquire();
 
                 m_Location = location;
-                m_LoadMode = loadMode;
+                m_LoadSceneParameters = loadSceneParameters;
                 m_ActivateOnLoad = activateOnLoad;
                 m_Priority = priority;
             }
@@ -101,7 +106,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 
                 if (!m_DepOp.IsValid() || m_DepOp.OperationException == null)
                 {
-                    m_Inst = InternalLoadScene(m_Location, loadingFromBundle, m_LoadMode, m_ActivateOnLoad, m_Priority);
+                    m_Inst = InternalLoadScene(m_Location, loadingFromBundle, m_LoadSceneParameters, m_ActivateOnLoad, m_Priority);
                     ((IUpdateReceiver)this).Update(0.0f);
                     if (!IsDone)
                         m_ResourceManager.AddUpdateReceiver(this);
@@ -114,22 +119,22 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 HasExecuted = true;
             }
 
-            internal SceneInstance InternalLoadScene(IResourceLocation location, bool loadingFromBundle, LoadSceneMode loadMode, bool activateOnLoad, int priority)
+            internal SceneInstance InternalLoadScene(IResourceLocation location, bool loadingFromBundle, LoadSceneParameters loadSceneParameters, bool activateOnLoad, int priority)
             {
                 var internalId = m_ResourceManager.TransformInternalId(location);
-                var op = InternalLoad(internalId, loadingFromBundle, loadMode);
+                var op = InternalLoad(internalId, loadingFromBundle, loadSceneParameters);
                 op.allowSceneActivation = activateOnLoad;
                 op.priority = priority;
                 return new SceneInstance() { m_Operation = op, Scene = SceneManager.GetSceneAt(SceneManager.sceneCount - 1) };
             }
 
-            AsyncOperation InternalLoad(string path, bool loadingFromBundle, LoadSceneMode mode)
+            AsyncOperation InternalLoad(string path, bool loadingFromBundle, LoadSceneParameters loadSceneParameters)
             {
 #if !UNITY_EDITOR
-                return SceneManager.LoadSceneAsync(path, new LoadSceneParameters() { loadSceneMode = mode });
+                return SceneManager.LoadSceneAsync(path, loadSceneParameters);
 #else
                 if (loadingFromBundle)
-                    return SceneManager.LoadSceneAsync(path, new LoadSceneParameters() { loadSceneMode = mode });
+                    return SceneManager.LoadSceneAsync(path, loadSceneParameters);
                 else
                 {
                     if (!path.ToLower().StartsWith("assets/") && !path.ToLower().StartsWith("packages/"))
@@ -137,7 +142,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     if (path.LastIndexOf(".unity") == -1)
                         path += ".unity";
 
-                    return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(path, new LoadSceneParameters() { loadSceneMode = mode });
+                    return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(path, loadSceneParameters);
                 }
 #endif
             }
@@ -244,14 +249,20 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
 
         /// <inheritdoc/>
-        public AsyncOperationHandle<SceneInstance> ProvideScene(ResourceManager resourceManager, IResourceLocation location, LoadSceneMode loadMode, bool activateOnLoad, int priority)
+        public AsyncOperationHandle<SceneInstance> ProvideScene(ResourceManager resourceManager, IResourceLocation location, LoadSceneMode loadSceneMode, bool activateOnLoad, int priority)
+        {
+            return ProvideScene(resourceManager, location, new LoadSceneParameters(loadSceneMode), activateOnLoad, priority);
+        }
+
+        /// <inheritdoc/>
+        public AsyncOperationHandle<SceneInstance> ProvideScene(ResourceManager resourceManager, IResourceLocation location, LoadSceneParameters loadSceneParameters, bool activateOnLoad, int priority)
         {
             AsyncOperationHandle<IList<AsyncOperationHandle>> depOp = default(AsyncOperationHandle<IList<AsyncOperationHandle>>);
             if (location.HasDependencies)
                 depOp = resourceManager.ProvideResourceGroupCached(location.Dependencies, location.DependencyHashCode, typeof(IAssetBundleResource), null);
 
             SceneOp op = new SceneOp(resourceManager);
-            op.Init(location, loadMode, activateOnLoad, priority, depOp);
+            op.Init(location, loadSceneParameters, activateOnLoad, priority, depOp);
 
             var handle = resourceManager.StartOperation<SceneInstance>(op, depOp);
 

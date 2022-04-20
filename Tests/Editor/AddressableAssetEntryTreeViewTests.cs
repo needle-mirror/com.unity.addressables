@@ -60,14 +60,23 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void BuildTree_Scenes_CreatesAnEntryOnlyForScenesInBuild()
         {
-            var sceneGuid1 = CreateScene(k_TreeViewTestFolderPath + "/includedScene1.unity", addToBuild: true);
-            var sceneGuid2 = CreateScene(k_TreeViewTestFolderPath + "/excludedScene.unity", addToBuild: false);
+            var scenesBU = EditorBuildSettings.scenes;
+            try
+            {
+                EditorBuildSettings.scenes = new EditorBuildSettingsScene[0];
+                var sceneGuid1 = CreateScene(k_TreeViewTestFolderPath + "/includedScene1.unity", addToBuild: true);
+                var sceneGuid2 = CreateScene(k_TreeViewTestFolderPath + "/excludedScene.unity", addToBuild: false);
 
-            var tree = CreateExpandedTree();
+                var tree = CreateExpandedTree();
 
-            var scenesListRow = tree.GetRows().First(c => c.displayName == AddressableAssetEntry.EditorSceneListName);
-            Assert.AreEqual(1, scenesListRow.children.Count);
-            Assert.True(scenesListRow.children.Any(r => r.displayName == GetName(sceneGuid1)));
+                var scenesListRow = tree.GetRows().First(c => c.displayName == AddressableAssetEntry.EditorSceneListName);
+                Assert.AreEqual(1, scenesListRow.children.Count);
+                Assert.True(scenesListRow.children.Any(r => r.displayName == GetName(sceneGuid1)));
+            }
+            finally
+            {
+                EditorBuildSettings.scenes = scenesBU;
+            }
         }
 
         [Test]

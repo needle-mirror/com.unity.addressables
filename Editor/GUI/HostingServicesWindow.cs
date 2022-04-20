@@ -64,7 +64,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         private readonly Dictionary<object, Dictionary<string, string>> m_TablePrevManagerVariables =
             new Dictionary<object, Dictionary<string, string>>();
-        
+
         readonly List<IHostingService> m_RemovalQueue = new List<IHostingService>();
         HostingServicesProfileVarsTreeView m_GlobalProfileVarTable;
         HostingServicesListTreeView m_ServicesList;
@@ -81,6 +81,13 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
         string[] m_ServiceTypeNames;
+
+        private GUIContent m_CreateServiceGUIContent = new GUIContent("Create", "Create a new hosting service");
+        private GUIContent m_ServiceNameGUIContent = new GUIContent("Service Name", "Name of the hosting service");
+        private GUIContent m_ServiceTypeAndIdGUIContent = new GUIContent("Service Type (ID)", "Type and identifier for the hosting service");
+        private GUIContent m_EnableServiceGUIContent = new GUIContent("Enable", "Starts the hosting service");
+        private GUIContent m_HostingServiceVariablesGUIContent = new GUIContent("Hosting Service Variables", "Stores information about the actively running service. Hosting Service Variables can be referenced by a Profile variable");
+        private GUIContent m_RefreshVariablesGUIContent = new GUIContent("Refresh", "Reloads information about the service. Useful when the network changed");
 
         /// <summary>
         /// Show the <see cref="HostingServicesWindow"/>, initialized with the given <see cref="AddressableAssetSettings"/>
@@ -106,6 +113,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void OnEnable()
         {
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.OpenHostingWindow, true);
             PopulateServiceTypes();
             m_ItemRectPadding = new GUIStyle();
             m_ItemRectPadding.padding = new RectOffset(k_ItemRectPadding, k_ItemRectPadding, k_ItemRectPadding, k_ItemRectPadding);
@@ -116,6 +124,7 @@ namespace UnityEditor.AddressableAssets.GUI
         [MenuItem("Window/Asset Management/Addressables/Hosting", priority = 2052)]
         static void InitializeWithDefaultSettings()
         {
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.OpenHostingWindow);
             var defaultSettings = AddressableAssetSettingsDefaultObject.Settings;
             if (defaultSettings == null)
             {
@@ -166,7 +175,8 @@ namespace UnityEditor.AddressableAssets.GUI
 
             UnityEngine.GUI.color = orgColor;
         }
-
+        
+        [UnityEngine.TestTools.ExcludeFromCoverage]
         void OnGUI()
         {
             if (m_Settings == null)
@@ -175,7 +185,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     return;
                 InitializeWithDefaultSettings();
             }
-                
+
 
             if (m_IsResizingVerticalSplitter)
                 m_VerticalSplitterRatio = Mathf.Clamp(Event.current.mousePosition.y / position.height, 0.2f, 0.9f);
@@ -208,7 +218,7 @@ namespace UnityEditor.AddressableAssets.GUI
             GUILayout.BeginArea(toolbarRect);
             GUILayout.BeginHorizontal(EditorStyles.toolbar);
             {
-                var guiMode = new GUIContent("Create");
+                var guiMode = new GUIContent(m_CreateServiceGUIContent);
                 Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
                 if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
                 {
@@ -332,7 +342,7 @@ namespace UnityEditor.AddressableAssets.GUI
         void DrawServiceElement(IHostingService svc, List<IHostingService> svcList)
         {
             bool isDirty = false;
-            string newName = EditorGUILayout.DelayedTextField("Service Name", svc.DescriptiveName);
+            string newName = EditorGUILayout.DelayedTextField(m_ServiceNameGUIContent, svc.DescriptiveName);
             if (svcList.Find(s => s.DescriptiveName == newName) == default(IHostingService))
             {
                 svc.DescriptiveName = newName;
@@ -341,12 +351,12 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             var typeAndId = string.Format("{0} ({1})", svc.GetType().Name, svc.InstanceId.ToString());
-            EditorGUILayout.LabelField("Service Type (ID)", typeAndId, GUILayout.MinWidth(225f));
+            EditorGUILayout.LabelField(m_ServiceTypeAndIdGUIContent, new GUIContent(typeAndId), GUILayout.MinWidth(225f));
 
             // Allow service to provide additional GUI configuration elements
             svc.OnGUI();
 
-            var newIsServiceEnabled = EditorGUILayout.Toggle("Enable", svc.IsHostingServiceRunning);
+            var newIsServiceEnabled = EditorGUILayout.Toggle(m_EnableServiceGUIContent, svc.IsHostingServiceRunning);
             if (newIsServiceEnabled != svc.IsHostingServiceRunning)
             {
                 if (newIsServiceEnabled)
@@ -361,10 +371,10 @@ namespace UnityEditor.AddressableAssets.GUI
             using (new EditorGUI.DisabledScope(!svc.IsHostingServiceRunning))
             {
                 GUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("Hosting Service Variables");
+                EditorGUILayout.LabelField(m_HostingServiceVariablesGUIContent);
 
                 var manager = m_Settings.HostingServicesManager;
-                if (GUILayout.Button("Refresh", GUILayout.ExpandWidth(false)))
+                if (GUILayout.Button(m_RefreshVariablesGUIContent, GUILayout.ExpandWidth(false)))
                     manager.RefreshGlobalProfileVariables();
 
                 GUILayout.EndHorizontal();
@@ -399,9 +409,9 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var manager = m_Settings.HostingServicesManager;
             var data = tableKey.ProfileVariables;
-            
+
             HostingServicesProfileVarsTreeView table;
-            
+
             if (!m_ProfileVarTables.TryGetValue(tableKey, out table))
             {
                 table = new HostingServicesProfileVarsTreeView(new TreeViewState(),
@@ -410,7 +420,6 @@ namespace UnityEditor.AddressableAssets.GUI
                 m_TablePrevData[tableKey] = new Dictionary<string, string>(data);
                 m_TablePrevManagerVariables[tableKey] = new Dictionary<string, string>(manager.GlobalProfileVariables);
             }
-            
             else if (!DictsAreEqual(data, m_TablePrevData[tableKey]) || !DictsAreEqual(manager.GlobalProfileVariables, m_TablePrevManagerVariables[tableKey]))
             {
                 table.ClearItems();
@@ -422,15 +431,15 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 foreach (var globalVar in manager.GlobalProfileVariables)
                     table.AddOrUpdateItem(globalVar.Key, globalVar.Value);
-                
+
                 foreach (var kvp in data)
                     table.AddOrUpdateItem(kvp.Key, kvp.Value);
             }
-            
+
             var rowHeight = table.RowHeight;
             var tableHeight = table.multiColumnHeader.height + rowHeight + (rowHeight * (data.Count() + manager.GlobalProfileVariables.Count)); // header + 1 extra line
-        
-            table.OnGUI(EditorGUILayout.GetControlRect(false, tableHeight)); 
+
+            table.OnGUI(EditorGUILayout.GetControlRect(false, tableHeight));
         }
 
         /// <inheritdoc/>

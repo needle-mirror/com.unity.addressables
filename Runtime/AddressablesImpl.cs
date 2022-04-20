@@ -11,6 +11,7 @@ using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.Networking;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.Exceptions;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
@@ -59,43 +60,6 @@ namespace UnityEngine.AddressableAssets
             set
             {
                 m_CatalogRequestsTimeout = value;
-            }
-        }
-
-        public class ResourceLocatorInfo
-        {
-            public IResourceLocator Locator { get; private set; }
-            public string LocalHash { get; private set; }
-            public IResourceLocation CatalogLocation { get; private set; }
-            public bool ContentUpdateAvailable { get; internal set; }
-            public ResourceLocatorInfo(IResourceLocator loc, string localHash, IResourceLocation remoteCatalogLocation)
-            {
-                Locator = loc;
-                LocalHash = localHash;
-                CatalogLocation = remoteCatalogLocation;
-            }
-
-            public IResourceLocation HashLocation
-            {
-                get
-                {
-                    return CatalogLocation.Dependencies[0];
-                }
-            }
-
-            public bool CanUpdateContent
-            {
-                get
-                {
-                    return !string.IsNullOrEmpty(LocalHash) && CatalogLocation != null && CatalogLocation.HasDependencies && CatalogLocation.Dependencies.Count == 2;
-                }
-            }
-
-            internal void UpdateContent(IResourceLocator locator, string hash, IResourceLocation loc)
-            {
-                LocalHash = hash;
-                CatalogLocation = loc;
-                Locator = locator;
             }
         }
 
@@ -435,7 +399,7 @@ namespace UnityEngine.AddressableAssets
             //this indicates that a specific addressables settings asset is being used for the runtime locations
             if (runtimeDataPath.StartsWith("GUID:"))
                 settingsPath = UnityEditor.AssetDatabase.GUIDToAssetPath(runtimeDataPath.Substring(runtimeDataPath.IndexOf(':') + 1));
-            
+
             var assembly = Assembly.Load("Unity.Addressables.Editor");
             if (string.IsNullOrEmpty(settingsPath) && !UnityEditor.EditorApplication.isPlaying)
             {
@@ -492,9 +456,20 @@ namespace UnityEngine.AddressableAssets
             return InitializeAsync(ResolveInternalId(settingsPath), null, autoReleaseHandle);
         }
 
-        internal ResourceLocationBase CreateCatalogLocationWithHashDependencies(string catalogPath, string hashFilePath)
+        public ResourceLocationBase CreateCatalogLocationWithHashDependencies<T>(IResourceLocation catalogLocation) where T : IResourceProvider
         {
-            var catalogLoc = new ResourceLocationBase(catalogPath, catalogPath, typeof(ContentCatalogProvider).FullName, typeof(IResourceLocator));
+            return CreateCatalogLocationWithHashDependencies<T>(catalogLocation.InternalId);
+        }
+
+        public ResourceLocationBase CreateCatalogLocationWithHashDependencies<T>(string catalogLocation) where T : IResourceProvider
+        {
+            string hashFilePath = catalogLocation.Replace(".json", ".hash");
+            return CreateCatalogLocationWithHashDependencies<T>(catalogLocation, hashFilePath);
+        }
+
+        public ResourceLocationBase CreateCatalogLocationWithHashDependencies<T>(string catalogPath, string hashFilePath) where T : IResourceProvider
+        {
+            var catalogLoc = new ResourceLocationBase(catalogPath, catalogPath, typeof(T).FullName, typeof(IResourceLocator));
             catalogLoc.Data = new ProviderLoadRequestOptions()
             {
                 IgnoreFailures = false,
@@ -527,7 +502,7 @@ namespace UnityEngine.AddressableAssets
 
             return catalogLoc;
         }
-        
+
         [Conditional("UNITY_EDITOR")]
         void QueueEditorUpdateIfNeeded()
         {
@@ -539,8 +514,7 @@ namespace UnityEngine.AddressableAssets
 
         public AsyncOperationHandle<IResourceLocator> LoadContentCatalogAsync(string catalogPath, bool autoReleaseHandle = true, string providerSuffix = null)
         {
-            string catalogHashPath = catalogPath.Replace(".json", ".hash");
-            var catalogLoc = CreateCatalogLocationWithHashDependencies(catalogPath, catalogHashPath);
+            var catalogLoc = CreateCatalogLocationWithHashDependencies<ContentCatalogProvider>(catalogPath);
             if (ShouldChainRequest)
                 return ResourceManager.CreateChainOperation(ChainOperation, op => LoadContentCatalogAsync(catalogPath, autoReleaseHandle, providerSuffix));
             var handle = Initialization.InitializationOperation.LoadContentCatalog(this, catalogLoc, providerSuffix);
@@ -579,7 +553,14 @@ namespace UnityEngine.AddressableAssets
         public AsyncOperationHandle<TObject> LoadAssetAsync<TObject>(IResourceLocation location)
         {
             QueueEditorUpdateIfNeeded();
+            if (ShouldChainRequest)
+                return TrackHandle(LoadAssetWithChain<TObject>(ChainOperation, location));
             return TrackHandle(ResourceManager.ProvideResource<TObject>(location));
+        }
+
+        AsyncOperationHandle<TObject> LoadAssetWithChain<TObject>(AsyncOperationHandle dep, IResourceLocation loc)
+        {
+            return ResourceManager.CreateChainOperation(dep, op => LoadAssetAsync<TObject>(loc));
         }
 
         AsyncOperationHandle<TObject> LoadAssetWithChain<TObject>(AsyncOperationHandle dep, object key)
@@ -722,10 +703,15 @@ namespace UnityEngine.AddressableAssets
         public AsyncOperationHandle<IList<TObject>> LoadAssetsAsync<TObject>(IList<IResourceLocation> locations, Action<TObject> callback, bool releaseDependenciesOnFailure)
         {
             QueueEditorUpdateIfNeeded();
-
+            if (ShouldChainRequest)
+                return TrackHandle(LoadAssetsWithChain(ChainOperation, locations, callback, releaseDependenciesOnFailure));
             return TrackHandle(ResourceManager.ProvideResources(locations, releaseDependenciesOnFailure, callback));
         }
 
+        AsyncOperationHandle<IList<TObject>> LoadAssetsWithChain<TObject>(AsyncOperationHandle dep, IList<IResourceLocation> locations, Action<TObject> callback, bool releaseDependenciesOnFailure)
+        {
+            return ResourceManager.CreateChainOperation(dep, op => LoadAssetsAsync(locations, callback, releaseDependenciesOnFailure));
+        }
         AsyncOperationHandle<IList<TObject>> LoadAssetsWithChain<TObject>(AsyncOperationHandle dep, IEnumerable keys, Action<TObject> callback, Addressables.MergeMode mode, bool releaseDependenciesOnFailure)
         {
             return ResourceManager.CreateChainOperation(dep, op => LoadAssetsAsync(keys, callback, mode, releaseDependenciesOnFailure));
@@ -843,6 +829,64 @@ namespace UnityEngine.AddressableAssets
             return ResourceManager.CreateChainOperation(dep, op => GetDownloadSizeAsync(key));
         }
 
+        AsyncOperationHandle<long> ComputeCatalogSizeWithChain(IResourceLocation catalogLoc)
+        {
+            if (!catalogLoc.HasDependencies)
+                return ResourceManager.CreateCompletedOperation<long>(0, "Attempting to get the remote header size of a content catalog, " +
+                    $"but no dependencies pointing to a remote location could be found for location {catalogLoc.InternalId}. Catalog location dependencies can " +
+                    $"be setup using CreateCatalogLocationWithHashDependencies");
+
+            AsyncOperationHandle dep = ResourceManager.ProvideResource<string>(catalogLoc.Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote]);
+            return ResourceManager.CreateChainOperation(dep, op =>
+            {
+                try
+                {
+                    var remoteHash = Hash128.Parse(op.Result.ToString());
+                    if (!IsCatalogCached(catalogLoc, remoteHash))
+                        return GetRemoteCatalogHeaderSize(catalogLoc);
+                }
+                catch (Exception e)
+                { 
+                    return ResourceManager.CreateCompletedOperation<long>(0, $"Fetching the remote catalog size failed. {e}");
+                }
+                
+                return ResourceManager.CreateCompletedOperation<long>(0, string.Empty);
+            });
+        }
+
+        internal bool IsCatalogCached(IResourceLocation catalogLoc, Hash128 remoteHash)
+        {
+            //If local hash exists, check if they're equal or not
+            if (!catalogLoc.HasDependencies 
+                    || catalogLoc.Dependencies.Count != 2
+                    || !File.Exists(catalogLoc.Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Cache].InternalId)
+                    || remoteHash != Hash128.Parse(File.ReadAllText(catalogLoc.Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Cache].InternalId)))
+                return false;
+
+            return true;
+        }
+
+        internal AsyncOperationHandle<long> GetRemoteCatalogHeaderSize(IResourceLocation catalogLoc)
+        {
+            if (!catalogLoc.HasDependencies)
+                return ResourceManager.CreateCompletedOperation<long>(0, "Attempting to get the remote header size of a content catalog, " +
+                    $"but no dependencies pointing to a remote location could be found for location {catalogLoc.InternalId}. Catalog location dependencies can " +
+                    $"be setup using CreateCatalogLocationWithHashDependencies");
+
+            var uwr = new UnityWebRequest(catalogLoc.Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote].InternalId.Replace(".hash", ".json"), UnityWebRequest.kHttpVerbHEAD);
+            AsyncOperationBase<UnityWebRequest> uwrAsyncOp = new UnityWebRequestOperation(uwr);
+
+            return ResourceManager.CreateChainOperation(ResourceManager.StartOperation(uwrAsyncOp, default(AsyncOperationHandle))
+                , getOp =>
+            {
+                var response = (getOp.Result as UnityWebRequest)?.GetResponseHeader("Content-Length");
+                if (response != null && long.TryParse(response, out long result))
+                    return ResourceManager.CreateCompletedOperation(result, "");
+                else
+                    return ResourceManager.CreateCompletedOperation<long>(0, "Attempting to get the remote header of a catalog failed.");
+            });
+        }
+
         AsyncOperationHandle<long> GetDownloadSizeWithChain(AsyncOperationHandle dep, IEnumerable keys)
         {
             return ResourceManager.CreateChainOperation(dep, op => GetDownloadSizeAsync(keys));
@@ -870,6 +914,12 @@ namespace UnityEngine.AddressableAssets
                     locations = key as IList<IResourceLocation>;
                 else if (key is IResourceLocation)
                 {
+                    foreach (var locator in m_ResourceLocators)
+                    {
+                        if (locator.CatalogLocation == key as IResourceLocation)
+                            return ComputeCatalogSizeWithChain(key as IResourceLocation);
+                    }
+
                     locations = new List<IResourceLocation>(1)
                     {
                         key as IResourceLocation
@@ -892,7 +942,6 @@ namespace UnityEngine.AddressableAssets
                 if (sizeData != null)
                     size += sizeData.ComputeSize(location, ResourceManager);
             }
-
             return ResourceManager.CreateCompletedOperation<long>(size, string.Empty);
         }
 
@@ -1209,27 +1258,49 @@ namespace UnityEngine.AddressableAssets
             return true;
         }
 
-        internal AsyncOperationHandle<SceneInstance> LoadSceneWithChain(AsyncOperationHandle dep, object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
+        internal AsyncOperationHandle<SceneInstance> LoadSceneWithChain(AsyncOperationHandle dep, object key, LoadSceneParameters loadSceneParameters, bool activateOnLoad = true, int priority = 100)
+        {
+            return TrackHandle(ResourceManager.CreateChainOperation(dep, op => LoadSceneAsync(key, loadSceneParameters, activateOnLoad, priority, false)));
+        }
+        internal AsyncOperationHandle<SceneInstance> LoadSceneWithChain(AsyncOperationHandle dep, IResourceLocation key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
         {
             return TrackHandle(ResourceManager.CreateChainOperation(dep, op => LoadSceneAsync(key, loadMode, activateOnLoad, priority, false)));
         }
 
-        public AsyncOperationHandle<SceneInstance> LoadSceneAsync(object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100, bool trackHandle = true)
+        public AsyncOperationHandle<SceneInstance> LoadSceneAsync(object key)
+        {
+            return LoadSceneAsync(key, new LoadSceneParameters(LoadSceneMode.Single));
+        }
+        public AsyncOperationHandle<SceneInstance> LoadSceneAsync(object key, LoadSceneParameters loadSceneParameters, bool activateOnLoad = true, int priority = 100, bool trackHandle = true)
         {
             QueueEditorUpdateIfNeeded();
             if (ShouldChainRequest)
-                return LoadSceneWithChain(ChainOperation, key, loadMode, activateOnLoad, priority);
+                return LoadSceneWithChain(ChainOperation, key, loadSceneParameters, activateOnLoad, priority);
 
             IList<IResourceLocation> locations;
             if (!GetResourceLocations(key, typeof(SceneInstance), out locations))
                 return ResourceManager.CreateCompletedOperationWithException<SceneInstance>(default(SceneInstance), new InvalidKeyException(key, typeof(SceneInstance), this));
 
-            return LoadSceneAsync(locations[0], loadMode, activateOnLoad, priority, trackHandle);
+            return LoadSceneAsync(locations[0], loadSceneParameters, activateOnLoad, priority, trackHandle);
+        }
+
+        public AsyncOperationHandle<SceneInstance> LoadSceneAsync(IResourceLocation location)
+        {
+            return LoadSceneAsync(location, new LoadSceneParameters(LoadSceneMode.Single));
         }
 
         public AsyncOperationHandle<SceneInstance> LoadSceneAsync(IResourceLocation location, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100, bool trackHandle = true)
         {
-            var handle = ResourceManager.ProvideScene(SceneProvider, location, loadMode, activateOnLoad, priority);
+            return LoadSceneAsync(location, new LoadSceneParameters(loadMode), activateOnLoad, priority, trackHandle);
+        }
+
+        public AsyncOperationHandle<SceneInstance> LoadSceneAsync(IResourceLocation location, LoadSceneParameters loadSceneParameters, bool activateOnLoad = true, int priority = 100, bool trackHandle = true)
+        {
+            QueueEditorUpdateIfNeeded();
+            if (ShouldChainRequest)
+                return LoadSceneWithChain(ChainOperation, location, loadSceneParameters.loadSceneMode, activateOnLoad, priority);
+
+            var handle = ResourceManager.ProvideScene(SceneProvider, location, loadSceneParameters.loadSceneMode, activateOnLoad, priority);
             if (trackHandle)
                 return TrackHandle(handle);
 
@@ -1314,7 +1385,7 @@ namespace UnityEngine.AddressableAssets
             return ResourceManager.CreateChainOperation(ChainOperation, op => CheckForCatalogUpdates(autoReleaseHandle));
         }
 
-        internal ResourceLocatorInfo GetLocatorInfo(string c)
+        public ResourceLocatorInfo GetLocatorInfo(string c)
         {
             foreach (var l in m_ResourceLocators)
                 if (l.Locator.LocatorId == c)

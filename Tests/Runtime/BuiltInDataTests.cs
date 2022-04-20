@@ -56,7 +56,7 @@ namespace BuiltInDataTests
         [UnityTest]
         public IEnumerator WhenSceneIsInScenesList_LoadSceneAsync_Succeeds()
         {
-            var op = m_Addressables.LoadSceneAsync(sceneKey, LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKey, new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.AreEqual(sceneKey, SceneManager.GetSceneByName(sceneKey).name);

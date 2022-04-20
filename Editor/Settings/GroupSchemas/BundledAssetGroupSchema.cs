@@ -1,13 +1,12 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using UnityEditor.AddressableAssets.HostingServices;
 using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
-using UnityEngine.AddressableAssets;
 
 namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 {
@@ -520,7 +519,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// </summary>
         private bool m_UseCustomPaths = false;
 
-
         /// <summary>
         /// Internal settings
         /// </summary>
@@ -528,6 +526,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             get { return AddressableAssetSettingsDefaultObject.Settings; }
         }
+
+        private GUIContent m_BuildAndLoadPathsGUIContent = new GUIContent("Build & Load Paths", "Paths to build or load AssetBundles from");
+        private GUIContent m_PathsPreviewGUIContent =  new GUIContent("Path Preview", "Preview of what the current paths will be evaluated to");
 
         /// <summary>
         /// Set default values taken from the assigned group.
@@ -830,7 +831,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         GUIContent m_TimeoutContent = new GUIContent("Request Timeout", "The timeout with no download activity (in seconds) for the Http request.");
         GUIContent m_ChunkedTransferContent = new GUIContent("Use Http Chunked Transfer", "If enabled, the Http request will use chunked transfers.");
         GUIContent m_RedirectLimitContent = new GUIContent("Http Redirect Limit", "The redirect limit for the Http request.");
-        GUIContent m_RetryCountContent = new GUIContent("Retry Count", "The number of times to retry the http request.");
+        GUIContent m_RetryCountContent = new GUIContent("Retry Count", "The number of times to retry the http request. Note that a retry count of 0 allows auto-downloading asset bundles that fail to load from the cache. Set to -1 to prevent this auto-downloading behavior.");
         GUIContent m_IncludeAddressInCatalogContent = new GUIContent("Include Addresses in Catalog", "If disabled, addresses from this group will not be included in the catalog.  This is useful for reducing the size of the catalog if addresses are not needed.");
         GUIContent m_IncludeGUIDInCatalogContent = new GUIContent("Include GUIDs in Catalog", "If disabled, guids from this group will not be included in the catalog.  This is useful for reducing the size of the catalog if guids are not needed.");
         GUIContent m_IncludeLabelsInCatalogContent = new GUIContent("Include Labels in Catalog", "If disabled, labels from this group will not be included in the catalog.  This is useful for reducing the size of the catalog if labels are not needed.");
@@ -1040,7 +1041,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             ShowMixedValue(buildPathProperty, otherSchemas, typeof(ProfileValueReference), nameof(m_BuildPath));
             ShowMixedValue(loadPathProperty, otherSchemas, typeof(ProfileValueReference), nameof(m_LoadPath));
 
-            List<ProfileGroupType> groupTypes = ProfileGroupType.CreateGroupTypes(settings.profileSettings.GetProfile(settings.activeProfileId));
+            List<ProfileGroupType> groupTypes = ProfileGroupType.CreateGroupTypes(settings.profileSettings.GetProfile(settings.activeProfileId), settings);
             List<string> options = groupTypes.Select(group => group.GroupTypePrefix).ToList();
             //set selected to custom
             options.Add(AddressableAssetProfileSettings.customEntryString);
@@ -1050,8 +1051,8 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             if (!EditorGUI.showMixedValue)
             {
                 //disregard custom value, want to check if valid pair
-                selected = DetermineSelectedIndex(groupTypes, options.Count - 1);
-                if (selected.HasValue && selected != options.Count - 1)
+                selected = DetermineSelectedIndex(groupTypes, options.Count - 1, settings);
+                if (selected != options.Count - 1)
                 {
                     m_UseCustomPaths = false;
                 }
@@ -1063,7 +1064,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
             //Dropdown selector
             EditorGUI.BeginChangeCheck();
-            var newIndex = EditorGUILayout.Popup("Build & Load Paths", selected.HasValue ? selected.Value : -1, options.ToArray());
+            var newIndex = EditorGUILayout.Popup(m_BuildAndLoadPathsGUIContent, selected.HasValue ? selected.Value : -1, options.ToArray());
             if (EditorGUI.EndChangeCheck() && newIndex != selected)
             {
                 selected = newIndex;
@@ -1086,14 +1087,14 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
         void ShowSelectedPropertyPathPair(SerializedObject so)
         {
-            List<ProfileGroupType> groupTypes = ProfileGroupType.CreateGroupTypes(settings.profileSettings.GetProfile(settings.activeProfileId));
+            List<ProfileGroupType> groupTypes = ProfileGroupType.CreateGroupTypes(settings.profileSettings.GetProfile(settings.activeProfileId), settings);
             List<string> options = groupTypes.Select(group => group.GroupTypePrefix).ToList();
             //Set selected to custom
             options.Add(AddressableAssetProfileSettings.customEntryString);
-            int? selected = options.Count - 1;
 
             //Determine selection and whether to show custom
-            selected = DetermineSelectedIndex(groupTypes, options.Count - 1);
+            
+            int? selected = DetermineSelectedIndex(groupTypes, options.Count - 1, settings);
             if (selected.HasValue && selected != options.Count - 1)
             {
                 m_UseCustomPaths = false;
@@ -1105,7 +1106,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
             //Dropdown selector
             EditorGUI.BeginChangeCheck();
-            var newIndex = EditorGUILayout.Popup("Build & Load Paths", selected.HasValue ? selected.Value : options.Count - 1, options.ToArray());
+            var newIndex = EditorGUILayout.Popup(m_BuildAndLoadPathsGUIContent, selected.HasValue ? selected.Value : options.Count - 1, options.ToArray());
             if (EditorGUI.EndChangeCheck() && newIndex != selected)
             {
                 SetPathPairOption(so, options, groupTypes, newIndex);
@@ -1121,18 +1122,27 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             EditorGUI.showMixedValue = false;
         }
 
-        int? DetermineSelectedIndex(List<ProfileGroupType> groupTypes, int? defaultValue)
-        {
-            int? selected = defaultValue;
 
-            HashSet<string> vars = settings.profileSettings.GetAllVariableIds();
+        internal int DetermineSelectedIndex(List<ProfileGroupType> groupTypes, int defaultValue, AddressableAssetSettings addressableAssetSettings)
+        {
+            HashSet<string> vars = addressableAssetSettings.profileSettings.GetAllVariableIds();
+            return DetermineSelectedIndex(groupTypes, defaultValue, addressableAssetSettings, vars);
+        }
+
+        internal int DetermineSelectedIndex(List<ProfileGroupType> groupTypes, int defaultValue, AddressableAssetSettings addressableAssetSettings, HashSet<string> vars)
+        {
+            int selected = defaultValue;
+
+            if (addressableAssetSettings == null)
+                return defaultValue;
+            
             if (vars.Contains(m_BuildPath.Id) && vars.Contains(m_LoadPath.Id) && !m_UseCustomPaths)
             {
                 for (int i = 0; i < groupTypes.Count; i++)
                 {
                     ProfileGroupType.GroupTypeVariable buildPathVar = groupTypes[i].GetVariableBySuffix("BuildPath");
                     ProfileGroupType.GroupTypeVariable loadPathVar = groupTypes[i].GetVariableBySuffix("LoadPath");
-                    if (m_BuildPath.GetName(settings) == groupTypes[i].GetName(buildPathVar) && m_LoadPath.GetName(settings) == groupTypes[i].GetName(loadPathVar))
+                    if (m_BuildPath.GetName(addressableAssetSettings) == groupTypes[i].GetName(buildPathVar) && m_LoadPath.GetName(addressableAssetSettings) == groupTypes[i].GetName(loadPathVar))
                     {
                         selected = i;
                         break;
@@ -1161,7 +1171,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         void ShowPathsPreview(bool showMixedValue)
         {
             EditorGUI.indentLevel++;
-            m_ShowPaths = EditorGUILayout.Foldout(m_ShowPaths, "Path Preview", true);
+            m_ShowPaths = EditorGUILayout.Foldout(m_ShowPaths, m_PathsPreviewGUIContent, true);
             if (m_ShowPaths)
             {
                 EditorStyles.helpBox.fontSize = 12;

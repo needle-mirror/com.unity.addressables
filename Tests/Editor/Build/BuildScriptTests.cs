@@ -272,8 +272,8 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsFalse(buildScript.CanBuildData<AddressablesPlayModeBuildResult>());
             Assert.IsFalse(buildScript.CanBuildData<AddressablesPlayerBuildResult>());
         }
-
-        class BuildScriptTestClass : BuildScriptBase
+        
+        internal class BuildScriptTestClass : BuildScriptBase
         {
             public override string Name
             {

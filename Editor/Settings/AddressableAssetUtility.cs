@@ -385,10 +385,11 @@ namespace UnityEditor.AddressableAssets.Settings
         internal static bool InstallCCDPackage()
         {
 #if !ENABLE_CCD
-            var confirm = EditorUtility.DisplayDialog("Install CCD Management SDK Package", "Are you sure you want to install the CCD Management SDK pre-release package and enable experimental CCD features within Addressables?\nTo remove this package and its related features, please use the Package manager.  Alternatively, uncheck the Addressable Asset Settings > Cloud Content Delivery > Enable Experimental CCD Features toggle to remove the package.", "Yes", "No");
+            var confirm = EditorUtility.DisplayDialog("Install CCD Management SDK Package", "Are you sure you want to install the CCD Management SDK package and enable experimental CCD features within Addressables?\nTo remove this package and its related features, please use the Package manager.  Alternatively, uncheck the Addressable Asset Settings > Cloud Content Delivery > Enable Experimental CCD Features toggle to remove the package.", "Yes", "No");
             if (confirm)
             {
-                Client.Add("com.unity.services.ccd.management@1.0.0-pre.2");
+                AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.InstallCCDManagementPackage);
+                Client.Add("com.unity.services.ccd.management@2.0.4");
                 AddressableAssetSettingsDefaultObject.Settings.CCDEnabled = true;
             }
 #endif
@@ -400,7 +401,7 @@ namespace UnityEditor.AddressableAssets.Settings
             var confirm = EditorUtility.DisplayDialog("Remove CCD Management SDK Package", "Are you sure you want to remove the CCD Management SDK package?", "Yes", "No");
             if (confirm)
             {
-#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+#if (UNITY_2019_4_OR_NEWER)
                 Client.Remove("com.unity.services.ccd.management");
                 AddressableAssetSettingsDefaultObject.Settings.CCDEnabled = false;
 #endif

@@ -5,9 +5,13 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.TestTools;
 using UnityEngine;
 using System.Linq;
+using System.Collections;
+using UnityEngine.SceneManagement;
+using UnityEngine.ResourceManagement.ResourceProviders;
 #if UNITY_EDITOR
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 #endif
 
 namespace AddressableAssetSettingsResourceLocationTests
@@ -17,15 +21,30 @@ namespace AddressableAssetSettingsResourceLocationTests
         const string k_ValidKey = "key";
         const string k_InvalidKey = "[key]";
 
+        const string k_FolderAddress = "Folder";
+        const string k_SubFolderAddress = "Folder/subfolder.prefab";
+        const string k_SceneSubFolderAddress = "Folder/subscene.unity";
+
 #if UNITY_EDITOR
         internal override void Setup(AddressableAssetSettings settings, string tempAssetFolder)
         {
+            string folderGuid = AssetDatabase.CreateFolder(tempAssetFolder, k_FolderAddress);
+
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            EditorSceneManager.SaveScene(scene, $"{tempAssetFolder}/{k_FolderAddress}/subscene.unity");
+            EditorSceneManager.CloseScene(scene, true);
+
+            AssetDatabase.Refresh();
+
             GameObject testObject = new GameObject("TestObject");
             GameObject testObject2 = new GameObject("TestObject2");
+            GameObject subFolderEntry = new GameObject("SubFolder");
             string path = tempAssetFolder + "/test.prefab";
             string path2 = tempAssetFolder + "/test2.prefab";
+            string path3 = $"{tempAssetFolder}/{k_FolderAddress}/subfolder.prefab";
             PrefabUtility.SaveAsPrefabAsset(testObject, path);
             PrefabUtility.SaveAsPrefabAsset(testObject2, path2);
+            PrefabUtility.SaveAsPrefabAsset(subFolderEntry, path3);
             string guid = AssetDatabase.AssetPathToGUID(path);
             string guid2 = AssetDatabase.AssetPathToGUID(path2);
 
@@ -34,6 +53,10 @@ namespace AddressableAssetSettingsResourceLocationTests
 
             entry = settings.CreateOrMoveEntry(guid2, settings.DefaultGroup);
             entry.address = k_InvalidKey;
+
+            AddressableAssetEntry folder = settings.CreateOrMoveEntry(folderGuid, settings.DefaultGroup);
+            folder.address = k_FolderAddress;
+            folder.IsFolder = true;
 
             bool currentIgnoreState = LogAssert.ignoreFailingMessages;
             LogAssert.ignoreFailingMessages = false;
@@ -59,6 +82,38 @@ namespace AddressableAssetSettingsResourceLocationTests
             Assert.IsTrue(res);
             Assert.IsNotNull(locs);
             Assert.AreEqual(1, locs.Count);
+        }
+
+        [UnityTest]
+        public IEnumerator GetResourceLocations_IncludesFolderGameObjectSubEntries_NullType()
+        {
+            IList<IResourceLocation> locations = new List<IResourceLocation>();
+            yield return m_Addressables.GetResourceLocations(k_SubFolderAddress, null, out locations);
+            Assert.AreEqual(1, locations.Count);
+        }
+
+        [UnityTest]
+        public IEnumerator GetResourceLocations_IncludesFolderGameObjectSubEntries_RuntimeType()
+        {
+            IList<IResourceLocation> locations = new List<IResourceLocation>();
+            yield return m_Addressables.GetResourceLocations(k_SubFolderAddress, typeof(GameObject), out locations);
+            Assert.AreEqual(1, locations.Count);
+        }
+
+        [UnityTest]
+        public IEnumerator GetResourceLocations_IncludesFolderSceneSubEntries_NullType()
+        {
+            IList<IResourceLocation> locations = new List<IResourceLocation>();
+            yield return  m_Addressables.GetResourceLocations(k_SceneSubFolderAddress, null, out locations);
+            Assert.AreEqual(1, locations.Count);
+        }
+
+        [UnityTest]
+        public IEnumerator GetResourceLocations_IncludesFolderSceneSubEntries_RuntimeSceneType()
+        {
+            IList<IResourceLocation> locations = new List<IResourceLocation>();
+            yield return m_Addressables.GetResourceLocations(k_SceneSubFolderAddress, typeof(SceneInstance), out locations);
+            Assert.AreEqual(1, locations.Count);
         }
 
         [Test]

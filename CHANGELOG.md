@@ -4,6 +4,56 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.20.0] - 2022-4-20
+- Added ability to get the download size of a given Content Catalog by its resource location
+- Add option to save the bundle build layout report as a json or txt file in the Preferences window.
+- Added sample for resolving duplicate dependencies to multiple groups.
+- AddressableAssetProfileSettings.GetProfileDataById and AddressableAssetProfileSettings.GetProfileDataByName public
+- Added ability to load scenes using SceneLoadParameters through Addressables API.
+- Made the following API public:
+  - AsyncOperationHandle.IsWaitingForCompletion
+  - AssetBundleResource.LoadType
+  - AssetBundleResource.GetLoadInfo()
+  - AssetBundleResource.GetAssetPreloadRequest()
+  - AssetBundleResource.Start()
+  - AssetBundleResource.Unload()
+  - WebRequestQueueOperation.Result
+  - WebRequestQueueOperation.OnComplete
+  - WebRequestQueueOperation.IsDone
+  - WebRequestQueueOperation.WebRequest
+  - WebRequestQueueOperation.ctor()
+  - WebRequestQueue.SetMaxConcurrentWebRequests()
+  - WebRequestQueue.QueueRequest()
+  - WebRequestQueue.WaitForRequestToBeActive()
+  - ResourceManagerConfig.ExtractKeyAndSubKey()
+  - UnityWebRequestUtilities.RequestHasErrors()
+  - UnityWebRequestUtilities.IsAssetBundleDownloaded()
+  - UnityWebRequestResult.Error.set
+  - UnityWebRequestResult.ShouldRetryDownloadError
+- Made the following API protected:
+  - AssetBundleProvider.UnloadingBundles.get
+  - AsyncOperationBase.ReferenceCount
+  - AsyncOperationBase.IncrementReferenceCount
+  - AsyncOperationBase.DecrementReferenceCount
+- Added functionality to extend groups window build menu with pre and post build methods
+- Fixed issue where custom analyze rules that are subclasses cannot be registered.
+- Added more tooltips to UI
+- Fixed issue where loading assets using a Location without initialising first would not initialise Addressables.
+- Content Update workflow has been changed to be more streamlined.  New settings have been added to handle Content Update and the previous state .bin file can now be automatically loaded instead of requiring manual selection.
+- Set default max concurrent Web requests value to 3.
+- Pre-cache delegate list for Completed and CompletedTypeless to reduce GC allocation.
+- Fixed issue where Scenes can be incorrectly reported as being in multiple bundles with Bundle Layout Preview analyze rule
+- Fixed bug where requests for a ResourceLocation that pointed to a scene in an Addressable folder wasn't returning the location
+- Fixed issue where content update could fail to update built-in shaders and monoscript bundles to load from the correct location.
+- Cache results of FindEntry to improve performance when no changes are made.
+- Fixed an issue where the AddressableAssetEntry returned by GetFolderSubEntry would not include the labels of the entry
+- Fixed issue where inherited fast mode scripts would fail to use instance and scene providers set for that build script object.
+- Fixed issue where multiple AssetReferences could not be dragged and dropped to a list or array.
+- Improved performance when deleting Addressable Asset Groups.
+
+## [1.20.0] - 2022-5-5
+- ...
+
 ## [1.19.19] - 2022-3-1
 - Improved message of InvalidKeyException errors.
 - Improved exception message of RemoteProviderExceptions
@@ -1112,6 +1162,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.0.8-preview] - 2018-02-08
 - Initial submission for package distribution
+
 
 
 

@@ -44,7 +44,7 @@ namespace UnityEditor.AddressableAssets.GUI
             m_ActiveIndex = -1;
             m_IsEditing = false;
         }
-        
+
         void OnGUI()
         {
             GUILayout.BeginVertical(EditorStyles.label);

@@ -30,7 +30,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         public int Version { get { return k_Version; } }
 
         /// <summary>
-        /// The mapping of the old to new bundle names. 
+        /// The mapping of the old to new bundle names.
         /// </summary>
         public Dictionary<string, string> BundleNameRemap { get { return m_BundleNameRemap; } set { m_BundleNameRemap = value; }}
 
@@ -59,7 +59,14 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
         internal Dictionary<string, string> m_BundleNameRemap;
 
-        internal static string m_LayoutTextFile = Addressables.LibraryPath + "/buildlayout.txt";
+        internal static string m_LayoutFileName = "buildlayout";
+        internal static string m_LayoutFilePath = $"{Addressables.LibraryPath}{m_LayoutFileName}";
+
+        internal static string GetLayoutFile(ProjectConfigData.ReportFileFormat fileFormat)
+        {
+            string ext = (fileFormat == ProjectConfigData.ReportFileFormat.JSON) ? "json" : "txt";
+            return $"{m_LayoutFilePath}.{ext}";
+        }
 
         static AssetBucket GetOrCreate(Dictionary<string, AssetBucket> buckets, string asset)
         {
@@ -245,11 +252,16 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
             // This is the addressables section. Everything above could technically be moved to SBP.
             {
+                layout.UnityVersion = UnityEngine.Application.unityVersion;
+                PackageManager.PackageInfo info = PackageManager.PackageInfo.FindForAssembly(typeof(BuildLayoutPrinter).Assembly);
+                if (info != null)
+                    layout.PackageVersion = $"{info.name}: {info.version}";
+
                 AddressableAssetsBuildContext aaContext = (AddressableAssetsBuildContext)m_AaBuildContext;
                 // Map from GUID to AddrssableAssetEntry
                 Dictionary<string, AddressableAssetEntry> guidToEntry = aaContext.assetEntries.ToDictionary(x => x.guid, x => x);
                 Dictionary<string, string> groupNameToBuildPath = new Dictionary<string, string>();
-                
+
                 // create groups
                 foreach (AddressableAssetGroup group in aaContext.Settings.groups)
                 {
@@ -295,13 +307,24 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                     {
                         var assetGroup = lookup.GroupLookup[grpName];
                         b.Name = m_BundleNameRemap[b.Name];
-                        b.FileSize = (ulong)new FileInfo(Path.Combine(groupNameToBuildPath[assetGroup.Name], b.Name)).Length;
+                        string filePath = Path.Combine(groupNameToBuildPath[assetGroup.Name], b.Name);
+                        if(File.Exists(filePath))
+                            b.FileSize = (ulong)new FileInfo(filePath).Length;
+                        else
+                        {
+                            Debug.LogWarning($"AssetBundle {b.Name} from Addressable Group \"{assetGroup.Name}\" was detected as part of the build, " +
+                                $"but the file could not be found.  Likely this is because a Content Update Restricted asset was modifed before doing a Content Update build. " +
+                                $"This could mean that assets inteded for an update are not included as part of this build. " +
+                                $"You can automatically run the Restrictions check by changing the Check for Content Update Restrictions option in the AddressableAssetSettings under the Update a Previous Build section, " +
+                                $"or run Addressable Groups Window -> Tools -> Check For Content Update Restrictions to determine if assets have been modified.");
+                            continue;
+                        }
                         assetGroup.Bundles.Add(b);
                     }
                     else
                     {
                         // will still be associated with a group and can be found in assetGroupToBundles
-                        foreach (KeyValuePair<AddressableAssetGroup,List<string>> pair in aaContext.assetGroupToBundles)
+                        foreach (KeyValuePair<AddressableAssetGroup, List<string>> pair in aaContext.assetGroupToBundles)
                         {
                             foreach (string s in pair.Value)
                             {
@@ -336,11 +359,20 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         {
             BuildLayout layout = CreateBuildLayout();
 
-            Directory.CreateDirectory(Path.GetDirectoryName(m_LayoutTextFile));
-            using (FileStream s = File.Open(m_LayoutTextFile, FileMode.Create))
-                BuildLayoutPrinter.WriteBundleLayout(s, layout);
+            string layoutFile = GetLayoutFile(ProjectConfigData.BuildLayoutReportFileFormat);
+            Directory.CreateDirectory(Path.GetDirectoryName(layoutFile));
+            using (FileStream s = File.Open(layoutFile, FileMode.Create))
+            {
+                if (ProjectConfigData.BuildLayoutReportFileFormat == ProjectConfigData.ReportFileFormat.JSON)
+                {
+                    using (StreamWriter sw = new StreamWriter(s))
+                        sw.Write(UnityEngine.JsonUtility.ToJson(layout));
+                }
+                else
+                    BuildLayoutPrinter.WriteBundleLayout(s, layout);
+            }
 
-            UnityEngine.Debug.Log($"Build layout written to {m_LayoutTextFile}");
+            UnityEngine.Debug.Log($"Build layout written to {layoutFile}");
 
             s_LayoutCompleteCallback?.Invoke(layout);
 

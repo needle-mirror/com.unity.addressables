@@ -273,6 +273,7 @@ namespace DiagnosticEventCollectorIntegrationTests
         protected override bool PostProfilerEvents() => true;
 
         [Test]
+        [Ignore("Unstable: https://jira.unity3d.com/browse/ADDR-2645")]
         public void WhenPostProfilerEventsIsTrue_DiagnosticEventsCollectorIsCreated()
         {
             Assert.AreEqual(1, Resources.FindObjectsOfTypeAll(typeof(DiagnosticEventCollectorSingleton)).Length);
@@ -284,6 +285,7 @@ namespace DiagnosticEventCollectorIntegrationTests
         protected override bool PostProfilerEvents() => false;
 
         [Test]
+        [Ignore("Unstable: https://jira.unity3d.com/browse/ADDR-2645")]
         public void WhenPostProfilerEventsIsFalse_DiagnosticEventsCollectorIsNotCreated()
         {
             Assert.AreEqual(0, Resources.FindObjectsOfTypeAll(typeof(DiagnosticEventCollectorSingleton)).Length);

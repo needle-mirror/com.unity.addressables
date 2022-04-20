@@ -1,7 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
+using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
@@ -57,6 +60,81 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
         {
             BundleRuleBase baseRule = new BundleRuleBase();
             Assert.DoesNotThrow(() => baseRule.FixIssues(Settings));
+        }
+
+        class TestBaseRule : BundleRuleBase
+        {
+            public override string ruleName => "TestBaseRule";
+        }
+        class TestInheritedRule : TestBaseRule
+        {
+            public override string ruleName => "TestInheritedRule";
+        }
+
+        [Test]
+        public void AnalyzeSystem_CanRegisterInheritedRule()
+        {
+            int currentCount = AnalyzeSystem.Rules.Count;
+
+            AnalyzeSystem.RegisterNewRule<TestBaseRule>();
+            AnalyzeSystem.RegisterNewRule<TestInheritedRule>();
+
+            Assert.AreEqual(currentCount + 2, AnalyzeSystem.Rules.Count);
+            Assert.AreEqual(typeof(TestBaseRule), AnalyzeSystem.Rules[currentCount].GetType());
+            Assert.AreEqual(typeof(TestInheritedRule), AnalyzeSystem.Rules[currentCount + 1].GetType());
+
+            AnalyzeSystem.Rules.RemoveAt(currentCount + 1);
+            AnalyzeSystem.Rules.RemoveAt(currentCount);
+        }
+
+        [Test]
+        public void AnalyzeSystem_CannotRegisterDuplicateRule()
+        {
+            int currentCount = AnalyzeSystem.Rules.Count;
+
+            AnalyzeSystem.RegisterNewRule<TestBaseRule>();
+            AnalyzeSystem.RegisterNewRule<TestBaseRule>();
+            Assert.AreEqual(currentCount + 1, AnalyzeSystem.Rules.Count);
+
+            AnalyzeSystem.Rules.RemoveAt(currentCount);
+        }
+        
+        [Test]
+        public void AnalyzeSystem_CanSaveAndLoad()
+        {
+            string path = GetAssetPath("analysis.json");
+            if (File.Exists(path))
+                File.Delete(path);
+            
+            int currentCount = AnalyzeSystem.Rules.Count;
+            AnalyzeSystem.RegisterNewRule<TestBaseRule>();
+            AnalyzeSystem.ClearAnalysis<TestBaseRule>();
+            try
+            {
+                AnalyzeSystem.SerializeData(path);
+                Assert.IsTrue(File.Exists(path));
+                string json = File.ReadAllText(path);
+                Assert.IsTrue(json.Contains("\"RuleName\":\"TestBaseRule\",\"Results\":[]"));
+                json = json.Replace("\"TestBaseRule\",\"Results\":[", "\"TestBaseRule\",\"Results\":[{\"m_ResultName\":\"someFakeResult\",\"m_Severity\":0}");
+                File.WriteAllText(path, json);
+
+                AnalyzeSystem.AnalyzeData.Data.TryGetValue(
+                    "TestBaseRule", out var results);
+                Assert.IsFalse(results.Any(r => r.resultName == "someFakeResult"));
+
+                AnalyzeSystem.DeserializeData(path);
+                Assert.IsTrue(AnalyzeSystem.AnalyzeData.Data.TryGetValue(
+                    "TestBaseRule", out results));
+                Assert.IsTrue(results.Count > 0);
+                Assert.AreEqual("someFakeResult", results[0].resultName);
+            }
+            finally
+            {
+                //cleanup
+                AnalyzeSystem.Rules.RemoveAt(currentCount);
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
         }
     }
 }

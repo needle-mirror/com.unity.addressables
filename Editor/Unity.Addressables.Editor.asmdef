@@ -5,7 +5,8 @@
         "Unity.ResourceManager",
         "Unity.ScriptableBuildPipeline.Editor",
         "Unity.ScriptableBuildPipeline",
-        "Unity.Services.CCD.Management"
+        "Unity.Services.Core",
+        "Unity.Services.Ccd.Management"
     ],
     "optionalUnityReferences": [],
     "includePlatforms": [
@@ -21,7 +22,7 @@
         },
         {
             "name": "com.unity.services.ccd.management",
-            "expression": "[1.0.0-pre.2,2.0.0)",
+            "expression": "[2.0.0,3.0.0)",
             "define": "ENABLE_CCD"
         }
     ]

@@ -8,6 +8,7 @@ using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.Serialization;
 
 // ReSharper disable DelegateSubtraction
@@ -15,8 +16,54 @@ using UnityEngine.Serialization;
 namespace UnityEditor.AddressableAssets.GUI
 {
     [Serializable]
-    class AddressableAssetsSettingsGroupEditor
+    internal class AddressableAssetsSettingsGroupEditor
     {
+        [System.AttributeUsage(AttributeTargets.Class)]
+        public class HideBuildMenuInUI : Attribute { }
+
+        /// <summary>
+        /// Interface used for classes that implement Addressables build menu steps.
+        /// </summary>
+        public interface IAddressablesBuildMenu
+        {
+            /// <summary>
+            /// Path from Build in the Addressables Groups Window.
+            /// </summary>
+            string BuildMenuPath { get; }
+
+            /// <summary>
+            /// If returns true, build menu will extend to available Build Scripts.
+            /// </summary>
+            bool SelectableBuildScript { get; }
+
+            /// <summary>
+            /// Display order in the menu, lower values are displayed first.
+            /// </summary>
+            int Order { get; }
+
+            /// <summary>
+            /// Called before beginning the Addressables content build.
+            /// </summary>
+            /// <param name="input">Input used for the Addressables content build</param>
+            /// <returns>True for success, else false and fail the build</returns>
+            bool OnPrebuild(AddressablesDataBuilderInput input);
+
+            /// <summary>
+            /// Called after the Addressables content build if the build was successful.
+            /// </summary>
+            /// <param name="input">Input used for the Addressables content build</param>
+            /// <param name="result">Result of the Addressables content build</param>
+            /// <returns>True for success, else false and fail the build</returns>
+            bool OnPostbuild(AddressablesDataBuilderInput input, AddressablesPlayerBuildResult result);
+        }
+
+        internal struct BuildMenuContext
+        {
+            public IAddressablesBuildMenu BuildMenu { get; set; }
+            public int buildScriptIndex;
+            public AddressableAssetSettings Settings { get; set; }
+        }
+
         [FormerlySerializedAs("treeState")]
         [SerializeField]
         TreeViewState m_TreeState;
@@ -173,7 +220,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
 
                 {
-                    var guiMode = new GUIContent("New");
+                    var guiMode = new GUIContent("New", "Create a new group");
                     Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
                     if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
                     {
@@ -193,7 +240,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     CreateProfileDropdown();
 
                 {
-                    var guiMode = new GUIContent("Tools");
+                    var guiMode = new GUIContent("Tools", "Tools used to configure or analyze Addressable Assets");
                     Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
                     if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
                     {
@@ -226,11 +273,11 @@ namespace UnityEditor.AddressableAssets.GUI
 
                 GUILayout.FlexibleSpace();
                 if (toolbarPos.width > 300)
-                    GUILayout.Space((spaceBetween * 2f)+8);
+                    GUILayout.Space((spaceBetween * 2f) + 8);
 
                 {
                     string playmodeButtonName = toolbarPos.width < 300 ? "Play Mode" : "Play Mode Script";
-                    var guiMode = new GUIContent(playmodeButtonName);
+                    var guiMode = new GUIContent(playmodeButtonName, "Determines how the Addressables system loads assets in Play Mode");
                     Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
                     if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
                     {
@@ -250,38 +297,56 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                 }
 
-                var guiBuild = new GUIContent("Build");
+                var guiBuild = new GUIContent("Build", "Options for building Addressable Assets");
                 Rect rBuild = GUILayoutUtility.GetRect(guiBuild, EditorStyles.toolbarDropDown);
                 if (EditorGUI.DropdownButton(rBuild, guiBuild, FocusType.Passive, EditorStyles.toolbarDropDown))
                 {
-                    //GUIUtility.hotControl = 0;
-                    var menu = new GenericMenu();
-                    var AddressablesPlayerBuildResultBuilderExists = false;
-                    for (int i = 0; i < settings.DataBuilders.Count; i++)
+                    var types = AddressableAssetUtility.GetTypes<IAddressablesBuildMenu>();
+                    var genericDropdownMenu = new GenericMenu();
+                    var displayMenus = CreateBuildMenus(types);
+                    foreach (IAddressablesBuildMenu buildOption in displayMenus)
                     {
-                        var m = settings.GetDataBuilder(i);
-                        if (m.CanBuildData<AddressablesPlayerBuildResult>())
+                        if (buildOption.SelectableBuildScript)
                         {
-                            AddressablesPlayerBuildResultBuilderExists = true;
-                            menu.AddItem(new GUIContent("New Build/" + m.Name), false, OnBuildScript, i);
+                            bool addressablesPlayerBuildResultBuilderExists = false;
+                            for (int i = 0; i < settings.DataBuilders.Count; i++)
+                            {
+                                var dataBuilder = settings.GetDataBuilder(i);
+                                if (dataBuilder.CanBuildData<AddressablesPlayerBuildResult>())
+                                {
+                                    addressablesPlayerBuildResultBuilderExists = true;
+                                    BuildMenuContext context = new BuildMenuContext()
+                                    {
+                                        buildScriptIndex = -1,
+                                        BuildMenu = buildOption,
+                                        Settings = settings
+                                    };
+
+                                    genericDropdownMenu.AddItem(new GUIContent(buildOption.BuildMenuPath + "/" + dataBuilder.Name), false, OnBuildAddressables, context);
+                                }
+                            }
+
+                            if (!addressablesPlayerBuildResultBuilderExists)
+                                genericDropdownMenu.AddDisabledItem(new GUIContent(buildOption.BuildMenuPath + "/No Build Script Available"));
+                        }
+                        else
+                        {
+                            BuildMenuContext context = new BuildMenuContext()
+                                {buildScriptIndex = -1, BuildMenu = buildOption, Settings = settings};
+                            genericDropdownMenu.AddItem(new GUIContent(buildOption.BuildMenuPath), false, OnBuildAddressables, context);
                         }
                     }
 
-                    if (!AddressablesPlayerBuildResultBuilderExists)
-                    {
-                        menu.AddDisabledItem(new GUIContent("New Build/No Build Script Available"));
-                    }
-
-                    menu.AddItem(new GUIContent("Update a Previous Build"), false, OnUpdateBuild);
-                    menu.AddItem(new GUIContent("Clean Build/All"), false, OnCleanAll);
-                    menu.AddItem(new GUIContent("Clean Build/Content Builders/All"), false, OnCleanAddressables, null);
+                    genericDropdownMenu.AddSeparator("");
+                    genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/All"), false, OnCleanAll);
+                    genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/Content Builders/All"), false, OnCleanAddressables, null);
                     for (int i = 0; i < settings.DataBuilders.Count; i++)
                     {
                         var m = settings.GetDataBuilder(i);
-                        menu.AddItem(new GUIContent("Clean Build/Content Builders/" + m.Name), false, OnCleanAddressables, m);
+                        genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/Content Builders/" + m.Name), false, OnCleanAddressables, m);
                     }
-                    menu.AddItem(new GUIContent("Clean Build/Build Pipeline Cache"), false, OnCleanSBP);
-                    menu.DropDown(rBuild);
+                    genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/Build Pipeline Cache"), false, OnCleanSBP);
+                    genericDropdownMenu.DropDown(rBuild);
                 }
 
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
@@ -318,6 +383,86 @@ namespace UnityEditor.AddressableAssets.GUI
             GUILayout.EndArea();
         }
 
+        internal static List<IAddressablesBuildMenu> CreateBuildMenus(IList<Type> types, bool includeMenusHiddenFromUI = false)
+        {
+            List<IAddressablesBuildMenu> displayMenus = new List<IAddressablesBuildMenu>(types.Count);
+
+            foreach (Type menuType in types)
+            {
+                if (Attribute.GetCustomAttribute(menuType, typeof(HideBuildMenuInUI)) != null && !includeMenusHiddenFromUI)
+                    continue;
+
+                var menuInst = Activator.CreateInstance(menuType) as IAddressablesBuildMenu;
+                if (string.IsNullOrEmpty(menuInst.BuildMenuPath))
+                    continue;
+                var existing = displayMenus.Find(b => b.BuildMenuPath == menuInst.BuildMenuPath);
+                if (existing == null)
+                    displayMenus.Add(menuInst);
+                else
+                {
+                    var existingType = existing.GetType();
+                    if (menuType.IsSubclassOf(existingType))
+                    {
+                        // override existing with our current
+                        displayMenus.Remove(existing);
+                        displayMenus.Add(menuInst);
+                    }
+                    else if (!existingType.IsSubclassOf(menuType))
+                    {
+                        // both are same level, issue
+                        Addressables.LogWarning(
+                            $"Trying to new build menu [{menuType}] with path \"{menuInst.BuildMenuPath}\". But an existing type already exists with that path, [{existingType}].");
+                    }
+                }
+            }
+
+            displayMenus.Sort((a, b) => a.Order.CompareTo(b.Order));
+            return displayMenus;
+        }
+
+        private static void OnBuildAddressables(object ctx)
+        {
+            BuildMenuContext buildAddressablesContext = (BuildMenuContext)ctx;
+            OnBuildAddressables(buildAddressablesContext);
+        }
+
+        internal static void OnBuildAddressables(BuildMenuContext context)
+        {
+            if (context.BuildMenu == null)
+            {
+                Addressables.LogError("Addressable content build failure : null build menu context");
+                return;
+            }
+
+            if (context.buildScriptIndex >= 0)
+                context.Settings.ActivePlayerDataBuilderIndex = context.buildScriptIndex;
+
+            var builderInput = new AddressablesDataBuilderInput(context.Settings);
+
+            if (!HandlePreBuild(context, builderInput))
+                return;
+
+            AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult rst, builderInput);
+
+            HandlePostBuild(context, builderInput, rst);
+        }
+
+        static bool HandlePreBuild(BuildMenuContext context, AddressablesDataBuilderInput builderInput)
+        {
+            if (!context.BuildMenu.OnPrebuild(builderInput))
+            {
+                Addressables.LogError($"Addressable content pre-build failure : {context.BuildMenu.BuildMenuPath}");
+                return false;
+            }
+            return true;
+        }
+
+        static void HandlePostBuild(BuildMenuContext context, AddressablesDataBuilderInput builderInput, AddressablesPlayerBuildResult rst)
+        {
+            if (string.IsNullOrEmpty(rst.Error) && !context.BuildMenu.OnPostbuild(builderInput, rst))
+                Addressables.LogError($"Addressable content post-build failure : {context.BuildMenu.BuildMenuPath}");
+        }
+
         void OnCleanAll()
         {
             OnCleanAddressables(null);
@@ -336,13 +481,38 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void OnPrepareUpdate()
         {
-            var path = ContentUpdateScript.GetContentStateDataPath(true);
+            var path = ContentUpdateScript.GetContentStateDataPath(false);
             if (string.IsNullOrEmpty(path))
+            { 
                 Debug.LogWarning("No path specified for Content State Data file.");
-            else if (!File.Exists(path))
-                Debug.LogWarningFormat("No Content State Data file exists at path: {0}");
-            else
-                ContentUpdatePreviewWindow.PrepareForContentUpdate(AddressableAssetSettingsDefaultObject.Settings, path);
+                return;
+            }
+
+            if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
+                path = ContentUpdateScript.DownloadBinFileToTempLocation(path);
+
+            if (!File.Exists(path))
+            {
+                if(UnityEditorInternal.InternalEditorUtility.inBatchMode)
+                { 
+                    Debug.LogWarningFormat("No Content State Data file exists at path: {0}", path);
+                    return;
+                }
+                else
+                {
+                    bool selectFileManually = EditorUtility.DisplayDialog("Unable to Check for Update Restrictions", $"The addressable_content_state.bin file could " +
+                        $"not be found at {path}", "Select .bin file", "Cancel content update");
+                    if(selectFileManually)
+                        path = ContentUpdateScript.GetContentStateDataPath(true);
+                    else
+                    { 
+                        Debug.LogWarningFormat("No Content State Data file exists at path: {0}.  Content update has been cancelled.", path);
+                        return;
+                    }
+                }
+            }
+
+            ContentUpdatePreviewWindow.PrepareForContentUpdate(AddressableAssetSettingsDefaultObject.Settings, path);
         }
 
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
@@ -350,7 +520,6 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             await AddressableAssetSettings.BuildAndReleasePlayerContent();
         }
-
 #endif
 
         void OnBuildScript(object context)
@@ -362,13 +531,6 @@ namespace UnityEditor.AddressableAssets.GUI
         void OnBuildPlayerData()
         {
             AddressableAssetSettings.BuildPlayerContent();
-        }
-
-        void OnUpdateBuild()
-        {
-            var path = ContentUpdateScript.GetContentStateDataPath(true);
-            if (!string.IsNullOrEmpty(path))
-                ContentUpdateScript.BuildContentUpdate(AddressableAssetSettingsDefaultObject.Settings, path);
         }
 
         void OnSetActiveBuildScript(object context)
@@ -397,7 +559,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 settings.activeProfileId = null; //this will reset it to default.
                 activeProfileName = settings.profileSettings.GetProfileName(settings.activeProfileId);
             }
-            var profileButton = new GUIContent("Profile: " + activeProfileName);
+            var profileButton = new GUIContent("Profile: " + activeProfileName, "The active collection of build path settings");
 
             Rect r = GUILayoutUtility.GetRect(profileButton, m_ButtonStyle, GUILayout.Width(115f));
             if (EditorGUI.DropdownButton(r, profileButton, FocusType.Passive, EditorStyles.toolbarDropDown))

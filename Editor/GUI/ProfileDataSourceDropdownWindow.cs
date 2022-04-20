@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.AddressableAssets.Settings;
@@ -6,7 +6,7 @@ using UnityEngine;
 using System.Threading.Tasks;
 
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
-using Unity.Services.CCD.Management.Models;
+using Unity.Services.Ccd.Management.Models;
 #endif
 
 namespace UnityEditor.AddressableAssets.GUI
@@ -32,7 +32,7 @@ namespace UnityEditor.AddressableAssets.GUI
         internal string m_BucketName;
         internal ProfileGroupType m_Bucket;
         internal bool m_isRefreshingCCDDataSources;
-        
+
         private ProfileDataSourceSettings m_ProfileDataSource;
 
         internal ProfileDataSourceSettings dataSourceSettings
@@ -44,7 +44,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 return m_ProfileDataSource;
             }
         }
-        
+
         static GUIStyle dropdownTitleStyle;
         static GUIStyle menuOptionStyle;
         static GUIStyle horizontalBarStyle;
@@ -57,6 +57,9 @@ namespace UnityEditor.AddressableAssets.GUI
         internal static OrgData m_Organization;
 
         List<BaseOption> options = new List<BaseOption>();
+
+        private GUIContent m_BundleLocationsGUIContent = new GUIContent("Bundle Locations", "Where AssetBundles are stored");
+        private GUIContent m_CCDBucketsGUIContent = new GUIContent("Cloud Content Delivery Buckets", "Storage buckets for Unity Cloud Content Delivery");
 
         public ProfileDataSourceDropdownWindow(Rect fieldRect, ProfileGroupType groupType)
         {
@@ -113,7 +116,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 normal =
                 {
                     background = blackTexture,
-                    scaledBackgrounds = new Texture2D[1]{ blackTexture }
+                    scaledBackgrounds = new Texture2D[1] { blackTexture }
                 },
                 fixedHeight = 1,
                 stretchHeight = false
@@ -140,7 +143,7 @@ namespace UnityEditor.AddressableAssets.GUI
             switch (state)
             {
                 case DropdownState.None:
-                    EditorGUILayout.LabelField("Bundle Locations", dropdownTitleStyle);
+                    EditorGUILayout.LabelField(m_BundleLocationsGUIContent, dropdownTitleStyle);
                     EditorGUILayout.Space(10);
                     EditorGUI.LabelField(horizontalBarRect, "", new GUIStyle(horizontalBarStyle) { fixedWidth = window.width });
                     //List all options
@@ -199,7 +202,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             }
 #endif
 
-                            EditorGUILayout.LabelField("Cloud Content Delivery Buckets", dropdownTitleStyle);
+                            EditorGUILayout.LabelField(m_CCDBucketsGUIContent, dropdownTitleStyle);
                             EditorGUILayout.Space(10);
                             EditorGUI.LabelField(horizontalBarRect, "", new GUIStyle(horizontalBarStyle) { fixedWidth = window.width });
 
@@ -275,13 +278,14 @@ namespace UnityEditor.AddressableAssets.GUI
                                 EditorStyles.helpBox.fontSize = 11;
                                 EditorStyles.helpBox.margin = new RectOffset(20, 20, 5, 5);
                                 EditorGUILayout.HelpBox(promotionOnlyBucketInfo, MessageType.Info);
-
                             }
                             var selectedProfileGroupTypes = m_ProfileGroupTypes.Where(groupType =>
                                 groupType.GroupTypePrefix.StartsWith(
                                     String.Join(
-                                    ProfileGroupType.k_PrefixSeparator.ToString(), new string[] { "CCD", CloudProjectSettings.projectId, m_BucketId }
-                                    ))).ToList();
+                                        ProfileGroupType.k_PrefixSeparator.ToString(), new string[] { "CCD", CloudProjectSettings.projectId, m_BucketId }
+                                    )
+                                )
+                                ).ToList();
 
                             m_WindowRect.height = m_ProfileGroupTypes.Count > 0 ? k_MaxHeight : 80;
 
@@ -321,7 +325,6 @@ namespace UnityEditor.AddressableAssets.GUI
                     editorWindow.Close();
                     break;
             }
-
         }
 
         private void SyncProfileGroupTypes()
@@ -406,7 +409,6 @@ namespace UnityEditor.AddressableAssets.GUI
                     action.Invoke(arg);
                 }
             }
-
         }
 
         internal class BuiltInOption : BaseOption
@@ -460,7 +462,6 @@ namespace UnityEditor.AddressableAssets.GUI
 
         internal class CCDOption : BaseOption
         {
-
             internal CCDOption()
             {
                 OptionName = "Cloud Content Delivery";
@@ -509,6 +510,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
                 DrawCreateBadge(bucketId);
             }
+
 #endif
 
             internal static void DrawCreateBucket()
@@ -517,8 +519,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     Application.OpenURL(
                         String.Format("https://dashboard.unity3d.com/organizations/{0}/projects/{1}/cloud-content-delivery",
-                        m_Organization.foreign_key,
-                        CloudProjectSettings.projectId));
+                            m_Organization.foreign_key,
+                            CloudProjectSettings.projectId));
                 });
                 var lastRect = GUILayoutUtility.GetLastRect();
                 lastRect.y += 2;
@@ -531,9 +533,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     Application.OpenURL(
                         String.Format("https://dashboard.unity3d.com/organizations/{0}/projects/{1}/cloud-content-delivery/buckets/{2}/badges",
-                        m_Organization.foreign_key,
-                        CloudProjectSettings.projectId,
-                        bucketId));
+                            m_Organization.foreign_key,
+                            CloudProjectSettings.projectId,
+                            bucketId));
                 });
                 var lastRect = GUILayoutUtility.GetLastRect();
                 lastRect.y += 2;
@@ -546,8 +548,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     Application.OpenURL(
                         String.Format("https://dashboard.unity3d.com/organizations/{0}/projects/{1}/cloud-content-delivery/onboarding",
-                        m_Organization.foreign_key,
-                        CloudProjectSettings.projectId));
+                            m_Organization.foreign_key,
+                            CloudProjectSettings.projectId));
                 });
                 var lastRect = GUILayoutUtility.GetLastRect();
                 lastRect.y += 2;

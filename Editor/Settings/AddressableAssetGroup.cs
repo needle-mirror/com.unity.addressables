@@ -48,6 +48,21 @@ namespace UnityEditor.AddressableAssets.Settings
         List<AddressableAssetEntry> m_FolderEntryCache = null;
         List<AddressableAssetEntry> m_AssetCollectionEntryCache = null;
         
+        /// <summary>
+        /// If true, this Group is likely marked 'Cannot Change Post Release', but has a modified asset since the previous build.
+        /// </summary>
+        public bool FlaggedDuringContentUpdateRestriction
+        {
+            get
+            {
+                foreach (var e in entries)
+                    if (e.FlaggedDuringContentUpdateRestriction)
+                        return true;
+
+                return false;
+            }
+        }
+
         internal void RefreshEntriesCache()
         {
             m_FolderEntryCache = new List<AddressableAssetEntry>();
@@ -322,7 +337,9 @@ namespace UnityEditor.AddressableAssets.Settings
                 return m_EntryMap.Values;
             }
         }
-        
+
+        internal Dictionary<string, AddressableAssetEntry> EntryMap => m_EntryMap;
+
         internal ICollection<AddressableAssetEntry> FolderEntries
         {
             get
@@ -461,7 +478,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     m_Data = null;
                 }
             }
-            else if (Settings != null)
+            else if (m_Settings != null)
             {
                 if (m_GroupName == null)
                     m_GroupName = Settings.FindUniqueGroupName("Packed Content Group");
@@ -497,8 +514,11 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             m_Settings = settings;
             m_GroupName = groupName;
+            if (m_GroupName == null)
+                m_GroupName = settings.FindUniqueGroupName("Packed Content Group");
             m_ReadOnly = readOnly;
             m_GUID = guid;
+            m_Data = null;
         }
 
         /// <summary>
@@ -533,6 +553,8 @@ namespace UnityEditor.AddressableAssets.Settings
             else if (m_AssetCollectionEntryCache != null && !string.IsNullOrEmpty(e.AssetPath) && e.AssetPath.EndsWith(".asset") && e.MainAssetType == typeof(AddressableAssetEntryCollection))
                 m_AssetCollectionEntryCache.Add(e);
 #pragma warning restore 0618
+            if (HasSchema<ContentUpdateGroupSchema>() && !GetSchema<ContentUpdateGroupSchema>().StaticContent)
+                e.FlaggedDuringContentUpdateRestriction = false;
             m_SerializeEntries = null;
             SetDirty(AddressableAssetSettings.ModificationEvent.EntryAdded, e, postEvent, true);
         }

@@ -5,7 +5,6 @@ using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
@@ -49,6 +48,24 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         [SerializeField]
         internal HashSet<GUID> m_ImplicitAssets;
 
+        [NonSerialized]
+        internal List<CheckDupeResult> m_ResultsData;
+        /// <summary>
+        /// Results calculated by the duplicate bundle dependencies check.
+        /// </summary>
+        protected IEnumerable<CheckDupeResult> CheckDupeResults
+        {
+            get
+            {
+                if (m_ResultsData == null)
+                {
+                    Debug.LogError("RefreshAnalysis needs to be called before getting results");
+                    return new List<CheckDupeResult>(0);
+                }
+                return m_ResultsData;
+            }
+        }
+
         /// <summary>
         /// Clear current analysis and rerun check for duplicates
         /// </summary>
@@ -71,23 +88,23 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                     select new AnalyzeResult
                     {
                         resultName = issueGroup.Key + kDelimiter +
-                                     ConvertBundleName(bundle.Key, issueGroup.Key) + kDelimiter +
-                                     item,
+                            ConvertBundleName(bundle.Key, issueGroup.Key) + kDelimiter +
+                            item,
                         severity = MessageType.Warning
                     }).ToList();
             }
             else
             {
                 m_Results = (from issueGroup in m_AllIssues
-                             from bundle in issueGroup.Value
-                             from item in bundle.Value
-                             select new AnalyzeResult
-                             {
-                                 resultName = item + kDelimiter +
-                                              ConvertBundleName(bundle.Key, issueGroup.Key) + kDelimiter +
-                                              issueGroup.Key,
-                                 severity = MessageType.Warning
-                             }).ToList();
+                    from bundle in issueGroup.Value
+                    from item in bundle.Value
+                    select new AnalyzeResult
+                    {
+                        resultName = item + kDelimiter +
+                            ConvertBundleName(bundle.Key, issueGroup.Key) + kDelimiter +
+                            issueGroup.Key,
+                        severity = MessageType.Warning
+                    }).ToList();
             }
             if (m_Results.Count == 0)
                 m_Results.Add(noErrors);
@@ -96,8 +113,8 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         internal override IList<CustomContextMenu> GetCustomContextMenuItems()
         {
             IList<CustomContextMenu> customItems = new List<CustomContextMenu>();
-            customItems.Add(new CustomContextMenu("Organize by Asset", 
-                () => InvertDisplay(), 
+            customItems.Add(new CustomContextMenu("Organize by Asset",
+                () => InvertDisplay(),
                 AnalyzeSystem.AnalyzeData.Data[ruleName].Any(),
                 AnalyzeSystem.GetDataForRule<ExtraCheckBundleDupeData>(this).ResultsInverted));
             return customItems;
@@ -157,7 +174,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
 
             CalculateInputDefinitions(settings);
 
-            if (m_AllBundleInputDefs.Count > 0)
+            if (AllBundleInputDefs.Count > 0)
             {
                 var context = GetBuildContext(settings);
                 ReturnCode exitCode = RefreshBuild(context);
@@ -171,14 +188,20 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 var implicitGuids = GetImplicitGuidToFilesMap();
                 var checkDupeResults = CalculateDuplicates(implicitGuids, context);
                 BuildImplicitDuplicatedAssetsSet(checkDupeResults);
+                m_ResultsData = checkDupeResults.ToList();
             }
-
+            else
+            {
+                m_ResultsData = new List<CheckDupeResult>(0);
+            }
+            
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.RunCheckBundleDupeDependenciesRule);
             RefreshDisplay();
             return m_Results;
         }
-        
+
         /// <summary>
-        /// Calculate duplicate dependencies 
+        /// Calculate duplicate dependencies
         /// </summary>
         /// <param name="implicitGuids">Map of implicit guids to their bundle files</param>
         /// <param name="aaContext">The build context information</param>
@@ -197,7 +220,7 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 from file in guidToFile.Value
 
                 //Get the files that belong to those guids
-                let fileToBundle = m_ExtractData.WriteData.FileToBundle[file]
+                let fileToBundle = ExtractData.WriteData.FileToBundle[file]
 
                     //Get the bundles that belong to those files
                     let bundleToGroup = aaContext.bundleToAssetGroup[fileToBundle]
@@ -228,14 +251,13 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
                 }
 
                 List<string> assets;
-                if (!groupData.TryGetValue(m_ExtractData.WriteData.FileToBundle[checkDupeResult.DuplicatedFile], out assets))
+                if (!groupData.TryGetValue(ExtractData.WriteData.FileToBundle[checkDupeResult.DuplicatedFile], out assets))
                 {
                     assets = new List<string>();
-                    groupData.Add(m_ExtractData.WriteData.FileToBundle[checkDupeResult.DuplicatedFile], assets);
+                    groupData.Add(ExtractData.WriteData.FileToBundle[checkDupeResult.DuplicatedFile], assets);
                 }
 
                 assets.Add(checkDupeResult.AssetPath);
-
                 m_ImplicitAssets.Add(checkDupeResult.DuplicatedGroupGuid);
             }
         }
@@ -266,10 +288,10 @@ namespace UnityEditor.AddressableAssets.Build.AnalyzeRules
         {
             m_AllIssues.Clear();
             m_ImplicitAssets = null;
+            m_ResultsData = null;
             base.ClearAnalysis();
         }
     }
-
 
     [InitializeOnLoad]
     class RegisterCheckBundleDupeDependencies

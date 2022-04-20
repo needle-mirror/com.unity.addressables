@@ -92,12 +92,12 @@ namespace SceneTests
         [UnityTest]
         public IEnumerator CanLoadMultipleScenesAdditively()
         {
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.AreEqual(sceneKeys[0], SceneManager.GetSceneByName(sceneKeys[0]).name);
 
-            var op1 = m_Addressables.LoadSceneAsync(sceneKeys[1], LoadSceneMode.Additive);
+            var op1 = m_Addressables.LoadSceneAsync(sceneKeys[1], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op1;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op1.Status);
             Assert.AreEqual(sceneKeys[1], SceneManager.GetSceneByName(sceneKeys[1]).name);
@@ -111,7 +111,7 @@ namespace SceneTests
         {
             var ifm = LogAssert.ignoreFailingMessages;
             LogAssert.ignoreFailingMessages = true;
-            var op = m_Addressables.LoadSceneAsync("testkey");
+            var op = m_Addressables.LoadSceneAsync("testkey", new LoadSceneParameters(LoadSceneMode.Single));
             yield return op;
             
             Assert.AreEqual(AsyncOperationStatus.Failed,op.Status);
@@ -136,7 +136,7 @@ namespace SceneTests
         public IEnumerator PercentComplete_NeverHasDecreasedValue_WhenLoadingScene()
         {
             //Setup
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
 
             //Test
             float lastPercentComplete = 0f;
@@ -156,7 +156,7 @@ namespace SceneTests
         [UnityTest]
         public IEnumerator WhenSceneUnloaded_InstanitatedObjectsInThatSceneAreReleased()
         {
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.AreEqual(sceneKeys[0], SceneManager.GetSceneByName(sceneKeys[0]).name);
@@ -175,7 +175,7 @@ namespace SceneTests
         [UnityTest]
         public IEnumerator WhenSceneUnloadedWithSceneManager_InstanitatedObjectsInThatSceneAreReleased()
         {
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.AreEqual(sceneKeys[0], SceneManager.GetSceneByName(sceneKeys[0]).name);
@@ -197,12 +197,12 @@ namespace SceneTests
         [UnityTest]
         public IEnumerator WhenSceneUnloaded_InstantiatedObjectsInOtherScenesAreNotReleased()
         {
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.AreEqual(sceneKeys[0], SceneManager.GetSceneByName(sceneKeys[0]).name);
 
-            var activeScene = m_Addressables.LoadSceneAsync(sceneKeys[1], LoadSceneMode.Additive);
+            var activeScene = m_Addressables.LoadSceneAsync(sceneKeys[1], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return activeScene;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, activeScene.Status);
             Assert.AreEqual(sceneKeys[1], SceneManager.GetSceneByName(sceneKeys[1]).name);
@@ -257,7 +257,7 @@ namespace SceneTests
         [UnityTest]
         public IEnumerator ActivateSceneAsync_ReturnsOperation()
         {
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
 
             var activateScene = op.Result.ActivateAsync();
@@ -271,7 +271,7 @@ namespace SceneTests
         [UnityTest]
         public IEnumerator SceneTests_LoadSceneHandle_MatchesTrackedHandle()
         {
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
 
             Assert.AreEqual(1, m_Addressables.m_SceneInstances.Count);
@@ -284,7 +284,7 @@ namespace SceneTests
         public IEnumerator SceneTests_LoadSceneWithChainHandle_MatchesTrackedHandle()
         {
             AddressablesImpl impl = new AddressablesImpl(new DefaultAllocationStrategy());
-            var op = m_Addressables.LoadSceneWithChain(impl.InitializeAsync(), sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneWithChain(impl.InitializeAsync(), sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
 
             Assert.AreEqual(1, m_Addressables.m_SceneInstances.Count);
@@ -298,7 +298,7 @@ namespace SceneTests
         public IEnumerator SceneTests_UnloadScene_RemovesTrackedInstanceOp()
         {
             AddressablesImpl impl = new AddressablesImpl(new DefaultAllocationStrategy());
-            var op = m_Addressables.LoadSceneWithChain(impl.InitializeAsync(), sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneWithChain(impl.InitializeAsync(), sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
 
             Assert.AreEqual(1, m_Addressables.m_SceneInstances.Count);
@@ -312,7 +312,7 @@ namespace SceneTests
         public IEnumerator SceneTests_UnloadSceneAsync_CanUnloadBaseHandle()
         {
             AddressablesImpl impl = new AddressablesImpl(new DefaultAllocationStrategy());
-            var op = m_Addressables.LoadSceneWithChain(impl.InitializeAsync(), sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneWithChain(impl.InitializeAsync(), sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
             
             Assert.AreEqual(1, m_Addressables.m_SceneInstances.Count);
@@ -330,7 +330,7 @@ namespace SceneTests
         [UnityTest]
         public IEnumerator SceneTests_UnloadSceneAsync_CanUnloadFromSceneInstance()
         {
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
             
             Assert.AreEqual(1, m_Addressables.m_SceneInstances.Count);
@@ -343,7 +343,7 @@ namespace SceneTests
         [UnityTest]
         public IEnumerator SceneTests_UnloadSceneAsync_UnloadSceneDecreaseRefOnlyOnce()
         {
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.AreEqual(sceneKeys[0], SceneManager.GetSceneByName(sceneKeys[0]).name);
@@ -358,7 +358,7 @@ namespace SceneTests
         [UnityTest]
         public IEnumerator SceneTests_Release_ReleaseToZeroRefCountUnloadsScene()
         {
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.AreEqual(sceneKeys[0], SceneManager.GetSceneByName(sceneKeys[0]).name);
@@ -374,7 +374,7 @@ namespace SceneTests
         public IEnumerator SceneTests_Release_ReleaseToRefCountZeroWhileLoadingUnloadsAfterLoadCompletes()
         {
             // Setup
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             
             // Test
             op.Completed += s => Assert.IsTrue(SceneManager.GetSceneByName(sceneKeys[0]).isLoaded);
@@ -391,7 +391,7 @@ namespace SceneTests
         public IEnumerator SceneTests_Release_ReleaseNotRefCountZeroWhileLoadingDoesntUnloadAfterLoadCompletes()
         {
             // Setup
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             Addressables.ResourceManager.Acquire(op);
             
             // Test
@@ -415,7 +415,7 @@ namespace SceneTests
         [UnityTest]
         public IEnumerator SceneTests_Release_ReleaseNotToZeroRefCountDoesNotUnloadScene()
         {
-            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
             Assert.AreEqual(AsyncOperationStatus.Succeeded, op.Status);
             Assert.AreEqual(sceneKeys[0], SceneManager.GetSceneByName(sceneKeys[0]).name);
@@ -459,7 +459,7 @@ namespace SceneTests
         public IEnumerator UnloadScene_ChainsBehindLoadOp_IfLoadOpIsRunning_TypedHandle()
         {
             //Setup
-            AsyncOperationHandle<SceneInstance> handle = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            AsyncOperationHandle<SceneInstance> handle = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
 
             //Test
             var unloadHandle = m_Addressables.UnloadSceneAsync(handle);
@@ -474,7 +474,7 @@ namespace SceneTests
         public IEnumerator UnloadScene_ChainsBehindLoadOp_IfLoadOpIsRunning_TypelessHandle()
         {
             //Setup
-            AsyncOperationHandle handle = m_Addressables.LoadSceneAsync(sceneKeys[0], LoadSceneMode.Additive);
+            AsyncOperationHandle handle = m_Addressables.LoadSceneAsync(sceneKeys[0], new LoadSceneParameters(LoadSceneMode.Additive));
 
             //Test
             var unloadHandle = m_Addressables.UnloadSceneAsync(handle);
@@ -490,7 +490,7 @@ namespace SceneTests
         {
             // Setup scene
             int bundleCountBeforeTest = AssetBundle.GetAllLoadedAssetBundles().Count();
-            var activeScene = m_Addressables.LoadSceneAsync(sceneKeys[1], LoadSceneMode.Additive);
+            var activeScene = m_Addressables.LoadSceneAsync(sceneKeys[1], new LoadSceneParameters(LoadSceneMode.Additive));
             yield return activeScene;
             
             Assert.AreEqual(AsyncOperationStatus.Succeeded, activeScene.Status);
@@ -534,7 +534,7 @@ namespace SceneTests
         public IEnumerator WhenUnloadScene_UnloadEmbeddedAssetsFlagWorks([Values(false,true)] bool unloadEmbeddedAssets)
         {
             // Create scene with embedded asset. Let's use Scriptable Object for ease of use
-            var op = m_Addressables.LoadSceneAsync(kEmbeddedSceneName, LoadSceneMode.Additive);
+            var op = m_Addressables.LoadSceneAsync(kEmbeddedSceneName, new LoadSceneParameters(LoadSceneMode.Additive));
             yield return op;
 
             // find the ScriptableObject. Get reference to it

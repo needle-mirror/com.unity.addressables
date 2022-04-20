@@ -7,13 +7,9 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
-using Unity.Services.CCD.Management;
-using Unity.Services.CCD.Management.Apis.Badges;
-using Unity.Services.CCD.Management.Apis.Buckets;
-using Unity.Services.CCD.Management.Badges;
-using Unity.Services.CCD.Management.Buckets;
-using Unity.Services.CCD.Management.Http;
-using Unity.Services.CCD.Management.Models;
+using Unity.Services.Ccd.Management;
+using Unity.Services.Ccd.Management.Http;
+using Unity.Services.Ccd.Management.Models;
 #endif
 
 namespace UnityEditor.AddressableAssets.Settings
@@ -89,7 +85,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Creates a list of default group types that are automatically added on ProfileDataSourceSettings object creation
         /// </summary>
         /// <returns>List of ProfileGroupTypes: Built-In and Editor Hosted</returns>
-        public static List<ProfileGroupType> CreateDefaultGroupTypes() => new List<ProfileGroupType>{CreateBuiltInGroupType(), CreateEditorHostedGroupType()};
+        public static List<ProfileGroupType> CreateDefaultGroupTypes() => new List<ProfileGroupType> { CreateBuiltInGroupType(), CreateEditorHostedGroupType() };
 
         static ProfileGroupType CreateBuiltInGroupType()
         {
@@ -159,12 +155,11 @@ namespace UnityEditor.AddressableAssets.Settings
             var profileGroupTypes = new List<ProfileGroupType>();
             profileGroupTypes.AddRange(CreateDefaultGroupTypes());
 
-            await CCDManagementAPIService.SetConfigurationAuthHeader(CloudProjectSettings.accessToken);
             var bucketDictionary = await GetAllBucketsAsync(projectId);
             foreach (var kvp in bucketDictionary)
             {
                 var bucket = kvp.Value;
-                var badges = await GetAllBadgesAsync(projectId, bucket.Id.ToString());
+                var badges = await GetAllBadgesAsync(bucket.Id.ToString());
                 if (badges.Count == 0) badges.Add(new CcdBadge(name: "latest"));
                 foreach (var badge in badges)
                 {
@@ -192,47 +187,63 @@ namespace UnityEditor.AddressableAssets.Settings
 
         private static async Task<Dictionary<Guid, CcdBucket>> GetAllBucketsAsync(string projectId)
         {
-            int numBuckets = Int32.MaxValue;
             int page = 1;
+            bool loop = true;
             List<CcdBucket> buckets = new List<CcdBucket>();
-            BucketsApiClient client = new BucketsApiClient(new HttpClient());
             do
             {
-                ListBucketsByProjectRequest request = new ListBucketsByProjectRequest(projectId, page);
-                Response<List<CcdBucket>> response = await client.ListBucketsByProjectAsync(request);
-                if (response.Result.Count > 0)
-                    buckets.AddRange(response.Result);
-                if (page == 1)
+                try
                 {
-                    response.Headers.TryGetValue(CONTENT_RANGE_HEADER, out string contentLength);
-                    // content-range: items x-y/z => grab z
-                    numBuckets = Int32.Parse(contentLength.Split('/')[1]);
+                    var listBuckets = await CcdManagement.Instance.ListBucketsAsync(new PageOptions()
+                    {
+                        Page = page
+                    });
+                    buckets.AddRange(listBuckets);
+                    page++;
                 }
-                page++;
-            } while (buckets.Count < numBuckets);
+                catch (CcdManagementException e)
+                {
+                    if (e.ErrorCode == CcdManagementErrorCodes.OutOfRange)
+                    {
+                        loop = false;
+                    }
+                    else
+                    {
+                        throw e;
+                    }
+                }
+            } while (loop);
             return buckets.ToDictionary(kvp => kvp.Id, kvp => kvp);
         }
 
-        private static async Task<List<CcdBadge>> GetAllBadgesAsync(string projectId, string bucketId)
+        private static async Task<List<CcdBadge>> GetAllBadgesAsync(string bucketId)
         {
-            int numBadges = Int32.MaxValue;
             int page = 1;
+            bool loop = true;
             List<CcdBadge> badges = new List<CcdBadge>();
-            BadgesApiClient client = new BadgesApiClient(new HttpClient());
             do
             {
-                ListBadgesRequest request = new ListBadgesRequest(bucketId, projectId, page);
-                Response<List<CcdBadge>> response = await client.ListBadgesAsync(request);
-                if (response.Result.Count > 0)
-                    badges.AddRange(response.Result);
-                if (page == 1)
+                try
                 {
-                    response.Headers.TryGetValue(CONTENT_RANGE_HEADER, out string contentLength);
-                    // content-range: items x-y/z => grab z
-                    numBadges = Int32.Parse(contentLength.Split('/')[1]);
+                    var listBadges = await CcdManagement.Instance.ListBadgesAsync(Guid.Parse(bucketId), new PageOptions()
+                    {
+                        Page = page
+                    });
+                    badges.AddRange(listBadges);
+                    page++;
                 }
-                page++;
-            } while (badges.Count < numBadges);
+                catch (CcdManagementException e)
+                {
+                    if (e.ErrorCode == CcdManagementErrorCodes.OutOfRange)
+                    {
+                        loop = false;
+                    }
+                    else
+                    {
+                        throw e;
+                    }
+                }
+            } while (loop);
             return badges;
         }
 #endif
@@ -249,12 +260,12 @@ namespace UnityEditor.AddressableAssets.Settings
                 profileGroupTypes.Add(CreateBuiltInGroupType());
             else
             {
-                types[0].AddOrUpdateVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kBuildPath, 
+                types[0].AddOrUpdateVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kBuildPath,
                     AddressableAssetSettings.kLocalBuildPathValue));
                 types[0].AddOrUpdateVariable(new ProfileGroupType.GroupTypeVariable(AddressableAssetSettings.kLoadPath,
                     AddressableAssetSettings.kLocalLoadPathValue));
             }
-            
+
             // Editor Hosted
             types = GetGroupTypesByPrefix(AddressableAssetSettings.EditorHostedGroupTypePrefix);
             if (types.Count == 0)

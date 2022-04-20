@@ -306,7 +306,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             return folderGuid;
         }
-        
+
         internal Object SetUpSingleSprite(out string atlasGuid)
         {
             // Setup Sprite data
@@ -333,7 +333,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Add sprite to subassets
             Object spr = AssetDatabase.LoadAssetAtPath(spritePath, typeof(Sprite));
             spr.name = "testSprite";
-            
+
             // Setup Atlas
             var spriteList = new[] {spr};
             newAtlas.Add(spriteList);
@@ -349,7 +349,6 @@ namespace UnityEditor.AddressableAssets.Tests
 
             return spr;
         }
-
 
         internal SpriteAtlas SetUpSpriteAtlas(int numAtlasObjects, out List<Object> subAssets)
         {
@@ -500,7 +499,7 @@ namespace UnityEditor.AddressableAssets.Tests
             m_AssetReferenceDrawer = null;
             TearDownTestDir();
         }
-        
+
         [Test]
         public void AssetReferenceDrawer_GatherFilters_CanRestrictInDoubleNestedClass()
         {
@@ -513,14 +512,14 @@ namespace UnityEditor.AddressableAssets.Tests
             m_AssetReferenceDrawer = null;
             TearDownTestDir();
         }
-        
+
         [Test]
         public void AssetReferenceDrawer_ValidateAsset_CanValidateAssetWithRestrictionsFromPath()
         {
             // Setup AssetReference
             string assetPath = "";
             var testObject = SetupAssetReference(out assetPath);
-            
+
             // Setup property
             TestObjectWithRestrictedRef obj = ScriptableObject.CreateInstance<TestObjectWithRestrictedRef>();
             var so = new SerializedObject(obj);
@@ -529,14 +528,14 @@ namespace UnityEditor.AddressableAssets.Tests
 
             // Test
             string guid;
-            
+
             FieldInfo propertyFieldInfo = typeof(TestObjectWithRestrictedRef).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, testObject, propertyFieldInfo, "", out guid));
             Assert.False(AssetReferenceDrawerUtilities.ValidateAsset(m_AssetReferenceDrawer.m_AssetRefObject, restrictions, assetPath));
             TearDownTestDir();
             m_AssetReferenceDrawer = null;
         }
-        
+
         [Test]
         public void AssetReferenceDrawer_ValidateAsset_CanValidateAssetWithoutRestrictionsFromPath()
         {
@@ -552,7 +551,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             // Test
             string guid;
-            
+
             FieldInfo propertyFieldInfo = typeof(TestObjectWithRestrictedRef).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, testObject, propertyFieldInfo, "", out guid));
             Assert.IsTrue(AssetReferenceDrawerUtilities.ValidateAsset(m_AssetReferenceDrawer.m_AssetRefObject, restrictions, assetPath));
@@ -697,7 +696,7 @@ namespace UnityEditor.AddressableAssets.Tests
             SetupDefaultSettings();
 
             // Test
-            m_AssetReferenceDrawer.DragAndDropNotFromAddressableGroupWindow(newEntryPath, newAssetGuid, property, Settings);
+            m_AssetReferenceDrawer.DragAndDropNotFromAddressableGroupWindow(new string[] { newEntryPath }, newAssetGuid, property, Settings);
             var newentry = Settings.FindAssetEntry(newAssetGuid);
             Assert.IsNull(newentry);
             Assert.AreEqual(m_AssetReferenceDrawer.m_AssetRefObject.Asset.name, newAssetGuid);
@@ -724,41 +723,41 @@ namespace UnityEditor.AddressableAssets.Tests
 
             // Test
             string guid;
-            
+
             FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-            Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame,property, testObject, propertyFieldInfo, "", out guid));
+            Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, testObject, propertyFieldInfo, "", out guid));
             Assert.AreEqual(m_AssetGUID, m_AssetReferenceDrawer.m_AssetRefObject.AssetGUID);
             Assert.AreEqual(m_AssetGUID, guid);
             Assert.AreEqual(testObject.name, m_AssetReferenceDrawer.m_AssetRefObject.editorAsset.name);
             m_AssetReferenceDrawer = null;
             TearDownTestDir();
         }
-        
+
         [Test]
         public void AssetReferenceDrawer_SetObject_CanSetSpriteObject()
         {
             // Setup
             string assetPath = "";
-            SetupAssetReference( out assetPath);
+            SetupAssetReference(out assetPath);
             var assetGuid = "";
             var testObject = SetUpSingleSprite(out assetGuid);
 
             // Setup property
             TestObjectWithRef obj = ScriptableObject.CreateInstance<TestObjectWithRef>();
             var so = new SerializedObject(obj);
-            var property = so.FindProperty("Reference"); 
+            var property = so.FindProperty("Reference");
             AssetReferenceDrawerUtilities.GatherFilters(property);
 
             // Test
             string guid;
-            
+
             FieldInfo propertyFieldInfo = typeof(TestObjectWithRef).GetField("Reference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             SetupDefaultSettings();
-            Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame,property, testObject, propertyFieldInfo, "", out guid));
+            Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, testObject, propertyFieldInfo, "", out guid));
             Assert.AreEqual(assetGuid, m_AssetReferenceDrawer.m_AssetRefObject.AssetGUID);
             Assert.AreEqual("testAtlas", m_AssetReferenceDrawer.m_AssetRefObject.editorAsset.name);
             Assert.AreEqual("testSprite", m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName);
-            
+
             // Cleanup
             TearDownTestDir();
         }
@@ -822,7 +821,7 @@ namespace UnityEditor.AddressableAssets.Tests
             AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, null, propertyFieldInfo, "", out guid);
             Assert.AreEqual(null, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName);
             Assert.AreEqual(string.Empty, m_AssetReferenceDrawer.m_AssetRefObject.AssetGUID);
-            
+
             // Cleanup
             Settings.RemoveAssetEntry(newAssetGuid);
             TearDownTestDir();
@@ -862,7 +861,7 @@ namespace UnityEditor.AddressableAssets.Tests
             AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, null, propertyFieldInfo, "", out guid);
             Assert.IsFalse(prevDirty);
             Assert.IsTrue(EditorUtility.IsDirty(property.serializedObject.targetObject));
-            
+
             // Cleanup
             Settings.RemoveAssetEntry(newAssetGuid);
             TearDownTestDir();
@@ -914,7 +913,7 @@ namespace UnityEditor.AddressableAssets.Tests
             foreach (var obj in property.serializedObject.targetObjects)
             {
                 var checkList = ((TestSubObjectsSpriteAtlasList)obj).testSpriteReference;
-                for (int currElement = checkList.Length-1; currElement >= 0; currElement--)
+                for (int currElement = checkList.Length - 1; currElement >= 0; currElement--)
                 {
                     if (currElement == selectedElement)
                         Assert.AreEqual(subAssets[selectedSubAsset].name, checkList[selectedElement].SubObjectName);
@@ -946,7 +945,7 @@ namespace UnityEditor.AddressableAssets.Tests
             AssetReferenceDrawerUtilities.SetSubAssets(property, null, propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
             foreach (var obj in property.serializedObject.targetObjects)
             {
-                Assert.AreEqual( null,((TestSubObjectsSpriteAtlas)obj).testSpriteReference.SubObjectName);
+                Assert.AreEqual(null, ((TestSubObjectsSpriteAtlas)obj).testSpriteReference.SubObjectName);
             }
 
             // Cleanup
@@ -987,7 +986,7 @@ namespace UnityEditor.AddressableAssets.Tests
             TearDownTestDir();
             Settings.RemoveAssetEntry(atlasGuid);
         }
-        
+
         [TestCase(1, 0, 1)]
         [TestCase(20, 10, 8)]
         public void AssetReferenceDrawer_GetSubAssetsList_CanGetSubAssetsList(int numAtlasObjects, int selectedId, int numReferences)
@@ -1004,7 +1003,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Test
             AssetReferenceDrawerUtilities.SetSubAssets(property, subAssets[selectedId], propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
             var subassetsList = AssetReferenceDrawerUtilities.GetSubAssetsList(m_AssetReferenceDrawer.m_AssetRefObject);
-            Assert.AreEqual(subassetsList.Count,subAssets.Count + 1);
+            Assert.AreEqual(subassetsList.Count, subAssets.Count + 1);
             foreach (var obj in subassetsList)
             {
                 if (obj != null)
@@ -1160,7 +1159,7 @@ namespace UnityEditor.AddressableAssets.Tests
             AssetReferenceDrawerUtilities.SetMainAssets(ref m_AssetReferenceDrawer.m_ReferencesSame, property, null, null, propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
             Assert.IsFalse(prevDirty);
             Assert.IsTrue(EditorUtility.IsDirty(property.serializedObject.targetObject));
-            
+
             // Cleanup
             TearDownTestDir();
             Settings.RemoveAssetEntry(atlasGuid);
@@ -1210,6 +1209,13 @@ namespace UnityEditor.AddressableAssets.Tests
             // Cleanup
             TearDownTestDir();
             Settings.RemoveAssetEntry(atlasGuid);
+        }
+
+        [Test]
+        public void SerializedPropertyExtensions_GetPropertyPathArrayName()
+        {
+            string arrayPath = SerializedPropertyExtensions.GetPropertyPathArrayName("MainList.Array.data[111].SubList.Array.data[222]");
+            Assert.AreEqual("MainList.Array.data[111].SubList.Array", arrayPath);
         }
 
 #endif

@@ -22,6 +22,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
                 EditorUtility.DisplayDialog("Error", "Attempting to open Addressables Event Viewer window, but no Addressables Settings file exists.  \n\nOpen 'Window/Asset Management/Addressables/Groups' for more info.", "Ok");
                 return;
             }
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.OpenEventViewerWindow);
             var window = GetWindow<ResourceProfilerWindow>();
             window.titleContent = new GUIContent("Addressables Event Viewer", "Addressables Event Viewer");
             window.Show();
@@ -60,11 +61,12 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         {
         }
 
-        protected override void OnGetColumns(List<string> columnNames, List<float> columnSizes)
+        protected override void OnGetColumns(List<string> columnNames, List<string> tooltips, List<float> columnSizes)
         {
             if (columnNames == null || columnSizes == null)
                 return;
             columnNames.AddRange(new[] { "Event", "Key" });
+            tooltips.AddRange(new[] { "A diagnostic event sent by the ResourceManager", "Identifier for the event" });
             columnSizes.AddRange(new float[] { 150, 400 });
         }
 
@@ -78,7 +80,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
             return true;
         }
-        
+
         protected override void OnInitializeGraphView(EventGraphListView graphView)
         {
             if (graphView == null)
@@ -89,10 +91,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics
             Color refCountBgColor = new Color(53 / 255f, 136 / 255f, 167 / 255f, 1);
             Color loadingBgColor = Color.Lerp(refCountBgColor, GraphColors.WindowBackground, 0.5f);
             Color refCountColor = new Color(123 / 255f, 158 / 255f, 6 / 255f, 1);
-            
+
             //Each DefineGraph call makes an association between a "name" (e.g. EventCount) and all EventDataSets with a matching "graph" member.
             //These graphs are then used to determine how/what the graphView will draw when dealing with samples from its associated EventDataSets
-            
+
             graphView.DefineGraph("EventCount", 0, new GraphLayerVertValueLine(0, "EventCount", "Event Counts", Color.green),
                 new GraphLayerLabel(0, "EventCount", "Number of instantiations on current frame", refCountColor, GraphColors.LabelGraphLabelBackground, v => v.ToString()));
 

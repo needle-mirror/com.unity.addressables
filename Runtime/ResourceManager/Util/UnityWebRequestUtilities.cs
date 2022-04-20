@@ -4,8 +4,17 @@ using UnityEngine.Networking;
 
 namespace UnityEngine.ResourceManagement.Util
 {
-    internal class UnityWebRequestUtilities
+    /// <summary>
+    /// Utility class for extracting information from UnityWebRequests.
+    /// </summary>
+    public class UnityWebRequestUtilities
     {
+        /// <summary>
+        /// Determines if a web request resulted in an error.
+        /// </summary>
+        /// <param name="webReq">The web request.</param>
+        /// <param name="result"></param>
+        /// <returns>True if a web request resulted in an error.</returns>
         public static bool RequestHasErrors(UnityWebRequest webReq, out UnityWebRequestResult result)
         {
             result = null;
@@ -35,7 +44,12 @@ namespace UnityEngine.ResourceManagement.Util
 #endif
         }
 
-        internal static bool IsAssetBundleDownloaded(UnityWebRequestAsyncOperation op)
+        /// <summary>
+        /// Indicates if the requested AssetBundle is downloaded.
+        /// </summary>
+        /// <param name="op">The object returned from sending the web request.</param>
+        /// <returns>Returns true if the AssetBundle is downloaded.</returns>
+        public static bool IsAssetBundleDownloaded(UnityWebRequestAsyncOperation op)
         {
 #if ENABLE_ASYNC_ASSETBUNDLE_UWR
             var handler = (DownloadHandlerAssetBundle)op.webRequest.downloadHandler;
@@ -96,7 +110,7 @@ namespace UnityEngine.ResourceManagement.Util
         /// <summary>
         /// A string explaining the error that occured.
         /// </summary>
-        public string Error { get; internal set; }
+        public string Error { get; set; }
 
         /// <summary>
         /// The numeric HTTP response code returned by the server, if any.
@@ -120,7 +134,11 @@ namespace UnityEngine.ResourceManagement.Util
         /// </summary>
         public string Url { get; }
         
-        internal bool ShouldRetryDownloadError()
+        /// <summary>
+        /// Determines if the web request can be sent again based on its error. 
+        /// </summary>
+        /// <returns>Returns true if the web request can be sent again.</returns>
+        public bool ShouldRetryDownloadError()
         {
             if (string.IsNullOrEmpty(Error))
                 return true;

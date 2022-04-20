@@ -22,6 +22,8 @@ namespace UnityEditor.AddressableAssets.GUI
         // Each schema list contains only schemas of the same type (e.g. BundledAssetGroupSchema).
         List<List<AddressableAssetGroupSchema>> m_GroupSchemas;
 
+        private GUIContent m_InspectAASettings = new GUIContent("Inspect Top Level Settings", "View Addressable Asset Settings");
+
         void OnEnable()
         {
             m_GroupTargets = new AddressableAssetGroup[targets.Length];
@@ -80,7 +82,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             EditorGUI.DrawRect(r, color);
         }
-        
+
         public override bool RequiresConstantRepaint()
         {
             return true;
@@ -143,7 +145,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 activeProfileName = m_GroupTarget.Settings.profileSettings.GetProfileName(m_GroupTarget.Settings.activeProfileId);
             }
             EditorGUILayout.PrefixLabel("Active Profile: " + activeProfileName);
-            if (GUILayout.Button("Inspect Top Level Settings"))
+            if (GUILayout.Button(m_InspectAASettings))
             {
                 EditorGUIUtility.PingObject(AddressableAssetSettingsDefaultObject.Settings);
                 Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
@@ -159,20 +161,20 @@ namespace UnityEditor.AddressableAssets.GUI
                 var schema = schemas[i];
                 var schemaType = schema.GetType();
                 int currentIndex = i;
-                
+
                 string foldoutKey = "Addressables.GroupSchema." + schemaType.Name;
                 bool foldoutActive = AddressablesGUIUtility.GetFoldoutValue(foldoutKey);
-                
+
                 string helpUrl = null;
-                if(schemaType == typeof(BundledAssetGroupSchema))
+                if (schemaType == typeof(BundledAssetGroupSchema))
                     helpUrl = AddressableAssetUtility.GenerateDocsURL("GroupSettings.html#content-packing--loading-settings");
-                if(schemaType == typeof(ContentUpdateGroupSchema))
+                if (schemaType == typeof(ContentUpdateGroupSchema))
                     helpUrl = AddressableAssetUtility.GenerateDocsURL("GroupSettings.html#content-update-restriction");
                 Action helpAction = () =>
                 {
                     Application.OpenURL(helpUrl);
                 };
-                
+
                 Action<Rect> menuAction = rect =>
                 {
                     var menu = new GenericMenu();
@@ -219,7 +221,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (EditorGUI.EndChangeCheck())
                     AddressablesGUIUtility.SetFoldoutValue(foldoutKey, foldoutActive);
                 EditorGUI.EndFoldoutHeaderGroup();
-                
+
                 if (foldoutActive)
                 {
                     try
@@ -237,11 +239,11 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                     GUILayout.Space(10);
                 }
-                
-                if (foldoutActive && i == schemas.Count-1)
+
+                if (foldoutActive && i == schemas.Count - 1)
                     doDrawDivider = true;
             }
-            
+
             if (doDrawDivider)
                 DrawDivider();
             GUILayout.Space(10);

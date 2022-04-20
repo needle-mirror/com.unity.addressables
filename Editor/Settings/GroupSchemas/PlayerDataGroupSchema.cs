@@ -13,6 +13,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
     [DisplayName("Resources and Built In Scenes")]
     public class PlayerDataGroupSchema : AddressableAssetGroupSchema
     {
+        [Tooltip("Assets in resources folders will have addresses generated during the build")]
         [FormerlySerializedAs("m_includeResourcesFolders")]
         [SerializeField]
         bool m_IncludeResourcesFolders = true;
@@ -31,6 +32,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 SetDirty(true);
             }
         }
+        [Tooltip("All scenes in the editor build settings will have addresses generated during the build")]
         [FormerlySerializedAs("m_includeBuildSettingsScenes")]
         [SerializeField]
         bool m_IncludeBuildSettingsScenes = true;
@@ -60,7 +62,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             prop = so.FindProperty("m_IncludeResourcesFolders");
             ShowMixedValue(prop, otherSchemas, typeof(bool), "m_IncludeResourcesFolders");
             EditorGUI.BeginChangeCheck();
-            bool newIncludeResourcesFolders = (bool)EditorGUILayout.Toggle(prop.displayName, IncludeResourcesFolders);
+            bool newIncludeResourcesFolders = (bool)EditorGUILayout.Toggle(new GUIContent(prop.displayName, "Assets in resources folders will have addresses generated during the build"), IncludeResourcesFolders);
             if (EditorGUI.EndChangeCheck())
             {
                 IncludeResourcesFolders = newIncludeResourcesFolders;
@@ -73,7 +75,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             prop = so.FindProperty("m_IncludeBuildSettingsScenes");
             ShowMixedValue(prop, otherSchemas, typeof(bool), "m_IncludeBuildSettingsScenes");
             EditorGUI.BeginChangeCheck();
-            bool newIncludeBuildSettingsScenes = (bool)EditorGUILayout.Toggle(prop.displayName, IncludeBuildSettingsScenes);
+            bool newIncludeBuildSettingsScenes = (bool)EditorGUILayout.Toggle(new GUIContent(prop.displayName, "All scenes in the editor build settings will have addresses generated during the build"), IncludeBuildSettingsScenes);
             if (EditorGUI.EndChangeCheck())
             {
                 IncludeBuildSettingsScenes = newIncludeBuildSettingsScenes;

@@ -316,8 +316,8 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var results = new List<AsyncOperationHandle>();
 
             var loc = new TestLocator(kLocatorId);
-            var locInfo = new AddressablesImpl.ResourceLocatorInfo(loc, "same", catalogLoc);
-            var locInfos = new List<AddressablesImpl.ResourceLocatorInfo>();
+            var locInfo = new ResourceLocatorInfo(loc, "same", catalogLoc);
+            var locInfos = new List<ResourceLocatorInfo>();
             locInfos.Add(locInfo);
 
             var trivialHashes = new List<string>(new[] {"badHash"});
@@ -347,8 +347,8 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var results = new List<AsyncOperationHandle>();
 
             var loc = new TestLocator(kLocatorId);
-            var locInfo = new AddressablesImpl.ResourceLocatorInfo(loc, "same", catalogLoc);
-            var locInfos = new List<AddressablesImpl.ResourceLocatorInfo>();
+            var locInfo = new ResourceLocatorInfo(loc, "same", catalogLoc);
+            var locInfos = new List<ResourceLocatorInfo>();
             locInfos.Add(locInfo);
 
             var trivialHashes = new List<string>(new[] {"same"});
@@ -381,9 +381,9 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             results.Add(handle2);
 
             var loc = new TestLocator(kLocatorId);
-            var locInfo1 = new AddressablesImpl.ResourceLocatorInfo(loc, "same", catalogLoc);
-            var locInfo2 = new AddressablesImpl.ResourceLocatorInfo(loc, "bad", catalogLoc);
-            var locInfos = new List<AddressablesImpl.ResourceLocatorInfo>();
+            var locInfo1 = new ResourceLocatorInfo(loc, "same", catalogLoc);
+            var locInfo2 = new ResourceLocatorInfo(loc, "bad", catalogLoc);
+            var locInfos = new List<ResourceLocatorInfo>();
             locInfos.Add(locInfo1);
             locInfos.Add(locInfo2);
 
@@ -420,9 +420,9 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             results.Add(handle2);
 
             var loc = new TestLocator(kLocatorId);
-            var locInfo1 = new AddressablesImpl.ResourceLocatorInfo(loc, "worse", catalogLoc);
-            var locInfo2 = new AddressablesImpl.ResourceLocatorInfo(loc, "bad", catalogLoc);
-            var locInfos = new List<AddressablesImpl.ResourceLocatorInfo>();
+            var locInfo1 = new ResourceLocatorInfo(loc, "worse", catalogLoc);
+            var locInfo2 = new ResourceLocatorInfo(loc, "bad", catalogLoc);
+            var locInfos = new List<ResourceLocatorInfo>();
             locInfos.Add(locInfo1);
             locInfos.Add(locInfo2);
 

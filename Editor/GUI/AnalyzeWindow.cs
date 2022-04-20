@@ -44,6 +44,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 EditorUtility.DisplayDialog("Error", "Attempting to open Addressables Analyze window, but no Addressables Settings file exists.  \n\nOpen 'Window/Asset Management/Addressables/Groups' for more info.", "Ok");
                 return;
             }
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.OpenAnalyzeWindow);
 
             instance.titleContent = new GUIContent("Addressables Analyze");
             instance.Show();
@@ -51,6 +52,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void OnEnable()
         {
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.OpenAnalyzeWindow, true);
             if (m_AnalyzeEditor == null)
                 m_AnalyzeEditor = new AnalyzeRuleGUI();
         }

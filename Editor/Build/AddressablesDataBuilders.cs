@@ -1,4 +1,9 @@
 using System;
+using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.Build.Pipeline;
+using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Build
@@ -48,6 +53,19 @@ namespace UnityEditor.AddressableAssets.Build
             opResult.LocationCount = locCount;
             return opResult;
         }
+        
+        /// <summary>
+        /// Helper method to create the desired result of a data builder.  This should always be used to create the build result
+        ///  with additional details added as needed.  The Result.Duration should always be set at the end of the build
+        ///  script in the non-error scenario.  Other results should be set as available.
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <returns></returns>
+        public static TResult CreateResult<TResult>() where TResult : IDataBuilderResult
+        {
+            var opResult = Activator.CreateInstance<TResult>();
+            return opResult;
+        }
     }
 
     /// <summary>
@@ -59,9 +77,48 @@ namespace UnityEditor.AddressableAssets.Build
     }
 
     /// <summary>
-    /// Build result for building the player.
+    /// Build result for building the Addressables content.
     /// </summary>
     public class AddressablesPlayerBuildResult : AddressableAssetBuildResult
     {
+        private List<BundleBuildResult> m_AssetBundleBuildResults = new List<BundleBuildResult>();
+        
+        /// <summary>
+        /// Information about a bundle build results
+        /// </summary>
+        [System.Serializable]
+        public class BundleBuildResult
+        {
+            public string FilePath;
+            public string InternalBundleName;
+            public AddressableAssetGroup SourceAssetGroup;
+            public uint Crc;
+            public string Hash;
+        }
+
+        /// <summary>
+        /// True if the build was doing an update to a previous build, else false.
+        /// </summary>
+        public bool IsUpdateContentBuild { get; internal set; }
+        
+        /// <summary>
+        /// Build results for AssetBundles created during the build.
+        /// </summary>
+        public List<BundleBuildResult> AssetBundleBuildResults => m_AssetBundleBuildResults;
+
+        /// <summary>
+        /// File path to the generated remote catalog hash file.
+        /// </summary>
+        public string RemoteCatalogHashFilePath { get; internal set; }
+        
+        /// <summary>
+        /// File path to the generated remote catalog json file.
+        /// </summary>
+        public string RemoteCatalogJsonFilePath { get; internal set; }
+        
+        /// <summary>
+        /// File path to the generate content state file
+        /// </summary>
+        public string ContentStateFilePath { get; internal set; }
     }
 }

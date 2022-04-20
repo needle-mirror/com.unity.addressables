@@ -145,7 +145,7 @@ namespace AddressableAssetsIntegrationTests
             yield return op;
             Assert.IsNull(op.Result);
         }
-        
+
         const string InvalidKeyExceptionBaseMessage = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown.";
 
         [UnityTest]
@@ -175,7 +175,7 @@ namespace AddressableAssetsIntegrationTests
                     handle.Release();
             }
         }
-        
+
         [UnityTest]
         public IEnumerator InvalidKeyException_LoadAsset_KeyFoundWithOtherType()
         {
@@ -192,7 +192,7 @@ namespace AddressableAssetsIntegrationTests
                     handle = m_Addressables.LoadAssetAsync<TextAsset>(keyString);
                     yield return handle;
                 }
-                
+
                 string message = $"{InvalidKeyExceptionBaseMessage} No Asset found with for Key={keyString}. Key exists as Type={typeof(GameObject)}, which is not assignable from the requested Type={typeof(TextAsset)}";
                 Assert.AreEqual(message, handle.OperationException.Message, "InvalidKeyException message not the same as expected for when a similar Location exists with same key and a different type");
             }
@@ -203,7 +203,7 @@ namespace AddressableAssetsIntegrationTests
                     handle.Release();
             }
         }
-        
+
         [UnityTest]
         public IEnumerator InvalidKeyException_LoadAsset_KeyFoundWithMultipleOtherType()
         {
@@ -237,7 +237,6 @@ namespace AddressableAssetsIntegrationTests
                     handle.Release();
             }
         }
-        
 
         [UnityTest]
         public IEnumerator InvalidKeyException_LoadAsset__AssetFromGUIDFoundWithDifferentType()
@@ -246,7 +245,7 @@ namespace AddressableAssetsIntegrationTests
             {
                 Assert.Ignore($"Skipping test {nameof(InvalidKeyException_LoadAsset__AssetFromGUIDFoundWithDifferentType)} for {TypeName}, Editor AssetDatabase based test.");
             }
-            
+
 
             //Setup
             yield return Init();
@@ -290,7 +289,6 @@ namespace AddressableAssetsIntegrationTests
 #endif
         }
 
-        
         [UnityTest]
         public IEnumerator InvalidKeyException_LoadAssets_MixedTypesGivesCorrectError()
         {
@@ -298,7 +296,7 @@ namespace AddressableAssetsIntegrationTests
             yield return Init();
             object[] keys = new object[] {"noSuchKey", 123};
             AsyncOperationHandle handle = default(AsyncOperationHandle);
-            
+
             //Test
             try
             {
@@ -310,7 +308,7 @@ namespace AddressableAssetsIntegrationTests
                 string message = handle.OperationException.Message;
                 string types = "Types=System.String, System.Int32";
                 string expected = $"{InvalidKeyExceptionBaseMessage} Enumerable key contains multiple Types. {types}, all Keys are expected to be strings";
-                
+
                 bool equalOne = message == expected;
                 bool equalTwo = message == expected.Replace("Types=System.String, System.Int32", "System.Int32, Types=System.String");
                 Assert.IsTrue(equalOne || equalTwo, $"Failed to get correct message for mixedTypes being requested. was {message}. But expected {expected}");
@@ -344,8 +342,7 @@ namespace AddressableAssetsIntegrationTests
             //Cleanup
             handle.Release();
         }
-        
-        
+
         [UnityTest]
         public IEnumerator InvalidKeyException_LoadAssets_Union_NoKeysFound()
         {
@@ -363,10 +360,10 @@ namespace AddressableAssetsIntegrationTests
                 }
 
                 string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
-                                  "No Union of Assets between Keys=noSuchKey1, noSuchKey2 with Type=UnityEngine.TextAsset" +
-                                  "\nNo Location found for Key=noSuchKey1" +
-                                  "\nNo Location found for Key=noSuchKey2";
-                
+                    "No Union of Assets between Keys=noSuchKey1, noSuchKey2 with Type=UnityEngine.TextAsset" +
+                    "\nNo Location found for Key=noSuchKey1" +
+                    "\nNo Location found for Key=noSuchKey2";
+
                 Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform the two locations have for other type");
                 yield return handle;
             }
@@ -394,9 +391,9 @@ namespace AddressableAssetsIntegrationTests
                 }
 
                 string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
-                                  "No Union of Assets between Keys=test0BASE, test1BASE with Type=UnityEngine.TextAsset" +
-                                  "\nUnion of Type=UnityEngine.GameObject found with Keys=test0BASE, test1BASE";
-                
+                    "No Union of Assets between Keys=test0BASE, test1BASE with Type=UnityEngine.TextAsset" +
+                    "\nUnion of Type=UnityEngine.GameObject found with Keys=test0BASE, test1BASE";
+
                 Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform the two locations have for other type");
                 yield return handle;
             }
@@ -406,7 +403,7 @@ namespace AddressableAssetsIntegrationTests
                 handle.Release();
             }
         }
-        
+
         [UnityTest]
         public IEnumerator InvalidKeyException_LoadAssets_Union_MultipleTypesAvailable()
         {
@@ -424,10 +421,10 @@ namespace AddressableAssetsIntegrationTests
                 }
 
                 string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
-                                  "No Union of Assets between Keys=test0BASE, assetWithSubObjects with Type=UnityEngine.TextAsset" +
-                                  "\nUnion of Type=UnityEngine.GameObject found with Key=test0BASE. Without Key=assetWithSubObjects" +
-                                  "\nUnion of Type=UnityEngine.AddressableAssets.Tests.TestObject found with Key=assetWithSubObjects. Without Key=test0BASE";
-                
+                    "No Union of Assets between Keys=test0BASE, assetWithSubObjects with Type=UnityEngine.TextAsset" +
+                    "\nUnion of Type=UnityEngine.GameObject found with Key=test0BASE. Without Key=assetWithSubObjects" +
+                    "\nUnion of Type=UnityEngine.AddressableAssets.Tests.TestObject found with Key=assetWithSubObjects. Without Key=test0BASE";
+
                 Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform that a merge could be made for two different types");
                 yield return handle;
             }
@@ -455,9 +452,9 @@ namespace AddressableAssetsIntegrationTests
                 }
 
                 string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
-                                  "No Intersection of Assets between Keys=test0BASE, noSuchKey with Type=UnityEngine.GameObject" +
-                                  "\nNo Location found for Key=noSuchKey";
-                
+                    "No Intersection of Assets between Keys=test0BASE, noSuchKey with Type=UnityEngine.GameObject" +
+                    "\nNo Location found for Key=noSuchKey";
+
                 Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to error due to noSuchKey");
                 yield return handle;
             }
@@ -467,7 +464,7 @@ namespace AddressableAssetsIntegrationTests
                 handle.Release();
             }
         }
-        
+
         [UnityTest]
         public IEnumerator InvalidKeyException_LoadAssets_Intersection_PossibleForAnotherType()
         {
@@ -485,9 +482,9 @@ namespace AddressableAssetsIntegrationTests
                 }
 
                 string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
-                                  "No Intersection of Assets between Keys=test0BASE, mixed with Type=UnityEngine.TextAsset" +
-                                  "\nAn Intersection exists for Type=UnityEngine.GameObject";
-                
+                    "No Intersection of Assets between Keys=test0BASE, mixed with Type=UnityEngine.TextAsset" +
+                    "\nAn Intersection exists for Type=UnityEngine.GameObject";
+
                 Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform that an intersection exists with GameObject");
                 yield return handle;
             }
@@ -497,7 +494,7 @@ namespace AddressableAssetsIntegrationTests
                 handle.Release();
             }
         }
-        
+
         [UnityTest]
         public IEnumerator InvalidKeyException_LoadAssets_UseFirst_NoLocations()
         {
@@ -515,10 +512,10 @@ namespace AddressableAssetsIntegrationTests
                 }
 
                 string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
-                                  "No UseFirst Asset within Keys=noSuchKey1, noSuchKey2 with Type=UnityEngine.GameObject" +
-                                  "\nNo Location found for Key=noSuchKey1" +
-                                  "\nNo Location found for Key=noSuchKey2";
-                
+                    "No UseFirst Asset within Keys=noSuchKey1, noSuchKey2 with Type=UnityEngine.GameObject" +
+                    "\nNo Location found for Key=noSuchKey1" +
+                    "\nNo Location found for Key=noSuchKey2";
+
                 Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform that all keys have no location");
                 yield return handle;
             }
@@ -528,7 +525,7 @@ namespace AddressableAssetsIntegrationTests
                 handle.Release();
             }
         }
-        
+
         [UnityTest]
         public IEnumerator InvalidKeyException_LoadAssets_UseFirst_PossibleForAnotherType()
         {
@@ -546,10 +543,10 @@ namespace AddressableAssetsIntegrationTests
                 }
 
                 string expected = "Exception of type 'UnityEngine.AddressableAssets.InvalidKeyException' was thrown. " +
-                                  "No UseFirst Asset within Keys=test0BASE, noSuchKey with Type=UnityEngine.TextAsset" +
-                                  "\nNo Location found for Key=noSuchKey" +
-                                  "\nType=UnityEngine.GameObject exists for Key=test0BASE";
-                
+                    "No UseFirst Asset within Keys=test0BASE, noSuchKey with Type=UnityEngine.TextAsset" +
+                    "\nNo Location found for Key=noSuchKey" +
+                    "\nType=UnityEngine.GameObject exists for Key=test0BASE";
+
                 Assert.AreEqual(expected, handle.OperationException.Message, "Incorrect invalidKeyMessage. Expected to inform that one key has no location and the other can be loaded with GameObject");
                 yield return handle;
             }
@@ -559,7 +556,7 @@ namespace AddressableAssetsIntegrationTests
                 handle.Release();
             }
         }
-        
+
         [UnityTest]
         public IEnumerator CanLoadTextureAsSprite()
         {
@@ -673,7 +670,7 @@ namespace AddressableAssetsIntegrationTests
             Assert.AreEqual(2, op.Result.Count);
             op.Release();
         }
-        
+
         [UnityTest]
         public IEnumerator CanUseCustomAssetBundleResource_LoadFromCustomProvider()
         {
@@ -686,7 +683,7 @@ namespace AddressableAssetsIntegrationTests
             string hash = "123456789";
             string bundleName = $"test_{hash}";
             string key = "lockey_key";
-            
+
             ResourceLocationBase location = null;
             TestCatalogProviderCustomAssetBundleResource testProvider;
             SetupBundleForProviderTests(bundleName, "bundle", key, out location, out testProvider);
@@ -695,7 +692,7 @@ namespace AddressableAssetsIntegrationTests
             yield return op;
 
             Assert.IsTrue(testProvider.TestInternalOp.Result.WasUsed);
-            
+
             op.Release();
         }
 
@@ -916,7 +913,7 @@ namespace AddressableAssetsIntegrationTests
             string catalogPath = "fakeCatalogPath.json";
             string catalogHashPath = "fakeCatalogPath.hash";
 
-            var loc = m_Addressables.CreateCatalogLocationWithHashDependencies(catalogPath, catalogHashPath);
+            var loc = m_Addressables.CreateCatalogLocationWithHashDependencies<ContentCatalogProvider>(catalogPath);
             Assert.AreEqual(2, loc.Dependencies.Count);
             var remoteLocation = loc.Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote];
             var cacheLocation = loc.Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Cache];
@@ -926,14 +923,87 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator IsCatalogCached_ReturnsFalse_WhenCatalogLocationDoesNotHaveDependencies()
+        {
+            yield return Init();
+
+            ResourceLocationBase fakeCatlaogLoc = new ResourceLocationBase("name", "FakeCatalogID", typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider));
+            Hash128 hash = Hash128.Parse("1234");
+            var result = m_Addressables.IsCatalogCached(fakeCatlaogLoc, hash);
+            Assert.IsFalse(result);
+        }
+
+        [UnityTest]
+        public IEnumerator IsCatalogCached_ReturnsFalse_WhenCatalogLocationDoesNotHaveRemoteHashFileDependency()
+        {
+            yield return Init();
+
+            ResourceLocationBase fakeCatlaogLoc = new ResourceLocationBase("name", "FakeCatalogID", typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider),
+                new ResourceLocationBase("dep", "fakedep", typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider)));
+            Hash128 hash = Hash128.Parse("1234");
+            var result = m_Addressables.IsCatalogCached(fakeCatlaogLoc, hash);
+            Assert.IsFalse(result);
+        }
+
+        [UnityTest]
+        public IEnumerator IsCatalogCached_ReturnsFalse_WhenCatalogLocationCacheFileDoesNotExist()
+        {
+            yield return Init();
+
+            ResourceLocationBase fakeCatlaogLoc = new ResourceLocationBase("name", "FakeCatalogID", typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider),
+                new ResourceLocationBase("dep", "notarealfilepath", typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider)),
+                new ResourceLocationBase("dep", "fakedep", typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider)));
+            Hash128 hash = Hash128.Parse("1234");
+            var result = m_Addressables.IsCatalogCached(fakeCatlaogLoc, hash);
+            Assert.IsFalse(result);
+        }
+
+#if UNITY_EDITOR //these tests involve writing files, which can have problems on some of the consoles
+        [UnityTest]
+        public IEnumerator IsCatalogCached_ReturnsFalse_WhenCatalogLocationCacheFileHashDoesNotMatchProvdedRemoteHash()
+        {
+            yield return Init();
+            Hash128 cacheHash = Hash128.Parse("1234");
+            Hash128 remoteHash = Hash128.Parse("5678");
+            string cacheHashFilePath = Path.Combine(kCatalogFolderPath, "CachedFilePath.hash");
+
+            WriteHashFileForCatalog(cacheHashFilePath, cacheHash.ToString());
+
+            ResourceLocationBase fakeCatlaogLoc = new ResourceLocationBase("name", "FakeCatalogID", typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider),
+                new ResourceLocationBase("dep", "fakedep", typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider)),
+                new ResourceLocationBase("dep", cacheHashFilePath, typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider)));
+            var result = m_Addressables.IsCatalogCached(fakeCatlaogLoc, remoteHash);
+            Assert.IsFalse(result);
+            File.Delete(cacheHashFilePath);
+        }
+
+        [UnityTest]
+        public IEnumerator IsCatalogCached_ReturnsTrue_WhenCatalogLocationCacheFileHashMatchesProvdedRemoteHash()
+        {
+            yield return Init();
+            Hash128 cacheHash = Hash128.Parse("1234");
+            Hash128 remoteHash = Hash128.Parse("1234");
+            string cacheHashFilePath = Path.Combine(kCatalogFolderPath, "CachedFilePath.hash");
+
+            WriteHashFileForCatalog(cacheHashFilePath, cacheHash.ToString());
+
+            ResourceLocationBase fakeCatlaogLoc = new ResourceLocationBase("name", "FakeCatalogID", typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider),
+                new ResourceLocationBase("dep", "fakedep", typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider)),
+                new ResourceLocationBase("dep", cacheHashFilePath, typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider)));
+            var result = m_Addressables.IsCatalogCached(fakeCatlaogLoc, remoteHash);
+            Assert.IsTrue(result);
+            File.Delete(cacheHashFilePath);
+        }
+#endif
+
+        [UnityTest]
         public IEnumerator LoadContentCatalogAsync_LocationsHaveTimeout()
         {
             yield return Init();
             string catalogPath = "fakeCatalogPath.json";
-            string catalogHashPath = "fakeCatalogPath.hash";
 
             m_Addressables.CatalogRequestsTimeout = 13;
-            var loc = m_Addressables.CreateCatalogLocationWithHashDependencies(catalogPath, catalogHashPath);
+            var loc = m_Addressables.CreateCatalogLocationWithHashDependencies<ContentCatalogProvider>(catalogPath);
             Assert.AreEqual(2, loc.Dependencies.Count);
             var remoteLocation = loc.Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote];
             var cacheLocation = loc.Dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Cache];
@@ -948,7 +1018,7 @@ namespace AddressableAssetsIntegrationTests
             Assert.IsNotNull(data);
             Assert.AreEqual(data.WebRequestTimeout, m_Addressables.CatalogRequestsTimeout);
         }
-        
+
 #if UNITY_EDITOR
         [UnityTest]
         public IEnumerator LoadingContentCatalogTwice_DoesNotThrowException_WhenHandleIsntReleased()
@@ -959,7 +1029,6 @@ namespace AddressableAssetsIntegrationTests
             Directory.CreateDirectory(kCatalogFolderPath);
             if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
             {
-
                 ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>
                 {
                     new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
@@ -988,8 +1057,9 @@ namespace AddressableAssetsIntegrationTests
             if (Directory.Exists(kCatalogFolderPath))
                 Directory.Delete(kCatalogFolderPath, true);
         }
+
 #endif
-        
+
 #if UNITY_EDITOR
         [UnityTest]
         public IEnumerator LoadingContentCatalogWithCacheTwice_DoesNotThrowException_WhenHandleIsntReleased()
@@ -1000,7 +1070,6 @@ namespace AddressableAssetsIntegrationTests
             Directory.CreateDirectory(kCatalogFolderPath);
             if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
             {
-
                 ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>
                 {
                     new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
@@ -1030,6 +1099,7 @@ namespace AddressableAssetsIntegrationTests
             if (Directory.Exists(kCatalogFolderPath))
                 Directory.Delete(kCatalogFolderPath, true);
         }
+
 #endif
 
         [UnityTest]
@@ -1100,7 +1170,7 @@ namespace AddressableAssetsIntegrationTests
             m_Addressables.ResourceManager.ResourceProviders.Add(jsonAssetProviderStub);
             m_Addressables.ResourceManager.m_providerMap.Clear();
         }
-        
+
 #if UNITY_EDITOR
         [UnityTest]
         public IEnumerator LoadingContentCatalog_CachesCatalogData_IfValidHashFound()
@@ -1141,8 +1211,9 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cachedDataPath);
             File.Delete(cachedHashPath);
         }
+
 #endif
-        
+
 #if UNITY_EDITOR
         [UnityTest]
         public IEnumerator LoadingContentCatalog_CachesCatalogData_IfValidHashFoundAndRemotePathContainsQueryParameters()
@@ -1174,7 +1245,6 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cachedDataPath);
             File.Delete(cachedHashPath);
         }
-        
 
         [UnityTest]
         public IEnumerator LoadingContentCatalog_CachesCatalogData_ForTwoCatalogsWithSameName()
@@ -1187,7 +1257,6 @@ namespace AddressableAssetsIntegrationTests
             Directory.CreateDirectory(Path.Combine(kCatalogFolderPath, "secondCatalog"));
             if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
             {
-
                 ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>
                 {
                     new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
@@ -1202,7 +1271,7 @@ namespace AddressableAssetsIntegrationTests
                     baseCatalogPath = new Uri(m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId).AbsolutePath;
                 File.Copy(baseCatalogPath, fullRemotePath);
             }
-            
+
             ContentCatalogData catalogData = new ContentCatalogData(new List<ContentCatalogDataEntry>
             {
                 new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
@@ -1239,6 +1308,7 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cachedDataPathTwo);
             File.Delete(cachedHashPathTwo);
         }
+
 #endif
 
 #if UNITY_EDITOR
@@ -1252,7 +1322,6 @@ namespace AddressableAssetsIntegrationTests
             Directory.CreateDirectory(kCatalogFolderPath);
             if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
             {
-
                 ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>
                 {
                     new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
@@ -1297,13 +1366,11 @@ namespace AddressableAssetsIntegrationTests
             Directory.CreateDirectory(kCatalogFolderPath);
             if (m_Addressables.m_ResourceLocators[0].CatalogLocation == null)
             {
-
                 ContentCatalogData data = new ContentCatalogData(new List<ContentCatalogDataEntry>
                 {
                     new ContentCatalogDataEntry(typeof(string), "testString", "test.provider", new[] {"key"})
                 }, "test_catalog");
                 File.WriteAllText(fullRemotePath, JsonUtility.ToJson(data));
-
             }
             else
             {
@@ -1334,6 +1401,7 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cachedDataPath);
             File.Delete(cachedHashPath);
         }
+
 #endif
         [UnityTest]
         public IEnumerator IResourceLocationComparing_SameKeySameTypeDifferentInternalId_ReturnsFalse()
@@ -1400,7 +1468,6 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cachedDataPath);
             File.Delete(cachedHashPath);
         }
-
 
         [UnityTest]
         public IEnumerator UpdateContentCatalog_UpdatesCachedData_IfCacheCorrupted()
@@ -1487,7 +1554,7 @@ namespace AddressableAssetsIntegrationTests
             if (baseCatalogPath.StartsWith("file://"))
                 baseCatalogPath = new Uri(m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId).AbsolutePath;
 
-            var location = m_Addressables.CreateCatalogLocationWithHashDependencies(baseCatalogPath, string.Empty);
+            var location = m_Addressables.CreateCatalogLocationWithHashDependencies<ContentCatalogProvider>(baseCatalogPath);
             var loadCatalogHandle = InitializationOperation.LoadContentCatalog(m_Addressables, location, string.Empty);
 
             yield return loadCatalogHandle;
@@ -1503,6 +1570,7 @@ namespace AddressableAssetsIntegrationTests
 
             PostTearDownEvent = ResetAddressables;
         }
+
 #endif
 
         internal bool CatalogDataWasCleaned(ContentCatalogData data)
@@ -1537,8 +1605,8 @@ namespace AddressableAssetsIntegrationTests
                 baseCatalogPath = new Uri(m_Addressables.m_ResourceLocators[0].CatalogLocation.InternalId).AbsolutePath;
             File.Copy(baseCatalogPath, fullRemotePath);
 
-            var location = m_Addressables.CreateCatalogLocationWithHashDependencies(baseCatalogPath, string.Empty);
-            var location2 = m_Addressables.CreateCatalogLocationWithHashDependencies(fullRemotePath, fullRemotePath.Replace(".json", ".hash"));
+            var location = m_Addressables.CreateCatalogLocationWithHashDependencies<ContentCatalogProvider>(baseCatalogPath);
+            var location2 = m_Addressables.CreateCatalogLocationWithHashDependencies<ContentCatalogProvider>(fullRemotePath);
             var loadCatalogHandle = InitializationOperation.LoadContentCatalog(m_Addressables, location, string.Empty);
             yield return loadCatalogHandle;
             var loadCatalogHandle2 = InitializationOperation.LoadContentCatalog(m_Addressables, location2, string.Empty);
@@ -1563,6 +1631,7 @@ namespace AddressableAssetsIntegrationTests
 
             PostTearDownEvent = ResetAddressables;
         }
+
         #endif
 
         [UnityTest]
@@ -2220,7 +2289,28 @@ namespace AddressableAssetsIntegrationTests
             AsyncOperationHandle op = m_Addressables.DownloadDependenciesAsync(label, true);
             yield return op;
             AssetBundleProvider.WaitForAllUnloadingBundlesToComplete();
+#if UNITY_2022_1_OR_NEWER
+            Assert.AreEqual(bundleCountBefore, AssetBundleProvider.AssetBundleCount);
+#else
             Assert.AreEqual(bundleCountBefore, AssetBundle.GetAllLoadedAssetBundles().Count());
+#endif
+        }
+
+        [Test]
+        public void AssetBundleProvider_CanSet_UnloadingBundles()
+        {
+#if UNITY_2022_1_OR_NEWER
+            var unloadingBundles = AssetBundleProvider.UnloadingBundles;
+
+            string key = "op1";
+            var newBundles = new Dictionary<string, AssetBundleUnloadOperation>() {{ key, new AssetBundleUnloadOperation() }};
+            AssetBundleProvider.UnloadingBundles = newBundles;
+            Assert.IsTrue(AssetBundleProvider.UnloadingBundles.ContainsKey(key));
+
+            AssetBundleProvider.UnloadingBundles = unloadingBundles;
+#else
+            Assert.Ignore($"Skipping test {nameof(AssetBundleProvider_CanSet_UnloadingBundles)}. Requires 2022.1+");
+#endif
         }
 
         [UnityTest]
@@ -2852,7 +2942,7 @@ namespace AddressableAssetsIntegrationTests
                 }
             }
         }
-        
+
         private void SetupBundleForProviderTests(string bundleName, string depName, string key, out ResourceLocationBase location, out TestCatalogProviderCustomAssetBundleResource testProvider)
         {
             testProvider = new TestCatalogProviderCustomAssetBundleResource();
@@ -3396,11 +3486,33 @@ namespace AddressableAssetsIntegrationTests
 #endif
         }
 
+        [Test]
+        public void AssetBundleResource_WhenNotLoaded_GetAssetPreloadRequest_ReturnsNull()
+        {
+            AssetBundleResource abr = new AssetBundleResource();
+            Assert.AreEqual(null, abr.GetAssetPreloadRequest());
+        }
+
+        [Test]
+        public void WebRequestQueueOperation_CanSetWebRequest()
+        {
+            string url = "https://www.mynewsite.com/";
+            var op = new WebRequestQueueOperation(new UnityWebRequest("https://www.myoldsite.com/"));
+            op.WebRequest = new UnityWebRequest(url);
+            Assert.AreEqual(url, op.WebRequest.url);
+        }
+
         [UnityTest]
         public IEnumerator WebRequestQueue_GetsSetOnInitialization_FromRuntimeData()
         {
             yield return Init();
             Assert.AreEqual(AddressablesTestUtility.kMaxWebRequestCount, WebRequestQueue.s_MaxRequest);
+        }
+
+        [Test]
+        public void  WebRequestQueue_WhenMaxConcurrentRequests_SetToZero_ThrowsException()
+        {
+            Assert.Throws<ArgumentException>(() => WebRequestQueue.SetMaxConcurrentRequests(0), "MaxRequests must be 1 or greater.");
         }
 
         internal static string CreateFakeCachedBundle(string bundleName, string hash)

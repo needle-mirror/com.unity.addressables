@@ -389,7 +389,7 @@ namespace AddressableTests.SyncAddressables
         [UnityTest]
         public IEnumerator LoadingScene_Synchronously_ActivateOnLoadDisabled_Completes()
         {
-            var loadOp = m_Addressables.LoadSceneAsync(m_SceneKey, LoadSceneMode.Additive, false);
+            var loadOp = m_Addressables.LoadSceneAsync(m_SceneKey, new LoadSceneParameters(LoadSceneMode.Additive), false);
             bool callbackCompleted = false;
             loadOp.Completed += handle => callbackCompleted = true;
             var result = loadOp.WaitForCompletion();
@@ -414,7 +414,7 @@ namespace AddressableTests.SyncAddressables
         [UnityTest]
         public IEnumerator LoadingScene_Synchronously_ActivateOnLoad_CompletesAsynchronously()
         {
-            var loadOp = m_Addressables.LoadSceneAsync(m_SceneKey, LoadSceneMode.Additive, true);
+            var loadOp = m_Addressables.LoadSceneAsync(m_SceneKey, new LoadSceneParameters(LoadSceneMode.Additive), true);
             bool callbackCompleted = false;
             loadOp.Completed += handle => callbackCompleted = true;
             var result = loadOp.WaitForCompletion();
@@ -440,7 +440,7 @@ namespace AddressableTests.SyncAddressables
         [UnityTest]
         public IEnumerator UnloadingScene_Synchronously_WhenAutoReleasingHandle_LogsWarning()
         {
-            var loadOp = m_Addressables.LoadSceneAsync(m_SceneKey, LoadSceneMode.Additive);
+            var loadOp = m_Addressables.LoadSceneAsync(m_SceneKey, new LoadSceneParameters(LoadSceneMode.Additive));
             loadOp.WaitForCompletion();
             yield return loadOp;
 
@@ -458,7 +458,7 @@ namespace AddressableTests.SyncAddressables
         [UnityTest]
         public IEnumerator UnloadingScene_Synchronously_LogsWarning()
         {
-            var loadOp = m_Addressables.LoadSceneAsync(m_SceneKey, LoadSceneMode.Additive);
+            var loadOp = m_Addressables.LoadSceneAsync(m_SceneKey, new LoadSceneParameters(LoadSceneMode.Additive));
             loadOp.WaitForCompletion();
             yield return loadOp;
 

@@ -69,6 +69,18 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <param name="priority">The loading priority for the load.</param>
         /// <returns>An operation handle for the loading of the scene.  The scene is wrapped in a SceneInstance object to support delayed activation.</returns>
         AsyncOperationHandle<SceneInstance> ProvideScene(ResourceManager resourceManager, IResourceLocation location, LoadSceneMode loadMode, bool activateOnLoad, int priority);
+        
+        /// <summary>
+        /// Load a scene at a specified resource location.
+        /// </summary>
+        /// <param name="resourceManager">The resource manager to use for loading dependencies.</param>
+        /// <param name="location">The location of the scene.</param>
+        /// <param name="loadSceneParameters">Load parameters for the scene.</param>
+        /// <param name="activateOnLoad">If true, the scene is activated as soon as it finished loading. Otherwise it needs to be activated via the returned SceneInstance object.</param>
+        /// <param name="priority">The loading priority for the load.</param>
+        /// <returns>An operation handle for the loading of the scene.  The scene is wrapped in a SceneInstance object to support delayed activation.</returns>
+        AsyncOperationHandle<SceneInstance> ProvideScene(ResourceManager resourceManager, IResourceLocation location, LoadSceneParameters loadSceneParameters, bool activateOnLoad, int priority);
+        
         /// <summary>
         /// Release a scene.
         /// </summary>

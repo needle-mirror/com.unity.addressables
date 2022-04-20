@@ -81,7 +81,7 @@ To set up a Profile variable to use the CCD bundle location:
 Make this the active profile when building content for delivey with CCD.
 
 > [!Important]
-> This feature requires the Content Delivery Management API package, which is currently in an experimental state.
+> This feature requires the Content Delivery Management API package.
 
 See [Profiles] for information about how to modify profiles.
 

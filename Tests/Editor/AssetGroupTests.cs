@@ -197,7 +197,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 CreatePrefabInResourcesSubFolder(assetPath);
                 AddressableAssetEntryTreeView treeView = new AddressableAssetEntryTreeView(
                     new TreeViewState(), 
-                    new MultiColumnHeaderState(new MultiColumnHeaderState.Column[1]), 
+                    new MultiColumnHeaderState(new MultiColumnHeaderState.Column[2]), 
                     new AddressableAssetsSettingsGroupEditor(new AddressableAssetsWindow()));
 
                 //Test

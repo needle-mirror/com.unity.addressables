@@ -84,6 +84,7 @@ namespace UnityEditor.AddressableAssets.GUI
             string labelText = label.text;
             m_ReferencesSame = true;
             m_AssetRefObject = property.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
+
             labelText = ObjectNames.NicifyVariableName(labelText);
             if (labelText != label.text || string.IsNullOrEmpty(label.text))
             {
@@ -270,59 +271,139 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 var aaEntries = DragAndDrop.GetGenericData("AssetEntryTreeViewItem") as List<AssetEntryTreeViewItem>;
                 if (aaEntries != null)
+                    DragAndDropFromAddressableGroupWindow(aaEntries, guid, property);
+                else if (DragAndDrop.paths != null)
+                    DragAndDropNotFromAddressableGroupWindow(DragAndDrop.paths, guid, property, aaSettings);
+            }
+        }
+
+        internal void DragAndDropFromAddressableGroupWindow(List<AssetEntryTreeViewItem> aaEntries, string guid, SerializedProperty property)
+        {
+            if (aaEntries.Count == 1)
+            {
+                var item = aaEntries[0];
+                if (item.entry != null)
                 {
-                    if (aaEntries.Count == 1)
+                    if (item.entry.IsInResources)
+                        Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first.");
+                    else
                     {
-                        var item = aaEntries[0];
-                        if (item.entry != null)
-                        {
-                            if (item.entry.IsInResources)
-                                Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first.");
-                            else
-                            {
-                                if (AssetReferenceDrawerUtilities.SetObject(ref m_AssetRefObject, ref m_ReferencesSame, property, item.entry.TargetAsset, fieldInfo, m_label.text, out guid))
-                                    TriggerOnValidate(property);
-                            }
-                        }
+                        if (AssetReferenceDrawerUtilities.SetObject(ref m_AssetRefObject, ref m_ReferencesSame, property, item.entry.TargetAsset, fieldInfo, m_label.text, out guid))
+                            TriggerOnValidate(property);
                     }
                 }
-                else
+            }
+            else if (fieldInfo.FieldType.IsArray || fieldInfo.FieldType.IsAssignableFrom(typeof(List<AssetReference>)))
+            {
+                string arrayName = SerializedPropertyExtensions.GetPropertyPathArrayName(property.propertyPath);
+                SerializedProperty arrayProperty = property.serializedObject.FindProperty(arrayName);
+                foreach (AssetEntryTreeViewItem item in aaEntries)
                 {
-                    if (DragAndDrop.paths != null && DragAndDrop.paths.Length == 1)
+                    AddressableAssetEntry entry = item.entry;
+                    if (entry.IsInResources)
+                        Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first.");
+                    else
                     {
-                        var path = DragAndDrop.paths[0];
-                        DragAndDropNotFromAddressableGroupWindow(path, guid, property, aaSettings);
+                        arrayProperty.InsertArrayElementAtIndex(arrayProperty.arraySize);
+                        arrayProperty.serializedObject.ApplyModifiedProperties();
+                        arrayProperty.serializedObject.Update();
+                        SerializedProperty elementProperty = arrayProperty.GetArrayElementAtIndex(arrayProperty.arraySize - 1);
+
+                        string labelText = "";
+                        AssetReference assetRef = elementProperty.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
+
+                        bool referencesSame = false;
+                        Object obj = entry.TargetAsset;
+
+                        if (AssetReferenceDrawerUtilities.SetObject(ref assetRef, ref referencesSame, elementProperty, obj, fieldInfo, m_label.text, out guid))
+                            TriggerOnValidate(elementProperty);
+                        else
+                        {
+                            arrayProperty.DeleteArrayElementAtIndex(arrayProperty.arraySize - 1);
+                            arrayProperty.serializedObject.ApplyModifiedProperties();
+                            arrayProperty.serializedObject.Update();
+                        }
                     }
                 }
             }
         }
 
-        internal void DragAndDropNotFromAddressableGroupWindow(string path, string guid, SerializedProperty property, AddressableAssetSettings aaSettings)
+        internal void DragAndDropNotFromAddressableGroupWindow(string[] paths, string guid, SerializedProperty property, AddressableAssetSettings aaSettings)
         {
-            if (AddressableAssetUtility.IsInResources(path))
-                Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first. ");
-            else if (!AddressableAssetUtility.IsPathValidForEntry(path))
-                Addressables.LogWarning("Dragged asset is not valid as an Asset Reference. " + path);
-            else
+            if (paths.Length == 1)
             {
-                Object obj;
-                if (DragAndDrop.objectReferences != null && DragAndDrop.objectReferences.Length == 1)
-                    obj = DragAndDrop.objectReferences[0];
+                string path = paths[0];
+                if (AddressableAssetUtility.IsInResources(path))
+                    Addressables.LogWarning(
+                        "Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first. ");
+                else if (!AddressableAssetUtility.IsPathValidForEntry(path))
+                    Addressables.LogWarning("Dragged asset is not valid as an Asset Reference. " + path);
                 else
-                    obj = AssetDatabase.LoadAssetAtPath<Object>(path);
-
-                if (AssetReferenceDrawerUtilities.SetObject(ref m_AssetRefObject, ref m_ReferencesSame, property, obj, fieldInfo, m_label.text, out guid))
                 {
-                    TriggerOnValidate(property);
-                    aaSettings = AddressableAssetSettingsDefaultObject.GetSettings(true);
-                    var entry = aaSettings.FindAssetEntry(guid);
-                    if (entry == null && !string.IsNullOrEmpty(guid))
+                    Object obj;
+                    if (DragAndDrop.objectReferences != null && DragAndDrop.objectReferences.Length == 1)
+                        obj = DragAndDrop.objectReferences[0];
+                    else
+                        obj = AssetDatabase.LoadAssetAtPath<Object>(path);
+
+                    if (AssetReferenceDrawerUtilities.SetObject(ref m_AssetRefObject, ref m_ReferencesSame, property,
+                        obj, fieldInfo, m_label.text, out guid))
                     {
-                        string assetName;
-                        if (!aaSettings.IsAssetPathInAddressableDirectory(path, out assetName))
+                        TriggerOnValidate(property);
+                        aaSettings = AddressableAssetSettingsDefaultObject.GetSettings(true);
+                        var entry = aaSettings.FindAssetEntry(guid);
+                        if (entry == null && !string.IsNullOrEmpty(guid))
                         {
-                            aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup);
-                            newGuid = guid;
+                            string assetName;
+                            if (!aaSettings.IsAssetPathInAddressableDirectory(path, out assetName))
+                            {
+                                aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup);
+                                newGuid = guid;
+                            }
+                        }
+                    }
+                }
+            }
+            else if (fieldInfo.FieldType.IsArray || fieldInfo.FieldType.IsAssignableFrom(typeof(List<AssetReference>)))
+            {
+                string arrayName = SerializedPropertyExtensions.GetPropertyPathArrayName(property.propertyPath);
+                SerializedProperty arrayProperty = property.serializedObject.FindProperty(arrayName);
+
+                for (int i = 0; i < paths.Length; i++)
+                {
+                    string path = paths[i];
+                    if (AddressableAssetUtility.IsInResources(path))
+                        Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first.");
+                    else if (!AddressableAssetUtility.IsPathValidForEntry(path))
+                        Addressables.LogWarning("Dragged asset is not valid as an Asset Reference. " + path);
+                    else
+                    {
+                        arrayProperty.InsertArrayElementAtIndex(arrayProperty.arraySize);
+                        arrayProperty.serializedObject.ApplyModifiedProperties();
+                        arrayProperty.serializedObject.Update();
+                        SerializedProperty elementProperty = arrayProperty.GetArrayElementAtIndex(arrayProperty.arraySize - 1);
+
+                        string labelText = "";
+                        AssetReference assetRef = elementProperty.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
+
+                        bool referencesSame = false;
+                        Object obj = (DragAndDrop.objectReferences != null && i < DragAndDrop.objectReferences.Length) ?
+                            DragAndDrop.objectReferences[i] : AssetDatabase.LoadAssetAtPath<Object>(path);
+
+                        if (AssetReferenceDrawerUtilities.SetObject(ref assetRef, ref referencesSame, elementProperty,
+                            obj, fieldInfo, m_label.text, out guid))
+                        {
+                            TriggerOnValidate(elementProperty);
+                            aaSettings = AddressableAssetSettingsDefaultObject.GetSettings(true);
+                            var entry = aaSettings.FindAssetEntry(guid);
+                            if (entry == null && !string.IsNullOrEmpty(guid) && !aaSettings.IsAssetPathInAddressableDirectory(path, out string assetName))
+                                aaSettings.CreateOrMoveEntry(guid, aaSettings.DefaultGroup);
+                        }
+                        else
+                        {
+                            arrayProperty.DeleteArrayElementAtIndex(arrayProperty.arraySize - 1);
+                            arrayProperty.serializedObject.ApplyModifiedProperties();
+                            arrayProperty.serializedObject.Update();
                         }
                     }
                 }
@@ -791,6 +872,21 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             return DescendHierarchy<T>(newObj, splitName, splitCounts, depth + 1);
+        }
+
+        internal static string GetPropertyPathArrayName(string propertyPath)
+        {
+            if (propertyPath.EndsWith("]"))
+            {
+                int leftBracket = propertyPath.LastIndexOf('[');
+                if (leftBracket > -1)
+                {
+                    string arrayString = propertyPath.Substring(0, leftBracket);
+                    if (arrayString.EndsWith(".data"))
+                        return arrayString.Substring(0, arrayString.Length - 5); // remove ".data"
+                }
+            }
+            return string.Empty;
         }
     }
 

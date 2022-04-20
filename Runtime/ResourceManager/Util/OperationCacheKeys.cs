@@ -7,6 +7,35 @@ namespace UnityEngine.ResourceManagement.Util
 {
     internal interface IOperationCacheKey : IEquatable<IOperationCacheKey> {}
 
+    /// <summary>
+    /// Used to compare cachable operation based solely on a single string id
+    /// </summary>
+    internal sealed class IdCacheKey : IOperationCacheKey
+    {
+        public string ID;
+
+        public IdCacheKey(string id)
+        {
+            ID = id;
+        }
+
+        bool Equals(IdCacheKey other)
+        {
+            if (ReferenceEquals(this, other)) return true;
+            if (ReferenceEquals(other, null)) return false;
+
+            return other.ID == ID;
+        }
+
+        public override int GetHashCode()
+        {
+            return ID.GetHashCode();
+        }
+
+        public override bool Equals(object obj) => Equals(obj as IdCacheKey);
+        public bool Equals(IOperationCacheKey other) => Equals(other as IdCacheKey);
+    }
+
     internal sealed class LocationCacheKey : IOperationCacheKey
     {
         readonly IResourceLocation m_Location;

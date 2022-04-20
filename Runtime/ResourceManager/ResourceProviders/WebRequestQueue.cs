@@ -5,19 +5,43 @@ using UnityEngine.ResourceManagement.Util;
 
 namespace UnityEngine.ResourceManagement
 {
-    internal class WebRequestQueueOperation
+    /// <summary>
+    /// Represents a web request stored in the <seealso cref="WebRequestQueue"/>.
+    /// </summary>
+    public class WebRequestQueueOperation
     {
         private bool m_Completed = false;
+        /// <summary>
+        /// Stores the async operation object returned from sending the web request.
+        /// </summary>
         public UnityWebRequestAsyncOperation Result;
+        /// <summary>
+        /// Event that is invoked when the async operation is complete.
+        /// </summary>
         public Action<UnityWebRequestAsyncOperation> OnComplete;
 
+        /// <summary>
+        /// Indicates that the async operation is complete.
+        /// </summary>
         public bool IsDone
         {
             get { return m_Completed || Result != null; }
         }
 
         internal UnityWebRequest m_WebRequest;
+        /// <summary>
+        /// The web request.
+        /// </summary>
+        public UnityWebRequest WebRequest
+        {
+            get { return m_WebRequest; }
+            internal set { m_WebRequest = value; }
+        }
 
+        /// <summary>
+        /// Initializes and returns an instance of WebRequestQueueOperation.
+        /// </summary>
+        /// <param name="request">The web request associated with this object.</param>
         public WebRequestQueueOperation(UnityWebRequest request)
         {
             m_WebRequest = request;
@@ -32,11 +56,19 @@ namespace UnityEngine.ResourceManagement
     }
 
 
-    internal static class WebRequestQueue
+    /// <summary>
+    /// Represents a queue of web requests. Completed requests are removed from the queue.
+    /// </summary>
+    public static class WebRequestQueue
     {
-        internal static int s_MaxRequest = 500;
+        internal static int s_MaxRequest = 3;
         internal static Queue<WebRequestQueueOperation> s_QueuedOperations = new Queue<WebRequestQueueOperation>();
         internal static List<UnityWebRequestAsyncOperation> s_ActiveRequests = new List<UnityWebRequestAsyncOperation>();
+
+        /// <summary>
+        /// Sets the max number of web requests running at the same time.
+        /// </summary>
+        /// <param name="maxRequests">The max number of web requests.</param>
         public static void SetMaxConcurrentRequests(int maxRequests)
         {
             if (maxRequests < 1)
@@ -44,36 +76,28 @@ namespace UnityEngine.ResourceManagement
             s_MaxRequest = maxRequests;
         }
 
+        /// <summary>
+        /// Adds a web request to the queue.
+        /// </summary>
+        /// <param name="request">The web request.</param>
+        /// <returns>Returns an object representing the web request.</returns>
         public static WebRequestQueueOperation QueueRequest(UnityWebRequest request)
         {
             WebRequestQueueOperation queueOperation = new WebRequestQueueOperation(request);
             if (s_ActiveRequests.Count < s_MaxRequest)
-            {
-                UnityWebRequestAsyncOperation webRequestAsyncOp = null;
-                try
-                {
-                    webRequestAsyncOp = request.SendWebRequest();
-                    s_ActiveRequests.Add(webRequestAsyncOp);
-
-                    if (webRequestAsyncOp.isDone)
-                        OnWebAsyncOpComplete(webRequestAsyncOp);
-                    else
-                        webRequestAsyncOp.completed += OnWebAsyncOpComplete;
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError(e.Message);
-                }
-
-                queueOperation.Complete(webRequestAsyncOp);
-            }
+                BeginWebRequest(queueOperation);
             else
                 s_QueuedOperations.Enqueue(queueOperation);
 
             return queueOperation;
         }
 
-        internal static void WaitForRequestToBeActive(WebRequestQueueOperation request, int millisecondsTimeout)
+        /// <summary>
+        /// Synchronously waits for a particular web request to be completed.
+        /// </summary>
+        /// <param name="request">The web request.</param>
+        /// <param name="millisecondsTimeout">The amount of time in milliseconds spent waiting per iteration before checking if the request is complete.</param>
+        public static void WaitForRequestToBeActive(WebRequestQueueOperation request, int millisecondsTimeout)
         {
             var completedRequests = new List<UnityWebRequestAsyncOperation>();
             while (s_QueuedOperations.Contains(request))
@@ -98,16 +122,35 @@ namespace UnityEngine.ResourceManagement
 
         private static void OnWebAsyncOpComplete(AsyncOperation operation)
         {
-            s_ActiveRequests.Remove((operation as UnityWebRequestAsyncOperation));
+            s_ActiveRequests.Remove(operation as UnityWebRequestAsyncOperation);
 
             if (s_QueuedOperations.Count > 0)
             {
                 var nextQueuedOperation = s_QueuedOperations.Dequeue();
-                var webRequestAsyncOp = nextQueuedOperation.m_WebRequest.SendWebRequest();
-                webRequestAsyncOp.completed += OnWebAsyncOpComplete;
-                s_ActiveRequests.Add(webRequestAsyncOp);
-                nextQueuedOperation.Complete(webRequestAsyncOp);
+                BeginWebRequest(nextQueuedOperation);
             }
+        }
+
+        static void BeginWebRequest(WebRequestQueueOperation queueOperation)
+        {
+            var request = queueOperation.m_WebRequest;
+            UnityWebRequestAsyncOperation webRequestAsyncOp = null;
+            try
+            {
+                webRequestAsyncOp = request.SendWebRequest();
+                s_ActiveRequests.Add(webRequestAsyncOp);
+
+                if (webRequestAsyncOp.isDone)
+                    OnWebAsyncOpComplete(webRequestAsyncOp);
+                else
+                    webRequestAsyncOp.completed += OnWebAsyncOpComplete;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e.Message);
+            }
+
+            queueOperation.Complete(webRequestAsyncOp);
         }
     }
 }

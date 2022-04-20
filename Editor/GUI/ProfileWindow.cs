@@ -4,9 +4,8 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using System.Linq;
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
-using Unity.Services.CCD.Management.Models;
+using Unity.Services.Ccd.Management.Models;
 #endif
 
 namespace UnityEditor.AddressableAssets.GUI
@@ -31,7 +30,7 @@ namespace UnityEditor.AddressableAssets.GUI
         //Default length of the Label within the Variables Pane
         private float m_LabelWidth = 155f;
         private float m_FieldBufferWidth = 0f;
-
+        
         GUIStyle m_ItemRectPadding;
 
         float m_HorizontalSplitterRatio = k_DefaultHorizontalSplitterRatio;
@@ -71,6 +70,8 @@ namespace UnityEditor.AddressableAssets.GUI
 
         private GUIStyle m_ButtonStyle;
 
+        private GUIContent m_CreateNewProfileOrVariablesGUIContent = new GUIContent("Create", "Create a new profile or profile variable(s)");
+
 
         private Dictionary<string, bool?> m_foldouts = new Dictionary<string, bool?>();
         private Dictionary<string, bool> m_CustomGroupTypes = new Dictionary<string, bool>();
@@ -78,6 +79,8 @@ namespace UnityEditor.AddressableAssets.GUI
         [MenuItem("Window/Asset Management/Addressables/Profiles", priority = 2051)]
         internal static void ShowWindow()
         {
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.OpenProfilesWindow);
+
             var settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
             {
@@ -115,10 +118,12 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             if (CloudProjectSettings.projectId != String.Empty) await ProfileDataSourceSettings.UpdateCCDDataSourcesAsync(CloudProjectSettings.projectId, false);
         }
+
 #endif
-            
+
         private void OnEnable()
         {
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.OpenProfilesWindow, true);
             Undo.undoRedoPerformed += MarkForReload;
             titleContent = new GUIContent("Addressables Profiles");
             m_ItemRectPadding = new GUIStyle();
@@ -158,9 +163,8 @@ namespace UnityEditor.AddressableAssets.GUI
             GUILayout.BeginArea(new Rect(0, 0, toolbarPos.width, k_ToolbarHeight));
             GUILayout.BeginHorizontal(EditorStyles.toolbar);
             {
-                var guiMode = new GUIContent("Create");
-                Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
-                if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
+                Rect rMode = GUILayoutUtility.GetRect(m_CreateNewProfileOrVariablesGUIContent, EditorStyles.toolbarDropDown);
+                if (EditorGUI.DropdownButton(rMode, m_CreateNewProfileOrVariablesGUIContent, FocusType.Passive, EditorStyles.toolbarDropDown))
                 {
                     var menu = new GenericMenu();
                     menu.AddItem(new GUIContent("Profile"), false, NewProfile);
@@ -250,7 +254,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
             GUILayout.BeginArea(variablesPaneRect);
             EditorGUI.indentLevel++;
-            List<ProfileGroupType> groupTypes = ProfileGroupType.CreateGroupTypes(selectedProfile);
+            List<ProfileGroupType> groupTypes = ProfileGroupType.CreateGroupTypes(selectedProfile, settings);
             HashSet<string> drawnGroupTypes = new HashSet<string>();
 
             //Displaying Path Groups
@@ -260,10 +264,10 @@ namespace UnityEditor.AddressableAssets.GUI
                 m_foldouts.TryGetValue(groupType.GroupTypePrefix, out foldout);
                 GUILayout.Space(5);
                 Rect pathPairRect = EditorGUILayout.BeginHorizontal(new GUILayoutOption[] { GUILayout.Width(fieldWidth + k_VariableItemPadding - k_SplitterThickness), GUILayout.MinWidth(fieldWidth + k_VariableItemPadding - k_SplitterThickness) });
-                m_foldouts[groupType.GroupTypePrefix] = EditorGUILayout.Foldout(foldout != null ? foldout.Value : true, groupType.GroupTypePrefix, true);
+                m_foldouts[groupType.GroupTypePrefix] = EditorGUILayout.Foldout(foldout != null ? foldout.Value : true, new GUIContent(groupType.GroupTypePrefix, "A pair of profile variables used for AssetBundles Build and Load Paths"), true);
                 Rect dsDropdownRect = EditorGUILayout.BeginHorizontal(new GUILayoutOption[] { GUILayout.Width(fieldWidth - m_LabelWidth), GUILayout.MinWidth(fieldWidth - m_LabelWidth) });
                 string dropdownText = DetermineOptionString(groupType);
-                bool dsDropdown = EditorGUILayout.DropdownButton(new GUIContent(dropdownText), FocusType.Keyboard, new GUILayoutOption[] { GUILayout.Width(fieldWidth - m_LabelWidth) });
+                bool dsDropdown = EditorGUILayout.DropdownButton(new GUIContent(dropdownText, "Location type"), FocusType.Keyboard, new GUILayoutOption[] { GUILayout.Width(fieldWidth - m_LabelWidth) });
                 if (evt.type == EventType.ContextClick)
                     CreatePairPrefixContextMenu(variablesPaneRect, pathPairRect, groupType, evt);
 
@@ -291,7 +295,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     foreach (var variable in pathVariables)
                     {
                         Rect newPathRect = EditorGUILayout.BeginVertical();
-                        string newPath = EditorGUILayout.TextField(groupType.GetName(variable), variable.Value, new GUILayoutOption[] { GUILayout.Width(fieldWidth) });
+                        string newPath = EditorGUILayout.TextField(new GUIContent(groupType.GetName(variable), "Profile variable representing a file path or url"), variable.Value, new GUILayoutOption[] { GUILayout.Width(fieldWidth) });
                         EditorGUILayout.EndVertical();
                         if (newPath != variable.Value && ProfileIndex == m_ProfileTreeView.lastClickedProfile)
                         {
@@ -314,7 +318,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     GUILayout.Space(5);
                     Rect newValueRect = EditorGUILayout.BeginVertical();
-                    string newValue = EditorGUILayout.TextField(curVariable.ProfileName, selectedProfile.values[i].value, new GUILayoutOption[] { GUILayout.Width(fieldWidth) });
+                    string newValue = EditorGUILayout.TextField(new GUIContent(curVariable.ProfileName, "Profile variable"), selectedProfile.values[i].value, new GUILayoutOption[] { GUILayout.Width(fieldWidth) });
                     EditorGUILayout.EndVertical();
                     if (newValue != selectedProfile.values[i].value && ProfileIndex == m_ProfileTreeView.lastClickedProfile)
                     {
@@ -371,12 +375,10 @@ namespace UnityEditor.AddressableAssets.GUI
                 settings.profileSettings.SetValue(selectedProfile.id, e.GroupType.GetName(e.GroupType.GetVariableBySuffix(AddressableAssetSettings.kLoadPath)), e.Option.LoadPath);
                 AddressableAssetUtility.OpenAssetIfUsingVCIntegration(settings);
             }
-
         }
 
         private string DetermineOptionString(ProfileGroupType groupType)
         {
-
             ProfileGroupType selectedGroupType = dataSourceSettings.FindGroupType(groupType);
             if (selectedGroupType != null)
             {
@@ -439,7 +441,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 evt.Use();
             }
         }
-        
+
         void RenamePathPair(ProfileGroupType groupType, Rect parentWindow, Rect displayRect)
         {
             try
@@ -606,7 +608,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
             bool VariableWithNewPrefixAlreadyExists()
             {
-                bool loadPathAlreadyExists = m_Settings.profileSettings.GetProfileDataByName(m_NewName + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kLoadPath) 
+                bool loadPathAlreadyExists = m_Settings.profileSettings.GetProfileDataByName(m_NewName + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kLoadPath)
                     != default(AddressableAssetProfileSettings.ProfileIdData);
                 bool buildPathAlreadyExists = m_Settings.profileSettings.GetProfileDataByName(m_NewName + ProfileGroupType.k_PrefixSeparator + AddressableAssetSettings.kBuildPath)
                     != default(AddressableAssetProfileSettings.ProfileIdData);

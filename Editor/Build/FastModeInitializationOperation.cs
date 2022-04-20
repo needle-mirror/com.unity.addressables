@@ -27,15 +27,30 @@ namespace UnityEditor.AddressableAssets.Settings
             m_Diagnostics = new ResourceManagerDiagnostics(m_addressables.ResourceManager);
         }
 
-        static T GetBuilderOfType<T>(AddressableAssetSettings settings) where T : class, IDataBuilder
+        internal static T GetBuilderOfType<T>(AddressableAssetSettings settings, bool includeSubclasses) where T : class, IDataBuilder
         {
+            System.Type typeToFind = typeof(T);
+            if (!includeSubclasses)
+            {
+                foreach (var db in settings.DataBuilders)
+                    if (db.GetType() == typeToFind)
+                        return db as T;
+                return null;
+            }
+            
+            ScriptableObject dataBuilder = null;
             foreach (var db in settings.DataBuilders)
             {
-                var b = db;
-                if (b.GetType() == typeof(T))
-                    return b as T;
+                var currentType = db.GetType();
+                if (dataBuilder == null)
+                {
+                    if (currentType == typeToFind || currentType.IsSubclassOf(typeToFind))
+                        dataBuilder = db;
+                }
+                else if (currentType.IsSubclassOf(dataBuilder.GetType()))
+                    dataBuilder = db;
             }
-            return null;
+            return dataBuilder as T;
         }
 
         ///<inheritdoc />
@@ -52,9 +67,9 @@ namespace UnityEditor.AddressableAssets.Settings
 
         protected override void Execute()
         {
-            var db = GetBuilderOfType<BuildScriptFastMode>(m_settings);
+            var db = GetBuilderOfType<BuildScriptFastMode>(m_settings, true);
             if (db == null)
-                UnityEngine.Debug.Log($"Unable to find {nameof(BuildScriptFastMode)} builder in settings assets. Using default Instance and Scene Providers.");
+                UnityEngine.Debug.Log($"Unable to find {nameof(BuildScriptFastMode)} or subclass builder in settings assets. Using default Instance and Scene Providers.");
 
             var locator = new AddressableAssetSettingsLocator(m_settings);
             m_addressables.AddResourceLocator(locator);

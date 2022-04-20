@@ -211,12 +211,35 @@ namespace UnityEngine.ResourceManagement.Util
         }
 
         internal int CreatedNodeCount { get { return m_NodesCreated; } }
-        internal int CachedNodeCount { get { return m_NodeCache == null ? 0 : m_NodeCache.Count; } }
+
+        internal int CachedNodeCount
+        {
+            get { return m_NodeCache == null ? 0 : m_NodeCache.Count; }
+            set
+            {
+                if (m_NodeCache == null)
+                    m_NodeCache = new LinkedList<T>();
+                while (value < m_NodeCache.Count)
+                    m_NodeCache.RemoveLast();
+                while (value > m_NodeCache.Count)
+                    m_NodeCache.AddLast(new LinkedListNode<T>(default));
+            }
+        }
     }
 
     internal static class GlobalLinkedListNodeCache<T>
     {
         static LinkedListNodeCache<T> m_globalCache;
+
+        public static bool CacheExists => m_globalCache != null;
+
+        public static void SetCacheSize(int length)
+        {
+            if (m_globalCache == null)
+                m_globalCache = new LinkedListNodeCache<T>();
+            m_globalCache.CachedNodeCount = length;
+        }
+        
         public static LinkedListNode<T> Acquire(T val)
         {
             if (m_globalCache == null)
@@ -465,8 +488,8 @@ namespace UnityEngine.ResourceManagement.Util
         /// <param name="keyObj">The key as an object.</param>
         /// <param name="mainKey">The key of the main asset.  This will be set to null if a sub key is not found.</param>
         /// <param name="subKey">The key of the sub object.  This will be set to null if not found.</param>
-        /// <returns></returns>
-        internal static bool ExtractKeyAndSubKey(object keyObj, out string mainKey, out string subKey)
+        /// <returns>Returns true if properly formatted keys are extracted.</returns>
+        public static bool ExtractKeyAndSubKey(object keyObj, out string mainKey, out string subKey)
         {
             var key = keyObj as string;
             if (key != null)

@@ -35,6 +35,7 @@ namespace UnityEditor.AddressableAssets.GUI
         [MenuItem("Window/Asset Management/Addressables/Groups", priority = 2050)]
         internal static void Init()
         {
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.OpenGroupsWindow);
             var window = GetWindow<AddressableAssetsWindow>();
             window.titleContent = new GUIContent("Addressables Groups");
             window.minSize = new Vector2(430, 250);
@@ -56,6 +57,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         public void OnEnable()
         {
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.OpenGroupsWindow, true);
             m_GroupEditor?.OnEnable();
             if (m_Request == null || m_Request.Status == StatusCode.Failure)
             {
@@ -96,28 +98,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     AddressableAssetSettingsDefaultObject.Settings = AddressableAssetSettings.Create(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, AddressableAssetSettingsDefaultObject.kDefaultConfigAssetName, true, true);
                     OfferToConvert(AddressableAssetSettingsDefaultObject.Settings);
                 }
-                //if (GUILayout.Button("Import Addressables Settings"))
-                //{
-                //    m_GroupEditor = null;
-                //    var path = EditorUtility.OpenFilePanel("Addressables Settings Object", AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, "asset");
-                //    if (!string.IsNullOrEmpty(path))
-                //    {
-                //        var i = path.ToLower().IndexOf("/assets/");
-                //        if (i > 0)
-                //        {
-                //            path = path.Substring(i + 1);
-                //            Addressables.LogFormat("Loading Addressables Settings from {0}", path);
-                //            var obj = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
-                //            if (obj != null)
-                //                AddressableAssetSettingsDefaultObject.Settings = obj;
-                //            else
-                //                Debug.LogWarning("Unable to load asset settings from: "
-                //                                 + path
-                //                                 + "\nPlease ensure the location included in the project directory."
-                //                );
-                //        }
-                //    }
-                //}
+                
                 GUILayout.Space(20);
                 GUILayout.BeginHorizontal();
                 GUILayout.Space(50);

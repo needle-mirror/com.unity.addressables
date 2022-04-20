@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -77,10 +78,10 @@ namespace UnityEngine.ResourceManagement.Tests
                 m_RM.RegisterForDeferredCallback(this);
             }
 
-            protected override bool InvokeWaitForCompletion() 
+            protected override bool InvokeWaitForCompletion()
             {
                 m_RM.Update(1);
-                return true; 
+                return true;
             }
         }
         class RMTestUpdateReceiver : IUpdateReceiver
@@ -334,27 +335,82 @@ namespace UnityEngine.ResourceManagement.Tests
             handle.Release();
         }
 
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator WebRequestQueue_CompletesAllOperations()
         {
             int numberOfCompletedOperations = 0;
-            int totalOperations = 5000;
+            int totalOperations = 500;
+            WebRequestQueue.SetMaxConcurrentRequests(3);
 
-            for (int i = 0; i < totalOperations; i++)
+            try
             {
-                UnityWebRequest uwr = new UnityWebRequest();
-                var requestOp = WebRequestQueue.QueueRequest(uwr);
-                if (requestOp.IsDone)
-                    numberOfCompletedOperations++;
-                else
-                    requestOp.OnComplete += op => { numberOfCompletedOperations++; };
+                if (!Directory.Exists("Temp"))
+                    Directory.CreateDirectory("Temp");
+
+                // save files to be 'downloaded'
+                for (int i = 0; i < totalOperations; i++)
+                    System.IO.File.WriteAllText($"Temp/testFile{i}.txt", $"my contents {i}");
+
+                for (int i = 0; i < totalOperations; i++)
+                {
+                    string url = "file://" + System.IO.Path.GetFullPath($"Temp/testfile{i}.txt");
+                    UnityWebRequest uwr = new UnityWebRequest(url);
+                    var requestOp = WebRequestQueue.QueueRequest(uwr);
+                    if (requestOp.IsDone)
+                        numberOfCompletedOperations++;
+                    else
+                        requestOp.OnComplete += op => { numberOfCompletedOperations++; };
+                }
+
+                while (WebRequestQueue.s_QueuedOperations.Count > 0)
+                    yield return null;
+
+                Assert.AreEqual(totalOperations, numberOfCompletedOperations);
             }
-
-            while (WebRequestQueue.s_QueuedOperations.Count > 0)
-                yield return null;
-
-            Assert.AreEqual(totalOperations, numberOfCompletedOperations);
+            finally
+            {
+                // delete files
+                for (int i = 0; i < totalOperations; i++)
+                {
+                    string fullPath = System.IO.Path.GetFullPath($"Temp/testfile{i}.txt");
+                    if (System.IO.File.Exists(fullPath))
+                        System.IO.File.Delete(fullPath);
+                }
+            }
         }
+#endif
+
+        [Test]
+        public void SubclassesOfAssetBundleProvider_UseIdCacheKey_ForAsyncOperations()
+        {
+            var cacheKey = m_ResourceManager.CreateCacheKeyForLocation(new AssetBundleProviderDerived(), new ResourceLocationBase("fake", "fake", "fake", null));
+            Assert.IsTrue(cacheKey is IdCacheKey);
+        }
+
+        [Test]
+        public void AssetBundleProvider_UseIdCacheKey_ForAsyncOperations()
+        {
+            var cacheKey = m_ResourceManager.CreateCacheKeyForLocation(new AssetBundleProvider(), new ResourceLocationBase("fake", "fake", "fake", null));
+            Assert.IsTrue(cacheKey is IdCacheKey);
+        }
+
+        [Test]
+        public void JsonProvider_DoesNotUseIdCacheKey_ForAsyncOperations()
+        {
+            var cacheKey = m_ResourceManager.CreateCacheKeyForLocation(new JsonAssetProvider(), new ResourceLocationBase("fake", "fake", "fake", null), typeof(string));
+            Assert.IsFalse(cacheKey is IdCacheKey);
+        }
+
+        [Test]
+        public void BundledAssetProvider_DoesNotUseIdCacheKey_ForAsyncOperations()
+        {
+            var cacheKey = m_ResourceManager.CreateCacheKeyForLocation(new BundledAssetProvider(), new ResourceLocationBase("fake", "fake", "fake", null), typeof(string));
+            Assert.IsFalse(cacheKey is IdCacheKey);
+        }
+
+        class AssetBundleProviderDerived : AssetBundleProvider { }
+
 
 #if UNITY_EDITOR
         [Test]

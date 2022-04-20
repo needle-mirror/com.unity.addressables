@@ -270,6 +270,7 @@ Use the [Addressables.LoadSceneAsync] method to load an Addressable Scene asset 
 The remaining parameters of the method correspond to those used with the Unity Engine [SceneManager.LoadSceneAsync] method:
 
 * __loadMode__: whether to add the loaded Scene into the current Scene or to unload and replace the current Scene. 
+* __loadSceneParameters__: includes loadMode in addition to localPhysicsMode, used when loading the Scene to specify whether a 2D and/or 3D physics Scene should be created
 * __activateOnLoad__: whether to activate the scene as soon as it finishes loading or to wait until you call the SceneInstance object's [ActivateAsync] method. Corresponds to the [AsyncOperation.allowSceneActivation] option. Defaults to true.
 * __priority__: the priority of the AsyncOperation used to load the Scene. Corresponds to the [AsyncOperation.priority] option. Defaults to 100.
 

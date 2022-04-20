@@ -75,7 +75,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 Debug.LogError(message);
                 return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, message);
             }
-
+            
+            AddressableAnalytics.BuildType buildType = AddressableAnalytics.DetermineBuildType();
             m_Log = (builderInput.Logger != null) ? builderInput.Logger : new BuildLog();
 
             AddressablesRuntimeProperties.ClearCachedPropertyValues();
@@ -106,6 +107,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             if (builderInput.Logger == null && m_Log != null)
                 WriteBuildLog((BuildLog)m_Log, Path.GetDirectoryName(Application.dataPath) + "/" + Addressables.LibraryPath);
 
+            if (result != null)
+            {
+                bool isPlayModeBuild = result.GetType() == typeof(AddressablesPlayModeBuildResult);
+                AddressableAnalytics.ReportBuildEvent(builderInput, result.Duration, result.Error, isPlayModeBuild, buildType);
+            }
+            
             return result;
         }
 

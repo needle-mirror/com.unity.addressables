@@ -19,18 +19,8 @@ using static UnityEditor.AddressableAssets.Settings.AddressablesFileEnumeration;
 using System.Threading.Tasks;
 
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
-using Unity.Services.CCD.Management;
-using Unity.Services.CCD.Management.Apis.Entries;
-using Unity.Services.CCD.Management.Http;
-using Unity.Services.CCD.Management.Apis.Content;
-using Unity.Services.CCD.Management.Apis.Releases;
-using Unity.Services.CCD.Management.Entries;
-using Unity.Services.CCD.Management.Content;
-using System.Net;
-using Unity.Services.CCD.Management.Apis.Badges;
-using Unity.Services.CCD.Management.Releases;
-using Unity.Services.CCD.Management.Badges;
-using Unity.Services.CCD.Management.Models;
+using Unity.Services.Ccd.Management;
+using Unity.Services.Ccd.Management.Models;
 #endif
 
 namespace UnityEditor.AddressableAssets.Settings
@@ -42,6 +32,51 @@ namespace UnityEditor.AddressableAssets.Settings
     /// </summary>
     public class AddressableAssetSettings : ScriptableObject
     {
+        internal class Cache<T1, T2>
+        {
+            private AddressableAssetSettings m_Settings;
+            private Hash128 m_CurrentCacheVersion;
+            private Dictionary<T1, T2> m_TargetInfoCache = new Dictionary<T1, T2>();
+
+            public Cache(AddressableAssetSettings settings)
+            {
+                m_Settings = settings;
+            }
+
+            public bool TryGetCached(T1 key, out T2 result)
+            {
+                if (IsValid() && m_TargetInfoCache.TryGetValue(key, out result))
+                    return true;
+                
+                result = default;
+                return false;
+            }
+
+            public void Add(T1 key, T2 value)
+            {
+                if (!IsValid())
+                    m_CurrentCacheVersion = m_Settings.currentHash;
+                m_TargetInfoCache.Add(key, value);
+            }
+
+            private bool IsValid()
+            {
+                if (m_TargetInfoCache.Count > 0)
+                {
+                    if (!m_CurrentCacheVersion.isValid || m_CurrentCacheVersion.Equals(m_Settings.currentHash) == false)
+                    {
+                        m_TargetInfoCache.Clear();
+                        m_CurrentCacheVersion = default;
+                        return false;
+                    }
+                    return true;
+                }
+                return false;
+            }
+        }
+        
+        private Cache<string, AddressableAssetEntry> m_FindAssetEntryCache = null;
+        
         [InitializeOnLoadMethod]
         static void RegisterWithAssetPostProcessor()
         {
@@ -50,6 +85,19 @@ namespace UnityEditor.AddressableAssets.Settings
                 AddressablesAssetPostProcessor.OnPostProcess.Register(AddressableAssetSettingsDefaultObject.Settings.OnPostprocessAllAssets, 0);
             else
                 EditorApplication.update += TryAddAssetPostprocessorOnNextUpdate;
+        }
+
+        [InitializeOnLoadMethod]
+        static void CheckCCDStatus()
+        {
+#if !ENABLE_CCD
+            if (AddressableAssetSettingsDefaultObject.Settings != null && AddressableAssetSettingsDefaultObject.Settings.CCDEnabled)
+            {
+                AddressableAssetSettingsDefaultObject.Settings.CCDEnabled = false;
+                Debug.LogError("This version of Addressables no longer supports integration with the current installed version of the CCD package. " +
+                    "Please upgrade the CCD package to continue using the integration. Or, re-enable the Enable CCD Integration toggle in the AddressableAssetSettings.");
+            }
+#endif
         }
 
         private static void TryAddAssetPostprocessorOnNextUpdate()
@@ -89,7 +137,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public const string kRemoteLoadPath = "Remote.LoadPath";
 
         private const string kLocalGroupTypePrefix = "Built-In";
-        internal static string LocalGroupTypePrefix => kLocalGroupTypePrefix; 
+        internal static string LocalGroupTypePrefix => kLocalGroupTypePrefix;
         /// <summary>
         /// Default value of local build path.
         /// </summary>
@@ -100,7 +148,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public const string kLocalLoadPathValue = "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]";
 
         private const string kEditorHostedGroupTypePrefix = "Editor Hosted";
-        internal static string EditorHostedGroupTypePrefix => kEditorHostedGroupTypePrefix; 
+        internal static string EditorHostedGroupTypePrefix => kEditorHostedGroupTypePrefix;
         /// <summary>
         /// Default value of remote build path.
         /// </summary>
@@ -121,13 +169,13 @@ namespace UnityEditor.AddressableAssets.Settings
 
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
         /// <summary>
-        /// Default path of build assets that are uploaded to CCD.
+        /// Default path of build assets that are uploaded to Ccd.
         /// </summary>
         public const string kCCDBuildDataPath = "CCDBuildData";
         /// <summary>
         /// CCD Package Name
         /// </summary>
-        public const string kCCDPackageName = "com.unity.services.ccd.management";
+        public const string kCCDPackageName = "com.unity.services.Ccd.management";
 #endif
 
 
@@ -431,7 +479,7 @@ namespace UnityEditor.AddressableAssets.Settings
 #endif
 
         [SerializeField]
-        int m_maxConcurrentWebRequests = 500;
+        int m_maxConcurrentWebRequests = 3;
 
         /// <summary>
         /// The maximum time to download hash and json catalog files before a timeout error.
@@ -589,6 +637,34 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         [SerializeField]
+        CheckForContentUpdateRestrictionsOptions m_CheckForContentUpdateRestrictionsOption = CheckForContentUpdateRestrictionsOptions.ListUpdatedAssetsWithRestrictions;
+
+        /// <summary>
+        /// Informs the Addressable system how to handle checking for Content Update Restrictions during a Content Update build.
+        /// During this check, assets are flagged that have changed, yet are contained in a Group that has the Cannot Change Post Release option set.
+        /// </summary>
+        public CheckForContentUpdateRestrictionsOptions CheckForContentUpdateRestrictionsOption
+        {
+            get { return m_CheckForContentUpdateRestrictionsOption; }
+            set { m_CheckForContentUpdateRestrictionsOption = value; }
+        }
+
+#if ENABLE_CCD
+        [SerializeField]
+        BuildAndReleaseContentStateBehavior m_BuildAndReleaseBinFileOption = 0;
+
+        /// <summary>
+        /// Informs the Addressable system how to handle checking for Content Update Restrictions during a Content Update build.
+        /// During this check, assets are flagged that have changed, yet are contained in a Group that has the Cannot Change Post Release option set.
+        /// </summary>
+        public BuildAndReleaseContentStateBehavior BuildAndReleaseBinFileOption
+        {
+            get { return m_BuildAndReleaseBinFileOption; }
+            set { m_BuildAndReleaseBinFileOption = value; }
+        }
+#endif
+
+        [SerializeField]
         string m_MonoScriptBundleCustomNaming = "";
         /// <summary>
         /// Custom MonoScript bundle prefix that is used if AddressableAssetSettings.MonoScriptBundleNaming is set to MonoScriptBundleNaming.Custom.
@@ -641,19 +717,39 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         [SerializeField]
-        private string m_ContentStateBuildPath = "";
+        internal string m_ContentStateBuildPathProfileVariableName = "";
+
+        [SerializeField]
+        internal string m_CustomContentStateBuildPath = "";
+
+        [SerializeField]
+        internal string m_ContentStateBuildPath = "";
         /// <summary>
         /// The path used for saving the addressables_content_state.bin file.  If empty, this will be the addressable settings config folder in your project.
         /// </summary>
         public string ContentStateBuildPath
         {
-            get { return m_ContentStateBuildPath; }
-            set { m_ContentStateBuildPath = value; }
+            get 
+            {
+                if (!string.IsNullOrEmpty(m_ContentStateBuildPath))
+                    return m_ContentStateBuildPath;
+                else if (m_ContentStateBuildPathProfileVariableName == AddressableAssetProfileSettings.customEntryString)
+                    return m_CustomContentStateBuildPath;
+                else if (m_ContentStateBuildPathProfileVariableName == AddressableAssetProfileSettings.defaultSettingsPathString)
+                    return $"{AddressableAssetSettingsDefaultObject.kDefaultConfigFolder}/{PlatformMappingService.GetPlatformPathSubFolder()}";
+                else
+                    return profileSettings.GetValueByName(activeProfileId, m_ContentStateBuildPathProfileVariableName);
+            }
+            set 
+            { 
+                m_ContentStateBuildPath = value;
+                m_CustomContentStateBuildPath = value;
+            }
         }
-        
+
         [SerializeField]
         private PlayerBuildOption m_BuildAddressablesWithPlayerBuild = PlayerBuildOption.DoNotBuildWithPlayer;
-        
+
         /// <summary>
         /// Defines if Addressables content will be built along with a Player build. (Requires 2021.2 or above)
         /// </summary>
@@ -665,7 +761,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public PlayerBuildOption BuildAddressablesWithPlayerBuild
         {
             get { return m_BuildAddressablesWithPlayerBuild; }
-            set { m_BuildAddressablesWithPlayerBuild = value;  }
+            set { m_BuildAddressablesWithPlayerBuild = value; }
         }
 
         internal string GetContentStateBuildPath()
@@ -1370,7 +1466,7 @@ namespace UnityEditor.AddressableAssets.Settings
             buildSettings.Validate(this);
         }
 
-        T CreateScriptAsset<T>() where T : ScriptableObject
+        internal T CreateScriptAsset<T>() where T : ScriptableObject
         {
             var script = CreateInstance<T>();
             if (!Directory.Exists(DataBuilderFolder))
@@ -1412,7 +1508,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 // TODO: Uncomment after initial opt-in testing period
                 //aa.ContiguousBundles = true;
                 aa.BuildAddressablesWithPlayerBuild = PlayerBuildOption.PreferencesValue;
-                
+
                 if (isPersisted)
                 {
                     Directory.CreateDirectory(configFolder);
@@ -1452,6 +1548,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             AddressableAssetGroupTemplate newAssetGroupTemplate = ScriptableObject.CreateInstance<AddressableAssetGroupTemplate>();
             newAssetGroupTemplate.Description = description;
+            newAssetGroupTemplate.Settings = this;
 
             AssetDatabase.CreateAsset(newAssetGroupTemplate, assetPath);
             AssetDatabase.SaveAssets();
@@ -1571,9 +1668,9 @@ namespace UnityEditor.AddressableAssets.Settings
         internal static AddressableAssetGroup CreateBuiltInData(AddressableAssetSettings aa)
         {
             var playerData = aa.CreateGroup(PlayerDataGroupName, false, true, false, null, typeof(PlayerDataGroupSchema));
-            var resourceEntry = aa.CreateOrMoveEntry(AddressableAssetEntry.ResourcesName, playerData);
+            var resourceEntry = aa.CreateOrMoveEntry(AddressableAssetEntry.ResourcesName, playerData, false, false);
             resourceEntry.IsInResources = true;
-            aa.CreateOrMoveEntry(AddressableAssetEntry.EditorSceneListName, playerData);
+            aa.CreateOrMoveEntry(AddressableAssetEntry.EditorSceneListName, playerData, false, false);
             return playerData;
         }
 
@@ -1683,76 +1780,86 @@ namespace UnityEditor.AddressableAssets.Settings
         public AddressableAssetEntry FindAssetEntry(string guid, bool includeImplicit)
         {
             AddressableAssetEntry foundEntry = null;
+            if (m_FindAssetEntryCache != null)
+            {
+                if (m_FindAssetEntryCache.TryGetCached(guid, out foundEntry))
+                    return foundEntry;
+            }
+            else
+                m_FindAssetEntryCache = new Cache<string, AddressableAssetEntry>(this);
+            
             if (includeImplicit)
             {
+                for (int i = 0; i < groups.Count; ++i)
+                {
+                    if (groups[i] == null)
+                        continue;
+
+                    if (groups[i].EntryMap.TryGetValue(guid, out foundEntry))
+                    {
+                        m_FindAssetEntryCache.Add(guid, foundEntry);
+                        return foundEntry;
+                    }
+        
+                    if (groups[i].AssetCollectionEntries.Count > 0)
+                    {
+                        foreach (AddressableAssetEntry addressableAssetEntry in groups[i].AssetCollectionEntries)
+                        {
+                            foundEntry = addressableAssetEntry.GetAssetCollectionSubEntry(guid);
+                            if (foundEntry != null)
+                            {
+                                m_FindAssetEntryCache.Add(guid, foundEntry);
+                                return foundEntry;
+                            }
+                        }
+                    }
+                }
+                
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 if (!AddressableAssetUtility.IsPathValidForEntry(path))
                     return null;
-                
-                // try find non-implicit first
-                foreach (var g in groups)
-                {
-                    if (g != null)
-                    {
-                        foundEntry = g.GetAssetEntry(guid);
-                        if (foundEntry != null)
-                            return foundEntry;
-                    }
-                }
-                
-                // go through all collections
-                foreach (var g in groups)
-                {
-                    if (g != null)
-                    {
-                        foreach (AddressableAssetEntry addressableAssetEntry in g.AssetCollectionEntries)
-                        {
-                            var e = addressableAssetEntry.GetAssetCollectionSubEntry(guid);
-                            if (e != null)
-                                return e;
-                        }
-                    }
-                }
-
+        
                 // find an explicit parent folder entry within groups
                 string directory = Path.GetDirectoryName(path);
-                AddressableAssetEntry folderEntry = null;
                 while (!string.IsNullOrEmpty(directory))
                 {
                     string folderGuid = AssetDatabase.AssetPathToGUID(directory);
-                    foreach (var g in groups)
+                    for (int i = 0; i < groups.Count; ++i)
                     {
-                        if (g != null)
+                        if (groups[i] == null)
+                            continue;
+                        if (groups[i].EntryMap.TryGetValue(folderGuid, out foundEntry))
                         {
-                            folderEntry = g.GetAssetEntry(folderGuid);
-                            if (folderEntry != null)
-                                break;
+                            foundEntry = foundEntry.GetFolderSubEntry(guid, path);
+                            if (foundEntry != null)
+                            {
+                                m_FindAssetEntryCache.Add(guid, foundEntry);
+                                return foundEntry;
+                            }
+                            Debug.LogError($"Explicit AssetEntry for {directory} unable to find subEntry {path}");
+                            return null;
                         }
-                    }
-
-                    if (folderEntry != null)
-                    {
-                        foundEntry = folderEntry.GetFolderSubEntry(guid, path);
-                        if (foundEntry != null)
-                            return foundEntry;
-                        Debug.LogError($"Explicit AssetEntry for {directory} unable to find subEntry {path}");
                     }
                     directory = Path.GetDirectoryName(directory);
                 }
+                m_FindAssetEntryCache.Add(guid, null);
             }
             else
             {
-                foreach (var g in groups)
+                for (int i = 0; i < groups.Count; ++i)
                 {
-                    if (g != null)
+                    if (groups[i] == null)
+                        continue;
+                    foundEntry = groups[i].GetAssetEntry(guid);
+                    if (foundEntry != null)
                     {
-                        foundEntry = g.GetAssetEntry(guid);
-                        if (foundEntry != null)
-                            break;
+                        m_FindAssetEntryCache.Add(guid, foundEntry);
+                        return foundEntry;
                     }
                 }
             }
-            return foundEntry;
+            
+            return null;
         }
 
         internal bool IsAssetPathInAddressableDirectory(string assetPath, out string assetName)
@@ -2079,7 +2186,15 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="g"></param>
         public void RemoveGroup(AddressableAssetGroup g)
         {
-            RemoveGroupInternal(g, true, true);
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                RemoveGroupInternal(g, true, true);
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+            }
         }
 
         internal void RemoveGroupInternal(AddressableAssetGroup g, bool deleteAsset, bool postEvent)
@@ -2373,8 +2488,14 @@ namespace UnityEditor.AddressableAssets.Settings
                 return result;
             }
 
+            //Reclean directory before every build
+            if (Directory.Exists(kCCDBuildDataPath))
+            {
+                Directory.Delete(kCCDBuildDataPath, true);
+            }
+
             //Build the player content
-            result = settings.BuildPlayerContentImpl();
+            result = settings.BuildPlayerContentImpl(new AddressablesDataBuilderInput(settings), true);
 
             //Getting files
             Addressables.Log("Creating and uploading entries");
@@ -2383,15 +2504,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
 
             //Creating a release for each bucket
-            var projectId = CloudProjectSettings.projectId;
-            await CCDManagementAPIService.SetConfigurationAuthHeader(CloudProjectSettings.accessToken);
-            var httpClient = new HttpClient();
-            var ccdEntryClient = new EntriesApiClient(httpClient);
-            var ccdContentClient = new ContentApiClient(httpClient);
-            var ccdReleaseClient = new ReleasesApiClient(httpClient);
-            var ccdBadgesClient = new BadgesApiClient(httpClient);
-
-            await CreateReleaseForBuckets(buckets, ccdEntryClient, projectId, ccdContentClient, ccdReleaseClient, ccdBadgesClient);
+            await CreateReleaseForBuckets(buckets);
 
             return result;
 
@@ -2432,46 +2545,43 @@ namespace UnityEditor.AddressableAssets.Settings
             return buckets;
         }
 
-        async static Task CreateReleaseForBuckets(Dictionary<DirectoryInfo, Dictionary<DirectoryInfo, List<FileInfo>>> buckets, EntriesApiClient ccdEntryClient, string projectId,
-            ContentApiClient ccdContentClient, ReleasesApiClient ccdReleaseClient, BadgesApiClient ccdBadgesClient)
+        async static Task CreateReleaseForBuckets(Dictionary<DirectoryInfo, Dictionary<DirectoryInfo, List<FileInfo>>> buckets)
         {
             foreach (var bucketKvp in buckets)
             {
-                string bucketId = bucketKvp.Key.Name;
+                Guid bucketId = Guid.Parse(bucketKvp.Key.Name);
 
                 foreach (var badgeKvp in bucketKvp.Value)
                 {
                     string badgeName = badgeKvp.Key.Name;
+                    List<CcdReleaseEntryCreate> entries = new List<CcdReleaseEntryCreate>();
 
-                    //Creating entries and uploading files
-                    await AddressableAssetUtility.ParallelForEachAsync(badgeKvp.Value, 5, async (path) =>
+                    foreach (var path in badgeKvp.Value)
                     {
                         string contentHash = AddressableAssetUtility.GetMd5Hash(path.FullName);
                         using (var stream = File.OpenRead(path.FullName))
                         {
                             var entryPath = path.Name;
-                            var entry = new CcdEntryCreateByPath(contentHash, (int)stream.Length);
-                            var createEntryRequest = new CreateOrUpdateEntryByPathRequest(bucketId, entryPath, projectId, entry, true);
-                            var createdEntry = (await ccdEntryClient.CreateOrUpdateEntryByPathAsync(createEntryRequest)).Result;
-
-                            var uploadContentRequest = new UploadContentRequest(bucketId, createdEntry.Entryid.ToString(), projectId, stream);
-
-                            var response = await ccdContentClient.UploadContentAsync(uploadContentRequest, (prog, total) =>
+                            var entryModelOptions = new EntryModelOptions(entryPath, contentHash, (int)stream.Length)
                             {
-                                Addressables.Log($"Uploaded {prog}/{total} of {entryPath}");
-                            });
-                            if (response.Status == (long)HttpStatusCode.NoContent)
-                            {
-                                Addressables.Log($"File: {createdEntry.Path} has been successfully uploaded");
-                            }
+                                UpdateIfExists = true
+                            };
+                            var createdEntry = await CcdManagement.Instance.CreateOrUpdateEntryByPathAsync(new EntryByPathOptions(bucketId, entryPath), entryModelOptions);
+
+                            var uploadContentOptions = new UploadContentOptions(bucketId, createdEntry.Entryid, stream);
+                            await CcdManagement.Instance.UploadContentAsync(uploadContentOptions);
+
+                            entries.Add(new CcdReleaseEntryCreate(createdEntry.Entryid, createdEntry.CurrentVersionid));
                         }
-                    });
+                    }
 
                     //Creating release
                     Addressables.Log("Creating release.");
-                    var createRelease = new CcdReleaseCreate();
-                    var createReleaseRequest = new CreateReleaseRequest(bucketId, projectId, createRelease);
-                    var release = (await ccdReleaseClient.CreateReleaseAsync(createReleaseRequest)).Result;
+                    var release = await CcdManagement.Instance.CreateReleaseAsync(new CreateReleaseOptions(bucketId)
+                    {
+                        Entries = entries,
+                        Notes = $"Automated release created for {badgeName}"
+                    });
                     Addressables.Log($"Release {release.Releaseid} created.");
 
                     //Don't update latest badge (as it always updates)
@@ -2479,9 +2589,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     {
                         //Updating badge
                         Addressables.Log("Updating badge.");
-                        var updateBadge = new CcdBadgeAssign("TestBadge", release.Releaseid);
-                        var updateBadgeRequest = new UpdateBadgeRequest(bucketId, projectId, updateBadge);
-                        var badge = (await ccdBadgesClient.UpdateBadgeAsync(updateBadgeRequest)).Result;
+                        var badge = await CcdManagement.Instance.AssignBadgeAsync(new AssignBadgeOptions(bucketId, badgeName, release.Releaseid));
                         Addressables.Log($"Badge {badge.Name} updated.");
                     }
                 }
@@ -2533,7 +2641,12 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="result">Results from running the active player data build script.</param>
         public static void BuildPlayerContent(out AddressablesPlayerBuildResult result)
         {
-            var settings = AddressableAssetSettingsDefaultObject.Settings;
+            BuildPlayerContent(out result, null);
+        }
+        
+        internal static void BuildPlayerContent(out AddressablesPlayerBuildResult result, AddressablesDataBuilderInput input)
+        {
+            var settings = input != null ? input.AddressableSettings : AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
             {
                 string error;
@@ -2551,7 +2664,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             NullifyBundleFileIds(settings);
 
-            result = settings.BuildPlayerContentImpl();
+            result = settings.BuildPlayerContentImpl(input);
         }
 
         internal static void NullifyBundleFileIds(AddressableAssetSettings settings)
@@ -2565,7 +2678,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        internal AddressablesPlayerBuildResult BuildPlayerContentImpl()
+        internal AddressablesPlayerBuildResult BuildPlayerContentImpl(AddressablesDataBuilderInput buildContext = null, bool buildAndRelease = false)
         {
             if (Directory.Exists(Addressables.BuildPath))
             {
@@ -2579,7 +2692,10 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
             }
 
-            var buildContext = new AddressablesDataBuilderInput(this);
+            if (buildContext == null)
+                buildContext = new AddressablesDataBuilderInput(this);
+                
+            buildContext.IsBuildAndRelease = buildAndRelease;
             var result = ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(buildContext);
             if (!string.IsNullOrEmpty(result.Error))
             {
@@ -2588,7 +2704,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             else
                 Debug.Log($"Addressable content successfully built (duration : {TimeSpan.FromSeconds(result.Duration).ToString("g")})");
-            AddressableAnalytics.Report(this);
+            
             if (BuildScript.buildCompleted != null)
                 BuildScript.buildCompleted(result);
             AssetDatabase.Refresh();

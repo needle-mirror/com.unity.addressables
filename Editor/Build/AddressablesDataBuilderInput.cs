@@ -27,7 +27,7 @@ namespace UnityEditor.AddressableAssets.Build
         /// <summary>
         /// Player build version.
         /// </summary>
-        public string PlayerVersion { get; private set; }
+        public string PlayerVersion { get; set; }
 
         /// <summary>
         /// Bool to signify if profiler events should be broadcast.
@@ -56,7 +56,7 @@ namespace UnityEditor.AddressableAssets.Build
         /// The asset content state of a previous build.  This allows detection of deltas with the current build content state.  This will be
         /// null in standard builds.  This is only set during content update builds.
         /// </summary>
-        public AddressablesContentState PreviousContentState { get; internal set; }
+        public AddressablesContentState PreviousContentState { get; set; }
 
 
         /// <summary>
@@ -107,6 +107,9 @@ namespace UnityEditor.AddressableAssets.Build
             Registry = new FileRegistry();
             PreviousContentState = null;
         }
+
+        internal bool IsBuildAndRelease = false;
+        internal bool IsContentUpdateBuild = false;
 
         internal IBuildLogger Logger { get; set; }
     }

@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
-using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
@@ -13,9 +13,52 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEngine.ResourceManagement.Util;
+
+#if ENABLE_CCD
+using Unity.Services.Ccd.Management;
+#endif
 
 namespace UnityEditor.AddressableAssets.Build
 {
+    /// <summary>
+    /// Option for how to deal with automatically checking for content update restrictions as part of the Update a Previous Build workflow.
+    /// </summary>
+    public enum CheckForContentUpdateRestrictionsOptions
+    {
+        /// If assets are modified that have been previously built in a Cannot Change Post Release group, 
+        /// the build will be paused and the Update Restrictions Check window is opened
+        /// </summary>
+        ListUpdatedAssetsWithRestrictions = 0,
+         /// <summary>
+        /// If assets are modified that have been previously built in a Cannot Change Post Release group, the Content Update build will fail.
+        /// </summary>
+        FailBuild = 1,
+        /// <summary>
+        /// <summary>
+        /// Updating a previous build does not automatically run the Check for Update Restrictions rule.
+        /// </summary>
+        Disabled = 2
+    }
+
+#if ENABLE_CCD
+    /// <summary>
+    /// This is used to determine the behavior of Update a Previous Build when taking advantage of the Build & Release feature.
+    /// </summary>
+    public enum BuildAndReleaseContentStateBehavior
+    {
+        /// <summary>
+        /// Uses the Previous Content State bin file path set in the AddressableAssetSettings
+        /// </summary>
+        UsePresetLocation = 0,
+        /// <summary>
+        /// Pulls the Previous Content State bin from the associated Cloud Content Delivery bucket set in the profile variables.
+        /// </summary>
+        UseCCDBucket = 1
+        
+    }
+#endif
+
     /// <summary>
     /// The given state of an Asset.  Represented by its guid and hash.
     /// </summary>
@@ -147,11 +190,25 @@ namespace UnityEditor.AddressableAssets.Build
         public CachedBundleState[] cachedBundles;
     }
 
+    internal struct ContentUpdateUsageData
+    {
+        public string ContentUpdateInterruptMessage;
+        public bool UsingCCD;
+    }
+
+    internal struct ContentUpdateBuildData
+    {
+        public string Error;
+        public double BuildDuration;
+    }
+
     /// <summary>
     /// Contains methods used for the content update workflow.
     /// </summary>
     public static class ContentUpdateScript
     {
+        internal static readonly string FirstTimeUpdatePreviousBuild = nameof(FirstTimeUpdatePreviousBuild);
+
         /// <summary>
         /// Contains build information used for updating assets.
         /// </summary>
@@ -191,6 +248,19 @@ namespace UnityEditor.AddressableAssets.Build
             /// The list of asset state information gathered from the previous build.
             /// </summary>
             public List<CachedAssetState> PreviousAssetStateCarryOver;
+        }
+
+        private static string m_BinFileCachePath = "Library/com.unity.addressables/AddressablesBinFileDownload/addressables_content_state.bin";
+
+        /// <summary>
+        /// If the previous content state file location is a remote location, this path is where the file is downloaded to as part of a 
+        /// contnet update build.  In the event of a fresh build where the previous state file build path is remote, this is the location the 
+        /// file is built to.
+        /// </summary>
+        public static string PreviousContentStateFileCachePath
+        {
+            get {return m_BinFileCachePath; }
+            set { m_BinFileCachePath = value; }
         }
 
         static bool GetAssetState(GUID asset, out AssetState assetState)
@@ -386,12 +456,25 @@ namespace UnityEditor.AddressableAssets.Build
         /// Gets the path of the cache data from a selected build.
         /// </summary>
         /// <param name="browse">If true, the user is allowed to browse for a specific file.</param>
-        /// <returns></returns>
+        /// <returns>The path of the previous state .bin file used to detect changes from the previous build to the content update build.</returns>
         public static string GetContentStateDataPath(bool browse)
         {
-            string assetPath = AddressableAssetSettingsDefaultObject.Settings != null ?
-                AddressableAssetSettingsDefaultObject.Settings.GetContentStateBuildPath() :
+            return GetContentStateDataPath(browse, null);
+        }
+        
+        internal static string GetContentStateDataPath(bool browse, AddressableAssetSettings settings)
+        {
+            if (settings == null)
+                settings = AddressableAssetSettingsDefaultObject.Settings;
+            var profileSettings = settings == null ? null : settings.profileSettings;
+            string assetPath = profileSettings != null ?
+                profileSettings.EvaluateString(settings.activeProfileId, settings.ContentStateBuildPath) : "";
+
+            if (string.IsNullOrEmpty(assetPath))
+            {
+                assetPath = settings != null ? settings.GetContentStateBuildPath() :
                 Path.Combine(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder, PlatformMappingService.GetPlatformPathSubFolder());
+            }
 
             if (browse)
             {
@@ -406,7 +489,7 @@ namespace UnityEditor.AddressableAssets.Build
                 return assetPath;
             }
 
-            if (AddressableAssetSettingsDefaultObject.Settings != null)
+            if(!ResourceManagerConfig.ShouldPathUseWebRequest(assetPath))
             {
                 try
                 {
@@ -420,11 +503,47 @@ namespace UnityEditor.AddressableAssets.Build
                     Directory.CreateDirectory(assetPath);
                 }
             }
-            else
-                Directory.CreateDirectory(assetPath);
+            
+#if ENABLE_CCD
+            switch(settings.BuildAndReleaseBinFileOption)
+            {
+                case BuildAndReleaseContentStateBehavior.UsePresetLocation:
+                    //do nothing
+                    break;
+                case BuildAndReleaseContentStateBehavior.UseCCDBucket:
+                    assetPath = settings.RemoteCatalogLoadPath.GetValue(settings);
+                    break;
+            }
+#endif
 
             var path = Path.Combine(assetPath, "addressables_content_state.bin");
             return path;
+        }
+
+        /// <summary>
+        /// Downloads the content state bin to a temporary directory
+        /// </summary>
+        /// <param name="url">The url of the bin file</param>
+        /// <returns>The temp path the bin file was downloaded to.</returns>
+        internal static string DownloadBinFileToTempLocation(string url)
+        {
+            if (!Directory.Exists(ContentUpdateScript.PreviousContentStateFileCachePath))
+                Directory.CreateDirectory(Path.GetDirectoryName(ContentUpdateScript.PreviousContentStateFileCachePath));
+            else if (File.Exists(ContentUpdateScript.PreviousContentStateFileCachePath))
+                File.Delete(ContentUpdateScript.PreviousContentStateFileCachePath);
+
+            try
+            { 
+                var bytes = new WebClient().DownloadData(url);
+                File.WriteAllBytes(ContentUpdateScript.PreviousContentStateFileCachePath, bytes);
+
+            }
+            catch
+            {
+                //Do nothing, nothing will get downloaded and the users can select a file manually if they want.
+            }
+
+            return ContentUpdateScript.PreviousContentStateFileCachePath;
         }
 
         /// <summary>
@@ -480,6 +599,7 @@ namespace UnityEditor.AddressableAssets.Build
 
             s_StreamingAssetsExists = Directory.Exists("Assets/StreamingAssets");
             var context = new AddressablesDataBuilderInput(settings, cacheData.playerVersion);
+            context.IsContentUpdateBuild = true;
             context.PreviousContentState = cacheData;
 
             Cleanup(!s_StreamingAssetsExists, false);
@@ -595,7 +715,12 @@ namespace UnityEditor.AddressableAssets.Build
             {
                 CachedAssetState cachedInfo;
                 if (!entryToCacheInfo.TryGetValue(entry.guid, out cachedInfo) || HasAssetOrDependencyChanged(cachedInfo))
+                { 
                     modifiedEntries.Add(entry);
+                    entry.FlaggedDuringContentUpdateRestriction = true;
+                }
+                else
+                    entry.FlaggedDuringContentUpdateRestriction = false;
             }
 
             AddAllDependentScenesFromModifiedEntries(modifiedEntries);
@@ -715,6 +840,7 @@ namespace UnityEditor.AddressableAssets.Build
                         if (!dependencyMap.ContainsKey(entry))
                             dependencyMap.Add(entry, new List<AddressableAssetEntry>());
                         dependencyMap[entry].Add(depEntry);
+                        depEntry.FlaggedDuringContentUpdateRestriction = true;
                     }
                 }
             }
@@ -735,7 +861,10 @@ namespace UnityEditor.AddressableAssets.Build
                             foreach (AddressableAssetEntry sharedGroupEntry in entry.parentGroup.entries)
                             {
                                 if (sharedGroupEntry.IsScene && !modifiedEntries.Contains(sharedGroupEntry))
+                                {
+                                    sharedGroupEntry.FlaggedDuringContentUpdateRestriction = true;
                                     entriesToAdd.Add(sharedGroupEntry);
+                                }
                             }
                             break;
 
@@ -749,7 +878,11 @@ namespace UnityEditor.AddressableAssets.Build
 
                                 //Only add if labels are shared
                                 if (sharedGroupEntry.IsScene && !modifiedEntries.Contains(sharedGroupEntry) && sharedGroupEntry.labels.Union(entry.labels).Any())
+                                { 
+                                 
+                                    sharedGroupEntry.FlaggedDuringContentUpdateRestriction = true;
                                     entriesToAdd.Add(sharedGroupEntry);
+                                }
                             }
                             break;
 

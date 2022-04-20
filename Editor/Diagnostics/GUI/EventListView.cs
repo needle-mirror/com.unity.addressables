@@ -90,13 +90,13 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             return false;
         }
 
-        public static MultiColumnHeaderState CreateDefaultMultiColumnHeaderState(List<string> dataColumns, List<float> sizes)
+        public static MultiColumnHeaderState CreateDefaultMultiColumnHeaderState(List<string> dataColumns, List<string> tooltips, List<float> sizes)
         {
             if (dataColumns == null || sizes == null || dataColumns.Count != sizes.Count)
                 throw new ArgumentException("Column name and size lists are not the same size");
             var columns = new List<MultiColumnHeaderState.Column>();
             for (int i = 0; i < dataColumns.Count; i++)
-                AddColumn(columns, dataColumns[i], dataColumns[i], sizes[i]);
+                AddColumn(columns, dataColumns[i], tooltips[i], sizes[i]);
             return new MultiColumnHeaderState(columns.ToArray());
         }
 

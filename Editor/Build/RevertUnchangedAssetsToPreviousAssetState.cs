@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,7 +8,7 @@ using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
-using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceProviders;
@@ -49,8 +48,73 @@ public class RevertUnchangedAssetsToPreviousAssetState
             List<AssetEntryRevertOperation> operations = DetermineRequiredAssetEntryUpdates(assetGroup, updateContext);
             ApplyAssetEntryUpdates(operations, GenerateLocationListsTask.GetBundleProviderName(assetGroup), aaContext.locations, updateContext);
         }
+        
+        var defaultContentUpdateSchema = aaContext.Settings.DefaultGroup.GetSchema<ContentUpdateGroupSchema>();
+        if(defaultContentUpdateSchema == null)
+        {
+            Debug.LogWarning($"Default group {aaContext.Settings.DefaultGroup.Name} does not contain a {nameof(ContentUpdateGroupSchema)}, so we're unable to determine if " +
+                $"the built in shader bundle and monoscript bundles need to be reverting to their previous paths.  We will not revert the paths for these bundles in the catalog, " +
+                $"if that is not the desired behavior, please add a {nameof(ContentUpdateGroupSchema)} to the Default group and set the Prevent Updates toggle to the correct setting.");
+        }
+        else if (defaultContentUpdateSchema.StaticContent)
+        {
+            // cannot detect individual shader usage, so just assume that the shaders haven't changed, and just indeterminisn.
+            if (!RevertBundleByNameContains("_unitybuiltinshaders", updateContext, aaContext))
+                return ReturnCode.Error;
+            // Scripts could have been added and fail, or removed and load fine, not enough information to know 
+            if (!RevertBundleByNameContains("_monoscripts", updateContext, aaContext))
+                return ReturnCode.Error;
+        }
 
         return ReturnCode.Success;
+    }
+
+    internal static bool RevertBundleByNameContains(string containingString, ContentUpdateContext updateContext, AddressableAssetsBuildContext aaContext)
+    {
+        CachedBundleState previousBundleCache = null;
+        foreach (CachedBundleState cachedBundle in updateContext.ContentState.cachedBundles)
+        {
+            var options = cachedBundle.data as AssetBundleRequestOptions;
+            if (options != null && options.BundleName.Contains(containingString))
+            {
+                previousBundleCache = cachedBundle;
+                break;
+            }
+        }
+        
+        ContentCatalogDataEntry currentLocation = null;
+        // find current location with it
+        foreach (ContentCatalogDataEntry catalogEntry in aaContext.locations)
+        {
+            if (catalogEntry.Provider == "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider")
+            {
+                var options = catalogEntry.Data as AssetBundleRequestOptions;
+                if (options != null && options.BundleName.Contains(containingString))
+                {
+                    currentLocation = catalogEntry;
+                    break;
+                }
+            }
+        }
+
+        if (previousBundleCache == null && currentLocation == null)
+            return true; // bundle were not used in either build
+        if (previousBundleCache == null)
+        {
+            UnityEngine.Debug.LogError($"Matching cached update state for {currentLocation.InternalId} failed. Content not found in original build.");
+            return false; // bundle was in update build, but not original
+        }
+        if (currentLocation == null)
+            return true; // bundle not in update build but was in original is ok
+        
+        currentLocation.InternalId = previousBundleCache.bundleFileId;
+        var currentOptions = currentLocation.Data as AssetBundleRequestOptions;
+        var prevOptions = previousBundleCache.data as AssetBundleRequestOptions;
+        currentOptions.Crc = prevOptions.Crc;
+        currentOptions.Hash = prevOptions.Hash;
+        currentOptions.BundleSize = prevOptions.BundleSize;
+        currentOptions.BundleName = prevOptions.BundleName;
+        return true;
     }
 
     internal static List<AssetEntryRevertOperation> DetermineRequiredAssetEntryUpdates(AddressableAssetGroup group, ContentUpdateScript.ContentUpdateContext contentUpdateContext)

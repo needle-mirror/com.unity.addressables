@@ -169,12 +169,27 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
     }
 
-    internal class AssetBundleResource : IAssetBundleResource, IUpdateReceiver
+    /// <summary>
+    /// Provides methods for loading an AssetBundle from a local or remote location.
+    /// </summary>
+    public class AssetBundleResource : IAssetBundleResource, IUpdateReceiver
     {
-        internal enum LoadType
+        /// <summary>
+        /// Options for where an AssetBundle can be loaded from.
+        /// </summary>
+        public enum LoadType
         {
+            /// <summary>
+            /// Cannot determine where the AssetBundle is located.
+            /// </summary>
             None,
+            /// <summary>
+            /// Load the AssetBundle from a local file location.
+            /// </summary>
             Local,
+            /// <summary>
+            /// Download the AssetBundle from a web server.
+            /// </summary>
             Web
         }
 
@@ -256,7 +271,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             return webRequest;
         }
 
-        internal AssetBundleRequest GetAssetPreloadRequest()
+        /// <summary>
+        /// Creates a request for loading all assets from an AssetBundle.
+        /// </summary>
+        /// <returns>Returns the request.</returns>
+        public AssetBundleRequest GetAssetPreloadRequest()
         {
             if (m_PreloadCompleted || GetAssetBundle() == null)
                 return null;
@@ -322,18 +341,29 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
             return m_AssetBundle;
         }
+
 #if UNLOAD_BUNDLE_ASYNC
         void OnUnloadOperationComplete(AsyncOperation op)
         {
             m_UnloadOperation = null;
             BeginOperation();
         }
+
 #endif
 
 #if UNLOAD_BUNDLE_ASYNC
-        internal void Start(ProvideHandle provideHandle, AssetBundleUnloadOperation unloadOp)
+        /// <summary>
+        /// Stores AssetBundle loading information, starts loading the bundle.
+        /// </summary>
+        /// <param name="provideHandle">The container for AssetBundle loading information.</param>
+        /// <param name="unloadOp">The async operation for unloading the AssetBundle.</param>
+        public void Start(ProvideHandle provideHandle, AssetBundleUnloadOperation unloadOp)
 #else
-        internal void Start(ProvideHandle provideHandle)
+        /// <summary>
+        /// Stores AssetBundle loading information, starts loading the bundle.
+        /// </summary>
+        /// <param name="provideHandle">The container for information regarding loading the AssetBundle.</param>
+        public void Start(ProvideHandle provideHandle)
 #endif
         {
             m_Retries = 0;
@@ -353,7 +383,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 m_UnloadOperation.completed += OnUnloadOperationComplete;
             else
 #endif
-                BeginOperation();
+            BeginOperation();
         }
 
         private bool WaitForCompletionHandler()
@@ -382,13 +412,13 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 while (!UnityWebRequestUtilities.IsAssetBundleDownloaded(op))
                     System.Threading.Thread.Sleep(k_WaitForWebRequestMainThreadSleep);
             }
-            
+
             if (m_RequestOperation is UnityWebRequestAsyncOperation && !m_WebRequestCompletedCallbackCalled)
             {
                 WebRequestOperationCompleted(m_RequestOperation);
                 m_RequestOperation.completed -= WebRequestOperationCompleted;
             }
-            
+
             var assetBundle = GetAssetBundle();
             if (!m_Completed && m_RequestOperation.isDone)
             {
@@ -407,7 +437,13 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 operation.completed += callback;
         }
 
-        internal static void GetLoadInfo(ProvideHandle handle, out LoadType loadType, out string path)
+        /// <summary>
+        /// Determines where an AssetBundle can be loaded from.
+        /// </summary>
+        /// <param name="handle">The container for AssetBundle loading information.</param>
+        /// <param name="loadType">Specifies where an AssetBundle can be loaded from.</param>
+        /// <param name="path">The file path or url where the AssetBundle is located.</param>
+        public static void GetLoadInfo(ProvideHandle handle, out LoadType loadType, out string path)
         {
             GetLoadInfo(handle.Location, handle.ResourceManager, out loadType, out path);
         }
@@ -492,6 +528,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             }
         }
 
+        /// <inheritdoc/>
         public void Update(float unscaledDeltaTime)
         {
             if (m_RequestOperation != null && m_RequestOperation is UnityWebRequestAsyncOperation operation && !operation.isDone)
@@ -602,12 +639,17 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             webReq.Dispose();
         }
 
-        /// <summary>
-        /// Unloads all resources associated with this asset bundle.
-        /// </summary>
 #if UNLOAD_BUNDLE_ASYNC
+        /// <summary>
+        /// Starts an async operation that unloads all resources associated with the AssetBundle.
+        /// </summary>
+        /// <param name="unloadOp">The async operation.</param>
+        /// <returns>Returns true if the async operation object is valid.</returns>
         public bool Unload(out AssetBundleUnloadOperation unloadOp)
 #else
+        /// <summary>
+        /// Unloads all resources associated with the AssetBundle.
+        /// </summary>
         public void Unload()
 #endif
         {
@@ -644,7 +686,16 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     public class AssetBundleProvider : ResourceProviderBase
     {
 #if UNLOAD_BUNDLE_ASYNC
-        static Dictionary<string, AssetBundleUnloadOperation> m_UnloadingBundles = new Dictionary<string, AssetBundleUnloadOperation>();
+        private static Dictionary<string, AssetBundleUnloadOperation> m_UnloadingBundles = new Dictionary<string, AssetBundleUnloadOperation>();
+        /// <summary>
+        /// Stores async operations that unload the requested AssetBundles.
+        /// </summary>
+        protected internal static Dictionary<string, AssetBundleUnloadOperation> UnloadingBundles
+        {
+            get { return m_UnloadingBundles; }
+            internal set { m_UnloadingBundles = value; }
+        }
+
         internal static int UnloadingAssetBundleCount => m_UnloadingBundles.Count;
         internal static int AssetBundleCount => AssetBundle.GetAllLoadedAssetBundles().Count() - UnloadingAssetBundleCount;
         internal static void WaitForAllUnloadingBundlesToComplete()
@@ -652,12 +703,13 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             if (UnloadingAssetBundleCount > 0)
             {
                 var bundles = m_UnloadingBundles.Values.ToArray();
-                foreach(var b in bundles)
+                foreach (var b in bundles)
                     b.WaitForCompletion();
             }
         }
+
 #else
-        internal static void WaitForAllUnloadingBundlesToComplete() { }
+        internal static void WaitForAllUnloadingBundlesToComplete() {}
 #endif
 
         /// <inheritdoc/>
@@ -673,7 +725,6 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 #else
             new AssetBundleResource().Start(providerInterface);
 #endif
-
         }
 
         /// <inheritdoc/>

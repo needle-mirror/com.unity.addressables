@@ -34,6 +34,9 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         MultiColumnHeaderState m_GraphListMchs;
         EventGraphListView m_GraphList;
 
+        private GUIContent m_ClearEventsGUIContent = new GUIContent("Clear Events", "Clear all data displayed in the window");
+        private GUIContent m_CurrentFrameGUIContent = new GUIContent("Current", "View the latest frame");
+
         EventDataPlayerSession activeSession
         {
             get { return m_EventData == null ? null : m_EventData.GetSessionByIndex(m_PlayerSessionIndex); }
@@ -43,6 +46,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
         void OnEnable()
         {
+            AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.OpenEventViewerWindow, true);
             EditorConnection.instance.Initialize();
             EditorConnection.instance.Register(DiagnosticEventCollectorSingleton.PlayerConnectionGuid, OnPlayerConnectionMessage);
             EditorConnection.instance.RegisterConnection(OnPlayerConnection);
@@ -59,7 +63,6 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                 m_EventData = new EventDataPlayerSessionCollection(OnRecordEvent);
                 m_EventData.GetPlayerSession(0, true).IsActive = true;
             }
-            
         }
 
         void OnDisable()
@@ -161,7 +164,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
             return true;
         }
-        
+
         protected virtual bool OnRecordEvent(DiagnosticEvent diagnosticEvent)
         {
             return false;
@@ -225,7 +228,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                     return;
                 }
             }
-            
+
             DrawToolBar(activeSession);
 
             var r = EditorGUILayout.GetControlRect();
@@ -278,7 +281,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                 activeSession.NeedsReload = false;
                 m_EventList?.Reload();
             }
-                
+
             Repaint();
         }
 
@@ -314,15 +317,15 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
 
-            if (GUILayout.Button("Clear Events", EditorStyles.toolbarButton))
+            if (GUILayout.Button(m_ClearEventsGUIContent, EditorStyles.toolbarButton))
             {
                 RegisterEventHandler(false);
                 session.Clear();
                 m_GraphList?.Reload();
                 RegisterEventHandler(true);
             }
-            
-            if (m_GraphList != null && m_GraphList.HasHiddenEvents && GUILayout.Button("Unhide All Hidden Events", EditorStyles.toolbarButton)) 
+
+            if (m_GraphList != null && m_GraphList.HasHiddenEvents && GUILayout.Button("Unhide All Hidden Events", EditorStyles.toolbarButton))
                 m_GraphList.UnhideAllHiddenEvents();
 
             GUILayout.FlexibleSpace();
@@ -331,23 +334,23 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             using (new EditorGUI.DisabledScope(m_InspectFrame <= 0))
                 if (GUILayout.Button(m_PrevFrameIcon, EditorStyles.toolbarButton))
                     SetInspectFrame(m_InspectFrame - 1);
-            
+
             using (new EditorGUI.DisabledScope(m_InspectFrame >= m_LatestFrame))
                 if (GUILayout.Button(m_NextFrameIcon, EditorStyles.toolbarButton))
                     SetInspectFrame(m_InspectFrame + 1);
-            
+
             if (GUILayout.Button("Current", EditorStyles.toolbarButton, GUILayout.ExpandWidth(false)))
                 SetInspectFrame(m_LatestFrame);
 
             GUILayout.EndHorizontal();
         }
 
-        protected virtual void OnGetColumns(List<string> columnNames, List<float> columnSizes)
+        protected virtual void OnGetColumns(List<string> columnNames, List<string> tooltips, List<float> columnSizes)
         {
             if (columnNames == null || columnSizes == null)
                 return;
-            columnNames.Add("Event"); columnSizes.Add(50);
-            columnNames.Add("Id"); columnSizes.Add(200);
+            columnNames.Add("Event"); tooltips.Add("A diagnostic event sent by the ResourceManager"); columnSizes.Add(50);
+            columnNames.Add("Id"); tooltips.Add("Identifier for the event"); columnSizes.Add(200);
             //        columnNames.Add("Data"); columnSizes.Add(400);
         }
 
@@ -392,9 +395,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                     m_EventListTreeViewState = new TreeViewState();
 
                 var columns = new List<string>();
+                var tooltips = new List<string>();
                 var sizes = new List<float>();
-                OnGetColumns(columns, sizes);
-                var headerState = EventListView.CreateDefaultMultiColumnHeaderState(columns, sizes);
+                OnGetColumns(columns, tooltips, sizes);
+                var headerState = EventListView.CreateDefaultMultiColumnHeaderState(columns, tooltips, sizes);
                 if (MultiColumnHeaderState.CanOverwriteSerializedFields(m_EventListMchs, headerState))
                     MultiColumnHeaderState.OverwriteSerializedFields(m_EventListMchs, headerState);
 

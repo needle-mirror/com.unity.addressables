@@ -19,7 +19,7 @@ namespace UnityEditor.AddressableAssets.Settings
         [SerializeField]
         private AddressableAssetSettings m_Settings;
 
-        private AddressableAssetSettings Settings
+        internal AddressableAssetSettings Settings
         {
             get
             {
@@ -28,6 +28,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
                 return m_Settings;
             }
+            set { m_Settings = value; }
         }
 
         /// <summary>

@@ -272,7 +272,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             if (type == null)
-                type = typeof(UnityEngine.Object);
+                type = typeof(object);
 
             string keyStr = key as string;
             if (!string.IsNullOrEmpty(keyStr))

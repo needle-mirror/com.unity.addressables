@@ -165,24 +165,38 @@ namespace UnityEditor.AddressableAssets.Settings
         List<BuildProfile> m_Profiles = new List<BuildProfile>();
         internal List<BuildProfile> profiles { get { return m_Profiles; } }
 
+        /// <summary>
+        /// A container for profile specific data, such as the name and ID of a profile.
+        /// </summary>
         [Serializable]
-        internal class ProfileIdData
+        public class ProfileIdData
         {
             [FormerlySerializedAs("m_id")]
             [SerializeField]
             string m_Id;
-            internal string Id { get { return m_Id; } }
+            /// <summary>
+            /// The unique ID set to identify a specific profile.
+            /// </summary>
+            public string Id { get { return m_Id; } }
 
             [FormerlySerializedAs("m_name")]
             [SerializeField]
             string m_Name;
-            internal string ProfileName
+            /// <summary>
+            /// The name of the specific profile.
+            /// </summary>
+            public string ProfileName
             {
                 get { return m_Name; }
             }
-            internal void SetName(string newName, AddressableAssetProfileSettings ps)
+            /// <summary>
+            /// Changes the name of a given profile and updates the values in the profile settings.
+            /// </summary>
+            /// <param name="newName">The new name you want to set the profile to.</param>
+            /// <param name="profileSettings">The profile settings object that contains this profile.</param>
+            public void SetName(string newName, AddressableAssetProfileSettings profileSettings)
             {
-                if (!ps.ValidateNewVariableName(newName))
+                if (!profileSettings.ValidateNewVariableName(newName))
                     return;
 
                 var currRefStr = "[" + m_Name + "]";
@@ -190,13 +204,13 @@ namespace UnityEditor.AddressableAssets.Settings
 
                 m_Name = newName;
 
-                foreach (var p in ps.profiles)
+                foreach (var p in profileSettings.profiles)
                 {
                     foreach (var v in p.values)
                         v.value = v.value.Replace(currRefStr, newRefStr);
                 }
 
-                ps.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, null, false);
+                profileSettings.SetDirty(AddressableAssetSettings.ModificationEvent.ProfileModified, null, false);
                 ProfileWindow.MarkForReload();
             }
 
@@ -205,13 +219,22 @@ namespace UnityEditor.AddressableAssets.Settings
             bool m_InlineUsage;
             internal bool InlineUsage { get { return m_InlineUsage; } }
             internal ProfileIdData() {}
-            internal ProfileIdData(string entryId, string entryName, bool inline = false)
+
+            /// <summary>
+            /// Create a new ProfileIdData.
+            /// </summary>
+            /// <param name="entryId">The unique ID for this ProfileIdData</param>
+            /// <param name="entryName">The name of the ProfileIdData.  ProfileIdData names should be unique in a given AddressableAssetProfileSettings.</param>
+            /// <param name="inline">False by default, this informs the BuildProifleSettingsEditor on if it should evaluate the ProfileIdData directly (true) 
+            /// or get the value by Id first before evaluation (false).</param>
+            public ProfileIdData(string entryId, string entryName, bool inline)
             {
                 m_Id = entryId;
                 m_Name = entryName;
                 m_InlineUsage = inline;
             }
         }
+
         [FormerlySerializedAs("m_profileEntryNames")]
         [SerializeField]
         List<ProfileIdData> m_ProfileEntryNames = new List<ProfileIdData>();
@@ -250,16 +273,31 @@ namespace UnityEditor.AddressableAssets.Settings
         /// </summary>
         public const string customEntryString = "<custom>";
         /// <summary>
+        /// Text that represents when the default settings path is being used.
+        /// </summary>
+        public const string defaultSettingsPathString = "<default settings path>";
+        /// <summary>
         /// Text that represents an undefined profile entry.
         /// </summary>
         public const string undefinedEntryValue = "<undefined>";
 
-        internal ProfileIdData GetProfileDataById(string id)
+
+        /// <summary>
+        /// Get the profile specific data for a given profile id.
+        /// </summary>
+        /// <param name="id">The profile id you're requesting data for.</param>
+        /// <returns>A ProfileIdData with information about a specific profile.</returns>
+        public ProfileIdData GetProfileDataById(string id)
         {
             return profileEntryNames.Find(p => p.Id == id);
         }
 
-        internal ProfileIdData GetProfileDataByName(string name)
+        /// <summary>
+        /// Get the profile specific data for a given profile name.
+        /// </summary>
+        /// <param name="name">The profile name you're requesting data for.</param>
+        /// <returns>A ProfileIdData with information about a specific profile.</returns>
+        public ProfileIdData GetProfileDataByName(string name)
         {
             return profileEntryNames.Find(p => p.ProfileName == name);
         }

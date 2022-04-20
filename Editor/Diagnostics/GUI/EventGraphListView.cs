@@ -19,7 +19,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
                 Content = new GUIContent(dataSet.DisplayName);
             }
         }
-        
+
         HashSet<int> m_HiddenEvents = new HashSet<int>();
         Dictionary<int, bool> m_MaximizedState = new Dictionary<int, bool>();
         Func<string, bool> m_FilterFunc;
@@ -92,7 +92,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
             return root;
         }
-        
+
         internal void UnhideAllHiddenEvents()
         {
             m_HiddenEvents.Clear();
@@ -103,11 +103,11 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
         {
             var selectedEventIds = GetSelection();
             GenericMenu menu = new GenericMenu();
-            
+
             menu.AddItem(new GUIContent("Hide Selected Event(s)"), false, HideSelectedEvents, selectedEventIds);
             menu.ShowAsContext();
         }
-        
+
         void HideSelectedEvents(object context)
         {
             var selectedEventIds = (IList<int>)context;
@@ -205,7 +205,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             ToggleItemMaximize(id);
             base.DoubleClickedItem(id);
         }
-        
+
         public void DefineGraph(string name, int maxValueStream, params IGraphLayer[] layers)
         {
             m_GraphDefinitions.Add(name, new GraphDefinition(maxValueStream, layers));
@@ -224,7 +224,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
 
             if (drawRect.height < 10)
                 return;
-            
+
             drawRect = new Rect(drawRect.x + 1, drawRect.y + 1, drawRect.width - 2, drawRect.height - 2);
             GraphDefinition gd;
             if (!m_GraphDefinitions.TryGetValue(dataSet.Graph, out gd))
@@ -239,7 +239,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             }
 
             int maxValue = gd.GetMaxValue(dataSet);
-            
+
             foreach (var l in gd.layers)
                 l.Draw(dataSet, drawRect, startTime, duration, m_InspectFrame, expanded, m_GraphMaterial, maxValue);
         }
@@ -261,7 +261,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics.GUI
             columns[0].canSort = false;
             columns[0].autoResize = false;
 
-            columns[1].headerContent = new GUIContent("Assets", "");
+            columns[1].headerContent = new GUIContent("Assets", "Performance counters rendered in a chart");
             columns[1].minWidth = 100;
             columns[1].width = 250;
             columns[1].maxWidth = 5000;

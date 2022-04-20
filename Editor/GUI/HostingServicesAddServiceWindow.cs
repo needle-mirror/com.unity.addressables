@@ -15,6 +15,10 @@ namespace UnityEditor.AddressableAssets.GUI
         string[] m_ServiceTypeNames;
         int m_ServiceTypeIndex;
 
+        private GUIContent m_HostingServiceScriptGUIContent = new GUIContent("Hosting Service Script", "Script representing the custom service");
+        private GUIContent m_ServiceNameGUIContent = new GUIContent("Service Name", "Name of the custom service");
+        private GUIContent m_AddServiceGUIContent = new GUIContent("Add", "Add the custom service");
+
         /// <summary>
         /// Initialize the dialog for the given <see cref="AddressableAssetSettings"/>
         /// </summary>
@@ -30,7 +34,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (m_Settings == null) return;
             EditorGUILayout.HelpBox("Select a script that implements the IHostingService interface.", MessageType.Info);
             var script =
-                EditorGUILayout.ObjectField("Hosting Service Script", m_Script, typeof(MonoScript), false) as MonoScript;
+                EditorGUILayout.ObjectField(m_HostingServiceScriptGUIContent, m_Script, typeof(MonoScript), false) as MonoScript;
 
             if (script != m_Script && script != null)
             {
@@ -56,14 +60,14 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
             }
 
-            m_HostingName = EditorGUILayout.TextField("Service Name", m_HostingName);
+            m_HostingName = EditorGUILayout.TextField(m_ServiceNameGUIContent, m_HostingName);
 
             EditorGUILayout.BeginHorizontal();
             {
                 GUILayout.FlexibleSpace();
                 using (new EditorGUI.DisabledGroupScope(m_Script == null))
                 {
-                    if (GUILayout.Button("Add", GUILayout.MaxWidth(75f)))
+                    if (GUILayout.Button(m_AddServiceGUIContent, GUILayout.MaxWidth(75f)))
                     {
                         try
                         {

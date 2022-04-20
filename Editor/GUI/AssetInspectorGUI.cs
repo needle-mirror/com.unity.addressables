@@ -1,20 +1,22 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
     using Object = UnityEngine.Object;
 
-    [InitializeOnLoad]
+    [InitializeOnLoad, ExcludeFromCoverage]
     internal static class AddressableAssetInspectorGUI
     {
         static GUIStyle s_ToggleMixed;
         static GUIContent s_AddressableAssetToggleText;
+
+        static GUIContent s_SystemSettingsGUIContent = new GUIContent("System Settings", "View Addressable Asset Settings");
 
         static AddressableAssetInspectorGUI()
         {
@@ -35,20 +37,20 @@ namespace UnityEditor.AddressableAssets.GUI
 
             if (!create)
             {
-	            List<AddressableAssetEntry> removedEntries = new List<AddressableAssetEntry>(targetInfos.Count);
-	            for (int i = 0; i < targetInfos.Count; ++i)
-	            {
-		            AddressableAssetEntry e = aaSettings.FindAssetEntry(targetInfos[i].Guid);
-		            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(e.parentGroup);
-		            removedEntries.Add(e);
-		            aaSettings.RemoveAssetEntry(removedEntries[i], false);
-	            }
-	            if (removedEntries.Count > 0)
-					aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, removedEntries, true, false);
+                List<AddressableAssetEntry> removedEntries = new List<AddressableAssetEntry>(targetInfos.Count);
+                for (int i = 0; i < targetInfos.Count; ++i)
+                {
+                    AddressableAssetEntry e = aaSettings.FindAssetEntry(targetInfos[i].Guid);
+                    AddressableAssetUtility.OpenAssetIfUsingVCIntegration(e.parentGroup);
+                    removedEntries.Add(e);
+                    aaSettings.RemoveAssetEntry(removedEntries[i], false);
+                }
+                if (removedEntries.Count > 0)
+                    aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryRemoved, removedEntries, true, false);
             }
             else
             {
-	            AddressableAssetGroup parentGroup = aaSettings.DefaultGroup;
+                AddressableAssetGroup parentGroup = aaSettings.DefaultGroup;
                 var resourceTargets = targetInfos.Where(ti => AddressableAssetUtility.IsInResources(ti.Path));
                 if (resourceTargets.Any())
                 {
@@ -56,49 +58,54 @@ namespace UnityEditor.AddressableAssets.GUI
                     var resourceGuids = resourceTargets.Select(t => t.Guid).ToList();
                     AddressableAssetUtility.SafeMoveResourcesToGroup(aaSettings, parentGroup, resourcePaths, resourceGuids);
                 }
-                
+
                 var otherTargetInfos = targetInfos.Except(resourceTargets);
                 List<string> otherTargetGuids = new List<string>(targetInfos.Count);
                 foreach (var info in otherTargetInfos)
-					otherTargetGuids.Add(info.Guid);
+                    otherTargetGuids.Add(info.Guid);
 
                 var entriesCreated = new List<AddressableAssetEntry>();
                 var entriesMoved = new List<AddressableAssetEntry>();
                 aaSettings.CreateOrMoveEntries(otherTargetGuids, parentGroup, entriesCreated, entriesMoved, false, false);
-                
+
                 bool openedInVC = false;
                 if (entriesMoved.Count > 0)
                 {
-	                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(parentGroup);
-	                openedInVC = true;
-	                aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesMoved, true, false);
+                    AddressableAssetUtility.OpenAssetIfUsingVCIntegration(parentGroup);
+                    openedInVC = true;
+                    aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesMoved, true, false);
                 }
-            
+
                 if (entriesCreated.Count > 0)
                 {
-	                if (!openedInVC)
-		                AddressableAssetUtility.OpenAssetIfUsingVCIntegration(parentGroup);
-	                aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryAdded, entriesCreated, true, false);
-	            } 
-	        }
+                    if (!openedInVC)
+                        AddressableAssetUtility.OpenAssetIfUsingVCIntegration(parentGroup);
+                    aaSettings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryAdded, entriesCreated, true, false);
+                }
+            }
         }
-
+        
+        [UnityEngine.TestTools.ExcludeFromCoverage]
         static void OnPostHeaderGUI(Editor editor)
         {
             var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
 
             if (editor.targets.Length > 0)
             {
+                // only display for the Prefab/Model importer not the displayed GameObjects
+                if (editor.targets[0].GetType() == typeof(GameObject))
+                    return;
+                
                 foreach (var t in editor.targets)
                 {
-                    if (t is AddressableAssetGroup || t is AddressableAssetGroupSchema)
+                    if (t is AddressableAssetGroupSchema)
                     {
                         GUILayout.BeginHorizontal();
                         GUILayout.Label("Profile: " + AddressableAssetSettingsDefaultObject.GetSettings(true).profileSettings.
                             GetProfileName(AddressableAssetSettingsDefaultObject.GetSettings(true).activeProfileId));
 
                         GUILayout.FlexibleSpace();
-                        if (GUILayout.Button("System Settings", "MiniButton"))
+                        if (GUILayout.Button(s_SystemSettingsGUIContent, "MiniButton"))
                         {
                             EditorGUIUtility.PingObject(AddressableAssetSettingsDefaultObject.Settings);
                             Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
@@ -107,7 +114,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         return;
                     }
                 }
-                
+
                 List<TargetInfo> targetInfos = GatherTargetInfos(editor.targets, aaSettings);
                 if (targetInfos.Count == 0)
                     return;
@@ -126,7 +133,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     if (!info.IsMainAsset)
                         targetHasAddressableSubObject = true;
                 }
-                
+
                 // Overrides a DisabledScope in the EditorElement.cs that disables GUI drawn in the header when the asset cannot be edited.
                 bool prevEnabledState = UnityEngine.GUI.enabled;
                 if (targetHasAddressableSubObject)
@@ -155,7 +162,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     var entryInfo = targetInfos[targetInfos.Count - 1];
                     if (entryInfo == null || entryInfo.MainAssetEntry == null)
                         throw new NullReferenceException("EntryInfo incorrect for Addressables content.");
-                    
+
                     GUILayout.BeginHorizontal();
 
                     if (mainAssetsAddressable > 0 && subAssetsAddressable > 0)
@@ -207,7 +214,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         FindUniqueAssetGuids(targetInfos, out var uniqueAssetGuids, out var uniqueAddressableAssetGuids);
                         EditorGUILayout.LabelField(uniqueAddressableAssetGuids.Count + " out of " + uniqueAssetGuids.Count + " assets are addressable.");
                     }
-                    
+
                     DrawSelectEntriesButton(targetInfos);
                     GUILayout.EndHorizontal();
                 }
@@ -227,9 +234,26 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
+        // Caching due to Gathering TargetInfos is an expensive operation
+        // The InspectorGUI needs to call this multiple times per layout and paint
+        private static AddressableAssetSettings.Cache<int, List<TargetInfo>> s_Cache = null; 
+
         internal static List<TargetInfo> GatherTargetInfos(Object[] targets, AddressableAssetSettings aaSettings)
         {
-            var targetInfos = new List<TargetInfo>();
+            if (aaSettings == null)
+                return new List<TargetInfo>();
+
+            int selectionHashCode = targets[0].GetHashCode();
+            for (int i=1; i<targets.Length; ++i)
+                selectionHashCode = selectionHashCode * 31 ^ targets[i].GetHashCode();
+            
+            List<TargetInfo> targetInfos = null;
+            if (s_Cache == null)
+                s_Cache = new AddressableAssetSettings.Cache<int, List<TargetInfo>>(aaSettings);
+            if (s_Cache.TryGetCached(selectionHashCode, out targetInfos))
+                return targetInfos;
+            
+            targetInfos = new List<TargetInfo>(targets.Length);
             AddressableAssetEntry entry;
             foreach (var t in targets)
             {
@@ -241,19 +265,18 @@ namespace UnityEditor.AddressableAssets.GUI
                     {
                         bool isMainAsset = t is AssetImporter || AssetDatabase.IsMainAsset(t);
                         var info = new TargetInfo() {TargetObject = t, Guid = guid, Path = path, IsMainAsset = isMainAsset};
-
                         if (aaSettings != null)
                         {
                             entry = aaSettings.FindAssetEntry(guid, true);
                             if (entry != null)
                                 info.MainAssetEntry = entry;
                         }
-
                         targetInfos.Add(info);
                     }
                 }
             }
 
+            s_Cache.Add(selectionHashCode, targetInfos);
             return targetInfos;
         }
 

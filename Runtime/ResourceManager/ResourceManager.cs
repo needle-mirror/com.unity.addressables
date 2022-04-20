@@ -157,6 +157,7 @@ namespace UnityEngine.ResourceManagement
         HashSet<InstanceOperation> m_TrackedInstanceOperations = new HashSet<InstanceOperation>();
         DelegateList<float> m_UpdateCallbacks = DelegateList<float>.CreateWithGlobalCache();
         List<IAsyncOperation> m_DeferredCompleteCallbacks = new List<IAsyncOperation>();
+        HashSet<IResourceProvider> m_AsestBundleProviders = new HashSet<IResourceProvider>();
 
         bool m_InsideExecuteDeferredCallbacksMethod = false;
         List<DeferredCallbackRegisterRequest> m_DeferredCallbacksToRegister = null;
@@ -393,8 +394,12 @@ namespace UnityEngine.ResourceManagement
                 desiredType = provider.GetDefaultType(location);
             }
 
+            if (provider == null)
+                provider = GetResourceProvider(desiredType, location);
+
             IAsyncOperation op;
-            var key = new LocationCacheKey(location, desiredType);
+            IOperationCacheKey key = CreateCacheKeyForLocation(provider, location, desiredType);
+
             if (m_AssetOperationCache.TryGetValue(key, out op))
             {
                 op.IncrementReferenceCount();
@@ -411,8 +416,6 @@ namespace UnityEngine.ResourceManagement
             var depOp = location.HasDependencies ?
                 ProvideResourceGroupCached(location.Dependencies, depHash, null, null, releaseDependenciesOnFailure) :
                 default(AsyncOperationHandle<IList<AsyncOperationHandle>>);
-            if (provider == null)
-                provider = GetResourceProvider(desiredType, location);
 
             ((IGenericProviderOperation)op).Init(this, provider, location, depOp, releaseDependenciesOnFailure);
 
@@ -423,6 +426,39 @@ namespace UnityEngine.ResourceManagement
                 depOp.Release();
 
             return handle;
+        }
+
+        /// <summary>
+        /// Creates the appropriate cache key for a given location + provider.  AssetBundleProviders need to use a different
+        /// cache key than regular locations.
+        /// </summary>
+        /// <param name="provider">The ResourceProvider for the given location</param>
+        /// <param name="location">The location of the asset we're attempting to request</param>
+        /// <param name="desiredType">The desired type of the asset we're attempting to request.</param>
+        /// <returns>An IOperationCacheKey for use with the async operation cache.</returns>
+        internal IOperationCacheKey CreateCacheKeyForLocation(IResourceProvider provider, IResourceLocation location, Type desiredType = null)
+        {
+            IOperationCacheKey key = null;
+            bool isAssetBundleProvider = false;
+            if(provider != null)
+            {
+                if (m_AsestBundleProviders.Contains(provider))
+                    isAssetBundleProvider = true;
+                else if(typeof(AssetBundleProvider).IsAssignableFrom(provider.GetType()))
+                {
+                    isAssetBundleProvider = true;
+                    m_AsestBundleProviders.Add(provider);
+                }
+            }
+
+            //If the location uses the AssetBundleProvider, we need to transform the ID first
+            //so we don't try and load the same bundle twice if the user is manipulating the path at runtime.
+            if (isAssetBundleProvider)
+                key = new IdCacheKey(TransformInternalId(location));
+            else
+                key = new LocationCacheKey(location, desiredType);
+
+            return key;
         }
 
         Dictionary<Type, Type> m_ProviderOperationTypeCache = new Dictionary<Type, Type>();
@@ -936,22 +972,38 @@ namespace UnityEngine.ResourceManagement
             }
         }
 
+        /// <summary>
+        /// Load a scene at a specificed resource location.
+        /// </summary>
+        /// <param name="sceneProvider">The scene provider instance.</param>
+        /// <param name="location">The location of the scene.</param>
+        /// <param name="loadSceneMode">The load mode for the scene.</param>
+        /// <param name="activateOnLoad">If false, the scene will be loaded in the background and not activated when complete.</param>
+        /// <param name="priority">The priority for the load operation.</param>
+        /// <returns>Async operation handle that will complete when the scene is loaded.  If activateOnLoad is false, then Activate() will need to be called on the SceneInstance returned.</returns>
+        public AsyncOperationHandle<SceneInstance> ProvideScene(ISceneProvider sceneProvider, IResourceLocation location, LoadSceneMode loadSceneMode, bool activateOnLoad, int priority)
+        {
+            if (sceneProvider == null)
+                throw new NullReferenceException("sceneProvider is null");
+
+            return sceneProvider.ProvideScene(this, location, new LoadSceneParameters(loadSceneMode), activateOnLoad, priority);
+        }
 
         /// <summary>
         /// Load a scene at a specificed resource location.
         /// </summary>
         /// <param name="sceneProvider">The scene provider instance.</param>
         /// <param name="location">The location of the scene.</param>
-        /// <param name="loadMode">The load mode for the scene.</param>
+        /// <param name="loadSceneParameters">The load parameters for the scene.</param>
         /// <param name="activateOnLoad">If false, the scene will be loaded in the background and not activated when complete.</param>
         /// <param name="priority">The priority for the load operation.</param>
         /// <returns>Async operation handle that will complete when the scene is loaded.  If activateOnLoad is false, then Activate() will need to be called on the SceneInstance returned.</returns>
-        public AsyncOperationHandle<SceneInstance> ProvideScene(ISceneProvider sceneProvider, IResourceLocation location, LoadSceneMode loadMode, bool activateOnLoad, int priority)
+        public AsyncOperationHandle<SceneInstance> ProvideScene(ISceneProvider sceneProvider, IResourceLocation location, LoadSceneParameters loadSceneParameters, bool activateOnLoad, int priority)
         {
             if (sceneProvider == null)
                 throw new NullReferenceException("sceneProvider is null");
 
-            return sceneProvider.ProvideScene(this, location, loadMode, activateOnLoad, priority);
+            return sceneProvider.ProvideScene(this, location, loadSceneParameters, activateOnLoad, priority);
         }
 
         /// <summary>

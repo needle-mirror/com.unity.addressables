@@ -21,10 +21,25 @@ public class BuildLayoutGenerationTaskTests
 {
     AddressableAssetSettings m_Settings;
 
-    const string kTempPath = "Assets/TempGen";
+    AddressableAssetSettings Settings
+    {
+        get
+        {
+            if (m_Settings == null)
+            {
+                var path = Path.Combine(TempPath, "Settings", "/AddressableAssetSettings.Tests.asset");
+                m_Settings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(path);
+            }
+
+            return m_Settings;
+        }
+    }
+
+    static string kTempPath = "Assets/BuildLayoutGenerationTaskTestsData";
     static string TempPath;
     static int ExecCount;
     bool m_PrevGenerateBuildLayout;
+    ProjectConfigData.ReportFileFormat m_PrevFileFormat;
 
     [OneTimeSetUp]
     public void OneTimeSetup()
@@ -36,9 +51,14 @@ public class BuildLayoutGenerationTaskTests
     public void Setup()
     {
         TempPath = kTempPath + (ExecCount++).ToString();
-        if (File.Exists(BuildLayoutGenerationTask.m_LayoutTextFile))
-            File.Delete(BuildLayoutGenerationTask.m_LayoutTextFile);
+        foreach (var fileFormat in Enum.GetValues(typeof(ProjectConfigData.ReportFileFormat)))
+        {
+            string layoutFile = BuildLayoutGenerationTask.GetLayoutFile((ProjectConfigData.ReportFileFormat)fileFormat);
+            if (File.Exists(layoutFile))
+                File.Delete(layoutFile);
+        }
         m_PrevGenerateBuildLayout = ProjectConfigData.GenerateBuildLayout;
+        m_PrevFileFormat = ProjectConfigData.BuildLayoutReportFileFormat;
         BuildScriptPackedMode.s_SkipCompilePlayerScripts = true;
         ProjectConfigData.GenerateBuildLayout = true;
         if (Directory.Exists(TempPath))
@@ -53,9 +73,10 @@ public class BuildLayoutGenerationTaskTests
     {
         BuildScriptPackedMode.s_SkipCompilePlayerScripts = false;
         ProjectConfigData.GenerateBuildLayout = m_PrevGenerateBuildLayout;
+        ProjectConfigData.BuildLayoutReportFileFormat = m_PrevFileFormat;
         // Many of the tests keep recreating assets in the same path, so we need to unload them completely so they don't get reused by the next test
-        AssetDatabase.DeleteAsset(AssetDatabase.GetAssetPath(m_Settings));
-        Resources.UnloadAsset(m_Settings);
+        AssetDatabase.DeleteAsset(AssetDatabase.GetAssetPath(Settings));
+        Resources.UnloadAsset(Settings);
 
         FileUtil.DeleteFileOrDirectory(TempPath);
         FileUtil.DeleteFileOrDirectory(TempPath + ".meta");
@@ -109,7 +130,7 @@ public class BuildLayoutGenerationTaskTests
 
     string MakeAddressable(AddressableAssetGroup group, string guid, string address = null)
     {
-        var entry = m_Settings.CreateOrMoveEntry(guid, group, false, false);
+        var entry = Settings.CreateOrMoveEntry(guid, group, false, false);
         entry.address = address == null ? Path.GetFileNameWithoutExtension(entry.AssetPath) : address;
         return guid;
     }
@@ -149,7 +170,7 @@ public class BuildLayoutGenerationTaskTests
 
     AddressableAssetGroup CreateGroup(string name)
     {
-        return m_Settings.CreateGroup(name, false, false, false, null, typeof(BundledAssetGroupSchema));
+        return Settings.CreateGroup(name, false, false, false, null, typeof(BundledAssetGroupSchema));
     }
 
     void PrintText(BuildLayout layout)
@@ -166,7 +187,7 @@ public class BuildLayoutGenerationTaskTests
         {
             BuildLayout layout = null;
             BuildLayoutGenerationTask.s_LayoutCompleteCallback = (x) => layout = x;
-            m_Settings.BuildPlayerContentImpl();
+            Settings.BuildPlayerContentImpl();
             return layout;
         }
         finally
@@ -270,14 +291,14 @@ public class BuildLayoutGenerationTaskTests
         Scene scene1 = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
         new GameObject().AddComponent<TestBehaviourWithReference>();
         EditorSceneManager.SaveScene(scene1, scenePath);
-        AddressableAssetEntry e = m_Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(scenePath), groupScenes);
+        AddressableAssetEntry e = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(scenePath), groupScenes);
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
         CreateAddressableTexture("t1", textureGroup, 256);
 
         BuildLayout layout = BuildAndExtractLayout();
 
-        BundledAssetGroupSchema schema = m_Settings.groups.First(x => x.HasSchema<BundledAssetGroupSchema>()).GetSchema<BundledAssetGroupSchema>();
-        string path = schema.BuildPath.GetValue(m_Settings);
+        BundledAssetGroupSchema schema = Settings.groups.First(x => x.HasSchema<BundledAssetGroupSchema>()).GetSchema<BundledAssetGroupSchema>();
+        string path = schema.BuildPath.GetValue(Settings);
         foreach (BuildLayout.Bundle bundle in layout.Groups.SelectMany(x => x.Bundles))
             AssertEditorBundleDetailsMatchPhysicalBundle(Path.Combine(path, bundle.Name), bundle);
     }
@@ -286,24 +307,86 @@ public class BuildLayoutGenerationTaskTests
     [Test]
     public void WhenSlimWriteResultsIsTrue_LayoutStillGenerated()
     {
+        ProjectConfigData.ReportFileFormat fileFormat = ProjectConfigData.ReportFileFormat.TXT;
+        string layoutFile = BuildLayoutGenerationTask.GetLayoutFile(fileFormat);
+
         bool prevSlim = ScriptableBuildPipeline.slimWriteResults;
+        ProjectConfigData.ReportFileFormat prevFileFormat = ProjectConfigData.BuildLayoutReportFileFormat;
         CreateAddressablePrefab("p1", CreateGroup("Group1"));
         try
         {
             ScriptableBuildPipeline.slimWriteResults = true;
+            ProjectConfigData.BuildLayoutReportFileFormat = fileFormat;
             BuildAndExtractLayout();
         }
-        finally { ScriptableBuildPipeline.slimWriteResults = prevSlim; }
-        FileAssert.Exists(BuildLayoutGenerationTask.m_LayoutTextFile);
+        finally
+        {
+            ScriptableBuildPipeline.slimWriteResults = prevSlim;
+            ProjectConfigData.BuildLayoutReportFileFormat = prevFileFormat;
+        }
+
+        FileAssert.Exists(layoutFile);
+
+        File.Delete(layoutFile);
     }
 
     [Test]
     public void WhenBuildLayoutIsDisabled_BuildLayoutIsNotGenerated()
     {
-        ProjectConfigData.GenerateBuildLayout = false;
-        CreateAddressablePrefab("p1", CreateGroup("Group1"));
-        BuildAndExtractLayout();
-        FileAssert.DoesNotExist(BuildLayoutGenerationTask.m_LayoutTextFile);
+        ProjectConfigData.ReportFileFormat fileFormat = ProjectConfigData.ReportFileFormat.TXT;
+        string layoutFile = BuildLayoutGenerationTask.GetLayoutFile(fileFormat);
+
+        bool prevGenerateBuildLayout = ProjectConfigData.GenerateBuildLayout;
+        ProjectConfigData.ReportFileFormat prevFileFormat = ProjectConfigData.BuildLayoutReportFileFormat;
+        try
+        {
+            ProjectConfigData.GenerateBuildLayout = false;
+            ProjectConfigData.BuildLayoutReportFileFormat = fileFormat;
+            CreateAddressablePrefab("p1", CreateGroup("Group1"));
+            BuildAndExtractLayout();
+        }
+        finally
+        {
+            ProjectConfigData.GenerateBuildLayout = prevGenerateBuildLayout;
+            ProjectConfigData.BuildLayoutReportFileFormat = prevFileFormat;
+        }
+
+        FileAssert.DoesNotExist(layoutFile);
+
+        File.Delete(layoutFile);
+    }
+
+    [Test]
+    [TestCase(ProjectConfigData.ReportFileFormat.TXT)]
+    [TestCase(ProjectConfigData.ReportFileFormat.JSON)]
+    public void WhenBuildLayoutIsEnabled_BuildLayoutIsGenerated(ProjectConfigData.ReportFileFormat format)
+    {
+        string layoutFile = BuildLayoutGenerationTask.GetLayoutFile(format);
+
+        bool prevGenerateBuildLayout = ProjectConfigData.GenerateBuildLayout;
+        ProjectConfigData.ReportFileFormat prevFileFormat = ProjectConfigData.BuildLayoutReportFileFormat;
+        try
+        {
+            ProjectConfigData.GenerateBuildLayout = true;
+            ProjectConfigData.BuildLayoutReportFileFormat = format;
+            CreateAddressablePrefab("p1", CreateGroup("Group1"));
+            BuildAndExtractLayout();
+        }
+        finally
+        {
+            ProjectConfigData.GenerateBuildLayout = prevGenerateBuildLayout;
+            ProjectConfigData.BuildLayoutReportFileFormat = prevFileFormat;
+        }
+
+        FileAssert.Exists(layoutFile);
+        if (format == ProjectConfigData.ReportFileFormat.JSON)
+        {
+            string text = File.ReadAllText(layoutFile);
+            var layout = JsonUtility.FromJson<BuildLayout>(text);
+            Assert.IsNotNull(layout);
+        }
+
+        File.Delete(layoutFile);
     }
 
     [Test]

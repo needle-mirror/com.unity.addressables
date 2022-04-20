@@ -39,7 +39,18 @@ namespace UnityEditor.AddressableAssets.GUI
     {
         private static Dictionary<string, FoldoutSessionStateValue> m_CachedSessionStates = new Dictionary<string, FoldoutSessionStateValue>();
         
-        
+        internal static GUIStyle GetStyle(string styleName)
+        {
+            GUIStyle s = UnityEngine.GUI.skin.FindStyle(styleName);
+            if (s == null)
+                s = EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).FindStyle(styleName);
+            if (s == null)
+            {
+                Debug.LogError("Missing built-in guistyle " + styleName);
+                s = new GUIStyle();
+            }
+            return s;
+        }
 
         internal static bool GetFoldoutValue(string stateKey)
         {

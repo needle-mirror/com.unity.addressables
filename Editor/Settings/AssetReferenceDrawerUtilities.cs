@@ -21,23 +21,23 @@ namespace UnityEditor.AddressableAssets.Settings
     {
         internal const string noAssetString = "None (Addressable Asset)";
         internal const string noAssetTypeStringformat = "None (Addressable {0})";
-        
+
         static internal bool ValidateAsset(AssetReference assetRefObject, List<AssetReferenceUIRestrictionSurrogate> restrictions, Object obj)
         {
             return assetRefObject != null
-                   && assetRefObject.ValidateAsset(obj)
-                   && restrictions != null
-                   && restrictions.All(r => r.ValidateAsset(obj));
+                && assetRefObject.ValidateAsset(obj)
+                && restrictions != null
+                && restrictions.All(r => r.ValidateAsset(obj));
         }
-        
+
         static internal bool ValidateAsset(AssetReference assetRefObject, List<AssetReferenceUIRestrictionSurrogate> restrictions, IReferenceEntryData entryData)
         {
             return assetRefObject != null
-                   && assetRefObject.ValidateAsset(entryData?.AssetPath)
-                   && restrictions != null
-                   && restrictions.All(r => r.ValidateAsset(entryData));
+                && assetRefObject.ValidateAsset(entryData?.AssetPath)
+                && restrictions != null
+                && restrictions.All(r => r.ValidateAsset(entryData));
         }
-        
+
         static internal bool ValidateAsset(AssetReference assetRefObject, List<AssetReferenceUIRestrictionSurrogate> restrictions, string path)
         {
             if (assetRefObject != null && assetRefObject.ValidateAsset(path))
@@ -113,7 +113,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             return false;
         }
-        
+
         static internal string SetSingleAsset(ref AssetReference assetReferenceObject, SerializedProperty property, Object asset, Object subObject)
         {
             string guid = null;
@@ -138,7 +138,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             return guid;
         }
-        
+
         static internal bool SetMainAssets(ref bool referencesSame, SerializedProperty property, Object asset, Object subObject, FieldInfo propertyField, string labelText)
         {
             var allsuccess = true;
@@ -170,7 +170,7 @@ namespace UnityEditor.AddressableAssets.Settings
             referencesSame = allsuccess;
             return allsuccess;
         }
-        
+
         static internal bool SetSubAssets(SerializedProperty property, Object subAsset, FieldInfo propertyField, string labelText)
         {
             bool valueChanged = false;
@@ -203,7 +203,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             return valueChanged;
         }
-        
+
         static internal bool CheckTargetObjectsSubassetsAreDifferent(SerializedProperty property, string objName, FieldInfo propertyField, string labelText)
         {
             foreach (var targetObject in property.serializedObject.targetObjects)
@@ -226,7 +226,7 @@ namespace UnityEditor.AddressableAssets.Settings
         static void SetDirty(Object obj)
         {
             UnityEngine.GUI.changed = true; // To support EditorGUI.BeginChangeCheck() / EditorGUI.EndChangeCheck()
-            
+
             EditorUtility.SetDirty(obj);
             AddressableAssetUtility.OpenAssetIfUsingVCIntegration(obj);
             var comp = obj as Component;
@@ -242,7 +242,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 var t = o.GetType();
                 FieldInfo info = null;
-                
+
                 // We need to look into sub types, if any.
                 string[] pathParts = property.propertyPath.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries);
                 for (int i = 0; i < pathParts.Length; i++)
@@ -255,7 +255,7 @@ namespace UnityEditor.AddressableAssets.Settings
                         info = f;
                     }
                 }
-                
+
                 if (info != null)
                 {
                     var a = info.GetCustomAttributes(false);
@@ -290,7 +290,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             return restrictions;
         }
-        
+
         static internal List<Object> GetSubAssetsList(AssetReference assetReferenceObject)
         {
             var subAssets = new List<Object>();
@@ -318,7 +318,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             return subAssets;
         }
-        
+
         static Type GetGenericTypeFromAssetReference(AssetReference assetReferenceObject)
         {
             var type = assetReferenceObject?.GetType();
@@ -331,16 +331,16 @@ namespace UnityEditor.AddressableAssets.Settings
 
             return null;
         }
-        
+
         static internal string GetNameForAsset(ref bool referencesSame, SerializedProperty property, bool isNotAddressable, FieldInfo propertyField, string labelText)
         {
             var currentRef =
                 property.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
 
-            string nameToUse = currentRef.editorAsset != null ? 
+            string nameToUse = currentRef.editorAsset != null ?
                 currentRef.editorAsset.name :
                 ConstructNoAssetLabel(propertyField.FieldType);
-            
+
             if (property.serializedObject.targetObjects.Length > 1)
             {
                 foreach (var t in property.serializedObject.targetObjects)
@@ -402,27 +402,29 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             if (aaEntries != null)
             {
-                if (aaEntries.Count != 1)
-                     return true;
-
-                if (aaEntries[0] == null || aaEntries[0].entry == null || aaEntries[0].entry.IsInResources || !ValidateAsset(assetReferenceObject, restrictions, aaEntries[0].entry.AssetPath))
-                    return true;
+                foreach (AssetEntryTreeViewItem item in aaEntries)
+                {
+                    if (item == null || item.entry == null || item.entry.IsInResources || !ValidateAsset(assetReferenceObject, restrictions, item.entry.AssetPath))
+                        return true;
+                }
             }
-            else if (dropObjReferences != null && dropObjReferences.Length == 1 && AssetDatabase.IsSubAsset(dropObjReferences[0]))
+            else if (dropObjReferences != null)
             {
-                if (!ValidateAsset(assetReferenceObject, restrictions, dropObjReferences[0]))
-                    return true;
+                foreach (Object obj in dropObjReferences)
+                {
+                    if (AssetDatabase.IsSubAsset(obj) && !ValidateAsset(assetReferenceObject, restrictions, obj))
+                        return true;
+                }
             }
             else
             {
-                if (dropPaths.Length != 1)
+                foreach (var path in DragAndDrop.paths)
                 {
-                    return true;
+                    if (!ValidateAsset(assetReferenceObject, restrictions, path))
+                        return true;
                 }
-                if (!ValidateAsset(assetReferenceObject, restrictions, DragAndDrop.paths[0]))
-                    return true;
             }
-            
+
             return false;
         }
 

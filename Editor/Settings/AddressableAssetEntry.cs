@@ -61,6 +61,11 @@ namespace UnityEditor.AddressableAssets.Settings
         List<string> m_SerializedLabels;
         HashSet<string> m_Labels = new HashSet<string>();
 
+        /// <summary>
+        /// If true, this asset was changed after being built into an Addressable Group marked 'Cannot Change Post Release'.
+        /// </summary>
+        public bool FlaggedDuringContentUpdateRestriction = false;
+
         internal virtual bool HasSettings() { return false; }
 
         /// <summary>
@@ -709,7 +714,14 @@ namespace UnityEditor.AddressableAssets.Settings
                     return null;
             }
 
-            assetEntry = settings.CreateSubEntryIfUnique(subAssetGuid, address + relativePath, this);
+            assetEntry = settings.CreateSubEntryIfUnique(subAssetGuid, address + "/" + relativePath, this);
+            
+            if (assetEntry != null)
+            {
+                assetEntry.m_Labels = m_Labels;
+                assetEntry.IsFolder = false;
+            }
+            
             if (assetEntry == null || assetEntry.IsSubAsset == false)
                 return null;
             return assetEntry;

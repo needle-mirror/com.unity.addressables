@@ -37,6 +37,30 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             PrefabUtility.SaveAsPrefabAsset(prefabWithMaterial, k_PrefabWithMaterialPath);
             AssetDatabase.Refresh();
         }
+        
+        [Test]
+        public void CheckResourcesDupe_GetsCorrectResourcePaths()
+        {
+            string resourcesPath = GetAssetPath("Resources");
+            if (!Directory.Exists(resourcesPath))
+                Directory.CreateDirectory(resourcesPath);
+            string prefabPath = GetAssetPath("Resources/PrefabA.prefab");
+            GameObject prefabA = new GameObject("PrefabA");
+            PrefabUtility.SaveAsPrefabAsset(prefabA, prefabPath);
+            
+            var rule = new CheckResourcesDupeDependencies();
+            var paths = rule.GetResourcePaths();
+            bool success = false;
+            foreach (var p in paths)
+            {
+                if (p.EndsWith("PrefabA.prefab"))
+                {
+                    success = true;
+                    break;
+                }
+            }
+            Assert.IsTrue(success, "CheckResourcesDupeDependencies ResourcePaths did not find the created prefab for test as expect.");
+        }
 
         [Test]
         public void CheckResourcesDupe_ResourcesDependenciesMatchWithExplicitBundleDependencies()

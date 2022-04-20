@@ -35,12 +35,14 @@ namespace UnityEditor.AddressableAssets.Settings
             internal bool showGroupsAsHierarchy = false;
             [SerializeField]
             internal bool generateBuildLayout = false;
+            [SerializeField]
+            internal ReportFileFormat buildLayoutReportFileFormat = ReportFileFormat.TXT;
         }
 
         static ConfigSaveData s_Data;
 
         /// <summary>
-        /// Whether to display sub objects in the Addressables Groups window. 
+        /// Whether to display sub objects in the Addressables Groups window.
         /// </summary>
         public static bool ShowSubObjectsInGroupView
         {
@@ -73,6 +75,42 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (s_Data.generateBuildLayout != value)
                 {
                     s_Data.generateBuildLayout = value;
+                    SaveData();
+                }
+            }
+        }
+
+        /// <summary>
+        /// File formats supported for the bundle build layout report.
+        /// </summary>
+        public enum ReportFileFormat
+        {
+            /// <summary>
+            /// The .txt file format.
+            /// </summary>
+            TXT,
+            /// <summary>
+            /// The .json file format.
+            /// </summary>
+            JSON
+        };
+
+        /// <summary>
+        /// File format of the bundle build layout report.
+        /// </summary>
+        public static ReportFileFormat BuildLayoutReportFileFormat
+        {
+            get
+            {
+                ValidateData();
+                return s_Data.buildLayoutReportFileFormat;
+            }
+            set
+            {
+                ValidateData();
+                if (s_Data.buildLayoutReportFileFormat != value)
+                {
+                    s_Data.buildLayoutReportFileFormat = value;
                     SaveData();
                 }
             }
@@ -131,7 +169,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 SaveData();
             }
         }
-        
+
         /// <summary>
         /// The remote bundle loading speed used in the Simulate Groups (advanced) playmode.
         /// </summary>
@@ -151,7 +189,7 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
-        /// Whether to allow searching for assets parsed hierarchally in the Addressables Groups window.  
+        /// Whether to allow searching for assets parsed hierarchally in the Addressables Groups window.
         /// </summary>
         public static bool HierarchicalSearch
         {
@@ -169,7 +207,7 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
-        /// Whether to display groups names parsed hierarchally in the Addressables Groups window. 
+        /// Whether to display groups names parsed hierarchally in the Addressables Groups window.
         /// </summary>
         public static bool ShowGroupsAsHierarchy
         {

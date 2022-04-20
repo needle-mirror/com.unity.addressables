@@ -37,7 +37,7 @@ namespace UnityEditor.AddressableAssets.Build
         {
             foreach (var rule in Rules)
             {
-                if (rule.GetType().IsAssignableFrom(typeof(TRule)))
+                if (rule.GetType().Equals(typeof(TRule)))
                     return;
             }
             Rules.Add(new TRule());
@@ -83,34 +83,7 @@ namespace UnityEditor.AddressableAssets.Build
                 {
                     if (!Directory.Exists(AnalyzeRuleDataFolder))
                         Directory.CreateDirectory(AnalyzeRuleDataFolder);
-
-                    if (!File.Exists(AnalyzeRuleDataPath))
-                        File.WriteAllText(AnalyzeRuleDataPath, JsonUtility.ToJson(new AddressablesAnalyzeResultData()));
-
-                    //Cleans up the previous result data
-                    if (Directory.Exists(AnalyzeRuleDataAssetsFolderPath))
-                        Directory.Delete(AnalyzeRuleDataAssetsFolderPath, true);
-
-                    m_AnalyzeData = JsonUtility.FromJson<AddressablesAnalyzeResultData>(File.ReadAllText(AnalyzeRuleDataPath));
-                    if(m_AnalyzeData == null)
-                        Addressables.LogWarning($"Unable to load Analyze Result Data at {AnalyzeRuleDataPath}.");
-                    else
-                    {
-                        if(m_AnalyzeData.Data == null)
-                            m_AnalyzeData.Data = new Dictionary<string, List<AnalyzeRule.AnalyzeResult>>();
-
-                        foreach (var rule in Rules)
-                        {
-                            if (rule == null)
-                            {
-                                Addressables.LogWarning("An unknown Analyze rule is being skipped because it is null.");
-                                continue;
-                            }
-
-                            if (!m_AnalyzeData.Data.ContainsKey(rule.ruleName))
-                                m_AnalyzeData.Data.Add(rule.ruleName, new List<AnalyzeRule.AnalyzeResult>());
-                        }
-                    }
+                    DeserializeData();
                 }
 
                 return m_AnalyzeData;
@@ -124,7 +97,58 @@ namespace UnityEditor.AddressableAssets.Build
 
         internal static void SerializeData()
         {
-            File.WriteAllText(AnalyzeRuleDataPath, JsonUtility.ToJson(m_AnalyzeData));
+            SerializeData(AnalyzeRuleDataPath);
+        }
+
+        internal static void DeserializeData()
+        {
+            DeserializeData(AnalyzeRuleDataPath);
+        }
+
+        /// <summary>
+        /// Serialize the analysis data to json and save to disk
+        /// </summary>
+        /// <param name="path">File path to save to</param>
+        public static void SerializeData(string path)
+        {
+            File.WriteAllText(path, JsonUtility.ToJson(m_AnalyzeData));
+        }
+
+        /// <summary>
+        /// Load and deserialize analysis data from json file and reload
+        /// </summary>
+        /// <param name="path">File path to load from</param>
+        public static void DeserializeData(string path)
+        {
+            if (!File.Exists(path))
+                File.WriteAllText(path, JsonUtility.ToJson(new AddressablesAnalyzeResultData()));
+
+            //Cleans up the previous result data
+            if (Directory.Exists(AnalyzeRuleDataAssetsFolderPath))
+                Directory.Delete(AnalyzeRuleDataAssetsFolderPath, true);
+
+            m_AnalyzeData = JsonUtility.FromJson<AddressablesAnalyzeResultData>(File.ReadAllText(path));
+            if(m_AnalyzeData == null)
+                Addressables.LogWarning($"Unable to load Analyze Result Data at {path}.");
+            else
+            {
+                if(m_AnalyzeData.Data == null)
+                    m_AnalyzeData.Data = new Dictionary<string, List<AnalyzeRule.AnalyzeResult>>();
+
+                foreach (var rule in Rules)
+                {
+                    if (rule == null)
+                    {
+                        Addressables.LogWarning("An unknown Analyze rule is being skipped because it is null.");
+                        continue;
+                    }
+
+                    if (!m_AnalyzeData.Data.ContainsKey(rule.ruleName))
+                        m_AnalyzeData.Data.Add(rule.ruleName, new List<AnalyzeRule.AnalyzeResult>());
+                }
+            }
+            
+            ReloadUI();
         }
 
         internal static void SaveDataForRule(AnalyzeRule rule, object data)

@@ -79,6 +79,40 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void SettingsCache_FindsEntry()
+        {
+            AddressableAssetSettings.Cache<string, int> cache = new AddressableAssetSettings.Cache<string, int>(Settings);
+            int result = 10;
+            string key = "testKey";
+            Assert.IsFalse(cache.TryGetCached(key, out result));
+            cache.Add(key, 20);
+            Assert.IsTrue(cache.TryGetCached(key, out result));
+            Assert.AreEqual(result, 20);
+        }
+        
+        [Test]
+        public void SettingsCache_CacheClearedOnSettingsChanged()
+        {
+            AddressableAssetSettings.Cache<string, int> cache = new AddressableAssetSettings.Cache<string, int>(Settings);
+            int result;
+            string key = "testKey";
+            cache.Add(key, 20);
+            Assert.IsTrue(cache.TryGetCached(key, out result));
+            Assert.AreEqual(result, 20);
+            
+            Settings.AddLabel("SettingsCache_CacheClearedOnSettingsChanged.testLabel", false);
+            try
+            {
+                Assert.IsFalse(cache.TryGetCached(key, out result));
+            }
+            finally
+            {
+                Settings.RemoveLabel("SettingsCache_CacheClearedOnSettingsChanged.testLabel", false);
+            }
+            
+        }
+
+        [Test]
         public void GetDefaultGroupDoesNotThrowNullExceptionWhenGroupsNull()
         {
             Settings.groups.Insert(0,null);

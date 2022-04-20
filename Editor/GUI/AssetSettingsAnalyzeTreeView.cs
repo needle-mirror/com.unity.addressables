@@ -49,6 +49,11 @@ namespace UnityEditor.AddressableAssets.GUI
                     where selection is AnalyzeRuleContainerTreeViewItem
                     select selection as AnalyzeRuleContainerTreeViewItem).ToList();
 
+            PerformActionForRuleItems(action, activeSelection);
+        }
+
+        private void PerformActionForRuleItems(Action<AnalyzeRuleContainerTreeViewItem> action, List<AnalyzeRuleContainerTreeViewItem> activeSelection)
+        {
             List<AnalyzeRuleContainerTreeViewItem> inheritSelection = new List<AnalyzeRuleContainerTreeViewItem>();
             foreach (var selected in activeSelection)
                 inheritSelection.AddRange(GatherAllInheritRuleContainers(selected));
@@ -89,16 +94,35 @@ namespace UnityEditor.AddressableAssets.GUI
             });
         }
 
+        public void ClearAll()
+        {
+            var root = rootItem.children[0] as AnalyzeRuleContainerTreeViewItem;
+            if (root == null)
+            {
+                Debug.LogError("Error: Structure of AnalyzeRule tree view is different to expected.");
+                return;
+            }
+            List<AnalyzeRuleContainerTreeViewItem> activeSelection = new List<AnalyzeRuleContainerTreeViewItem>(1);
+            activeSelection.Add(root);
+            PerformActionForRuleItems((ruleContainer) =>
+            {
+                AnalyzeSystem.ClearAnalysis(ruleContainer.analyzeRule);
+                BuildResults(ruleContainer, new List<AnalyzeRule.AnalyzeResult>());
+            }, activeSelection);
+            
+            Reload();
+            UpdateSelections(GetSelection());
+        }
         public void ClearAllSelectedRules()
         {
             PerformActionForEntireRuleSelection((ruleContainer) =>
             {
                 AnalyzeSystem.ClearAnalysis(ruleContainer.analyzeRule);
-
                 BuildResults(ruleContainer, new List<AnalyzeRule.AnalyzeResult>());
-                Reload();
-                UpdateSelections(GetSelection());
             });
+
+            Reload();
+            UpdateSelections(GetSelection());
         }
 
         public bool SelectionContainsFixableRule { get; private set; }

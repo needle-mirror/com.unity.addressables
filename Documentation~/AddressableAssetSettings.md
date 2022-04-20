@@ -84,7 +84,7 @@ Settings that affect catalog and AssetBundle download handling.
 | Property| Function |
 |:---|:---|
 | __Custom certificate handler__| The class to use for custom certificate handling. The list contains all classes in the project that extend [UnityEngine.Networking.CertificateHandler]. |
-| __Max Concurrent Web Requests__| The system queues any requests beyond this limit. |
+| __Max Concurrent Web Requests__| The system queues any requests beyond this limit. 2-4 concurrent downloads are recommended to reach optimum download speeds. |
 | __Catalog Download Timeout__ | How many seconds to wait for a catalog file to download. |
 
 ## Build

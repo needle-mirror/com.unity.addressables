@@ -792,6 +792,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
                 var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
                 Assert.True(string.IsNullOrEmpty(errorStr));
+                BuiltinSceneCache.ClearState(true);
 
                 var actualLocations = m_BuildContext.locations.Where(
                         l => l.ResourceType == typeof(GameObject) &&
@@ -808,6 +809,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void ProcessPlayerDataSchema_WhenMultipleResourcesAreIncluded_ShouldGenerateCorrectResourceLocationsAndProviders()
         {
+            
             using (new HideResourceFoldersScope())
             {
                 var resourcesPaths = new[]
@@ -829,7 +831,8 @@ namespace UnityEditor.AddressableAssets.Tests
 
                 var errorStr = m_BuildScript.ProcessPlayerDataSchema(schema, group, m_BuildContext);
                 Assert.True(string.IsNullOrEmpty(errorStr));
-
+                BuiltinSceneCache.ClearState(true);
+                
                 var actualLocations = m_BuildContext.locations.Where(
                         l => l.ResourceType == typeof(GameObject) &&
                              l.Provider == typeof(LegacyResourcesProvider).FullName)

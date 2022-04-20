@@ -173,9 +173,8 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         //UI magic to group the path pairs from profile variables
-        internal static List<ProfileGroupType> CreateGroupTypes(AddressableAssetProfileSettings.BuildProfile buildProfile)
+        internal static List<ProfileGroupType> CreateGroupTypes(AddressableAssetProfileSettings.BuildProfile buildProfile, AddressableAssetSettings settings)
         {
-            AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
             Dictionary<string, ProfileGroupType> groups = new Dictionary<string, ProfileGroupType>();
             foreach (var profileEntry in settings.profileSettings.profileEntryNames)
             {

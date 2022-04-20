@@ -35,13 +35,14 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             }
         }
 
+        private GUIContent m_UpdateRestrictionGUIContent = new GUIContent("Prevent Updates", "Assets in Prevent Update groups will be moved to a new remote group during the content update process");
+
         /// <inheritdoc/>
         public override void OnGUI()
         {
-            ContentType current = m_StaticContent ? ContentType.CannotChangePostRelease : ContentType.CanChangePostRelease;
-            var newType = (ContentType)EditorGUILayout.EnumPopup("Update Restriction", current);
-            if (newType != current)
-                StaticContent = newType == ContentType.CannotChangePostRelease;
+            var staticContent = EditorGUILayout.Toggle(m_UpdateRestrictionGUIContent, m_StaticContent);
+            if (staticContent != m_StaticContent)
+                StaticContent = staticContent;
         }
 
         /// <inheritdoc/>
@@ -53,13 +54,14 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             // Type/Static Content
             ShowMixedValue(prop, otherSchemas, typeof(bool), "m_StaticContent");
             EditorGUI.BeginChangeCheck();
-            ContentType current = m_StaticContent ? ContentType.CannotChangePostRelease : ContentType.CanChangePostRelease;
-            var newType = (ContentType)EditorGUILayout.EnumPopup("Update Restriction", current);
+            
+            var staticContent = EditorGUILayout.Toggle(m_UpdateRestrictionGUIContent, m_StaticContent);
+
             if (EditorGUI.EndChangeCheck())
             {
-                StaticContent = newType == ContentType.CannotChangePostRelease;
+                StaticContent = staticContent;
                 foreach (var s in otherSchemas)
-                    (s as ContentUpdateGroupSchema).StaticContent = (newType == ContentType.CannotChangePostRelease);
+                    (s as ContentUpdateGroupSchema).StaticContent = StaticContent;
             }
             EditorGUI.showMixedValue = false;
 
