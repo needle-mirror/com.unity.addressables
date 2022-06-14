@@ -137,29 +137,6 @@ There are several scenarios where you might need to customize the path or URL of
 
 See [ID transform function] for more information.
 
-## Content catalogs
-
-Content Catalogs are the data stores Addressables uses to look up an asset's physical location based on the key(s) provided to the system. By default, Addressables builds a single catalog for all Addressable assets. The catalog is placed in the StreamingAsset folder when you build your application player. The local catalog can access remote as well as local assets, but if you want to update content between full builds of your application, you must also enable the [Build Remote Catalogs] option.
-
-The remote catalog is a separate copy of the catalog that you host along with your remote content. Ultimately, Addressables only uses one of these catalogs. If a remote catalog is built and it has a different hash than the local catalog, it is downloaded, cached, and used in place of the built-in local catalog. When you produce a [content update build], the hash is updated and the new remote catalog points to the changed versions of any updated assets.
-
-> [!NOTE]
-> You must enable the remote catalog for the full player build that you publish. Otherwise, the Addressables system does not check for a remote catalog and thus cannot detect any content updates. See [Enabling the remote catalog]. 
-
-## Loading additional catalogs
-
-It is possible, however, to specify additional Content Catalogs to be loaded. There are different reasons you might decide loading additional catalogs is right for your project, such as building an art-only project that you want to use across different projects.
-
-Should you find that loading additional catalogs is right for you, there is a method that can assist in this regard, LoadContentCatalogAsync.
-
-For LoadContentCatalogAsync, all that is required is for you to supply the location of the catalog you wish to load. However, this alone does not use catalog caching, so be careful if you're loading a catalog from a remote location. You will incur that WebRequest every time you need to load that catalog.
-
-To help prevent you from needing to download a remote catalog every time, if you provide a .hash file with the hash of the catalog alongside the catalog you're loading, we can use this to properly cache your Content Catalog. 
-
-> [!NOTE]
-> * The hash file does need to be in the same location and have the same name as your catalog. The only difference to the path should be the extension.
-> * You'll notice this method comes with a parameter autoReleaseHandle. In order for the system to download a new remote catalog, any prior calls to LoadContentCatalogAsync that point to the catalog you're attempting to load need to be released. Otherwise, the system picks up the Content Catalog load operation from our operation cache. If the cached operation is picked up, the new remote catalog is not downloaded. If set to true, the parameter autoReleaseHandle can ensure that the operation doesn't stick around in our operation cache after completing.
-
 [Addressables.CleanBundleCache]: xref:UnityEngine.AddressableAssets.Addressables.CleanBundleCache*
 [Addressables.DownloadDependenciesAsync]: xref:UnityEngine.AddressableAssets.Addressables.DownloadDependenciesAsync*
 [Addressables.GetDownloadSize]: xref:UnityEngine.AddressableAssets.Addressables.GetDownloadSize*
@@ -167,7 +144,6 @@ To help prevent you from needing to download a remote catalog every time, if you
 [Advanced Options]: xref:addressables-group-settings#advanced-options
 [AssetBundle compression]: xref:AssetBundles-Cache
 [AsyncOperationHandle]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle
-[Build Remote Catalogs]: xref:addressables-asset-settings#catalog
 [Building and running a WebGL project]: xref:webgl-building#AssetBundles
 [CacheInitializationSettings]: xref:UnityEditor.AddressableAssets.Settings.CacheInitializationSettings
 [Caching.ClearCache]: xref:UnityEngine.Caching.ClearCache
@@ -180,7 +156,6 @@ To help prevent you from needing to download a remote catalog every time, if you
 [Custom URL evaluation]: xref:addressables-api-transform-internal-id
 [Editor Hosting]: xref:addressables-asset-hosting-services
 [enabling remote distribution]: #enabling-remote-distribution
-[Enabling the remote catalog]: #enabling-the-remote-catalog
 [Managing catalogs at runtime]: xref:addressables-api-load-content-catalog-async
 [Profile variable syntax]: xref:addressables-profiles#profile-variable-syntax
 [Profile]: xref:addressables-profiles

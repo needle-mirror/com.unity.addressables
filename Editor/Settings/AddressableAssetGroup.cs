@@ -53,20 +53,15 @@ namespace UnityEditor.AddressableAssets.Settings
         /// </summary>
         public bool FlaggedDuringContentUpdateRestriction
         {
-            get
-            {
-                foreach (var e in entries)
-                    if (e.FlaggedDuringContentUpdateRestriction)
-                        return true;
-
-                return false;
-            }
+            get;
+            internal set;
         }
 
         internal void RefreshEntriesCache()
         {
             m_FolderEntryCache = new List<AddressableAssetEntry>();
             m_AssetCollectionEntryCache = new List<AddressableAssetEntry>();
+            FlaggedDuringContentUpdateRestriction = false;
             foreach (AddressableAssetEntry e in entries)
             {
                 if (!string.IsNullOrEmpty(e.AssetPath) && e.MainAssetType == typeof(DefaultAsset) && AssetDatabase.IsValidFolder(e.AssetPath))
@@ -75,6 +70,9 @@ namespace UnityEditor.AddressableAssets.Settings
                 else if (!string.IsNullOrEmpty(e.AssetPath) && e.AssetPath.EndsWith(".asset") && e.MainAssetType == typeof(AddressableAssetEntryCollection))
                     m_AssetCollectionEntryCache.Add(e);
 #pragma warning restore 0618
+                if (e.FlaggedDuringContentUpdateRestriction)
+                    FlaggedDuringContentUpdateRestriction = true;
+
             }
         }
 

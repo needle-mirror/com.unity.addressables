@@ -30,7 +30,7 @@ namespace UnityEditor.AddressableAssets.GUI
         //Default length of the Label within the Variables Pane
         private float m_LabelWidth = 155f;
         private float m_FieldBufferWidth = 0f;
-        
+
         GUIStyle m_ItemRectPadding;
 
         float m_HorizontalSplitterRatio = k_DefaultHorizontalSplitterRatio;
@@ -393,14 +393,22 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (selectedGroupType.GroupTypePrefix.StartsWith("CCD"))
                 {
                     var parts = selectedGroupType.GroupTypePrefix.Split(ProfileGroupType.k_PrefixSeparator);
-                    var badgeName = String.Join(ProfileGroupType.k_PrefixSeparator.ToString(), parts, 3, parts.Length - 3);
+                    var badgeName = String.Join(ProfileGroupType.k_PrefixSeparator.ToString(), parts, 4, parts.Length - 4);
                     var bucketName = selectedGroupType.GetVariableBySuffix($"{nameof(CcdBucket)}{nameof(CcdBucket.Name)}").Value;
+                    var environmentName = selectedGroupType.GetVariableBySuffix($"{nameof(ProfileDataSourceSettings.Environment)}{nameof(ProfileDataSourceSettings.Environment.name)}").Value;
                     return String.Join(ProfileGroupType.k_PrefixSeparator.ToString(), new string[]
                     {
                         "CCD",
+                        environmentName,
                         bucketName,
                         badgeName
                     });
+                }
+
+
+                if (selectedGroupType.GroupTypePrefix == AddressableAssetSettings.CcdManagerGroupTypePrefix)
+                {
+                    return $"{selectedGroupType.GroupTypePrefix} ({m_ProfileDataSource.currentEnvironment.name})";
                 }
 #endif
                 return selectedGroupType.GroupTypePrefix;

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 #if UNITY_EDITOR
@@ -12,6 +13,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -21,8 +23,11 @@ namespace AddressableTests.SyncAddressables
     public abstract class SyncAddressableTests : AddressablesTestFixture
     {
         protected string m_PrefabKey = "syncprefabkey";
+        protected string m_PrefabKey2 = "syncprefabkey2";
         protected string m_InvalidKey = "notarealkey";
         protected string m_SceneKey = "syncscenekey";
+        protected string m_ResourcePrefabKey = "resourceprefabkey";
+
 #if UNITY_EDITOR
         private AddressableAssetSettings m_settingsInstance;
         protected AddressableAssetSettings m_Settings
@@ -43,10 +48,26 @@ namespace AddressableTests.SyncAddressables
                 new List<AddressableAssetGroupSchema>(), typeof(BundledAssetGroupSchema));
             syncGroup.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.OnlyHash;
 
+            AddressableAssetGroup syncGroup2 = settings.CreateGroup("SyncAddressables2", false, false, true,
+                new List<AddressableAssetGroupSchema>(), typeof(BundledAssetGroupSchema));
+            syncGroup2.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.OnlyHash;
+
             //Create prefab
             string guid = CreatePrefab(tempAssetFolder + "/synctest.prefab");
             AddressableAssetEntry entry = settings.CreateOrMoveEntry(guid, syncGroup);
             entry.address = m_PrefabKey;
+            
+            string path = Path.Combine($"{GetGeneratedAssetsPath()}", "Resources");
+            Directory.CreateDirectory(path);
+            
+            string resourceGuid = CreatePrefab(Path.Combine(path, "synctest.prefab"));
+            AddressableAssetEntry resourceEntry = settings.CreateOrMoveEntry(resourceGuid, syncGroup);
+            resourceEntry.address = m_ResourcePrefabKey;
+
+            //Create prefab
+            string guid2 = CreatePrefab(tempAssetFolder + "/synctest2.prefab");
+            AddressableAssetEntry entry2 = settings.CreateOrMoveEntry(guid2, syncGroup2);
+            entry2.address = m_PrefabKey2;
 
             //Create Scenes
             string sceneGuid = CreateScene($"{tempAssetFolder}/SyncTestScene.unity");
@@ -76,6 +97,26 @@ namespace AddressableTests.SyncAddressables
             //Cleanup
             ReleaseOp(loadOp);
         }
+        
+        [Test]
+        public void SyncAddressableLoad_CompletesWithValidKeyWhenLoadedFromResources()
+        {
+            //string path = Path.Combine($"{GetGeneratedAssetsPath()}", "Resources");
+            
+            IResourceLocation loc = new ResourceLocationBase(m_ResourcePrefabKey, "synctest", typeof(LegacyResourcesProvider).FullName, typeof(GameObject));
+            if (!m_Addressables.ResourceManager.ResourceProviders.Any(rp => rp.GetType() == typeof(LegacyResourcesProvider)))
+                m_Addressables.ResourceManager.ResourceProviders.Add(new LegacyResourcesProvider());
+            
+            var loadOp = m_Addressables.LoadAssetAsync<GameObject>(loc);
+            var result = loadOp.WaitForCompletion();
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, loadOp.Status);
+            Assert.NotNull(result);
+            Assert.IsNotNull(loadOp.Result);
+            Assert.AreEqual(loadOp.Result, result);
+            //Cleanup
+            ReleaseOp(loadOp);
+                
+        }
 
         [Test]
         public void SyncAddressableLoadAssets_CompletesWithValidKey()
@@ -89,6 +130,34 @@ namespace AddressableTests.SyncAddressables
 
             //Cleanup
             ReleaseOp(loadOp);
+        }
+
+        [Test]
+        [Timeout(3000)]
+        public void SyncAddressables_DoesntHang_WhenCallingMultiple_BackToBack()
+        {
+            var pf1 = m_Addressables.LoadAssetAsync<GameObject>(m_PrefabKey).WaitForCompletion();
+            var pf2 = m_Addressables.LoadAssetAsync<GameObject>(m_PrefabKey2).WaitForCompletion();
+
+            Assert.IsNotNull(pf1);
+            Assert.IsNotNull(pf2);
+
+            m_Addressables.ReleaseInstance(pf1);
+            m_Addressables.ReleaseInstance(pf2);
+        }
+
+        [Test]
+        [Timeout(3000)]
+        public void ProviderOperation_WaitForCompletion_AfterOpComplete_DoesntHang()
+        {
+            ProviderOperation<GameObject> providerOp = new ProviderOperation<GameObject>();
+            providerOp.Init(m_Addressables.ResourceManager, new BundledAssetProvider(), 
+                new ResourceLocationBase(m_PrefabKey, m_PrefabKey, typeof(BundledAssetProvider).FullName, typeof(GameObject)), 
+                new AsyncOperationHandle<IList<AsyncOperationHandle>>());
+            providerOp.HasExecuted = true;
+            providerOp.ProviderCompleted(default(GameObject), true, null);
+
+            providerOp.WaitForCompletion();
         }
 
         [Test]

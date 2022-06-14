@@ -4,6 +4,28 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.20.3] - 2022-6-14
+- Added documentation to several areas (Build, Settings, Profiles, Catalogs, Runtime loading).
+- Fixed issue where GatherAllAssets filter would still return subObjects of filtered Assets.
+- Fixed issue where content update entries dependent on modified entries and not found as modified by check for content update restrictions
+- Fixed issue where the notification for changed static content wasn't getting cleared for assets inside of folders.
+- Fixed issue where Sprites belonging to a Sprite Atlas aren't assignable to an AssetReferenceSprite field.
+- Fixed issue where RefreshGlobalProfileVariables is called during script compilation.
+- Fixed issue where UnauthorizedAccessException occurs when lacking permissions to cache a remote catalog.
+- Fixed stack overflow with SortedDelegate and Addressables OnPostProcessAllAssets occurred during invoke a queued invoke and registering a new delegate.
+- Fixed issue where SceneLoadParameters were not used when using LoadSceneAsync using SceneLoadParameters.
+- Fixed issue where Schema gui with List members would not save when editing in the Group inspector.
+- Fixed issue where Serializable types of structs and class members of MonoBehaviour or ScriptableObjects would be returned as a location with GetResourceLocations but would not be loadable.
+- Fixed issue where setting default group does not dirty settings. Causing a reload to reset to previous default group.
+- Added updated documentation for the 1.20 Content Update workflows
+- Fixed issue where AssetReference subasset popup text is always white regardless of Editor skin.
+- Fixed issue where newly created assets would not show the Addressables inspector until after a domain reload.
+- Optimised Build pass Post Process Bundles when running on a large number of asset dependency trees.
+- A warning now gets printed if caching data fails due to Application.persistentDataPath being an empty string
+- Fixed issue where pressing the Reset button on the Hosting window would not assign a new random available port number.
+- Fixed bug where WaitForCompletion could hang indefinitely under certain race conditions (primarily on Android)
+- Fixed a bug where calling WaitForCompletion on a LoadAssetAsync call that was loading from Resources would freeze the editor.
+
 ## [1.20.0] - 2022-4-20
 - Added ability to get the download size of a given Content Catalog by its resource location
 - Add option to save the bundle build layout report as a json or txt file in the Preferences window.
@@ -50,9 +72,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed issue where inherited fast mode scripts would fail to use instance and scene providers set for that build script object.
 - Fixed issue where multiple AssetReferences could not be dragged and dropped to a list or array.
 - Improved performance when deleting Addressable Asset Groups.
-
-## [1.20.0] - 2022-5-5
-- ...
 
 ## [1.19.19] - 2022-3-1
 - Improved message of InvalidKeyException errors.
@@ -1162,6 +1181,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.0.8-preview] - 2018-02-08
 - Initial submission for package distribution
+
 
 
 

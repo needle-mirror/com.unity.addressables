@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEngine;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
 
@@ -80,5 +81,63 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// A mapping of AssetBundle to the full dependency tree, flattened into a single list.
         /// </summary>
         public Dictionary<string, List<string>> bundleToExpandedBundleDependencies;
+        
+        private Dictionary<string, List<ContentCatalogDataEntry>> m_PrimaryKeyToDependers = null;
+        internal Dictionary<string, List<ContentCatalogDataEntry>> PrimaryKeyToDependerLocations
+        {
+            get
+            {
+                if (m_PrimaryKeyToDependers != null)
+                    return m_PrimaryKeyToDependers;
+                if (locations == null || locations.Count == 0)
+                {
+                    Debug.LogError("Attempting to get Entries dependent on key, but currently no locations");
+                    return new Dictionary<string, List<ContentCatalogDataEntry>>(0);
+                }
+
+                m_PrimaryKeyToDependers = new Dictionary<string, List<ContentCatalogDataEntry>>(locations.Count);
+                foreach (ContentCatalogDataEntry location in locations)
+                {
+                    for (int i = 0; i < location.Dependencies.Count; ++i)
+                    {
+                        string dependencyKey = location.Dependencies[i] as string;
+                        if (string.IsNullOrEmpty(dependencyKey))
+                            continue;
+                            
+                        if (!m_PrimaryKeyToDependers.TryGetValue(dependencyKey, out var dependers))
+                        {
+                            dependers = new List<ContentCatalogDataEntry>();
+                            m_PrimaryKeyToDependers.Add(dependencyKey, dependers);
+                        }
+                        dependers.Add(location);
+                    }
+                }
+
+                return m_PrimaryKeyToDependers;
+            }
+        }
+        
+        private Dictionary<string, ContentCatalogDataEntry> m_PrimaryKeyToLocation = null;
+        internal Dictionary<string, ContentCatalogDataEntry> PrimaryKeyToLocation
+        {
+            get
+            {
+                if (m_PrimaryKeyToLocation != null)
+                    return m_PrimaryKeyToLocation;
+                if (locations == null || locations.Count == 0)
+                {
+                    Debug.LogError("Attempting to get Primary key to entries dependent on key, but currently no locations");
+                    return new Dictionary<string, ContentCatalogDataEntry>();
+                }
+                
+                m_PrimaryKeyToLocation = new Dictionary<string, ContentCatalogDataEntry>();
+                foreach (var loc in locations)
+                {
+                    if (loc != null && loc.Keys[0] != null && loc.Keys[0] is string && !m_PrimaryKeyToLocation.ContainsKey((string) loc.Keys[0]))
+                        m_PrimaryKeyToLocation[(string) loc.Keys[0]] = loc;
+                }
+                return m_PrimaryKeyToLocation;
+            }
+        }
     }
 }

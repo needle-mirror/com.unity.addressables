@@ -8,10 +8,10 @@ The build layout report provides detailed information and statistics about your 
 
 * Description of AssetBundles
 * Sizes of each Asset and AssetBundle
-* Explanation of non-Addressable Assets implicitly included in AssetBundles as dependencies
-* AssetBundle dependencies
+* Explanation of non-Addressable Assets implicitly included in AssetBundles as dependencies. See [Asset and AssetBundle dependencies] for more information.
+* [AssetBundle dependencies]
 
- When enabled, the Addressables build script creates the report whenever you build Addressables content. You can enable the report in the Addressables section of the [Preferences window]. You can find the report in your project folder at `Library/com.unity.addressables/buildlayout.txt`. Producing the report does increase build time.
+ When enabled, the Addressables build script creates the report whenever you build Addressables content. You can enable the report in the Addressables section of the [Preferences window]. You can find the report in your project folder at `Library/com.unity.addressables/buildlayout`. Producing the report does increase build time.
 
 See [Building your Addressable content] for more information about building content.
 
@@ -27,7 +27,7 @@ To create a build report:
 
 2. Perform a full build of your Addressables content. (See [Builds] for more information.)
 3. In a file system window, navigate to the `Library/com.unity.addressables/` folder of your Unity project.
-4. Open the `buildlayout.txt` file in a suitable text editor.
+4. Open the `buildlayout` file in a suitable text editor.
 
 ## Report data
 
@@ -80,8 +80,7 @@ Reports details for each AssetBundle built for a group.
 | Bundle Dependencies| The list of other AssetBundles the current bundle depends upon. These bundles are always loaded with the current bundle. |
 | Expanded Bundle Dependencies|  |
 | Explicit Assets| [Asset information] about Addressables included in the bundle. |
-| Files| [File information] about the files in the AssetBundle archive. Scene bundles contain up to two files per Scene, non-Scene bundles contain only one file.
- |
+| Files| [File information] about the files in the AssetBundle archive. Scene bundles contain up to two files per Scene, non-Scene bundles contain only one file. |
 
 
 
@@ -109,11 +108,7 @@ Provides details about each serialized file in an AssetBundle archive
 | Name| Purpose |
 |:---|:---| 
 | File summary| Index in file list, number and size of serialized MonoScripts in the file |
-| File sections| A serialized file can have one or more of the following sections:
-No extension --
-.resS --
-.resource --
-.sharedAssets -- |
+| File sections| A serialized file can have one or more of the following sections: <br/> &#8226; No extension<br/> &#8226; .resS<br/> &#8226; .resource<br/> &#8226; .sharedAssets |
 | Data from Other Assets| Dependent assets referenced by assets in the file. |
 
 
@@ -122,10 +117,11 @@ No extension --
 
 Lists any bundles that Addressables created from assets, such as the default shaders, that are provided as part of the Unity Engine. The Addressables build places such assets in the separate bundles listed here when needed to avoid duplicating the assets across multiple bundles as implicit dependencies.
 
-
+[Asset and AssetBundle dependencies]: xref:addressables-managing-assets#asset-and-assetbundle-dependencies
 [Asset bundle]: #assetbundle-information
 [Asset information]: #asset-information
 [Asset]: #asset-information
+[AssetBundle dependencies]: xref:AssetBundles-Dependencies
 [AssetBundle information]: #assetbundle-information
 [Build layout report]: #build-layout-report
 [Build profile log]: #build-profiling

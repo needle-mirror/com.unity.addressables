@@ -58,8 +58,6 @@ namespace UnityEditor.AddressableAssets.HostingServices
         ILogger m_Logger;
         List<Type> m_RegisteredServiceTypes;
 
-        internal bool exitingEditMode = false;
-
         /// <summary>
         /// Key/Value pairs valid for profile variable substitution
         /// </summary>
@@ -269,6 +267,14 @@ namespace UnityEditor.AddressableAssets.HostingServices
             m_Settings.SetDirty(AddressableAssetSettings.ModificationEvent.HostingServicesManagerModified, this, true, true);
             AddressableAssetUtility.OpenAssetIfUsingVCIntegration(m_Settings);
         }
+        
+        /// <summary>
+        /// Should be called by parent <see cref="ScriptableObject"/> instance Awake method
+        /// </summary>
+        internal void OnAwake()
+        {
+            RefreshGlobalProfileVariables();
+        }
 
         /// <summary>
         /// Should be called by parent <see cref="ScriptableObject"/> instance OnEnable method
@@ -281,27 +287,14 @@ namespace UnityEditor.AddressableAssets.HostingServices
             m_Settings.OnModification += OnSettingsModification;
             m_Settings.profileSettings.RegisterProfileStringEvaluationFunc(EvaluateGlobalProfileVariableKey);
 
-            bool hasAnEnabledService = false;
             foreach (var svc in HostingServices)
             {
                 svc.Logger = m_Logger;
                 m_Settings.profileSettings.RegisterProfileStringEvaluationFunc(svc.EvaluateProfileString);
                 var baseSvc = svc as BaseHostingService;
                 baseSvc?.OnEnable();
-
-                if (!hasAnEnabledService)
-                    hasAnEnabledService = svc.IsHostingServiceRunning || baseSvc != null && baseSvc.WasEnabled;
             }
-
-            if (!exitingEditMode || exitingEditMode && hasAnEnabledService && IsUsingPackedPlayMode())
-                RefreshGlobalProfileVariables();
-            else
-                LoadSessionStateKeys();
-        }
-
-        bool IsUsingPackedPlayMode()
-        {
-            return m_Settings.ActivePlayModeDataBuilder != null && m_Settings.ActivePlayModeDataBuilder.GetType() == typeof(BuildScriptPackedPlayMode);
+            LoadSessionStateKeysIfExists();
         }
 
         /// <summary>
@@ -323,9 +316,12 @@ namespace UnityEditor.AddressableAssets.HostingServices
             SaveSessionStateKeys();
         }
 
-        internal void LoadSessionStateKeys()
+        internal void LoadSessionStateKeysIfExists()
         {
             int numKeys = SessionState.GetInt(k_GlobalProfileVariablesCountKey, 0);
+            if (numKeys > 0)
+                GlobalProfileVariables.Clear();
+
             for (int i = 0; i < numKeys; i++)
             {
                 string profileVar = SessionState.GetString(GetSessionStateKey(i), string.Empty);

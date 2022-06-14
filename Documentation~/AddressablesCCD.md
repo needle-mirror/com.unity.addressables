@@ -34,19 +34,20 @@ Set the remote `LoadPath` to one of the following two paths:
 * If you publish content using a badge: 
 
 ```c#
-  https://(ProjectID).client-api.unity3dusercontent.com/client_api/v1/buckets/(BucketID)/release_by_badge/(BadgeName)/entry_by_path/content/?path=
+  https://(ProjectID).client-api.unity3dusercontent.com/client_api/v1/environments/(EnvironmentName)/buckets/(BucketID)/release_by_badge/(BadgeName)/entry_by_path/content/?path=
 
 ```
 
 * If you publish using a release: 
 
 ```c#
-  https://(ProjectID).client-api.unity3dusercontent.com/client_api/v1/buckets/(BucketID)/releases/(ReleaseID)/entry_by_path/content/?path=
+  https://(ProjectID).client-api.unity3dusercontent.com/client_api/v1/environments/(EnvironmentName)/buckets/(BucketID)/releases/(ReleaseID)/entry_by_path/content/?path=
 
 ```
 
 where:
 * `(ProjectID)` is your CCD project's ID string
+* `(EnvironmentName)` is the name of the Environment of your project
 * `(BucketID)` is the Bucket ID string for a CCD bucket within your project
 * `(ReleaseID)` is the ID of a specific release within a bucket
 * `(BadgeName)` is the name of the specific CCD badge
@@ -61,27 +62,33 @@ See [Profiles] for information about how to create and edit profiles.
 
 If your project is set up to use the [Unity Cloud Content Delivery] service, you can set the profile's remote path pair to publish content to a designated bucket and badge.
 
+> [!Important]
+> This feature requires the Content Delivery Management API package.
+
 To set up a Profile variable to use the CCD bundle location:
 
 1. Open the Profile window (menu: __Window > Asset Management > Addressables > Profiles__).
 2. Select the profile to change.
 3. Change the __Remote__ variable to use the __Cloud Content Delivery__ __Bundle Location__.
    <br/>![](images/addr_ccd_profiles_option.png)<br/>*Cloud Content Delivery Bundle Location Option*
-
-4. Choose the Bucket to use.
-   <br/>![](images/addr_ccd_profiles_buckets.png)<br/>*Cloud Content Delivery Bundle Location Option*
-
+4. Choose `Automatic (set using CcdManager)` or `Specify the Environment, Bucket, and Badge` option
+   <br>![](images/addr_ccd_profiles_option_2.png)<br/>*Cloud Content Delivery Bundle Location Option 2*
+   > [!Note] 
+   > The CcdManager is a static class that is used to notify Addressables which Environment, Bucket, and Badge to load from at Runtime. See [CcdManager].
+   * If choosing Automatic, select the environment you wish to use
+   <br>![](images/addr_ccd_profiles_automatic_env.png)<br/>*Cloud Content Delivery Bundle Location Automatic Environment Option*
+   * If choosing to specify, select the environment you wish to use
+   <br>![](images/addr_ccd_profiles_env.png)<br/>*Cloud Content Delivery Bundle Location Environment Option
+5. Choose the Bucket to use.
+   <br/>![](images/addr_ccd_profiles_buckets.png)<br/>*Cloud Content Delivery Bundle Location Bucket Option*
 > [!Note]
 > If no buckets are present, you will be shown this window before continuing.
-> <br/>![](images/addr_ccd_profiles_nobucket.png)<br/>*Cloud Content Delivery Bundle Location Option*
+> <br/>![](images/addr_ccd_profiles_nobucket.png)<br/>*Cloud Content Delivery Bundle Location No BucketOption*
 
-5. Choose the Badge.
-   <br/>![](images/addr_ccd_profiles_badges.png)<br/>*Cloud Content Delivery Bundle Location Option*
+6. Choose the Badge.
+   <br/>![](images/addr_ccd_profiles_badges.png)<br/>*Cloud Content Delivery Bundle Location Badge Option*
 
 Make this the active profile when building content for delivey with CCD.
-
-> [!Important]
-> This feature requires the Content Delivery Management API package.
 
 See [Profiles] for information about how to modify profiles.
 
@@ -127,6 +134,21 @@ Finally, the management package will a create release for those remote target an
 <br/>![](images/addr_ccd_build_and_release.png)<br/>*Build & Release option*
 
 
+<a name="ccd-manager"></a>
+#### CcdManager
+When setting up the project profile path pairs and utilizing CCD, there is an option to use `Automatic`. This option utilizes the `CcdManager` to set static properties at Runtime to tell Addressables which Environment, Bucket, and Badge to reach out to for loading assets. The `CcdManager` has 3 main properties: `EnvironmentName`, `BucketId`, and `Badge`. Setting these properties at runtime before Addressables initializes will tell Addressables to look at these locations within CCD. To learn more about environments, buckets, and badges see [CCD organization].
+
+Example Snippet of setting CcdManager Properties:
+```c#
+   CcdManager.EnvironmentName = ENV_NAME;
+   CcdManager.BucketId = BUCKET_ID;
+   CcdManager.Badge = BADGE;
+
+   // Addressables call to load or instantiate asset
+```
+>[!Note]
+> ANY Addressables call initializes the system so be sure to set the `CcdManager` prior to any Addressables call to ensure that there are no race conditions or unexpected behaviors.
+
 [Getting Started]: xref:addressables-getting-started
 [Upgrading to the Addressables System]: xref:addressables-migration
 [Remote content distribution]: xref:addressables-remote-content-distribution
@@ -140,8 +162,10 @@ Finally, the management package will a create release for those remote target an
 [Building your Addressable content]: xref:addressables-building-content
 [Configure a profile to include your CCD URL]: #configure-profile-with-ccd-url
 [Marking assets as Addressable]: xref:addressables-getting-started#making-an-asset-addressable
-[Unity Cloud Content Delivery]: https://docs.unity3d.com/Manual/UnityCCD.html
+[Unity Cloud Content Delivery]: https://docs.unity.com/ccd/UnityCCD.html
 [Using Addressables in Unity Cloud Build]: xref:UnityCloudBuildAddressables
 [Groups]: xref:addressables-groups
 [CCD dashboard]: https://docs.unity.com/ccd/Content/UnityCCDDashboard.htm
 [command-line interface]: https://docs.unity.com/ccd/Content/UnityCCDCLI.htm
+[CcdManager]: #ccd-manager
+[CCD organization]: https://docs.unity.com/ccd/UnityCCD.html#CCD_organization

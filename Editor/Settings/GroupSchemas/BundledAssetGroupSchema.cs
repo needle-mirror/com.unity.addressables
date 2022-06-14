@@ -194,8 +194,12 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// </summary>
         public AssetNamingMode InternalIdNamingMode
         {
-            get { return m_InternalIdNamingMode; }
-            set { m_InternalIdNamingMode = value; SetDirty(true); }
+            get => m_InternalIdNamingMode;
+            set
+            {
+                m_InternalIdNamingMode = value;
+                SetDirty(true);
+            }
         }
 
         [SerializeField]
@@ -223,7 +227,18 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <summary>
         /// Determines how other cached versions of asset bundles are cleared.
         /// </summary>
-        public CacheClearBehavior AssetBundledCacheClearBehavior { get { return m_CacheClearBehavior; } set { m_CacheClearBehavior = value; } }
+        public CacheClearBehavior AssetBundledCacheClearBehavior
+        {
+            get => m_CacheClearBehavior;
+            set
+            {
+                if (m_CacheClearBehavior != value)
+                {
+                    m_CacheClearBehavior = value;
+                    SetDirty(true);
+                }
+            }
+        }
 
 
         /// <summary>
@@ -269,7 +284,15 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <summary>
         /// The provider type to use for loading assets from bundles.
         /// </summary>
-        public SerializedType BundledAssetProviderType { get { return m_BundledAssetProviderType; } }
+        public SerializedType BundledAssetProviderType
+        {
+            get => m_BundledAssetProviderType;
+            internal set
+            {
+                m_BundledAssetProviderType = value;
+                SetDirty(true);
+            }
+        }
 
         [SerializeField]
         [Tooltip("If true, the bundle and asset provider for assets in this group will get unique provider ids and will only provide for assets in this group.")]
@@ -512,7 +535,15 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <summary>
         /// The provider type to use for loading asset bundles.
         /// </summary>
-        public SerializedType AssetBundleProviderType { get { return m_AssetBundleProviderType; } }
+        public SerializedType AssetBundleProviderType
+        { 
+            get => m_AssetBundleProviderType;
+            internal set
+            {
+                m_AssetBundleProviderType = value;
+                SetDirty(true);
+            }
+        }
 
         /// <summary>
         /// Used to determine if dropdown should be custom
@@ -705,11 +736,14 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// </summary>
         public BundleNamingStyle BundleNaming
         {
-            get { return m_BundleNaming; }
+            get => m_BundleNaming;
             set
             {
-                m_BundleNaming = value;
-                SetDirty(true);
+                if (m_BundleNaming != value)
+                {
+                    m_BundleNaming = value;
+                    SetDirty(true);
+                }
             }
         }
 
@@ -720,11 +754,14 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// </summary>
         public AssetLoadMode AssetLoadMode
         {
-            get { return m_AssetLoadMode; }
+            get => m_AssetLoadMode;
             set
             {
-                m_AssetLoadMode = value;
-                SetDirty(true);
+                if (m_AssetLoadMode != value)
+                {
+                    m_AssetLoadMode = value;
+                    SetDirty(true);
+                }
             }
         }
 
@@ -742,9 +779,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <inheritdoc/>
         public override void OnGUI()
         {
-            var so = new SerializedObject(this);
-
-            ShowSelectedPropertyPathPair(so);
+            ShowSelectedPropertyPathPair(SchemaSerializedObject);
 
             AdvancedOptionsFoldout.IsActive = GUI.AddressablesGUIUtility.FoldoutWithHelp(AdvancedOptionsFoldout.IsActive, new GUIContent("Advanced Options"), () =>
             {
@@ -752,15 +787,14 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 Application.OpenURL(url);
             });
             if (AdvancedOptionsFoldout.IsActive)
-                ShowAdvancedProperties(so);
-            so.ApplyModifiedProperties();
+                ShowAdvancedProperties(SchemaSerializedObject);
+            SchemaSerializedObject.ApplyModifiedProperties();
         }
 
         /// <inheritdoc/>
         public override void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
         {
             List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>> queuedChanges = null;
-            var so = new SerializedObject(this);
 
             List<BundledAssetGroupSchema> otherBundledSchemas = new List<BundledAssetGroupSchema>();
             foreach (var schema in otherSchemas)
@@ -770,7 +804,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
             foreach (var schema in otherBundledSchemas)
                 schema.m_ShowPaths = m_ShowPaths;
-            ShowSelectedPropertyPathPairMulti(so, otherSchemas, ref queuedChanges,
+            ShowSelectedPropertyPathPairMulti(SchemaSerializedObject, otherSchemas, ref queuedChanges,
                 (src, dst) => { dst.m_BuildPath.Id = src.BuildPath.Id; dst.m_LoadPath.Id = src.LoadPath.Id; dst.m_UseCustomPaths = src.m_UseCustomPaths;  dst.SetDirty(true); });
 
             EditorGUI.BeginChangeCheck();
@@ -781,11 +815,11 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             }, 10);
             if (AdvancedOptionsFoldout.IsActive)
             {
-                ShowAdvancedPropertiesMulti(so, otherSchemas, ref queuedChanges);
+                ShowAdvancedPropertiesMulti(SchemaSerializedObject, otherSchemas, ref queuedChanges);
             }
             EditorGUI.EndFoldoutHeaderGroup();
 
-            so.ApplyModifiedProperties();
+            SchemaSerializedObject.ApplyModifiedProperties();
             if (queuedChanges != null)
             {
                 Undo.SetCurrentGroupName("bundledAssetGroupSchemasUndos");
@@ -913,12 +947,12 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             ShowSelectedPropertyMulti(so, nameof(m_IncludeLabelsInCatalog), m_IncludeLabelsInCatalogContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.IncludeLabelsInCatalog = src.IncludeLabelsInCatalog, ref m_IncludeLabelsInCatalog);
             ShowSelectedPropertyMulti(so, nameof(m_InternalIdNamingMode), m_InternalIdNamingModeContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.InternalIdNamingMode = src.InternalIdNamingMode, ref m_InternalIdNamingMode);
             ShowSelectedPropertyMulti(so, nameof(m_InternalBundleIdMode), m_InternalBundleIdModeContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.InternalBundleIdMode = src.InternalBundleIdMode, ref m_InternalBundleIdMode);
-            ShowSelectedPropertyMulti(so, nameof(m_CacheClearBehavior), m_CacheClearBehaviorContent, otherBundledSchemas, ref queuedChanges, (src, dst) => { dst.AssetBundledCacheClearBehavior = src.AssetBundledCacheClearBehavior; dst.SetDirty(true); }, ref m_CacheClearBehavior);
+            ShowSelectedPropertyMulti(so, nameof(m_CacheClearBehavior), m_CacheClearBehaviorContent, otherBundledSchemas, ref queuedChanges, (src, dst) => { dst.AssetBundledCacheClearBehavior = src.AssetBundledCacheClearBehavior; }, ref m_CacheClearBehavior);
             ShowSelectedPropertyMulti(so, nameof(m_BundleMode), m_BundleModeContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.BundleMode = src.BundleMode, ref m_BundleMode);
             ShowSelectedPropertyMulti(so, nameof(m_BundleNaming), m_BundleNamingContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.BundleNaming = src.BundleNaming, ref m_BundleNaming);
             ShowSelectedPropertyMulti(so, nameof(m_AssetLoadMode), m_AssetLoadModeContent, otherBundledSchemas, ref queuedChanges, (src, dst) => dst.AssetLoadMode = src.AssetLoadMode, ref m_AssetLoadMode);
-            ShowSelectedPropertyMulti(so, nameof(m_BundledAssetProviderType), m_AssetProviderContent, otherBundledSchemas, ref queuedChanges, (src, dst) => { dst.m_BundledAssetProviderType = src.BundledAssetProviderType; dst.SetDirty(true); }, ref m_BundledAssetProviderType);
-            ShowSelectedPropertyMulti(so, nameof(m_AssetBundleProviderType), m_BundleProviderContent, otherBundledSchemas, ref queuedChanges, (src, dst) => { dst.m_AssetBundleProviderType = src.AssetBundleProviderType; dst.SetDirty(true); }, ref m_AssetBundleProviderType);
+            ShowSelectedPropertyMulti(so, nameof(m_BundledAssetProviderType), m_AssetProviderContent, otherBundledSchemas, ref queuedChanges, (src, dst) => { dst.BundledAssetProviderType = src.BundledAssetProviderType; }, ref m_BundledAssetProviderType);
+            ShowSelectedPropertyMulti(so, nameof(m_AssetBundleProviderType), m_BundleProviderContent, otherBundledSchemas, ref queuedChanges, (src, dst) => { dst.AssetBundleProviderType = src.AssetBundleProviderType; }, ref m_AssetBundleProviderType);
         }
 
         void ShowSelectedPropertyMulti<T>(SerializedObject so, string propertyName, GUIContent label, List<AddressableAssetGroupSchema> otherSchemas, ref List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>> queuedChanges, Action<BundledAssetGroupSchema, BundledAssetGroupSchema> a, ref T propertyValue)
@@ -929,33 +963,63 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             ShowMixedValue(prop, otherSchemas, typeof(T), propertyName);
 
             T newValue = default(T);
-
+            SerializedPropertyType type = SerializedPropertyType.Generic;
             EditorGUI.BeginChangeCheck();
             if (typeof(T) == typeof(bool))
             {
                 newValue = (T)(object)EditorGUILayout.Toggle(label, (bool)(object)propertyValue);
+                type = SerializedPropertyType.Boolean;
             }
             else if (typeof(T).IsEnum)
             {
-                newValue = (T)(object)(AssetNamingMode)EditorGUILayout.EnumPopup(label, (Enum)(object)propertyValue);
+                var e = EditorGUILayout.EnumPopup(label, (Enum)(object)propertyValue);
+                newValue = (T)(object)Convert.ToInt32(e);
+                type = SerializedPropertyType.Enum;
             }
             else if (typeof(T) == typeof(int))
             {
                 newValue = (T)(object)EditorGUILayout.IntField(label, (int)(object)propertyValue);
+                type = SerializedPropertyType.Integer;
             }
             else
             {
                 EditorGUILayout.PropertyField(prop, label, true);
+                so.ApplyModifiedProperties();
             }
+            
             if (EditorGUI.EndChangeCheck())
             {
-                Undo.RecordObject(so.targetObject, so.targetObject.name + propertyName);
-                if (typeof(T) == typeof(bool) || typeof(T).IsEnum || typeof(T) == typeof(int))
-                    propertyValue = newValue;
-                if (queuedChanges == null)
-                    queuedChanges = new List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>>();
-                queuedChanges.Add(a);
-                EditorUtility.SetDirty(this);
+                if (type != SerializedPropertyType.Generic)
+                {
+                    HashSet<SerializedProperty> properties = new HashSet<SerializedProperty>(){prop};
+                    foreach (AddressableAssetGroupSchema otherSchema in otherSchemas)
+                        properties.Add(otherSchema.SchemaSerializedObject.FindProperty(propertyName));
+
+                    foreach (SerializedProperty propertyForValueDestination in properties)
+                    {
+                        var destinationSerializedObject = propertyForValueDestination.serializedObject;
+                        switch (type)
+                        {
+                            case SerializedPropertyType.Boolean:
+                                propertyForValueDestination.boolValue = (bool) (object) newValue;
+                                break;
+                            case SerializedPropertyType.Integer:
+                                propertyForValueDestination.intValue = (int) (object) newValue;
+                                break;
+                            case SerializedPropertyType.Enum:
+                                propertyForValueDestination.enumValueIndex = (int) (object) newValue;
+                                break;
+                        }
+
+                        destinationSerializedObject.ApplyModifiedProperties();
+                    }
+                }
+                else if (a != null)
+                {
+                    if (queuedChanges == null)
+                        queuedChanges = new List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>>();
+                    queuedChanges.Add(a);
+                }
             }
             EditorGUI.showMixedValue = false;
         }

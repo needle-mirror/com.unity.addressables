@@ -261,6 +261,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
         }
 
         [UnityTest]
+        [Ignore("Test only runs on unstead platform, ps4, and causes a compile error on that build target.  https://jira.unity3d.com/browse/ADDR-2796")]
         public IEnumerator UpdateContent_UpdatesCatalogs_WhenAutoCleanCacheEnabled_AndCachingDisabled_ReturnsException()
         {
 #if !ENABLE_CACHING && !PLATFORM_SWITCH
@@ -268,7 +269,9 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             var localHashLoc = new ResourceLocationBase("LocalHash", "Local", kLocalHashProviderId, typeof(string));
             var catalogLoc = new ResourceLocationBase("cat", "cat_id", typeof(TestCatalogProvider).FullName, typeof(object), remoteHashLoc, localHashLoc);
 
-            m_Addressables.RuntimePath = m_RuntimeSettingsPath;
+            //causes a compile err.  Needs re-evaluation on ps4
+            //m_Addressables.RuntimePath = m_RuntimeSettingsPath; 
+
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kRemoteHashProviderId, "different"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestHashProvider(kLocalHashProviderId, "same"));
             m_Addressables.ResourceManager.ResourceProviders.Add(new TestCatalogProvider(kNewLocatorId));

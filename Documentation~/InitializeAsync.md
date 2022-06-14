@@ -15,7 +15,7 @@ The initialization operation performs the following tasks:
 
 The following Addressables settings can change initialization behavior:
 
-* [Disable Catalog Update on Startup]: Addressables won't automatically check for an updated catalog. See [Updating catalogs] for information about manually updating your catalogs.
+* [Only update catalogs manually]: Addressables won't automatically check for an updated catalog. See [Updating catalogs] for information about manually updating your catalogs.
 * [Build Remote Catalog]: Addressables won't attempt to load remote content without a remote catalog.
 * [Custom certificate handler]: identify a custom certificate handler if you need one to access your remote asset hosting service.
 * [Initialization object list]: add [IObjectInitializationDataProvider] ScriptableObjects to your application that are invoked during the initialization operation.
@@ -66,7 +66,7 @@ When Addressables initializes at runtime, it applies these settings to the defau
 [Custom certificate handler]: xref:addressables-asset-settings#downloads
 [Custom URL transform function]: xref:addressables-api-transform-internal-id
 [Customizing initialization]: #customizing-initialization
-[Disable Catalog Update on Startup]: xref:addressables-asset-settings#catalog
+[Only update catalogs manually]: xref:addressables-asset-settings#catalog
 [Getting the address of an asset at runtime]: #getting-the-address-of-an-asset-at-runtime
 [initialization object list]: xref:addressables-asset-settings#initialization-object-list
 [initialization object]: xref:addressables-asset-settings#initialization-object-list

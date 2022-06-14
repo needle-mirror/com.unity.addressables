@@ -31,6 +31,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         private Func<float> m_GetProgressCallback;
         private Func<DownloadStatus> m_GetDownloadProgressCallback;
         private Func<bool> m_WaitForCompletionCallback;
+        private bool m_ProviderCompletedCalled = false; //This is used to fix a race condition with WaitForCompletion, like in AssetBundleProvider
         private DownloadStatus m_DownloadStatus;
         private IResourceProvider m_Provider;
         internal AsyncOperationHandle<IList<AsyncOperationHandle>> m_DepOp;
@@ -57,17 +58,19 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         ///<inheritdoc />
         protected  override bool InvokeWaitForCompletion()
         {
-            if (IsDone)
+            if (IsDone || m_ProviderCompletedCalled)
                 return true;
+
             if (m_DepOp.IsValid() && !m_DepOp.IsDone)
                 m_DepOp.WaitForCompletion();
-            if (m_WaitForCompletionCallback == null)
-                return false;
+
             m_RM?.Update(Time.unscaledDeltaTime);
             if (!HasExecuted)
                 InvokeExecute();
+
             if (m_WaitForCompletionCallback == null)
                 return false;
+
             return m_WaitForCompletionCallback.Invoke();
         }
 
@@ -155,6 +158,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_GetDownloadProgressCallback = null;
             m_WaitForCompletionCallback = null;
             m_NeedsRelease = status;
+            m_ProviderCompletedCalled = true;
 
             ProviderOperation<T> top = this as ProviderOperation<T>;
             if (top != null)
@@ -248,6 +252,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_Provider = provider;
             m_Location = location;
             m_ReleaseDependenciesOnFailure = true;
+            m_ProviderCompletedCalled = false;
             SetWaitForCompletionCallback(WaitForCompletionHandler);
         }
 
@@ -261,6 +266,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             m_Provider = provider;
             m_Location = location;
             m_ReleaseDependenciesOnFailure = releaseDependenciesOnFailure;
+            m_ProviderCompletedCalled = false;
             SetWaitForCompletionCallback(WaitForCompletionHandler);
         }
 

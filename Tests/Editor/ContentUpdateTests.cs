@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AddressableAssetsIntegrationTests;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
@@ -947,10 +948,10 @@ namespace UnityEditor.AddressableAssets.Tests
                     PreviousAssetState = context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID]
                 }
             };
+            
+            context.ContentState.cachedBundles = new CachedBundleState[] {new CachedBundleState() {bundleFileId = "cachedBundle", data = "string"}};
 
-            Assert.DoesNotThrow(() =>
-                RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, "BundleProvider",
-                    new List<ContentCatalogDataEntry>(), context));
+            Assert.DoesNotThrow(() => RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, context));
 
             File.Delete(k_ContentUpdateTestCachedBundlePath);
             Settings.RemoveGroup(group);
@@ -993,7 +994,8 @@ namespace UnityEditor.AddressableAssets.Tests
                 }
             };
 
-            RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, "BundleProvider", new List<ContentCatalogDataEntry>(), context);
+            context.ContentState.cachedBundles = new CachedBundleState[] {new CachedBundleState() {bundleFileId = "cachedBundle", data = "string"}};
+            RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, context);
 
             Assert.IsTrue(File.Exists(k_ContentUpdateTestCachedBundlePath));
             Assert.IsFalse(File.Exists(k_ContentUpdateTestNewBundleName));
@@ -1036,77 +1038,13 @@ namespace UnityEditor.AddressableAssets.Tests
                 }
             };
 
-            RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, "BundleProvider", new List<ContentCatalogDataEntry>(), context);
+            context.ContentState.cachedBundles = new CachedBundleState[] {new CachedBundleState() {bundleFileId = "cachedBundle", data = "string"}};
+            RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, context);
 
             var registryPaths = context.Registry.GetFilePaths();
 
             Assert.AreEqual(1, registryPaths.Count());
             Assert.AreEqual(k_ContentUpdateTestCachedBundlePath, registryPaths.ElementAt(0));
-
-            Settings.RemoveGroup(group);
-        }
-
-        [Test]
-        public void ApplyAssetEntryUpdates_PreviousStateDependencies_SetInCatalogEntry()
-        {
-            var group = Settings.CreateGroup("ContentUpdateTests", false, false, false, null, typeof(BundledAssetGroupSchema), typeof(ContentUpdateGroupSchema));
-            string contentUpdateTestGroupGuid = GUID.Generate().ToString();
-
-            group.GetSchema<ContentUpdateGroupSchema>().StaticContent = false;
-            var assetEntry = CreateAssetEntry(m_ContentUpdateTestAssetGUID, group);
-            group.AddAssetEntry(assetEntry);
-
-            var context = GetContentUpdateContext(m_ContentUpdateTestAssetGUID, k_ContentUpdateTestCachedAssetHash,
-                k_ContentUpdateTestNewInternalBundleName, k_ContentUpdateTestNewBundleName,
-                k_ContentUpdateTestCachedBundlePath, contentUpdateTestGroupGuid, k_ContentUpdateTestFileName);
-
-            var previousDep = new AssetState()
-            {
-                guid = GUID.Generate(),
-                hash = Hash128.Parse("9823749283742")
-            };
-
-            var currentDep = new AssetState()
-            {
-                guid = GUID.Generate(),
-                hash = Hash128.Parse("128747239872")
-            };
-
-            context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID].dependencies = new AssetState[]
-            {
-                previousDep
-            };
-
-            context.IdToCatalogDataEntryMap[m_ContentUpdateTestAssetGUID].Dependencies.Add(currentDep);
-
-            var ops = new List<RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation>()
-            {
-                new RevertUnchangedAssetsToPreviousAssetState.AssetEntryRevertOperation()
-                {
-                    PreviousBuildPath = k_ContentUpdateTestCachedBundlePath,
-                    AssetEntry = assetEntry,
-                    BundleCatalogEntry = context.IdToCatalogDataEntryMap[m_ContentUpdateTestAssetGUID],
-                    CurrentBuildPath = k_ContentUpdateTestNewBundleName,
-                    PreviousAssetState = context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID]
-                }
-            };
-
-            string depBundleFileId = "depBundleFileId";
-            context.GuidToPreviousAssetStateMap.Add(previousDep.guid.ToString(), new CachedAssetState()
-            {
-                asset = previousDep,
-                bundleFileId = depBundleFileId,
-                data = previousDep,
-                dependencies = new AssetState[0],
-                groupGuid = contentUpdateTestGroupGuid
-            });
-
-            var locations = new List<ContentCatalogDataEntry>();
-            RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, "BundleProvider", locations, context);
-
-            Assert.AreEqual(1, locations.Count);
-            Assert.AreEqual(1, ops[0].BundleCatalogEntry.Dependencies.Count);
-            Assert.AreEqual(depBundleFileId + ops[0].AssetEntry.GetHashCode(), ops[0].BundleCatalogEntry.Dependencies[0]);
 
             Settings.RemoveGroup(group);
         }
@@ -1184,7 +1122,12 @@ namespace UnityEditor.AddressableAssets.Tests
             };
 
             var locations = new List<ContentCatalogDataEntry>();
-            RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, "BundleProvider", locations, context);
+            context.ContentState.cachedBundles = new CachedBundleState[]
+            {
+                new CachedBundleState() {bundleFileId = "cachedBundle", data = "string"},
+                new CachedBundleState() {bundleFileId = "cachedBundle2", data = "string"}
+            };
+            RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, context);
 
             Assert.AreEqual(k_ContentUpdateTestCachedBundlePath, context.IdToCatalogDataEntryMap[m_ContentUpdateTestAssetGUID].InternalId);
             Assert.AreEqual(depGroupCachedBundlePath, context.IdToCatalogDataEntryMap[depAssetGuid.ToString()].InternalId);
@@ -1315,6 +1258,75 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             string buildPath = RevertUnchangedAssetsToPreviousAssetState.BundleIdToBuildPath(bundleId, rootLoadPath, rootBuildPath);
             Assert.IsTrue(buildPath.StartsWith(rootBuildPath));
+        }
+        
+        [Test]
+        public void GatherModifiedEntries_IncludesDependants()
+        {
+            // Create assets
+            GameObject mainObject = new GameObject("mainObject");
+            Material mat = new Material(Shader.Find("Transparent/Diffuse"));
+            mainObject.AddComponent<MeshRenderer>().material = mat;
+
+            string mainAssetPath = GetAssetPath("mainObject.prefab");
+            string refAssetPath = GetAssetPath("refObject.prefab");
+            string materialAssetPath = GetAssetPath("testMaterial.mat");
+
+            AssetDatabase.CreateAsset(mat, materialAssetPath);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(mainObject, mainAssetPath);
+            GameObject refObject = new GameObject("refObject");
+            refObject.AddComponent<ObjectReferenceMonoBehaviour>().m_ObjectReference = prefab;
+            PrefabUtility.SaveAsPrefabAsset(refObject, refAssetPath);
+            AssetDatabase.SaveAssets();
+            AddressableAssetGroup mainAssetGroup = null;
+
+            try
+            {
+                // Create addressables
+                mainAssetGroup = Settings.CreateGroup("TestGroup", false, false, false, null);
+
+                var schema = mainAssetGroup.AddSchema<BundledAssetGroupSchema>();
+                schema.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalBuildPath);
+                schema.LoadPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalLoadPath);
+                schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
+                mainAssetGroup.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
+
+                AddressableAssetEntry mainEntry =
+                    Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(mainAssetPath), mainAssetGroup);
+                AddressableAssetEntry refEntry =
+                    Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(refAssetPath), mainAssetGroup);
+
+                // Build
+                var context = new AddressablesDataBuilderInput(Settings);
+                Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(context);
+
+                // Modify assets
+                var ma = AssetDatabase.LoadAssetAtPath<Material>(materialAssetPath);
+                ma.color = new Color(Random.value, Random.value, Random.value);
+                EditorUtility.SetDirty(ma);
+                AssetDatabase.SaveAssets();
+
+                // Test
+                var tempPath = Path.GetDirectoryName(Application.dataPath) + "/Library/com.unity.addressables/" +
+                               PlatformMappingService.GetPlatformPathSubFolder() + "/addressables_content_state.bin";
+                var modifiedEntries = ContentUpdateScript.GatherModifiedEntries(Settings, tempPath);
+
+                Assert.AreEqual(2, modifiedEntries.Count);
+                Assert.IsTrue(modifiedEntries.Contains(mainEntry), "Modified Entries does not include the main prefab");
+                Assert.IsTrue(modifiedEntries.Contains(refEntry), "Modified Entries does not include the prefab that is dependant on Prefab that has changed material");
+            }
+            finally
+            {
+                // Cleanup
+                GameObject.DestroyImmediate(mainObject);
+                GameObject.DestroyImmediate(refObject);
+
+                Settings.RemoveGroup(mainAssetGroup);
+
+                AssetDatabase.DeleteAsset(mainAssetPath);
+                AssetDatabase.DeleteAsset(refAssetPath);
+                AssetDatabase.DeleteAsset(materialAssetPath);
+            }
         }
     }
 }

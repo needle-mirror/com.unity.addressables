@@ -354,7 +354,8 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
 
                     if (string.IsNullOrEmpty(remoteHash) || disableCatalogUpdateOnStart) //offline
                     {
-                        if (!string.IsNullOrEmpty(m_LocalHashValue) && !m_Retried) //cache exists and not forcing a retry state
+#if ENABLE_CACHING
+                        if (!string.IsNullOrEmpty(m_LocalHashValue) && !m_Retried && !string.IsNullOrEmpty(Application.persistentDataPath)) //cache exists and not forcing a retry state
                         {
                             idToLoad = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Cache]).Replace(".hash", ".json");
                         }
@@ -362,6 +363,9 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                         {
                             m_LocalHashValue = Hash128.Compute(idToLoad).ToString();
                         }
+#else
+                        m_LocalHashValue = Hash128.Compute(idToLoad).ToString();
+#endif
                     }
                     else //online
                     {
@@ -372,8 +376,11 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                         else //remote is different than cache, or no cache
                         {
                             idToLoad = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Remote]).Replace(".hash", ".json");
-                            m_LocalDataPath = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Cache]).Replace(".hash", ".json");
                             m_RemoteHashValue = remoteHash;
+#if ENABLE_CACHING
+                            if (!string.IsNullOrEmpty(Application.persistentDataPath))
+                                m_LocalDataPath = GetTransformedInternalId(location.Dependencies[(int)DependencyHashIndex.Cache]).Replace(".hash", ".json");
+#endif
                         }
                     }
                 }
@@ -391,14 +398,20 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
                     {
 #if ENABLE_CACHING
                         var dir = Path.GetDirectoryName(m_LocalDataPath);
-                        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                            Directory.CreateDirectory(dir);
                         var localCachePath = m_LocalDataPath;
                         Addressables.LogFormat("Addressables - Saving cached content catalog to {0}.", localCachePath);
                         try
                         {
+                            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                                Directory.CreateDirectory(dir);
                             File.WriteAllText(localCachePath, JsonUtility.ToJson(ccd));
                             File.WriteAllText(localCachePath.Replace(".json", ".hash"), m_RemoteHashValue);
+                        }
+                        catch (UnauthorizedAccessException uae)
+                        {
+                            Addressables.LogWarning($"Did not save cached content catalog. Missing access permissions for location {localCachePath} : {uae.Message}");
+                            m_ProviderInterface.Complete(ccd, true, null);
+                            return;
                         }
                         catch (Exception e)
                         {
@@ -411,6 +424,13 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
 #endif
                         ccd.localHash = m_RemoteHashValue;
                     }
+#if ENABLE_CACHING
+                    else if (string.IsNullOrEmpty(m_LocalDataPath) && string.IsNullOrEmpty(Application.persistentDataPath))
+                    {
+                        Addressables.LogWarning($"Did not save cached content catalog because Application.persistentDataPath is an empty path.");
+                    }
+#endif
+
                     m_ProviderInterface.Complete(ccd, true, null);
                 }
                 else

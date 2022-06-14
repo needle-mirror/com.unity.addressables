@@ -46,7 +46,8 @@ public class RevertUnchangedAssetsToPreviousAssetState
         foreach (var assetGroup in groups)
         {
             List<AssetEntryRevertOperation> operations = DetermineRequiredAssetEntryUpdates(assetGroup, updateContext);
-            ApplyAssetEntryUpdates(operations, GenerateLocationListsTask.GetBundleProviderName(assetGroup), aaContext.locations, updateContext);
+            if (operations != null && operations.Count > 0)
+                ApplyAssetEntryUpdates(operations, updateContext);
         }
         
         var defaultContentUpdateSchema = aaContext.Settings.DefaultGroup.GetSchema<ContentUpdateGroupSchema>();
@@ -218,52 +219,22 @@ public class RevertUnchangedAssetsToPreviousAssetState
         return false;
     }
 
-    internal static void ApplyAssetEntryUpdates(
-        List<AssetEntryRevertOperation> operations,
-        string bundleProviderName,
-        List<ContentCatalogDataEntry> locations,
-        ContentUpdateContext contentUpdateContext)
+    internal static void ApplyAssetEntryUpdates(List<AssetEntryRevertOperation> operations, ContentUpdateContext contentUpdateContext)
     {
+        UnityEngine.Assertions.Assert.IsNotNull(contentUpdateContext.ContentState.cachedBundles, "CachedBundles is null, cachedBundles requires to apply update.");
         foreach (AssetEntryRevertOperation operation in operations)
         {
             //Check that we can replace the entry in the file registry
-            //before continuing.  Past this point destructive actions are taken.
-            if (contentUpdateContext.Registry.ReplaceBundleEntry(Path.GetFileNameWithoutExtension(operation.PreviousBuildPath), operation.PreviousAssetState.bundleFileId) ||
-                IsPreviouslyRevertedDependency(operation.PreviousAssetState.bundleFileId, contentUpdateContext))
+            if (contentUpdateContext.Registry.ReplaceBundleEntry(Path.GetFileNameWithoutExtension(operation.PreviousBuildPath), operation.PreviousAssetState.bundleFileId))
             {
                 File.Delete(operation.CurrentBuildPath);
-                operation.BundleCatalogEntry.InternalId = operation.PreviousAssetState.bundleFileId;
-                if (contentUpdateContext.ContentState.cachedBundles != null)
-                {
-                    var bundleState = contentUpdateContext.ContentState.cachedBundles.FirstOrDefault(s => s.bundleFileId == operation.PreviousAssetState.bundleFileId);
-                    operation.BundleCatalogEntry.Data = bundleState != null ? bundleState.data : null;
-                }
-                //If the entry has dependencies, we need to update those to point to their respective cached versions as well.
-                if (operation.PreviousAssetState.dependencies.Length > 0)
-                {
-                    operation.BundleCatalogEntry.Dependencies.Clear();
-                    foreach (AssetState state in operation.PreviousAssetState.dependencies)
-                    {
-                        if (contentUpdateContext.GuidToPreviousAssetStateMap.TryGetValue(state.guid.ToString(), out var cachedDependencyState) &&
-                            !string.IsNullOrEmpty(cachedDependencyState.bundleFileId))
-                        {
-                            string modifiedKey = cachedDependencyState.bundleFileId + operation.AssetEntry.GetHashCode();
-                            locations.Add(new ContentCatalogDataEntry(
-                                typeof(IAssetBundleResource),
-                                cachedDependencyState.bundleFileId,
-                                bundleProviderName,
-                                new List<object>() { modifiedKey }));
-
-                            contentUpdateContext.Registry.AddFile(cachedDependencyState.bundleFileId);
-                            if (!operation.BundleCatalogEntry.Dependencies.Contains(modifiedKey))
-                                operation.BundleCatalogEntry.Dependencies.Add(modifiedKey);
-
-                            contentUpdateContext.PreviousAssetStateCarryOver.Add(cachedDependencyState);
-                        }
-                    }
-                }
+                
                 //sync the internal ids of the catalog entry and asset entry to the cached state
                 operation.BundleCatalogEntry.InternalId = operation.AssetEntry.BundleFileId = operation.PreviousAssetState.bundleFileId;
+                var bundleState = contentUpdateContext.ContentState.cachedBundles.FirstOrDefault(s => s.bundleFileId == operation.PreviousAssetState.bundleFileId);
+                UnityEngine.Assertions.Assert.IsNotNull(bundleState, "Could not find cached bundle state for " + operation.AssetEntry.BundleFileId);
+                UnityEngine.Assertions.Assert.IsNotNull(bundleState.data, "Could not find cached bundle load data for " + operation.AssetEntry.BundleFileId);
+                operation.BundleCatalogEntry.Data = bundleState.data;
             }
         }
     }

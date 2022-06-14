@@ -10,6 +10,7 @@ using UnityEditor.SceneManagement;
 using UnityEditor.U2D;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.AddressableAssets.Tests;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -206,6 +207,71 @@ namespace UnityEditor.AddressableAssets.Tests
             e.CreateCatalogEntries(entries, false, "doesntMatter", null, null, providerTypes);
             e.m_cachedMainAssetType = savedType;
             Assert.AreEqual(0, entries.Count);
+        }
+        
+        [Test]
+        public void CreateCatalogEntries_NonUnityObjectsTypesAreStripped()
+        {
+            // Init
+            string id = "testObject";
+            var path = GetAssetPath("testObjectWithSerializedClass.asset");
+            var testObject = TestObjectWithSerializableField.Create(id);
+            AssetDatabase.CreateAsset(testObject, path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+            var e = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(path), Settings.DefaultGroup);
+            e.address = id;
+            
+            // test
+            try
+            {
+                var entries = new List<ContentCatalogDataEntry>();
+                var providerTypes = new HashSet<Type>();
+                e.CreateCatalogEntries(entries, false, "doesntMatter", null, null, providerTypes);
+                var foundCatalogEntryForSerialisedClass = entries.Find(entry => entry.ResourceType == typeof(SerializableClass));
+                Assert.IsNull(foundCatalogEntryForSerialisedClass, "SerializableClass was found as a catalog entry type. Only Unity Objects are meant to be Assets not serialised objects internal to the type.");
+            }
+            finally
+            {
+                Settings.RemoveAssetEntry(e);
+                AssetDatabase.DeleteAsset(path);
+                UnityEngine.Object.DestroyImmediate(testObject);
+            }
+        }
+        
+        [Test]
+        public void CreateCatalogEntries_IncludesUnityObjectsOnly()
+        {
+            // Init
+            string id = "testObject";
+            var path = GetAssetPath("testObjectWithSerializedClass.asset");
+            var testObject = TestObjectWithSerializableField.Create(id);
+            AssetDatabase.CreateAsset(testObject, path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+            var e = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(path), Settings.DefaultGroup);
+            e.address = id;
+            
+            // test
+            try
+            {
+                var entries = new List<ContentCatalogDataEntry>();
+                var providerTypes = new HashSet<Type>();
+                e.CreateCatalogEntries(entries, false, "doesntMatter", null, null, providerTypes);
+                var foundCatalogEntryForTestObject = entries.Find(entry => entry.ResourceType == typeof(TestObjectWithSerializableField));
+                Assert.AreEqual(1, entries.Count, "Too many catalog entries found for TestObjectWithSerializableField Asset created");
+                Assert.IsNotNull(foundCatalogEntryForTestObject, "TestObjectWithSerializableField was not found for catalog entries for the ScriptableObject type.");
+            }
+            finally
+            {
+                Settings.RemoveAssetEntry(e);
+                AssetDatabase.DeleteAsset(path);
+                UnityEngine.Object.DestroyImmediate(testObject);
+            }
         }
 
         [Test]

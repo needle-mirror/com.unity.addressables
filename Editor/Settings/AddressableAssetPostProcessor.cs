@@ -13,7 +13,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             else if (AddressableAssetSettingsDefaultObject.SettingsExists)
             {
-                s_OnPostProcessHandler.BufferInvoke(importedAssets, deletedAssets, movedAssets, movedFromAssetPaths);
+                s_OnPostProcessHandler.TryInvokeOrDelayToReady(importedAssets, deletedAssets, movedAssets, movedFromAssetPaths);
             }
         }
     }

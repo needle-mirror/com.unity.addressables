@@ -101,6 +101,16 @@ namespace UnityEngine.AddressableAssets.Initialization
             Addressables.LogFormat("Initializing Addressables version {0}.", m_rtdOp.Result.AddressablesVersion);
             var rtd = m_rtdOp.Result;
 
+#if ENABLE_CCD
+            Addressables.LogFormat("Initializing CcdManager");
+            if (!CcdManager.IsConfigured())
+            {
+                CcdManager.EnvironmentName = rtd.CcdManagedData.EnvironmentName;
+                CcdManager.BucketId = rtd.CcdManagedData.BucketId;
+                CcdManager.Badge = rtd.CcdManagedData.Badge;
+            }
+#endif
+
             m_Addressables.ResourceManager.postProfilerEvents = rtd.ProfileEvents;
             WebRequestQueue.SetMaxConcurrentRequests(rtd.MaxConcurrentWebRequests);
             m_Addressables.CatalogRequestsTimeout = rtd.CatalogRequestsTimeout;

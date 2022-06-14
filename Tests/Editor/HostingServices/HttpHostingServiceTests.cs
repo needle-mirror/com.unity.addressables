@@ -226,9 +226,11 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
         [Test]
         public void ResetListenPortShould_AssignRandomPortIfZero()
         {
+            var oldPort = m_Service.HostingServicePort;
             m_Service.ResetListenPort();
             m_Service.StartHostingService();
             Assert.Greater(m_Service.HostingServicePort, 0);
+            Assert.AreNotEqual(m_Service.HostingServicePort, oldPort);
         }
 
         [Test]

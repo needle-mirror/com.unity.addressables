@@ -13,12 +13,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
     [DisplayName("Content Update Restriction")]
     public class ContentUpdateGroupSchema : AddressableAssetGroupSchema
     {
-        enum ContentType
-        {
-            CanChangePostRelease,
-            CannotChangePostRelease
-        }
-
         [FormerlySerializedAs("m_staticContent")]
         [SerializeField]
         bool m_StaticContent;
@@ -27,11 +21,14 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// </summary>
         public bool StaticContent
         {
-            get { return m_StaticContent; }
+            get => m_StaticContent;
             set
             {
-                m_StaticContent = value;
-                SetDirty(true);
+                if (m_StaticContent != value)
+                {
+                    m_StaticContent = value;
+                    SetDirty(true);
+                }
             }
         }
 
@@ -42,30 +39,37 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             var staticContent = EditorGUILayout.Toggle(m_UpdateRestrictionGUIContent, m_StaticContent);
             if (staticContent != m_StaticContent)
-                StaticContent = staticContent;
+            {
+                var prop = SchemaSerializedObject.FindProperty("m_StaticContent");
+                prop.boolValue = staticContent;
+                SchemaSerializedObject.ApplyModifiedProperties();
+            }
         }
 
         /// <inheritdoc/>
         public override void OnGUIMultiple(List<AddressableAssetGroupSchema> otherSchemas)
         {
-            var so = new SerializedObject(this);
-            var prop = so.FindProperty("m_StaticContent");
-
+            string propertyName = "m_StaticContent";
+            var prop = SchemaSerializedObject.FindProperty(propertyName);
+            
             // Type/Static Content
-            ShowMixedValue(prop, otherSchemas, typeof(bool), "m_StaticContent");
+            ShowMixedValue(prop, otherSchemas, typeof(bool), propertyName);
             EditorGUI.BeginChangeCheck();
             
             var staticContent = EditorGUILayout.Toggle(m_UpdateRestrictionGUIContent, m_StaticContent);
 
             if (EditorGUI.EndChangeCheck())
             {
-                StaticContent = staticContent;
+                prop.boolValue = staticContent;
+                SchemaSerializedObject.ApplyModifiedProperties();
                 foreach (var s in otherSchemas)
-                    (s as ContentUpdateGroupSchema).StaticContent = StaticContent;
+                {
+                    var otherProp = s.SchemaSerializedObject.FindProperty(propertyName);
+                    otherProp.boolValue = staticContent;
+                    s.SchemaSerializedObject.ApplyModifiedProperties();
+                }
             }
             EditorGUI.showMixedValue = false;
-
-            so.ApplyModifiedProperties();
         }
     }
 }

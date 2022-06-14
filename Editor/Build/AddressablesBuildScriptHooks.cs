@@ -66,11 +66,8 @@ namespace UnityEditor.AddressableAssets.Build
                     if (BuildScript.buildCompleted != null)
                         BuildScript.buildCompleted(res);
                     settings.DataBuilderCompleted(settings.ActivePlayModeDataBuilder, res);
-                    settings.HostingServicesManager.exitingEditMode = true;
                 }
             }
-            else
-                settings.HostingServicesManager.exitingEditMode = false;
         }
     }
 }

@@ -68,7 +68,7 @@ Settings that control remote content builds and updates.
 
 | Property| Function |
 |:---|:---|
-| __Disable Catalog Update on Startup__| Disables the automatic check for an updated remote catalog when the Addressables system initializes at runtime. You can manually [check for an updated catalog]. |
+| __Only update catalogs manually__| Disables the automatic check for an updated remote catalog when the Addressables system initializes at runtime. You can manually [check for an updated catalog]. |
 | __Content State Build Path__|Where to build the content state file produced by the default build script.|
 | __Build Remote Catalog__| Enable to build a remote catalog. |
 | __Build & Load Paths__ | Where to build and load the remote catalog. Choose a [Profile] path pair from the list or select `<custom>` if you want to set the build and load paths separately.<br/>Only visible when you enable **Build Remote Catalog**.|
@@ -111,23 +111,28 @@ Settings that affect all builds.
 
 Configures the [IDataBuilder] scripts available in the project. If you create a custom Build or Play Mode script, you must add it to this list before you can use it.
 
-
 The Addressables packages contains a few build scripts that handle the default build processes and provide different ways to access your data in Play mode. You can find these scripts in the AddressableAssetData/DataBuilders folder.
 
-To add a custom script, click the __+__ button and locate your script in the project. The custom script must extend [BuildScriptBase] or implement [IDataBuilder].
-
 > [!NOTE]
-> Build scripts and Play Mode scripts both implement __[IDataBuilder]__. The system distinguishes between them by the data type of the result they produce. A build script produces an __[AddressablesPlayerBuildResult]__, while a Play Mode script produces an __[AddressablesPlayModeBuildResult]__. In a custom script, implement the __[CanBuildData]__ method.
+> Build and Play Mode scripts are ScriptableObject assets. Follow the instructions in the [ScriptableObject manual page] to create a ScriptableObject asset for a Build or Play Mode script.
+
+To add a custom script, click on the __+__ button and select the ScriptableObject asset which represents the desired script from the file panel.
+
+See [Custom Build Scripting] for more information about custom scripts.
 
 ## Asset Group Templates
 
 ![](images/addr_settings_group_templates.png)<br/>*Configured group templates*
 
+
 Defines the list of templates that you can use to create new groups. When you create a new template, you must add it to this list before you can use it.
 
 The Addressables package contains one template that includes the schemas used by the default build scripts. You can find the template in the AddressableAssetData/AssetGroupTemplates folder. 
 
-To add a custom template, click the __+__ button and locate your custom template asset in your project.
+> [!NOTE]
+> Group templates are ScriptableObject assets. Follow the instructions in the [ScriptableObject manual page] to create a ScriptableObject asset for a group template.
+
+To add a custom template, click on the __+__ button and select the ScriptableObject asset which represents the desired template from the file panel.
 
 See [Group templates] for information on creating custom templates.
 
@@ -137,7 +142,10 @@ See [Group templates] for information on creating custom templates.
 
 Configures the initialization objects for the project. Initialization objects are ScriptableObject classes that implement the [IObjectInitializationDataProvider] interface. You can create these objects to pass data to the Addressables initialization process at runtime. 
 
-To add an initialization object, click the __+__ button and locate your initialization object asset in the project.
+> [!NOTE]
+> Initialization objects are ScriptableObject assets. Follow the instructions in the [ScriptableObject manual page] to create a ScriptableObject asset for a initialization object.
+
+To add an initialization object, click on the __+__ button and select the ScriptableObject asset which represents the desired object from the file panel.
 
 See [Customizing initialization] for more information.
 
@@ -165,11 +173,13 @@ See [Customizing initialization] for more information.
 [IObjectInitializationDataProvider]: xref:UnityEngine.ResourceManagement.Util.IObjectInitializationDataProvider
 [Profile]: xref:addressables-profiles
 [Profiles]: xref:addressables-profiles
+[ScriptableObject manual page]: xref:class-ScriptableObject
 [Unique Bundle IDs]: xref:addressables-content-update-builds#unique-bundle-ids-setting
 [UnityEngine.Networking.CertificateHandler]: xref:UnityEngine.Networking.CertificateHandler
 [AddressablesPlayModeBuildResult]: xref:UnityEditor.AddressableAssets.Build.AddressablesPlayModeBuildResult
 [CanBuildData]: xref:UnityEditor.AddressableAssets.Build.IDataBuilder.CanBuildData*
 [AsyncOperationHandle.OperationException]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.OperationException
 [Content update builds]: xref:addressables-content-update-builds
+[Custom Build Scripting]: xref:addressables-api-build-player-content#custom-build-scripting
 [Unity Editor Preferences]: xref:addressables-configuration#unity-preferences
 [Building content]: xref:addressables-builds#build-with-player

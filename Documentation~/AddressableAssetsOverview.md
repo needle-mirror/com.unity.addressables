@@ -34,7 +34,7 @@ A key feature of the Addressables system is that you assign addresses to your as
 
 ![](images/addr_0.png)<br/>*Addressables loads Assets by address no matter where they're located*
 
-Because an address isn't tied to the physical location of the Asset, you have much more flexibility when managing and optimizing your Assets, both in the Unity Editor and at runtime. [Content catalogs] map Addresses to physical locations.
+Because an address isn't tied to the physical location of the Asset, you have much more flexibility when managing and optimizing your Assets, both in the Unity Editor and at runtime. [Catalogs](#content-catalogs) map Addresses to physical locations.
 
 Although, you should typically assign unique addresses to your assets, an asset address is not required to be unique. You can assign the same address string to more than one asset when useful. For example, if you have variants of an asset, you could assign the same address to all the variants and use labels to distinguish between the variants:
 
@@ -96,17 +96,11 @@ See [Schemas] for more information about group schemas.
 
 ## Content catalogs
 
-The Addressables system produces a content catalog file that maps the addresses of your assets to their physical locations. Addressables produces one content catalog per project, but you can load catalogs created by other Unity Projects to load Addressable assets produced by those Projects. This allows you to use separate Projects to develop and build some of your assets, which can make iteration and team collaboration easier on large productions.
-
-When Addressables produces the content catalog, it also creates a hash file containing the hash (a mathematical fingerprint) of the catalog. If you are hosting your Addressable assets remotely, the system uses this hash file to determine if the content catalog has changed and needs to be downloaded.
+The Addressables system produces a content catalog file that maps the addresses of your assets to their physical locations. It can also create a hash file containing the hash (a mathematical fingerprint) of the catalog. If you are hosting your Addressable assets remotely, the system uses this hash file to determine if the content catalog has changed and needs to be downloaded. See [Content catalogs] for more information. 
 
 The Profile selected when you perform a content build determines how the addresses in the content catalog map to resource loading paths. See [Profiles] for more information.
 
-See [Loading additional catalogs] for information about loading content catalogs.
-
 See [Distributing content remotely] for information about hosting content remotely.
-
-See [Managing catalogs at runtime] if you want to load additional catalogs or override the default update behavior.
 
 ## Content builds
 
@@ -148,16 +142,14 @@ The Addressables system provides a few tools and windows to help you manage your
 [Analyze tool]: xref:addressables-analyze-tool
 [Building Addressable content]: xref:addressables-builds
 [Build layout report]: xref:addressables-build-layout-report
-[Content catalogs]: #content-catalogs
+[Content catalogs]: xref:addressables-build-artifacts#content-catalogs
 [Distributing content remotely]: xref:addressables-remote-content-distribution
 [Hosting tool]: xref:addressables-asset-hosting-services
 [IResourceProvider]: xref:UnityEngine.ResourceManagement.ResourceProviders.IResourceProvider
-[Loading additional catalogs]: xref:addressables-api-load-content-catalog-async#loading-additional-catalogs
 [Loading Addressable Assets]: xref:addressables-api-load-asset-async
 [Loading assets]: xref:addressables-api-load-asset-async
 [Making an asset Addressable]: xref:addressables-getting-started#making-an-asset-addressable
 [Managing Assets]: xref:AssetWorkflow
-[Managing catalogs at runtime]: xref:addressables-api-load-content-catalog-async
 [Memory management]: xref:addressables-memory-management
 [Play mode Scripts]: xref:addressables-groups#play-mode-scripts
 [Profiles window]: xref:addressables-profiles

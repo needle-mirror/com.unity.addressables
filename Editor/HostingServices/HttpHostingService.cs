@@ -134,7 +134,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         GUIContent m_PortNumberGUI =
             new GUIContent("Port", "Port number used by the service");
         GUIContent m_ResetPortGUI =
-            new GUIContent("Reset", "Selects the next available port. Value is unchanged if the current port is still available");
+            new GUIContent("Reset", "Selects the next available port. Value will remain unchanged if no other port is available");
 
         // ReSharper disable once MemberCanBePrivate.Global
         /// <summary>
@@ -339,7 +339,7 @@ namespace UnityEditor.AddressableAssets.HostingServices
         }
 
         /// <summary>
-        /// Listen on a new port then next time the server starts. If the server is already running, it will be stopped
+        /// Listen on a new port the next time the server starts. If the server is already running, it will be stopped
         /// and restarted automatically.
         /// </summary>
         /// <param name="port">Specify a port to listen on. Default is 0 to choose any open port</param>
@@ -347,8 +347,22 @@ namespace UnityEditor.AddressableAssets.HostingServices
         public void ResetListenPort(int port = 0)
         {
             var isRunning = IsHostingServiceRunning;
+            bool autoPickPort = port == 0;
+            var newPort = autoPickPort ? GetAvailablePort() : port;
             StopHostingService();
-            HostingServicePort = port;
+            
+            if (autoPickPort)
+            {
+                var oldPort = HostingServicePort;
+                HostingServicePort = newPort;
+                if (HostingServicePort == 0)
+                {
+                    HostingServicePort = oldPort;
+                    LogError("No other port available. Unable to change hosting port.");
+                }
+            }
+            else
+                HostingServicePort = newPort;
 
             if (isRunning)
                 StartHostingService();

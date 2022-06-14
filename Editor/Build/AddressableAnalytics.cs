@@ -46,7 +46,7 @@ namespace UnityEditor.AddressableAssets
             public int NumberOfGroupsUsingCCD;
             public int NumberOfGroupsUsingRemoteCustomPaths;
             public int NumberOfGroupsUsingLocalCustomPaths;
-            
+
             public int NumberOfAssetsInEditorHostedPaths;
             public int NumberOfAssetsInBuiltInPaths;
             public int NumberOfAssetsInCCDPaths;
@@ -98,7 +98,7 @@ namespace UnityEditor.AddressableAssets
             InstallCCDManagementPackage = 9,
             ContentUpdateCancelled = 10,
             ContentUpdateHasChangesInUpdateRestrictionWindow = 11,
-            ContentUpdateContinuesWithoutChanges = 12, 
+            ContentUpdateContinuesWithoutChanges = 12,
             RunContentUpdateBuild = 13,
             CannotLocateBinFile = 14,
             BuildFailedDueToModifiedStaticEntries = 15,
@@ -119,7 +119,8 @@ namespace UnityEditor.AddressableAssets
             BuiltIn = 0,
             EditorHosted = 1,
             CCD = 2,
-            Custom = 3
+            Custom = 3,
+            Automatic = 4
         }
         internal enum BuildType
         {
@@ -156,13 +157,13 @@ namespace UnityEditor.AddressableAssets
                 if (cachePathField == null)
                     return BuildType.Inconclusive;
                 string cachePath = (string)cachePathField.GetValue(null);
-                if (cachePath != null && Directory.Exists(cachePath)) 
+                if (cachePath != null && Directory.Exists(cachePath))
                     return BuildType.IncrementalBuild;
                 if (cachePath != null)
-                        return BuildType.CleanBuild;
+                    return BuildType.CleanBuild;
                 return BuildType.Inconclusive;
             }
-            catch 
+            catch
             {
                 return BuildType.Inconclusive;
             }
@@ -199,25 +200,25 @@ namespace UnityEditor.AddressableAssets
             bool isBuildAndRelease = builderInput.IsBuildAndRelease;
 
             bool usingCCD = false;
-            
+
 #if ENABLE_CCD
-                usingCCD = true;
+            usingCCD = true;
 #endif
 
             ErrorType errorCode = ParseError(error);
-            
+
             if (isPlayModeBuild)
             {
                 BuildScriptType playModeBuildScriptType = DetermineBuildScriptType(currentSettings.ActivePlayModeDataBuilder);
                 BuildData playModeBuildData = new BuildData()
                 {
                     IsPlayModeBuild = true,
-                    BuildScript = (int) playModeBuildScriptType
+                    BuildScript = (int)playModeBuildScriptType
                 };
 
                 return playModeBuildData;
             }
-            
+
             BuildScriptType buildScriptType = DetermineBuildScriptType(currentSettings.ActivePlayerDataBuilder);
             int numberOfAddressableAssets = 0;
 
@@ -231,19 +232,19 @@ namespace UnityEditor.AddressableAssets
 
             int minNumberOfAssetsInAGroup = -1;
             int maxNumberOfAssetsInAGroup = -1;
-            
+
             int numberOfGroupsUsingEditorHosted = 0;
             int numberOfGroupsUsingBuiltIn = 0;
             int numberOfGroupsUsingCCD = 0;
             int numberOfGroupsUsingRemoteCustomPaths = 0;
             int numberOfGroupsUsingLocalCustomPaths = 0;
-           
+
             int numberOfAssetsInEditorHostedPaths = 0;
             int numberOfAssetsInBuiltInPaths = 0;
             int numberOfAssetsInCCDPaths = 0;
             int numberOfAssetsInRemoteCustomPaths = 0;
             int numberOfAssetsInLocalCustomPaths = 0;
-            
+
 
             List<ProfileGroupType> groupTypes = ProfileGroupType.CreateGroupTypes(currentSettings.profileSettings.GetProfile(currentSettings.activeProfileId), currentSettings);
             var dataSourceSettings = ProfileDataSourceSettings.GetSettings();
@@ -260,23 +261,25 @@ namespace UnityEditor.AddressableAssets
                     prefixToTypeMap.Add(groupType.GroupTypePrefix, PathType.EditorHosted);
                 else if (groupTypeArchetype.GroupTypePrefix.StartsWith("CCD"))
                     prefixToTypeMap.Add(groupType.GroupTypePrefix, PathType.CCD);
+                else if (groupTypeArchetype.GroupTypePrefix.StartsWith("Automatic"))
+                    prefixToTypeMap.Add(groupType.GroupTypePrefix, PathType.CCD);
             }
 
             HashSet<string> vars = currentSettings.profileSettings.GetAllVariableIds();
-            
+
             foreach (var group in currentSettings.groups)
             {
                 if (group == null)
-                    continue; 
-                
+                    continue;
+
                 numberOfAddressableAssets += group.entries.Count;
-                
+
                 var schema = group.GetSchema<BundledAssetGroupSchema>();
                 if (schema == null)
                     continue;
 
                 int selected = schema.DetermineSelectedIndex(groupTypes, -1, currentSettings, vars);
-                
+
                 PathType pathType;
                 if (selected == -1)
                     pathType = PathType.Custom;
@@ -314,10 +317,16 @@ namespace UnityEditor.AddressableAssets
                     numberOfGroupsUsingCCD += 1;
                     numberOfAssetsInCCDPaths += group.entries.Count;
                 }
-                
+
+                if (pathType == PathType.Automatic)
+                {
+                    numberOfGroupsUsingCCD += 1;
+                    numberOfAssetsInCCDPaths += group.entries.Count;
+                }
+
                 var bundleMode = schema.BundleMode;
                 var compressionType = schema.Compression;
-              
+
                 switch (compressionType)
                 {
                     case BundledAssetGroupSchema.BundleCompressionMode.Uncompressed:
@@ -355,10 +364,10 @@ namespace UnityEditor.AddressableAssets
                 IsUsingCCD = usingCCD,
                 IsContentUpdateBuild = isContentUpdateBuild,
                 IsPlayModeBuild = false,
-                BuildScript = (int) buildScriptType,
+                BuildScript = (int)buildScriptType,
                 BuildAndRelease = isBuildAndRelease,
                 NumberOfLabels = currentSettings.labelTable.labelNames.Count,
-                IsIncrementalBuild = (int) buildType,
+                IsIncrementalBuild = (int)buildType,
                 NumberOfAddressableAssets = numberOfAddressableAssets,
                 MinNumberOfAddressableAssetsInAGroup = minNumberOfAssetsInAGroup,
                 MaxNumberOfAddressableAssetsInAGroup = maxNumberOfAssetsInAGroup,
@@ -380,8 +389,8 @@ namespace UnityEditor.AddressableAssets
                 NumberOfAssetsInBuiltInPaths = numberOfAssetsInBuiltInPaths,
                 NumberOfAssetsInEditorHostedPaths = numberOfAssetsInEditorHostedPaths,
                 NumberOfAssetsInCCDPaths = numberOfAssetsInCCDPaths,
-                BuildTarget = (int) EditorUserBuildSettings.activeBuildTarget,
-                ErrorCode = (int) errorCode
+                BuildTarget = (int)EditorUserBuildSettings.activeBuildTarget,
+                ErrorCode = (int)errorCode
             };
 
             return data;
@@ -402,18 +411,18 @@ namespace UnityEditor.AddressableAssets
 
         internal static UsageData GenerateUsageData(UsageEventType eventType, AnalyticsContentUpdateRestriction restriction = AnalyticsContentUpdateRestriction.NotApplicable)
         {
-            
+
             bool usingCCD = false;
-            
+
 #if ENABLE_CCD
-                usingCCD = true;
+            usingCCD = true;
 #endif
-            
+
             var data = new UsageData()
             {
                 UsageEventType = (int)eventType,
                 IsUsingCCD = usingCCD,
-                AutoRunRestrictionsOption = (int) restriction
+                AutoRunRestrictionsOption = (int)restriction
             };
 
             return data;
@@ -436,7 +445,7 @@ namespace UnityEditor.AddressableAssets
                 if (!RegisterEvent(UsageEvent))
                     return;
 
-            UsageData data = GenerateUsageData(eventType, (AnalyticsContentUpdateRestriction) restriction);
+            UsageData data = GenerateUsageData(eventType, (AnalyticsContentUpdateRestriction)restriction);
             EditorAnalytics.SendEventWithLimit(UsageEvent, data);
         }
 

@@ -39,9 +39,6 @@ See [Groups] and [Group settings] for more information.
 
 [Profiles] let you configure sets of build variables as appropriate for the purpose of build. For example, you could configure a profile to use for development builds of your project, one for test builds, and another for publishing release builds. You can create as many profiles as you need.
 
-> [!TIP]
-> When you host  
-
 See [Profiles] for more information.
 
 ## Asset hosting service

@@ -276,7 +276,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
             }
 
-            s_Cache.Add(selectionHashCode, targetInfos);
+            if (targetInfos != null && targetInfos.Count > 0)
+                s_Cache.Add(selectionHashCode, targetInfos);
             return targetInfos;
         }
 

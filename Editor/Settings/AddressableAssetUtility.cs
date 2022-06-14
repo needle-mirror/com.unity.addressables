@@ -53,7 +53,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 path == CommonStrings.UnityDefaultResourcePath ||
                 path == CommonStrings.UnityBuiltInExtraPath)
                 return false;
-            if (path.EndsWith($"{Path.DirectorySeparatorChar}Editor") || path.Contains($"{Path.DirectorySeparatorChar}Editor{Path.DirectorySeparatorChar}") 
+            if (path.EndsWith($"{Path.DirectorySeparatorChar}Editor") || path.Contains($"{Path.DirectorySeparatorChar}Editor{Path.DirectorySeparatorChar}")
                 || path.EndsWith("/Editor") || path.Contains("/Editor/"))
                 return false;
             if (path == "Assets")
@@ -283,7 +283,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             return result;
         }
-        
+
         struct PackageData
         {
             public string version;
@@ -389,7 +389,7 @@ namespace UnityEditor.AddressableAssets.Settings
             if (confirm)
             {
                 AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.InstallCCDManagementPackage);
-                Client.Add("com.unity.services.ccd.management@2.0.4");
+                Client.Add("com.unity.services.ccd.management@2.1.0");
                 AddressableAssetSettingsDefaultObject.Settings.CCDEnabled = true;
             }
 #endif
@@ -446,7 +446,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal class SortedDelegate<T1, T2, T3, T4>
         {
-            struct BufferedValues
+            struct QueuedValues
             {
                 public T1 arg1;
                 public T2 arg2;
@@ -454,13 +454,17 @@ namespace UnityEditor.AddressableAssets.Settings
                 public T4 arg4;
             }
 
-            List<BufferedValues> m_Buffer;
-            bool m_IsInvoking;
-            private List<(int, Delegate)> m_RegisterQueue = new List<(int, Delegate)>();
-
             public delegate void Delegate(T1 arg1, T2 arg2, T3 arg3, T4 arg4);
             private SortedList<int, Delegate> m_SortedInvocationList = new SortedList<int, Delegate>();
 
+            private List<QueuedValues> m_InvokeQueue;
+            private List<(int, Delegate)> m_RegisterQueue;
+            private bool m_IsInvoking;
+
+            /// <summary>
+            /// Removes a delegate from the invocation list.
+            /// </summary>
+            /// <param name="toUnregister">Delegate to remove</param>
             public void Unregister(Delegate toUnregister)
             {
                 IList<int> keys = m_SortedInvocationList.Keys;
@@ -473,8 +477,8 @@ namespace UnityEditor.AddressableAssets.Settings
                         break;
                     }
                 }
-                
-                if (m_IsInvoking)
+
+                if (m_IsInvoking && m_RegisterQueue != null)
                 {
                     for (int i = m_RegisterQueue.Count - 1; i >= 0; --i)
                     {
@@ -486,7 +490,12 @@ namespace UnityEditor.AddressableAssets.Settings
                     }
                 }
             }
-            
+
+            /// <summary>
+            /// Add a delegate to the invocation list
+            /// </summary>
+            /// <param name="toRegister">Delegate to add</param>
+            /// <param name="order">Order to call the delegate in the invocation list</param>
             public void Register(Delegate toRegister, int order)
             {
                 if (m_IsInvoking)
@@ -494,54 +503,91 @@ namespace UnityEditor.AddressableAssets.Settings
                     m_RegisterQueue.Add((order, toRegister));
                     return;
                 }
-                
+
+                FlushRegistrationQueue();
+                RegisterToInvocationList(toRegister, order);
+                FlushInvokeQueue();
+            }
+
+            private void RegisterToInvocationList(Delegate toRegister, int order)
+            {
+                // unregister first, this will remove the delegate from another order if it is added
                 Unregister(toRegister);
                 if (m_SortedInvocationList.ContainsKey(order))
                     m_SortedInvocationList[order] += toRegister;
                 else
                     m_SortedInvocationList.Add(order, toRegister);
-                InvokeBuffer_Internal();
             }
 
+            /// <summary>
+            /// Invoke all delegates in the invocation list for the given parameters
+            /// </summary>
+            /// <param name="arg1"></param>
+            /// <param name="arg2"></param>
+            /// <param name="arg3"></param>
+            /// <param name="arg4"></param>
             public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
             {
                 if (m_IsInvoking)
                     return;
-                
+
+                FlushRegistrationQueue();
+                Invoke_Internal(arg1, arg2, arg3, arg4);
+                FlushInvokeQueue();
+            }
+
+            private void Invoke_Internal(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+            {
                 m_IsInvoking = true;
                 foreach (var invocationList in m_SortedInvocationList)
-                    invocationList.Value?.Invoke(arg1,arg2,arg3,arg4);
-
-                if (m_RegisterQueue.Count > 0)
                 {
-                    m_IsInvoking = false;
-                    foreach (var toRegister in m_RegisterQueue)
-                        Register(toRegister.Item2, toRegister.Item1);
-                    m_RegisterQueue.Clear();
-                    m_IsInvoking = true;
+                    invocationList.Value?.Invoke(arg1, arg2, arg3, arg4);
                 }
-                
-                InvokeBuffer_Internal();
                 m_IsInvoking = false;
             }
 
-            void InvokeBuffer_Internal()
+            private void FlushRegistrationQueue()
             {
-                if (m_Buffer != null)
+                if (m_RegisterQueue != null && m_RegisterQueue.Count > 0)
                 {
-                    foreach (var b in m_Buffer)
-                        Invoke(b.arg1, b.arg2, b.arg3, b.arg4);
-                    m_Buffer = null;
+                    for (int i = m_RegisterQueue.Count - 1; i >= 0; --i)
+                        RegisterToInvocationList(m_RegisterQueue[i].Item2, m_RegisterQueue[i].Item1);
+                    m_RegisterQueue = null;
                 }
             }
-            
-            public void BufferInvoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+
+            private void FlushInvokeQueue()
+            {
+                if (m_InvokeQueue != null)
+                {
+                    // keep looping the invoke buffer in case new invokes get added during invoke
+                    while (m_InvokeQueue.Count > 0)
+                    {
+                        for (int i = m_InvokeQueue.Count - 1; i >= 0; --i)
+                        {
+                            Invoke_Internal(m_InvokeQueue[i].arg1, m_InvokeQueue[i].arg2, m_InvokeQueue[i].arg3, m_InvokeQueue[i].arg4);
+                            m_InvokeQueue.RemoveAt(i);
+                        }
+                    }
+                    m_InvokeQueue = null;
+                }
+            }
+
+            /// <summary>
+            /// Will invoke with the given parameters if there is any delegates in the invocation list, and not currently invoking
+            /// else, will save the values and invoke when there is a delegate registered.
+            /// </summary>
+            /// <param name="arg1"></param>
+            /// <param name="arg2"></param>
+            /// <param name="arg3"></param>
+            /// <param name="arg4"></param>
+            public void TryInvokeOrDelayToReady(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
             {
                 if (m_SortedInvocationList.Count == 0 || m_IsInvoking)
                 {
-                    if (m_Buffer == null)
-                        m_Buffer = new List<BufferedValues>();
-                    m_Buffer.Add(new BufferedValues { arg1 = arg1, arg2 = arg2, arg3 = arg3, arg4 = arg4 });
+                    if (m_InvokeQueue == null)
+                        m_InvokeQueue = new List<QueuedValues>();
+                    m_InvokeQueue.Add(new QueuedValues { arg1 = arg1, arg2 = arg2, arg3 = arg3, arg4 = arg4 });
                 }
                 else
                 {
@@ -555,18 +601,18 @@ namespace UnityEditor.AddressableAssets.Settings
                 self.Register(delegateToAdd, lastInOrder + 1);
                 return self;
             }
-            
+
             public static SortedDelegate<T1, T2, T3, T4> operator -(SortedDelegate<T1, T2, T3, T4> self, Delegate delegateToRemove)
             {
                 self.Unregister(delegateToRemove);
                 return self;
             }
-            
+
             public static bool operator ==(SortedDelegate<T1, T2, T3, T4> obj1, SortedDelegate<T1, T2, T3, T4> obj2)
             {
                 bool aNull = ReferenceEquals(obj1, null);
                 bool bNull = ReferenceEquals(obj2, null);
-                
+
                 if (aNull && bNull)
                     return true;
                 if (!aNull && bNull)
@@ -577,12 +623,12 @@ namespace UnityEditor.AddressableAssets.Settings
                     return true;
                 return obj1.Equals(obj2);
             }
-            
+
             public static bool operator !=(SortedDelegate<T1, T2, T3, T4> lhs, SortedDelegate<T1, T2, T3, T4> rhs)
             {
                 return !(lhs == rhs);
             }
-            
+
             protected bool Equals(SortedDelegate<T1, T2, T3, T4> other)
             {
                 return Equals(m_SortedInvocationList, other.m_SortedInvocationList);
@@ -593,7 +639,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
                 if (obj.GetType() != this.GetType()) return false;
-                return Equals((SortedDelegate<T1, T2, T3, T4>) obj);
+                return Equals((SortedDelegate<T1, T2, T3, T4>)obj);
             }
 
             public override int GetHashCode()

@@ -906,6 +906,7 @@ namespace AddressableAssetsIntegrationTests
             op.Release();
         }
 
+#if !UNITY_SWITCH
         [UnityTest]
         public IEnumerator LoadContentCatalogAsync_SetsUpLocalAndRemoteLocations()
         {
@@ -921,7 +922,7 @@ namespace AddressableAssetsIntegrationTests
             Assert.AreEqual(catalogHashPath, remoteLocation.ToString());
             Assert.AreEqual(m_Addressables.ResolveInternalId(AddressablesImpl.kCacheDataFolder + catalogHashPath.GetHashCode() + catalogHashPath.Substring(catalogHashPath.LastIndexOf("."))), cacheLocation.ToString());
         }
-
+#endif
         [UnityTest]
         public IEnumerator IsCatalogCached_ReturnsFalse_WhenCatalogLocationDoesNotHaveDependencies()
         {
@@ -995,7 +996,7 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cacheHashFilePath);
         }
 #endif
-
+#if !UNITY_SWITCH
         [UnityTest]
         public IEnumerator LoadContentCatalogAsync_LocationsHaveTimeout()
         {
@@ -1018,7 +1019,7 @@ namespace AddressableAssetsIntegrationTests
             Assert.IsNotNull(data);
             Assert.AreEqual(data.WebRequestTimeout, m_Addressables.CatalogRequestsTimeout);
         }
-
+#endif
 #if UNITY_EDITOR
         [UnityTest]
         public IEnumerator LoadingContentCatalogTwice_DoesNotThrowException_WhenHandleIsntReleased()
@@ -1632,7 +1633,7 @@ namespace AddressableAssetsIntegrationTests
             PostTearDownEvent = ResetAddressables;
         }
 
-        #endif
+#endif
 
         [UnityTest]
         public IEnumerator ContentCatalogProvider_RemovesEntryFromMap_WhenOperationHandleReleased()

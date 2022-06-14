@@ -295,6 +295,14 @@ namespace UnityEditor.AddressableAssets.GUI
                         AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.ContentUpdateHasChangesInUpdateRestrictionWindow);
                     string groupName = string.IsNullOrEmpty(m_GroupName) ? "Content Update" : m_GroupName;
                     var enabledEntries = m_Tree.GetEnabledEntries();
+                    HashSet<AddressableAssetGroup> clearedGroups = new HashSet<AddressableAssetGroup>();
+                    foreach (var entry in enabledEntries)
+                    {
+                        if (clearedGroups.Contains(entry.parentGroup))
+                            continue;
+                        entry.parentGroup.FlaggedDuringContentUpdateRestriction = false;
+                        clearedGroups.Add(entry.parentGroup);
+                    }
                     ContentUpdateScript.CreateContentUpdateGroup(m_Settings, enabledEntries, groupName);
                     m_ApplyChangesCallback?.Invoke();
 

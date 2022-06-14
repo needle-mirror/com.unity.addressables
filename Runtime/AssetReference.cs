@@ -211,6 +211,32 @@ namespace UnityEngine.AddressableAssets
                 return prop.GetValue(this, null) as Object;
             }
         }
+
+        internal override Object GetEditorAssetInternal()
+        {
+            if (CachedAsset != null || string.IsNullOrEmpty(m_AssetGUID))
+                return CachedAsset;
+
+            var assetPath = AssetDatabase.GUIDToAssetPath(m_AssetGUID);
+            Type mainAssetType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
+            Object asset = mainAssetType == typeof(SpriteAtlas) ?
+                AssetDatabase.LoadAssetAtPath(assetPath, typeof(SpriteAtlas)) :
+                AssetDatabase.LoadAssetAtPath(assetPath, m_DerivedClassType ?? AssetDatabase.GetMainAssetTypeAtPath(assetPath));
+
+            if (m_DerivedClassType == null)
+                return CachedAsset = asset;
+
+            if (asset == null)
+                Debug.LogWarning($"Assigned editorAsset does not match type {typeof(SpriteAtlas)} or {m_DerivedClassType}. EditorAsset will be null.");
+            return CachedAsset = asset;
+        }
+
+        internal override bool SetEditorAssetInternal(Object value)
+        {
+            if (value is SpriteAtlas)
+                return OnSetEditorAsset(value, typeof(SpriteAtlas));
+            return base.SetEditorAssetInternal(value);
+        }
 #endif
     }
 
@@ -272,7 +298,7 @@ namespace UnityEngine.AddressableAssets
     {
         [FormerlySerializedAs("m_assetGUID")]
         [SerializeField]
-        string m_AssetGUID = "";
+        protected internal string m_AssetGUID = "";
         [SerializeField]
         string m_SubObjectName;
         [SerializeField]
@@ -434,7 +460,7 @@ namespace UnityEngine.AddressableAssets
         /// <summary>
         /// Cached Editor Asset.
         /// </summary>
-        protected Object CachedAsset
+        protected internal Object CachedAsset
         {
             get
             {
@@ -687,20 +713,29 @@ namespace UnityEngine.AddressableAssets
         {
             get
             {
-                if (CachedAsset != null || string.IsNullOrEmpty(m_AssetGUID))
-                    return CachedAsset;
-                
-                var asset = FetchEditorAsset();
-                
-                if (m_DerivedClassType == null)
-                    return CachedAsset = asset;
-                
-                if (asset == null)
-                    Debug.LogWarning("Assigned editorAsset does not match type " + m_DerivedClassType + ". EditorAsset will be null.");
-                return CachedAsset = asset;
+                return GetEditorAssetInternal();
             }
         }
         
+        /// <summary>
+        /// Helper function that can be used to override the base class editorAsset accessor.
+        /// </summary>
+        /// <returns>Returns the main asset referenced used in the editor.</returns>
+        internal virtual Object GetEditorAssetInternal()
+        {
+            if (CachedAsset != null || string.IsNullOrEmpty(m_AssetGUID))
+                return CachedAsset;
+                
+            var asset = FetchEditorAsset();
+                
+            if (m_DerivedClassType == null)
+                return CachedAsset = asset;
+                
+            if (asset == null)
+                Debug.LogWarning("Assigned editorAsset does not match type " + m_DerivedClassType + ". EditorAsset will be null.");
+            return CachedAsset = asset;
+        }
+
         internal Object FetchEditorAsset()
         {
             var assetPath = AssetDatabase.GUIDToAssetPath(m_AssetGUID);
@@ -718,6 +753,16 @@ namespace UnityEngine.AddressableAssets
         /// <param name="value">Object to reference</param>
         /// </summary>
         public virtual bool SetEditorAsset(Object value)
+        {
+            return SetEditorAssetInternal(value);
+        }
+
+        internal virtual bool SetEditorAssetInternal(Object value)
+        {
+            return OnSetEditorAsset(value, m_DerivedClassType);
+        }
+        
+        internal bool OnSetEditorAsset(Object value, Type derivedType)
         {
             if (value == null)
             {
@@ -746,8 +791,8 @@ namespace UnityEngine.AddressableAssets
                 {
                     m_AssetGUID = AssetDatabase.AssetPathToGUID(path);
                     Object mainAsset;
-                    if (m_DerivedClassType != null)
-                        mainAsset = LocateEditorAssetForTypedAssetReference(value, path);
+                    if (derivedType != null)
+                        mainAsset = LocateEditorAssetForTypedAssetReference(value, path, derivedType);
                     else
                     {
                         mainAsset = AssetDatabase.LoadMainAssetAtPath(path);
@@ -762,23 +807,23 @@ namespace UnityEngine.AddressableAssets
             return true;
         }
 
-        internal Object LocateEditorAssetForTypedAssetReference(Object value, string path)
+        internal Object LocateEditorAssetForTypedAssetReference(Object value, string path, Type type)
         {
             Object mainAsset;
-            if (value.GetType() != m_DerivedClassType)
+            if (value.GetType() != type)
             {
                 mainAsset = null;
             }
             else
             {
-                mainAsset = AssetDatabase.LoadAssetAtPath(path, m_DerivedClassType);
+                mainAsset = AssetDatabase.LoadAssetAtPath(path, type);
                 if (mainAsset != value)
                 {
                     mainAsset = null;
                     var subAssets = AssetDatabase.LoadAllAssetRepresentationsAtPath(path);
                     foreach (var asset in subAssets)
                     {
-                        if (asset.GetType() == m_DerivedClassType && value == asset)
+                        if (asset.GetType() == type && value == asset)
                         {
                             mainAsset = asset;
                             break;
@@ -787,7 +832,7 @@ namespace UnityEngine.AddressableAssets
                 }
             }
             if (mainAsset == null)
-                Debug.LogWarning( "Assigned editorAsset does not match type " + m_DerivedClassType + ". EditorAsset will be null.");
+                Debug.LogWarning( "Assigned editorAsset does not match type " + type + ". EditorAsset will be null.");
 
             return mainAsset;
         }

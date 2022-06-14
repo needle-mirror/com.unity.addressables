@@ -93,12 +93,13 @@ When you first install the Addressables package, the Groups window displays two 
 
 * __Built In Data__: contains assets in any Project Resource folders and any Scenes included in the Build Settings list. (None of these assets can be Addressable unless removed from Resources or the Scene list.)
 
-* __Default Local Group (Default)__: Initially empty, any assets you make Addressable are added to this group. The group is set up so that its assets are built to your local build path and included in your Project builds. You can change the name, settings, and make another group the default group, if desired.
+* __Default Local Group (Default)__: Initially empty, any assets you make Addressable are added to this group. The group is set up so that its assets are built to your local build path and included in your Project builds. You can change the name, settings, and make another group the default group, if desired. Note that the settings of the default group are also used to create [shared AssetBundles].
 
 The list columns contain the following information:
 
 | Column| Purpose |
-|:---|:---| 
+|:---|:---|
+| __Notifications__| Any notifications regarding a Group, or asset, that is flagged during the build.
 | __Group Name__ \ __Addressable Name__| The name of the item. For groups, this is an arbitrary name that you can assign. For assets, this is the Addressable address. You can edit the name or address using the context menu. |
 | __Icon__| The Unity asset icon based on asset type. |
 | __Path__| The path to the source asset in your Project. |
@@ -254,6 +255,7 @@ The Play Mode Scripts include:
 [ProjectConfigData]: xref:UnityEditor.AddressableAssets.Settings.ProjectConfigData
 [Schema]: xref:addressables-group-settings#schemas
 [settings of the group]: xref:addressables-group-settings#group-settings
+[shared AssetBundles]: xref:addressables-build-artifacts#shared-assetbundles
 [template]: xref:addressables-group-settings#group-templates
 [UnityWebRequestAssetBundle.GetAssetBundle]: xref:UnityEngine.Networking.UnityWebRequest.GetAssetBundle(System.String,System.UInt32)
 [AssetBundle.LoadFromFileAsync]: xref:UnityEngine.UnityEngine.AssetBundle.LoadFromFileAsync(System.String,System.UInt32,System.UInt64)

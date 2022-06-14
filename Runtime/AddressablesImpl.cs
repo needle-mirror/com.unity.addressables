@@ -238,7 +238,7 @@ namespace UnityEngine.AddressableAssets
         public string ResolveInternalId(string id)
         {
             var path = AddressablesRuntimeProperties.EvaluateString(id);
-#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_XBOXONE
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_WSA || UNITY_XBOXONE || UNITY_GAMECORE
             if (path.Length >= 260 && path.StartsWith(Application.dataPath))
                 path = path.Substring(Application.dataPath.Length + 1);
 #endif
@@ -380,11 +380,9 @@ namespace UnityEngine.AddressableAssets
             if (m_InitializationOperation.IsValid())
                 return m_InitializationOperation;
             //these need to be referenced in order to prevent stripping on IL2CPP platforms.
-            if (string.IsNullOrEmpty(Application.streamingAssetsPath))
-                Addressables.LogWarning("Application.streamingAssetsPath has been stripped!");
+            GC.KeepAlive(Application.streamingAssetsPath);
 #if !UNITY_SWITCH
-            if (string.IsNullOrEmpty(Application.persistentDataPath))
-                Addressables.LogWarning("Application.persistentDataPath has been stripped!");
+            GC.KeepAlive(Application.persistentDataPath);
 #endif
             if (string.IsNullOrEmpty(runtimeDataPath))
                 return ResourceManager.CreateCompletedOperation<IResourceLocator>(null, string.Format("Invalid Key: {0}", runtimeDataPath));
@@ -489,9 +487,12 @@ namespace UnityEngine.AddressableAssets
                 {
                     tmpPath = ResourceManagerConfig.StripQueryParameters(hashFilePath);
                 }
+#if UNITY_SWITCH
+                string cacheHashFilePath = hashFilePath; // ResourceLocationBase does not allow empty string id
+#else
                 // The file name of the local cached catalog + hash file is the hash code of the remote hash path, without query parameters (if any).
                 string cacheHashFilePath = ResolveInternalId(kCacheDataFolder + tmpPath.GetHashCode() + ".hash");
-
+#endif
                 var hashResourceLocation = new ResourceLocationBase(hashFilePath, hashFilePath, typeof(TextDataProvider).FullName, typeof(string));
                 hashResourceLocation.Data = hashOptions.Copy();
                 catalogLoc.Dependencies.Add(hashResourceLocation);
@@ -1298,9 +1299,9 @@ namespace UnityEngine.AddressableAssets
         {
             QueueEditorUpdateIfNeeded();
             if (ShouldChainRequest)
-                return LoadSceneWithChain(ChainOperation, location, loadSceneParameters.loadSceneMode, activateOnLoad, priority);
+                return LoadSceneWithChain(ChainOperation, location, loadSceneParameters, activateOnLoad, priority);
 
-            var handle = ResourceManager.ProvideScene(SceneProvider, location, loadSceneParameters.loadSceneMode, activateOnLoad, priority);
+            var handle = ResourceManager.ProvideScene(SceneProvider, location, loadSceneParameters, activateOnLoad, priority);
             if (trackHandle)
                 return TrackHandle(handle);
 

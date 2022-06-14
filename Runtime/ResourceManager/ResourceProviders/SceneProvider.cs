@@ -70,7 +70,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     ((IUpdateReceiver)this).Update(Time.unscaledDeltaTime);
                     //We need the operation to complete but it'll take a frame to activate the scene (post 0.9 progress).
                     if (m_Inst.m_Operation.progress == 0 && timer.ElapsedMilliseconds > 5000)
-                        throw new Exception("Infinite loop detected within LoadSceneAsync.WaitForCompletion. For more information see the notes under the Scenes section of the \"Synchronous Addressables\" page of the Addressables documentation.");
+                        throw new Exception("Infinite loop detected within LoadSceneAsync.WaitForCompletion. For more information see the notes under the Scenes section of the \"Synchronous Addressables\" page of the Addressables documentation, or consider using asynchronous scene loading code.");
 
                     if (m_Inst.m_Operation.allowSceneActivation && Mathf.Approximately(m_Inst.m_Operation.progress, .9f))
                     {

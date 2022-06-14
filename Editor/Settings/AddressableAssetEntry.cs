@@ -64,6 +64,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <summary>
         /// If true, this asset was changed after being built into an Addressable Group marked 'Cannot Change Post Release'.
         /// </summary>
+        [SerializeField]
         public bool FlaggedDuringContentUpdateRestriction = false;
 
         internal virtual bool HasSettings() { return false; }
@@ -527,16 +528,18 @@ namespace UnityEditor.AddressableAssets.Settings
                     }
                     else
                     {
-                        if (includeSelf)
-                            if (entryFilter == null || entryFilter(this))
-                                assets.Add(this);
-                        if (includeSubObjects)
+                        if (entryFilter == null || entryFilter(this))
                         {
-                            var mainType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath);
-                            if (mainType == typeof(SpriteAtlas))
-                                GatherSpriteAtlasEntries(assets);
-                            else
-                                GatherSubObjectEntries(assets);
+                            if (includeSelf)
+                                assets.Add(this);
+                            if (includeSubObjects)
+                            {
+                                var mainType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath);
+                                if (mainType == typeof(SpriteAtlas))
+                                    GatherSpriteAtlasEntries(assets);
+                                else
+                                    GatherSubObjectEntries(assets);
+                            }
                         }
                     }
                 }
@@ -989,6 +992,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 ObjectIdentifier[] ids = depInfo != null ? depInfo[new GUID(guid)].includedObjects.ToArray() :
                     ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(guid), EditorUserBuildSettings.activeBuildTarget);
+
                 foreach (var t in GatherMainAndReferencedSerializedTypes(ids))
                     entries.Add(new ContentCatalogDataEntry(t, assetPath, providerType, keyList, dependencies, extraData));
             }
@@ -1006,6 +1010,8 @@ namespace UnityEditor.AddressableAssets.Settings
                 HashSet<Type> typesSeen = new HashSet<Type>();
                 foreach (var objType in typesForObjs)
                 {
+                    if (!typeof(UnityEngine.Object).IsAssignableFrom(objType))
+                        continue;
                     if (typeof(Component).IsAssignableFrom(objType))
                         continue;
                     Type rtType = AddressableAssetUtility.MapEditorTypeToRuntimeType(objType, false);

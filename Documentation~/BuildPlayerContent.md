@@ -233,7 +233,7 @@ public class BuildLauncher
 
 #### Domain reloads and Addressables builds
 
-If your scripted build process involves changing settings that trigger a domain reload before it makes an Addressables build, then you should script such builds to use the Unity Editor [command line interface] rather than interactively running a script in the Editor. These types of settings include:
+If your scripted build process involves changing settings that trigger a domain reload before it makes an Addressables build, then you should script such builds to use [Unity's command line arguments] rather than interactively running a script in the Editor. These types of settings include:
 
 * Changing the defined compiler symbols
 * Changing platform target or target group
@@ -318,44 +318,70 @@ D:\Unity\2020.3.0f1\Editor\Unity.exe -quit -batchMode -projectPath . -executeMet
 
 <!-- Ideally we would have more examples for build scripting in the following sections -->
 
-### Overriding an existing script
+### Custom Build Scripting
 
-If you want to use the same basic build as the default, but want to treat specific groups or types of assets differently, you can extend the default build script and override the functions within it. If the group or asset the build script is processing is one that you want to treat differently, you can run your own code, otherwise you can call the base class version of the function to use the default algorithm.
+To configure a new custom script, add it to the [Build and Play Mode Scripts] list.
 
-See the [Addressable variants project] in the [Addressables-Sample] repository for an example.
+Custom scripts extend the [BuildScriptBase] class or implement the [IDataBuilder] interface. There are several overridable methods, such as `ClearCachedData` and `CanBuildData<T>`. If extending the [BuildScriptBase] class, the most notable method to override is `BuildDataImplementation<TResult>`. This is the method that is used to setup or build content. 
 
-### Extending BuildScriptBase or implementing IDataBuilder
+A custom script is either a Build Script or a Play Mode Script. This is determined by how the `CanBuildData<T>` method is implemented. Build scripts can only build data of the type `AddressablesPlayerBuildResult`, so the method is implemented in this way:
 
-You can extend [BuildScriptBase] or implement [IDataBuilder] to substantially change the Addressables build system. To understand how the Addressables system builds content, first examine the default build script, `BuildScriptPackedMode.cs`, which you can find in the Addressables package folder, Addressables/EditorBuild/DataBuilders.
+[!code-cs[sample](../Tests/Editor/DocExampleCode/CustomBuildScript.cs#doc_CustomBuildScript)]
+<!--
+```csharp
+public override bool CanBuildData<T>()
+{
+    return typeof(T).IsAssignableFrom(typeof(AddressablesPlayerBuildResult));
+}
+```
+-->
+This allows the script to be listed in the **Build/New Build/** menu.
+
+Play Mode Scripts can only build data of the type `AddressablesPlayModeBuildResult`, so the method is implemented in this way:
+
+[!code-cs[sample](../Tests/Editor/DocExampleCode/CustomBuildScript.cs#doc_CustomPlayModeScript)]
+<!--
+```csharp
+public override bool CanBuildData<T>()
+{
+    return typeof(T).IsAssignableFrom(typeof(AddressablesPlayModeBuildResult));
+}
+```
+-->
+This allows the script to be listed in the **Play Mode Scripts** menu.
+
+See the [Custom Build and Playmode Scripts Sample] for an example.
+
+#### Extend the default build script
+
+If you want to use the same basic build as the default build script [BuildScriptPackedMode], but want to treat specific groups or types of assets differently, you can extend the default build script and override the functions within it. If the group or asset the build script is processing is one that you want to treat differently, you can run your own code, otherwise you can call the base class version of the function to use the default algorithm. 
+
+See the [Addressable variants project] for an example.
 
 #### Save the content state
 
 If you support [remote content distribution] and update your content between player releases, you must record the state of your Addressables groups at the time of the build. Recording the state allows you to perform a differential build using the [Update a Previous Build] script.
 
+See the implementation of [BuildScriptPackedMode] and [ContentUpdateScript], for details.
 
-See the implementation of the default build script, `BuildScriptPackedMode.cs`, for details.
-
-[Addressables-Sample]: https://github.com/Unity-Technologies/Addressables-Sample
 [Addressable variants project]: https://github.com/Unity-Technologies/Addressables-Sample/tree/master/Advanced/Addressable%20Variants
 [ActivePlayerDataBuilder]: xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.ActivePlayerDataBuilder
-[ActivePlayerDataBuilderIndex]: xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.ActivePlayerDataBuilderIndex
 [activeProfileId]: xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.activeProfileId
 [AddressableAssetSetting.DataBuilders]: xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.DataBuilders
 [AddressableAssetSettings.BuildPlayerContent]: xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.BuildPlayerContent*
 [AddressableAssetSettings]: xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings
 [AddressableAssetSettingsDefaultObject]: xref:UnityEditor.AddressableAssets.AddressableAssetSettingsDefaultObject
 [AddressableAssetSettingsDefaultObject.Settings]: xref:UnityEditor.AddressableAssets.AddressableAssetSettingsDefaultObject.Settings
-[command line interface]: xref:CommandLineArguments
 [BuildScriptBase]: xref:UnityEditor.AddressableAssets.Build.DataBuilders.BuildScriptBase
-[CachedAssetState]: xref:UnityEditor.AddressableAssets.Build.CachedAssetState
+[BuildScriptPackedMode]: xref:UnityEditor.AddressableAssets.Build.DataBuilders.BuildScriptPackedMode
+[Build and Play Mode Scripts]: xref:addressables-asset-settings#build-and-play-mode-scripts
 [ContentUpdateScript]: xref:UnityEditor.AddressableAssets.Build.ContentUpdateScript
+[Custom Build and Playmode Scripts Sample]: xref:samples-custom-build-and-playmode-scripts
 [DataBuilders]: xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings.DataBuilders
 [Domain reloads and Addressable builds]: #domain-reloads-and-addressables-builds
 [IDataBuilder]: xref:UnityEditor.AddressableAssets.Build.IDataBuilder
 [List.IndexOf]: xref:System.Collections.Generic.List`1.IndexOf*
-[Play Mode Scripts]: xref:addressables-groups#play-mode-scripts
 [Profile]: xref:addressables-profiles
 [remote content distribution]: xref:addressables-remote-content-distribution
 [Unity's command line arguments]: xref:CommandLineArguments
 [Update a Previous Build]: xref:addressables-content-update-builds#building-content-updates
-[command line interface]: xref:CommandLineArguments

@@ -510,12 +510,9 @@ namespace UnityEditor.AddressableAssets.GUI
 
         public override void OnGUI(Rect rect)
         {
-            var buttonStyle = new GUIStyle();
-            buttonStyle.fontStyle = FontStyle.Normal;
-            buttonStyle.fontSize = 12;
+            var buttonStyle = new GUIStyle(UnityEngine.GUI.skin.label);
             buttonStyle.contentOffset = new Vector2(10, 0);
-            buttonStyle.normal.textColor = Color.white;
-
+            
             EditorGUILayout.BeginVertical();
             m_scrollPosition = EditorGUILayout.BeginScrollView(m_scrollPosition, GUILayout.Width(rect.width), GUILayout.Height(rect.height));
             for (int i = 0; i < m_objNames.Length; i++)

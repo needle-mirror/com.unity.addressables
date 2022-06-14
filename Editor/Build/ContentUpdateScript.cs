@@ -693,6 +693,7 @@ namespace UnityEditor.AddressableAssets.Build
                     return false;
                 }
 
+                g.FlaggedDuringContentUpdateRestriction = false;
                 return true;
             });
 
@@ -718,6 +719,7 @@ namespace UnityEditor.AddressableAssets.Build
                 { 
                     modifiedEntries.Add(entry);
                     entry.FlaggedDuringContentUpdateRestriction = true;
+                    entry.parentGroup.FlaggedDuringContentUpdateRestriction = true;
                 }
                 else
                     entry.FlaggedDuringContentUpdateRestriction = false;
@@ -728,6 +730,33 @@ namespace UnityEditor.AddressableAssets.Build
             {
                 if (!dependencyMap.ContainsKey(entry))
                     dependencyMap.Add(entry, new List<AddressableAssetEntry>());
+            }
+        }
+
+        internal static void ClearContentUpdateNotifications(AddressableAssetGroup assetGroup)
+        {
+            if (assetGroup == null)
+                return;
+
+            if (assetGroup.FlaggedDuringContentUpdateRestriction)
+            {
+                ClearContentUpdateFlagForEntries(assetGroup.entries);
+                assetGroup.FlaggedDuringContentUpdateRestriction = false;
+            }
+        }
+
+        static void ClearContentUpdateFlagForEntries(ICollection<AddressableAssetEntry> entries)
+        {
+            foreach (var e in entries)
+            {
+                if (e != null)
+                    e.FlaggedDuringContentUpdateRestriction = false;
+                if (e.IsFolder)
+                {
+                    List<AddressableAssetEntry> folderEntries = new List<AddressableAssetEntry>();
+                    e.GatherFolderEntries(folderEntries, true, true, null);
+                    ClearContentUpdateFlagForEntries(folderEntries);
+                }
             }
         }
 
@@ -747,7 +776,64 @@ namespace UnityEditor.AddressableAssets.Build
 
             GatherExplicitModifiedEntries(settings, ref modifiedData, cacheData);
             GetStaticContentDependenciesForEntries(settings, ref modifiedData, GetGroupGuidToCacheBundleNameMap(cacheData));
+            GetEntriesDependentOnModifiedEntries(settings, ref modifiedData);
             return modifiedData;
+        }
+
+        internal static void GetEntriesDependentOnModifiedEntries(AddressableAssetSettings settings, ref Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap)
+        {
+            var groups = GetStaticGroups(settings);
+            Dictionary<AddressableAssetEntry, string[]> entryToDependencies = new Dictionary<AddressableAssetEntry, string[]>();
+            foreach (AddressableAssetGroup group in groups)
+            {
+                foreach (AddressableAssetEntry entry in group.entries)
+                {
+                    string[] dependencies = AssetDatabase.GetDependencies(entry.AssetPath);
+                    entryToDependencies.Add(entry, dependencies);
+                }
+            }
+
+            HashSet<AddressableAssetEntry> modifiedEntries = new HashSet<AddressableAssetEntry>();
+            foreach (KeyValuePair<AddressableAssetEntry,List<AddressableAssetEntry>> mappedEntry in dependencyMap)
+            {
+                modifiedEntries.Add(mappedEntry.Key);
+                foreach (AddressableAssetEntry dependencyEntry in mappedEntry.Value)
+                    modifiedEntries.Add(dependencyEntry);
+            }
+            
+            // if an entry is dependant on a modified entry, then it too should be modified to reference the moved asset
+            foreach (AddressableAssetEntry modifiedEntry in modifiedEntries)
+            {
+                foreach (KeyValuePair<AddressableAssetEntry,string[]> dependency in entryToDependencies)
+                {
+                    if (dependency.Key != modifiedEntry &&
+                        dependency.Value.Contains(modifiedEntry.AssetPath) &&
+                        dependencyMap.TryGetValue(modifiedEntry, out var value))
+                    {
+                        if (!value.Contains(dependency.Key))
+                            value.Add(dependency.Key);
+                    }
+                }
+            }
+        }
+
+        internal static List<AddressableAssetGroup> GetStaticGroups(AddressableAssetSettings settings)
+        {
+            List<AddressableAssetGroup> staticGroups = new List<AddressableAssetGroup>();
+            foreach (AddressableAssetGroup group in settings.groups)
+            {
+                var staticSchema = group.GetSchema<ContentUpdateGroupSchema>();
+                if (staticSchema == null)
+                    continue;
+                var bundleSchema = group.GetSchema<BundledAssetGroupSchema>();
+                if (bundleSchema == null )
+                    continue;
+                
+                if (staticSchema.StaticContent)
+                    staticGroups.Add(group);
+            }
+
+            return staticGroups;
         }
 
         internal static Dictionary<string, string> GetGroupGuidToCacheBundleNameMap(AddressablesContentState cacheData)
@@ -823,14 +909,13 @@ namespace UnityEditor.AddressableAssets.Build
                     var depEntry = settings.FindAssetEntry(guid, true);
                     if (depEntry == null)
                         continue;
+                    if (groupGuidsWithUnchangedBundleName.Contains(depEntry.parentGroup.Guid))
+                        continue;
 
                     if (!groupHasStaticContentMap.TryGetValue(depEntry.parentGroup, out bool groupHasStaticContentEnabled))
                     {
                         groupHasStaticContentEnabled = depEntry.parentGroup.HasSchema<ContentUpdateGroupSchema>() &&
                             depEntry.parentGroup.GetSchema<ContentUpdateGroupSchema>().StaticContent;
-
-                        if (groupGuidsWithUnchangedBundleName.Contains(depEntry.parentGroup.Guid))
-                            continue;
 
                         groupHasStaticContentMap.Add(depEntry.parentGroup, groupHasStaticContentEnabled);
                     }

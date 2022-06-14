@@ -267,7 +267,10 @@ See [AssetReference] for more information about using AssetReferences.
 
 Use the [Addressables.LoadSceneAsync] method to load an Addressable Scene asset by address or other Addressable key object. 
 
-The remaining parameters of the method correspond to those used with the Unity Engine [SceneManager.LoadSceneAsync] method:
+> [!NOTE]
+> [Addressables.LoadSceneAsync] uses the Unity Engine [SceneManager.LoadSceneAsync] method internally. API that affects the behaviour of [SceneManager.LoadSceneAsync] will most likely affect [Addressables.LoadSceneAsync] in the same way, for example [Application.backgroundLoadingPriority].
+
+The remaining parameters of the method correspond to those used with the [SceneManager.LoadSceneAsync] method:
 
 * __loadMode__: whether to add the loaded Scene into the current Scene or to unload and replace the current Scene. 
 * __loadSceneParameters__: includes loadMode in addition to localPhysicsMode, used when loading the Scene to specify whether a 2D and/or 3D physics Scene should be created
@@ -309,7 +312,7 @@ public class LoadSceneByAddress : MonoBehaviour
 
 See the [Scene loading project] in the [Addressables-Sample] repository for additional examples.
 
-If you load a Scene with [LoadSceneMode.Single], the Unity runtime unloads the current Scene and calls [Resources.UnloadUnusedAssets]. The unloaded Scene is released, which allows its AssetBundle to be unloaded. Individual Addressables and their operation handles that you loaded separately are not released; you must release them yourself. (The exception to this is that any Addressable assets that you instantiated using [Addressables.InstantiateAsync] with `trackHandle` set to true, the default, are automatically released.) 
+If you load a Scene with [LoadSceneMode.Single], the Unity runtime unloads the current Scene and calls [Resources.UnloadUnusedAssets]. See [Releasing Addressable assets] for more information.
 
 > [!NOTE]
 > In the Editor, you can always load scenes in the current project, even when they are packaged in a remote bundle that is not available and you set the Play Mode Script to __Use Existing Build__. The Editor loads the Scene using the asset database.
@@ -419,7 +422,11 @@ If the content has already been loaded, execution times may differ between the v
 
 Because the Addressables system uses reference counting to determine whether an asset is in use, you must release every asset that you load or instantiate when you are done with it. See [Memory Management] for more information.
 
-When you unload a Scene, implicit assets in the Scene are not automatically unloaded. You must call [Resources.UnloadUnusedAssets] or [UnloadAsset] to free these assets. Note that the Unity runtime automatically calls `UnloadUnusedAssets` when you load a Scene using the [LoadSceneMode.Single] mode.
+When you unload a Scene, its AssetBundle is unloaded. This unloads assets associated with the Scene, for example any GameObjects moved from the original Scene to a different Scene.
+
+Note that the Unity runtime automatically calls `UnloadUnusedAssets` when you load a Scene using the [LoadSceneMode.Single] mode. To prevent the Scene and its assets from being unloaded, maintain a reference to the scene load operation handle until it the Scene should be unloaded manually. One way to do this is to use [ResourceManager.Acquire] on the load operation handle. Conventional methods of preserving the assets such as [Object.DontDestroyOnLoad] or [HideFlags.DontUnloadUnusedAsset] will not work.
+
+Individual Addressables and their operation handles that you loaded separately from the Scene are not released. You must call [Resources.UnloadUnusedAssets] or [UnloadAsset] to free these assets. (The exception to this is that any Addressable assets that you instantiated using [Addressables.InstantiateAsync] with `trackHandle` set to true, the default, are automatically released.)
 
 ## Using Addressables in a Scene
 
@@ -432,8 +439,6 @@ If a Scene is NOT Addressable, then any Addressable assets you add directly to t
 
 In custom component classes, you can use [AssetReference] fields to allow the assignment of Addressable assets in non-Addressable scenes. Otherwise, you can use [addresses] and [labels] to load assets at runtime from a script. Note that you must load an AssetReference in code whether or not the Scene is Addressable. 
 
-
-
 [ActivateAsync]: xref:UnityEngine.ResourceManagement.ResourceProviders.SceneInstance.ActivateAsync*
 [Addressables.ClearDependencyCacheAsync]: xref:UnityEngine.AddressableAssets.Addressables.ClearDependencyCacheAsync*
 [Addressables.DownloadDependenciesAsync]: xref:UnityEngine.AddressableAssets.Addressables.DownloadDependenciesAsync*
@@ -443,6 +448,7 @@ In custom component classes, you can use [AssetReference] fields to allow the as
 [Addressables.LoadSceneAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadSceneAsync*
 [Addressables.ReleaseInstance]: xref:UnityEngine.AddressableAssets.Addressables.ReleaseInstance*
 [Addressables]: xref:UnityEngine.AddressableAssets.Addressables
+[Application.backgroundLoadingPriority]: xref:UnityEngine.Application.backgroundLoadingPriority
 [AssetReference]: xref:UnityEngine.AddressableAssets.AssetReference
 [AssetReferences]: xref:addressables-asset-references
 [AsyncOperation.priority]: xref:UnityEngine.AsyncOperation.priority
@@ -457,15 +463,19 @@ In custom component classes, you can use [AssetReference] fields to allow the as
 [AsyncOperationHandle.Task]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle-1.Task.html
 [Completed callback]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle-1.Completed.html
 [Coroutine]: xref:UnityEngine.Coroutine*
+[HideFlags.DontUnloadUnusedAsset]: xref:UnityEngine.HideFlags.DontUnloadUnusedAsset
 [LoadAssetAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadAssetAsync*
 [LoadAssetsAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadAssetsAsync*
 [LoadResourceLocationsAsync]: xref:UnityEngine.AddressableAssets.Addressables.LoadResourceLocationsAsync*
 [LoadSceneMode.Single]: xref:UnityEngine.SceneManagement.LoadSceneMode.Single
 [Memory Management]: xref:addressables-memory-management
 [merge mode]: xref:UnityEngine.AddressableAssets.Addressables.MergeMode
+[Object.DontDestroyOnLoad]: xref:UnityEngine.Object.DontDestroyOnLoad(UnityEngine.Object)
 [OperationException]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.OperationException
 [Operations]: xref:addressables-async-operation-handling
 [PrimaryKey]: xref:UnityEngine.ResourceManagement.ResourceLocations.IResourceLocation.PrimaryKey
+[Releasing Addressable assets]: #releasing-addressable-assets
+[ResourceManager.Acquire]: xref:UnityEngine.ResourceManagement.ResourceManager.Acquire(UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle)
 [ResourceManager.CreateGenericGroupOperation]: xref:UnityEngine.ResourceManagement.ResourceManager.CreateGenericGroupOperation*
 [Resources.UnloadUnusedAssets]: xref:UnityEngine.Resources.UnloadUnusedAssets
 [Result]: xref:UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle.Result

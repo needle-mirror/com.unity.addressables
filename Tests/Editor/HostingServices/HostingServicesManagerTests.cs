@@ -322,6 +322,16 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             Assert.IsTrue(wait.WaitOne(100));
         }
 
+        [Test]
+        public void OnAwakeShould_RefreshGlobalProfileVariables()
+        {
+            m_Manager.Initialize(m_Settings);
+            m_Manager.GlobalProfileVariables.Clear();
+
+            m_Manager.OnAwake();
+            Assert.GreaterOrEqual(m_Manager.GlobalProfileVariables.Count, 1);
+        }
+
         // OnEnable
 
         [Test]
@@ -364,87 +374,12 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
         }
 
         [Test]
-        public void OnEnableShould_RefreshGlobalProfileVariables_IfNotExitingEditMode()
-        {
-            m_Manager.Initialize(m_Settings);
-            m_Manager.GlobalProfileVariables.Clear();
-            bool exitingExitMode = m_Manager.exitingEditMode;
-            m_Manager.exitingEditMode = false;
-
-            m_Manager.OnEnable();
-            Assert.GreaterOrEqual(m_Manager.GlobalProfileVariables.Count, 1);
-
-            m_Manager.exitingEditMode = exitingExitMode;
-        }
-
-        [Test]
-        public void OnEnableShould_RefreshGlobalProfileVariables_IfExitingEditMode_AndServiceEnabled_AndUsingPackedPlayMode()
-        {
-            m_Manager.Initialize(m_Settings);
-            m_Manager.GlobalProfileVariables.Clear();
-            bool exitingExitMode = m_Manager.exitingEditMode;
-            m_Manager.exitingEditMode = true;
-
-            var svc = m_Manager.AddHostingService(typeof(TestHostingService), "test");
-            svc.StartHostingService();
-
-            int activePlayerDataBuilderIndex = m_Settings.ActivePlayModeDataBuilderIndex;
-            m_Settings.DataBuilders.Add(ScriptableObject.CreateInstance<BuildScriptPackedPlayMode>());
-            m_Settings.ActivePlayModeDataBuilderIndex = m_Settings.DataBuilders.Count - 1;
-
-            m_Manager.OnEnable();
-            Assert.GreaterOrEqual(m_Manager.GlobalProfileVariables.Count, 1);
-            svc.StopHostingService();
-
-            m_Settings.ActivePlayModeDataBuilderIndex = activePlayerDataBuilderIndex;
-            m_Settings.DataBuilders.RemoveAt(m_Settings.DataBuilders.Count - 1);
-            m_Manager.exitingEditMode = exitingExitMode;
-        }
-
-        public class OnEnableTestFactory
-        {
-            public static IEnumerable LoadGlobalProfileVariablesTestCases
-            {
-                get
-                {
-                    bool[,] testCases =
-                    {
-                        { true, false },
-                        { false, true },
-                        { false, false }
-                    };
-                    for (int i = 0; i < testCases.GetLength(0); i++)
-                    {
-                        string serviceStatusText = testCases[i, 0] ? "ServiceEnabled" : "ServiceDisabled";
-                        string playModeTypeText = testCases[i, 1] ? "UsingPackedPlayMode" : "NotUsingPackedPlayMode";
-                        string name = $"OnEnableShould_LoadGlobalProfileVariables_IfExitingEditMode_And{serviceStatusText}_And{playModeTypeText}";
-                        yield return new TestCaseData(testCases[i, 0], testCases[i, 1]).SetName(name);
-                    }
-                }
-            }
-        }
-
-        [Test]
-        [TestCaseSource(typeof(OnEnableTestFactory), "LoadGlobalProfileVariablesTestCases")]
-        public void OnEnableShould_LoadSessionStateKeys_IfExitingEditMode_AndConditionsAreMet(bool serviceEnabled, bool usingPackedPlayMode)
+        public void OnEnableShould_LoadSessionStateKeys()
         {
             string ipAddressKey = m_Manager.GetPrivateIpAddressKey();
             string ipAddressVal = "123.1.2.3";
 
             m_Manager.Initialize(m_Settings);
-            bool exitingExitMode = m_Manager.exitingEditMode;
-            m_Manager.exitingEditMode = true;
-
-            var svc = m_Manager.AddHostingService(typeof(TestHostingService), "test");
-            if (serviceEnabled)
-                svc.StartHostingService();
-
-            int activePlayerDataBuilderIndex = m_Settings.ActivePlayModeDataBuilderIndex;
-            if (usingPackedPlayMode)
-            {
-                m_Settings.DataBuilders.Add(ScriptableObject.CreateInstance<BuildScriptPackedPlayMode>());
-                m_Settings.ActivePlayModeDataBuilderIndex = m_Settings.DataBuilders.Count - 1;
-            }
 
             m_Manager.GlobalProfileVariables.Clear();
             m_Manager.GlobalProfileVariables.Add(ipAddressKey, ipAddressVal);
@@ -456,13 +391,6 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             Assert.IsTrue(m_Manager.GlobalProfileVariables.ContainsKey(ipAddressKey));
             Assert.AreEqual(ipAddressVal, m_Manager.GlobalProfileVariables[ipAddressKey]);
 
-            if (serviceEnabled)
-                svc.StopHostingService();
-
-            m_Settings.ActivePlayModeDataBuilderIndex = activePlayerDataBuilderIndex;
-            if (usingPackedPlayMode)
-                m_Settings.DataBuilders.RemoveAt(m_Settings.DataBuilders.Count - 1);
-            m_Manager.exitingEditMode = exitingExitMode;
             HostingServicesManager.EraseSessionStateKeys();
         }
 
@@ -586,7 +514,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
 
             m_Manager.OnDisable();
             m_Manager.GlobalProfileVariables.Clear();
-            m_Manager.LoadSessionStateKeys();
+            m_Manager.LoadSessionStateKeysIfExists();
 
             Assert.AreEqual(1, m_Manager.GlobalProfileVariables.Count);
             Assert.IsTrue(m_Manager.GlobalProfileVariables.ContainsKey(ipAddressKey));
@@ -734,7 +662,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             m_Manager.SaveSessionStateKeys();
             m_Manager.GlobalProfileVariables.Clear();
 
-            m_Manager.LoadSessionStateKeys();
+            m_Manager.LoadSessionStateKeysIfExists();
             Assert.AreEqual(customIps.Count, m_Manager.GlobalProfileVariables.Count);
             foreach (KeyValuePair<string, string> pair in customIps)
             {
@@ -760,7 +688,7 @@ namespace UnityEditor.AddressableAssets.Tests.HostingServices
             m_Manager.GlobalProfileVariables.Clear();
             
             SessionState.EraseString(HostingServicesManager.GetSessionStateKey(1));
-            m_Manager.LoadSessionStateKeys();
+            m_Manager.LoadSessionStateKeysIfExists();
             Assert.AreEqual(2, m_Manager.GlobalProfileVariables.Count);
             Assert.IsFalse(m_Manager.GlobalProfileVariables.ContainsKey(ipAddressKey));
 

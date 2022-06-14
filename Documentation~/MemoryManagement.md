@@ -88,16 +88,22 @@ As an example, consider a situation in which you have two assets in an AssetBund
 
 Depending on how you organize your assets, the preload tables in AssetBundles could become quite large and contain many duplicate entries. This is especially true if you have several loadable assets that all reference a complex asset, such as PrefabC in the situation above. If you determine that the memory overhead from the preload table is a problem, you can structure your loadable assets so that they have fewer complex loading dependencies.
 
-## AssetBundle dependencies
+## Memory implications of loading AssetBundle dependencies
 
-Loading an Addressable asset also loads all of the AssetBundles containing its dependencies. An AssetBundle dependency occurs when an asset in one bundle references an asset in another bundle. An example of this is a material referencing a texture. 
+Loading an Addressable asset also loads all of the AssetBundles containing its dependencies. An AssetBundle dependency occurs when an asset in one bundle references an asset in another bundle. An example of this is a material referencing a texture. For more information see [Asset and AssetBundle dependencies]. 
 
 Addressables calculates dependencies between bundles at the bundle level. If one asset references an object in another bundle, then the entire bundle has a dependency on that bundle. This means that even if you load an asset in the first bundle that has no dependencies of its own, the second AssetBundle is still loaded into memory.
 
-To avoid loading more bundles than are required, you should strive to keep the dependencies between AssetBundles as simple as possible. 
+For Example:	
+
+`BundleA` contains Addressable Assets `RootAsset1` and `RootAsset2`. `RootAsset2` references `DependencyAsset3`, which is contained in `BundleB`. Even though `RootAsset1` has no reference to `BundleB`, `BundleB` is still a dependency of `RootAsset1` because `RootAsset1` is in `BundleA`, which has a reference on `BundleB`.
 
 > [!NOTE]
 > Prior to Addressables 1.13.0, the dependency graph was not as thorough as it is now. In the example above, RootAsset1 would not have had a dependency on BundleB. This previous behavior resulted in references breaking when an AssetBundle being referenced by another AssetBundle was unloaded and reloaded. This fix may result in additional data remaining in memory if the dependency graph is complex enough.
+
+To avoid loading more bundles than are required, you should strive to keep the dependencies between AssetBundles as simple as possible. There are several diagnostic tools included with Addressables that can be used to accomplish this:
+* [Analyze Tool]
+* [Build Layout Report]
 
 [TypeTrees]: #typetrees
 [Table of contents]: #table-of-contents
@@ -106,4 +112,6 @@ To avoid loading more bundles than are required, you should strive to keep the d
 [BuildAssetBundleOptions.DisableWriteTypeTree]: xref:UnityEditor.BuildAssetBundleOptions.DisableWriteTypeTree
 [Event Viewer]: xref:addressables-event-viewer
 [Resources.UnloadUnusedAssets]: xref:UnityEngine.Resources.UnloadUnusedAssets
+[Asset and AssetBundle dependencies]: xref:addressables-managing-assets#asset-and-assetbundle-dependencies
 [AssetBundle.memoryBudgetKB]: xref:UnityEngine.AssetBundle.memoryBudgetKB
+[Analyze Tool]: xref:addressables-analyze-tool

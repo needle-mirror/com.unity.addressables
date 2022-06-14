@@ -23,26 +23,34 @@ The Build Settings scene list must contain at least one scene. You can create a 
 
 A small amount of data in Resources folders typically doesn't cause performance issues. If you use 3rd party packages that place assets there, you don't need to move them unless they cause problems. (Addressable assets cannot be stored in Resources folders.) 
 
-## Shared assets in groups
+## Asset and AssetBundle dependencies
 
-When you add an asset to an Addressables group, that asset is packed into an AssetBundle when you make a content build. If an asset references other assets, known as dependencies, how those dependencies are treated depends on whether or not they are also Addressable. Dependencies that are Addressable are packed into AssetBundles according to the settings of the group they are in -- this could be the same bundle as the referencing asset or a different bundle. A dependency that is not Addressable is included in the bundle of its referencing asset. 
+When you add an asset to an Addressables group, that asset is packed into an AssetBundle when you make a [content build]. In this case the asset is explicitly included in the bundle, or in other words it is an **explicit** asset. 
 
-If more than one Addressable references the same non-Addressable asset, then copies of the non-Addressable asset are included in each bundle containing a referencing Addressable.
+If an asset references other assets, then the referenced assets are dependencies of the original asset. This is known as an asset dependency. If the asset is packed into Assetbundle A and the referenced assets are packed into AssetBundle B, then bundle B is a dependency of bundle A. This is known as an AssetBundle dependency. See the [AssetBundle dependencies manual page] for more information.
+
+Asset dependencies are treated depending on whether or not they are also Addressable. Dependencies that are Addressable are packed into AssetBundles according to the settings of the group they are in -- this could be the same bundle as the referencing asset or a different bundle. A dependency that is not Addressable is included in the bundle of its referencing asset. The referenced asset is implicitly included in the bundle, or in other words it is an **implicit** asset.
+
+> [!TIP]
+> Use the [Bundle Layout Preview] Analyze rule to view explicit and implicit assets that will be included in AssetBundles based on the contents of Addressables groups. This is useful when previewing assets before making an content build.
+> Use the [Build Layout Report] tool to display more detailed information about AssetBundles produced by a content build.
+
+If more than one Addressable references the same implicit asset, then copies of the implicit asset are included in each bundle containing a referencing Addressable.
 
 ![](images/addr_interact_shared.png)
 
 *Non-Addressable assets are copied to each bundle with a referencing Addressable*
 
-A subtle consequence that can occur when an asset is implicitly included in more than one bundle, is that multiple instances of that asset can be instantiated at runtime rather than the single instance your game logic expects. If you change the instance state at runtime, only the object from the same bundle can see the change since all the other assets now have their own individual instance rather than sharing the common one. 
+A subtle consequence that can occur when an implicit asset is included in more than one bundle, is that multiple instances of that asset can be instantiated at runtime rather than the single instance your game logic expects. If you change the instance state at runtime, only the object from the same bundle can see the change since all the other assets now have their own individual instance rather than sharing the common one. 
 
-To eliminate this duplication, you can make the dependency an Addressable asset and include it in one of the existing bundles or add it to a different bundle. Once you make the dependency an Addressable, the bundle it is a part of is loaded whenever you load one of the Addressables that reference it.
+To eliminate this duplication, you can make the implicit asset an Addressable asset and include it in one of the existing bundles or add it to a different bundle. The bundle the asset is added to is loaded whenever you load one of the Addressables that reference it. If the Addressables are packed into a different AssetBundle than the referenced asset, then the bundle containing the referenced asset is an AssetBundle dependency.
 
-Be aware that when you reference an asset in another bundle, then that bundle must be loaded when you load ANY asset in the current bundle, not just the asset containing the reference. Although none of the assets in this other AssetBundle are loaded, loading a bundle has its own runtime cost. See [Asset bundle dependencies] for more information. 
+Be aware that the dependent bundle must be loaded when you load ANY asset in the current bundle, not just the asset containing the reference. Although none of the assets in this other AssetBundle are loaded, loading a bundle has its own runtime cost. See [Memory implications of loading AssetBundle dependencies] for more information. 
 
 > [!TIP]
-> Use the [Analyze tool] to identify unwanted asset duplication resulting from your project content organization.
+> Use the [Check Duplicate Bundle Dependencies] Analyze rule to identify and resolve unwanted asset duplication resulting from your project content organization.
 
-### SpriteAtlas
+## SpriteAtlas
 
 Some SpriteAtlas options can change how Sprites are loaded. This is important to consider when using the **Use Asset Database** [Play Mode Script].
 * [Sprite Packer Mode] 
@@ -50,7 +58,7 @@ Some SpriteAtlas options can change how Sprites are loaded. This is important to
 
 Additionally Addressables handles SpriteAtlases a bit differently than other assets, as illustrated by the following examples:
 
-#### Addressable Sprites 
+### Addressable Sprites 
 
 __Example 1:__
 
@@ -64,7 +72,7 @@ __Example 3:__
 
 The SpriteAtlas from Example 2 is marked as Addressable in its own AssetBundle. At this point there are four AssetBundles created. If you are using a 2020.x or newer version of Unity, this builds as you would expect. The three AssetBundles with the sprites are each only a few KB and have a dependency on this fourth SpriteAtlas AssetBundle, which is about 1500KB. If you are using 2019.x or older, the texture itself may end up elsewhere. The three Sprite AssetBundles still depend on the SpriteAtlas AssetBundle. However, the SpriteAtlas AssetBundle may only contain metadata, and the texture may be in one of the other Sprite AssetBundles.
 
-#### Addressable Prefabs With Sprite dependencies 
+### Addressable Prefabs With Sprite dependencies 
 
 __Example 1:__
 
@@ -78,10 +86,25 @@ __Example 3:__
 
 Taking the prefabs, textures, and SpriteAtlas from the above example, the SpriteAtlas is also marked as Addressable. Conforming to the rules of explicit inclusion, the SpriteAtlas texture is included only in the AssetBundle containing the SpriteAtlas. The AssetBundles with prefabs reference this fourth AssetBundle as a dependency.
 
+## Shaders
 
-[Analyze tool]: xref:addressables-analyze-tool
-[Asset bundle dependencies]: xref:addressables-memory-management#assetbundle-dependencies
+By default, Unity [strips shaders variants] that are not used in scenes. This can exclude variants that are only used in AssetBundles. To ensure that certain variants are not stripped, include them in the __Shader Stripping__ properties in [Graphics Settings]. 
+
+For example, if there are Addressable assets using lightmap-related shaders such as [Mixed Lights], set the __Shader Stripping__ > __Lightmap Mode__ property to __Custom__.
+
+[Quality Settings] also affect shader variants used in AssetBundles.
+
+[AssetBundle dependencies manual page]: xref:AssetBundles-Dependencies
 [Builds]: xref:addressables-builds
+[Bundle Layout Preview]: xref:addressables-analyze-tool#unfixable-rules
+[Build Layout Report]: xref:addressables-build-layout-report
+[Check Duplicate Bundle Dependencies]: xref:addressables-analyze-tool#fixable-rules
+[content build]: xref:addressables-builds
 [Include In Build]: https://docs.unity3d.com/Manual/SpriteAtlasDistribution.html#Dontinclbuild
+[Graphics Settings]: xref:class-GraphicsSettings
+[Memory implications of loading AssetBundle dependencies]: xref:addressables-memory-management#memory-implications-of-loading-assetbundle-dependencies
+[Mixed Lights]: xref:LightMode-Mixed
 [Play Mode Script]: xref:addressables-groups#play-mode-scripts
 [Sprite Packer Mode]: https://docs.unity3d.com/Manual/SpritePackerModes.html
+[strips shaders variants]: xref:shader-variant-stripping
+[Quality Settings]: xref:class-QualitySettings

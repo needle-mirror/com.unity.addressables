@@ -30,6 +30,12 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
             private bool WaitForCompletionHandler()
             {
+                if (!m_RequestOperation.isDone && Mathf.Approximately(m_RequestOperation.progress, 1f))
+                {
+                    m_RequestOperation.completed -= AsyncOperationCompleted;
+                    AsyncOperationCompleted(m_RequestOperation);
+                    return true;
+                }
                 return m_RequestOperation != null && m_RequestOperation.isDone;
             }
 

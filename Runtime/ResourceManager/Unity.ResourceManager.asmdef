@@ -5,6 +5,11 @@
             "name": "Unity",
             "expression": "2021.2.0a19",
             "define": "ENABLE_ASYNC_ASSETBUNDLE_UWR"
+        },
+        {
+            "name": "com.unity.services.ccd.management",
+            "expression": "[2.1.0,2.1.1)",
+            "define": "ENABLE_CCD"
         }
     ]
 }

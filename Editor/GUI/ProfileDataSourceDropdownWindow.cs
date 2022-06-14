@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using System.Threading.Tasks;
+using UnityEngine.AddressableAssets.ResourceLocators;
 
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
 using Unity.Services.Ccd.Management.Models;
@@ -19,15 +20,18 @@ namespace UnityEditor.AddressableAssets.GUI
         internal ProfileGroupType m_GroupType;
         internal const float k_Margin = 4;
         internal const float k_MaxHeight = 286;
+        internal const float k_MinHeight = 80;
         internal Vector2 scrollPos;
         internal delegate void ValueChangedEventHandler(object sender, DropdownWindowEventArgs e);
         internal event ValueChangedEventHandler ValueChanged;
 
-        internal enum CCDDropdownState { Bucket, Badge };
-        internal CCDDropdownState CCDState = CCDDropdownState.Bucket;
+        internal enum CCDDropdownState { None, General, Bucket, Badge, Environment, AutomaticEnvironment };
+        internal CCDDropdownState CCDState = CCDDropdownState.General;
 
         //temp variables
         internal List<ProfileGroupType> m_ProfileGroupTypes = new List<ProfileGroupType>();
+        internal string m_EnvironmentId;
+        internal string m_EnvironmentName;
         internal string m_BucketId;
         internal string m_BucketName;
         internal ProfileGroupType m_Bucket;
@@ -136,6 +140,7 @@ namespace UnityEditor.AddressableAssets.GUI
         public override void OnGUI(Rect window)
 #endif
         {
+            EditorGUI.BeginDisabledGroup(m_isRefreshingCCDDataSources);
             Event evt = Event.current;
             Rect horizontalBarRect = new Rect(0, 30, 0, 0);
             Rect backButtonRect = new Rect(5, 0, 30, 30);
@@ -176,101 +181,124 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                     return;
                 case DropdownState.CCD:
+                    var isRefreshing = false;
+
                     switch (CCDState)
                     {
-                        case CCDDropdownState.Bucket:
-                            EditorGUI.LabelField(backButtonRect, EditorGUIUtility.IconContent(backIcon));
-                            if (evt.type == EventType.MouseDown && backButtonRect.Contains(evt.mousePosition))
-                            {
-                                state = DropdownState.None;
-                                CCDState = CCDDropdownState.Bucket;
-                                m_WindowRect.height = 120;
-                                return;
-                            }
-#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
-                            if (CloudProjectSettings.projectId != String.Empty)
-                            {
-                                EditorGUI.LabelField(refreshButtonRect, EditorGUIUtility.IconContent(refreshIcon));
-                                if (evt.type == EventType.MouseDown && refreshButtonRect.Contains(evt.mousePosition) && !m_isRefreshingCCDDataSources)
-                                {
-                                    m_isRefreshingCCDDataSources = true;
-                                    await ProfileDataSourceSettings.UpdateCCDDataSourcesAsync(CloudProjectSettings.projectId, true);
-                                    SyncProfileGroupTypes();
-                                    m_isRefreshingCCDDataSources = false;
-                                    return;
-                                }
-                            }
-#endif
-
-                            EditorGUILayout.LabelField(m_CCDBucketsGUIContent, dropdownTitleStyle);
-                            EditorGUILayout.Space(10);
-                            EditorGUI.LabelField(horizontalBarRect, "", new GUIStyle(horizontalBarStyle) { fixedWidth = window.width });
-
-                            if (CloudProjectSettings.projectId == String.Empty)
-                            {
-                                EditorStyles.helpBox.fontSize = 12;
-                                EditorGUILayout.LabelField("Connecting to Cloud Content Delivery requires enabling Cloud Project Settings in the Services Window.", EditorStyles.helpBox);
-                            }
-                            else
-                            {
-#if !ENABLE_CCD                 //Used to Display whether or not a user has the CCD Package
-                                EditorStyles.helpBox.fontSize = 12;
-                                EditorGUILayout.HelpBox("Connecting to Cloud Content Delivery requires the CCD Management SDK Package", MessageType.Warning);
-                                var installPackageButton = GUILayout.Button("Install CCD Management SDK Package");
-                                if (installPackageButton)
-                                {
-                                    editorWindow.Close();
-                                    AddressableAssetUtility.InstallCCDPackage();
-                                }
+                        case CCDDropdownState.None:
+                            state = DropdownState.None;
+                            break;
+                        case CCDDropdownState.General:
+#if !ENABLE_CCD
+                            isRefreshing = DrawCcdDisabledDropdownHeader(window, horizontalBarRect, backButtonRect, refreshButtonRect, evt, "Cloud Content Delivery", DropdownState.None, CCDDropdownState.General);
 #else
-                                scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.ExpandHeight(true));
+                            isRefreshing = await DrawCcdEnabledDropdownHeader(window, horizontalBarRect, backButtonRect, refreshButtonRect, evt, "Cloud Content Delivery", DropdownState.None, CCDDropdownState.General);
+#endif
+                            if (isRefreshing) return;
+                            BaseOption.DrawMenuItem("Automatic (set using CcdManager)", nextIcon, () =>
+                            {
+                                CCDState = CCDDropdownState.AutomaticEnvironment;
+                            });
+                            BaseOption.DrawMenuItem("Specify the Environment, Bucket, and Badge", nextIcon, () =>
+                            {
+                                CCDState = CCDDropdownState.Environment;
+                            });
+                            break;
+#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+                        case CCDDropdownState.AutomaticEnvironment:
+                            isRefreshing = await DrawCcdEnabledDropdownHeader(window, horizontalBarRect, backButtonRect, refreshButtonRect, evt, "Select Environment", DropdownState.CCD, CCDDropdownState.General);
+                            if (isRefreshing) return;
 
-                                m_WindowRect.height = m_ProfileGroupTypes.Count > 0 ? k_MaxHeight : 80;
+                            m_WindowRect.height = m_ProfileDataSource.environments.Count > 0 ? k_MaxHeight : k_MinHeight;
+
+                            if (m_ProfileDataSource.environments.Count == 1 && m_ProfileDataSource.environments[0].name == "production")
+                            {
+                                string environmentHelpInfo = $"It is recommended to have at least 1 <b>non-production</b> environment when using the Automatic setting.";
+                                EditorStyles.helpBox.fontSize = 11;
+                                EditorStyles.helpBox.margin = new RectOffset(20, 20, 5, 5);
+                                EditorStyles.helpBox.richText = true;
+                                EditorGUILayout.HelpBox(environmentHelpInfo, MessageType.Info);
+                            }
+
+                            foreach (var env in m_ProfileDataSource.environments)
+                            {
+                                BaseOption.DrawMenuItem(env.name, null, () =>
+                                {
+                                    m_EnvironmentId = env.id;
+                                    m_EnvironmentName = env.name;
+
+                                    m_ProfileDataSource.SetEnvironmentById(env.id);
+                                    AddressableAssetSettingsDefaultObject.Settings.m_CcdManagedData.State = CcdManagedData.ConfigState.Default;
+
+                                    var args = new DropdownWindowEventArgs();
+                                    var groupType = m_ProfileDataSource.GetGroupTypesByPrefix("Automatic").First();
+                                    args.GroupType = m_GroupType;
+
+                                    args.Option = new CCDOption();
+                                    args.Option.BuildPath = groupType.GetVariableBySuffix("BuildPath").Value;
+                                    args.Option.LoadPath = groupType.GetVariableBySuffix("LoadPath").Value;
+                                    args.IsCustom = false;
+                                    OnValueChanged(args);
+                                    editorWindow.Close();
+                                });
+                            }
+                            CCDOption.DrawCreateEnv();
+
+                            break;
+                        case CCDDropdownState.Environment:
+                            isRefreshing = await DrawCcdEnabledDropdownHeader(window, horizontalBarRect, backButtonRect, refreshButtonRect, evt, "Select Environment", DropdownState.CCD, CCDDropdownState.General);
+                            if (isRefreshing) return;
+
+                            m_WindowRect.height = m_ProfileDataSource.environments.Count > 0 ? k_MaxHeight : k_MinHeight;
+
+                            foreach (var env in m_ProfileDataSource.environments)
+                            {
+                                BaseOption.DrawMenuItem(env.name, nextIcon, () =>
+                                {
+                                    m_EnvironmentId = env.id;
+                                    m_EnvironmentName = env.name;
+                                    CCDState = CCDDropdownState.Bucket;
+                                });
+                            }
+                            CCDOption.DrawCreateEnv();
+
+                            break;
+                        case CCDDropdownState.Bucket:
+                            isRefreshing = await DrawCcdEnabledDropdownHeader(window, horizontalBarRect, backButtonRect, refreshButtonRect, evt, $"{m_EnvironmentName} Buckets", DropdownState.CCD, CCDDropdownState.Environment);
+                            if (isRefreshing) return;
+
+                            scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.ExpandHeight(true));
+
+                            m_WindowRect.height = m_ProfileGroupTypes.Count > 0 ? k_MaxHeight : k_MinHeight;
 
 
-                                Dictionary<string, ProfileGroupType> buckets = new Dictionary<string, ProfileGroupType>();
-                                m_ProfileGroupTypes.ForEach((groupType) =>
+                            Dictionary<string, ProfileGroupType> buckets = new Dictionary<string, ProfileGroupType>();
+                            m_ProfileGroupTypes.ForEach((groupType) =>
+                            {
+                                if (groupType.GetVariableBySuffix($"{nameof(ProfileDataSourceSettings.Environment)}{nameof(ProfileDataSourceSettings.Environment.name)}").Value == m_EnvironmentName)
                                 {
                                     var parts = groupType.GroupTypePrefix.Split(ProfileGroupType.k_PrefixSeparator);
-                                    var bucketId = parts[2];
+                                    var bucketId = parts[3];
                                     var bucketName = groupType.GetVariableBySuffix($"{nameof(CcdBucket)}{nameof(CcdBucket.Name)}");
                                     if (!buckets.ContainsKey(bucketId))
                                         buckets.Add(bucketId, groupType);
+                                }
+                            });
+
+                            CCDOption.DrawBuckets(buckets,
+                                (KeyValuePair<string, ProfileGroupType> bucket) =>
+                                {
+                                    CCDState = CCDDropdownState.Badge;
+                                    m_BucketName = bucket.Value.GetVariableBySuffix($"{nameof(CcdBucket)}{nameof(CcdBucket.Name)}").Value;
+                                    m_BucketId = bucket.Key;
+                                    m_Bucket = bucket.Value;
                                 });
-
-                                CCDOption.DrawBuckets(buckets,
-                                    (KeyValuePair<string, ProfileGroupType> bucket) =>
-                                    {
-                                        CCDState = CCDDropdownState.Badge;
-                                        m_BucketId = bucket.Key;
-                                        m_Bucket = bucket.Value;
-                                    });
-                                EditorGUILayout.EndScrollView();
-
-#endif
-                            }
+                            EditorGUILayout.EndScrollView();
                             break;
-#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
                         case CCDDropdownState.Badge:
-                            EditorGUI.LabelField(backButtonRect, EditorGUIUtility.IconContent(backIcon));
-                            if (evt.type == EventType.MouseDown && backButtonRect.Contains(evt.mousePosition))
-                            {
-                                state = DropdownState.CCD;
-                                CCDState = CCDDropdownState.Bucket;
-                                m_WindowRect.height = 120;
-                            }
-                            EditorGUI.LabelField(refreshButtonRect, EditorGUIUtility.IconContent(refreshIcon));
-                            if (evt.type == EventType.MouseDown && refreshButtonRect.Contains(evt.mousePosition) && !m_isRefreshingCCDDataSources)
-                            {
-                                m_isRefreshingCCDDataSources = true;
-                                await ProfileDataSourceSettings.UpdateCCDDataSourcesAsync(CloudProjectSettings.projectId, true);
-                                SyncProfileGroupTypes();
-                                m_isRefreshingCCDDataSources = false;
-                                return;
-                            }
-                            EditorGUILayout.LabelField(String.Format("{0} Badges", m_Bucket.GetVariableBySuffix($"{nameof(CcdBucket)}{nameof(CcdBucket.Name)}").Value), dropdownTitleStyle);
-                            EditorGUILayout.Space(10);
-                            EditorGUI.LabelField(horizontalBarRect, "", new GUIStyle(horizontalBarStyle) { fixedWidth = window.width });
+                            isRefreshing = await DrawCcdEnabledDropdownHeader(window, horizontalBarRect, backButtonRect, refreshButtonRect, evt, $"{m_BucketName} Badges", DropdownState.CCD, CCDDropdownState.Bucket);
+                            if (isRefreshing) return;
+
                             scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.ExpandHeight(true));
                             if (bool.Parse(m_Bucket.GetVariableBySuffix("PromoteOnly").Value))
                             {
@@ -282,18 +310,18 @@ namespace UnityEditor.AddressableAssets.GUI
                             var selectedProfileGroupTypes = m_ProfileGroupTypes.Where(groupType =>
                                 groupType.GroupTypePrefix.StartsWith(
                                     String.Join(
-                                        ProfileGroupType.k_PrefixSeparator.ToString(), new string[] { "CCD", CloudProjectSettings.projectId, m_BucketId }
+                                        ProfileGroupType.k_PrefixSeparator.ToString(), new string[] { "CCD", CloudProjectSettings.projectId, m_EnvironmentId, m_BucketId }
                                     )
                                 )
                                 ).ToList();
 
-                            m_WindowRect.height = m_ProfileGroupTypes.Count > 0 ? k_MaxHeight : 80;
+                            m_WindowRect.height = m_ProfileGroupTypes.Count > 0 ? k_MaxHeight : k_MinHeight;
 
                             HashSet<ProfileGroupType> groupTypes = new HashSet<ProfileGroupType>();
                             selectedProfileGroupTypes.ForEach((groupType) =>
                             {
                                 var parts = groupType.GroupTypePrefix.Split(ProfileGroupType.k_PrefixSeparator);
-                                var badgeName = String.Join(ProfileGroupType.k_PrefixSeparator.ToString(), parts, 3, parts.Length - 3);
+                                var badgeName = String.Join(ProfileGroupType.k_PrefixSeparator.ToString(), parts, 4, parts.Length - 4);
                                 if (!groupTypes.Contains(groupType))
                                     groupTypes.Add(groupType);
                             });
@@ -301,6 +329,8 @@ namespace UnityEditor.AddressableAssets.GUI
 
                             CCDOption.DrawBadges(groupTypes, m_BucketId, (ProfileGroupType groupType) =>
                             {
+
+                                m_ProfileDataSource.SetEnvironmentById(m_EnvironmentId);
                                 var args = new DropdownWindowEventArgs();
                                 args.GroupType = m_GroupType;
                                 args.Option = new CCDOption();
@@ -313,7 +343,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             EditorGUILayout.EndScrollView();
                             break;
                         default:
-                            CCDState = CCDDropdownState.Bucket;
+                            CCDState = CCDDropdownState.General;
                             break;
 
 #endif
@@ -325,6 +355,67 @@ namespace UnityEditor.AddressableAssets.GUI
                     editorWindow.Close();
                     break;
             }
+            EditorGUI.EndDisabledGroup();
+        }
+
+        private bool DrawCcdDisabledDropdownHeader(Rect window, Rect horizontalBarRect, Rect backButtonRect, Rect refreshButtonRect, Event evt, string title, DropdownState dropdownState, CCDDropdownState prevState)
+        {
+            DrawHeader(window, horizontalBarRect, backButtonRect, refreshButtonRect, evt, title, dropdownState, prevState);
+#if !ENABLE_CCD
+            //Used to Display whether or not a user has the CCD Package
+            EditorStyles.helpBox.fontSize = 12;
+            EditorGUILayout.HelpBox("Connecting to Cloud Content Delivery requires the CCD Management SDK Package", MessageType.Warning);
+            var installPackageButton = GUILayout.Button("Install CCD Management SDK Package");
+            if (installPackageButton)
+            {
+                editorWindow.Close();
+                AddressableAssetUtility.InstallCCDPackage();
+            }
+#endif
+            return true;
+        }
+
+#if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
+        private async Task<bool> DrawCcdEnabledDropdownHeader(Rect window, Rect horizontalBarRect, Rect backButtonRect, Rect refreshButtonRect, Event evt, string title, DropdownState dropdownState, CCDDropdownState prevState)
+        {
+            DrawHeader(window, horizontalBarRect, backButtonRect, refreshButtonRect, evt, title, dropdownState, prevState);
+
+            if (CloudProjectSettings.projectId != String.Empty)
+            {
+                EditorGUI.LabelField(refreshButtonRect, EditorGUIUtility.IconContent(refreshIcon));
+                if (evt.type == EventType.MouseDown && refreshButtonRect.Contains(evt.mousePosition) && !m_isRefreshingCCDDataSources)
+                {
+                    m_isRefreshingCCDDataSources = true;
+                    await ProfileDataSourceSettings.UpdateCCDDataSourcesAsync(CloudProjectSettings.projectId, true);
+                    SyncProfileGroupTypes();
+                    m_isRefreshingCCDDataSources = false;
+                    return true;
+                }
+            }
+
+            if (CloudProjectSettings.projectId == String.Empty)
+            {
+                EditorStyles.helpBox.fontSize = 12;
+                EditorGUILayout.LabelField("Connecting to Cloud Content Delivery requires enabling Cloud Project Settings in the Services Window.", EditorStyles.helpBox);
+                return true;
+            }
+            return false;
+        }
+#endif
+
+        private void DrawHeader(Rect window, Rect horizontalBarRect, Rect backButtonRect, Rect refreshButtonRect, Event evt, string title, DropdownState dropdownState, CCDDropdownState prevState)
+        {
+            EditorGUI.LabelField(backButtonRect, EditorGUIUtility.IconContent(backIcon));
+            if (evt.type == EventType.MouseDown && backButtonRect.Contains(evt.mousePosition))
+            {
+                state = dropdownState;
+                CCDState = prevState;
+                m_WindowRect.height = 120;
+            }
+
+            EditorGUILayout.LabelField(title, dropdownTitleStyle);
+            EditorGUILayout.Space(10);
+            EditorGUI.LabelField(horizontalBarRect, "", new GUIStyle(horizontalBarStyle) { fixedWidth = window.width });
         }
 
         private void SyncProfileGroupTypes()
@@ -337,7 +428,7 @@ namespace UnityEditor.AddressableAssets.GUI
             using (System.Net.Http.HttpClient client = new System.Net.Http.HttpClient())
             {
                 client.DefaultRequestHeaders.Add("Authorization", "Bearer " + CloudProjectSettings.accessToken);
-                var response = await client.GetAsync(String.Format("https://api.unity.com/v1/core/api/orgs/{0}", CloudProjectSettings.organizationId));
+                var response = await client.GetAsync(String.Format("{0}/v1/core/api/orgs/{1}", ProfileDataSourceSettings.m_GenesisBasePath, CloudProjectSettings.organizationId));
                 if (!response.IsSuccessStatusCode)
                 {
                     throw new Exception("Failed to retrieve org data.");
@@ -512,13 +603,27 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
 #endif
+            internal static void DrawCreateEnv()
+            {
+                DrawMenuItem("<a>Create new environment</a>", null, () =>
+                {
+                    Application.OpenURL(
+                        String.Format("https://dashboard.unity3d.com/organizations/{0}/projects/{1}/settings/environments",
+                            m_Organization.foreign_key,
+                            CloudProjectSettings.projectId));
+                });
+                var lastRect = GUILayoutUtility.GetLastRect();
+                lastRect.y += 2;
+                EditorGUI.LabelField(lastRect, "<a>___________________________</a>", menuOptionStyle);
+            }
 
             internal static void DrawCreateBucket()
             {
                 DrawMenuItem("<a>Create new bucket</a>", null, () =>
                 {
                     Application.OpenURL(
-                        String.Format("https://dashboard.unity3d.com/organizations/{0}/projects/{1}/cloud-content-delivery",
+                        String.Format("{0}/organizations/{1}/projects/{2}/cloud-content-delivery",
+                            ProfileDataSourceSettings.m_DashboardBasePath,
                             m_Organization.foreign_key,
                             CloudProjectSettings.projectId));
                 });
@@ -532,7 +637,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 DrawMenuItem("<a>Create new badge</a>", null, () =>
                 {
                     Application.OpenURL(
-                        String.Format("https://dashboard.unity3d.com/organizations/{0}/projects/{1}/cloud-content-delivery/buckets/{2}/badges",
+                        String.Format("{0}/organizations/{1}/projects/{2}/cloud-content-delivery/buckets/{3}/badges",
+                            ProfileDataSourceSettings.m_DashboardBasePath,
                             m_Organization.foreign_key,
                             CloudProjectSettings.projectId,
                             bucketId));
@@ -547,7 +653,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 DrawMenuItem("<a>Complete CCD Onboarding</a>", null, () =>
                 {
                     Application.OpenURL(
-                        String.Format("https://dashboard.unity3d.com/organizations/{0}/projects/{1}/cloud-content-delivery/onboarding",
+                        String.Format("{0}/organizations/{1}/projects/{2}/cloud-content-delivery/onboarding",
+                            ProfileDataSourceSettings.m_DashboardBasePath,
                             m_Organization.foreign_key,
                             CloudProjectSettings.projectId));
                 });

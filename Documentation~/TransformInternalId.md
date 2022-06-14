@@ -102,7 +102,7 @@ public class WebRequestOverride : MonoBehaviour
 [Custom certificate handler]: xref:addressables-asset-settings#downloads
 [Custom URL transform function]: #id-transform-function
 [Customizing initialization]: #customizing-initialization
-[Disable Catalog Update on Startup]: xref:addressables-asset-settings#catalog
+[Only update catalogs manually]: xref:addressables-asset-settings#catalog
 [Getting the address of an asset at runtime]: #getting-the-address-of-an-asset-at-runtime
 [initialization object list]: xref:addressables-asset-settings#initialization-object-list
 [initialization object]: xref:addressables-asset-settings#initialization-object-list

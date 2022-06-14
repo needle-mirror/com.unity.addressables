@@ -10,6 +10,7 @@ using UnityEngine.Assertions;
 using UnityEngine.AddressableAssets;
 using Debug = UnityEngine.Debug;
 using static UnityEditor.AddressableAssets.Settings.AddressablesFileEnumeration;
+using UnityEditor.AddressableAssets.Build;
 
 namespace UnityEditor.AddressableAssets.GUI
 {
@@ -590,10 +591,10 @@ namespace UnityEditor.AddressableAssets.GUI
                     {
                         var notification = WarningIcon;
                         if (item.group != null)
-                            notification.tooltip = "This group contains assets with the setting �Prevent Updates� that have been modified. " +
+                            notification.tooltip = "This group contains assets with the setting 'Prevent Updates' that have been modified. " +
                                 "To resolve, change the group setting, or move the assets to a different group.";
                         else if (item.entry != null)
-                            notification.tooltip = "This asset has been modified, but it is in a group with the setting �Prevent Updates�. " +
+                            notification.tooltip = "This asset has been modified, or is part of a modified dependency tree, but it is in a group with the setting 'Prevent Updates'. " +
                                 "To resolve, change the group setting, or move the asset to a different group.";
                         UnityEngine.GUI.Label(cellRect, notification);
                     }
@@ -854,13 +855,8 @@ namespace UnityEditor.AddressableAssets.GUI
         void ClearContentUpdateWarnings()
         {
             foreach(var group in m_Editor.settings.groups)
-            {
-                if(group.FlaggedDuringContentUpdateRestriction)
-                {
-                    foreach (var entry in group.entries)
-                        entry.FlaggedDuringContentUpdateRestriction = false;
-                }
-            }
+                ContentUpdateScript.ClearContentUpdateNotifications(group);
+            
             Reload();
         }
 

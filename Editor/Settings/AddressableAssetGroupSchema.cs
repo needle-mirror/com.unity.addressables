@@ -16,6 +16,18 @@ namespace UnityEditor.AddressableAssets.Settings
         [FormerlySerializedAs("m_group")] [AddressableReadOnly] [SerializeField]
         AddressableAssetGroup m_Group;
 
+        SerializedObject m_SchemaSerializedObject = null;
+        internal SerializedObject SchemaSerializedObject
+        {
+            get
+            {
+                if (m_SchemaSerializedObject == null)
+                    m_SchemaSerializedObject = new SerializedObject(this);
+                return m_SchemaSerializedObject;
+            }
+            set { m_SchemaSerializedObject = value; }
+        }
+        
         /// <summary>
         /// Get the group that the schema belongs to.
         /// </summary>
@@ -52,8 +64,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public virtual void OnGUI()
         {
             var type = GetType();
-            var so = new SerializedObject(this);
-            var p = so.GetIterator();
+            var p = SchemaSerializedObject.GetIterator();
             p.Next(true);
             while (p.Next(false))
             {
@@ -61,7 +72,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (prop != null)
                     EditorGUILayout.PropertyField(p, true);
             }
-            so.ApplyModifiedProperties();
+            SchemaSerializedObject.ApplyModifiedProperties();
         }
 
         /// <summary>
@@ -78,6 +89,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="postEvent">Determines if this method call will post an event to the internal addressables event system</param>
         protected void SetDirty(bool postEvent)
         {
+            m_SchemaSerializedObject = null;
             if (m_Group != null)
             {
                 if (m_Group.Settings != null && m_Group.Settings.IsPersisted)
@@ -109,7 +121,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             foreach (var schema in otherSchemas)
             {
-                var s_prop = (new SerializedObject(schema)).FindProperty(propertyName);
+                var s_prop = schema.SchemaSerializedObject.FindProperty(propertyName);
                 if ((property.propertyType == SerializedPropertyType.Enum && (property.enumValueIndex != s_prop.enumValueIndex)) ||
                     (property.propertyType == SerializedPropertyType.String && (property.stringValue != s_prop.stringValue)) ||
                     (property.propertyType == SerializedPropertyType.Integer && (property.intValue != s_prop.intValue)) ||

@@ -12,9 +12,13 @@ If you want to change the default catalog update behavior of the Addressables sy
 
 ## Loading additional catalogs
 
-Use [Addressables.LoadContentCatalogAsync] to load additional content catalogs, either from your hosting service or from the local file system. After the operation to load the catalog is finished, you can call any Addressables loading functions using the keys in the new catalog.
+Use [Addressables.LoadContentCatalogAsync] to load additional content catalogs, either from your hosting service or from the local file system. All that is required is for you to supply the location of the catalog you wish to load. After the operation to load the catalog is finished, you can call any Addressables loading functions using the keys in the new catalog.
 
 If you provide the catalog hash file at the same URL as the catalog, Addressables caches the secondary catalog. When the client application loads the catalog in the future, it only downloads a new version of the catalog if the hash changes.
+
+> [!NOTE]
+> * The hash file does need to be in the same location and have the same name as your catalog. The only difference to the path should be the extension.
+> * LoadContentCatalogAsync comes with a parameter autoReleaseHandle. In order for the system to download a new remote catalog, any prior calls to LoadContentCatalogAsync that point to the catalog you're attempting to load need to be released. Otherwise, the system picks up the Content Catalog load operation from our operation cache. If the cached operation is picked up, the new remote catalog is not downloaded. If set to true, the parameter autoReleaseHandle can ensure that the operation doesn't stick around in our operation cache after completing.
 
 Once you load a catalog, you cannot unload it. You can, however, update a loaded catalog. You must release the operation handle for the operation that loaded the catalog before updating a catalog. See [Updating catalogs] for more information.
 
@@ -108,7 +112,7 @@ IEnumerator UpdateCatalogs()
 [Custom certificate handler]: xref:addressables-asset-settings#downloads
 [Custom URL transform function]: #id-transform-function
 [Customizing initialization]: #customizing-initialization
-[Disable Catalog Update on Startup]: xref:addressables-asset-settings#catalog
+[Only update catalogs manually]: xref:addressables-asset-settings#catalog
 [Getting the address of an asset at runtime]: #getting-the-address-of-an-asset-at-runtime
 [initialization object list]: xref:addressables-asset-settings#initialization-object-list
 [initialization object]: xref:addressables-asset-settings#initialization-object-list
