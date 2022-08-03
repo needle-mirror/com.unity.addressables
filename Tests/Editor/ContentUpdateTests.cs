@@ -19,7 +19,10 @@ namespace UnityEditor.AddressableAssets.Tests
 {
     public class ContentUpdateTests : AddressableAssetTestBase
     {
-        protected override bool PersistSettings { get { return true; } }
+        protected override bool PersistSettings
+        {
+            get { return true; }
+        }
 
         [Test]
         public void CanCreateContentStateData()
@@ -296,7 +299,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> staticDependencies = new Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>>()
             {
-                {mainEntry, new List<AddressableAssetEntry>() }
+                {mainEntry, new List<AddressableAssetEntry>()}
             };
             ContentUpdateScript.GetStaticContentDependenciesForEntries(Settings, ref staticDependencies, null);
 
@@ -347,7 +350,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> staticDependencies = new Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>>()
             {
-                {mainEntry, new List<AddressableAssetEntry>() }
+                {mainEntry, new List<AddressableAssetEntry>()}
             };
             ContentUpdateScript.GetStaticContentDependenciesForEntries(Settings, ref staticDependencies, null);
 
@@ -398,15 +401,15 @@ namespace UnityEditor.AddressableAssets.Tests
 
             var staticDependencies = new Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>>()
             {
-                { mainAssetEntry, new List<AddressableAssetEntry>() }
+                {mainAssetEntry, new List<AddressableAssetEntry>()}
             };
 
             string cachedBundleName = "cachedBundleName";
             var groupGuidToCacheBundleName = new Dictionary<string, string>()
             {
-                { folderGuid, cachedBundleName },
-                { mainAssetGuid, cachedBundleName },
-                { subAssetGuid, cachedBundleName },
+                {folderGuid, cachedBundleName},
+                {mainAssetGuid, cachedBundleName},
+                {subAssetGuid, cachedBundleName},
             };
             ContentUpdateScript.GetStaticContentDependenciesForEntries(Settings, ref staticDependencies, groupGuidToCacheBundleName);
 
@@ -642,7 +645,8 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         private ContentUpdateScript.ContentUpdateContext GetContentUpdateContext(string contentUpdateTestAssetGUID, string contentUpdateTestCachedAssetHash,
-            string contentUpdateTestNewInternalBundleName, string contentUpdateTestNewBundleName, string contentUpdateTestCachedBundlePath, string contentUpdateTestGroupGuid, string contentUpdateTestFileName)
+            string contentUpdateTestNewInternalBundleName, string contentUpdateTestNewBundleName, string contentUpdateTestCachedBundlePath, string contentUpdateTestGroupGuid,
+            string contentUpdateTestFileName)
         {
             var context = new ContentUpdateScript.ContentUpdateContext()
             {
@@ -660,7 +664,8 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         private void AddToContentUpdateContext(ContentUpdateScript.ContentUpdateContext context, string contentUpdateTestAssetGUID, string contentUpdateTestCachedAssetHash,
-            string contentUpdateTestNewInternalBundleName, string contentUpdateTestNewBundleName, string contentUpdateTestCachedBundlePath, string contentUpdateTestGroupGuid, string contentUpdateTestFileName)
+            string contentUpdateTestNewInternalBundleName, string contentUpdateTestNewBundleName, string contentUpdateTestCachedBundlePath, string contentUpdateTestGroupGuid,
+            string contentUpdateTestFileName)
         {
             context.BundleToInternalBundleIdMap.Add(contentUpdateTestNewInternalBundleName, contentUpdateTestNewBundleName);
             context.GuidToPreviousAssetStateMap.Add(contentUpdateTestAssetGUID,
@@ -672,18 +677,18 @@ namespace UnityEditor.AddressableAssets.Tests
                         guid = new GUID(contentUpdateTestAssetGUID),
                         hash = Hash128.Parse(contentUpdateTestCachedAssetHash)
                     },
-                    dependencies = new AssetState[] {},
+                    dependencies = new AssetState[] { },
                     data = null,
                     groupGuid = contentUpdateTestGroupGuid
                 }
             );
 
             context.IdToCatalogDataEntryMap.Add(contentUpdateTestNewBundleName,
-                new ContentCatalogDataEntry(typeof(IAssetBundleResource), contentUpdateTestNewBundleName, typeof(AssetBundleProvider).FullName, new[] { contentUpdateTestNewBundleName }));
+                new ContentCatalogDataEntry(typeof(IAssetBundleResource), contentUpdateTestNewBundleName, typeof(AssetBundleProvider).FullName, new[] {contentUpdateTestNewBundleName}));
             context.IdToCatalogDataEntryMap.Add(contentUpdateTestAssetGUID,
-                new ContentCatalogDataEntry(typeof(IAssetBundleResource), contentUpdateTestAssetGUID, typeof(AssetBundleProvider).FullName, new[] { contentUpdateTestAssetGUID }));
+                new ContentCatalogDataEntry(typeof(IAssetBundleResource), contentUpdateTestAssetGUID, typeof(AssetBundleProvider).FullName, new[] {contentUpdateTestAssetGUID}));
 
-            context.WriteData.AssetToFiles.Add(new GUID(contentUpdateTestAssetGUID), new List<string>() { contentUpdateTestFileName });
+            context.WriteData.AssetToFiles.Add(new GUID(contentUpdateTestAssetGUID), new List<string>() {contentUpdateTestFileName});
             context.WriteData.FileToBundle.Add(contentUpdateTestFileName, contentUpdateTestNewInternalBundleName);
         }
 
@@ -882,8 +887,8 @@ namespace UnityEditor.AddressableAssets.Tests
 
             var ops = RevertUnchangedAssetsToPreviousAssetState.DetermineRequiredAssetEntryUpdates(group, context);
             LogAssert.Expect(LogType.Warning, $"CachedAssetState found for {assetEntry.AssetPath} but the previous bundle at {k_ContentUpdateTestCachedBundlePath} cannot be found. " +
-                $"This will not affect loading the bundle in previously built players, but loading the missing bundle in Play Mode using the play mode script " +
-                $"\"Use Existing Build (requires built groups)\" will fail.");
+                                              $"This will not affect loading the bundle in previously built players, but loading the missing bundle in Play Mode using the play mode script " +
+                                              $"\"Use Existing Build (requires built groups)\" will fail.");
             Assert.IsTrue(ops.Count == 1);
 
             Settings.RemoveGroup(group);
@@ -948,7 +953,7 @@ namespace UnityEditor.AddressableAssets.Tests
                     PreviousAssetState = context.GuidToPreviousAssetStateMap[m_ContentUpdateTestAssetGUID]
                 }
             };
-            
+
             context.ContentState.cachedBundles = new CachedBundleState[] {new CachedBundleState() {bundleFileId = "cachedBundle", data = "string"}};
 
             Assert.DoesNotThrow(() => RevertUnchangedAssetsToPreviousAssetState.ApplyAssetEntryUpdates(ops, context));
@@ -1153,22 +1158,22 @@ namespace UnityEditor.AddressableAssets.Tests
             aaContext.locations = new List<ContentCatalogDataEntry>(2);
             List<object> keys = new List<object>();
             keys.Add("stringLoadKey");
-            
-            AssetBundleRequestOptions newLocationData1 = new AssetBundleRequestOptions(){Crc = 456, Hash = "def", BundleName = bundleName, BundleSize = 20};
+
+            AssetBundleRequestOptions newLocationData1 = new AssetBundleRequestOptions() {Crc = 456, Hash = "def", BundleName = bundleName, BundleSize = 20};
             aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), "newInternalID", assetBundleProvider, keys, null, newLocationData1));
-            AssetBundleRequestOptions newLocationData2 = new AssetBundleRequestOptions(){Crc = 456, Hash = "def", BundleName = "nonCachedBundleName", BundleSize = 20};
+            AssetBundleRequestOptions newLocationData2 = new AssetBundleRequestOptions() {Crc = 456, Hash = "def", BundleName = "nonCachedBundleName", BundleSize = 20};
             aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), "newInternalID", assetBundleProvider, keys, null, newLocationData2));
-            
+
             bool reverted = RevertUnchangedAssetsToPreviousAssetState.RevertBundleByNameContains("_containKey", updateContext, aaContext);
             Assert.IsTrue(reverted, "Failed to revert the bundle containing _containsKey");
-            
+
             // first entry is reverted
             AssetBundleRequestOptions catalogRequestOptions = aaContext.locations[0].Data as AssetBundleRequestOptions;
             Assert.AreEqual(cachedRequestOptions.Crc, catalogRequestOptions.Crc, "Reverted Catalog CRC expected to be the same as the cached value");
             Assert.AreEqual(cachedRequestOptions.Hash, catalogRequestOptions.Hash, "Reverted Catalog Hash expected to be the same as the cached value");
             Assert.AreEqual(cachedRequestOptions.BundleName, catalogRequestOptions.BundleName, "Reverted Catalog BundleName expected to be the same as the cached value");
             Assert.AreEqual(cachedRequestOptions.BundleSize, catalogRequestOptions.BundleSize, "Reverted Catalog BundleSize expected to be the same as the cached value");
-            
+
             // second entry is not reverted
             catalogRequestOptions = aaContext.locations[1].Data as AssetBundleRequestOptions;
             Assert.AreNotEqual(cachedRequestOptions.Crc, catalogRequestOptions.Crc, "Noncached Catalog CRC expected to be different as the cached value");
@@ -1176,18 +1181,18 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreNotEqual(cachedRequestOptions.BundleName, catalogRequestOptions.BundleName, "Noncached Catalog BundleName expected to be different as the cached value");
             Assert.AreNotEqual(cachedRequestOptions.BundleSize, catalogRequestOptions.BundleSize, "Noncached Catalog BundleSize expected to be different as the cached value");
         }
-        
+
         // not found in cache
         // not found in catalog
         // bundeOptions missing
-        
+
         [Test]
         public void RevertBundleFails_WhenBundleMissingFromCacheButInCatalog()
         {
             string assetBundleProvider = "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider";
             ContentUpdateScript.ContentUpdateContext updateContext = new ContentUpdateScript.ContentUpdateContext();
             updateContext.ContentState = new AddressablesContentState();
-            
+
             AssetBundleRequestOptions cachedRequestOptions = new AssetBundleRequestOptions() {Crc = 123, Hash = "abc", BundleName = "cachedBundleName", BundleSize = 10};
             updateContext.ContentState.cachedBundles = new CachedBundleState[]
             {
@@ -1196,23 +1201,24 @@ namespace UnityEditor.AddressableAssets.Tests
 
             AddressableAssetsBuildContext aaContext = new AddressableAssetsBuildContext();
             aaContext.locations = new List<ContentCatalogDataEntry>(1);
-            List<object> keys = new List<object>(); keys.Add("stringLoadKey");
-            AssetBundleRequestOptions locData = new AssetBundleRequestOptions(){Crc = 456, Hash = "def", BundleName = "catalogBundleName", BundleSize = 20};
+            List<object> keys = new List<object>();
+            keys.Add("stringLoadKey");
+            AssetBundleRequestOptions locData = new AssetBundleRequestOptions() {Crc = 456, Hash = "def", BundleName = "catalogBundleName", BundleSize = 20};
             string internalId = "catalogInternalId";
             aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), internalId, assetBundleProvider, keys, null, locData));
-            
+
             LogAssert.Expect(LogType.Error, $"Matching cached update state for {internalId} failed. Content not found in original build.");
             bool reverted = RevertUnchangedAssetsToPreviousAssetState.RevertBundleByNameContains("catalogBundleName", updateContext, aaContext);
             Assert.IsFalse(reverted, "Expected to Fail finding \"_containsKey\" where cached content does not have an entry with that bundle Name");
         }
-        
+
         [Test]
         public void RevertBundleSucceeds_WhenBundleMissingFromCatalogButInCache()
         {
             string assetBundleProvider = "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider";
             ContentUpdateScript.ContentUpdateContext updateContext = new ContentUpdateScript.ContentUpdateContext();
             updateContext.ContentState = new AddressablesContentState();
-            
+
             AssetBundleRequestOptions cachedRequestOptions = new AssetBundleRequestOptions() {Crc = 123, Hash = "abc", BundleName = "cachedBundleName", BundleSize = 10};
             updateContext.ContentState.cachedBundles = new CachedBundleState[]
             {
@@ -1221,21 +1227,22 @@ namespace UnityEditor.AddressableAssets.Tests
 
             AddressableAssetsBuildContext aaContext = new AddressableAssetsBuildContext();
             aaContext.locations = new List<ContentCatalogDataEntry>(1);
-            List<object> keys = new List<object>(); keys.Add("stringLoadKey");
-            AssetBundleRequestOptions locData = new AssetBundleRequestOptions(){Crc = 456, Hash = "def", BundleName = "catalogBundleName", BundleSize = 20};
+            List<object> keys = new List<object>();
+            keys.Add("stringLoadKey");
+            AssetBundleRequestOptions locData = new AssetBundleRequestOptions() {Crc = 456, Hash = "def", BundleName = "catalogBundleName", BundleSize = 20};
             aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), "newInternalID", assetBundleProvider, keys, null, locData));
-            
+
             bool reverted = RevertUnchangedAssetsToPreviousAssetState.RevertBundleByNameContains("cachedBundleName", updateContext, aaContext);
             Assert.IsTrue(reverted, "Expected to succeed where cache exists but not included in current build to be reverted");
         }
-        
+
         [Test]
         public void RevertBundleSucceeds_WhenBundleMissingFromCacheAndCatalog()
         {
             string assetBundleProvider = "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider";
             ContentUpdateScript.ContentUpdateContext updateContext = new ContentUpdateScript.ContentUpdateContext();
             updateContext.ContentState = new AddressablesContentState();
-            
+
             updateContext.ContentState.cachedBundles = new CachedBundleState[]
             {
                 new CachedBundleState() {bundleFileId = "cachedInternalId", data = null}
@@ -1243,9 +1250,10 @@ namespace UnityEditor.AddressableAssets.Tests
 
             AddressableAssetsBuildContext aaContext = new AddressableAssetsBuildContext();
             aaContext.locations = new List<ContentCatalogDataEntry>(1);
-            List<object> keys = new List<object>(); keys.Add("stringLoadKey");
+            List<object> keys = new List<object>();
+            keys.Add("stringLoadKey");
             aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), "newInternalID", assetBundleProvider, keys, null, null));
-            
+
             bool reverted = RevertUnchangedAssetsToPreviousAssetState.RevertBundleByNameContains("catalogBundleName", updateContext, aaContext);
             Assert.IsTrue(reverted, "Expected to succeed where bundle to revert was not in either cache or current builds");
         }
@@ -1259,7 +1267,7 @@ namespace UnityEditor.AddressableAssets.Tests
             string buildPath = RevertUnchangedAssetsToPreviousAssetState.BundleIdToBuildPath(bundleId, rootLoadPath, rootBuildPath);
             Assert.IsTrue(buildPath.StartsWith(rootBuildPath));
         }
-        
+
         [Test]
         public void GatherModifiedEntries_IncludesDependants()
         {

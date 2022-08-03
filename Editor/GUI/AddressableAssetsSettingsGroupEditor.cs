@@ -19,7 +19,9 @@ namespace UnityEditor.AddressableAssets.GUI
     internal class AddressableAssetsSettingsGroupEditor
     {
         [System.AttributeUsage(AttributeTargets.Class)]
-        public class HideBuildMenuInUI : Attribute { }
+        public class HideBuildMenuInUI : Attribute
+        {
+        }
 
         /// <summary>
         /// Interface used for classes that implement Addressables build menu steps.
@@ -67,9 +69,11 @@ namespace UnityEditor.AddressableAssets.GUI
         [FormerlySerializedAs("treeState")]
         [SerializeField]
         TreeViewState m_TreeState;
+
         [FormerlySerializedAs("mchs")]
         [SerializeField]
         MultiColumnHeaderState m_Mchs;
+
         internal AddressableAssetEntryTreeView m_EntryTree;
 
         public AddressableAssetsWindow window;
@@ -78,6 +82,7 @@ namespace UnityEditor.AddressableAssets.GUI
         const int k_SearchHeight = 20;
 
         AddressableAssetSettings m_Settings;
+
         internal AddressableAssetSettings settings
         {
             get
@@ -94,8 +99,10 @@ namespace UnityEditor.AddressableAssets.GUI
 
         bool m_ResizingVerticalSplitter;
         Rect m_VerticalSplitterRect = new Rect(0, 0, 10, k_SplitterWidth);
+
         [SerializeField]
         float m_VerticalSplitterPercent;
+
         const int k_SplitterWidth = 3;
 
         public AddressableAssetsSettingsGroupEditor(AddressableAssetsWindow w)
@@ -118,6 +125,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (item is AssetEntryTreeViewItem i)
                     items.Push(i);
             }
+
             while (items.Count > 0)
             {
                 var i = items.Pop();
@@ -187,13 +195,16 @@ namespace UnityEditor.AddressableAssets.GUI
                 Addressables.LogError("Missing built-in guistyle " + styleName);
                 s = new GUIStyle();
             }
+
             return s;
         }
 
         [NonSerialized]
         List<GUIStyle> m_SearchStyles;
+
         [NonSerialized]
         GUIStyle m_ButtonStyle;
+
         [NonSerialized]
         Texture2D m_CogIcon;
 
@@ -206,6 +217,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 m_SearchStyles.Add(GetStyle("ToolbarSeachCancelButton"));
                 m_SearchStyles.Add(GetStyle("ToolbarSeachCancelButtonEmpty"));
             }
+
             if (m_ButtonStyle == null)
                 m_ButtonStyle = GetStyle("ToolbarButton");
             if (m_CogIcon == null)
@@ -230,6 +242,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             if (templateObject != null)
                                 menu.AddItem(new GUIContent(templateObject.name), false, m_EntryTree.CreateNewGroup, templateObject);
                         }
+
                         menu.AddSeparator(string.Empty);
                         menu.AddItem(new GUIContent("Blank (no schema)"), false, m_EntryTree.CreateNewGroup, null);
                         menu.DropDown(rMode);
@@ -259,9 +272,19 @@ namespace UnityEditor.AddressableAssets.GUI
                         menu.AddItem(new GUIContent("Window/Hosting Services"), false, () => EditorWindow.GetWindow<HostingServicesWindow>().Show(settings));
                         menu.AddItem(new GUIContent("Window/Event Viewer"), false, ResourceProfilerWindow.ShowWindow);
 
-                        menu.AddItem(new GUIContent("Groups View/Show Sprite and Subobject Addresses"), ProjectConfigData.ShowSubObjectsInGroupView, () => { ProjectConfigData.ShowSubObjectsInGroupView = !ProjectConfigData.ShowSubObjectsInGroupView; m_EntryTree.Reload(); });
-                        menu.AddItem(new GUIContent("Groups View/Group Hierarchy with Dashes", "If enabled, group names are parsed as if a '-' represented a child in hierarchy.  So a group called 'a-b-c' would be displayed as if it were in a folder called 'b' that lived in a folder called 'a'.  In this mode, only groups without '-' can be rearranged within the groups window."),
-                            ProjectConfigData.ShowGroupsAsHierarchy, () => { ProjectConfigData.ShowGroupsAsHierarchy = !ProjectConfigData.ShowGroupsAsHierarchy; m_EntryTree.Reload(); });
+                        menu.AddItem(new GUIContent("Groups View/Show Sprite and Subobject Addresses"), ProjectConfigData.ShowSubObjectsInGroupView, () =>
+                        {
+                            ProjectConfigData.ShowSubObjectsInGroupView = !ProjectConfigData.ShowSubObjectsInGroupView;
+                            m_EntryTree.Reload();
+                        });
+                        menu.AddItem(
+                            new GUIContent("Groups View/Group Hierarchy with Dashes",
+                                "If enabled, group names are parsed as if a '-' represented a child in hierarchy.  So a group called 'a-b-c' would be displayed as if it were in a folder called 'b' that lived in a folder called 'a'.  In this mode, only groups without '-' can be rearranged within the groups window."),
+                            ProjectConfigData.ShowGroupsAsHierarchy, () =>
+                            {
+                                ProjectConfigData.ShowGroupsAsHierarchy = !ProjectConfigData.ShowGroupsAsHierarchy;
+                                m_EntryTree.Reload();
+                            });
 
                         var bundleList = AssetDatabase.GetAllAssetBundleNames();
                         if (bundleList != null && bundleList.Length > 0)
@@ -287,12 +310,13 @@ namespace UnityEditor.AddressableAssets.GUI
                             var m = settings.GetDataBuilder(i);
                             if (m.CanBuildData<AddressablesPlayModeBuildResult>())
                             {
-                                string text = m is Build.DataBuilders.BuildScriptPackedPlayMode ?
-                                    $"Use Existing Build ({PlatformMappingService.GetAddressablesPlatformPathInternal(EditorUserBuildSettings.activeBuildTarget)})" :
-                                    m.Name;
+                                string text = m is Build.DataBuilders.BuildScriptPackedPlayMode
+                                    ? $"Use Existing Build ({PlatformMappingService.GetAddressablesPlatformPathInternal(EditorUserBuildSettings.activeBuildTarget)})"
+                                    : m.Name;
                                 menu.AddItem(new GUIContent(text), i == settings.ActivePlayModeDataBuilderIndex, OnSetActivePlayModeScript, i);
                             }
                         }
+
                         menu.DropDown(rMode);
                     }
                 }
@@ -345,6 +369,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         var m = settings.GetDataBuilder(i);
                         genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/Content Builders/" + m.Name), false, OnCleanAddressables, m);
                     }
+
                     genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/Build Pipeline Cache"), false, OnCleanSBP);
                     genericDropdownMenu.DropDown(rBuild);
                 }
@@ -454,6 +479,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 Addressables.LogError($"Addressable content pre-build failure : {context.BuildMenu.BuildMenuPath}");
                 return false;
             }
+
             return true;
         }
 
@@ -483,7 +509,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var path = ContentUpdateScript.GetContentStateDataPath(false);
             if (string.IsNullOrEmpty(path))
-            { 
+            {
                 Debug.LogWarning("No path specified for Content State Data file.");
                 return;
             }
@@ -493,19 +519,19 @@ namespace UnityEditor.AddressableAssets.GUI
 
             if (!File.Exists(path))
             {
-                if(UnityEditorInternal.InternalEditorUtility.inBatchMode)
-                { 
+                if (UnityEditorInternal.InternalEditorUtility.inBatchMode)
+                {
                     Debug.LogWarningFormat("No Content State Data file exists at path: {0}", path);
                     return;
                 }
                 else
                 {
                     bool selectFileManually = EditorUtility.DisplayDialog("Unable to Check for Update Restrictions", $"The addressable_content_state.bin file could " +
-                        $"not be found at {path}", "Select .bin file", "Cancel content update");
-                    if(selectFileManually)
+                                                                                                                     $"not be found at {path}", "Select .bin file", "Cancel content update");
+                    if (selectFileManually)
                         path = ContentUpdateScript.GetContentStateDataPath(true);
                     else
-                    { 
+                    {
                         Debug.LogWarningFormat("No Content State Data file exists at path: {0}.  Content update has been cancelled.", path);
                         return;
                     }
@@ -559,6 +585,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 settings.activeProfileId = null; //this will reset it to default.
                 activeProfileName = settings.profileSettings.GetProfileName(settings.activeProfileId);
             }
+
             var profileButton = new GUIContent("Profile: " + activeProfileName, "The active collection of build path settings");
 
             Rect r = GUILayoutUtility.GetRect(profileButton, m_ButtonStyle, GUILayout.Width(115f));
@@ -573,6 +600,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     menu.AddItem(new GUIContent(name), name == activeProfileName, SetActiveProfile, name);
                 }
+
                 menu.AddSeparator(string.Empty);
                 menu.AddItem(new GUIContent("Manage Profiles"), false, () => EditorWindow.GetWindow<ProfileWindow>().Show(true));
                 menu.DropDown(r);
@@ -587,6 +615,7 @@ namespace UnityEditor.AddressableAssets.GUI
         }
 
         bool m_ModificationRegistered;
+
         public void OnEnable()
         {
             if (AddressableAssetSettingsDefaultObject.Settings == null)
