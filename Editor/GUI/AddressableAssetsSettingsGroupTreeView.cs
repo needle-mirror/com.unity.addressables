@@ -490,12 +490,13 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             item.checkedForChildren = true;
             var subAssets = new List<AddressableAssetEntry>();
-            entry.GatherAllAssets(subAssets, false, entry.IsInResources, ProjectConfigData.ShowSubObjectsInGroupView);
+            bool includeSubObjects = ProjectConfigData.ShowSubObjectsInGroupView && !entry.IsFolder && !string.IsNullOrEmpty(entry.guid);
+            entry.GatherAllAssets(subAssets, false, entry.IsInResources, includeSubObjects);
             if (subAssets.Count > 0)
             {
                 foreach (var e in subAssets)
                 {
-                    if (e.guid.Length > 0 && e.address.Contains("[") && e.address.Contains("]"))
+                    if (e.guid.Length > 0 && e.address.Contains('[') && e.address.Contains(']'))
                         Debug.LogErrorFormat("Subasset address '{0}' cannot contain '[ ]'.", e.address);
                     AddAndRecurseEntriesBuild(e, item, depth + 1, IsExpanded(item.id));
                 }
@@ -1006,28 +1007,30 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             else
             {
-                if (isEntry && !isMissingPath)
+                if (isEntry)
                 {
-                    if (resourceCount == selectedNodes.Count)
+                    if (!isMissingPath)
                     {
-                        foreach (var g in m_Editor.settings.groups)
+                        if (resourceCount == selectedNodes.Count)
                         {
-                            if (!g.ReadOnly)
-                                menu.AddItem(new GUIContent("Move Resources to group/" + g.Name), false, MoveResourcesToGroup, g);
+                            foreach (var g in m_Editor.settings.groups)
+                            {
+                                if (!g.ReadOnly)
+                                    menu.AddItem(new GUIContent("Move Resources to group/" + g.Name), false, MoveResourcesToGroup, g);
+                            }
+                        }
+                        else if (resourceCount == 0)
+                        {
+                            foreach (var g in m_Editor.settings.groups)
+                            {
+                                if (!g.ReadOnly)
+                                    menu.AddItem(new GUIContent("Move Addressables to group/" + g.Name), false, MoveEntriesToGroup, g);
+                            }
                         }
                     }
-                    else if (resourceCount == 0)
-                    {
-                        foreach (var g in m_Editor.settings.groups)
-                        {
-                            if (!g.ReadOnly)
-                                menu.AddItem(new GUIContent("Move Addressables to group/" + g.Name), false, MoveEntriesToGroup, g);
-                        }
-                    }
-
+                    
                     if (selectedNodes.Count == 1)
                         menu.AddItem(new GUIContent("Copy Address to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
-
                     else if (selectedNodes.Count > 1)
                         menu.AddItem(new GUIContent("Copy " + selectedNodes.Count + " Addresses to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
                 }
