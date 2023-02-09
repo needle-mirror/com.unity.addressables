@@ -9,6 +9,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
     {
         public MissingReport(VisualElement rootView) : base(rootView) { }
 
+        public Image Icon => GetElement<Image>();
         public Label MissingBuildHashLabel => GetElement<Label>();
         public Button SearchForBuildReportButton => GetElement<Button>();
 

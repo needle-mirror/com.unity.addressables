@@ -1,7 +1,7 @@
 {
   "name": "com.unity.addressables",
   "displayName": "Addressables",
-  "version": "1.21.3",
+  "version": "1.21.8",
   "unity": "2019.4",
   "description": "The Addressable Asset System allows the developer to ask for an asset via its address. Once an asset (e.g. a prefab) is marked \"addressable\", it generates an address which can be called from anywhere. Wherever the asset resides (local or remote), the system will locate it and its dependencies, then return it.\n\nUse 'Window->Asset Management->Addressables' to begin working with the system.\n\nAddressables use asynchronous loading to support loading from any location with any collection of dependencies. Whether you have been using direct references, traditional asset bundles, or Resource folders, addressables provide a simpler way to make your game more dynamic. Addressables simultaneously opens up the world of asset bundles while managing all the complexity.\n\nFor usage samples, see github.com/Unity-Technologies/Addressables-Sample",
   "keywords": [
@@ -12,7 +12,7 @@
     "assetbundles"
   ],
   "dependencies": {
-    "com.unity.scriptablebuildpipeline": "1.21.2",
+    "com.unity.scriptablebuildpipeline": "1.21.3",
     "com.unity.modules.assetbundle": "1.0.0",
     "com.unity.modules.imageconversion": "1.0.0",
     "com.unity.modules.jsonserialize": "1.0.0",
@@ -23,13 +23,13 @@
     "changelog": "- Optimised PostProcessBundles\n- Fixed issue where having a runtime profile variable or property to evaluate web urls on Windows platforms can result in malformed urls.\n- Fixed possible `NullRefernceException` when importing new assets and `AddressableAssetUtility+SortedDelegate,Register` was called.\n- Fixed an issue where EditorGUI.changed would not be properly set in certain circumstances when updating AssetReferences using the inspector\n- Fixed CCD build and release to properly upload static groups\n- Fixed CCD build and release to allow both static and managed groups in the same profile\n- Include additional object dependency information in build layout report\n- Addressables Profiler module compatible with Unity Editor 2022.2+\n- Addressables Build Report window added. Compatible with Unity Editor 2022.2+"
   },
   "upmCi": {
-    "footprint": "b09026fdef47759ea53edb715483d664ae25b805"
+    "footprint": "6c922adfffd6a4312b0f75bd0293c7c1e7b170e6"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.addressables@1.21/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/Addressables.git",
     "type": "git",
-    "revision": "0ca356afa58812a67cd094dc54dd4df06efb93cb"
+    "revision": "983b68f6151bf3c52a38fd509d418d1369086e63"
   },
   "samples": [
     {

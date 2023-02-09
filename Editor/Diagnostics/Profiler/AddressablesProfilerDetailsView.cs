@@ -230,6 +230,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
         {
             MissingReport missingDisplay = MissingReport.Create();
             m_MissingReportElements.Add(missingDisplay);
+            missingDisplay.Icon.image = EditorGUIUtility.IconContent(AddressableIconNames.ErrorIcon).image;
             missingDisplay.MissingBuildHashLabel.text = string.Format(ProfilerStrings.MissingBuildReportLabelText, hash.ToString());
             missingDisplay.SearchForBuildReportButton.clickable.clicked += MissingBuildReportClicked;
 

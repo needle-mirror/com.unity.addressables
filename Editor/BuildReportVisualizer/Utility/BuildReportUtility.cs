@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build.Layout;
+using UnityEditor.AddressableAssets.Diagnostics;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -225,14 +226,6 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public static readonly string ReferencedByTab = nameof(ReferencedByTab);
         public static readonly string ReferencesToTab = nameof(ReferencesToTab);
 
-        public static readonly string AssetBundleIconDark = "d_Package Manager@2x";
-        public static readonly string ForwardIconDark = "d_tab_next@2x";
-        public static readonly string BackIconDark = "d_tab_prev@2x";
-        public static readonly string HelpIcon = "_Help@2x";
-        public static readonly string AssetBundleIconLight = "Package Manager@2x";
-        public static readonly string ForwardIconLight = "tab_next@2x";
-        public static readonly string BackIconLight = "tab_prev@2x";
-
         public static readonly string DetailsViewDarkPath = StyleSheetsPath + "DetailsViewDark.uss";
         public static readonly string DetailsViewLightPath = StyleSheetsPath + "DetailsViewLight.uss";
 
@@ -249,22 +242,22 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
         internal static string GetAssetBundleIconPath()
         {
-            return EditorGUIUtility.isProSkin ? AssetBundleIconDark : AssetBundleIconLight;
+            return EditorGUIUtility.isProSkin ? AddressableIconNames.AssetBundleIconDark : AddressableIconNames.AssetBundleIconLight;
         }
 
         internal static string GetForwardIconPath()
         {
-            return EditorGUIUtility.isProSkin ? ForwardIconDark : ForwardIconLight;
+            return EditorGUIUtility.isProSkin ? AddressableIconNames.ForwardIconDark : AddressableIconNames.ForwardIconLight;
         }
 
         internal static string GetHelpIconPath()
         {
-            return HelpIcon;
+            return AddressableIconNames.HelpIcon;
         }
 
         internal static string GetBackIconPath()
         {
-            return EditorGUIUtility.isProSkin ? BackIconDark : BackIconLight;
+            return EditorGUIUtility.isProSkin ? AddressableIconNames.BackIconDark : AddressableIconNames.BackIconLight;
         }
 
         internal static string GetDetailsViewStylesheetPath()
@@ -453,7 +446,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             {
                 if (assetOfDependentBundle.ExternallyReferencedAssets.Find(x => x.AddressableName == asset.AddressableName) != null)
                 {
-                    dependenciesOfAsset.Add(assetOfDependentBundle.Guid, assetOfDependentBundle);
+                    dependenciesOfAsset.TryAdd(assetOfDependentBundle.Guid, assetOfDependentBundle);
                 }
             }
             return dependenciesOfAsset;

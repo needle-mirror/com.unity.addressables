@@ -72,7 +72,16 @@ You can set the compression option using the Advanced settings on each group. Co
 
 Note that the hardware characteristics of a platform can mean that uncompressed bundles are not always the fastest to load.  The maximum speed of loading uncompressed bundles is gated by IO speed, while the speed of loading LZ4-compressed bundles can be gated by either IO speed or CPU, depending on hardware.  On most platforms, loading LZ4-compressed bundles is CPU bound, and loading uncompressed bundles will be faster. On platforms that have low IO speeds and high CPU speeds, LZ4 loading can be faster. It is always a good practice to run performance analysis to validate whether your game fits the common patterns, or needs some unique tweaking.
 
-More information on Unity's compression selection is available in the [AssetBundle compression manual page]. 
+More information on Unity's compression selection is available in the [AssetBundle compression manual page].
+
+### AssetBundle CRC
+
+Different CRC settings are best used depending upon different circumstances. Checking for a change in the file requires the entire AssetBundle to be decompressed and the check processed on the uncompressed bytes. This can impact performance negatively and may not be a worth while trade off.
+Corruption is likely to only happen during a download, disk storage is generally reliable and unlikely to have corrupted files after saving to disk. if your AssetBundle contains data that may be tampered with such as settings values, then you may want to consider enabling CRC checks on saved AssetBundles.
+
+For __local__ AssetBundles, if the application download performs a check on the download before saving to disk. Then consider setting this to __Disabled__ as the download will have already been checked.
+
+For __remote__ AssetBundles, __Enabled, Excluding cache__ is a good default. When downloading and caching an AssetBundle to disk, the bytes are decompressed and a CRC calculation is done during file saving. This will not impact performance and the corruption is most likely to occur during this phase from the download. __including cache__ is good to use where the data needs to be checked everytime such as settings values.
 
 ### Asset Load Mode
 

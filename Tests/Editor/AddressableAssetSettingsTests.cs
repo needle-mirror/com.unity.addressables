@@ -17,6 +17,7 @@ using UnityEngine.ResourceManagement;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.Util;
 using UnityEngine.TestTools;
+using static UnityEditor.AddressableAssets.Settings.AddressableAssetSettings;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -148,11 +149,14 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void AddRemovelabel()
         {
+            var initialValue = Settings.currentHash;
             const string labelName = "Newlabel";
             Settings.AddLabel(labelName);
             Assert.Contains(labelName, Settings.labelTable.labelNames);
+            Assert.AreNotEqual(initialValue, Settings.currentHash);
             Settings.RemoveLabel(labelName);
             Assert.False(Settings.labelTable.labelNames.Contains(labelName));
+            Assert.AreEqual(initialValue, Settings.currentHash);
         }
 
         [Test]
@@ -1200,6 +1204,51 @@ namespace UnityEditor.AddressableAssets.Tests
             var newGroup = Settings.CreateGroup("doesnt matter", true, false, false, null, typeof(ContentUpdateGroupSchema), typeof(BundledAssetGroupSchema));
             Assert.AreNotEqual(Settings.currentHash, prevHash);
             Settings.RemoveGroup(newGroup);
+            Assert.AreEqual(Settings.currentHash, prevHash);
+        }
+
+        [Test]
+        public void AddressableAssetSettings_HashChanges_WhenBuildSettingsChange()
+        {
+            var initialSetting = Settings.buildSettings.LogResourceManagerExceptions;
+            var initialHash = Settings.currentHash;
+            Settings.buildSettings.LogResourceManagerExceptions = !initialSetting;
+            Assert.AreNotEqual(Settings.currentHash, initialHash);
+            Settings.buildSettings.LogResourceManagerExceptions = initialSetting;
+            Assert.AreEqual(Settings.currentHash, initialHash);
+        }
+
+        [Test]
+        public void AddressableAssetSettings_HashChanges_HandleNullGroups()
+        {
+            var prevHash = Settings.currentHash;
+            var newGroup = Settings.CreateGroup("doesnt matter", true, false, false, null, typeof(ContentUpdateGroupSchema), typeof(BundledAssetGroupSchema));
+            Assert.AreNotEqual(Settings.currentHash, prevHash);
+
+            var groupAddedHash = Settings.currentHash;
+
+            // so delete the file, then we should be able to iterate through groups and ensure we find a null reference
+            var groupFile = Settings.ConfigFolder + "/AssetGroups/doesnt matter.asset";
+            Assert.True(File.Exists(groupFile));
+            AssetDatabase.DeleteAsset(groupFile);
+
+            // SetDirty hasn't been called so the hash stays the same
+            Assert.AreEqual(Settings.currentHash, groupAddedHash);
+
+            // add a real null group, does not call SetDirty
+            Settings.groups.Add(null);
+            Assert.AreEqual(Settings.currentHash, groupAddedHash);
+
+            // calling SetDirty manually ignores both the deleted and null groups and we return to the initial hash
+            Settings.SetDirty(ModificationEvent.GroupAdded, null, true);
+            Assert.AreEqual(Settings.currentHash, prevHash);
+
+            // count does not count null groups so equal, SetDirty is called and reverts to original
+            Settings.RemoveGroup(newGroup);
+            Assert.AreEqual(Settings.currentHash, prevHash);
+
+            // count is the same, should be equal
+            Settings.RemoveGroup(null);
             Assert.AreEqual(Settings.currentHash, prevHash);
         }
 

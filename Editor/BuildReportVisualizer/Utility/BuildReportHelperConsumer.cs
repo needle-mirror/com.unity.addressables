@@ -46,9 +46,9 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             foreach (BuildLayout.ExplicitAsset explicitDep in asset.InternalReferencedExplicitAssets)
             {
                 if (asset.Bundle == mainAsset.Bundle && !internalReferencedExplicitAssets.ContainsKey(explicitDep.Guid))
-                    internalReferencedExplicitAssets.Add(explicitDep.Guid, new BuildReportHelperExplicitAssetDependency(explicitDep, asset));
+                    internalReferencedExplicitAssets.TryAdd(explicitDep.Guid, new BuildReportHelperExplicitAssetDependency(explicitDep, asset));
                 else if (asset.Bundle != mainAsset.Bundle && !externallyReferencedAssets.ContainsKey(explicitDep.Guid))
-                    externallyReferencedAssets.Add(explicitDep.Guid, new BuildReportHelperExplicitAssetDependency(explicitDep, asset));
+                    externallyReferencedAssets.TryAdd(explicitDep.Guid, new BuildReportHelperExplicitAssetDependency(explicitDep, asset));
                 GenerateFlatListOfReferencedAssets(explicitDep, mainAsset, internalReferencedExplicitAssets, internalReferencedOtherAssets, externallyReferencedAssets, duplicateAssets);
             }
 
@@ -57,23 +57,23 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 if (asset.Bundle == mainAsset.Bundle && !internalReferencedOtherAssets.ContainsKey(implicitDep.AssetGuid))
                 {
                     if (duplicateAssets.ContainsKey(implicitDep.AssetGuid))
-                        internalReferencedOtherAssets.Add(implicitDep.AssetGuid, new BuildReportHelperImplicitAssetDependency(duplicateAssets[implicitDep.AssetGuid], asset));
+                        internalReferencedOtherAssets.TryAdd(implicitDep.AssetGuid, new BuildReportHelperImplicitAssetDependency(duplicateAssets[implicitDep.AssetGuid], asset));
                     else
-                        internalReferencedOtherAssets.Add(implicitDep.AssetGuid, new BuildReportHelperImplicitAssetDependency(implicitDep, asset));
+                        internalReferencedOtherAssets.TryAdd(implicitDep.AssetGuid, new BuildReportHelperImplicitAssetDependency(implicitDep, asset));
                 }
                 else if (asset.Bundle != mainAsset.Bundle && !externallyReferencedAssets.ContainsKey(implicitDep.AssetGuid))
                 {
                     if (duplicateAssets.ContainsKey(implicitDep.AssetGuid))
-                        externallyReferencedAssets.Add(implicitDep.AssetGuid, new BuildReportHelperImplicitAssetDependency(duplicateAssets[implicitDep.AssetGuid], asset));
+                        externallyReferencedAssets.TryAdd(implicitDep.AssetGuid, new BuildReportHelperImplicitAssetDependency(duplicateAssets[implicitDep.AssetGuid], asset));
                     else
-                        externallyReferencedAssets.Add(implicitDep.AssetGuid, new BuildReportHelperImplicitAssetDependency(implicitDep, asset));
+                        externallyReferencedAssets.TryAdd(implicitDep.AssetGuid, new BuildReportHelperImplicitAssetDependency(implicitDep, asset));
                 }
             }
 
             foreach (BuildLayout.ExplicitAsset explicitDep in asset.ExternallyReferencedAssets)
             {
                 if (!externallyReferencedAssets.ContainsKey(explicitDep.Guid))
-                    externallyReferencedAssets.Add(explicitDep.Guid, new BuildReportHelperExplicitAssetDependency(explicitDep, asset));
+                    externallyReferencedAssets.TryAdd(explicitDep.Guid, new BuildReportHelperExplicitAssetDependency(explicitDep, asset));
                 GenerateFlatListOfReferencedAssets(explicitDep, mainAsset, internalReferencedExplicitAssets, internalReferencedOtherAssets, externallyReferencedAssets, duplicateAssets);
             }
         }
@@ -115,7 +115,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             GUIDToReferencingAssets = new SortedDictionary<string, BuildLayout.ExplicitAsset>();
             foreach (BuildLayout.ExplicitAsset referencingAsset in asset.ReferencingAssets)
             {
-                GUIDToReferencingAssets.Add(referencingAsset.Guid, referencingAsset);
+                GUIDToReferencingAssets.TryAdd(referencingAsset.Guid, referencingAsset);
             }
         }
 
@@ -153,7 +153,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                     {
                         if (otherAsset.AssetGuid == asset.AssetGuid)
                         {
-                            GUIDToReferencingAssets.Add(explicitAsset.Guid, explicitAsset);
+                            GUIDToReferencingAssets.TryAdd(explicitAsset.Guid, explicitAsset);
                         }
                     }
                 }
@@ -182,7 +182,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             {
                 if (!guidToImplicitAssets.ContainsKey(asset.AssetGuid))
                 {
-                    guidToImplicitAssets.Add(asset.AssetGuid, asset);
+                    guidToImplicitAssets.TryAdd(asset.AssetGuid, asset);
                 }
             }
             return guidToImplicitAssets;
@@ -194,7 +194,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             foreach (BuildLayout.ExplicitAsset asset in BuildLayoutHelpers.EnumerateAssets(report))
             {
                 var helperAsset = new BuildReportHelperExplicitAsset(asset, null, duplicateAssets);
-                guidToExplicitAssets.Add(asset.Guid, helperAsset);
+                guidToExplicitAssets.TryAdd(asset.Guid, helperAsset);
             }
             return guidToExplicitAssets;
         }
@@ -205,7 +205,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             foreach (BuildLayout.AssetDuplicationData dupData in report.DuplicatedAssets)
             {
                 var helperDupAsset = new BuildReportHelperDuplicateImplicitAsset(guidToImplicitAssets[dupData.AssetGuid], dupData);
-                duplicateAssets.Add(dupData.AssetGuid, helperDupAsset);
+                duplicateAssets.TryAdd(dupData.AssetGuid, helperDupAsset);
             }
             return duplicateAssets;
         }

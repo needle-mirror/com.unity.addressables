@@ -97,11 +97,15 @@ static class AddressablesTestUtility
         var importer = (TextureImporter)AssetImporter.GetAtPath(spritePath);
         importer.textureType = TextureImporterType.Sprite;
         importer.spriteImportMode = SpriteImportMode.Multiple;
+
+#pragma warning disable 618
         importer.spritesheet = new SpriteMetaData[]
         {
             new SpriteMetaData() {name = "topleft", pivot = Vector2.zero, rect = new Rect(0, 0, 16, 16)},
             new SpriteMetaData() {name = "botright", pivot = Vector2.zero, rect = new Rect(16, 16, 16, 16)}
         };
+#pragma warning restore 618
+
         importer.SaveAndReimport();
 
         var spriteEntry = settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(spritePath), group, false, false);
@@ -187,11 +191,15 @@ static class AddressablesTestUtility
             var importer = (TextureImporter)AssetImporter.GetAtPath(spritePath);
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Multiple;
+
+#pragma warning disable 618
             importer.spritesheet = new SpriteMetaData[]
             {
                 new SpriteMetaData() {name = "topleft", pivot = Vector2.zero, rect = new Rect(0, 0, 16, 16)},
                 new SpriteMetaData() {name = "botright", pivot = Vector2.zero, rect = new Rect(16, 16, 16, 16)}
             };
+#pragma warning restore 618
+
             importer.SaveAndReimport();
         }
 

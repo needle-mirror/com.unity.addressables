@@ -859,13 +859,18 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 if (!m_GroupsHash.isValid)
                 {
-                    var gc = m_GroupAssets.Count;
-                    m_GroupsHash.Append(ref gc);
+                    int count = 0;
                     foreach (var g in m_GroupAssets)
                     {
-                        var gah = g.currentHash;
-                        m_GroupsHash.Append(ref gah);
+                        // this ignores both null values and deleted managed objects
+                        if (g != null)
+                        {
+                            count += 1;
+                            var gah = g.currentHash;
+                            m_GroupsHash.Append(ref gah);
+                        }
                     }
+                    m_GroupsHash.Append(ref count);
                 }
                 return m_GroupsHash;
             }
@@ -1878,6 +1883,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             if (modificationEvent == ModificationEvent.ProfileRemoved && eventData as string == activeProfileId)
                 activeProfileId = null;
+
             if (this != null)
             {
                 if (postEvent)
