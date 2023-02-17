@@ -66,6 +66,9 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         IDependencyData m_DependencyData;
 
         [InjectContext(ContextUsage.In)]
+        IObjectDependencyData m_ObjectDependencyData;
+
+        [InjectContext(ContextUsage.In)]
         IBundleBuildResults m_BuildBundleResults;
 #pragma warning restore 649
 
@@ -131,9 +134,6 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         {
             if (AssetType.TryParse<AssetType>(name, true, out var rst))
                 return rst;
-            //TODO: I'm removing this warning for now since it can spam the logs during a build. 
-            //If we want to re-add it, we need to do so carefully.  
-            //Debug.LogWarning($"Unhandled Scene Object type {name}");
             return AssetType.SceneObject;
         }
 
@@ -220,6 +220,8 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 Dictionary<string, AssetBucket> buckets = new Dictionary<string, AssetBucket>();
                 WriteResult writeResult = m_Results.WriteResults[file.Name];
                 List<ObjectSerializedInfo> sceneObjects = new List<ObjectSerializedInfo>();
+                FileObjectData fData = new FileObjectData();
+                lookup.FileToFileObjectData.Add(file, fData);
 
                 foreach (ObjectSerializedInfo info in writeResult.serializedObjects)
                 {
@@ -282,8 +284,10 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 }
 
                 // Create entries for buckets that are implicitly pulled in
-                Dictionary<string, BuildLayout.DataFromOtherAsset> guidToOtherData =
-                    new Dictionary<string, BuildLayout.DataFromOtherAsset>();
+                Dictionary<string, BuildLayout.DataFromOtherAsset> guidToOtherData = new Dictionary<string, BuildLayout.DataFromOtherAsset>();
+                Dictionary<string, Dictionary<long, string>> guidToObjectNames = new Dictionary<string, Dictionary<long, string>>();
+                int assetInFileId = 0;
+                HashSet<string> MonoScriptAssets = new HashSet<string>();
 
                 foreach (AssetBucket bucket in buckets.Values.Where(x => x.ExplictAsset == null))
                 {
@@ -293,6 +297,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                     {
                         file.MonoScriptCount++;
                         file.MonoScriptSize += bucket.CalcObjectSize();
+                        MonoScriptAssets.Add(bucket.guid);
                         continue;
                     }
 
@@ -303,6 +308,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                     implicitAsset.StreamedSize = bucket.CalcStreamedSize();
                     implicitAsset.ObjectCount = bucket.objs.Count;
                     implicitAsset.File = file;
+                    assetInFileId = file.OtherAssets.Count;
                     file.OtherAssets.Add(implicitAsset);
 
                     if (lookup.UsedImplicits.TryGetValue(implicitAsset.AssetGuid, out var dataList))
@@ -320,6 +326,10 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                         lookup.AssetPathToTypeMap[implicitAsset.AssetPath] = implicitAsset.MainAssetType;
                     }
 
+                    Dictionary<long, string> localIdentifierToObjectName;
+                    if (!guidToObjectNames.TryGetValue(bucket.guid, out localIdentifierToObjectName))
+                        localIdentifierToObjectName = GetObjectsIdForAsset(assetPath);
+
                     foreach (ObjectSerializedInfo bucketObj in bucket.objs)
                     {
                         Type objType = null;
@@ -333,13 +343,21 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                                 eType = AssetType.SceneObject;
                         }
 
-                        implicitAsset.Objects.Add(new BuildLayout.ObjectData()
+                        string name = "";
+                        if (localIdentifierToObjectName.TryGetValue(bucketObj.serializedObject.localIdentifierInFile, out string value))
+                            name = value;
+                        BuildLayout.ObjectData layoutObject = new BuildLayout.ObjectData()
                         {
+                            ObjectName = name,
                             LocalIdentifierInFile = bucketObj.serializedObject.localIdentifierInFile,
                             AssetType = eType,
                             SerializedSize = bucketObj.header.size,
                             StreamedSize = bucketObj.rawData.size
-                        });
+                        };
+
+                        int objectIndex = implicitAsset.Objects.Count;
+                        implicitAsset.Objects.Add(layoutObject);
+                        fData.Add(bucketObj.serializedObject, layoutObject, assetInFileId, objectIndex);
                     }
 
                     if (!guidToPulledInBuckets.TryGetValue(implicitAsset.AssetGuid,
@@ -348,18 +366,28 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                     bucketList.Add(implicitAsset);
                 }
 
-                // Add references
+                assetInFileId = file.OtherAssets.Count-1;
                 foreach (BuildLayout.ExplicitAsset asset in file.Assets)
                 {
+                    assetInFileId++;
                     AssetBucket bucket = buckets[asset.Guid];
+                    GUID.TryParse(asset.Guid, out GUID guid);
+
+                    // size info
                     asset.SerializedSize = bucket.CalcObjectSize();
                     asset.StreamedSize = bucket.CalcStreamedSize();
 
+                    // asset hash
+                    if (m_Results.AssetResults.TryGetValue(guid, out var data))
+                        asset.AssetHash = data.Hash;
+
+                    // asset type
                     if (lookup.AssetPathToTypeMap.ContainsKey(asset.AssetPath))
                         asset.MainAssetType = lookup.AssetPathToTypeMap[asset.AssetPath];
                     else
                     {
-                        asset.MainAssetType = BuildLayoutHelpers.GetAssetType(AssetDatabase.GetMainAssetTypeAtPath(asset.AssetPath));
+                        System.Type type = AssetDatabase.GetMainAssetTypeAtPath(asset.AssetPath);
+                        asset.MainAssetType = BuildLayoutHelpers.GetAssetType(type);
                         lookup.AssetPathToTypeMap[asset.AssetPath] = asset.MainAssetType;
                     }
 
@@ -374,48 +402,80 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                             asset.MainAssetType = AssetType.Prefab;
                     }
 
-                    GUID.TryParse(asset.Guid, out GUID guid);
-                    if (m_Results.AssetResults.TryGetValue(guid, out var data))
-                        asset.AssetHash = data.Hash;
-
-                    foreach (ObjectSerializedInfo bucketObj in bucket.objs)
+                    if (asset.IsScene)
                     {
-                        Type objType = null;
-                        if (objectTypes.TryGetValue(bucketObj.serializedObject, out Type[] types) && types.Length > 0)
-                            objType = types[0];
-
-                        AssetType eType = objType == null ? AssetType.Other : BuildLayoutHelpers.GetAssetType(objType);
-                        if (asset.IsScene && eType == AssetType.Other)
-                            eType = GetSceneObjectType(bucketObj.serializedObject.filePath.Remove(0, 6));
-
-                        asset.Objects.Add(new BuildLayout.ObjectData()
-                        {
-                            LocalIdentifierInFile = bucketObj.serializedObject.localIdentifierInFile,
-                            AssetType = eType,
-                            SerializedSize = bucketObj.header.size,
-                            StreamedSize = bucketObj.rawData.size
-                        });
+                        CollectObjectsForScene(bucket, asset);
                     }
+                    else
+                    {
+                        Dictionary<long, string> localIdentifierToObjectName;
+                        if (!guidToObjectNames.TryGetValue(bucket.guid, out localIdentifierToObjectName))
+                            localIdentifierToObjectName = GetObjectsIdForAsset(asset.AssetPath);
 
+                        CollectObjectsForAsset(bucket, objectTypes, asset, localIdentifierToObjectName, fData, assetInFileId);
+                    }
+                }
+
+                HashSet<BuildLayout.ExplicitAsset> explicitAssetsAddedAsExternal = new HashSet<BuildLayout.ExplicitAsset>();
+                // Add references
+                foreach (BuildLayout.ExplicitAsset asset in file.Assets)
+                {
                     IEnumerable<ObjectIdentifier> refs = null;
                     if (m_DependencyData.AssetInfo.TryGetValue(new GUID(asset.Guid), out AssetLoadInfo info))
                         refs = info.referencedObjects;
                     else
                         refs = m_DependencyData.SceneInfo[new GUID(asset.Guid)].referencedObjects;
+
                     foreach (string refGUID in refs.Select(x => x.guid.Empty() ? x.filePath : x.guid.ToString()).Distinct())
                     {
+                        if (MonoScriptAssets.Contains(refGUID))
+                            continue;
                         if (guidToOtherData.TryGetValue(refGUID, out BuildLayout.DataFromOtherAsset dfoa))
                         {
                             dfoa.ReferencingAssets.Add(asset);
                             asset.InternalReferencedOtherAssets.Add(dfoa);
                         }
-                        else if (buckets.TryGetValue(refGUID, out AssetBucket refBucket))
+                        else if (buckets.TryGetValue(refGUID, out AssetBucket refBucket) && refBucket.ExplictAsset != null)
                         {
+                            refBucket.ExplictAsset.ReferencingAssets.Add(asset);
                             asset.InternalReferencedExplicitAssets.Add(refBucket.ExplictAsset);
                         }
                         else if (lookup.GuidToExplicitAsset.TryGetValue(refGUID, out BuildLayout.ExplicitAsset refAsset))
                         {
+                            refAsset.ReferencingAssets.Add(asset);
                             asset.ExternallyReferencedAssets.Add(refAsset);
+                            if (explicitAssetsAddedAsExternal.Add(refAsset))
+                                file.ExternalReferences.Add(refAsset);
+                        }
+                    }
+                }
+            }
+
+            foreach (BuildLayout.File file in lookup.Files.Values)
+            {
+                if (lookup.FileToFileObjectData.TryGetValue(file, out FileObjectData fData))
+                {
+                    foreach (BuildLayout.ExplicitAsset asset in file.Assets)
+                    {
+                        if (asset.IsScene && asset.Objects.Count > 0)
+                        {
+                            BuildLayout.ObjectData objectData = asset.Objects[0];
+                            IEnumerable<ObjectIdentifier> dependencies = m_DependencyData.SceneInfo[new GUID(asset.Guid)].referencedObjects;
+                            CollectObjectReferences(fData, objectData, file, lookup, dependencies);
+                        }
+                        else
+                        {
+                            foreach (BuildLayout.ObjectData objectData in asset.Objects)
+                                CollectObjectReferences(fData, objectData, file, lookup);
+                        }
+                    }
+
+                    foreach (var otherAsset in file.OtherAssets)
+                    {
+                        foreach (BuildLayout.ObjectData objectData in otherAsset.Objects)
+                        {
+                            // TODO see if theres a cached result for this
+                            CollectObjectReferences(fData, objectData, file, lookup);
                         }
                     }
                 }
@@ -424,10 +484,193 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             return lookup;
         }
 
+        private static Dictionary<long, string> GetObjectsIdForAsset(string assetPath)
+        {
+            UnityEngine.Object[] assetSubObjects = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+            Dictionary<long, string> localIdentifierToObjectName = new Dictionary<long, string>(assetSubObjects.Length);
+            if (assetSubObjects != null)
+            {
+                foreach (var o in assetSubObjects)
+                {
+                    if (o != null && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(o, out _, out long localId))
+                        localIdentifierToObjectName[localId] = o.name;
+                }
+            }
+
+            return localIdentifierToObjectName;
+        }
+
+        private void CollectObjectsForAsset(in AssetBucket bucket, in Dictionary<ObjectIdentifier, Type[]> objectTypes, BuildLayout.ExplicitAsset asset,
+            in Dictionary<long, string> localIdentifierToObjectName, FileObjectData fileObjectData, int assetInFileId)
+        {
+            foreach (ObjectSerializedInfo bucketObj in bucket.objs)
+            {
+                Type objType = null;
+                if (objectTypes.TryGetValue(bucketObj.serializedObject, out Type[] types) && types.Length > 0)
+                    objType = types[0];
+
+                AssetType eType = objType == null ? AssetType.Other : BuildLayoutHelpers.GetAssetType(objType);
+                if (IsComponentType(eType))
+                    eType = AssetType.Component;
+                string componentName = "";
+
+                if (asset.IsScene && (eType == AssetType.Other || eType == AssetType.Component))
+                    eType = GetSceneObjectType(bucketObj.serializedObject.filePath.Remove(0, 6));
+                if (eType == AssetType.Component)
+                    componentName = objType.Name;
+
+                string name = "";
+                if (localIdentifierToObjectName.TryGetValue(bucketObj.serializedObject.localIdentifierInFile, out string value))
+                    name = value;
+
+                BuildLayout.ObjectData layoutObject = new BuildLayout.ObjectData()
+                {
+                    ObjectName = name,
+                    ComponentName = componentName,
+                    LocalIdentifierInFile = bucketObj.serializedObject.localIdentifierInFile,
+                    AssetType = eType,
+                    SerializedSize = bucketObj.header.size,
+                    StreamedSize = bucketObj.rawData.size
+                };
+
+                int objectIndex = asset.Objects.Count;
+                asset.Objects.Add(layoutObject);
+                fileObjectData.Add(bucketObj.serializedObject, layoutObject, assetInFileId, objectIndex);
+            }
+        }
+
+        private static bool IsComponentType(AssetType eType)
+        {
+            if (eType == AssetType.Transform ||
+                eType == AssetType.GameObject ||
+                eType == AssetType.Camera ||
+                eType == AssetType.Light ||
+                eType == AssetType.MeshFilter ||
+                eType == AssetType.MeshRenderer ||
+                eType == AssetType.SphereCollider ||
+                eType == AssetType.AudioListener ||
+                eType == AssetType.BoxCollider ||
+                eType == AssetType.BoxCollider2D
+                ||
+                eType == AssetType.MonoBehaviour)
+            {
+                // old components that should not have been in the enum, treat all as component type
+                return true;
+            }
+
+            return false;
+        }
+
+        private void CollectObjectsForScene(in AssetBucket bucket, BuildLayout.ExplicitAsset asset)
+        {
+            Dictionary<AssetType, BuildLayout.ObjectData> TypeToObjectData = new Dictionary<AssetType, BuildLayout.ObjectData>();
+            foreach (ObjectSerializedInfo bucketObj in bucket.objs)
+            {
+                AssetType eType = GetSceneObjectType(bucketObj.serializedObject.filePath.Remove(0, 6));
+                if (!TypeToObjectData.TryGetValue(eType, out BuildLayout.ObjectData layoutObject))
+                {
+                    layoutObject = new BuildLayout.ObjectData()
+                    {
+                        ObjectName = eType.ToString(),
+                        LocalIdentifierInFile = TypeToObjectData.Count+1,
+                        AssetType = eType,
+                        SerializedSize = bucketObj.header.size,
+                        StreamedSize = bucketObj.rawData.size
+                    };
+                    TypeToObjectData.Add(eType, layoutObject);
+                }
+                else
+                {
+                    layoutObject.SerializedSize += bucketObj.header.size;
+                    layoutObject.StreamedSize += bucketObj.rawData.size;
+                }
+            }
+
+            // main scene object
+            asset.Objects.Add(new BuildLayout.ObjectData()
+            {
+                ObjectName = "Main",
+                LocalIdentifierInFile = 0,
+                AssetType = AssetType.SceneObject,
+                SerializedSize = 0,
+                StreamedSize = 0
+            });
+
+            foreach (BuildLayout.ObjectData layoutObject in TypeToObjectData.Values)
+            {
+                asset.Objects.Add(layoutObject);
+            }
+        }
+
+        private void CollectObjectReferences(FileObjectData fileObjectLookup, BuildLayout.ObjectData objectData, BuildLayout.File fileData, LayoutLookupTables lookup,
+            IEnumerable<ObjectIdentifier> dependencies = null)
+        {
+            // get the ObjectIdentification object for the objectData
+            if (dependencies == null && fileObjectLookup.TryGetObjectIdentifier(objectData, out var objId))
+            {
+                m_ObjectDependencyData.ObjectDependencyMap.TryGetValue(objId, out List<ObjectIdentifier> dependenciesFromMap);
+                dependencies = dependenciesFromMap;
+            }
+
+            if (dependencies != null)
+            {
+                int assetIdOffset = fileData.Assets.Count + fileData.OtherAssets.Count;
+                Dictionary<int, HashSet<int>> assetIndices = new Dictionary<int, HashSet<int>>(); // TODO I don't like this is allocated so much
+                HashSet<int> indices;
+                foreach (ObjectIdentifier dependency in dependencies)
+                {
+                    if (fileObjectLookup.TryGetObjectReferenceData(dependency, out (int,int) val))
+                    {
+                        // object dependency within this file was found
+                        if (assetIndices.TryGetValue(val.Item1, out indices))
+                            indices.Add(val.Item2);
+                        else
+                            assetIndices[val.Item1] = new HashSet<int>(){val.Item2};
+                    }
+                    else // if not in fileObjectLookup, not a dependency on this file, need to find in another file
+                    {
+                        if (lookup.GuidToExplicitAsset.TryGetValue(dependency.guid.ToString(), out BuildLayout.ExplicitAsset referencedAsset))
+                        {
+                            var otherFData = lookup.FileToFileObjectData[referencedAsset.File];
+                            if (otherFData.TryGetObjectReferenceData(dependency, out val))
+                            {
+                                val.Item1 = -1;
+                                for (int i = 0; i < fileData.ExternalReferences.Count; ++i)
+                                {
+                                    if (fileData.ExternalReferences[i] == referencedAsset)
+                                    {
+                                        val.Item1 = i + assetIdOffset;
+                                        break;
+                                    }
+                                }
+
+                                if (val.Item1 >= 0)
+                                {
+                                    if (assetIndices.TryGetValue(val.Item1, out indices))
+                                        indices.Add(val.Item2);
+                                    else
+                                        assetIndices[val.Item1] = new HashSet<int>(){val.Item2};
+                                }
+                            }
+                        } // can be false for built in shared bundles
+                    }
+                }
+
+                foreach (KeyValuePair<int,HashSet<int>> assetRefData in assetIndices)
+                {
+                    objectData.References.Add(new BuildLayout.ObjectReference(){AssetId = assetRefData.Key, ObjectIds = new List<int>(assetRefData.Value)});
+                }
+            }
+        }
+
         private BuildLayout GenerateBuildLayout(AddressableAssetsBuildContext aaContext, LayoutLookupTables lookup)
         {
             BuildLayout layout = new BuildLayout();
             layout.BuildStart = aaContext.buildStartTime;
+
+            layout.LocalCatalogBuildPath = aaContext.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BuildPath.GetValue(aaContext.Settings);
+            layout.RemoteCatalogBuildPath = aaContext.Settings.RemoteCatalogBuildPath.GetValue(aaContext.Settings);
+
             AddressableAssetSettings aaSettings = aaContext.Settings;
             if (m_ContentCatalogData != null)
                 layout.BuildResultHash = m_ContentCatalogData.m_BuildResultHash;
@@ -624,7 +867,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         /// <summary>
         /// Calculates the Efficiency of bundle and all bundles below it in the dependency tree and caches the results.
         /// Example: There are 3 bundles A, B, and C, that are each 10 MB on disk. A depends on 2 MB worth of assets in B, and B depends on 4 MB worth of assets in C.
-        /// The Efficiency of the BundleDependency from A->B would be 2/10 -> 20% and the ExpandedEfficiency of A->B would be (2 + 4)/(10 + 10) -> 6/20 -> 30%
+        /// The Efficiency of the dependencyLink from A->B would be 2/10 -> 20% and the ExpandedEfficiency of A->B would be (2 + 4)/(10 + 10) -> 6/20 -> 30%
         /// </summary>
         /// <param name="bundle"> the root of the dependency tree that the CalculateEfficiency call will start from. </param>
         /// <param name="bundleDependencyCache"> Cache of all bundle dependencies that have already been calculated </param>
@@ -939,6 +1182,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 Debug.Log($"Json build layout written to {legacyJsonFilePath}");
             }
 
+            ProjectConfigData.AddBuildReportFilePath(destinationPath);
             s_LayoutCompleteCallback?.Invoke(destinationPath, layout);
             return ReturnCode.Success;
         }
@@ -947,7 +1191,8 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         /// Creates an Error report for the error provided
         /// </summary>
         /// <param name="error">Build error string</param>
-        /// <returns>The success or failure ReturnCode</returns>
+        /// <param name="aaContext">The current build context</param>
+        /// <param name="previousContentState">Previous content state, used to determine whether a new or build update was performed.</param>
         public static void GenerateErrorReport(string error, AddressableAssetsBuildContext aaContext, AddressablesContentState previousContentState)
         {
             if (aaContext == null)

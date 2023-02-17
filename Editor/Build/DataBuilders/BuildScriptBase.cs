@@ -247,6 +247,32 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// <param name="content">The content of the file.</param>
         /// <param name="registry">The file registry used to track all produced artifacts.</param>
         /// <returns>True if the file was written.</returns>
+        protected internal static bool WriteFile(string path, byte[] content, FileRegistry registry)
+        {
+            try
+            {
+                registry.AddFile(path);
+                var dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+                File.WriteAllBytes(path, content);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+                registry.RemoveFile(path);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Utility method to write a file.  The directory will be created if it does not exist.
+        /// </summary>
+        /// <param name="path">The path of the file to write.</param>
+        /// <param name="content">The content of the file.</param>
+        /// <param name="registry">The file registry used to track all produced artifacts.</param>
+        /// <returns>True if the file was written.</returns>
         protected static bool WriteFile(string path, string content, FileRegistry registry)
         {
             try

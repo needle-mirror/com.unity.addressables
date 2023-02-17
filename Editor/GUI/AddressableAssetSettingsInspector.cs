@@ -332,11 +332,11 @@ namespace UnityEditor.AddressableAssets.GUI
                 bool bundleLocalCatalog = EditorGUILayout.Toggle(m_BundleLocalCatalog, m_AasTarget.BundleLocalCatalog);
                 if (bundleLocalCatalog != m_AasTarget.BundleLocalCatalog)
                     m_QueuedChanges.Add(() => m_AasTarget.BundleLocalCatalog = bundleLocalCatalog);
-
+/*
                 bool optimizeCatalogSize = EditorGUILayout.Toggle(m_OptimizeCatalogSize, m_AasTarget.OptimizeCatalogSize);
                 if (optimizeCatalogSize != m_AasTarget.OptimizeCatalogSize)
                     m_QueuedChanges.Add(() => m_AasTarget.OptimizeCatalogSize = optimizeCatalogSize);
-
+*/
                 bool buildRemoteCatalog = EditorGUILayout.Toggle(m_BuildRemoteCatalog, m_AasTarget.BuildRemoteCatalog);
                 if (buildRemoteCatalog != m_AasTarget.BuildRemoteCatalog)
                     m_QueuedChanges.Add(() => m_AasTarget.BuildRemoteCatalog = buildRemoteCatalog);

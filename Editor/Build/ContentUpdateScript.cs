@@ -900,7 +900,7 @@ namespace UnityEditor.AddressableAssets.Build
                 List<AssetBundleBuild> bundleInputDefinitions = new List<AssetBundleBuild>();
 
                 BuildScriptPackedMode.PrepGroupBundlePacking(group, bundleInputDefinitions, schema, entry => !entryGuidToDeps.ContainsKey(entry.guid));
-                BuildScriptPackedMode.HandleDuplicateBundleNames(bundleInputDefinitions);
+                BuildScriptPackedMode.HandleBundleNames(bundleInputDefinitions);
 
                 for (int i = 0; i < bundleInputDefinitions.Count; i++)
                 {

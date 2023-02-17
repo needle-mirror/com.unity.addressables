@@ -4,6 +4,17 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.21.3] - 2023-2-9
+- Optimised PostProcessBundles
+- Fixed issue where having a runtime profile variable or property to evaluate web urls on Windows platforms can result in malformed urls.
+- Fixed possible `NullRefernceException` when importing new assets and `AddressableAssetUtility+SortedDelegate,Register` was called.
+- Fixed an issue where EditorGUI.changed would not be properly set in certain circumstances when updating AssetReferences using the inspector
+- Fixed CCD build and release to properly upload static groups
+- Fixed CCD build and release to allow both static and managed groups in the same profile
+- Include additional object dependency information in build layout report
+- Addressables Profiler module compatible with Unity Editor 2022.2+
+- Addressables Build Report window added. Compatible with Unity Editor 2022.2+
+
 ## [1.21.2] - 2022-12-9
 - Fixed issue where folders in Groups window would display the subObjects of assets without expanding the assets.
 - Added the ability to copy a subAsset address to clipboard from right click.
@@ -1213,4 +1224,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.0.8-preview] - 2018-02-08
 - Initial submission for package distribution
+
 

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:ui="UnityEngine.UIElements"
+xmlns:uie="UnityEditor.UIElements"
+xmlns:addr="UnityEditor.AddressableAssets.GUIElements"
+xsi:noNamespaceSchemaLocation="../../../../../../UIElementsSchema/UIElements.xsd">
+<ui:VisualElement style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); flex-direction: row;">
+    <ui:VisualElement style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); width: 25px; height: 25px; background-image: url(&apos;project://database/Assets/UnityDefaultRuntimeTheme.tss?fileID=8228938214290033325&amp;guid=476c3b65c5d4cf24d9b55a819c5923c6&amp;type=3#console.erroricon&apos;); max-width: 25px; max-height: 25px;" />
+    <ui:Label name="MissingBuildHashLabel" tabindex="-1" text="" display-tooltip-when-elided="true" style="flex-wrap: wrap; white-space: normal; max-width: 400px;" />
+    <ui:Button name="SearchForBuildReportButton" text="Find in file system" display-tooltip-when-elided="true" style="align-self: center;" />
+    <addr:DocumentationButton name="DocsButton" page="ProfilerModule.html#requirements" display-tooltip-when-elided="true" tooltip="Open documentation in browser" />
+</ui:VisualElement>
+</ui:UXML>

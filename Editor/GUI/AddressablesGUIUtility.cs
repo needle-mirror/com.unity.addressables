@@ -75,7 +75,7 @@ namespace UnityEditor.AddressableAssets.GUI
             m_CachedSessionStates.Add(stateKey, foldoutState);
         }
 
-        static Color HeaderBorderColor
+        internal static Color HeaderBorderColor
         {
             get
             {
@@ -84,7 +84,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        static Color HeaderNormalColor
+        internal static Color HeaderNormalColor
         {
             get
             {
@@ -93,7 +93,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        static Color HeaderHoverColor
+        internal static Color HeaderHoverColor
         {
             get
             {

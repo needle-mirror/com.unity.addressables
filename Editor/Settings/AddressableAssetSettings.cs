@@ -597,7 +597,7 @@ namespace UnityEditor.AddressableAssets.Settings
             get { return m_OptimizeCatalogSize; }
             set { m_OptimizeCatalogSize = value; }
         }
-
+        
         /// <summary>
         /// Determine if a remote catalog should be built-for and loaded-by the app.
         /// </summary>
@@ -2741,11 +2741,16 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             foreach (AddressableAssetGroup group in settings.groups)
             {
-                if (group == null)
-                    continue;
-                foreach (AddressableAssetEntry entry in group.entries)
-                    entry.BundleFileId = null;
+                NullifyBundleFileIds(group);
             }
+        }
+
+        internal static void NullifyBundleFileIds(AddressableAssetGroup group)
+        {
+            if (group == null)
+                return;
+            foreach (AddressableAssetEntry entry in group.entries)
+                entry.BundleFileId = null;
         }
 
         internal AddressablesPlayerBuildResult BuildPlayerContentImpl(AddressablesDataBuilderInput buildContext = null, bool buildAndRelease = false)

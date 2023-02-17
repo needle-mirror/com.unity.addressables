@@ -120,8 +120,19 @@ namespace UnityEngine.ResourceManagement
 
         /// <summary>
         /// Functor to transform internal ids before being used by the providers.
-        /// See the [TransformInternalId](xref:addressables-api-transform-internal-id) documentation for more details.
         /// </summary>
+        /// <remarks>
+        /// Used to assign a function to the [ResourceManager](xref:UnityEngine.ResourceManagement.ResourceManager)  that replaces location identifiers used at runtime.
+        /// This is useful when you want to load assets from a different location than the one specified in the content catalog,
+        /// for example downloading a remote AssetBundle from a different URL.
+        ///
+        /// Assigning this value through the <see cref="Addressables"/> object will set the value on the <see cref="ResourceManager"/>.
+        /// 
+        /// The example below instantiates a GameObject from a local AssetBundle. The location identifier of the bundle is replaced with a file URI, and so the bundle is loaded via UnityWebRequest. 
+        /// <code source="../../Tests/Editor/DocExampleCode/ScriptReference/UsingInternalIdTransformFunc.cs" region="SAMPLE"/>/// 
+        /// </remarks>
+        /// <value>A function taking an [IResourceLocation](xref:UnityEngine.ResourceManagement.ResourceLocations.IResourceLocation) and returning a transformed string location.</value>
+        /// <seealso href="xref:addressables-api-transform-internal-id">Transforming resource URLs</seealso>
         public Func<IResourceLocation, string> InternalIdTransformFunc { get; set; }
 
         /// <summary>
@@ -138,8 +149,18 @@ namespace UnityEngine.ResourceManagement
         /// Delegate that can be used to override the web request options before being sent.
         /// </summary>
         /// <remarks>
-        /// The web request passed to this delegate has already been preconfigured internally. Override at your own risk.
+        /// You can assign a function to the <see cref="Addressables"/> object's WebRequestOverride property to individually modify the <see cref="UnityWebRequest"/> which is used to download files.
+        ///
+        /// This can be used to add custom request headers or query strings.
+        ///
+        /// This affects all downloads through Addressables including catalog files and asset bundles.
+        ///
+        /// Assigning this value through the <see cref="Addressables"/> object will set the value on the <see cref="ResourceManager"/>.
+        /// 
+        /// For example you could add an Authorization header to authenticate with Cloud Content Delivery's private buckets.
+        /// <code source="../../Tests/Editor/DocExampleCode/ScriptReference/UsingWebRequestOverride.cs" region="SAMPLE" />
         /// </remarks>
+        /// <seealso href="xref:addressables-api-transform-internal-id#webrequest-override">Transforming resource URLs</seealso>
         public Action<UnityWebRequest> WebRequestOverride { get; set; }
 
         internal bool CallbackHooksEnabled = true; // tests might need to disable the callback hooks to manually pump updating
@@ -261,6 +282,9 @@ namespace UnityEngine.ResourceManagement
             m_ResourceProviders.OnElementAdded += OnObjectAdded;
             m_ResourceProviders.OnElementRemoved += OnObjectRemoved;
             m_UpdateReceivers.OnElementAdded += x => RegisterForCallbacks();
+#if ENABLE_ADDRESSABLE_PROFILER
+            Profiling.ProfilerRuntime.Initialise();
+#endif
         }
 
         private void OnObjectAdded(object obj)
@@ -440,7 +464,7 @@ namespace UnityEngine.ResourceManagement
 
             Type provType;
             if (!m_ProviderOperationTypeCache.TryGetValue(desiredType, out provType))
-                m_ProviderOperationTypeCache.Add(desiredType, provType = typeof(ProviderOperation<>).MakeGenericType(new Type[] {desiredType}));
+                m_ProviderOperationTypeCache.Add(desiredType, provType = typeof(ProviderOperation<>).MakeGenericType(new Type[] { desiredType }));
             op = CreateOperation<IAsyncOperation>(provType, provType.GetHashCode(), key, m_ReleaseOpCached);
 
             // Calculate the hash of the dependencies
@@ -964,7 +988,7 @@ namespace UnityEngine.ResourceManagement
 
             internal override DownloadStatus GetDownloadStatus(HashSet<object> visited)
             {
-                return m_dependency.IsValid() ? m_dependency.InternalGetDownloadStatus(visited) : new DownloadStatus() {IsDone = IsDone};
+                return m_dependency.IsValid() ? m_dependency.InternalGetDownloadStatus(visited) : new DownloadStatus() { IsDone = IsDone };
             }
 
             /// <inheritdoc />

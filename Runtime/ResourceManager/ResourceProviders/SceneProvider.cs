@@ -33,7 +33,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
             internal override DownloadStatus GetDownloadStatus(HashSet<object> visited)
             {
-                return m_DepOp.IsValid() ? m_DepOp.InternalGetDownloadStatus(visited) : new DownloadStatus() {IsDone = IsDone};
+                return m_DepOp.IsValid() ? m_DepOp.InternalGetDownloadStatus(visited) : new DownloadStatus() { IsDone = IsDone };
             }
 
             public void Init(IResourceLocation location, LoadSceneMode loadSceneMode, bool activateOnLoad, int priority, AsyncOperationHandle<IList<AsyncOperationHandle>> depOp)
@@ -131,16 +131,24 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 var op = InternalLoad(internalId, loadingFromBundle, loadSceneParameters);
                 op.allowSceneActivation = activateOnLoad;
                 op.priority = priority;
-                return new SceneInstance() {m_Operation = op, Scene = SceneManager.GetSceneAt(SceneManager.sceneCount - 1)};
+                return new SceneInstance() { m_Operation = op, Scene = SceneManager.GetSceneAt(SceneManager.sceneCount - 1) };
             }
 
             AsyncOperation InternalLoad(string path, bool loadingFromBundle, LoadSceneParameters loadSceneParameters)
             {
 #if !UNITY_EDITOR
+#if ENABLE_ADDRESSABLE_PROFILER
+                Profiling.ProfilerRuntime.AddSceneOperation(Handle, m_Location, Profiling.ContentStatus.Loading);
+#endif
                 return SceneManager.LoadSceneAsync(path, loadSceneParameters);
 #else
                 if (loadingFromBundle)
+                {
+#if ENABLE_ADDRESSABLE_PROFILER
+                    Profiling.ProfilerRuntime.AddSceneOperation(Handle, m_Location, Profiling.ContentStatus.Loading);
+#endif
                     return SceneManager.LoadSceneAsync(path, loadSceneParameters);
+                }
                 else
                 {
                     if (!path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) && !path.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase))
@@ -189,6 +197,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                     if (m_Inst.m_Operation.isDone || (!m_Inst.m_Operation.allowSceneActivation && Mathf.Approximately(m_Inst.m_Operation.progress, .9f)))
                     {
                         m_ResourceManager.RemoveUpdateReciever(this);
+#if ENABLE_ADDRESSABLE_PROFILER
+                        Profiling.ProfilerRuntime.AddSceneOperation(Handle, m_Location, Profiling.ContentStatus.Active);
+#endif
                         Complete(m_Inst, true, null);
                     }
                 }
@@ -291,6 +302,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             var unloadOp = new UnloadSceneOp();
             unloadOp.Init(sceneLoadHandle, unloadOptions);
+#if ENABLE_ADDRESSABLE_PROFILER
+            Profiling.ProfilerRuntime.SceneReleased(sceneLoadHandle);
+#endif
             return resourceManager.StartOperation(unloadOp, sceneLoadHandle);
         }
     }

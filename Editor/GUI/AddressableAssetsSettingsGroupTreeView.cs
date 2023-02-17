@@ -83,6 +83,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void OnSortingChanged(MultiColumnHeader mch)
         {
+            //This is where the sort happens in the groups view
             SortChildren(rootItem);
             Reload();
         }
@@ -1028,7 +1029,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             }
                         }
                     }
-                    
+
                     if (selectedNodes.Count == 1)
                         menu.AddItem(new GUIContent("Copy Address to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
                     else if (selectedNodes.Count > 1)

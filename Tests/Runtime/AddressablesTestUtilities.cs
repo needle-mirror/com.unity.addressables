@@ -234,19 +234,24 @@ static class AddressablesTestUtility
         UnityEngine.Object.DestroyImmediate(go, false);
         return AssetDatabase.AssetPathToGUID(assetPath);
     }
-
+    const string kCatalogExt =
+#if ENABLE_BINARY_CATALOG
+            ".bin";
+#else
+            ".json";
+#endif
     static void RunBuilder(AddressableAssetSettings settings, string testType, string suffix)
     {
         var buildContext = new AddressablesDataBuilderInput(settings);
         buildContext.RuntimeSettingsFilename = "settings" + suffix + ".json";
-        buildContext.RuntimeCatalogFilename = "catalog" + suffix + ".json";
-
+        buildContext.RuntimeCatalogFilename = "catalog" + suffix + kCatalogExt;
         foreach (var db in settings.DataBuilders)
         {
             var b = db as IDataBuilder;
             if (b.GetType().Name != testType)
                 continue;
-            buildContext.PathFormat = "{0}" + Addressables.LibraryPath + "{1}_" + testType + "_TEST_" + suffix + ".json";
+
+            buildContext.PathSuffix = "_TEST_" + suffix;
             b.BuildData<AddressableAssetBuildResult>(buildContext);
             PlayerPrefs.SetString(Addressables.kAddressablesRuntimeDataPath + testType, PlayerPrefs.GetString(Addressables.kAddressablesRuntimeDataPath, ""));
         }
