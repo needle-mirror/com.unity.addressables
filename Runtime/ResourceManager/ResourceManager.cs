@@ -169,7 +169,7 @@ namespace UnityEngine.ResourceManagement
         IAllocationStrategy m_allocator;
 
         // list of all the providers in s_ResourceProviders that implement IUpdateReceiver
-        ListWithEvents<IUpdateReceiver> m_UpdateReceivers = new ListWithEvents<IUpdateReceiver>();
+        internal ListWithEvents<IUpdateReceiver> m_UpdateReceivers = new ListWithEvents<IUpdateReceiver>();
 
         List<IUpdateReceiver> m_UpdateReceiversToRemove = null;
 
@@ -193,7 +193,7 @@ namespace UnityEngine.ResourceManagement
         internal Dictionary<int, IResourceProvider> m_providerMap = new Dictionary<int, IResourceProvider>();
         Dictionary<IOperationCacheKey, IAsyncOperation> m_AssetOperationCache = new Dictionary<IOperationCacheKey, IAsyncOperation>();
         HashSet<InstanceOperation> m_TrackedInstanceOperations = new HashSet<InstanceOperation>();
-        DelegateList<float> m_UpdateCallbacks = DelegateList<float>.CreateWithGlobalCache();
+        internal DelegateList<float> m_UpdateCallbacks = DelegateList<float>.CreateWithGlobalCache();
         List<IAsyncOperation> m_DeferredCompleteCallbacks = new List<IAsyncOperation>();
         HashSet<IResourceProvider> m_AsestBundleProviders = new HashSet<IResourceProvider>();
 

@@ -113,12 +113,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 {
                     m_Inst = InternalLoadScene(m_Location, loadingFromBundle, m_LoadSceneParameters, m_ActivateOnLoad, m_Priority);
                     ((IUpdateReceiver)this).Update(0.0f);
-                    if (!IsDone)
-                        m_ResourceManager.AddUpdateReceiver(this);
                 }
                 else
                 {
-                    m_ResourceManager.RemoveUpdateReciever(this);
                     Complete(m_Inst, false, m_DepOp.OperationException);
                 }
 

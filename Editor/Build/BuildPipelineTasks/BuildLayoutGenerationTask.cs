@@ -137,6 +137,18 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             return AssetType.SceneObject;
         }
 
+        ulong GetFileSizeFromPath(string path, out bool success)
+        {
+            success = false;
+            FileInfo fileInfo = new FileInfo(path);
+            if (fileInfo.Exists)
+            {
+                success = true;
+                return (ulong)fileInfo.Length;
+            }
+            return 0;
+        }
+
         private BuildLayout CreateBuildLayout()
         {
             AddressableAssetsBuildContext aaContext = (AddressableAssetsBuildContext)m_AaBuildContext;
@@ -191,7 +203,10 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                     var sf = new BuildLayout.SubFile();
                     sf.IsSerializedFile = rf.serializedFile;
                     sf.Name = rf.fileAlias;
-                    sf.Size = (ulong)new FileInfo(rf.fileName).Length;
+                    sf.Size = GetFileSizeFromPath(rf.fileName, out bool success);
+                    if (!success)
+                        Debug.LogWarning($"Resource File {sf.Name} from file  \"{f.Name}\" was detected as part of the build, but the file could not be found. This may be because your build cache size is too small. Filesize of this Resource File will be 0 in BuildLayout.");
+
                     f.SubFiles.Add(sf);
                 }
 
@@ -827,10 +842,11 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 b.Group = assetGroup;
                 lookup.FilenameToBundle[b.Name] = b;
                 var filePath = Path.Combine(lookup.GroupNameToBuildPath[assetGroup.Name], b.Name);
-                if (File.Exists(filePath))
-                    b.FileSize = (ulong)new FileInfo(filePath).Length;
-                else if (!IsContentUpdateBuild)
-                    Debug.LogWarning($"AssetBundle {b.Name} from Addressable Group \"{assetGroup.Name}\" was detected as part of the build, but the file could not be found.");
+
+                b.FileSize = GetFileSizeFromPath(filePath, out bool success);
+                if (!success)
+                    Debug.LogWarning($"AssetBundle {b.Name} from Addressable Group \"{assetGroup.Name}\" was detected as part of the build, but the file could not be found. Filesize of this AssetBundle will be 0 in BuildLayout.");
+
                 assetGroup.Bundles.Add(b);
             }
             else
@@ -840,7 +856,11 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 b.Name = m_BundleNameRemap[b.Name];
                 b.Group = lookup.GroupLookup[defaultGroup.Guid]; // should this be set?
                 lookup.FilenameToBundle[b.Name] = b;
-                b.FileSize = (ulong)new FileInfo(Path.Combine(lookup.GroupNameToBuildPath[defaultGroup.Name], b.Name)).Length;
+
+                b.FileSize = GetFileSizeFromPath(Path.Combine(lookup.GroupNameToBuildPath[defaultGroup.Name], b.Name), out bool success);
+                if (!success)
+                    Debug.LogWarning($"Built in assetBundle {b.Name} was detected as part of the build, but the file could not be found. Filesize of this AssetBundle will be 0 in BuildLayout.");
+
                 layout.BuiltInBundles.Add(b);
             }
         }

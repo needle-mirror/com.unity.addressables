@@ -155,6 +155,9 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         private void CreateGUI()
         {
             VisualElement root = rootVisualElement;
+            if (root == null)
+                return;
+
             m_WindowTreeAsset.CloneTree(root);
 
             // Implement toolbar buttons

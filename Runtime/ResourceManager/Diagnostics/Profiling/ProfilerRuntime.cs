@@ -145,7 +145,7 @@ namespace UnityEngine.ResourceManagement.Profiling
         {
             if (location.Dependencies.Count == 0)
             {
-                Debug.LogError($"Asset operations handle has no dependencies: {location.InternalId}");
+                // AssetDatabase mode has no dependencies
                 return "";
             }
 
@@ -178,8 +178,20 @@ namespace UnityEngine.ResourceManagement.Profiling
 
         public static void SceneReleased(AsyncOperationHandle<SceneInstance> handle)
         {
-            if (m_SceneData.Remove(handle.InternalOp))
-                SceneLoadCounter.Value -= 1;
+            if (handle.InternalOp is ChainOperationTypelessDepedency<SceneInstance> chainOp)
+            {
+                if (m_SceneData.Remove(chainOp.WrappedOp.InternalOp))
+                    SceneLoadCounter.Value -= 1;
+                else
+                    Debug.LogWarning($"Failed to remove scene from Addressables profiler for " + chainOp.WrappedOp.DebugName);
+            }
+            else
+            {
+                if (m_SceneData.Remove(handle.InternalOp))
+                    SceneLoadCounter.Value -= 1;
+                else
+                    Debug.LogWarning($"Failed to remove scene from Addressables profiler for " + handle.DebugName);
+            }
         }
 
         private static void PushToProfilerStream()

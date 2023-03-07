@@ -206,7 +206,7 @@ namespace UnityEditor.AddressableAssets.GUI
             new GUIContent("MonoScript Bundle Custom Prefix", "Custom prefix for MonoScript bundle.");
 
         GUIContent m_StripUnityVersionFromBundleBuild =
-            new GUIContent("Strip Unity Version from AssetBundles", "If enabled, the Unity Editor version is stripped from the AssetBundle header.");
+            new GUIContent("Strip Unity Version from AssetBundles", "If enabled, the Unity Editor version is stripped from the archive file header and the bundles's serialized files.");
 
         GUIContent m_DisableVisibleSubAssetRepresentations =
             new GUIContent("Disable Visible Sub Asset Representations", "If enabled, the build will assume that all sub Assets have no visible asset representations.");

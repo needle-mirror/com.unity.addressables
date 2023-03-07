@@ -11,6 +11,7 @@ using Unity.Services.Core;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 
 namespace UnityEditor.AddressableAssets.Build
@@ -43,6 +44,7 @@ namespace UnityEditor.AddressableAssets.Build
 
         internal void RegisterNewBuildEvents()
         {
+            OnPreBuildEvents += s_Instance.VerifyBuildVersion;
             OnPreBuildEvents += s_Instance.RefreshDataSources;
             OnPreBuildEvents += s_Instance.VerifyTargetBucket;
             OnPostBuildEvents += s_Instance.UploadContentState;
@@ -51,6 +53,7 @@ namespace UnityEditor.AddressableAssets.Build
 
         internal void RegisterUpdateBuildEvents()
         {
+            OnPreUpdateEvents += s_Instance.VerifyBuildVersion;
             OnPreUpdateEvents += s_Instance.RefreshDataSources;
             OnPreUpdateEvents += s_Instance.DownloadContentStateBin;
             OnPreUpdateEvents += s_Instance.VerifyTargetBucket;
@@ -155,7 +158,7 @@ namespace UnityEditor.AddressableAssets.Build
                 var shouldContinue = await e.Invoke(input, result);
                 if (!shouldContinue)
                 {
-                    // if a post-build step adds an error we have to log it manually 
+                    // if a post-build step adds an error we have to log it manually
                     if (result != null && result.Error != "")
                     {
                         Debug.LogError(result.Error);
@@ -227,6 +230,16 @@ namespace UnityEditor.AddressableAssets.Build
                 {
                     OnPostUpdateEvents += (PostEvent)(t);
                 }
+        }
+
+        public async Task<bool> VerifyBuildVersion(AddressablesDataBuilderInput input)
+        {
+            if (string.IsNullOrWhiteSpace(input.AddressableSettings.OverridePlayerVersion))
+            {
+                Addressables.LogWarning("<b>When using CCD it is recommended that you set a 'Player Version Override' in Addressables Settings.</b> You can have it use the Player build version by setting it to [UnityEditor.PlayerSettings.bundleVersion].");
+                Addressables.LogWarning("Documentation on how to disable this warning is available in the example DisableBuildWarnings.cs.");
+            }
+            return true;
         }
 
         /// <summary>
@@ -453,6 +466,7 @@ namespace UnityEditor.AddressableAssets.Build
 
             try
             {
+                SetEnvironmentId(settings, groupType);
                 var bucketId = GetBucketId(settings, groupType);
                 if (bucketId == null)
                 {
@@ -569,6 +583,7 @@ namespace UnityEditor.AddressableAssets.Build
 
             try
             {
+                SetEnvironmentId(settings, groupType);
                 var bucketId = GetBucketId(settings, groupType);
                 if (bucketId == null)
                 {
@@ -665,6 +680,27 @@ namespace UnityEditor.AddressableAssets.Build
                 return false;
             }
             return groupType.GroupTypePrefix == AddressableAssetSettings.CcdManagerGroupTypePrefix;
+        }
+
+        internal void SetEnvironmentId(AddressableAssetSettings settings, ProfileGroupType groupType)
+        {
+            string environmentId = null;
+            if (!IsUsingManager(groupType))
+            {
+                // if not using the manager load the bucketID from the group type
+                environmentId = groupType.GetVariableBySuffix($"{nameof(ProfileDataSourceSettings.Environment)}{nameof(ProfileDataSourceSettings.Environment.id)}").Value;
+            }
+            else if (settings.m_CcdManagedData != null)
+            {
+                environmentId = settings.m_CcdManagedData.EnvironmentId;
+            }
+
+            if (environmentId == null)
+            {
+                throw new Exception("unable to determine environment ID.");
+            }
+
+            CcdManagement.SetEnvironmentId(environmentId);
         }
 
         internal string GetBucketId(AddressableAssetSettings settings, ProfileGroupType groupType)

@@ -110,6 +110,14 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
+        ///  Default bundle version.
+        /// </summary>
+        /// <remarks>
+        /// Used when generating the catalog name. When using the default, the version will be evaluated from the version set in Player Settings.
+        /// </remarks>
+        internal const string kDefaultPlayerVersion = "[UnityEditor.PlayerSettings.bundleVersion]";
+
+        /// <summary>
         /// Build Path Name
         /// </summary>
         public const string kBuildPath = "BuildPath";
@@ -597,7 +605,7 @@ namespace UnityEditor.AddressableAssets.Settings
             get { return m_OptimizeCatalogSize; }
             set { m_OptimizeCatalogSize = value; }
         }
-        
+
         /// <summary>
         /// Determine if a remote catalog should be built-for and loaded-by the app.
         /// </summary>
@@ -1436,6 +1444,31 @@ namespace UnityEditor.AddressableAssets.Settings
                                    "Building Addressables content will clear this label from all entries. That action cannot be undone.", label);
         }
 
+        /// <summary>
+        /// Removes all labels that are not in use by an entry.
+        /// </summary>
+        /// <param name="postEvent">Send modification event.</param>
+        internal void RemoveUnusedLabels(bool postEvent = true)
+        {
+            HashSet<string> usedLabels = new HashSet<string>();
+            foreach (AddressableAssetGroup assetGroup in groups)
+            {
+                foreach (AddressableAssetEntry entry in assetGroup.entries)
+                {
+                    foreach (string label in entry.labels)
+                        usedLabels.Add(label);
+                }
+            }
+
+            HashSet<string> unused = new HashSet<string>(m_LabelTable.labelNames);
+            unused.RemoveWhere(l => usedLabels.Contains(l));
+            if (unused.Count > 0)
+            {
+                foreach (string s in unused)
+                    RemoveLabel(s, postEvent);
+            }
+        }
+
         [FormerlySerializedAs("m_activeProfileId")]
         [SerializeField]
         string m_ActiveProfileId;
@@ -1662,6 +1695,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 // TODO: Uncomment after initial opt-in testing period
                 //aa.ContiguousBundles = true;
                 aa.BuildAddressablesWithPlayerBuild = PlayerBuildOption.PreferencesValue;
+                aa.OverridePlayerVersion = kDefaultPlayerVersion;
 
                 if (isPersisted)
                 {
@@ -2167,12 +2201,11 @@ namespace UnityEditor.AddressableAssets.Settings
             if (targetParent == null || entry == null)
                 return;
 
-            entry.ReadOnly = readOnly;
-
             if (entry.parentGroup != null && entry.parentGroup != targetParent)
                 entry.parentGroup.RemoveAssetEntry(entry, postEvent);
 
             targetParent.AddAssetEntry(entry, postEvent);
+            entry.ReadOnly = readOnly;
         }
 
         /// <summary>

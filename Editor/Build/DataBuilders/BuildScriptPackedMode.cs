@@ -480,7 +480,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     using (m_Log.ScopedStep(LogLevel.Info, "Get Assets"))
                         aaContext.Settings.GetAllAssets(allEntries, false, ContentUpdateScript.GroupFilter);
 
-                    if (ContentUpdateScript.SaveContentState(aaContext.locations, tempPath, allEntries,
+                    if (ContentUpdateScript.SaveContentState(aaContext.locations, aaContext.GuidToCatalogLocation, tempPath, allEntries,
                             extractData.DependencyData, playerBuildVersion, remoteCatalogLoadPath,
                             carryOverCachedState))
                     {

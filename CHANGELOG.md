@@ -4,6 +4,19 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.21.9] - 2023-03-07
+- Removed code within WriteObjectToByteList that would never be reached
+- Fixed an issue where SceneOps would have update called on them twice per frame
+- Fixed an issue where in some circumstances an Operation would continue to have update called on it even after it finished.
+- Fixed an issue with Labels window after a domain reload causing a null reference exception.
+- Added Remove all unused labels option to labels popup window.
+- Fixed issue when not including the address and guid in catalog using content update workflow, would always indicate the asset as changed
+- Fixed Addressables profiler module help links to documentation.
+- Fixed issue where scenes unloaded due to another scene loading in single mode, would result in the profiler module still reporting the scene as loaded.
+- Groups window will now show labels of entries that are not a part of the settings.
+- Fixed 404s when uploading files with incorrect environment ID
+- Fixed issue where BuildLayoutGenerationTask would sometimes fail in large projects
+
 ## [1.21.8] - 2023-02-09
 - Optimised PostProcessBundles
 - Fixed issue where having a runtime profile variable or property to evaluate web urls on Windows platforms can result in malformed urls.

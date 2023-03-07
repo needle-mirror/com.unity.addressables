@@ -2209,7 +2209,7 @@ namespace UnityEngine.AddressableAssets
         /// Release scene
         /// </summary>
         /// <param name="scene">The SceneInstance to release.</param>
-        /// <param name="unloadOptions">Specify behavior for unloading embedded scene objecs</param>
+        /// <param name="autoReleaseHandle">If true, the handle will be released automatically when complete.</param>
         /// <returns>The operation handle for the scene unload.</returns>
         public static AsyncOperationHandle<SceneInstance> UnloadSceneAsync(SceneInstance scene, bool autoReleaseHandle = true)
         {

@@ -147,6 +147,12 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void HasDefaultVersionOverride()
+        {
+            Assert.AreEqual(kDefaultPlayerVersion, Settings.OverridePlayerVersion);
+        }
+
+        [Test]
         public void AddRemovelabel()
         {
             var initialValue = Settings.currentHash;
@@ -239,6 +245,38 @@ namespace UnityEditor.AddressableAssets.Tests
             string name = "[label]";
             Settings.AddLabel(name);
             LogAssert.Expect(LogType.Error, $"Label name '{name}' cannot contain '[ ]'.");
+        }
+
+        [Test]
+        public void AddRemoveUnusedLabels()
+        {
+            var group = Settings.CreateGroup("NewGroupForUnusedLabelsTest", false, false, false, null);
+            Assert.IsNotNull(group);
+            var entry = Settings.CreateOrMoveEntry(m_AssetGUID, group);
+            Assert.IsNotNull(entry);
+
+            const string labelName = "LabelInUse";
+            const string labelName2 = "LabelNotInUse";
+
+            try
+            {
+                Settings.AddLabel(labelName);
+                entry.SetLabel(labelName, true, false, false);
+                Settings.AddLabel(labelName2);
+
+                Assert.Contains(labelName, Settings.labelTable.labelNames);
+                Assert.Contains(labelName2, Settings.labelTable.labelNames);
+
+                Settings.RemoveUnusedLabels();
+                Assert.Contains(labelName, Settings.labelTable.labelNames);
+                Assert.False(Settings.labelTable.labelNames.Contains(labelName2));
+            }
+            finally
+            {
+                Settings.RemoveAssetEntry(entry);
+                Settings.RemoveGroup(group);
+                Settings.RemoveLabel(labelName, false);
+            }
         }
 
         [Test]
@@ -1427,6 +1465,14 @@ namespace UnityEditor.AddressableAssets.Tests
                     Assert.IsNull(entry.BundleFileId);
                 }
             }
+        }
+
+        [Test]
+        public void ReloadSettings_ClearVersionOverride()
+        {
+            Settings.OverridePlayerVersion = "";
+            ReloadSettings();
+            Assert.AreEqual("", Settings.OverridePlayerVersion);
         }
     }
 }

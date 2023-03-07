@@ -53,6 +53,14 @@ namespace UnityEditor.AddressableAssets.GUI
             return s;
         }
 
+        internal static string ConvertTextToStrikethrough(string value)
+        {
+            string str = "";
+            foreach (char c in value)
+                str = str + c + '\u0336';
+            return str;
+        }
+
         internal static bool GetFoldoutValue(string stateKey)
         {
             if (m_CachedSessionStates.TryGetValue(stateKey, out var val))

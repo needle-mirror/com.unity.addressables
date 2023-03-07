@@ -149,6 +149,20 @@ Example Snippet of setting CcdManager Properties:
 >[!Note]
 > ANY Addressables call initializes the system so be sure to set the `CcdManager` prior to any Addressables call to ensure that there are no race conditions or unexpected behaviors.
 
+### Using Build Events
+CCD provides a means of wrapping the build and upload service to provide additional functionality.
+
+#### Adding a build event
+You can add additional events to PreUpdate and PreBuild event chains.
+
+[!code-cs[sample](../../Tests/Editor/DocExampleCode/PrintBucketInformation.cs#SAMPLE)]
+
+#### Disabling version override warnings
+If you are getting warnings about overriding the player version and would like to keep your current setup, you can disable the warnings by removing the corresponding build events.
+
+[!code-cs[sample](../../Tests/Editor/DocExampleCode/DisableBuildWarnings.cs#SAMPLE)]
+
+
 [Getting Started]: xref:addressables-getting-started
 [Upgrading to the Addressables System]: xref:addressables-migration
 [Remote content distribution]: xref:addressables-remote-content-distribution
