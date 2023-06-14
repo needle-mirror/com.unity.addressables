@@ -417,7 +417,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/Content Builders/" + m.Name), false, OnCleanAddressables, m);
                     }
 
-                    genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/Build Pipeline Cache"), false, OnCleanSBP);
+                    genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/Build Pipeline Cache"), false, OnCleanSBP, true);
                     genericDropdownMenu.DropDown(rBuild);
                 }
 
@@ -563,7 +563,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         private static async void OnBuildCcd(BuildMenuContext context)
         {
-            bool isUpdate = false; 
+            bool isUpdate = false;
             PreEvent preEvent = null;
             PostEvent postEvent = null;
             try {
@@ -582,7 +582,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 await AddressableAssetSettings.BuildAndReleasePlayerContent(isUpdate);
             } finally {
                 UnregisterBuildMenuEvents(isUpdate, preEvent, postEvent);
-                EditorUtility.ClearProgressBar();                               
+                EditorUtility.ClearProgressBar();
             }
         }
 
@@ -654,8 +654,10 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void OnCleanAll()
         {
+            if (!EditorUtility.DisplayDialog("Clear build cache", "Do you really want to clear your entire build cache and runtime data cache?", "Yes", "No"))
+                return;
             OnCleanAddressables(null);
-            OnCleanSBP();
+            OnCleanSBP(false);
         }
 
         void OnCleanAddressables(object builder)
@@ -663,9 +665,9 @@ namespace UnityEditor.AddressableAssets.GUI
             AddressableAssetSettings.CleanPlayerContent(builder as IDataBuilder);
         }
 
-        void OnCleanSBP()
+        void OnCleanSBP(object prompt)
         {
-            BuildCache.PurgeCache(true);
+            BuildCache.PurgeCache((bool) prompt);
         }
 
         void OnPrepareUpdate()

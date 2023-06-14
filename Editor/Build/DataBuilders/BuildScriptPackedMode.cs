@@ -790,12 +790,16 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 dependencyHashes = CreateRemoteCatalog(jsonText, aaContext.runtimeData.CatalogLocations, aaContext.Settings, builderInput, new ProviderLoadRequestOptions() {IgnoreFailures = true}, catalogHash);
             }
 
-            aaContext.runtimeData.CatalogLocations.Add(new ResourceLocationData(
+            ResourceLocationData localCatalog = new ResourceLocationData(
                 new[] {ResourceManagerRuntimeData.kCatalogAddress},
                 localLoadPath,
                 typeof(ContentCatalogProvider),
                 typeof(ContentCatalogData),
-                dependencyHashes));
+                dependencyHashes);
+            //We need to set the data here because this location data gets used later if we decide to load the remote/cached catalog instead.  See DetermineIdToLoad(...)
+            localCatalog.Data = new ProviderLoadRequestOptions() { IgnoreFailures = true };
+
+            aaContext.runtimeData.CatalogLocations.Add(localCatalog);
 
             return true;
         }
