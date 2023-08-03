@@ -127,9 +127,9 @@ namespace UnityEngine.ResourceManagement
         /// for example downloading a remote AssetBundle from a different URL.
         ///
         /// Assigning this value through the <see cref="Addressables"/> object will set the value on the <see cref="ResourceManager"/>.
-        /// 
-        /// The example below instantiates a GameObject from a local AssetBundle. The location identifier of the bundle is replaced with a file URI, and so the bundle is loaded via UnityWebRequest. 
-        /// <code source="../../Tests/Editor/DocExampleCode/ScriptReference/UsingInternalIdTransformFunc.cs" region="SAMPLE"/>/// 
+        ///
+        /// The example below instantiates a GameObject from a local AssetBundle. The location identifier of the bundle is replaced with a file URI, and so the bundle is loaded via UnityWebRequest.
+        /// <code source="../../Tests/Editor/DocExampleCode/ScriptReference/UsingInternalIdTransformFunc.cs" region="SAMPLE"/>///
         /// </remarks>
         /// <value>A function taking an [IResourceLocation](xref:UnityEngine.ResourceManagement.ResourceLocations.IResourceLocation) and returning a transformed string location.</value>
         /// <seealso href="xref:addressables-api-transform-internal-id">Transforming resource URLs</seealso>
@@ -156,7 +156,7 @@ namespace UnityEngine.ResourceManagement
         /// This affects all downloads through Addressables including catalog files and asset bundles.
         ///
         /// Assigning this value through the <see cref="Addressables"/> object will set the value on the <see cref="ResourceManager"/>.
-        /// 
+        ///
         /// For example you could add an Authorization header to authenticate with Cloud Content Delivery's private buckets.
         /// <code source="../../Tests/Editor/DocExampleCode/ScriptReference/UsingWebRequestOverride.cs" region="SAMPLE" />
         /// </remarks>
@@ -459,7 +459,6 @@ namespace UnityEngine.ResourceManagement
             {
                 op.IncrementReferenceCount();
                 return new AsyncOperationHandle(op, location.ToString());
-                ;
             }
 
             Type provType;
@@ -620,7 +619,11 @@ namespace UnityEngine.ResourceManagement
             Allocator.Release(o.GetType().GetHashCode(), o);
             var cachable = o as ICachable;
             if (cachable?.Key != null)
+            {
                 RemoveOperationFromCache(cachable.Key);
+                cachable.Key = null;
+            }
+
         }
 
         internal T CreateOperation<T>(Type actualType, int typeHash, IOperationCacheKey cacheKey, Action<IAsyncOperation> onDestroyAction) where T : IAsyncOperation
