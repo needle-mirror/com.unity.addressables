@@ -29,6 +29,7 @@ namespace UnityEditor.AddressableAssets.GUI
         internal const string noAssetString = "None (AddressableAsset)";
         internal const string forceAddressableString = "Make Addressable - ";
         internal AssetReference m_AssetRefObject;
+        internal bool m_SubassetRefreshed;
         internal GUIContent m_label;
         internal bool m_ReferencesSame = true;
         internal List<AssetReferenceUIRestrictionSurrogate> m_Restrictions = null;
@@ -127,6 +128,8 @@ namespace UnityEditor.AddressableAssets.GUI
             if (shouldDrawSubAssetsControl)
                 assetDropDownRect = new Rect(assetDropDownRect.position, new Vector2(assetDropDownRect.width / 2, assetDropDownRect.height));
 
+            RefreshSubAsset();
+
             bool isEnterKeyPressed = Event.current.type == EventType.KeyDown && Event.current.isKey && (Event.current.keyCode == KeyCode.KeypadEnter || Event.current.keyCode == KeyCode.Return);
             DrawControl(property, nameToUse, isNotAddressable, guid, isEnterKeyPressed);
             if (shouldDrawSubAssetsControl)
@@ -168,7 +171,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 else if (guid != newGuid)
                 {
                     if (AssetReferenceDrawerUtilities.SetObject(ref m_AssetRefObject, ref m_ReferencesSame, property, AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(newGuid)),
-                            fieldInfo, m_label.text, out guid))
+                        fieldInfo, m_label.text, out guid))
                     {
                         checkToForceAddressable = newGuid;
                         TriggerOnValidate(property);
@@ -291,13 +294,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 var item = aaEntries[0];
                 if (item.entry != null)
                 {
-                    if (item.entry.IsInResources)
-                        Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first.");
-                    else
-                    {
-                        if (AssetReferenceDrawerUtilities.SetObject(ref m_AssetRefObject, ref m_ReferencesSame, property, item.entry.TargetAsset, fieldInfo, m_label.text, out guid))
-                            TriggerOnValidate(property);
-                    }
+                    if (AssetReferenceDrawerUtilities.SetObject(ref m_AssetRefObject, ref m_ReferencesSame, property, item.entry.TargetAsset, fieldInfo, m_label.text, out guid))
+                        TriggerOnValidate(property);
                 }
             }
             else if (fieldInfo.FieldType.IsArray || fieldInfo.FieldType.IsAssignableFrom(typeof(List<AssetReference>)))
@@ -307,29 +305,25 @@ namespace UnityEditor.AddressableAssets.GUI
                 foreach (AssetEntryTreeViewItem item in aaEntries)
                 {
                     AddressableAssetEntry entry = item.entry;
-                    if (entry.IsInResources)
-                        Addressables.LogWarning("Cannot use an AssetReference on an asset in Resources. Move asset out of Resources first.");
+
+                    arrayProperty.InsertArrayElementAtIndex(arrayProperty.arraySize);
+                    arrayProperty.serializedObject.ApplyModifiedProperties();
+                    arrayProperty.serializedObject.Update();
+                    SerializedProperty elementProperty = arrayProperty.GetArrayElementAtIndex(arrayProperty.arraySize - 1);
+
+                    string labelText = "";
+                    AssetReference assetRef = elementProperty.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
+
+                    bool referencesSame = false;
+                    Object obj = entry.TargetAsset;
+
+                    if (AssetReferenceDrawerUtilities.SetObject(ref assetRef, ref referencesSame, elementProperty, obj, fieldInfo, m_label.text, out guid))
+                        TriggerOnValidate(elementProperty);
                     else
                     {
-                        arrayProperty.InsertArrayElementAtIndex(arrayProperty.arraySize);
+                        arrayProperty.DeleteArrayElementAtIndex(arrayProperty.arraySize - 1);
                         arrayProperty.serializedObject.ApplyModifiedProperties();
                         arrayProperty.serializedObject.Update();
-                        SerializedProperty elementProperty = arrayProperty.GetArrayElementAtIndex(arrayProperty.arraySize - 1);
-
-                        string labelText = "";
-                        AssetReference assetRef = elementProperty.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
-
-                        bool referencesSame = false;
-                        Object obj = entry.TargetAsset;
-
-                        if (AssetReferenceDrawerUtilities.SetObject(ref assetRef, ref referencesSame, elementProperty, obj, fieldInfo, m_label.text, out guid))
-                            TriggerOnValidate(elementProperty);
-                        else
-                        {
-                            arrayProperty.DeleteArrayElementAtIndex(arrayProperty.arraySize - 1);
-                            arrayProperty.serializedObject.ApplyModifiedProperties();
-                            arrayProperty.serializedObject.Update();
-                        }
                     }
                 }
             }
@@ -354,7 +348,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         obj = AssetDatabase.LoadAssetAtPath<Object>(path);
 
                     if (AssetReferenceDrawerUtilities.SetObject(ref m_AssetRefObject, ref m_ReferencesSame, property,
-                            obj, fieldInfo, m_label.text, out guid))
+                        obj, fieldInfo, m_label.text, out guid))
                     {
                         TriggerOnValidate(property);
                         aaSettings = AddressableAssetSettingsDefaultObject.GetSettings(true);
@@ -397,7 +391,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         Object obj = (DragAndDrop.objectReferences != null && i < DragAndDrop.objectReferences.Length) ? DragAndDrop.objectReferences[i] : AssetDatabase.LoadAssetAtPath<Object>(path);
 
                         if (AssetReferenceDrawerUtilities.SetObject(ref assetRef, ref referencesSame, elementProperty,
-                                obj, fieldInfo, m_label.text, out guid))
+                            obj, fieldInfo, m_label.text, out guid))
                         {
                             TriggerOnValidate(elementProperty);
                             aaSettings = AddressableAssetSettingsDefaultObject.GetSettings(true);
@@ -416,6 +410,22 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
+        internal bool RefreshSubAsset()
+        {
+            if (!m_SubassetRefreshed)
+            {
+                var saveRequired = AssetReferenceDrawerUtilities.RefreshSubObjects(ref m_AssetRefObject);
+                if (saveRequired)
+                {
+                    assetProperty.serializedObject.ApplyModifiedPropertiesWithoutUndo();
+                    assetProperty.serializedObject.Update();
+                }
+                m_SubassetRefreshed = true;
+                return saveRequired;
+            }
+            return false;
+        }
+
         private void DrawSubAssetsControl(SerializedProperty property, List<Object> subAssets, bool isEnterKeyPressed)
         {
             var objRect = new Rect(assetDropDownRect.xMax, assetDropDownRect.y, assetDropDownRect.width, assetDropDownRect.height);
@@ -429,6 +439,7 @@ namespace UnityEditor.AddressableAssets.GUI
             // Check if targetObjects have multiple different selected
             if (property.serializedObject.targetObjects.Length > 1)
                 multipleSubassets = AssetReferenceDrawerUtilities.CheckTargetObjectsSubassetsAreDifferent(property, m_AssetRefObject.SubObjectName, fieldInfo, m_label.text);
+
 
             bool isPickerPressed = Event.current.type == EventType.MouseDown && Event.current.button == 0 && pickerRect.Contains(Event.current.mousePosition);
             bool enterKeyRequestsPopup = isEnterKeyPressed && (controlName == UnityEngine.GUI.GetNameOfFocusedControl());
@@ -464,7 +475,7 @@ namespace UnityEditor.AddressableAssets.GUI
             var subAssetNames = subAssets.Select(sa => sa == null ? "<none>" : $"{AssetReferenceDrawerUtilities.FormatName(sa.name)}:{sa.GetType()}").ToList();
             objNames = subAssetNames.ToArray();
 
-            selIndex = subAssetNames.IndexOf($"{m_AssetRefObject.SubObjectName}:{m_AssetRefObject.SubOjbectType}");
+            selIndex = subAssetNames.IndexOf($"{m_AssetRefObject.SubObjectName}:{m_AssetRefObject.SubObjectType}");
             if (selIndex == -1)
                 selIndex = 0;
         }
@@ -822,8 +833,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     aaSettings.GatherAllAssetReferenceDrawableEntries(allAssets);
                     foreach (var entry in allAssets)
                     {
-                        if (!entry.IsInResources &&
-                            m_Drawer.ValidateAsset(entry))
+                        if (m_Drawer.ValidateAsset(entry))
                         {
                             var child = new AssetRefTreeViewItem(entry.AssetPath.GetHashCode(), 0, entry.address, entry.AssetPath);
                             root.AddChild(child);

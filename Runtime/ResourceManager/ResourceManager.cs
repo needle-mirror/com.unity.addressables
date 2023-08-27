@@ -51,65 +51,6 @@ namespace UnityEngine.ResourceManagement
             AsyncOperationDestroy,
         }
 
-        internal bool postProfilerEvents = false;
-
-        /// <summary>
-        /// Container for information associated with a Diagnostics event.
-        /// </summary>
-        public struct DiagnosticEventContext
-        {
-            /// <summary>
-            /// Operation handle for the event.
-            /// </summary>
-            public AsyncOperationHandle OperationHandle { get; }
-
-            /// <summary>
-            /// The type of diagnostic event.
-            /// </summary>
-            public DiagnosticEventType Type { get; }
-
-            /// <summary>
-            /// The value for this event.
-            /// </summary>
-            public int EventValue { get; }
-
-            /// <summary>
-            /// The IResourceLocation being provided by the operation triggering this event.
-            /// This value is null if the event is not while providing a resource.
-            /// </summary>
-            public IResourceLocation Location { get; }
-
-            /// <summary>
-            /// Addition data included with this event.
-            /// </summary>
-            public object Context { get; }
-
-            /// <summary>
-            /// Any error that occured.
-            /// </summary>
-            public string Error { get; }
-
-            /// <summary>
-            /// Construct a new DiagnosticEventContext.
-            /// </summary>
-            /// <param name="op">Operation handle for the event.</param>
-            /// <param name="type">The type of diagnostic event.</param>
-            /// <param name="eventValue">The value for this event.</param>
-            /// <param name="error">Any error that occured.</param>
-            /// <param name="context">Additional context data.</param>
-            public DiagnosticEventContext(AsyncOperationHandle op, DiagnosticEventType type, int eventValue = 0, string error = null, object context = null)
-            {
-                OperationHandle = op;
-                Type = type;
-                EventValue = eventValue;
-                Location = op.m_InternalOp != null && op.m_InternalOp is IGenericProviderOperation gen
-                    ? gen.Location
-                    : null;
-                Error = error;
-                Context = context;
-            }
-        }
-
         /// <summary>
         /// Global exception handler.  This will be called whenever an IAsyncOperation.OperationException is set to a non-null value.
         /// </summary>
@@ -206,8 +147,6 @@ namespace UnityEngine.ResourceManagement
             internal bool incrementRefCount;
         }
 
-        Action<AsyncOperationHandle, DiagnosticEventType, int, object> m_obsoleteDiagnosticsHandler; // For use in working with Obsolete RegisterDiagnosticCallback method.
-        Action<DiagnosticEventContext> m_diagnosticsHandler;
         Action<IAsyncOperation> m_ReleaseOpNonCached;
         Action<IAsyncOperation> m_ReleaseOpCached;
         Action<IAsyncOperation> m_ReleaseInstanceOp;
@@ -282,9 +221,7 @@ namespace UnityEngine.ResourceManagement
             m_ResourceProviders.OnElementAdded += OnObjectAdded;
             m_ResourceProviders.OnElementRemoved += OnObjectRemoved;
             m_UpdateReceivers.OnElementAdded += x => RegisterForCallbacks();
-#if ENABLE_ADDRESSABLE_PROFILER
             Profiling.ProfilerRuntime.Initialise();
-#endif
         }
 
         private void OnObjectAdded(object obj)
@@ -310,65 +247,6 @@ namespace UnityEngine.ResourceManagement
                 m_RegisteredForCallbacks = true;
                 MonoBehaviourCallbackHooks.Instance.OnUpdateDelegate += Update;
             }
-        }
-
-        /// <summary>
-        /// Clears out the diagnostics callback handler.
-        /// </summary>
-        [Obsolete("ClearDiagnosticsCallback is Obsolete, use ClearDiagnosticCallbacks instead.")]
-        public void ClearDiagnosticsCallback()
-        {
-            m_diagnosticsHandler = null;
-            m_obsoleteDiagnosticsHandler = null;
-        }
-
-        /// <summary>
-        /// Clears out the diagnostics callbacks handler.
-        /// </summary>
-        public void ClearDiagnosticCallbacks()
-        {
-            m_diagnosticsHandler = null;
-            m_obsoleteDiagnosticsHandler = null;
-        }
-
-        /// <summary>
-        /// Unregister a handler for diagnostic events.
-        /// </summary>
-        /// <param name="func">The event handler function.</param>
-        public void UnregisterDiagnosticCallback(Action<DiagnosticEventContext> func)
-        {
-            if (m_diagnosticsHandler != null)
-                m_diagnosticsHandler -= func;
-            else
-                Debug.LogError("No Diagnostic callbacks registered, cannot remove callback.");
-        }
-
-        /// <summary>
-        /// Register a handler for diagnostic events.
-        /// </summary>
-        /// <param name="func">The event handler function.</param>
-        [Obsolete]
-        public void RegisterDiagnosticCallback(Action<AsyncOperationHandle, ResourceManager.DiagnosticEventType, int, object> func)
-        {
-            m_obsoleteDiagnosticsHandler = func;
-        }
-
-        /// <summary>
-        /// Register a handler for diagnostic events.
-        /// </summary>
-        /// <param name="func">The event handler function.</param>
-        public void RegisterDiagnosticCallback(Action<DiagnosticEventContext> func)
-        {
-            m_diagnosticsHandler += func;
-        }
-
-        internal void PostDiagnosticEvent(DiagnosticEventContext context)
-        {
-            m_diagnosticsHandler?.Invoke(context);
-
-            if (m_obsoleteDiagnosticsHandler == null)
-                return;
-            m_obsoleteDiagnosticsHandler(context.OperationHandle, context.Type, context.EventValue, string.IsNullOrEmpty(context.Error) ? context.Context : context.Error);
         }
 
         /// <summary>
@@ -625,7 +503,6 @@ namespace UnityEngine.ResourceManagement
                 RemoveOperationFromCache(cachable.Key);
                 cachable.Key = null;
             }
-
         }
 
         internal T CreateOperation<T>(Type actualType, int typeHash, IOperationCacheKey cacheKey, Action<IAsyncOperation> onDestroyAction) where T : IAsyncOperation
@@ -1068,7 +945,7 @@ namespace UnityEngine.ResourceManagement
             if (sceneProvider == null)
                 throw new NullReferenceException("sceneProvider is null");
 
-            return sceneProvider.ProvideScene(this, location, new LoadSceneParameters(loadSceneMode), activateOnLoad, priority);
+            return sceneProvider.ProvideScene(this, location, new LoadSceneParameters(loadSceneMode), SceneReleaseMode.ReleaseSceneWhenSceneUnloaded, activateOnLoad, priority);
         }
 
         /// <summary>
@@ -1085,7 +962,25 @@ namespace UnityEngine.ResourceManagement
             if (sceneProvider == null)
                 throw new NullReferenceException("sceneProvider is null");
 
-            return sceneProvider.ProvideScene(this, location, loadSceneParameters, activateOnLoad, priority);
+            return sceneProvider.ProvideScene(this, location, loadSceneParameters, SceneReleaseMode.ReleaseSceneWhenSceneUnloaded, activateOnLoad, priority);
+        }
+
+        /// <summary>
+        /// Load a scene at a specificed resource location.
+        /// </summary>
+        /// <param name="sceneProvider">The scene provider instance.</param>
+        /// <param name="location">The location of the scene.</param>
+        /// <param name="loadSceneParameters">The load parameters for the scene.</param>
+        /// <param name="releaseMode">How the scene is handled if it is unloaded due to another scene loading using single mode.</param>
+        /// <param name="activateOnLoad">If false, the scene will be loaded in the background and not activated when complete.</param>
+        /// <param name="priority">The priority for the load operation.</param>
+        /// <returns>Async operation handle that will complete when the scene is loaded.  If activateOnLoad is false, then Activate() will need to be called on the SceneInstance returned.</returns>
+        public AsyncOperationHandle<SceneInstance> ProvideScene(ISceneProvider sceneProvider, IResourceLocation location, LoadSceneParameters loadSceneParameters, SceneReleaseMode releaseMode, bool activateOnLoad, int priority)
+        {
+            if (sceneProvider == null)
+                throw new NullReferenceException("sceneProvider is null");
+
+            return sceneProvider.ProvideScene(this, location, loadSceneParameters, releaseMode, activateOnLoad, priority);
         }
 
         /// <summary>

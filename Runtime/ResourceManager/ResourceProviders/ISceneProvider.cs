@@ -8,12 +8,19 @@ using UnityEngine.SceneManagement;
 
 namespace UnityEngine.ResourceManagement.ResourceProviders
 {
+    public enum SceneReleaseMode
+    {
+        ReleaseSceneWhenSceneUnloaded = 0,
+        OnlyReleaseSceneOnHandleRelease,
+    }
+
     /// <summary>
     /// Wrapper for scenes.  This is used to allow access to the AsyncOperation and delayed activation.
     /// </summary>
     public struct SceneInstance
     {
         Scene m_Scene;
+        bool m_ReleaseOnSceneUnloaded;
         internal AsyncOperation m_Operation;
 
         /// <summary>
@@ -25,13 +32,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             internal set { m_Scene = value; }
         }
 
-        /// <summary>
-        /// Activate the scene via the AsyncOperation.
-        /// </summary>
-        [Obsolete("Activate() has been deprecated.  Please use ActivateAsync().")]
-        public void Activate()
+        internal bool ReleaseSceneOnSceneUnloaded
         {
-            m_Operation.allowSceneActivation = true;
+            get { return m_ReleaseOnSceneUnloaded; }
+            set { m_ReleaseOnSceneUnloaded = value; }
         }
 
         /// <summary>
@@ -86,6 +90,18 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         /// <param name="priority">The loading priority for the load.</param>
         /// <returns>An operation handle for the loading of the scene.  The scene is wrapped in a SceneInstance object to support delayed activation.</returns>
         AsyncOperationHandle<SceneInstance> ProvideScene(ResourceManager resourceManager, IResourceLocation location, LoadSceneParameters loadSceneParameters, bool activateOnLoad, int priority);
+
+        /// <summary>
+        /// Load a scene at a specified resource location.
+        /// </summary>
+        /// <param name="resourceManager">The resource manager to use for loading dependencies.</param>
+        /// <param name="location">The location of the scene.</param>
+        /// <param name="loadSceneParameters">Load parameters for the scene.</param>
+        /// <param name="releaseMode">How the scene is handled if it is unloaded due to another scene loading using single mode.</param>
+        /// <param name="activateOnLoad">If true, the scene is activated as soon as it finished loading. Otherwise it needs to be activated via the returned SceneInstance object.</param>
+        /// <param name="priority">The loading priority for the load.</param>
+        /// <returns>An operation handle for the loading of the scene.  The scene is wrapped in a SceneInstance object to support delayed activation.</returns>
+        AsyncOperationHandle<SceneInstance> ProvideScene(ResourceManager resourceManager, IResourceLocation location, LoadSceneParameters loadSceneParameters, SceneReleaseMode releaseMode, bool activateOnLoad, int priority);
 
         /// <summary>
         /// Release a scene.
