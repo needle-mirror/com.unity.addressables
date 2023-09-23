@@ -77,7 +77,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 aaContext.GuidToCatalogLocation = output.GuidToLocation;
             else foreach (KeyValuePair<GUID,List<ContentCatalogDataEntry>> pair in output.GuidToLocation)
                 aaContext.GuidToCatalogLocation[pair.Key] = pair.Value;
-            
+
             aaContext.assetGroupToBundles = output.AssetGroupToBundles;
             if (aaContext.providerTypes == null)
                 aaContext.providerTypes = output.ProviderTypes;
@@ -375,7 +375,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 case BuildTarget.GameCoreXboxOne:
                     return '\\';
                 case BuildTarget.Android:
-                    return '\\';
+                    return '/';
                 default:
                     return '/';
             }
