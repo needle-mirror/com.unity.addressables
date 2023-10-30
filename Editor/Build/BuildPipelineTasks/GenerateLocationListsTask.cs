@@ -361,7 +361,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 case BuildTarget.GameCoreXboxOne:
                     return '\\';
                 case BuildTarget.Android:
-                    return '\\';
+                    return '/';
                 default:
                     return '/';
             }
