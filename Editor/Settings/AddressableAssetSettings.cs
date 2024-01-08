@@ -523,11 +523,11 @@ namespace UnityEditor.AddressableAssets.Settings
 
         [SerializeField]
         [SerializedTypeRestriction(type = typeof(IResourceProvider))]
-        SerializedType m_BundledAssetProviderType;
+        internal SerializedType m_BundledAssetProviderType;
 
         [SerializeField]
         [SerializedTypeRestriction(type = typeof(IResourceProvider))]
-        SerializedType m_AssetBundleProviderType;
+        internal SerializedType m_AssetBundleProviderType;
 
         [SerializeField]
         bool m_IgnoreUnsupportedFilesInBuild = false;
@@ -547,6 +547,10 @@ namespace UnityEditor.AddressableAssets.Settings
 #else
         bool m_CCDEnabled = true;
 #endif
+        /// <summary>
+        /// A flag indicating whether or not a compatible version of the CCD package is installed
+        /// for use with the CCD integration workflow
+        /// </summary>
         public bool CCDEnabled
         {
             get { return m_CCDEnabled; }
@@ -850,16 +854,21 @@ namespace UnityEditor.AddressableAssets.Settings
             get => m_BundledAssetProviderType;
             set
             {
-                foreach (AddressableAssetGroup group in groups)
-                {
-                    if (group == null)
-                        continue;
-
-                    var schema = group.GetSchema<BundledAssetGroupSchema>();
-                    if (schema != null)
-                        schema.BundledAssetProviderType = value;
-                }
                 m_BundledAssetProviderType = value;
+                UpdateBundledAssetProviderType();
+            }
+        }
+
+        internal void UpdateBundledAssetProviderType()
+        {
+            foreach (AddressableAssetGroup group in groups)
+            {
+                if (group == null)
+                    continue;
+
+                var schema = group.GetSchema<BundledAssetGroupSchema>();
+                if (schema != null)
+                    schema.BundledAssetProviderType = BundledAssetProviderType;
             }
         }
 
@@ -871,16 +880,21 @@ namespace UnityEditor.AddressableAssets.Settings
             get => m_AssetBundleProviderType;
             set
             {
-                foreach (AddressableAssetGroup group in groups)
-                {
-                    if (group == null)
-                        continue;
-
-                    var schema = group.GetSchema<BundledAssetGroupSchema>();
-                    if (schema != null)
-                        schema.AssetBundleProviderType = value;
-                }
                 m_AssetBundleProviderType = value;
+                UpdateAssetBundleProviderType();
+            }
+        }
+
+        internal void UpdateAssetBundleProviderType()
+        {
+            foreach (AddressableAssetGroup group in groups)
+            {
+                if (group == null)
+                    continue;
+
+                var schema = group.GetSchema<BundledAssetGroupSchema>();
+                if (schema != null)
+                    schema.AssetBundleProviderType = AssetBundleProviderType;
             }
         }
 
@@ -1936,7 +1950,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="configName">The name of the settings object.</param>
         /// <param name="createDefaultGroups">If true, create groups for player data and local packed content.</param>
         /// <param name="isPersisted">If true, assets are created.</param>
-        /// <returns></returns>
+        /// <returns>The AddressableAssetSettings object.</returns>
         public static AddressableAssetSettings Create(string configFolder, string configName, bool createDefaultGroups, bool isPersisted)
         {
             AddressableAssetSettings aa;
@@ -2451,7 +2465,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="targetParent">The group to add the entry to.</param>
         /// <param name="readOnly">Is the new entry read only.</param>
         /// <param name="postEvent">Send modification event.</param>
-        /// <returns></returns>
+        /// <returns>The AddressableAssetEntry that was moved or created.</returns>
         public AddressableAssetEntry CreateOrMoveEntry(string guid, AddressableAssetGroup targetParent, bool readOnly = false, bool postEvent = true)
         {
             if (targetParent == null || string.IsNullOrEmpty(guid))
@@ -2565,15 +2579,21 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
-        /// Create a new asset group.
+        /// Creates a new Addressable Asset group.
         /// </summary>
-        /// <param name="groupName">The group name.</param>
-        /// <param name="setAsDefaultGroup">Set the new group as the default group.</param>
-        /// <param name="readOnly">Is the new group read only.</param>
-        /// <param name="postEvent">Post modification event.</param>
-        /// <param name="schemasToCopy">Schema set to copy from.</param>
-        /// <param name="types">Types of schemas to add.</param>
-        /// <returns>The newly created group.</returns>
+        /// <param name="groupName">The name of the Addressable Asset group.</param>
+        /// <param name="setAsDefaultGroup">Whether to set the new group as the default Addressable Asset group.</param>
+        /// <param name="readOnly">Whether to set the the group as viewable but not modifiable. Otherwise, the group can be modified.</param>
+        /// <param name="postEvent">Whether to generate an event when the group is created. Otherwise, no event is created.</param>
+        /// <param name="schemasToCopy">The list of group schemas to add to the created group.</param>
+        /// <param name="types">The types of schemas to create and add to the created group.</param>
+        /// <returns>The newly created Addressable Asset group.</returns>
+        /// <remarks>
+        /// Use schemasToCopy to copy schemas with custom values, for example schemas from an existing Addressable Asset group. Pass in schema types to add schemas with default values.
+        /// </remarks>
+        /// <example>
+        /// <code source="../../Tests/Editor/DocExampleCode/ScriptReference/UsingCreateGroup.cs" region="SAMPLE"/>
+        /// </example>
         public AddressableAssetGroup CreateGroup(string groupName, bool setAsDefaultGroup, bool readOnly, bool postEvent, List<AddressableAssetGroupSchema> schemasToCopy, params Type[] types)
         {
             if (string.IsNullOrEmpty(groupName))
@@ -2654,7 +2674,7 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <summary>
         /// Remove an asset group.
         /// </summary>
-        /// <param name="g"></param>
+        /// <param name="g">The Addressable Group to remove</param>
         public void RemoveGroup(AddressableAssetGroup g)
         {
             AssetDatabase.StartAssetEditing();

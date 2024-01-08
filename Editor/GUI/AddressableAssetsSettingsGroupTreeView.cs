@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Editor.GUI;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -306,7 +305,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     return;
                 }
-                
+
                 // we have added or remove groups, sort alphabetically first
                 if (m_Editor.settings.groups.Count != s.sortOrder.Length)
                 {
@@ -1438,7 +1437,7 @@ namespace UnityEditor.AddressableAssets.GUI
                             SerializeState(AssetDatabase.GUIDFromAssetPath(AssetDatabase.GetAssetPath(m_Editor.settings)));
                             foreach (AddressableAssetGroup modifiedGroup in modifiedGroups)
                                 AddressableAssetUtility.OpenAssetIfUsingVCIntegration(modifiedGroup);
-                            
+
                             m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entries, true, false);
                         }
                     }
