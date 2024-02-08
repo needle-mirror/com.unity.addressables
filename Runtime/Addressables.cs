@@ -15,6 +15,7 @@ using UnityEngine.Networking;
 
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditorInternal;
 #endif
 
 namespace UnityEngine.AddressableAssets
@@ -38,7 +39,7 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// The Content Catalog location this Resource Locator was loaded from.  Catalog locations typically contain
-        /// exactly two dependencies.  The first dependency is the remote location of the content catalog hash file, the 
+        /// exactly two dependencies.  The first dependency is the remote location of the content catalog hash file, the
         /// second is the local path of the hash file.
         /// </summary>
         public IResourceLocation CatalogLocation { get; private set; }
@@ -50,7 +51,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="loc">The IResourceLocator to track.</param>
         /// <param name="localHash">The local hash of the content catalog.</param>
-        /// <param name="remoteCatalogLocation">The location for the remote catalog.  Typically this location contains exactly two dependeices, 
+        /// <param name="remoteCatalogLocation">The location for the remote catalog.  Typically this location contains exactly two dependeices,
         /// the first one pointing to the remote hash file.  The second dependency pointing to the local hash file.</param>
         public ResourceLocatorInfo(IResourceLocator loc, string localHash, IResourceLocation remoteCatalogLocation)
         {
@@ -226,31 +227,62 @@ namespace UnityEngine.AddressableAssets
 
         string GetMessageForSingleKey(string keyString)
         {
+            HashSet<Type> typesAvailableForKey = GetTypesForKey(keyString);
+            if (typesAvailableForKey.Count == 0)
+            {
+                return GetNotFoundMessage(keyString);
+            }
+
 #if UNITY_EDITOR
             string path = AssetDatabase.GUIDToAssetPath(keyString);
             if (!string.IsNullOrEmpty(path))
             {
-                Type directType = AssetDatabase.GetMainAssetTypeAtPath(path);
-                if (directType != null)
-                    return $"{base.Message} Could not load Asset with GUID={keyString}, Path={path}. Asset exists with main Type={directType}, which is not assignable from the requested Type={Type}";
-                return string.Format(BaseInvalidKeyMessageFormat, base.Message, keyString, Type);
+                return GetEditorTypeNotAssignableMessage(keyString, path);
             }
 #endif
 
-            HashSet<Type> typesAvailableForKey = GetTypesForKey(keyString);
-            if (typesAvailableForKey.Count == 0)
-                return $"{base.Message} No Location found for Key={keyString}";
-
             if (typesAvailableForKey.Count == 1)
             {
-                Type availableType = null;
-                foreach (Type type in typesAvailableForKey)
-                    availableType = type;
-                if (availableType == null)
-                    return string.Format(BaseInvalidKeyMessageFormat, base.Message, keyString, Type);
-                return $"{base.Message} No Asset found with for Key={keyString}. Key exists as Type={availableType}, which is not assignable from the requested Type={Type}";
+                return GetTypeNotAssignableMessage(keyString, typesAvailableForKey);
             }
 
+            return GetMultipleAssignableTypesMessage(keyString, typesAvailableForKey);
+        }
+
+        private string GetNotFoundMessage(string keyString)
+        {
+#if UNITY_EDITOR
+                string path = AssetDatabase.GUIDToAssetPath(keyString);
+                if (!string.IsNullOrEmpty(path))
+                {
+                    return $"{base.Message} No Location found for Key={keyString}, Path={path}. Verify the asset is marked as Addressable.";
+                }
+#endif
+                return $"{base.Message} No Location found for Key={keyString}";
+        }
+
+#if UNITY_EDITOR
+        private string GetEditorTypeNotAssignableMessage(string keyString, string path)
+        {
+            Type directType = AssetDatabase.GetMainAssetTypeAtPath(path);
+            if (directType != null)
+                return $"{base.Message} Could not load Asset with GUID={keyString}, Path={path}. Asset exists with main Type={directType}, which is not assignable from the requested Type={Type}";
+            return string.Format(BaseInvalidKeyMessageFormat, base.Message, keyString, Type);
+        }
+#endif
+
+        private string GetTypeNotAssignableMessage(string keyString, HashSet<Type> typesAvailableForKey)
+        {
+            Type availableType = null;
+            foreach (Type type in typesAvailableForKey)
+                availableType = type;
+            if (availableType == null)
+                return string.Format(BaseInvalidKeyMessageFormat, base.Message, keyString, Type);
+            return $"{base.Message} No Asset found with for Key={keyString}. Key exists as Type={availableType}, which is not assignable from the requested Type={Type}";
+        }
+
+        private string GetMultipleAssignableTypesMessage(string keyString, HashSet<Type> typesAvailableForKey)
+        {
             StringBuilder csv = new StringBuilder(512);
             int count = 0;
             foreach (Type type in typesAvailableForKey)
@@ -412,7 +444,11 @@ namespace UnityEngine.AddressableAssets
             get
             {
 #if UNITY_EDITOR
-                if (EditorSettings.enterPlayModeOptionsEnabled && reinitializeAddressables)
+                // Addressables in the Editor can be reinitialized when entering or exiting playmode.
+                // This waits until we are on the main thread so that calls like Addressables.Log don't
+                // end up calling the reinitialization code and blowing up if they're being called on
+                // a background thread.
+                if (InternalEditorUtility.CurrentThreadIsMainThread() && reinitializeAddressables && EditorSettings.enterPlayModeOptionsEnabled)
                 {
                     reinitializeAddressables = false;
                     m_AddressablesInstance.ReleaseSceneManagerOperation();
@@ -579,7 +615,7 @@ namespace UnityEngine.AddressableAssets
         /// </example>
         /// <example>
         /// In this example we add a build pre-process hook. When building a player this throws an exception if the content has not been built.
-        /// This could be useful when 'Build Addressables on Player Build' is not set in Addressables Settings. 
+        /// This could be useful when 'Build Addressables on Player Build' is not set in Addressables Settings.
         /// <code source="../Tests/Editor/DocExampleCode/ScriptReference/ContentBuiltcheck.cs" region="CONTENT_BUILT_CHECK"/>
         /// </example>
         public static string BuildPath
@@ -611,7 +647,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// /// <remarks>
         /// When running in the Editor Addressables.RuntimePath returns the path to the locally built data in the <see cref="Addressables.LibraryPath"/>.
-        /// When running in a player this returns the path to the same content found in <see cref="Application.streamingAssetsPath"/>. 
+        /// When running in a player this returns the path to the same content found in <see cref="Application.streamingAssetsPath"/>.
         /// This folder contains the settings, local catalog and Addressables managed local asset bundles.
         /// </remarks>
         public static string RuntimePath
@@ -748,7 +784,7 @@ namespace UnityEngine.AddressableAssets
         }
 
         /// <summary>
-        /// Write an exception as a log message. 
+        /// Write an exception as a log message.
         /// </summary>
         /// <remarks>
         /// LogException can be used to convert an exception to a log message. The exception is stringified. If the operation is in a failed state, the exception is logged at an Error logging level. If not the exception is logged at a Debug logging level.
@@ -816,12 +852,12 @@ namespace UnityEngine.AddressableAssets
         /// The Addressables system initializes itself at runtime the first time you call an Addressables API function.
         /// You can call this function explicitly to initialize Addressables earlier. This function does nothing if
         /// initialization has already occurred.
-        /// 
+        ///
         /// Other Addressables API functions such as <see cref="LoadAssetAsync">LoadAssetAsync</see> also automatically initializes the
         /// system if not already initialized. However in some cases you may wish to explicitly initalize Addressables,
         /// for example to check if the initialization process completed successfully before proceeding to load Addressables
         /// assets. Initializing explicitly shortens the execution time of the subsequent Addressables API function call
-        /// because the initialization process is already completed. 
+        /// because the initialization process is already completed.
         ///
         /// The initialization process loads configuration data and the local content catalog. Custom initialization
         /// tasks can also be included in this process, for example loading additional remote catalogs.
@@ -957,7 +993,7 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <remarks>
         /// Loads an Addressable asset. If a `key` references multiple assets (i.e. a label that is assigned to multiple assets), only the first asset found will be loaded.
-        /// 
+        ///
         /// When you load an Addressable asset, the system:
         /// * Gathers the asset's dependencies
         /// * Downloads any remote AssetBundles needed to load the asset or its dependencies
@@ -1924,7 +1960,7 @@ namespace UnityEngine.AddressableAssets
         /// Loads a Prefab and instantiates a copy of the prefab into the active scene or parent GameObject. The Prefab and any resources associated with it
         /// are loaded asynchronously, whereas the instantiation is executed synchronously. In the situation where the Prefab and resources are already loaded,
         /// the entire operation is completed synchronously.
-        /// 
+        ///
         /// Most versions of the function shares the same parameters(position, rotation, etc.) as [Object.Instantiate](xref:UnityEngine.Object.Instantiate*).
         /// You can create an [InstantiationParameters](xref:UnityEngine.ResourceManagement.ResourceProviders.InstantiationParameters) struct to store these
         /// parameters, pass it into the function instead.
@@ -2029,7 +2065,7 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The operation handle for the request.</returns>
         /// <seealso cref="Addressables.LoadSceneAsync"/>
         //[Obsolete("We have added Async to the name of all asynchronous methods (UnityUpgradable) -> LoadSceneAsync(*)", true)]
-        [Obsolete]        
+        [Obsolete]
         public static AsyncOperationHandle<SceneInstance> LoadScene(object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100)
         {
             return LoadSceneAsync(key, loadMode, activateOnLoad, priority);
@@ -2313,7 +2349,7 @@ namespace UnityEngine.AddressableAssets
         /// Adding new resource locators can be used to add locations and manage asset files outside of the Addressables build system.
         ///
         /// In the following example we have a folder in the root folder called "dataFiles" containing some json files.
-        /// 
+        ///
         /// These json files are then loaded using TextDataProvider, which is a ResourceProvider used to load text files.
         /// </remarks>
         /// <param name="locator">The locator object.</param>
@@ -2354,9 +2390,9 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <remarks>
         /// This is used to reduce the disk usage of the app by removing AssetBundles that are not needed.
-        /// 
+        ///
         /// Note, that only AssetBundles loaded through UnityWebRequest are cached. If you want to purge the entire cache, use [Caching.ClearCache](xref:UnityEngine.Cache.ClearCache) instead.
-        /// 
+        ///
         /// In the Editor, calling CleanBundleCache when not using the "Use Existing Build (requires built groups)" will clear all bundles. No bundles are used by "Use Asset Database (fastest)" or "Simulate Groups (advanced)" catalogs.
         ///
         /// See [AssetBundle caching](xref:addressables-remote-content-distribution) for more details.
@@ -2410,9 +2446,9 @@ namespace UnityEngine.AddressableAssets
 
         /// <summary>
         /// Given a location path that points to a remote content catalog and its corresponding remote hash file, create a location with the dependencies
-        /// that point to remote, and local, hash files respectively.  The first dependency, remote, uses the provided remote hash location.  
+        /// that point to remote, and local, hash files respectively.  The first dependency, remote, uses the provided remote hash location.
         /// The second dependency, local, points to a location inside the Addressables local cache data folder.  The Addressables local cache data folder is meant for content catalogs
-        /// and is not the same cache location for AssetBundles. 
+        /// and is not the same cache location for AssetBundles.
         /// </summary>
         /// <typeparam name="T">The type of provider you want to load your given catalog.  By default, Addressables uses the ContentCatalogProvider.</typeparam>
         /// <param name="remoteCatalogPath">The path of the remote content catalog.</param>

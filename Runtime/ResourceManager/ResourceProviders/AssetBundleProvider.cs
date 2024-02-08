@@ -315,10 +315,12 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
         internal UnityWebRequest CreateWebRequest(string url)
         {
+            string sanitizedUrl = Uri.UnescapeDataString(url);
+
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
-            Uri uri = new Uri(url.Replace(" ", "%20"));
+            Uri uri = new Uri(sanitizedUrl.Replace(" ", "%20"));
 #else
-            Uri uri = new Uri(Uri.EscapeUriString(url));
+            Uri uri = new Uri(Uri.EscapeUriString(sanitizedUrl));
 #endif
 
             if (m_Options == null)
@@ -450,6 +452,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 return;
             Profiling.ProfilerRuntime.BundleReleased(m_Options.BundleName);
         }
+
 #endif
 
 #if UNLOAD_BUNDLE_ASYNC
@@ -527,6 +530,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                         m_AssetBundle = downloadHandler.assetBundle;
                 }
 #endif
+                WebRequestQueue.DequeueRequest(op);
+
                 if (!m_RequestCompletedCallbackCalled)
                 {
                     m_RequestOperation.completed -= WebRequestOperationCompleted;
@@ -534,8 +539,8 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 }
             }
 
-            if (!m_Completed && m_Source == BundleSource.Local) {
-
+            if (!m_Completed && m_Source == BundleSource.Local)
+            {
                 // we don't have to check for done with local files as calling
                 // m_requestOperation.assetBundle is blocking and will wait for the file to load
                 if (!m_RequestCompletedCallbackCalled)
@@ -632,14 +637,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         {
             m_Source = BundleSource.Local;
 #if !UNITY_2021_1_OR_NEWER
-                if (AsyncOperationHandle.IsWaitingForCompletion)
-                    CompleteBundleLoad(AssetBundle.LoadFromFile(m_TransformedInternalId, m_Options == null ? 0 : m_Options.Crc));
-                else
+            if (AsyncOperationHandle.IsWaitingForCompletion)
+                CompleteBundleLoad(AssetBundle.LoadFromFile(m_TransformedInternalId, m_Options == null ? 0 : m_Options.Crc));
+            else
 #endif
             {
                 m_RequestOperation = AssetBundle.LoadFromFileAsync(m_TransformedInternalId, m_Options == null ? 0 : m_Options.Crc);
 #if ENABLE_ADDRESSABLE_PROFILER
-                    AddBundleToProfiler(Profiling.ContentStatus.Loading, m_Source);
+                AddBundleToProfiler(Profiling.ContentStatus.Loading, m_Source);
 #endif
                 AddCallbackInvokeIfDone(m_RequestOperation, LocalRequestOperationCompleted);
             }
@@ -665,7 +670,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             else
             {
 #if ENABLE_ADDRESSABLE_PROFILER
-                    AddBundleToProfiler(Profiling.ContentStatus.Queue, m_Source);
+                AddBundleToProfiler(Profiling.ContentStatus.Queue, m_Source);
 #endif
                 webRequestQueueOperation.OnComplete += asyncOp => BeginWebRequestOperation(asyncOp);
             }
@@ -684,7 +689,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 if (m_Options.Timeout > 0)
                     m_ProvideHandle.ResourceManager.AddUpdateReceiver(this);
 #if ENABLE_ADDRESSABLE_PROFILER
-                AddBundleToProfiler(m_Source == BundleSource.Cache ? Profiling.ContentStatus.Loading : Profiling.ContentStatus.Downloading, m_Source );
+                AddBundleToProfiler(m_Source == BundleSource.Cache ? Profiling.ContentStatus.Loading : Profiling.ContentStatus.Downloading, m_Source);
 #endif
                 m_RequestOperation.completed += WebRequestOperationCompleted;
             }
@@ -906,6 +911,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         internal static void WaitForAllUnloadingBundlesToComplete()
         {
         }
+
 #endif
 
         /// <inheritdoc/>
