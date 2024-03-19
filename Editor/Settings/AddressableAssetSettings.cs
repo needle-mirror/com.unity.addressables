@@ -930,13 +930,13 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
-        /// Retrieves the group whose settings are used for shared bundles (Built In and MonoScript bundles). 
+        /// Retrieves the group whose settings are used for shared bundles (Built In and MonoScript bundles).
         /// </summary>
         /// <returns>The group whose settings are used.</returns>
         public AddressableAssetGroup GetSharedBundleGroup()
         {
             if (SharedBundleSettings == SharedBundleSettings.CustomGroup &&
-                m_SharedBundleSettingsCustomGroupIndex >= 0 && 
+                m_SharedBundleSettingsCustomGroupIndex >= 0 &&
                 m_SharedBundleSettingsCustomGroupIndex < groups.Count)
                 return groups[m_SharedBundleSettingsCustomGroupIndex];
             return DefaultGroup;
@@ -2309,6 +2309,11 @@ namespace UnityEditor.AddressableAssets.Settings
             return null;
         }
 
+        internal void ClearFindAssetEntryCache()
+        {
+            m_FindAssetEntryCache = null;
+        }
+
         internal bool IsAssetPathInAddressableDirectory(string assetPath, out string assetName)
         {
             if (!string.IsNullOrEmpty(assetPath))
@@ -3253,14 +3258,17 @@ namespace UnityEditor.AddressableAssets.Settings
 
 
         /// <summary>
-        /// Impementation of ISerializationCallbackReceiver, does nothing.
+        /// Impementation of ISerializationCallbackReceiver. Sorts collections for deterministic ordering
         /// </summary>
         public void OnBeforeSerialize()
         {
+            // m_InitializationObjects, m_DataBuilders, and m_GroupTemplateObjects are serialized by array index
+            profileSettings.profiles.Sort((a, b) => string.CompareOrdinal(a.id, b.id));
+            m_GroupAssets.Sort((a, b) => string.CompareOrdinal(a.Guid, b.Guid));
         }
 
         /// <summary>
-        /// Impementation of ISerializationCallbackReceiver, used to set callbacks for ProfileValueReference changes.
+        /// Impementation of ISerializationCallbackReceiver. Used to set callbacks for ProfileValueReference changes.
         /// </summary>
         public void OnAfterDeserialize()
         {
