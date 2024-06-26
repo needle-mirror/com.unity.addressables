@@ -42,14 +42,7 @@ namespace UnityEngine.AddressableAssets
         public ISceneProvider SceneProvider;
 
         public ResourceManager ResourceManager
-        {
-            get
-            {
-                if (m_ResourceManager == null)
-                    m_ResourceManager = new ResourceManager(new DefaultAllocationStrategy());
-                return m_ResourceManager;
-            }
-        }
+        { get => m_ResourceManager; }
 
         public int CatalogRequestsTimeout
         {
@@ -154,7 +147,7 @@ namespace UnityEngine.AddressableAssets
                     if (sceneHandle.Result.ReleaseSceneOnSceneUnloaded)
                     {
                         var op = SceneProvider.ReleaseScene(m_ResourceManager, sceneHandle);
-                        AutoReleaseHandleOnCompletion(op);
+                        op.ReleaseHandleOnCompletion();
                     }
                     break;
                 }
@@ -367,7 +360,7 @@ namespace UnityEngine.AddressableAssets
                     return m_InitializationOperation;
                 var completedOperation = ResourceManager.CreateCompletedOperation(m_ResourceLocators[0].Locator, errorMsg: null);
                 if (autoReleaseHandle)
-                    AutoReleaseHandleOnCompletion(completedOperation);
+                    completedOperation.ReleaseHandleOnCompletion();
                 return completedOperation;
             }
 
@@ -425,7 +418,7 @@ namespace UnityEngine.AddressableAssets
             if (!m_InitializationOperation.IsValid())
                 m_InitializationOperation = Initialization.InitializationOperation.CreateInitializationOperation(this, runtimeDataPath, providerSuffix);
             if (autoReleaseHandle)
-                AutoReleaseHandleOnCompletion(m_InitializationOperation);
+                m_InitializationOperation.ReleaseHandleOnCompletion();
 
             return m_InitializationOperation;
         }
@@ -471,11 +464,13 @@ namespace UnityEngine.AddressableAssets
 
         public ResourceLocationBase CreateCatalogLocationWithHashDependencies<T>(string catalogPath, string hashFilePath) where T : IResourceProvider
         {
-            var catalogLoc = new ResourceLocationBase(catalogPath, catalogPath, typeof(T).FullName, typeof(IResourceLocator));
-            catalogLoc.Data = new ProviderLoadRequestOptions()
+            var catalogLoc = new ResourceLocationBase(catalogPath, catalogPath, typeof(T).FullName, typeof(IResourceLocator))
             {
-                IgnoreFailures = false,
-                WebRequestTimeout = CatalogRequestsTimeout
+                Data = new ProviderLoadRequestOptions()
+                {
+                    IgnoreFailures = false,
+                    WebRequestTimeout = CatalogRequestsTimeout
+                }
             };
 
             if (!string.IsNullOrEmpty(hashFilePath))
@@ -497,14 +492,18 @@ namespace UnityEngine.AddressableAssets
                 // The file name of the local cached catalog + hash file is the hash code of the remote hash path, without query parameters (if any).
                 string cacheHashFilePath = ResolveInternalId(kCacheDataFolder + tmpPath.GetHashCode() + ".hash");
 #endif
-                var hashResourceLocation = new ResourceLocationBase(hashFilePath, hashFilePath, typeof(TextDataProvider).FullName, typeof(string));
-                hashResourceLocation.Data = hashOptions.Copy();
+                var hashResourceLocation = new ResourceLocationBase(hashFilePath, hashFilePath, typeof(TextDataProvider).FullName, typeof(string))
+                {
+                    Data = hashOptions.Copy()
+                };
                 catalogLoc.Dependencies.Add(hashResourceLocation);
-                var cacheResourceLocation = new ResourceLocationBase(cacheHashFilePath, cacheHashFilePath, typeof(TextDataProvider).FullName, typeof(string));
-                cacheResourceLocation.Data = hashOptions.Copy();
+                var cacheResourceLocation = new ResourceLocationBase(cacheHashFilePath, cacheHashFilePath, typeof(TextDataProvider).FullName, typeof(string))
+                {
+                    Data = hashOptions.Copy()
+                };
                 catalogLoc.Dependencies.Add(cacheResourceLocation);
 
-                //If you're explicitly loading a contnet catalog, we'll just set the "local" filepath to be the same as the "cached" one
+                //If you're explicitly loading a content catalog, we'll just set the "local" filepath to be the same as the "cached" one
                 catalogLoc.Dependencies.Add(cacheResourceLocation);
             }
 
@@ -527,7 +526,7 @@ namespace UnityEngine.AddressableAssets
                 return ResourceManager.CreateChainOperation(ChainOperation, op => LoadContentCatalogAsync(catalogPath, autoReleaseHandle, providerSuffix));
             var handle = Initialization.InitializationOperation.LoadContentCatalog(this, catalogLoc, providerSuffix);
             if (autoReleaseHandle)
-                AutoReleaseHandleOnCompletion(handle);
+                handle.ReleaseHandleOnCompletion();
             QueueEditorUpdateIfNeeded();
             return handle;
         }
@@ -779,10 +778,9 @@ namespace UnityEngine.AddressableAssets
             if (handle.Status == AsyncOperationStatus.Succeeded)
             {
                 m_SceneInstances.Add(handle);
-                if (!m_resultToHandle.ContainsKey(handle.Result))
+                if (m_resultToHandle.TryAdd(handle.Result, handle))
                 {
                     handle.Destroyed += m_OnHandleDestroyedAction;
-                    m_resultToHandle.Add(handle.Result, handle);
                 }
             }
         }
@@ -791,10 +789,9 @@ namespace UnityEngine.AddressableAssets
         {
             if (handle.Status == AsyncOperationStatus.Succeeded)
             {
-                if (!m_resultToHandle.ContainsKey(handle.Result))
+                if (m_resultToHandle.TryAdd(handle.Result, handle))
                 {
                     handle.Destroyed += m_OnHandleDestroyedAction;
-                    m_resultToHandle.Add(handle.Result, handle);
                 }
             }
         }
@@ -809,7 +806,7 @@ namespace UnityEngine.AddressableAssets
 
             AsyncOperationHandle handle;
             if (m_resultToHandle.TryGetValue(obj, out handle))
-                Release(handle);
+                handle.Release();
             else
             {
                 LogError("Addressables.Release was called on an object that Addressables was not previously aware of.  Thus nothing is being released");
@@ -818,21 +815,6 @@ namespace UnityEngine.AddressableAssets
 
         public void Release<TObject>(AsyncOperationHandle<TObject> handle)
         {
-            if (typeof(TObject) == typeof(SceneInstance))
-            {
-                SceneInstance sceneInstance = (SceneInstance)Convert.ChangeType(handle.Result, typeof(SceneInstance));
-                if (sceneInstance.Scene.isLoaded && handle.ReferenceCount == 1)
-                {
-                    if (ActiveSceneInstances == 1 && m_SceneInstances.First().Equals(handle))
-                        m_SceneInstances.Clear();
-                    UnloadSceneAsync(handle, UnloadSceneOptions.None, true);
-                }
-                else if (!sceneInstance.Scene.isLoaded && handle.ReferenceCount == 2 && !handle.UnloadSceneOpExcludeReleaseCallback)
-                {
-                    AutoReleaseHandleOnCompletion(handle);
-                }
-            }
-
             m_ResourceManager.Release(handle);
         }
 
@@ -973,7 +955,7 @@ namespace UnityEngine.AddressableAssets
         {
             var handle = ResourceManager.CreateChainOperation(dep, op => DownloadDependenciesAsync(key).Convert<IList<IAssetBundleResource>>());
             if (autoReleaseHandle)
-                AutoReleaseHandleOnCompletion(handle);
+                handle.ReleaseHandleOnCompletion();
             return handle;
         }
 
@@ -1016,7 +998,7 @@ namespace UnityEngine.AddressableAssets
             {
                 var handle = ResourceManager.CreateCompletedOperationWithException<IList<IAssetBundleResource>>(null, new InvalidKeyException(key, typeof(object), this));
                 if (autoReleaseHandle)
-                    AutoReleaseHandleOnCompletion(handle);
+                    handle.ReleaseHandleOnCompletion();
                 return handle;
             }
             else
@@ -1025,7 +1007,7 @@ namespace UnityEngine.AddressableAssets
                 WrapAsDownloadLocations(dlLocations);
                 var handle = LoadAssetsAsync<IAssetBundleResource>(dlLocations, null, true);
                 if (autoReleaseHandle)
-                    AutoReleaseHandleOnCompletion(handle);
+                    handle.ReleaseHandleOnCompletion();
                 return handle;
             }
         }
@@ -1034,7 +1016,7 @@ namespace UnityEngine.AddressableAssets
         {
             var handle = ResourceManager.CreateChainOperation(dep, op => DownloadDependenciesAsync(locations).Convert<IList<IAssetBundleResource>>());
             if (autoReleaseHandle)
-                AutoReleaseHandleOnCompletion(handle);
+                handle.ReleaseHandleOnCompletion();
             return handle;
         }
 
@@ -1048,7 +1030,7 @@ namespace UnityEngine.AddressableAssets
             WrapAsDownloadLocations(dlLocations);
             var handle = LoadAssetsAsync<IAssetBundleResource>(dlLocations, null, true);
             if (autoReleaseHandle)
-                AutoReleaseHandleOnCompletion(handle);
+                handle.ReleaseHandleOnCompletion();
             return handle;
         }
 
@@ -1056,7 +1038,7 @@ namespace UnityEngine.AddressableAssets
         {
             var handle = ResourceManager.CreateChainOperation(dep, op => DownloadDependenciesAsync(keys, mode).Convert<IList<IAssetBundleResource>>());
             if (autoReleaseHandle)
-                AutoReleaseHandleOnCompletion(handle);
+                handle.ReleaseHandleOnCompletion();
             return handle;
         }
 
@@ -1071,7 +1053,7 @@ namespace UnityEngine.AddressableAssets
             {
                 var handle = ResourceManager.CreateCompletedOperationWithException<IList<IAssetBundleResource>>(null, new InvalidKeyException(keys, typeof(object), mode, this));
                 if (autoReleaseHandle)
-                    AutoReleaseHandleOnCompletion(handle);
+                    handle.ReleaseHandleOnCompletion();
                 return handle;
             }
             else
@@ -1080,7 +1062,7 @@ namespace UnityEngine.AddressableAssets
                 WrapAsDownloadLocations(dlLocations);
                 var handle = LoadAssetsAsync<IAssetBundleResource>(dlLocations, null, true);
                 if (autoReleaseHandle)
-                    AutoReleaseHandleOnCompletion(handle);
+                    handle.ReleaseHandleOnCompletion();
                 return handle;
             }
         }
@@ -1128,29 +1110,9 @@ namespace UnityEngine.AddressableAssets
             return result;
         }
 
-        internal void AutoReleaseHandleOnCompletion(AsyncOperationHandle handle)
-        {
-            handle.Completed += op => Release(op);
-        }
-
-        internal void AutoReleaseHandleOnCompletion<TObject>(AsyncOperationHandle<TObject> handle)
-        {
-            handle.Completed += op => Release(op);
-        }
-
-        internal void AutoReleaseHandleOnCompletion<TObject>(AsyncOperationHandle<TObject> handle, bool unloadSceneOpExcludeReleaseCallback)
-        {
-            handle.Completed += op =>
-            {
-                if (unloadSceneOpExcludeReleaseCallback)
-                    op.UnloadSceneOpExcludeReleaseCallback = true;
-                Release(op);
-            };
-        }
-
         internal void AutoReleaseHandleOnTypelessCompletion<TObject>(AsyncOperationHandle<TObject> handle)
         {
-            handle.CompletedTypeless += op => Release(op);
+            handle.CompletedTypeless += op => op.Release();
         }
 
         public AsyncOperationHandle<bool> ClearDependencyCacheAsync(object key, bool autoReleaseHandle)
@@ -1161,7 +1123,7 @@ namespace UnityEngine.AddressableAssets
                 var chainOp = ResourceManager.CreateChainOperation(ChainOperation,
                     op => ClearDependencyCacheAsync(key, autoReleaseHandle));
                 if (autoReleaseHandle)
-                    AutoReleaseHandleOnCompletion(chainOp);
+                    chainOp.ReleaseHandleOnCompletion();
                 return chainOp;
             }
 
@@ -1169,7 +1131,7 @@ namespace UnityEngine.AddressableAssets
 
             var completedOp = ResourceManager.CreateCompletedOperation(result, result ? String.Empty : "Unable to clear the cache.  AssetBundle's may still be loaded for the given key.");
             if (autoReleaseHandle)
-                AutoReleaseHandleOnCompletion(completedOp);
+                completedOp.ReleaseHandleOnCompletion();
             return completedOp;
         }
 
@@ -1181,7 +1143,7 @@ namespace UnityEngine.AddressableAssets
                 var chainOp = ResourceManager.CreateChainOperation(ChainOperation,
                     op => ClearDependencyCacheAsync(locations, autoReleaseHandle));
                 if (autoReleaseHandle)
-                    AutoReleaseHandleOnCompletion(chainOp);
+                    chainOp.ReleaseHandleOnCompletion();
                 return chainOp;
             }
 
@@ -1191,7 +1153,7 @@ namespace UnityEngine.AddressableAssets
 
             var completedOp = ResourceManager.CreateCompletedOperation(result, result ? String.Empty : "Unable to clear the cache.  AssetBundle's may still be loaded for the given key(s).");
             if (autoReleaseHandle)
-                AutoReleaseHandleOnCompletion(completedOp);
+                completedOp.ReleaseHandleOnCompletion();
             return completedOp;
         }
 
@@ -1203,7 +1165,7 @@ namespace UnityEngine.AddressableAssets
                 var chainOp = ResourceManager.CreateChainOperation(ChainOperation,
                     op => ClearDependencyCacheAsync(keys, autoReleaseHandle));
                 if (autoReleaseHandle)
-                    AutoReleaseHandleOnCompletion(chainOp);
+                    chainOp.ReleaseHandleOnCompletion();
                 return chainOp;
             }
 
@@ -1213,7 +1175,7 @@ namespace UnityEngine.AddressableAssets
 
             var completedOp = ResourceManager.CreateCompletedOperation(result, result ? String.Empty : "Unable to clear the cache.  AssetBundle's may still be loaded for the given key(s).");
             if (autoReleaseHandle)
-                AutoReleaseHandleOnCompletion(completedOp);
+                completedOp.ReleaseHandleOnCompletion();
             return completedOp;
         }
 
@@ -1294,7 +1256,7 @@ namespace UnityEngine.AddressableAssets
 
             AsyncOperationHandle handle;
             if (m_resultToHandle.TryGetValue(instance, out handle))
-                Release(handle);
+                handle.Release();
             else
                 return false;
 
@@ -1392,7 +1354,7 @@ namespace UnityEngine.AddressableAssets
             QueueEditorUpdateIfNeeded();
             var relOp = SceneProvider.ReleaseScene(ResourceManager, handle, unloadOptions);
             if (autoReleaseHandle)
-                AutoReleaseHandleOnCompletion(relOp, true);
+                relOp.ReleaseHandleOnCompletion();
             return relOp;
         }
 
@@ -1409,7 +1371,7 @@ namespace UnityEngine.AddressableAssets
                 return CheckForCatalogUpdatesWithChain(autoReleaseHandle);
 
             if (m_ActiveCheckUpdateOperation.IsValid())
-                Release(m_ActiveCheckUpdateOperation);
+                m_ActiveCheckUpdateOperation.Release();
 
             m_ActiveCheckUpdateOperation = new CheckCatalogsOperation(this).Start(m_ResourceLocators);
             if (autoReleaseHandle)
