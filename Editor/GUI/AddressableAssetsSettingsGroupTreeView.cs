@@ -573,7 +573,12 @@ namespace UnityEditor.AddressableAssets.GUI
             if (item == null || item.group == null && item.entry == null)
             {
                 using (new EditorGUI.DisabledScope(true))
-                    base.RowGUI(args);
+                {
+                    if (!string.IsNullOrEmpty(item.folderPath))
+                        CellGUI(args.GetCellRect(1), null, (int)ColumnId.Id, ref args);
+                    else
+                        base.RowGUI(args);
+                }
             }
             else
             {
