@@ -259,7 +259,7 @@ namespace UnityEngine.AddressableAssets
         internal bool GetResourceLocations(object key, Type type, out IList<IResourceLocation> locations)
         {
             if (type == null && (key is AssetReference))
-                type = (key as AssetReference).SubOjbectType;
+                type = (key as AssetReference).SubObjectType;
 
             key = EvaluateKey(key);
 

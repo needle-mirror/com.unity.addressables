@@ -464,7 +464,7 @@ namespace UnityEditor.AddressableAssets.GUI
             var subAssetNames = subAssets.Select(sa => sa == null ? "<none>" : $"{AssetReferenceDrawerUtilities.FormatName(sa.name)}:{sa.GetType()}").ToList();
             objNames = subAssetNames.ToArray();
 
-            selIndex = subAssetNames.IndexOf($"{m_AssetRefObject.SubObjectName}:{m_AssetRefObject.SubOjbectType}");
+            selIndex = subAssetNames.IndexOf($"{m_AssetRefObject.SubObjectName}:{m_AssetRefObject.SubObjectType}");
             if (selIndex == -1)
                 selIndex = 0;
         }

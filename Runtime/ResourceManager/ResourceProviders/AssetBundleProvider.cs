@@ -614,7 +614,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             m_DownloadedBytes = 0;
             m_RequestCompletedCallbackCalled = false;
             GetLoadInfo(m_ProvideHandle, out LoadType loadType, out m_TransformedInternalId);
-            
+
             if (loadType == LoadType.Local)
             {
                 //download only bundles loads should not load local bundles
