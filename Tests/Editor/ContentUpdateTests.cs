@@ -9,6 +9,7 @@ using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
+using UnityEditor.TestTools;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -17,7 +18,7 @@ using UnityEngine.TestTools;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
-    public class ContentUpdateTests : AddressableAssetTestBase
+    public abstract class ContentUpdateTests : AddressableAssetTestBase
     {
         protected override bool PersistSettings
         {
@@ -1367,6 +1368,19 @@ namespace UnityEditor.AddressableAssets.Tests
                 AssetDatabase.DeleteAsset(materialAssetPath);
             }
         }
+    }
+
+    namespace ContentUpdatePerPlatformTests
+    {
+
+        [RequirePlatformSupport(BuildTarget.StandaloneWindows, BuildTarget.StandaloneWindows64)]
+        public class ContentUpdateTestsWindows : ContentUpdateTests { }
+
+        [RequirePlatformSupport(BuildTarget.StandaloneOSX)]
+        public class ContentUpdateTestsOSX : ContentUpdateTests { }
+
+        [RequirePlatformSupport(BuildTarget.StandaloneLinux64)]
+        public class ContentUpdateTestsLinux : ContentUpdateTests { }
     }
 }
 

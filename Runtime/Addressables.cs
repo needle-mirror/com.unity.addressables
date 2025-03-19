@@ -1902,7 +1902,7 @@ namespace UnityEngine.AddressableAssets
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<SceneInstance> LoadSceneAsync(object key, LoadSceneMode loadMode = LoadSceneMode.Single, bool activateOnLoad = true, int priority = 100, SceneReleaseMode releaseMode = SceneReleaseMode.ReleaseSceneWhenSceneUnloaded)
         {
-            return m_Addressables.LoadSceneAsync(key, new LoadSceneParameters(loadMode), SceneReleaseMode.ReleaseSceneWhenSceneUnloaded, activateOnLoad, priority);
+            return m_Addressables.LoadSceneAsync(key, new LoadSceneParameters(loadMode), releaseMode, activateOnLoad, priority);
         }
 
         /// <summary>
