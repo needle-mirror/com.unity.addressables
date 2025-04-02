@@ -225,12 +225,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
         }
 
-        internal static string GetBuiltInShaderBundleNamePrefix(AddressableAssetsBuildContext aaContext)
+        internal static string GetShaderBundleNamePrefix(AddressableAssetsBuildContext aaContext)
         {
-            return GetBuiltInShaderBundleNamePrefix(aaContext.Settings);
+            return GetShaderBundleNamePrefix(aaContext.Settings);
         }
 
-        internal static string GetBuiltInShaderBundleNamePrefix(AddressableAssetSettings settings)
+        internal static string GetShaderBundleNamePrefix(AddressableAssetSettings settings)
         {
             string value = "";
             switch (settings.ShaderBundleNaming)
@@ -320,7 +320,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     buildTargetGroup,
                     aaContext.Settings.buildSettings.bundleBuildPath);
 
-                var builtinShaderBundleName = GetBuiltInShaderBundleNamePrefix(aaContext) + "_unitybuiltinshaders.bundle";
+                var builtinBundleName = GetShaderBundleNamePrefix(aaContext) + $"{ShaderBundleBaseName}.bundle";
 
                 var schema = aaContext.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>();
                 AddBundleProvider(schema);
@@ -328,7 +328,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 string monoScriptBundleName = GetMonoScriptBundleNamePrefix(aaContext);
                 if (!string.IsNullOrEmpty(monoScriptBundleName))
                     monoScriptBundleName += "_monoscripts.bundle";
-                var buildTasks = RuntimeDataBuildTasks(builtinShaderBundleName, monoScriptBundleName);
+                var buildTasks = RuntimeDataBuildTasks(builtinBundleName, monoScriptBundleName);
                 buildTasks.Add(extractData);
 
                 IBundleBuildResults results;
@@ -1290,7 +1290,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         // and isn't needed for most tests.
         internal static bool s_SkipCompilePlayerScripts = false;
 
-        static IList<IBuildTask> RuntimeDataBuildTasks(string builtinShaderBundleName, string monoScriptBundleName)
+        static IList<IBuildTask> RuntimeDataBuildTasks(string builtinBundleName, string monoScriptBundleName)
         {
             var buildTasks = new List<IBuildTask>();
 
@@ -1308,7 +1308,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             buildTasks.Add(new CalculateAssetDependencyData());
             buildTasks.Add(new AddHashToBundleNameTask());
             buildTasks.Add(new StripUnusedSpriteSources());
-            buildTasks.Add(new CreateBuiltInShadersBundle(builtinShaderBundleName));
+            buildTasks.Add(new CreateBuiltInShadersBundle(builtinBundleName));
             if (!string.IsNullOrEmpty(monoScriptBundleName))
                 buildTasks.Add(new CreateMonoScriptBundle(monoScriptBundleName));
             buildTasks.Add(new PostDependencyCallback());
@@ -1422,7 +1422,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     bundleResultInfo.InternalBundleName = requestOptions.BundleName;
 
                     if (assetGroup == assetGroup.Settings.DefaultGroup && info.Dependencies.Length == 0 && !string.IsNullOrEmpty(info.FileName) &&
-                        (info.FileName.EndsWith("_unitybuiltinshaders.bundle", StringComparison.Ordinal) || info.FileName.EndsWith("_monoscripts.bundle", StringComparison.Ordinal)))
+                        (info.FileName.EndsWith($"{ShaderBundleBaseName}.bundle", StringComparison.Ordinal)
+                         || info.FileName.EndsWith("_monoscripts.bundle", StringComparison.Ordinal)))
                     {
                         outputBundleNames[i] = ConstructAssetBundleName(null, schema, info, outputBundleNames[i]);
                     }
