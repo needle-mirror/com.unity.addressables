@@ -1856,6 +1856,8 @@ namespace UnityEditor.AddressableAssets.Settings
             return FindGroup(g => g != null && g.Name == groupName);
         }
 
+        internal string DefaultGroupGuid => m_DefaultGroup;
+
         /// <summary>
         /// The default group.  This group is used when marking assets as addressable via the inspector.
         /// </summary>
@@ -2495,7 +2497,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal void RemoveGroupInternal(AddressableAssetGroup g, bool deleteAsset, bool postEvent)
         {
-            g?.ClearSchemas(true);
+            g?.ClearSchemas(true, false);
             groups.Remove(g);
             SetDirty(ModificationEvent.GroupRemoved, g, postEvent, true);
             if (g != null && deleteAsset)
