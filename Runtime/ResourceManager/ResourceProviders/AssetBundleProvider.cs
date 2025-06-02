@@ -994,9 +994,11 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
         internal virtual IOperationCacheKey CreateCacheKeyForLocation(ResourceManager rm, IResourceLocation location, Type desiredType)
         {
-            //We need to transform the ID first
-            //so we don't try and load the same bundle twice if the user is manipulating the path at runtime.
-            return new IdCacheKey(location.GetType(), rm.TransformInternalId(location));
+            // Do not transform the internal ID here, as it can result in generating the same key
+            // for different asset bundles when using certain naming modes (e.g., using filename).
+            // Instead, use the 'primarykey', which is unique per bundle and includes the hash
+            // generated from the build info, ensuring consistent and distinct keys across bundles.
+            return new IdCacheKey(location.GetType(), location.PrimaryKey);
         }
     }
 }
