@@ -320,6 +320,29 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 SetDirty(true);
             }
         }
+        [SerializeField]
+        [Tooltip("If true, assetbundle download data will be stripped from the catalog.  This should only be enabled for local groups.  Only applies to binary catalogs.")]
+        bool m_StripDownloadOptions = false;
+        /// <summary>
+        /// Strip unnecessary assetbundle download data from the catalog.  This should only be enabled for local groups.  Only applies to binary catalogs.
+        /// </summary>
+        public bool StripDownloadOptions
+        {
+            get
+            {
+                if (UseDefaultSchemaSettings)
+                    return GetDefaultSchemaSettings().stripDownloadOptions;
+                return m_StripDownloadOptions;
+            }
+            set
+            {
+                if (m_StripDownloadOptions != value)
+                {
+                    m_StripDownloadOptions = value;
+                    SetDirty(true);
+                }
+            }
+        }
 
         [SerializeField]
         [Tooltip("If true, the bundle and asset provider for assets in this group will get unique provider ids and will only provide for assets in this group.")]
@@ -992,6 +1015,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
         static GUI.FoldoutSessionStateValue AdvancedOptionsFoldout = new GUI.FoldoutSessionStateValue("Addressables.BundledAssetGroup.AdvancedOptions");
 
+        GUIContent m_StripDownloadOptionsContent = new GUIContent("Strip Bundle Download Options", "Strip unused asset bundle download data from catalog.  This should only be enabled for local groups and is disabled if UnityWebRequests are enabled for local bundles.");
         GUIContent m_CompressionContent = new GUIContent("Asset Bundle Compression", "Compression method to use for asset bundles.");
         GUIContent m_UseAssetBundleCacheContent = new GUIContent("Use Asset Bundle Cache", "If enabled and supported, the device will cache  asset bundles.");
         GUIContent m_AssetBundleCrcContent = new GUIContent("Asset Bundle CRC", "Defines which Asset Bundles will have their CRC checked when loading to ensure correct content.");
@@ -1086,6 +1110,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             }
             GUILayout.Space(m_PostBlockContentSpace);
 
+            EditorGUI.BeginDisabledGroup(settings.UseUnityWebRequestForLocalBundles);
+            EditorGUILayout.PropertyField(so.FindProperty(nameof(m_StripDownloadOptions)), m_StripDownloadOptionsContent, true);
+            EditorGUI.EndDisabledGroup();
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeAddressInCatalog)), m_IncludeAddressInCatalogContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeGUIDInCatalog)), m_IncludeGUIDInCatalogContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeLabelsInCatalog)), m_IncludeLabelsInCatalogContent, true);
@@ -1182,6 +1209,11 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             ShowSelectedPropertyDefaultSettingsMulti(so, otherBundledSchemas, ref queuedChanges);
             GUILayout.Space(m_PostBlockContentSpace);
 
+            EditorGUI.BeginDisabledGroup(settings.UseUnityWebRequestForLocalBundles);
+            ShowSelectedPropertyMulti(so, nameof(m_StripDownloadOptions), m_StripDownloadOptionsContent, otherSchemas, ref queuedChanges,
+                (src, dst) => dst.StripDownloadOptions = src.StripDownloadOptions, ref m_StripDownloadOptions);
+            EditorGUI.EndDisabledGroup();
+
             ShowSelectedPropertyMulti(so, nameof(m_IncludeAddressInCatalog), m_IncludeAddressInCatalogContent, otherSchemas, ref queuedChanges,
                 (src, dst) => dst.IncludeAddressInCatalog = src.IncludeAddressInCatalog, ref m_IncludeAddressInCatalog);
             ShowSelectedPropertyMulti(so, nameof(m_IncludeGUIDInCatalog), m_IncludeGUIDInCatalogContent, otherSchemas, ref queuedChanges,
@@ -1233,7 +1265,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 EditorGUILayout.PropertyField(serializedProperty, label, true);
                 so.ApplyModifiedProperties();
             }
-
             if (EditorGUI.EndChangeCheck())
             {
                 if (serializedPropertyType != SerializedPropertyType.Generic)
@@ -1604,6 +1635,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             /// The recommended naming style for AssetBundle file name.
             /// </summary>
             public BundleNamingStyle bundleNaming;
+            /// <summary>
+            /// The recommended setting for stripping additional download metadata.
+            /// </summary>
+            public bool stripDownloadOptions;
         }
 
         internal Dictionary<DefaultSchemaSettingsBuildTargetGroup, DefaultSchemaSettings[]> m_DefaultSettings;
@@ -1627,6 +1662,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultLocalSettings.useAssetBundleCrc = false;
                 defaultLocalSettings.useAssetBundleCrcForCachedBundles = false;
                 defaultLocalSettings.bundleNaming = BundleNamingStyle.NoHash;
+                defaultLocalSettings.stripDownloadOptions = true;
 
                 defaultRemoteSettings.compression = BundleCompressionMode.Uncompressed;
                 defaultRemoteSettings.useAssetBundleCache = false; // bundle caching not supported
@@ -1634,6 +1670,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultRemoteSettings.useAssetBundleCrc = true;
                 defaultRemoteSettings.useAssetBundleCrcForCachedBundles = false;
                 defaultRemoteSettings.bundleNaming = BundleNamingStyle.NoHash;
+                defaultRemoteSettings.stripDownloadOptions = false;
 #elif UNITY_PS4
                 defaultLocalSettings.compression = BundleCompressionMode.Uncompressed;
                 defaultLocalSettings.useAssetBundleCache = false; // bundle caching not supported
@@ -1641,6 +1678,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultLocalSettings.useAssetBundleCrc = false;
                 defaultLocalSettings.useAssetBundleCrcForCachedBundles = false;
                 defaultLocalSettings.bundleNaming = BundleNamingStyle.NoHash;
+                defaultLocalSettings.stripDownloadOptions = true;
 
                 defaultRemoteSettings.compression = BundleCompressionMode.Uncompressed;
                 defaultRemoteSettings.useAssetBundleCache = false; // bundle caching not supported
@@ -1648,6 +1686,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultRemoteSettings.useAssetBundleCrc = true;
                 defaultRemoteSettings.useAssetBundleCrcForCachedBundles = false;
                 defaultRemoteSettings.bundleNaming = BundleNamingStyle.NoHash;
+                defaultRemoteSettings.stripDownloadOptions = false;
 #elif UNITY_PS5
                 defaultLocalSettings.compression = BundleCompressionMode.Uncompressed;
                 defaultLocalSettings.useAssetBundleCache = false;
@@ -1655,6 +1694,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultLocalSettings.useAssetBundleCrc = false;
                 defaultLocalSettings.useAssetBundleCrcForCachedBundles = false;
                 defaultLocalSettings.bundleNaming = BundleNamingStyle.NoHash;
+                defaultLocalSettings.stripDownloadOptions = true;
 
                 defaultRemoteSettings.compression = BundleCompressionMode.Uncompressed;
                 defaultRemoteSettings.useAssetBundleCache = true;
@@ -1662,6 +1702,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultRemoteSettings.useAssetBundleCrc = true;
                 defaultRemoteSettings.useAssetBundleCrcForCachedBundles = false;
                 defaultRemoteSettings.bundleNaming = BundleNamingStyle.NoHash;
+                defaultRemoteSettings.stripDownloadOptions = false;
 #elif UNITY_GAMECORE || UNITY_GAMECORE_XBOXONE || UNITY_GAMECORE_XBOXSERIES || UNITY_XBOXONE
                 defaultLocalSettings.compression = BundleCompressionMode.LZ4;
                 defaultLocalSettings.useAssetBundleCache = false;
@@ -1669,6 +1710,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultLocalSettings.useAssetBundleCrc = false;
                 defaultLocalSettings.useAssetBundleCrcForCachedBundles = false;
                 defaultLocalSettings.bundleNaming = BundleNamingStyle.NoHash;
+                defaultLocalSettings.stripDownloadOptions = true;
 
                 defaultRemoteSettings.compression = BundleCompressionMode.LZMA;
                 defaultRemoteSettings.useAssetBundleCache = true;
@@ -1676,6 +1718,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultRemoteSettings.useAssetBundleCrc = true;
                 defaultRemoteSettings.useAssetBundleCrcForCachedBundles = false;
                 defaultRemoteSettings.bundleNaming = BundleNamingStyle.NoHash;
+                defaultRemoteSettings.stripDownloadOptions = false;
 #else
                 defaultLocalSettings.compression = BundleCompressionMode.LZ4;
                 defaultLocalSettings.useAssetBundleCache = false;
@@ -1683,12 +1726,14 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultLocalSettings.useAssetBundleCrc = false;
                 defaultLocalSettings.useAssetBundleCrcForCachedBundles = false;
                 defaultLocalSettings.bundleNaming = BundleNamingStyle.AppendHash;
+                defaultLocalSettings.stripDownloadOptions = true;
 
                 defaultRemoteSettings.compression = BundleCompressionMode.LZMA;
                 defaultRemoteSettings.useAssetBundleCache = true;
                 defaultRemoteSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 defaultRemoteSettings.useAssetBundleCrc = true;
                 defaultRemoteSettings.useAssetBundleCrcForCachedBundles = false;
+                defaultRemoteSettings.stripDownloadOptions = false;
 #endif
                 defaultSettings[DefaultSchemaSettingsBuildTargetGroup.Default] = new DefaultSchemaSettings[2] { defaultLocalSettings, defaultRemoteSettings };
             }
@@ -1702,6 +1747,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 windowsLocalSettings.useAssetBundleCrc = false;
                 windowsLocalSettings.useAssetBundleCrcForCachedBundles = false;
                 windowsLocalSettings.bundleNaming = BundleNamingStyle.OnlyHash; // help avoid max path limit
+                windowsLocalSettings.stripDownloadOptions = true;
 
                 DefaultSchemaSettings windowsRemoteSettings;
                 windowsRemoteSettings.compression = BundleCompressionMode.LZMA;
@@ -1710,6 +1756,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 windowsRemoteSettings.useAssetBundleCrc = true;
                 windowsRemoteSettings.useAssetBundleCrcForCachedBundles = false;
                 windowsRemoteSettings.bundleNaming = BundleNamingStyle.OnlyHash; // help avoid max path limit
+                windowsRemoteSettings.stripDownloadOptions = false;
 
                 defaultSettings[DefaultSchemaSettingsBuildTargetGroup.StandaloneWindows] = new DefaultSchemaSettings[2] { windowsLocalSettings, windowsRemoteSettings };
             }
@@ -1723,6 +1770,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 iOSLocalSettings.useAssetBundleCrc = false;
                 iOSLocalSettings.useAssetBundleCrcForCachedBundles = false;
                 iOSLocalSettings.bundleNaming = BundleNamingStyle.AppendHash;
+                iOSLocalSettings.stripDownloadOptions = true;
 
                 DefaultSchemaSettings iOSRemoteSettings;
                 iOSRemoteSettings.compression = BundleCompressionMode.LZMA;
@@ -1731,6 +1779,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 iOSRemoteSettings.useAssetBundleCrc = true;
                 iOSRemoteSettings.useAssetBundleCrcForCachedBundles = false;
                 iOSRemoteSettings.bundleNaming = BundleNamingStyle.AppendHash;
+                iOSRemoteSettings.stripDownloadOptions = false;
 
                 defaultSettings[DefaultSchemaSettingsBuildTargetGroup.iOS] = new DefaultSchemaSettings[2] { iOSLocalSettings, iOSRemoteSettings };
             }
@@ -1744,6 +1793,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 androidLocalSettings.useAssetBundleCrc = false;
                 androidLocalSettings.useAssetBundleCrcForCachedBundles = false;
                 androidLocalSettings.bundleNaming = BundleNamingStyle.AppendHash;
+                androidLocalSettings.stripDownloadOptions = true;
 
                 DefaultSchemaSettings androidRemoteSettings;
                 androidRemoteSettings.compression = BundleCompressionMode.LZMA;
@@ -1752,8 +1802,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 androidRemoteSettings.useAssetBundleCrc = true;
                 androidRemoteSettings.useAssetBundleCrcForCachedBundles = false;
                 androidRemoteSettings.bundleNaming = BundleNamingStyle.AppendHash;
+                androidRemoteSettings.stripDownloadOptions = false;
 
-                defaultSettings[DefaultSchemaSettingsBuildTargetGroup.Android] = new DefaultSchemaSettings[2] { androidLocalSettings, androidLocalSettings };
+                defaultSettings[DefaultSchemaSettingsBuildTargetGroup.Android] = new DefaultSchemaSettings[2] { androidLocalSettings, androidRemoteSettings };
             }
 
             // WebGL
@@ -1769,6 +1820,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 webGLSettings.useAssetBundleCrc = true;
                 webGLSettings.useAssetBundleCrcForCachedBundles = false;
                 webGLSettings.bundleNaming = BundleNamingStyle.AppendHash;
+                webGLSettings.stripDownloadOptions = false;
 
                 defaultSettings[DefaultSchemaSettingsBuildTargetGroup.WebGL] = new DefaultSchemaSettings[2] { webGLSettings, webGLSettings };
             }

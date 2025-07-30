@@ -836,6 +836,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         public void OnDisable()
         {
+            m_EntryTree?.Cleanup();
             if (AddressableAssetSettingsDefaultObject.Settings == null)
                 return;
             if (m_ModificationRegistered)

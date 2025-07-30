@@ -542,6 +542,9 @@ namespace UnityEditor.AddressableAssets.Settings
         bool m_NonRecursiveBuilding = true;
 
         [SerializeField]
+        bool m_AllowNestedBundleFolders = false;
+
+        [SerializeField]
 #if !ENABLE_CCD
         bool m_CCDEnabled = false;
 #else
@@ -631,7 +634,11 @@ namespace UnityEditor.AddressableAssets.Settings
 
                     var schema = group.GetSchema<BundledAssetGroupSchema>();
                     if (schema != null)
+                    {
                         schema.UseUnityWebRequestForLocalBundles = value;
+                        if(value)
+                            schema.StripDownloadOptions = false; // StripDownloadOptions is not supported with UWR
+                    }
                 }
                 m_UseUWRForLocalBundles = value;
             }
@@ -1014,6 +1021,15 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get { return m_CheckForContentUpdateRestrictionsOption; }
             set { m_CheckForContentUpdateRestrictionsOption = value; }
+        }
+
+        /// <summary>
+        /// If true, allows nested folders in the bundle output folder. This is useful for organizing bundles into subfolders. This enables legacy behavior.
+        /// </summary>
+        public bool AllowNestedBundleFolders
+        {
+            get { return m_AllowNestedBundleFolders; }
+            set { m_AllowNestedBundleFolders = value; }
         }
 
 #if ENABLE_CCD
