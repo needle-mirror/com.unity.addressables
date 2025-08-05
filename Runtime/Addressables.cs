@@ -12,6 +12,8 @@ using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Text;
 using UnityEngine.Networking;
+using UnityEngine.Scripting;
+
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -682,6 +684,7 @@ namespace UnityEngine.AddressableAssets
         /// When running in a player this returns the path to the same content found in <see cref="Application.streamingAssetsPath"/>.
         /// This folder contains the settings, local catalog and Addressables managed local asset bundles.
         /// </remarks>
+        [Preserve]
         public static string RuntimePath
         {
             get { return m_Addressables.RuntimePath; }

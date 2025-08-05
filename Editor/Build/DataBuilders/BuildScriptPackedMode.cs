@@ -1529,6 +1529,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         {
             if (assetGroup != null)
             {
+                if (!assetGroup.AllowNestedFolders && schema.BundleMode == BundledAssetGroupSchema.BundlePackingMode.PackSeparately)
+                    assetBundleName = assetBundleName.Replace('/', '_');
+
                 string groupName = assetGroup.Name.Replace(" ", "").Replace('\\', '/').Replace("//", "/").ToLower();
                 assetBundleName = groupName + "_" + assetBundleName;
             }

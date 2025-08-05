@@ -285,7 +285,7 @@ namespace UnityEngine.ResourceManagement
             m_ResourceProviders.OnElementAdded += OnObjectAdded;
             m_ResourceProviders.OnElementRemoved += OnObjectRemoved;
             m_UpdateReceivers.OnElementAdded += x => RegisterForCallbacks();
-#if ENABLE_ADDRESSABLE_PROFILER
+#if ENABLE_ADDRESSABLE_PROFILER && UNITY_2022_2_OR_NEWER
             Profiling.ProfilerRuntime.Initialise();
 #endif
         }
