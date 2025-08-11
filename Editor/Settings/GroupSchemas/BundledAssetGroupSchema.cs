@@ -1107,12 +1107,19 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                     Undo.RecordObject(so.targetObject, so.targetObject.name + nameof(BundleNaming));
                     BundleNaming = bundleNaming;
                 }
+                EditorGUI.BeginDisabledGroup(settings.UseUnityWebRequestForLocalBundles);
+                EditorGUI.BeginChangeCheck();
+                bool stripDLOptions = EditorGUILayout.Toggle(m_StripDownloadOptionsContent, StripDownloadOptions);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(so.targetObject, so.targetObject.name + nameof(StripDownloadOptions));
+                    StripDownloadOptions = stripDLOptions;
+                }
+                EditorGUI.EndDisabledGroup();
             }
             GUILayout.Space(m_PostBlockContentSpace);
 
-            EditorGUI.BeginDisabledGroup(settings.UseUnityWebRequestForLocalBundles);
-            EditorGUILayout.PropertyField(so.FindProperty(nameof(m_StripDownloadOptions)), m_StripDownloadOptionsContent, true);
-            EditorGUI.EndDisabledGroup();
+
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeAddressInCatalog)), m_IncludeAddressInCatalogContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeGUIDInCatalog)), m_IncludeGUIDInCatalogContent, true);
             EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeLabelsInCatalog)), m_IncludeLabelsInCatalogContent, true);
@@ -1208,11 +1215,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             ShowSelectedPropertyDefaultSettingsMulti(so, otherBundledSchemas, ref queuedChanges);
             GUILayout.Space(m_PostBlockContentSpace);
-
-            EditorGUI.BeginDisabledGroup(settings.UseUnityWebRequestForLocalBundles);
-            ShowSelectedPropertyMulti(so, nameof(m_StripDownloadOptions), m_StripDownloadOptionsContent, otherSchemas, ref queuedChanges,
-                (src, dst) => dst.StripDownloadOptions = src.StripDownloadOptions, ref m_StripDownloadOptions);
-            EditorGUI.EndDisabledGroup();
 
             ShowSelectedPropertyMulti(so, nameof(m_IncludeAddressInCatalog), m_IncludeAddressInCatalogContent, otherSchemas, ref queuedChanges,
                 (src, dst) => dst.IncludeAddressInCatalog = src.IncludeAddressInCatalog, ref m_IncludeAddressInCatalog);
@@ -1564,6 +1566,15 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 if (EditorGUI.EndChangeCheck())
                     AddQueuedChanges(ref queuedChanges, (src, dst) => src.BundleNaming = dst.BundleNaming = bundleNaming);
                 EditorGUI.showMixedValue = false;
+
+
+                ShowMixedValue(this, otherBundledSchemas, (a, b) => a.StripDownloadOptions != b.StripDownloadOptions);
+                EditorGUI.BeginChangeCheck();
+                bool stripDLOptions = EditorGUILayout.Toggle(m_StripDownloadOptionsContent, StripDownloadOptions);
+                if (EditorGUI.EndChangeCheck())
+                    AddQueuedChanges(ref queuedChanges, (src, dst) => src.StripDownloadOptions = dst.StripDownloadOptions = stripDLOptions);
+                EditorGUI.showMixedValue = false;
+
             }
         }
 
@@ -1793,7 +1804,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 androidLocalSettings.useAssetBundleCrc = false;
                 androidLocalSettings.useAssetBundleCrcForCachedBundles = false;
                 androidLocalSettings.bundleNaming = BundleNamingStyle.AppendHash;
-                androidLocalSettings.stripDownloadOptions = true;
+                androidLocalSettings.stripDownloadOptions = false;
 
                 DefaultSchemaSettings androidRemoteSettings;
                 androidRemoteSettings.compression = BundleCompressionMode.LZMA;
