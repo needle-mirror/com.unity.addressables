@@ -668,7 +668,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 remoteHashLoadLocation.Data = catalogLoadOptions.Copy();
                 locations.Add(remoteHashLoadLocation);
 
-#if UNITY_SWITCH
+#if UNITY_SWITCH || UNITY_SWITCH2
                 var cacheLoadPath = remoteHashLoadPath; // ResourceLocationBase does not allow empty string id
 #else
                 var cacheLoadPath = "{UnityEngine.Application.persistentDataPath}/com.unity.addressables" + versionedFileName + ".hash";
@@ -919,7 +919,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 remoteHashLoadLocation.Data = catalogLoadOptions.Copy();
                 locations.Add(remoteHashLoadLocation);
 
-#if UNITY_SWITCH
+#if UNITY_SWITCH || UNITY_SWITCH2
                 var cacheLoadPath = remoteHashLoadPath; // ResourceLocationBase does not allow empty string id
 #else
                 var cacheLoadPath = "{UnityEngine.Application.persistentDataPath}/com.unity.addressables" + versionedFileName + ".hash";
