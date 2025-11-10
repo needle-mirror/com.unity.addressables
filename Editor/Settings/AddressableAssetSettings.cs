@@ -1715,16 +1715,24 @@ namespace UnityEditor.AddressableAssets.Settings
             if (postEvent)
                 SetDirty(ModificationEvent.LabelAdded, newLabelName, postEvent, true);
 
+            // Collect entries that need updating
+            var entriesToUpdate = new List<AddressableAssetEntry>();
             foreach (var group in groups)
             {
                 foreach (var entry in group.entries)
                 {
                     if (entry.labels.Contains(oldLabelName))
                     {
-                        entry.labels.Remove(oldLabelName);
-                        entry.SetLabel(newLabelName, true);
+                        entriesToUpdate.Add(entry);
                     }
                 }
+            }
+
+            // Rename collected entries
+            foreach (var entry in entriesToUpdate)
+            {
+                entry.labels.Remove(oldLabelName);
+                entry.SetLabel(newLabelName, true);
             }
 
             m_LabelTable.RemoveLabelName(oldLabelName);
