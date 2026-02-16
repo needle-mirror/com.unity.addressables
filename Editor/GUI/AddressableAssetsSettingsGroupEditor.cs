@@ -556,7 +556,7 @@ namespace UnityEditor.AddressableAssets.GUI
             BuildAddressablesWithResult(context);
         }
 
-        internal static AddressablesPlayerBuildResult BuildAddressablesWithResult(BuildMenuContext context)
+        internal static AddressablesPlayerBuildResult BuildAddressablesWithResult(BuildMenuContext context, AddressablesDataBuilderInput builderInput = null)
         {
             AddressablesPlayerBuildResult result = default;
 
@@ -571,7 +571,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (context.buildScriptIndex >= 0)
                     context.Settings.ActivePlayerDataBuilderIndex = context.buildScriptIndex;
 
-                var builderInput = new AddressablesDataBuilderInput(context.Settings);
+                if (builderInput == null)
+                    builderInput = new AddressablesDataBuilderInput(context.Settings);
 
                 if (!HandlePreBuild(context, builderInput))
                     return null;
