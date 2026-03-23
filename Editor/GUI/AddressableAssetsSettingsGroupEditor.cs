@@ -556,23 +556,42 @@ namespace UnityEditor.AddressableAssets.GUI
 
         internal static void OnBuildAddressables(BuildMenuContext context)
         {
-            if (context.BuildMenu == null)
+            BuildAddressablesWithResult(context);
+        }
+
+        internal static AddressablesPlayerBuildResult BuildAddressablesWithResult(BuildMenuContext context, AddressablesDataBuilderInput builderInput = null)
+        {
+            AddressablesPlayerBuildResult result = default;
+
+            try
             {
-                Addressables.LogError("Addressable content build failure : null build menu context");
-                return;
+                if (context.BuildMenu == null)
+                {
+                    Addressables.LogError("Addressable content build failure : null build menu context");
+                    return null;
+                }
+
+                if (context.buildScriptIndex >= 0)
+                    context.Settings.ActivePlayerDataBuilderIndex = context.buildScriptIndex;
+
+                if (builderInput == null)
+                    builderInput = new AddressablesDataBuilderInput(context.Settings);
+
+                if (!HandlePreBuild(context, builderInput))
+                    return null;
+
+                AddressableAssetSettings.BuildPlayerContent(out result, builderInput);
+
+                HandlePostBuild(context, builderInput, result);
+            }
+            catch (Exception e)
+            {
+                // since this is called from a menu option, the exception tends to get logged in a less than ideal handler.
+                // using Debug.LogException so we get the full stack trace as this might be in user code
+                Debug.LogException(e);
             }
 
-            if (context.buildScriptIndex >= 0)
-                context.Settings.ActivePlayerDataBuilderIndex = context.buildScriptIndex;
-
-            var builderInput = new AddressablesDataBuilderInput(context.Settings);
-
-            if (!HandlePreBuild(context, builderInput))
-                return;
-
-            AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult rst, builderInput);
-
-            HandlePostBuild(context, builderInput, rst);
+            return result;
         }
 
 #if (ENABLE_CCD && UNITY_2019_4_OR_NEWER)
