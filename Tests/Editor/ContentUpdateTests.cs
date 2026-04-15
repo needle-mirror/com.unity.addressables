@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
@@ -55,7 +56,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
                 Assert.IsTrue(string.IsNullOrEmpty(op.Error), op.Error);
                 ContentStatePath = Path.GetDirectoryName(Application.dataPath) + "/" + Addressables.LibraryPath + PlatformMappingService.GetPlatformPathSubFolder() + "/addressables_content_state.bin";
-                TypeTreeDataPath = Path.GetDirectoryName(Application.dataPath) + "/" + Addressables.LibraryPath + "/aa/" + PlatformMappingService.GetPlatformPathSubFolder() + "/" + BuildScriptPackedMode.kTypeTreeDataFileName;
+                TypeTreeDataPath = Path.GetDirectoryName(Application.dataPath) + "/" + Addressables.LibraryPath + "/aa/" + PlatformMappingService.GetPlatformPathSubFolder() + "/" + BundledAssetSchemaBuilder.kTypeTreeDataFileName;
             }
 
             public void Dispose()
@@ -515,7 +516,12 @@ namespace UnityEditor.AddressableAssets.Tests
             foreach (var p in paths)
             {
                 if (Path.GetFileNameWithoutExtension(p).EndsWith("catalog"))
+#if ENABLE_JSON_CATALOG
+                    return ContentCatalogData.LoadFromFile(p).CreateCustomLocator();
+#else
+
                     return ContentCatalogData.LoadFromFile(p, true).CreateCustomLocator();
+#endif
             }
             return null;
         }
@@ -1267,7 +1273,7 @@ namespace UnityEditor.AddressableAssets.Tests
             string assetBundleProvider = "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider";
             ContentUpdateScript.ContentUpdateContext updateContext = new ContentUpdateScript.ContentUpdateContext();
             updateContext.ContentState = new AddressablesContentState();
-            AssetBundleRequestOptions cachedRequestOptions = new AssetBundleRequestOptions() {Crc = 123, Hash = "abc", BundleName = bundleName, BundleSize = 10};
+            AssetBundleRequestOptions cachedRequestOptions = new AssetBundleRequestOptions() { Crc = 123, Hash = "abc", BundleName = bundleName, BundleSize = 10 };
             updateContext.ContentState.cachedBundles = new CachedBundleState[]
             {
                 new CachedBundleState() {bundleFileId = "cachedInternalId", data = cachedRequestOptions}
@@ -1278,9 +1284,9 @@ namespace UnityEditor.AddressableAssets.Tests
             List<object> keys = new List<object>();
             keys.Add("stringLoadKey");
 
-            AssetBundleRequestOptions newLocationData1 = new AssetBundleRequestOptions() {Crc = 456, Hash = "def", BundleName = bundleName, BundleSize = 20};
+            AssetBundleRequestOptions newLocationData1 = new AssetBundleRequestOptions() { Crc = 456, Hash = "def", BundleName = bundleName, BundleSize = 20 };
             aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), "newInternalID", assetBundleProvider, keys, null, newLocationData1));
-            AssetBundleRequestOptions newLocationData2 = new AssetBundleRequestOptions() {Crc = 456, Hash = "def", BundleName = "nonCachedBundleName", BundleSize = 20};
+            AssetBundleRequestOptions newLocationData2 = new AssetBundleRequestOptions() { Crc = 456, Hash = "def", BundleName = "nonCachedBundleName", BundleSize = 20 };
             aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), "newInternalID", assetBundleProvider, keys, null, newLocationData2));
 
             bool reverted = RevertUnchangedAssetsToPreviousAssetState.RevertBundleByNameContains("_containKey", updateContext, aaContext);
@@ -1312,7 +1318,7 @@ namespace UnityEditor.AddressableAssets.Tests
             ContentUpdateScript.ContentUpdateContext updateContext = new ContentUpdateScript.ContentUpdateContext();
             updateContext.ContentState = new AddressablesContentState();
 
-            AssetBundleRequestOptions cachedRequestOptions = new AssetBundleRequestOptions() {Crc = 123, Hash = "abc", BundleName = "cachedBundleName", BundleSize = 10};
+            AssetBundleRequestOptions cachedRequestOptions = new AssetBundleRequestOptions() { Crc = 123, Hash = "abc", BundleName = "cachedBundleName", BundleSize = 10 };
             updateContext.ContentState.cachedBundles = new CachedBundleState[]
             {
                 new CachedBundleState() {bundleFileId = "cachedInternalId", data = cachedRequestOptions}
@@ -1322,7 +1328,7 @@ namespace UnityEditor.AddressableAssets.Tests
             aaContext.locations = new List<ContentCatalogDataEntry>(1);
             List<object> keys = new List<object>();
             keys.Add("stringLoadKey");
-            AssetBundleRequestOptions locData = new AssetBundleRequestOptions() {Crc = 456, Hash = "def", BundleName = "catalogBundleName", BundleSize = 20};
+            AssetBundleRequestOptions locData = new AssetBundleRequestOptions() { Crc = 456, Hash = "def", BundleName = "catalogBundleName", BundleSize = 20 };
             string internalId = "catalogInternalId";
             aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), internalId, assetBundleProvider, keys, null, locData));
 
@@ -1338,7 +1344,7 @@ namespace UnityEditor.AddressableAssets.Tests
             ContentUpdateScript.ContentUpdateContext updateContext = new ContentUpdateScript.ContentUpdateContext();
             updateContext.ContentState = new AddressablesContentState();
 
-            AssetBundleRequestOptions cachedRequestOptions = new AssetBundleRequestOptions() {Crc = 123, Hash = "abc", BundleName = "cachedBundleName", BundleSize = 10};
+            AssetBundleRequestOptions cachedRequestOptions = new AssetBundleRequestOptions() { Crc = 123, Hash = "abc", BundleName = "cachedBundleName", BundleSize = 10 };
             updateContext.ContentState.cachedBundles = new CachedBundleState[]
             {
                 new CachedBundleState() {bundleFileId = "cachedInternalId", data = cachedRequestOptions}
@@ -1348,7 +1354,7 @@ namespace UnityEditor.AddressableAssets.Tests
             aaContext.locations = new List<ContentCatalogDataEntry>(1);
             List<object> keys = new List<object>();
             keys.Add("stringLoadKey");
-            AssetBundleRequestOptions locData = new AssetBundleRequestOptions() {Crc = 456, Hash = "def", BundleName = "catalogBundleName", BundleSize = 20};
+            AssetBundleRequestOptions locData = new AssetBundleRequestOptions() { Crc = 456, Hash = "def", BundleName = "catalogBundleName", BundleSize = 20 };
             aaContext.locations.Add(new ContentCatalogDataEntry(typeof(AssetBundleResource), "newInternalID", assetBundleProvider, keys, null, locData));
 
             bool reverted = RevertUnchangedAssetsToPreviousAssetState.RevertBundleByNameContains("cachedBundleName", updateContext, aaContext);

@@ -1,4 +1,5 @@
 using System;
+using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -31,6 +32,13 @@ namespace UnityEditor.AddressableAssets
         public static string DefaultAssetPath
         {
             get { return kDefaultConfigFolder + "/" + kDefaultConfigAssetName + ".asset"; }
+        }
+
+        static void EnsureDefaultConfigFolderExists()
+        {
+            if (AssetDatabase.IsValidFolder(kDefaultConfigFolder))
+                return;
+            AssetDatabase.CreateFolder("Assets", "AddressableAssetsData");
         }
 
         [FormerlySerializedAs("m_addressableAssetSettingsGuid")]
@@ -126,6 +134,7 @@ namespace UnityEditor.AddressableAssets
                             EditorBuildSettings.RemoveConfigObject(kDefaultConfigAssetName);
                             so = CreateInstance<AddressableAssetSettingsDefaultObject>();
                             so.SetSettingsObject(s_DefaultSettingsObject);
+                            EnsureDefaultConfigFolderExists();
                             AssetDatabase.CreateAsset(so, kDefaultConfigFolder + "/DefaultObject.asset");
                             EditorUtility.SetDirty(so);
                             AddressableAssetUtility.OpenAssetIfUsingVCIntegration(kDefaultConfigFolder + "/DefaultObject.asset");
@@ -154,6 +163,7 @@ namespace UnityEditor.AddressableAssets
                 if (!EditorBuildSettings.TryGetConfigObject(kDefaultConfigObjectName, out so))
                 {
                     so = CreateInstance<AddressableAssetSettingsDefaultObject>();
+                    EnsureDefaultConfigFolderExists();
                     AssetDatabase.CreateAsset(so, kDefaultConfigFolder + "/DefaultObject.asset");
                     AssetDatabase.SaveAssets();
                     EditorBuildSettings.AddConfigObject(kDefaultConfigObjectName, so, true);

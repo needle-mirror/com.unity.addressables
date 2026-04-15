@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor.AddressableAssets.Build;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.GUI.Adapters;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Build.Pipeline.Utilities;
@@ -254,7 +255,7 @@ namespace UnityEditor.AddressableAssets.GUI
         GUIStyle m_ButtonStyle;
 
         [NonSerialized]
-        Texture2D m_CogIcon;
+        Texture2D m_MenuIcon;
 
         void TopToolbar(Rect toolbarPos)
         {
@@ -281,8 +282,8 @@ namespace UnityEditor.AddressableAssets.GUI
 
             if (m_ButtonStyle == null)
                 m_ButtonStyle = GetStyle("ToolbarButton");
-            if (m_CogIcon == null)
-                m_CogIcon = EditorGUIUtility.FindTexture("_Popup");
+            if (m_MenuIcon == null)
+                m_MenuIcon = EditorGUIUtility.FindTexture("_Menu");
 
 
             GUILayout.BeginArea(new Rect(0, 0, toolbarPos.width, k_SearchHeight));
@@ -407,7 +408,10 @@ namespace UnityEditor.AddressableAssets.GUI
                                         Settings = settings
                                     };
 
-                                    genericDropdownMenu.AddItem(new GUIContent(buildOption.BuildMenuPath + "/" + dataBuilder.Name), false, OnBuildAddressables, context);
+                                    string displayName = dataBuilder.Name;
+                                    if (dataBuilder.GetType() == typeof(BuildScriptSchemaDriven))
+                                        displayName += " (Recommended)";
+                                    genericDropdownMenu.AddItem(new GUIContent(buildOption.BuildMenuPath + "/" + displayName), false, OnBuildAddressables, context);
                                 }
                             }
 
@@ -433,6 +437,10 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
 
                     genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/Build Pipeline Cache"), false, OnCleanSBP, true);
+#if ENABLE_CONTENT_DIRECTORIES
+                    genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/Content Directory Cache"), false, OnCleanContentDirectory, true);
+#endif
+                    genericDropdownMenu.AddItem(new GUIContent("Clear Build Cache/Shader Cache"), false, OnCleanShaderCache, true);
                     genericDropdownMenu.DropDown(rBuild);
                 }
 
@@ -462,7 +470,10 @@ namespace UnityEditor.AddressableAssets.GUI
                                         Settings = settings
                                     };
 
-                                    genericDropdownMenu.AddItem(new GUIContent(dataBuilder.Name), false, OnBuildCcd, context);
+                                    string displayName = dataBuilder.Name;
+                                    if (dataBuilder.GetType() == typeof(BuildScriptSchemaDriven))
+                                        displayName += " (Recommended)";
+                                    genericDropdownMenu.AddItem(new GUIContent(displayName), false, OnBuildCcd, context);
                                 }
                             }
 
@@ -697,10 +708,32 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void OnCleanAll()
         {
-            if (!EditorUtility.DisplayDialog("Clear build cache", "Do you really want to clear your entire build cache and runtime data cache?", "Yes", "No"))
+            string buildPath = Path.Combine(Addressables.LibraryPath, "aa");
+            string message = $"Do you really want to clear your entire build cache and runtime data cache?\r\nThis will also delete all build cache, runtime cache and the AssetBundles in {buildPath} to ensure invalid AssetBundles don't end up in your Player build.";
+
+            if (!EditorUtility.DisplayDialog("Delete Cache", message, "Delete", "Cancel"))
                 return;
+
+            // Delete the default build path directory to remove all built bundles
+            if (Directory.Exists(buildPath))
+            {
+                try
+                {
+                    Directory.Delete(buildPath, true);
+                    Debug.Log($"Deleted bundles from {buildPath}");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Failed to delete {buildPath}: {e.Message}");
+                }
+            }
+
             OnCleanAddressables(null);
             OnCleanSBP(false);
+#if ENABLE_CONTENT_DIRECTORIES
+            OnCleanContentDirectory(false);
+#endif
+            OnCleanShaderCache(false);
         }
 
         void OnCleanAddressables(object builder)
@@ -711,6 +744,37 @@ namespace UnityEditor.AddressableAssets.GUI
         void OnCleanSBP(object prompt)
         {
             BuildCache.PurgeCache((bool) prompt);
+        }
+
+#if ENABLE_CONTENT_DIRECTORIES
+        void OnCleanContentDirectory(object prompt)
+        {
+            if ((bool) prompt)
+            {
+                if (!EditorUtility.DisplayDialog("Purge Content Directory Cache", "Do you really want to purge your entire content directory build cache?", "Yes", "No"))
+                    return;
+            }
+            BuildPipeline.CleanBuildCache();
+            if (AssetDatabase.AssetPathExists("Library/BuildInstructions/ContentDirectoryRootAssets"))
+            {
+                AssetDatabase.DeleteAsset("Library/BuildInstructions/ContentDirectoryRootAssets");
+
+            }
+        }
+#endif
+
+        void OnCleanShaderCache(object prompt)
+        {
+            if ((bool) prompt)
+            {
+                if (!EditorUtility.DisplayDialog("Purge Shader Cache", "Do you really want to purge your entire shader cache?", "Yes", "No"))
+                    return;
+            }
+
+            if (Directory.Exists("Library/ShaderCache"))
+            {
+                Directory.Delete("Library/ShaderCache", true);
+            }
         }
 
         void OnPrepareUpdate()
