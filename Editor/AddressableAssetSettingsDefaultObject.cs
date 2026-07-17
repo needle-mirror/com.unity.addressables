@@ -9,6 +9,7 @@ namespace UnityEditor.AddressableAssets
     /// <summary>
     /// Class used to get and set the default <see cref="AddressableAssetSettings"/> object.
     /// </summary>
+    [AddressablesHelpURL("AddressableAssetSettings.html")]
     public class AddressableAssetSettingsDefaultObject : ScriptableObject
     {
         /// <summary>
