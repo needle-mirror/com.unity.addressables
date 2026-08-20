@@ -3,6 +3,10 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+
+## [2.11.2] - 2026-08-20
+- Updating scriptable build pipeline version
+
 ## [2.11.1] - 2026-04-23
 - Fixed `PrefabPackedIdentifiers.SerializationIndexFromObjectIdentifier` so that when "Prefab Packed Header Size" is below 4, the leading bytes of the asset hash affect the **most significant** bits of the serialization index (little-endian safe), restoring contiguous bundle ordering without shrinking per-object entropy to 32 bits.
 
