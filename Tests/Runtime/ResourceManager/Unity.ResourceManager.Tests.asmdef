@@ -3,6 +3,7 @@
     "rootNamespace": "",
     "references": [
         "Unity.ResourceManager",
+        "Unity.Addressables.Tests",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Unity.Addressables.Runtime.Tests"

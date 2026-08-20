@@ -4,9 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-#if UNITY_6000_0_OR_NEWER
 using System.Runtime.Serialization;
-#endif
 using UnityEngine.Networking;
 using UnityEngine.Profiling;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -64,13 +62,12 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     /// Contains cache information to be used by the AssetBundleProvider
     /// </summary>
     [Serializable]
-#if UNITY_6000_0_OR_NEWER
     [DataContract]
-#endif
     public class AssetBundleRequestOptions : ILocationSizeData
     {
+
         /// <summary>
-        /// Default constructor for AssetBundleRequestOptions.
+        /// Creates a new AssetBundleRequestOptions with default values.
         /// </summary>
         public AssetBundleRequestOptions()
         {
@@ -78,11 +75,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AssetBundleRequestOptions"/> class by copying the values from
-        /// the specified <paramref name="abro"/> instance.
+        /// Creates a new AssetBundleRequestOptions by copying the values of an existing one.
         /// </summary>
-        /// <param name="abro">The <see cref="AssetBundleRequestOptions"/> instance whose property values are copied to initialize the new
-        /// instance. Cannot be <see langword="null"/>.</param>
+        /// <param name="abro">The options to copy the values from.</param>
         public AssetBundleRequestOptions(AssetBundleRequestOptions abro)
         {
             Crc = abro.Crc;
@@ -99,9 +94,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
         [FormerlySerializedAs("m_hash")]
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "Hash")]
-#endif
         string m_Hash = "";
 
         /// <summary>
@@ -115,9 +108,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
         [FormerlySerializedAs("m_crc")]
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "Crc")]
-#endif
         uint m_Crc;
 
         /// <summary>
@@ -131,9 +122,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
         [FormerlySerializedAs("m_timeout")]
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "Timeout")]
-#endif
         int m_Timeout;
 
         /// <summary>
@@ -147,9 +136,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
         [FormerlySerializedAs("m_chunkedTransfer")]
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "ChunkedTransfer")]
-#endif
         bool m_ChunkedTransfer;
 
         /// <summary>
@@ -163,9 +150,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
         [FormerlySerializedAs("m_redirectLimit")]
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "RedirectLimit")]
-#endif
         int m_RedirectLimit = -1;
 
         /// <summary>
@@ -179,9 +164,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 
         [FormerlySerializedAs("m_retryCount")]
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "RetryCount")]
-#endif
         int m_RetryCount;
 
         /// <summary>
@@ -194,9 +177,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
 
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "BundleName")]
-#endif
         string m_BundleName = null;
 
         /// <summary>
@@ -209,9 +190,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
 
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "AssetLoadMode")]
-#endif
         AssetLoadMode m_AssetLoadMode = AssetLoadMode.RequestedAssetAndDependencies;
 
         /// <summary>
@@ -228,9 +207,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
 
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "BundleSize")]
-#endif
         long m_BundleSize;
 
         /// <summary>
@@ -243,9 +220,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
 
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "UseCrcForCachedBundle")]
-#endif
         bool m_UseCrcForCachedBundles;
 
         /// <summary>
@@ -258,9 +233,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
 
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "UseUnityWebRequestForLocalBundles")]
-#endif
         bool m_UseUWRForLocalBundles;
 
         /// <summary>
@@ -273,9 +246,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         }
 
         [SerializeField]
-#if UNITY_6000_0_OR_NEWER
         [DataMember(Name = "ClearOtherCachedVersionsWhenLoaded")]
-#endif
         bool m_ClearOtherCachedVersionsWhenLoaded;
 
         /// <summary>

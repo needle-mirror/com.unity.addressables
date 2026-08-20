@@ -2,6 +2,7 @@ namespace AddressableAssets.DocExampleCode
 {
     #region doc_Load
 
+    using System;
     using System.Collections;
     using System.Collections.Generic;
     using UnityEngine;
@@ -12,6 +13,7 @@ namespace AddressableAssets.DocExampleCode
 
     internal class LoadWithLocation : MonoBehaviour
     {
+        [NonSerialized]
         public Dictionary<string, AsyncOperationHandle<GameObject>> operationDictionary;
         public List<string> keys;
         public UnityEvent Ready;

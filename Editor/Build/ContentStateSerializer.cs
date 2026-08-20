@@ -1,4 +1,3 @@
-#if UNITY_6000_0_OR_NEWER
 using System;
 using System.IO;
 using System.Runtime.Serialization;
@@ -32,11 +31,10 @@ namespace UnityEditor.AddressableAssets.Build
                             typeof(SerializableGUID),
                             typeof(SerializableHash128)
                         },
-                        PreserveObjectReferences = true
+                        PreserveObjectReferences = true,
+                        DataContractSurrogate = new ContentStateSurrogate()
                     };
-                    var serializer = new DataContractSerializer(typeof(AddressablesContentState), settings);
-                    serializer.SetSerializationSurrogateProvider(new ContentStateSurrogate());
-                    s_Serializer = serializer;
+                    s_Serializer = new DataContractSerializer(typeof(AddressablesContentState), settings);
                 }
                 return s_Serializer;
             }
@@ -241,9 +239,9 @@ namespace UnityEditor.AddressableAssets.Build
     /// <summary>
     /// Data contract surrogate to handle Unity types during serialization.
     /// </summary>
-    internal class ContentStateSurrogate : ISerializationSurrogateProvider
+    internal class ContentStateSurrogate : IDataContractSurrogate
     {
-        public Type GetSurrogateType(Type type)
+        public Type GetDataContractType(Type type)
         {
             if (type == typeof(GUID))
                 return typeof(SerializableGUID);
@@ -297,4 +295,3 @@ namespace UnityEditor.AddressableAssets.Build
         }
     }
 }
-#endif

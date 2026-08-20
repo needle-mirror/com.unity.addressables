@@ -1126,7 +1126,7 @@ namespace UnityEditor.AddressableAssets.Tests
                     if (currElement == selectedElement)
                         Assert.AreEqual(atlasGuid, checkList[selectedElement].AssetGUID);
                     else
-                        Assert.AreEqual(null, checkList[currElement].AssetGUID);
+                        Assert.IsTrue(string.IsNullOrEmpty(checkList[currElement].AssetGUID));
                 }
             }
 

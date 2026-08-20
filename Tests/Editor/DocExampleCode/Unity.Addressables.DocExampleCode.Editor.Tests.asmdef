@@ -6,8 +6,12 @@
         "Unity.Addressables",
         "Unity.ResourceManager",
         "Unity.ScriptableBuildPipeline.Editor",
+        "UnityUnity.Addressables.Runtime.Tests",
+        "Unity.Addressables.Editor.BuildReportVisualizer",
         "UnityEditor.TestRunner",
-        "UnityEngine.TestRunner"
+        "UnityEngine.TestRunner",
+        "Unity.Services.Ccd.Management",
+        "Unity.Services.Core"
     ],
     "includePlatforms": [
         "Editor"
@@ -16,7 +20,8 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "nunit.framework.dll"
+        "nunit.framework.dll",
+        "Moq.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [],

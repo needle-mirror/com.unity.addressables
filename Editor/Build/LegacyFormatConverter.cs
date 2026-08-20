@@ -1,4 +1,3 @@
-#if UNITY_6000_0_OR_NEWER
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -78,11 +77,11 @@ namespace UnityEditor.AddressableAssets.Build
 #if UNITY_EDITOR_WIN
             return Path.Combine(toolsPath, "win/AddressablesFormatConverter.exe");
 #elif UNITY_EDITOR_OSX
-#if UNITY_EDITOR_ARM64
+    #if UNITY_EDITOR_ARM64
             return Path.Combine(toolsPath, "osx-arm64/AddressablesFormatConverter");
-#else
+    #else
             return Path.Combine(toolsPath, "osx-x64/AddressablesFormatConverter");
-#endif
+    #endif
 #elif UNITY_EDITOR_LINUX
             return Path.Combine(toolsPath, "linux/AddressablesFormatConverter");
 #else
@@ -167,4 +166,3 @@ namespace UnityEditor.AddressableAssets.Build
         }
     }
 }
-#endif

@@ -171,6 +171,7 @@ public static class AddressablesTestUtility
         AssetDatabase.AddObjectToAsset(mat, assetWithDifferentTypedSubAssets);
         AssetDatabase.AddObjectToAsset(mesh, assetWithDifferentTypedSubAssets);
 
+        AssetDatabase.SaveAssetIfDirty(assetWithDifferentTypedSubAssets);
         AssetDatabase.ImportAsset($"{RootFolder}/assetWithDifferentTypedSubAssets.asset", ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
         var assetWithDifferentTypedSubObjectsGUID = AssetDatabase.AssetPathToGUID($"{RootFolder}/assetWithDifferentTypedSubAssets.asset");
         var multiTypedSubAssetsEntry = settings.CreateOrMoveEntry(assetWithDifferentTypedSubObjectsGUID, settings.DefaultGroup);

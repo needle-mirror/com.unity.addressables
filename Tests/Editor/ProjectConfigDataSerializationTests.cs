@@ -1,4 +1,3 @@
-#if UNITY_6000_0_OR_NEWER
 using System;
 using System.IO;
 using System.Runtime.Serialization;
@@ -184,4 +183,3 @@ namespace UnityEditor.AddressableAssets.Tests
         }
     }
 }
-#endif

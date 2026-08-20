@@ -1,4 +1,3 @@
-#if UNITY_6000_0_OR_NEWER
 using System;
 using System.IO;
 using NUnit.Framework;
@@ -380,4 +379,3 @@ namespace UnityEditor.AddressableAssets.Tests
         }
     }
 }
-#endif
