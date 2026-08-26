@@ -2,9 +2,9 @@ using System.Collections;
 using System.Linq;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Tests.Runtime.TestObjects;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -40,7 +40,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
         string CreateAsset(string assetName, string path)
         {
-            AssetDatabase.CreateAsset(UnityEngine.AddressableAssets.Tests.TestObject.Create(assetName), path);
+            AssetDatabase.CreateAsset(TestObject.Create(assetName), path);
             AssetDatabase.SaveAssets();
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
             AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
@@ -188,7 +188,7 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             // Setup
             Addressables.InitializeAsync().WaitForCompletion();
-            var handle = Addressables.LoadAssetAsync<UnityEngine.AddressableAssets.Tests.TestObject>(k_AssetKey);
+            var handle = Addressables.LoadAssetAsync<TestObject>(k_AssetKey);
             handle.WaitForCompletion();
 
             Assert.That(AssetBundle.GetAllLoadedAssetBundles().Count(),

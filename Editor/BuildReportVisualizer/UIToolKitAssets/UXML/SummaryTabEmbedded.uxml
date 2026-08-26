@@ -1,0 +1,86 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <ui:ScrollView name="SummaryTabScroll" class="SummaryTabScroll">
+        <ui:VisualElement name="SummaryTabHeader" class="SummaryTabHeader">
+            <ui:VisualElement class="SummaryTabHeaderLine">
+                <ui:Label name="SummaryTabHeaderTitle" class="SummaryTabHeaderTitle" selectable="true"/>
+                <ui:VisualElement name="SummaryTabStatusBadge" class="SummaryTabStatusBadge">
+                    <ui:Image name="SummaryTabStatusBadgeIcon" class="SummaryTabStatusBadgeIcon"/>
+                    <ui:Label name="SummaryTabStatusBadgeText" class="SummaryTabStatusBadgeText"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="SummaryTabHeaderLine">
+                <ui:VisualElement class="SummaryTabHeaderSubtitleRow">
+                    <ui:Image name="SummaryTabHeaderPlatformIcon" class="SummaryTabHeaderPlatformIcon"/>
+                    <ui:Label name="SummaryTabHeaderSubtitle" class="SummaryTabHeaderSubtitle" selectable="true"/>
+                </ui:VisualElement>
+                <ui:Label name="SummaryTabHeaderTimeRange" class="SummaryTabHeaderTimeRange" selectable="true"/>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="SummaryTabContentDirectories"/>
+
+        <ui:VisualElement name="SummaryTabStatCards" class="SummaryTabStatCardRow">
+            <ui:VisualElement name="SummaryTabStatCardBundleSize" class="SummaryTabStatCard">
+                <ui:Image class="SummaryTabStatCardIcon"/>
+                <ui:VisualElement class="SummaryTabStatCardText">
+                    <ui:Label name="SummaryTabTotalBundleSizeValue" class="SummaryTabStatCardValue" selectable="true"/>
+                    <ui:Label text="Total Bundle Size" class="SummaryTabStatCardLabel"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="SummaryTabStatCardDuration" class="SummaryTabStatCard">
+                <ui:Image class="SummaryTabStatCardIcon"/>
+                <ui:VisualElement class="SummaryTabStatCardText">
+                    <ui:Label name="SummaryTabBuildDurationValue" class="SummaryTabStatCardValue" selectable="true"/>
+                    <ui:Label text="Build Duration" class="SummaryTabStatCardLabel"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="SummaryTabStatCardBundles" class="SummaryTabStatCard">
+                <ui:Image class="SummaryTabStatCardIcon"/>
+                <ui:VisualElement class="SummaryTabStatCardText">
+                    <ui:Label name="SummaryTabBundleCountValue" class="SummaryTabStatCardValue" selectable="true"/>
+                    <ui:Label text="Bundles" class="SummaryTabStatCardLabel"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="SummaryTabStatCardAssets" class="SummaryTabStatCard">
+                <ui:Image class="SummaryTabStatCardIcon"/>
+                <ui:VisualElement class="SummaryTabStatCardText">
+                    <ui:Label name="SummaryTabAssetCountValue" class="SummaryTabStatCardValue" selectable="true"/>
+                    <ui:Label text="Assets" class="SummaryTabStatCardLabel"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="SummaryTabSections" class="SummaryTabSections">
+            <ui:VisualElement class="SummaryTabSection">
+                <ui:Foldout name="SummaryTabBuildDetails" text="Build Details" value="true" class="SummaryTabSectionFoldout">
+                    <ui:VisualElement class="SummaryTabSectionContent">
+                        <ui:VisualElement name="SummaryTabDetailsGrid" class="SummaryTabDetailsGrid">
+                            <ui:VisualElement class="SummaryTabDetailsGroup">
+                                <ui:VisualElement name="SummaryTabDetailsLeftLabels" class="SummaryTabDetailsLabels"/>
+                                <ui:VisualElement name="SummaryTabDetailsLeftValues" class="SummaryTabDetailsValues"/>
+                            </ui:VisualElement>
+                            <ui:VisualElement class="SummaryTabDetailsSpacer"/>
+                            <ui:VisualElement class="SummaryTabDetailsGroup">
+                                <ui:VisualElement name="SummaryTabDetailsRightLabels" class="SummaryTabDetailsLabels"/>
+                                <ui:VisualElement name="SummaryTabDetailsRightValues" class="SummaryTabDetailsValues"/>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:Foldout>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="SummaryTabPotentialIssues" class="SummaryTabSection SummaryTabIssuesCard">
+                <ui:VisualElement class="SummaryTabIssuesBody">
+                    <ui:Image name="SummaryTabIssuesIcon" class="SummaryTabIssuesIcon"/>
+                    <ui:VisualElement class="SummaryTabIssuesText">
+                        <ui:Label name="SummaryTabIssuesMessage" class="SummaryTabIssuesMessage" selectable="true"/>
+                        <ui:Label name="SummaryTabIssuesDetail" class="SummaryTabIssuesDetail" selectable="true"/>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="SummaryTabIssuesActions">
+                    <ui:Button name="SummaryTabIssuesViewButton" text="View"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:ScrollView>
+</ui:UXML>

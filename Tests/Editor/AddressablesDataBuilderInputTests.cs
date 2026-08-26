@@ -1,8 +1,6 @@
 using NUnit.Framework;
-using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
-using UnityEditor.AddressableAssets.Settings;
-using UnityEngine;
+using UnityEditor.AddressableAssets.Tests.Editor.TestObjects;
 
 namespace UnityEditor.AddressableAssets.Tests
 {

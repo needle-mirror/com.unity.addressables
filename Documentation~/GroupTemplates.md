@@ -9,7 +9,7 @@ Create reusable group templates that define which schema objects Unity creates f
 A group template defines which types of schema objects Unity creates for a new group. The Addressables system includes the following default templates:
 
 * **Packed Assets**: Includes all the settings needed to build and load Addressables using the [AssetBundle system](xref:um-asset-bundles).
-* **Content Directories**: Includes all the settings needed to build and load Addressables using the [content directory system](xref:um-content-directories).
+* **Content Directories**: Includes all the settings needed to build and load Addressables using the [content directory system](https://docs.unity3d.com/6000.6/Documentation/Manual/content-directories.html).
 * **Blank (no schema)**: A group with [no schema](GroupSchemas) attached to it.
 
 ## Create a custom group template

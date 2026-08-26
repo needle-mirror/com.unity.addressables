@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.Build.Content;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -158,6 +159,11 @@ namespace UnityEditor.AddressableAssets.Settings
         /// Is a sub asset.  For example an asset in an addressable folder.
         /// </summary>
         public bool IsSubAsset { get; set; }
+
+        /// <summary>
+        /// Is it is a sub object of another asset. SubAssets can also be folders, but they would have an asset path.
+        /// </summary>
+        public bool IsSubObject => IsSubAsset && string.IsNullOrEmpty(AssetPath);
 
         /// <summary>
         /// Stores a reference to the parent entry. Only used if the asset is a sub asset.
@@ -354,7 +360,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 parentGroup.SetDirty(e, o, postEvent, true);
         }
 
-        internal void SetCachedPath(string newCachedPath)
+        internal void RepointToNewPath(string newCachedPath)
         {
             if (newCachedPath != m_cachedAssetPath)
             {
@@ -365,9 +371,16 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        internal void SetSubObjectType(Type type)
+        internal void SetSubObject(UnityEngine.Object subObject)
         {
-            m_cachedMainAssetType = type;
+            m_TargetAsset = subObject;
+            SetCachedMainAssetType(subObject == null ? null : subObject.GetType());
+        }
+
+        internal void SetCachedMainAssetType(Type type)
+        {
+            if (type != null)
+                m_cachedMainAssetType = type;
         }
 
         internal string m_cachedAssetPath = null;
@@ -380,12 +393,7 @@ namespace UnityEditor.AddressableAssets.Settings
             get
             {
                 if (string.IsNullOrEmpty(m_cachedAssetPath))
-                {
-                    if (string.IsNullOrEmpty(guid))
-                        SetCachedPath(string.Empty);
-                    else
-                        SetCachedPath(AssetDatabase.GUIDToAssetPath(guid));
-                }
+                    m_cachedAssetPath = string.IsNullOrEmpty(guid) ? string.Empty : AssetDatabase.GUIDToAssetPath(guid);
 
                 return m_cachedAssetPath;
             }
@@ -417,7 +425,7 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
-        private UnityEngine.Object m_TargetAsset;
+        internal UnityEngine.Object m_TargetAsset;
 
         /// <summary>
         /// The asset object for this entry.
@@ -504,6 +512,32 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="entryFilter">Optional predicate to run against each entry, only returning those that pass.  A null filter will return all entries</param>
         public void GatherAllAssets(List<AddressableAssetEntry> assets, bool includeSelf, bool recurseAll, bool includeSubObjects, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
+            // Cast picks between the two overloads below; a bare null is ambiguous.
+            GatherAllAssets(assets, includeSelf, recurseAll, includeSubObjects, entryFilter, (AddressableFolderEnumerator)null);
+        }
+
+        /// <summary>
+        /// Gathers all asset entries, sharing the folder walk the build is already doing.
+        /// </summary>
+        /// <param name="assets">The generated list of entries.</param>
+        /// <param name="includeSelf">Determines if the entry should be contained in the result list or just sub entries.</param>
+        /// <param name="recurseAll">Determines if full recursion should be done when gathering entries.</param>
+        /// <param name="includeSubObjects">Determines if sub objects such as sprites should be included.</param>
+        /// <param name="entryFilter">Optional predicate to run against each entry, only returning those that pass.</param>
+        /// <param name="aaContext">Shares this build's folder walk. Pass null to walk folders fresh.</param>
+        public void GatherAllAssets(List<AddressableAssetEntry> assets, bool includeSelf, bool recurseAll, bool includeSubObjects,
+            Func<AddressableAssetEntry, bool> entryFilter, AddressableAssetsBuildContext aaContext)
+        {
+            GatherAllAssets(assets, includeSelf, recurseAll, includeSubObjects, entryFilter, aaContext?.FolderEnumerator);
+        }
+
+        /// <summary>
+        /// Gathers all asset entries, sharing the folder walk held by an enumerator.
+        /// </summary>
+        /// <param name="enumerator">Reuses this enumerator's folder walk. Pass null to walk fresh.</param>
+        internal void GatherAllAssets(List<AddressableAssetEntry> assets, bool includeSelf, bool recurseAll, bool includeSubObjects,
+            Func<AddressableAssetEntry, bool> entryFilter, AddressableFolderEnumerator enumerator)
+        {
             if (assets == null)
                 assets = new List<AddressableAssetEntry>();
 
@@ -514,8 +548,12 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 IsFolder = true;
                 List<AddressableAssetEntry> folderEntries = new List<AddressableAssetEntry>();
-                GatherFolderEntries(folderEntries, recurseAll, includeSubObjects, entryFilter);
-                SubAssets = folderEntries;
+                GatherFolderEntries(folderEntries, recurseAll, includeSubObjects, entryFilter, enumerator);
+
+                if (recurseAll && entryFilter == null)
+                    SubAssets = folderEntries;
+
+
                 assets.AddRange(folderEntries);
             }
             else if (entryFilter == null || entryFilter(this))
@@ -525,6 +563,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (includeSubObjects)
                 {
                     var mainType = AssetDatabase.GetMainAssetTypeAtPath(AssetPath);
+                    SetCachedMainAssetType(mainType);
                     if (mainType == typeof(SpriteAtlas))
                         GatherSpriteAtlasEntries(assets);
                     else
@@ -550,7 +589,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     var newEntry = parentGroup.Settings.CreateEntry("", namedAddress, parentGroup, true);
                     newEntry.IsSubAsset = true;
                     newEntry.ParentEntry = this;
-                    newEntry.SetSubObjectType(o.GetType());
+                    newEntry.SetSubObject(o);
                     assets.Add(newEntry);
                 }
             }
@@ -580,16 +619,26 @@ namespace UnityEditor.AddressableAssets.Settings
                     var newEntry = settings.CreateEntry("", namedAddress, parentGroup, true);
                     newEntry.IsSubAsset = true;
                     newEntry.ParentEntry = this;
+
+                    // Only the type is cached. GetSprites hands back clones, which get
+                    // dropped on every read.
+                    newEntry.SetCachedMainAssetType(sprites[i].GetType());
                     assets.Add(newEntry);
                 }
             }
         }
 
-        internal void GatherFolderEntries(List<AddressableAssetEntry> assets, bool recurseAll, bool includeSubObjects, Func<AddressableAssetEntry, bool> entryFilter)
+        internal void GatherFolderEntries(List<AddressableAssetEntry> assets, bool recurseAll, bool includeSubObjects, Func<AddressableAssetEntry, bool> entryFilter,
+            AddressableFolderEnumerator enumerator = null)
         {
             var path = AssetPath;
             var settings = parentGroup.Settings;
-            foreach (var file in AddressablesFileEnumeration.EnumerateAddressableFolder(path, settings, recurseAll))
+
+            List<string> folderFiles = enumerator != null
+                ? enumerator.Enumerate(path, recurseAll)
+                : AddressablesFileEnumeration.EnumerateAddressableFolder(path, settings, recurseAll);
+
+            foreach (var file in folderFiles)
             {
                 var subGuid = AssetDatabase.AssetPathToGUID(file);
                 var entry = settings.CreateSubEntryIfUnique(subGuid, address + GetRelativePath(file, path), this);
@@ -603,6 +652,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     if (includeSubObjects)
                     {
                         var mainType = AssetDatabase.GetMainAssetTypeAtPath(entry.AssetPath);
+                        entry.SetCachedMainAssetType(mainType);
                         if (mainType == typeof(SpriteAtlas))
                             entry.GatherSpriteAtlasEntries(assets);
                         else

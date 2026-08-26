@@ -1,0 +1,80 @@
+/* Narrower panes: the report shares the Build Analysis window with its build list. */
+
+#MiddlePane {
+    min-width: 300px;
+    background-color: var(--unity-colors-window-secondary-background);
+}
+
+#RightPane {
+    min-width: 250px;
+}
+
+/* Tab strip, matching the Build Analysis window's own tabs. Source of truth for these values:
+   Modules/BuildAnalysis/EditorResourcesPackage/Editor Default Resources/BuildAnalysis/
+   StyleSheets/BuildAnalysisWindow.uss.
+
+   The TabView is hoisted above the splitter and keeps only its header row, so the strip spans the
+   full width; MiddlePane below holds whichever tab is selected. */
+
+.TabsView {
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.TabsView > .unity-tab-view__content-container {
+    display: none;
+}
+
+.unity-tab-view__content-viewport,
+.unity-tab__header {
+    background-color: var(--unity-colors-inspector_titlebar-background);
+}
+
+.unity-tab-view__content-viewport {
+    border-bottom-color: var(--unity-colors-default-border);
+    border-bottom-width: 1px;
+}
+
+/* The [?][details] pair at the end of the strip. Source of truth for these values: the
+   .help-button / .inspector-toggle rules in Modules/BuildAnalysis/EditorResourcesPackage/
+   Editor Default Resources/BuildAnalysis/StyleSheets/BuildAnalysisWindow.uss. */
+
+.ReportToolbarButton {
+    width: 22px;
+    flex-shrink: 0;
+    align-self: stretch;
+    padding: 0;
+    background-size: 16px 16px;
+    background-position-x: center;
+    background-position-y: center;
+    background-repeat: no-repeat;
+}
+
+.ReportToolbarButton .unity-toolbar-toggle__text,
+.ReportToolbarButton .unity-text-element {
+    display: none;
+}
+
+/* First of the pair in the DOM, so auto margin pushes both right. Override only the left margin:
+   toolbar controls carry margin-left: -1px to tuck under the previous one's border, and zeroing
+   that leaves a seam between the two. */
+.ReportToolbarHelp {
+    margin-left: auto;
+}
+
+.ReportToolbarHelp--light {
+    background-image: resource('Icons/_Help.png');
+}
+
+.ReportToolbarHelp--dark {
+    background-image: resource('Icons/d__Help.png');
+}
+
+/* The window's MainToolbar inspector glyph, from the package's copy. */
+.ReportToolbarDetails--light {
+    background-image: resource('Packages/com.unity.addressables/Editor/BuildReportVisualizer/BuildReport Resources/Icons/Button_RightPanel_LightTheme.png');
+}
+
+.ReportToolbarDetails--dark {
+    background-image: resource('Packages/com.unity.addressables/Editor/BuildReportVisualizer/BuildReport Resources/Icons/Button_RightPanel_DarkTheme.png');
+}

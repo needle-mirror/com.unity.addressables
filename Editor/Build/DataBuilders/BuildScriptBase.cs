@@ -5,6 +5,9 @@ using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
 using UnityEditor.AddressableAssets.BuildReportVisualizer;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+using UnityEditor.Build;
+#endif
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
@@ -72,7 +75,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             Directory.CreateDirectory(directory);
             PackageManager.PackageInfo info = PackageManager.PackageInfo.FindForAssembly(typeof(BuildScriptBase).Assembly);
             tepLogger.AddMetaData(info.name, info.version);
-            var tepPath = Path.Combine(directory, "AddressablesBuildTEP.json");
+            var tepPath = Path.Combine(directory, BuildReportUtility.TepFileName);
             File.WriteAllText(tepPath, tepLogger.FormatForTraceEventProfiler());
 
             if (!ProjectConfigData.GenerateBuildLayout || ProjectConfigData.BuildLayoutReportFileFormat == ProjectConfigData.ReportFileFormat.TXT)
@@ -86,6 +89,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 return;
             }
             var layoutHeader = BuildLayout.Open(buildLayoutPath, true, false);
+#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+            if (BuildHistory.TryGetBuildReportDirectory(layoutHeader.AddressablesBuildSessionGUID, out string buildReportTepDirectory))
+                AddressablesBuildHistorySupport.TryCopyTep(tepPath, buildReportTepDirectory);
+#endif
             var buildStart = layoutHeader.BuildStart;
             var timestampedLayoutPath = GetLayoutTEPFilePath(buildStart);
             // Re-entering Play Mode reuses the same build layout report, so
@@ -131,7 +138,25 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             {
                 try
                 {
-                    result = BuildDataImplementation<TResult>(builderInput);
+                    // A nested build - a custom script calling another builder with the same
+                    // input - reuses this enumerator, so it keeps the warm tree and does not
+                    // subscribe to the change events twice. Only the creator disposes it.
+                    bool ownsEnumerator = builderInput.FolderEnumerator == null;
+                    if (ownsEnumerator)
+                        builderInput.FolderEnumerator = new AddressableFolderEnumerator(builderInput.AddressableSettings, false, m_Log,
+                            watchForChanges: true);
+                    try
+                    {
+                        result = BuildDataImplementation<TResult>(builderInput);
+                    }
+                    finally
+                    {
+                        if (ownsEnumerator)
+                        {
+                            builderInput.FolderEnumerator.Dispose();
+                            builderInput.FolderEnumerator = null;
+                        }
+                    }
                 }
                 catch (Exception e)
                 {
@@ -471,7 +496,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         }
 
         /// <summary>
-        /// Displays the Addressables Report window
+        /// Displays the build report for the build that just finished.
         /// </summary>
         protected virtual void DisplayBuildReport()
         {
@@ -479,7 +504,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             {
                 using (Log.ScopedStep(LogLevel.Info, "DisplayBuildReport"))
                 {
-                    BuildReportWindow.ShowWindowAfterBuild();
+                    BuildReportUtility.ShowBuildReportWindow();
                 }
             }
         }

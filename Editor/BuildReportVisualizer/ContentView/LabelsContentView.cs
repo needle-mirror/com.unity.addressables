@@ -174,7 +174,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             FileSizePlusRefs = bundle.FileSize + bundle.ExpandedDependencyFileSize + bundle.DependencyFileSize;
             FileSizeBundle = bundle.FileSize;
             FileSizeUncompressed = bundle.UncompressedFileSize;
-            RefsTo = Bundle.ExpandedDependencies.Count;
+            RefsTo = Bundle.ExpandedDependencies?.Count ?? 0;
             RefsBy = Bundle.DependentBundles.Count;
         }
 

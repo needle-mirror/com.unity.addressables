@@ -46,7 +46,7 @@ Additional files can be created to collect data about the content build.
 The files are:
 * `Library/com.unity.addressables/AddressablesBuildTEP.json`: build performance data. Refer to [Build profiling](BuildProfileLog.md) for more information.
 * `Library/com.unity.addressables/buildlayoutreport`: information about the AssetBundles produced by the build. Refer to [Build layout report](BuildLayoutReport.md) for more information.
-* A [build report](xref:um-build-history) for content directory and Player builds.
+* A [build report](https://docs.unity3d.com/6000.6/Documentation/Manual/build-history.html) for content directory and Player builds.
 
 ## Additional resources
 

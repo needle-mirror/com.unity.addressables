@@ -101,16 +101,12 @@ namespace Tests.Editor.GUI
         // don't do this for real, but helpful for us when testing icon validity
         private static Texture CallIconLazyLoadWithPathOnly(string path, bool doFileRead)
         {
-            var entry = new AddressableAssetEntry("", "", null, false)
-            {
-                m_cachedAssetPath = path
-            };
             var lazyLoader = new IconLazyLoad();
             // We don't want to expose it internally but we need to test the icon
             var methodHandle = typeof(IconLazyLoad).GetMethod("FastIconFromPath",
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(methodHandle);
-            return methodHandle.Invoke(lazyLoader, new object[] { entry, doFileRead }) as Texture;
+            return methodHandle.Invoke(lazyLoader, new object[] { path, doFileRead }) as Texture;
         }
 
         private static void TestPathIsLoadedSameFromAssetDBAsFastPath(string path, bool doFileRead, string expected)

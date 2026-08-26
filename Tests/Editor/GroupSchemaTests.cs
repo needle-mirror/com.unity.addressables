@@ -7,6 +7,7 @@ using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.TestTools;
 using static UnityEditor.AddressableAssets.Settings.GroupSchemas.BundledAssetGroupSchema;
 
@@ -663,6 +664,7 @@ namespace UnityEditor.AddressableAssets.Tests
             schema.UseAssetBundleCrc = true;
             schema.UseAssetBundleCrcForCachedBundles = true;
             schema.BundleNaming = BundleNamingStyle.NoHash;
+            schema.CacheProbeMode = CacheProbeMode.IsVersionCached;
         }
 
         private void ValidateSettings(BundledAssetGroupSchema schema)
@@ -674,6 +676,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(expectedSettings.useAssetBundleCrc, schema.UseAssetBundleCrc);
             Assert.AreEqual(expectedSettings.useAssetBundleCrcForCachedBundles, schema.UseAssetBundleCrcForCachedBundles);
             Assert.AreEqual(expectedSettings.bundleNaming, schema.BundleNaming);
+            Assert.AreEqual(expectedSettings.cacheProbeMode, schema.CacheProbeMode);
 
         }
 
@@ -687,6 +690,37 @@ namespace UnityEditor.AddressableAssets.Tests
         {
             m_Settings.profileSettings.RemoveValue(m_Settings.profileSettings.GetVariableId($"{key}.BuildPath"));
             m_Settings.profileSettings.RemoveValue(m_Settings.profileSettings.GetVariableId($"{key}.LoadPath"));
+        }
+
+        [Test]
+        public void CacheProbeMode_DefaultsToCachedVersions_AndRoundTripsThroughPopupIndex()
+        {
+            AddressableAssetGroup group = null;
+            try
+            {
+                group = m_Settings.CreateGroup("CacheProbeModeTestGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+                var schema = group.GetSchema<BundledAssetGroupSchema>();
+                schema.UseDefaultSchemaSettings = false;
+
+                // A new group must keep the fast probe, so existing content is unaffected.
+                Assert.AreEqual(CacheProbeMode.CachedVersions, schema.CacheProbeMode);
+
+                schema.CacheProbeMode = CacheProbeMode.IsVersionCached;
+                Assert.AreEqual(CacheProbeMode.IsVersionCached, schema.CacheProbeMode);
+
+                // Index 1 is the strict probe, index 0 the fast one.
+                schema.SetCacheProbeModeFromPopupIndex(0, schema);
+                Assert.AreEqual(CacheProbeMode.CachedVersions, schema.CacheProbeMode);
+
+                schema.SetCacheProbeModeFromPopupIndex(1, schema);
+                Assert.AreEqual(CacheProbeMode.IsVersionCached, schema.CacheProbeMode);
+            }
+            finally
+            {
+                if (group != null)
+                    m_Settings.RemoveGroupInternal(group, true, false);
+                Undo.ClearAll();
+            }
         }
 
         // UUM-140558: "Disabled" must clear both CRC flags, not just UseAssetBundleCrc.

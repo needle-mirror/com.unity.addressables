@@ -196,21 +196,27 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                     countedBundles.Add(b);
                 }
 
-                foreach (var depB in b.ExpandedDependencies)
+                if (b.ExpandedDependencies != null)
                 {
-                    if (!countedBundles.Contains(depB))
+                    foreach (var depB in b.ExpandedDependencies)
                     {
-                        FileSizePlusRefs += depB.FileSize;
-                        countedBundles.Add(depB);
+                        if (!countedBundles.Contains(depB))
+                        {
+                            FileSizePlusRefs += depB.FileSize;
+                            countedBundles.Add(depB);
+                        }
                     }
                 }
 
-                foreach (var depB in b.Dependencies)
+                if (b.Dependencies != null)
                 {
-                    if (!countedBundles.Contains(depB))
+                    foreach (var depB in b.Dependencies)
                     {
-                        FileSizePlusRefs += depB.FileSize;
-                        countedBundles.Add(depB);
+                        if (!countedBundles.Contains(depB))
+                        {
+                            FileSizePlusRefs += depB.FileSize;
+                            countedBundles.Add(depB);
+                        }
                     }
                 }
             }
@@ -389,15 +395,18 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
            CreateAssetEntries(children, out var bundlesReferencedByAssetEntries, bundle, ref id, includeAllDependencies);
 
-           foreach (var depBundle in bundle.Bundle.ExpandedDependencies)
+           if (bundle.Bundle.ExpandedDependencies != null)
            {
-               if (!bundlesReferencedByAssetEntries.Contains(depBundle))
+               foreach (var depBundle in bundle.Bundle.ExpandedDependencies)
                {
-                   var reportBundle = new BundlesViewBuildReportBundle(depBundle);
-                   if (includeAllDependencies || EntryAppearsInSearch(reportBundle, m_SearchValue))
+                   if (!bundlesReferencedByAssetEntries.Contains(depBundle))
                    {
-                       indirectlyReferencedBundleReportItems.Add(new TreeViewItemData<BundlesViewBuildReportItem>(++id, reportBundle));
-                       indirectlyReferencedBundles.Add(depBundle);
+                       var reportBundle = new BundlesViewBuildReportBundle(depBundle);
+                       if (includeAllDependencies || EntryAppearsInSearch(reportBundle, m_SearchValue))
+                       {
+                           indirectlyReferencedBundleReportItems.Add(new TreeViewItemData<BundlesViewBuildReportItem>(++id, reportBundle));
+                           indirectlyReferencedBundles.Add(depBundle);
+                       }
                    }
                }
            }

@@ -1,6 +1,7 @@
 using System;
+using UnityEngine;
 
-namespace UnityEngine.AddressableAssets.Tests
+namespace UnityEditor.AddressableAssets.Tests.Runtime.TestObjects
 {
     [CreateAssetMenu(order = 0, fileName = "towsf", menuName = "Test/TestObjectWithSerializableField")]
     public class TestObjectWithSerializableField : ScriptableObject

@@ -40,7 +40,7 @@ The Addressables system separates the building of Addressable content from a Pla
 
 The [schemas assigned to a group](group-inspector-settings-reference.md) define the content build system and the settings used to build the assets in a group. The default schemas determine which content build system Addressables uses to create a content build of the assets in your project, as follows:
 
-* **Content Directory**: Uses [content directories](xref:um-content-directories) to create content builds.
+* **Content Directory**: Uses [content directories](https://docs.unity3d.com/6000.6/Documentation/Manual/content-directories.html) to create content builds.
 * **Content Packing & Loading**: Uses [AssetBundles](xref:um-asset-bundles) to create content builds.
 
 For more information about the content build systems available, refer to [Choose a content build system](content-build-systems.md).

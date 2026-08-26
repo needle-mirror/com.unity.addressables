@@ -12,7 +12,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
     [Serializable]
     class BuildReportListView : IAddressableView
     {
-        BuildReportWindow m_Window;
+        IBuildReportHost m_Host;
         ListView m_ListView;
 
         VisualTreeAsset m_ReportListItemTreeAsset;
@@ -39,18 +39,19 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             }
         }
 
-        public BuildReportListView(BuildReportWindow window, VisualTreeAsset reportListItemTreeAsset)
+        public BuildReportListView(IBuildReportHost host)
         {
-            m_Window = window;
-            m_ReportListItemTreeAsset = reportListItemTreeAsset;
+            m_Host = host;
         }
 
         public void CreateGUI(VisualElement rootVisualElement)
         {
             RefreshItemsFromProjectConfig();
 
-            UQueryBuilder<ListView> listQuery = rootVisualElement.Query<ListView>(name: BuildReportUtility.ReportsList);
-            m_ListView = listQuery.First();
+            var listPanelTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(BuildReportUtility.ReportsListPanelUxmlPath);
+            listPanelTree.CloneTree(rootVisualElement);
+            m_ReportListItemTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(BuildReportUtility.ReportsListItemUxmlPath);
+            m_ListView = rootVisualElement.Q<ListView>(BuildReportUtility.ReportsList);
 
             m_ListView.makeItem = () =>
             {
@@ -155,11 +156,11 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             if (item.Layout == null)
             {
                 Debug.LogError($"Unable to read '{item.FilePath}'");
-                m_Window?.ClearViews();
+                m_Host?.ClearViews();
             }
             else
             {
-                m_Window?.Consume(LoadLayout(item.FilePath));
+                m_Host?.Consume(LoadLayout(item.FilePath));
             }
         }
 
@@ -171,7 +172,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 {
                     BuildLayout layout = BuildLayout.Open(m_BuildReportItems[0].FilePath, readFullFile: true);
                     if (layout != null)
-                        m_Window.Consume(layout);
+                        m_Host.Consume(layout);
                     else
                         Debug.LogWarning($"Unable to load build report at {m_BuildReportItems[0].FilePath}.");
                 }
@@ -293,7 +294,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             if (configIndex >= 0)
                 ProjectConfigData.RemoveBuildReportFilePathAtIndex(configIndex);
 
-            m_Window?.ClearViews();
+            m_Host?.ClearViews();
             m_ListView?.Rebuild();
         }
 
@@ -302,7 +303,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             ProjectConfigData.ClearBuildReportFilePaths();
             m_BuildReportItems.Clear();
 
-            m_Window?.ClearViews();
+            m_Host?.ClearViews();
             m_ListView?.Rebuild();
         }
 

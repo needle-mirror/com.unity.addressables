@@ -931,9 +931,7 @@ namespace UnityEditor.AddressableAssets.Build
                     e.FlaggedDuringContentUpdateRestriction = false;
                 if (e.IsFolder)
                 {
-                    List<AddressableAssetEntry> folderEntries = new List<AddressableAssetEntry>();
-                    e.GatherFolderEntries(folderEntries, true, true, null);
-                    ClearContentUpdateFlagForEntries(folderEntries);
+                    ClearContentUpdateFlagForEntries(e.SubAssets);
                 }
             }
         }

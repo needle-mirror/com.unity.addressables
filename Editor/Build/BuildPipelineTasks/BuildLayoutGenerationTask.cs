@@ -28,7 +28,12 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         const int k_Version = 1;
         const bool k_PrettyPrint = false;
 
-        internal static Action<string, BuildLayout> s_LayoutCompleteCallback;
+        internal static event Action<string, BuildLayout> LayoutCompleted;
+
+        internal static void RaiseLayoutCompleted(string path, BuildLayout layout)
+        {
+            LayoutCompleted?.Invoke(path, layout);
+        }
 
         /// <summary>
         /// The GenerateLocationListsTask version.
@@ -89,6 +94,20 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         {
             string ext = (fileFormat == ProjectConfigData.ReportFileFormat.JSON) ? "json" : "txt";
             return $"{m_LayoutFilePath}.{ext}";
+        }
+
+        /// <summary>
+        /// Refreshes the fixed-path json layout, which identifies the most recent build to
+        /// <see cref="DataBuilders.BuildScriptBase.WriteBuildLog"/>.
+        /// </summary>
+        internal static string WriteLegacyJsonLayout(string sourcePath)
+        {
+            string legacyJsonFilePath = GetLayoutFilePathForFormat(ProjectConfigData.ReportFileFormat.JSON);
+            Directory.CreateDirectory(Path.GetDirectoryName(legacyJsonFilePath));
+            if (File.Exists(legacyJsonFilePath))
+                File.Delete(legacyJsonFilePath);
+            File.Copy(sourcePath, legacyJsonFilePath);
+            return legacyJsonFilePath;
         }
 
         internal static string TimeStampedReportPath(DateTime now)
@@ -937,7 +956,9 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             else
                 throw new System.ArgumentException("Default Group does not have an enabled BundledAssetGroupSchema or ContentDirectoryGroupSchema, cannot determine LocalCatalogBuildPath");
 
-            layout.RemoteCatalogBuildPath = aaContext.Settings.RemoteCatalogBuildPath.GetValue(aaContext.Settings);
+            layout.RemoteCatalogBuildPath = string.Empty;
+            if (aaContext.Settings.BuildRemoteCatalog)
+                layout.RemoteCatalogBuildPath = aaContext.Settings.RemoteCatalogBuildPath.GetValue(aaContext.Settings);
 
             AddressableAssetSettings aaSettings = aaContext.Settings;
             if (m_BuildLayoutParameters.BuildResultHash != null)
@@ -1459,16 +1480,15 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             }
             else
             {
-                string legacyJsonFilePath = GetLayoutFilePathForFormat(ProjectConfigData.ReportFileFormat.JSON);
-                Directory.CreateDirectory(Path.GetDirectoryName(legacyJsonFilePath));
-                if (File.Exists(legacyJsonFilePath))
-                    File.Delete(legacyJsonFilePath);
-                File.Copy(destinationPath, legacyJsonFilePath);
+                string legacyJsonFilePath = WriteLegacyJsonLayout(destinationPath);
                 m_Log.AddEntry(LogLevel.Info, $"Json build layout written to {legacyJsonFilePath}");
             }
 
             ProjectConfigData.AddBuildReportFilePath(destinationPath);
-            s_LayoutCompleteCallback?.Invoke(destinationPath, layout);
+#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+            AddressablesBuildHistorySupport.RegisterBuild(layout, destinationPath);
+#endif
+            RaiseLayoutCompleted(destinationPath, layout);
             return ReturnCode.Success;
         }
 
@@ -1499,7 +1519,17 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 layout.BuildType = BuildType.NewBuild;
 
             string destinationPath = TimeStampedReportPath(layout.BuildStart);
+            SetDuration(layout);
             layout.WriteToFile(destinationPath, k_PrettyPrint);
+
+            if (ProjectConfigData.GenerateBuildLayout)
+            {
+                if (ProjectConfigData.BuildLayoutReportFileFormat == ProjectConfigData.ReportFileFormat.JSON)
+                    WriteLegacyJsonLayout(destinationPath);
+#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+                AddressablesBuildHistorySupport.RegisterBuild(layout, destinationPath);
+#endif
+            }
         }
     }
 }

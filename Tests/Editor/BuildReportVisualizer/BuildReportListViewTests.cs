@@ -41,7 +41,7 @@ namespace Tests.Editor.BuildReportVisualizer
         static BuildReportListView CreateListViewWithReports(int count, out string[] paths)
         {
             paths = AddReportPaths(count);
-            var listView = new BuildReportListView(null, null);
+            var listView = new BuildReportListView(null);
             listView.RefreshItemsFromProjectConfig();
             return listView;
         }
@@ -56,7 +56,7 @@ namespace Tests.Editor.BuildReportVisualizer
         [TestCase("2.3.16", true)]
         public void TestValidBuildLayout(string version, bool isValid)
         {
-            var listView = new BuildReportListView(null, null);
+            var listView = new BuildReportListView(null);
             Assert.AreEqual(isValid, listView.BuildLayoutIsValid(version));
         }
 
@@ -109,7 +109,7 @@ namespace Tests.Editor.BuildReportVisualizer
         [Test]
         public void RemoveReport_MatchesFilePathsWithDifferentDirectorySeparators()
         {
-            var listView = new BuildReportListView(null, null);
+            var listView = new BuildReportListView(null);
             ProjectConfigData.AddBuildReportFilePath("Test/Reports/report.json");
             listView.RefreshItemsFromProjectConfig();
 

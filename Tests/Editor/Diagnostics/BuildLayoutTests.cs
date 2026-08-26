@@ -5,6 +5,7 @@ using AddressableAssetsIntegrationTests;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
 using UnityEditor.AddressableAssets.Build.Layout;
+using UnityEditor.AddressableAssets.Tests.Editor.TestObjects;
 using UnityEditor.Animations;
 using UnityEngine;
 
@@ -608,6 +609,52 @@ namespace UnityEditor.AddressableAssets.Tests.Diagnostics
         }
 
         [Test]
+        [TestCase(true)]
+        [TestCase(false)]
+        public void BuildLayoutBundle_SaveAndLoad_ReadsSessionGuidForHeader(bool prettyPrint)
+        {
+            BuildLayout layout = CreateTestLayout(DateTime.Now);
+            layout.AddressablesBuildSessionGUID = GUID.Generate();
+            string filePath = $"{Application.dataPath}/testLayout.json";
+
+            try
+            {
+                layout.WriteToFile(filePath, prettyPrint);
+                BuildLayout readLayout = BuildLayout.Open(filePath);
+                Assert.AreEqual(layout.AddressablesBuildSessionGUID, readLayout.Header.AddressablesBuildSessionGUID, "Header Data written or Read incorrectly");
+            }
+            finally
+            {
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+            }
+        }
+
+        [Test]
+        public void BuildLayoutBundle_SaveAndLoad_RestoresSessionGuidFromString()
+        {
+            BuildLayout layout = CreateTestLayout(DateTime.Now);
+            layout.AddressablesBuildSessionGUID = GUID.Generate();
+            string filePath = $"{Application.dataPath}/testLayout.json";
+
+            try
+            {
+                layout.WriteToFile(filePath, false);
+                string json = File.ReadAllText(filePath);
+                json = json.Replace($"\"AddressablesBuildSessionGUID\":\"{layout.AddressablesBuildSessionGUID}\"", "\"AddressablesBuildSessionGUID\":{}");
+                File.WriteAllText(filePath, json);
+
+                BuildLayout readLayout = BuildLayout.Open(filePath);
+                Assert.AreEqual(layout.AddressablesBuildSessionGUID, readLayout.Header.AddressablesBuildSessionGUID, "Session GUID was not restored from BuildSessionGuidString");
+            }
+            finally
+            {
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+            }
+        }
+
+        [Test]
         public void BuildLayoutBundle_SaveAndLoad_ReadsCorrectDataForBody()
         {
             DateTime time = DateTime.Now;
@@ -637,7 +684,7 @@ namespace UnityEditor.AddressableAssets.Tests.Diagnostics
         [TestCase(typeof(GameObject), AssetType.GameObject)]
         [TestCase(typeof(SceneAsset), AssetType.Scene)]
         [TestCase(typeof(AnimatorController), AssetType.AnimationController)]
-        [TestCase(typeof(TestObject), AssetType.ScriptableObject)]
+        [TestCase(typeof(TestEditorObject), AssetType.ScriptableObject)]
         [TestCase(typeof(ObjectReferenceMonoBehaviour), AssetType.MonoBehaviour)]
         public void GetAssetType_ReturnsCorrect(System.Type typeIn, AssetType expectedType)
         {

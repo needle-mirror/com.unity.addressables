@@ -186,5 +186,74 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.DefaultGroup = oldDefault;
             Settings.RemoveGroup(group1);
         }
+
+        class GatherCountingGroup : AddressableAssetGroup
+        {
+            internal int GatherCalls;
+
+            public override void GatherAllAssets(List<AddressableAssetEntry> results, bool includeSelf, bool recurseAll,
+                bool includeSubObjects, Func<AddressableAssetEntry, bool> entryFilter = null)
+            {
+                GatherCalls++;
+                base.GatherAllAssets(results, includeSelf, recurseAll, includeSubObjects, entryFilter);
+            }
+        }
+
+        class PlainDerivedGroup : AddressableAssetGroup
+        {
+        }
+
+        T CreateDerivedGroupWithEntry<T>() where T : AddressableAssetGroup
+        {
+            var group = ScriptableObject.CreateInstance<T>();
+            group.Initialize(Settings, typeof(T).Name, System.Guid.NewGuid().ToString("N"), false);
+            group.AddAssetEntry(new AddressableAssetEntry(m_AssetGUID, "test", group, false));
+            return group;
+        }
+
+        [Test]
+        public void WhenGroupIsSubclassed_GatherWithEnumerator_CallsTheOverride()
+        {
+            var group = CreateDerivedGroupWithEntry<GatherCountingGroup>();
+            try
+            {
+                var results = new List<AddressableAssetEntry>();
+                using (var enumerator = new AddressableFolderEnumerator(Settings, false, null))
+                {
+                    group.GatherAllAssets(results, true, true, false, null, enumerator);
+                }
+
+                Assert.AreEqual(1, group.GatherCalls,
+                    "The build path must still reach an override of the public GatherAllAssets.");
+                Assert.AreEqual(1, results.Count, "The override should still have produced the group's entry.");
+            }
+            finally
+            {
+                ScriptableObject.DestroyImmediate(group);
+            }
+        }
+
+        [Test]
+        public void WhenSubclassDoesNotOverride_GatherWithEnumerator_DoesNotRecurse()
+        {
+            var group = CreateDerivedGroupWithEntry<PlainDerivedGroup>();
+            try
+            {
+                // Routing a derived group to the public form sends it back here with a null
+                // enumerator. Without that stopping the routing, this recurses until the
+                // stack runs out rather than failing an assert.
+                var results = new List<AddressableAssetEntry>();
+                using (var enumerator = new AddressableFolderEnumerator(Settings, false, null))
+                {
+                    group.GatherAllAssets(results, true, true, false, null, enumerator);
+                }
+
+                Assert.AreEqual(1, results.Count);
+            }
+            finally
+            {
+                ScriptableObject.DestroyImmediate(group);
+            }
+        }
     }
 }

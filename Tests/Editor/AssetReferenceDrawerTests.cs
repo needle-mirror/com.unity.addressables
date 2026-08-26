@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEditor.AddressableAssets.GUI;
@@ -13,6 +14,7 @@ using UnityEngine.TestTools;
 using UnityEngine.U2D;
 using Object = UnityEngine.Object;
 using UnityEditor.AddressableAssets.GUI.Adapters;
+using UnityEditor.AddressableAssets.Tests.Editor.TestObjects;
 
 namespace UnityEditor.AddressableAssets.Tests
 {
@@ -50,27 +52,27 @@ namespace UnityEditor.AddressableAssets.Tests
         internal SerializedProperty _property;
         internal SpriteAtlas _atlas;
 
-        internal class TestObjectWithRef : TestObject
+        internal class TestEditorObjectWithRef : TestEditorObject
         {
             [SerializeField]
             public AssetReference Reference = new AssetReference();
         }
 
-        internal class TestObjectWithRestrictedRef : TestObject
+        internal class TestEditorObjectWithRestrictedRef : TestEditorObject
         {
             [SerializeField]
             [AssetReferenceUILabelRestriction(new[] {"HD"})]
             private AssetReference Reference = new AssetReference();
         }
 
-        internal class TestObjectWithRestrictedRefByMultipleLabels : TestObject
+        internal class TestEditorObjectWithRestrictedRefByMultipleLabels : TestEditorObject
         {
             [SerializeField]
             [AssetReferenceUILabelRestriction(new[] {"HDR", "test", "default"})]
             private AssetReference ReferenceMultiple = new AssetReference();
         }
 
-        internal class TestObjectWithRestrictedRefInNestedClass : TestObject
+        internal class TestEditorObjectWithRestrictedRefInNestedClass : TestEditorObject
         {
             [SerializeField]
             NestedClass OneLevelNested = new NestedClass();
@@ -94,16 +96,38 @@ namespace UnityEditor.AddressableAssets.Tests
             }
         }
 
-        internal class TestSubObjectsSpriteAtlas : TestObject
+        internal class TestEditorSubObjectsSpriteAtlas : TestEditorObject
         {
             [SerializeField]
             public AssetReferenceSprite testSpriteReference;
         }
 
-        internal class TestSubObjectsSpriteAtlasList : TestObject
+        internal class TestEditorSubObjectsSpriteAtlasList : TestEditorObject
         {
             [SerializeField]
             public AssetReferenceSprite[] testSpriteReference;
+        }
+
+        internal class TestEditorObjectWithAtlasedSpriteRef : TestEditorObject
+        {
+            [SerializeField]
+            public AssetReferenceAtlasedSprite Reference = new AssetReferenceAtlasedSprite("");
+        }
+
+        internal class ObjectOnlyRejectingUIRestriction : AssetReferenceUIRestriction
+        {
+            public override bool ValidateAsset(Object obj)
+            {
+                return false;
+            }
+        }
+
+        internal class ObjectOnlyGameObjectUIRestriction : AssetReferenceUIRestriction
+        {
+            public override bool ValidateAsset(Object obj)
+            {
+                return obj is GameObject;
+            }
         }
 
         internal class TestAssetReferenceDrawer : AssetReferenceDrawer
@@ -207,7 +231,7 @@ namespace UnityEditor.AddressableAssets.Tests
             SetupDefaultSettings();
 
             // Setup property
-            TestObjectWithRef obj = ScriptableObject.CreateInstance<TestObjectWithRef>();
+            TestEditorObjectWithRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
             Settings.CreateOrMoveEntry(newEntryGuid, Settings.groups[0]);
             obj.Reference = ar;
             var so = new SerializedObject(obj);
@@ -215,7 +239,7 @@ namespace UnityEditor.AddressableAssets.Tests
             m_AssetReferenceDrawer.m_AssetRefObject = ar;
             AssetReferenceDrawerUtilities.GatherFilters(property);
             string sprGuid;
-            FieldInfo propertyFieldInfo = typeof(TestObjectWithRef).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorObjectWithRef).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, obj, propertyFieldInfo, "", out sprGuid);
 
             return property;
@@ -235,7 +259,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var targetObjects = new Object[numReferences];
             for (int i = 0; i < numReferences; i++)
             {
-                var testScriptable = TestSubObjectsSpriteAtlas.CreateInstance<TestSubObjectsSpriteAtlas>();
+                var testScriptable = TestEditorSubObjectsSpriteAtlas.CreateInstance<TestEditorSubObjectsSpriteAtlas>();
 
                 // Preset references for certain tests
                 if (setReferences && i <= numToSet)
@@ -273,7 +297,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var targetObjects = new Object[numElements];
             for (int refIdx = 0; refIdx < numReferences; refIdx++)
             {
-                var testScriptable = TestSubObjectsSpriteAtlasList.CreateInstance<TestSubObjectsSpriteAtlasList>();
+                var testScriptable = TestEditorSubObjectsSpriteAtlasList.CreateInstance<TestEditorSubObjectsSpriteAtlasList>();
                 testScriptable.testSpriteReference = new AssetReferenceSprite[numElements];
 
                 // Preset reference array elements for certain tests
@@ -363,6 +387,26 @@ namespace UnityEditor.AddressableAssets.Tests
             return spr;
         }
 
+        internal Sprite SetUpSpriteNotInAtlas(out string spriteGuid, out string spritePath)
+        {
+            var texture = new Texture2D(32, 32);
+            var data = ImageConversion.EncodeToPNG(texture);
+            UnityEngine.Object.DestroyImmediate(texture);
+
+            Directory.CreateDirectory(TestFolder);
+            spritePath = TestFolder + "/testSpriteNotInAtlas.png";
+            File.WriteAllBytes(spritePath, data);
+
+            AssetDatabase.ImportAsset(spritePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(spritePath);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.SaveAndReimport();
+
+            spriteGuid = AssetDatabase.AssetPathToGUID(spritePath);
+            return (Sprite)AssetDatabase.LoadAssetAtPath(spritePath, typeof(Sprite));
+        }
+
         internal SpriteAtlas SetUpSpriteAtlas(int numAtlasObjects, out List<Object> subAssets)
         {
             // Setup Sprite data
@@ -424,7 +468,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var atlas = SetUpSpriteAtlas(numAtlasObjects, out _subAssets);
             _property = SetupForSetSubAssets(atlas, numReferences, true);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             AssetReferenceDrawerUtilities.SetSubAssets(_property, _subAssets[selectedId], propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
             AssetReferenceDrawerUtilities.GatherFilters(_property);
         }
@@ -439,7 +483,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
         public void SetObjectForPerformanceTests()
         {
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, _property, _atlas, propertyFieldInfo,
                 m_AssetReferenceDrawer.m_label.text, out string guid);
         }
@@ -447,13 +491,13 @@ namespace UnityEditor.AddressableAssets.Tests
         public void SetMainAssetsForPerformanceTests()
         {
             _subAssets = new List<Object>();
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             AssetReferenceDrawerUtilities.SetMainAssets(ref m_AssetReferenceDrawer.m_ReferencesSame, _property, _atlas, null, propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
         }
 
         public void GetNameForAssetForPerformanceTests()
         {
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             AssetReferenceDrawerUtilities.GetNameForAsset(ref m_AssetReferenceDrawer.m_ReferencesSame, _property, false, propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
         }
 
@@ -469,7 +513,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
         public void CheckTargetObjectsSubassetsAreDifferentForPerformanceTests()
         {
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             AssetReferenceDrawerUtilities.CheckTargetObjectsSubassetsAreDifferent(_property, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName, propertyFieldInfo,
                 m_AssetReferenceDrawer.m_label.text);
         }
@@ -480,7 +524,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void AssetReferenceDrawer_DrawsCorrectLabelName()
         {
-            var testScriptable = TestSubObjectsSpriteAtlasList.CreateInstance<TestSubObjectsSpriteAtlasList>();
+            var testScriptable = TestEditorSubObjectsSpriteAtlasList.CreateInstance<TestEditorSubObjectsSpriteAtlasList>();
             testScriptable.testSpriteReference = new AssetReferenceSprite[1];
             var serializedObject = new SerializedObject(testScriptable);
 
@@ -491,7 +535,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var label = new GUIContent("Custom property");
             var expectedLabel = label.text;
 
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlasList).GetField("testSpriteReference", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlasList).GetField("testSpriteReference", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             property.GetActualObjectForSerializedProperty<AssetReference>(propertyFieldInfo, ref expectedLabel);
 
             Assert.AreEqual(label.text, expectedLabel, "Default label name is present instead of Custom label name");
@@ -501,7 +545,7 @@ namespace UnityEditor.AddressableAssets.Tests
         public void CanRestrictLabel()
         {
             m_AssetReferenceDrawer = new AssetReferenceDrawer();
-            TestObjectWithRestrictedRef obj = ScriptableObject.CreateInstance<TestObjectWithRestrictedRef>();
+            TestEditorObjectWithRestrictedRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRestrictedRef>();
             var so = new SerializedObject(obj);
             var property = so.FindProperty("Reference");
             List<AssetReferenceUIRestrictionSurrogate> restrictions = AssetReferenceDrawerUtilities.GatherFilters(property);
@@ -515,7 +559,7 @@ namespace UnityEditor.AddressableAssets.Tests
         public void CanRestrictMultipleLabels()
         {
             m_AssetReferenceDrawer = new AssetReferenceDrawer();
-            TestObjectWithRestrictedRefByMultipleLabels obj = ScriptableObject.CreateInstance<TestObjectWithRestrictedRefByMultipleLabels>();
+            TestEditorObjectWithRestrictedRefByMultipleLabels obj = ScriptableObject.CreateInstance<TestEditorObjectWithRestrictedRefByMultipleLabels>();
             var so = new SerializedObject(obj);
             var property = so.FindProperty("ReferenceMultiple");
             AssetReferenceDrawerUtilities.GatherFilters(property);
@@ -532,7 +576,7 @@ namespace UnityEditor.AddressableAssets.Tests
         public void AssetReferenceDrawer_GatherFilters_CanRestrictInSingleNestedClass()
         {
             m_AssetReferenceDrawer = new AssetReferenceDrawer();
-            TestObjectWithRestrictedRefInNestedClass obj = ScriptableObject.CreateInstance<TestObjectWithRestrictedRefInNestedClass>();
+            TestEditorObjectWithRestrictedRefInNestedClass obj = ScriptableObject.CreateInstance<TestEditorObjectWithRestrictedRefInNestedClass>();
             var so = new SerializedObject(obj);
             var oneLevelProp = so.FindProperty("OneLevelNested.ReferenceInNestedClass");
             var restrictions = AssetReferenceDrawerUtilities.GatherFilters(oneLevelProp);
@@ -545,7 +589,7 @@ namespace UnityEditor.AddressableAssets.Tests
         public void AssetReferenceDrawer_GatherFilters_CanRestrictInDoubleNestedClass()
         {
             m_AssetReferenceDrawer = new AssetReferenceDrawer();
-            TestObjectWithRestrictedRefInNestedClass obj = ScriptableObject.CreateInstance<TestObjectWithRestrictedRefInNestedClass>();
+            TestEditorObjectWithRestrictedRefInNestedClass obj = ScriptableObject.CreateInstance<TestEditorObjectWithRestrictedRefInNestedClass>();
             var so = new SerializedObject(obj);
             var twoLevelProp = so.FindProperty("TwoLevelNested.Nested.ReferenceInNestedClass");
             var restrictions = AssetReferenceDrawerUtilities.GatherFilters(twoLevelProp);
@@ -562,7 +606,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var testObject = SetupAssetReference(out assetPath);
 
             // Setup property
-            TestObjectWithRestrictedRef obj = ScriptableObject.CreateInstance<TestObjectWithRestrictedRef>();
+            TestEditorObjectWithRestrictedRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRestrictedRef>();
             var so = new SerializedObject(obj);
             var property = so.FindProperty("Reference");
             var restrictions = AssetReferenceDrawerUtilities.GatherFilters(property);
@@ -570,7 +614,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Test
             string guid;
 
-            FieldInfo propertyFieldInfo = typeof(TestObjectWithRestrictedRef).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorObjectWithRestrictedRef).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, testObject, propertyFieldInfo, "",
                 out guid));
             Assert.False(AssetReferenceDrawerUtilities.ValidateAsset(m_AssetReferenceDrawer.m_AssetRefObject, restrictions, assetPath));
@@ -586,7 +630,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var testObject = SetupAssetReference(out assetPath);
 
             // Setup property
-            TestObjectWithRef obj = ScriptableObject.CreateInstance<TestObjectWithRef>();
+            TestEditorObjectWithRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
             var so = new SerializedObject(obj);
             var property = so.FindProperty("Reference");
             var restrictions = AssetReferenceDrawerUtilities.GatherFilters(property);
@@ -594,7 +638,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Test
             string guid;
 
-            FieldInfo propertyFieldInfo = typeof(TestObjectWithRestrictedRef).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorObjectWithRestrictedRef).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, testObject, propertyFieldInfo, "",
                 out guid));
             Assert.IsTrue(AssetReferenceDrawerUtilities.ValidateAsset(m_AssetReferenceDrawer.m_AssetRefObject, restrictions, assetPath));
@@ -672,7 +716,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Drawer Setup
             var testAssetReferenceDrawer = new TestAssetReferenceDrawer();
             testAssetReferenceDrawer.SetAssetReference(new AssetReference());
-            TestObjectWithRef obj = ScriptableObject.CreateInstance<TestObjectWithRef>();
+            TestEditorObjectWithRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
             var so = new SerializedObject(obj);
             var property = so.FindProperty("Reference");
             testAssetReferenceDrawer.m_Restrictions = AssetReferenceDrawerUtilities.GatherFilters(property);
@@ -729,7 +773,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // ScriptableObject property and Drawer setup
             m_AssetReferenceDrawer = new AssetReferenceDrawer();
             m_AssetReferenceDrawer.m_AssetRefObject = new AssetReference();
-            TestObjectWithRestrictedRef obj = ScriptableObject.CreateInstance<TestObjectWithRestrictedRef>();
+            TestEditorObjectWithRestrictedRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRestrictedRef>();
             var so = new SerializedObject(obj);
             var propertyName = "Reference";
             var property = so.FindProperty(propertyName);
@@ -761,6 +805,238 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void AssetReferenceDrawerUtilities_SetObject_InvalidAssetForReferenceType_ReturnsFalseWithNullGuid()
+        {
+            // Setup property
+            m_AssetReferenceDrawer = new AssetReferenceDrawer();
+            TestEditorObjectWithAtlasedSpriteRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithAtlasedSpriteRef>();
+            var so = new SerializedObject(obj);
+            var property = so.FindProperty("Reference");
+            m_AssetReferenceDrawer.m_AssetRefObject = obj.Reference;
+            SetupDefaultSettings();
+
+            var sprite = SetUpSpriteNotInAtlas(out string spriteGuid, out string spritePath);
+
+            // Test
+            LogAssert.Expect(LogType.Warning, new Regex("Invalid asset for AssetReference path"));
+            var result = AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, sprite, null, "", out string guid);
+            Assert.IsFalse(result, "SetObject should report failure when the asset fails the reference type validation.");
+            Assert.IsTrue(string.IsNullOrEmpty(guid));
+            Assert.IsTrue(string.IsNullOrEmpty(m_AssetReferenceDrawer.m_AssetRefObject.AssetGUID));
+
+            // Cleanup
+            AssetDatabase.DeleteAsset(spritePath);
+            m_AssetReferenceDrawer = null;
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void AssetReferenceDrawerUtilities_SetObject_SpriteWithNoSettings_AssignsWithoutAtlasLookup()
+        {
+            // Setup property
+            m_AssetReferenceDrawer = new AssetReferenceDrawer();
+            TestEditorObjectWithRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
+            var so = new SerializedObject(obj);
+            var property = so.FindProperty("Reference");
+            m_AssetReferenceDrawer.m_AssetRefObject = obj.Reference;
+
+            var sprite = SetUpSpriteNotInAtlas(out string spriteGuid, out string spritePath);
+            var previousSettings = AddressableAssetSettingsDefaultObject.Settings;
+            AddressableAssetSettingsDefaultObject.Settings = null;
+
+            // Test
+            try
+            {
+                LogAssert.Expect(LogType.Error, "Invalid guid for default AddressableAssetSettings object.");
+                var result = AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, sprite, null, "", out string guid);
+                Assert.IsTrue(result, "SetObject should assign a sprite without the atlas lookup when no settings exist.");
+                Assert.AreEqual(spriteGuid, guid, "The sprite's texture should be assigned as the main asset.");
+                Assert.AreEqual(sprite.name, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName, "The sprite should be assigned as the subobject.");
+            }
+            finally
+            {
+                AddressableAssetSettingsDefaultObject.Settings = previousSettings;
+            }
+
+            // Cleanup
+            AssetDatabase.DeleteAsset(spritePath);
+            m_AssetReferenceDrawer = null;
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void ValidateDrag_MainAsset_OnPlainAssetReference_IsAccepted()
+        {
+            TestEditorObjectWithRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
+            var so = new SerializedObject(obj);
+            var restrictions = AssetReferenceDrawerUtilities.GatherFilters(so.FindProperty("Reference"));
+            var prefabPath = ConfigFolder + "/test" + "/test.prefab";
+            CreateTestPrefabAddressable(prefabPath, false);
+            var prefab = AssetDatabase.LoadMainAssetAtPath(prefabPath);
+
+            var rejected = AssetReferenceDrawerUtilities.ValidateDrag(obj.Reference, restrictions, null, new Object[] {prefab}, new string[] {prefabPath});
+            Assert.IsFalse(rejected, "Hovering any asset over an untyped AssetReference field should be accepted.");
+
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void ValidateDrag_PrefabMainAsset_OnGameObjectReference_IsAccepted()
+        {
+            var reference = new AssetReferenceGameObject("");
+            var prefabPath = ConfigFolder + "/test" + "/test.prefab";
+            CreateTestPrefabAddressable(prefabPath, false);
+            var prefab = AssetDatabase.LoadMainAssetAtPath(prefabPath);
+
+            var rejected = AssetReferenceDrawerUtilities.ValidateDrag(reference, new List<AssetReferenceUIRestrictionSurrogate>(), null, new Object[] {prefab}, new string[] {prefabPath});
+            Assert.IsFalse(rejected, "Hovering a prefab main asset over an AssetReferenceGameObject field should be accepted.");
+
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void ValidateDrag_SpriteSubAsset_OnTypedReference_IsAccepted()
+        {
+            var reference = new AssetReferenceT<Sprite>("");
+            var sprite = SetUpSpriteNotInAtlas(out string spriteGuid, out string spritePath);
+
+            var rejected = AssetReferenceDrawerUtilities.ValidateDrag(reference, new List<AssetReferenceUIRestrictionSurrogate>(), null, new Object[] {sprite}, new string[] {spritePath});
+            Assert.IsFalse(rejected, "Hovering a Sprite subasset over a typed Sprite reference should be accepted.");
+
+            AssetDatabase.DeleteAsset(spritePath);
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void ValidateDrag_SpriteTextureMainAsset_OnTypedReference_IsRejected()
+        {
+            var reference = new AssetReferenceT<Sprite>("");
+            SetUpSpriteNotInAtlas(out string spriteGuid, out string spritePath);
+            var texture = AssetDatabase.LoadMainAssetAtPath(spritePath);
+
+            var rejected = AssetReferenceDrawerUtilities.ValidateDrag(reference, new List<AssetReferenceUIRestrictionSurrogate>(), null, new Object[] {texture}, new string[] {spritePath});
+            Assert.IsTrue(rejected, "A main asset whose matching object only exists as a subasset should be rejected for a typed reference, since SetObject cannot assign it.");
+
+            AssetDatabase.DeleteAsset(spritePath);
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void ValidateDrag_SpriteTextureMainAsset_OnSpriteRef_IsAccepted()
+        {
+            TestEditorSubObjectsSpriteAtlas obj = ScriptableObject.CreateInstance<TestEditorSubObjectsSpriteAtlas>();
+            obj.testSpriteReference = new AssetReferenceSprite("");
+            var so = new SerializedObject(obj);
+            var restrictions = AssetReferenceDrawerUtilities.GatherFilters(so.FindProperty("testSpriteReference"));
+            SetUpSpriteNotInAtlas(out string spriteGuid, out string spritePath);
+            var texture = AssetDatabase.LoadMainAssetAtPath(spritePath);
+
+            var rejected = AssetReferenceDrawerUtilities.ValidateDrag(obj.testSpriteReference, restrictions, null, new Object[] {texture}, new string[] {spritePath});
+            Assert.IsFalse(rejected, "Hovering a sprite-mode Texture2D over an AssetReferenceSprite field should be accepted.");
+
+            AssetDatabase.DeleteAsset(spritePath);
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void ValidateDrag_SpriteAtlasMainAsset_OnSpriteRef_IsAccepted()
+        {
+            TestEditorSubObjectsSpriteAtlas obj = ScriptableObject.CreateInstance<TestEditorSubObjectsSpriteAtlas>();
+            obj.testSpriteReference = new AssetReferenceSprite("");
+            var so = new SerializedObject(obj);
+            var restrictions = AssetReferenceDrawerUtilities.GatherFilters(so.FindProperty("testSpriteReference"));
+            var atlas = SetUpSpriteAtlas(1, out List<Object> subAssets);
+            var atlasPath = AssetDatabase.GetAssetPath(atlas);
+
+            var rejected = AssetReferenceDrawerUtilities.ValidateDrag(obj.testSpriteReference, restrictions, null, new Object[] {atlas}, new string[] {atlasPath});
+            Assert.IsFalse(rejected, "Hovering a SpriteAtlas over an AssetReferenceSprite field should be accepted.");
+
+            Settings.RemoveAssetEntry(AssetDatabase.AssetPathToGUID(atlasPath));
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void ValidateDrag_SpriteAtlasMainAsset_OnAtlasedSpriteRef_IsAccepted()
+        {
+            TestEditorObjectWithAtlasedSpriteRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithAtlasedSpriteRef>();
+            var so = new SerializedObject(obj);
+            var restrictions = AssetReferenceDrawerUtilities.GatherFilters(so.FindProperty("Reference"));
+            var atlas = SetUpSpriteAtlas(1, out List<Object> subAssets);
+            var atlasPath = AssetDatabase.GetAssetPath(atlas);
+
+            var rejected = AssetReferenceDrawerUtilities.ValidateDrag(obj.Reference, restrictions, null, new Object[] {atlas}, new string[] {atlasPath});
+            Assert.IsFalse(rejected, "Hovering a SpriteAtlas over an AssetReferenceAtlasedSprite field should be accepted.");
+
+            Settings.RemoveAssetEntry(AssetDatabase.AssetPathToGUID(atlasPath));
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void ValidateDrag_TextureMainAsset_OnAtlasedSpriteRef_IsRejected()
+        {
+            TestEditorObjectWithAtlasedSpriteRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithAtlasedSpriteRef>();
+            var so = new SerializedObject(obj);
+            var restrictions = AssetReferenceDrawerUtilities.GatherFilters(so.FindProperty("Reference"));
+            SetUpSpriteNotInAtlas(out string spriteGuid, out string spritePath);
+            var texture = AssetDatabase.LoadMainAssetAtPath(spritePath);
+
+            var rejected = AssetReferenceDrawerUtilities.ValidateDrag(obj.Reference, restrictions, null, new Object[] {texture}, new string[] {spritePath});
+            Assert.IsTrue(rejected, "Hovering a Texture2D main asset over an AssetReferenceAtlasedSprite field should be rejected.");
+
+            AssetDatabase.DeleteAsset(spritePath);
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void ValidateDrag_NonAtlasedSprite_OnAtlasedSpriteRef_IsRejected()
+        {
+            TestEditorObjectWithAtlasedSpriteRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithAtlasedSpriteRef>();
+            var so = new SerializedObject(obj);
+            var restrictions = AssetReferenceDrawerUtilities.GatherFilters(so.FindProperty("Reference"));
+            var sprite = SetUpSpriteNotInAtlas(out string spriteGuid, out string spritePath);
+
+            var rejected = AssetReferenceDrawerUtilities.ValidateDrag(obj.Reference, restrictions, null, new Object[] {sprite}, new string[] {spritePath});
+            Assert.IsTrue(rejected, "A Sprite that is not in an atlas should be rejected for an AssetReferenceAtlasedSprite field.");
+
+            AssetDatabase.DeleteAsset(spritePath);
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void ValidateDrag_MainAsset_WithObjectOnlyCustomRestriction_MatchingAsset_IsAccepted()
+        {
+            TestEditorObjectWithRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
+            var surrogate = new AssetReferenceUIRestrictionSurrogate();
+            surrogate.Init(new ObjectOnlyGameObjectUIRestriction());
+            var restrictions = new List<AssetReferenceUIRestrictionSurrogate> {surrogate};
+            var prefabPath = ConfigFolder + "/test" + "/test.prefab";
+            CreateTestPrefabAddressable(prefabPath, false);
+            var prefab = AssetDatabase.LoadMainAssetAtPath(prefabPath);
+
+            var rejected = AssetReferenceDrawerUtilities.ValidateDrag(obj.Reference, restrictions, null, new Object[] {prefab}, new string[] {prefabPath});
+            Assert.IsFalse(rejected, "A custom UI restriction that accepts the dragged main asset should not reject the drag.");
+
+            TearDownTestDir();
+        }
+
+        [Test]
+        public void ValidateDrag_MainAsset_WithObjectOnlyCustomRestriction_NonMatchingAsset_IsRejected()
+        {
+            TestEditorObjectWithRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
+            var surrogate = new AssetReferenceUIRestrictionSurrogate();
+            surrogate.Init(new ObjectOnlyRejectingUIRestriction());
+            var restrictions = new List<AssetReferenceUIRestrictionSurrogate> {surrogate};
+            var prefabPath = ConfigFolder + "/test" + "/test.prefab";
+            CreateTestPrefabAddressable(prefabPath, false);
+            var prefab = AssetDatabase.LoadMainAssetAtPath(prefabPath);
+
+            var rejected = AssetReferenceDrawerUtilities.ValidateDrag(obj.Reference, restrictions, null, new Object[] {prefab}, new string[] {prefabPath});
+            Assert.IsTrue(rejected, "A custom UI restriction that only overrides ValidateAsset(Object) should still reject a dragged main asset.");
+
+            TearDownTestDir();
+        }
+
+        [Test]
         public void AssetReferenceDrawer_SetObject_CanSetObject()
         {
             // Setup AssetReference
@@ -768,7 +1044,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var testObject = SetupAssetReference(out assetPath);
 
             // Setup property
-            TestObjectWithRef obj = ScriptableObject.CreateInstance<TestObjectWithRef>();
+            TestEditorObjectWithRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
             var so = new SerializedObject(obj);
             var property = so.FindProperty("Reference");
             AssetReferenceDrawerUtilities.GatherFilters(property);
@@ -776,7 +1052,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Test
             string guid;
 
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, testObject, propertyFieldInfo, "",
                 out guid));
             Assert.AreEqual(m_AssetGUID, m_AssetReferenceDrawer.m_AssetRefObject.AssetGUID);
@@ -796,7 +1072,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var testObject = SetUpSingleSprite(out assetGuid);
 
             // Setup property
-            TestObjectWithRef obj = ScriptableObject.CreateInstance<TestObjectWithRef>();
+            TestEditorObjectWithRef obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
             var so = new SerializedObject(obj);
             var property = so.FindProperty("Reference");
             AssetReferenceDrawerUtilities.GatherFilters(property);
@@ -804,7 +1080,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Test
             string guid;
 
-            FieldInfo propertyFieldInfo = typeof(TestObjectWithRef).GetField("Reference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorObjectWithRef).GetField("Reference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             SetupDefaultSettings();
             Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, testObject, propertyFieldInfo, "",
                 out guid));
@@ -843,7 +1119,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             // Setup property
             var ar = new AssetReferenceT<Mesh>("");
-            var obj = ScriptableObject.CreateInstance<TestObjectWithRef>();
+            var obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
             obj.Reference = ar;
             var so = new SerializedObject(obj);
             var property = so.FindProperty("Reference");
@@ -853,7 +1129,7 @@ namespace UnityEditor.AddressableAssets.Tests
             m_AssetReferenceDrawer = new AssetReferenceDrawer();
             m_AssetReferenceDrawer.m_AssetRefObject = ar;
             AssetReferenceDrawerUtilities.GatherFilters(property);
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             var success = AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, meshSubAsset, propertyFieldInfo,
                 "", out guid);
 
@@ -872,7 +1148,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             // Test
             string guid;
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, null, propertyFieldInfo, "", out guid);
             Assert.AreEqual(null, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName);
             Assert.AreEqual(string.Empty, m_AssetReferenceDrawer.m_AssetRefObject.AssetGUID);
@@ -910,7 +1186,7 @@ namespace UnityEditor.AddressableAssets.Tests
             string guid;
             EditorUtility.ClearDirty(property.serializedObject.targetObject);
             var prevDirty = EditorUtility.IsDirty(property.serializedObject.targetObject);
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, null, propertyFieldInfo, "", out guid);
             Assert.IsFalse(prevDirty);
             Assert.IsTrue(EditorUtility.IsDirty(property.serializedObject.targetObject));
@@ -932,13 +1208,13 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 
             // Test
             AssetReferenceDrawerUtilities.SetSubAssets(property, subAssets[selectedId], propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
             foreach (var obj in property.serializedObject.targetObjects)
             {
-                Assert.AreEqual(((TestSubObjectsSpriteAtlas)obj).testSpriteReference.SubObjectName, subAssets[selectedId].name);
+                Assert.AreEqual(((TestEditorSubObjectsSpriteAtlas)obj).testSpriteReference.SubObjectName, subAssets[selectedId].name);
             }
 
             // Cleanup
@@ -956,7 +1232,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var property = SetupForSetSubAssetsList(atlas, numReferences, selectedElement, numElements, true, numReferences);
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlasList).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlasList).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_label = new GUIContent("Element " + selectedElement);
 
             // Test
@@ -965,7 +1241,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Check that only the selected element of each object's reference list was set to null
             foreach (var obj in property.serializedObject.targetObjects)
             {
-                var checkList = ((TestSubObjectsSpriteAtlasList)obj).testSpriteReference;
+                var checkList = ((TestEditorSubObjectsSpriteAtlasList)obj).testSpriteReference;
                 for (int currElement = checkList.Length - 1; currElement >= 0; currElement--)
                 {
                     if (currElement == selectedElement)
@@ -991,14 +1267,14 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 
             // Test
             AssetReferenceDrawerUtilities.SetSubAssets(property, subAssets[selectedId], propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
             AssetReferenceDrawerUtilities.SetSubAssets(property, null, propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
             foreach (var obj in property.serializedObject.targetObjects)
             {
-                Assert.AreEqual(null, ((TestSubObjectsSpriteAtlas)obj).testSpriteReference.SubObjectName);
+                Assert.AreEqual(null, ((TestEditorSubObjectsSpriteAtlas)obj).testSpriteReference.SubObjectName);
             }
 
             // Cleanup
@@ -1016,7 +1292,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var property = SetupForSetSubAssetsList(atlas, numReferences, selectedElement, numElements, true, numReferences);
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlasList).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlasList).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_label = new GUIContent("Element " + selectedElement);
 
             // Test
@@ -1025,7 +1301,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Check that only the selected element of each object's reference list was set to null
             foreach (var obj in property.serializedObject.targetObjects)
             {
-                var checkList = ((TestSubObjectsSpriteAtlasList)obj).testSpriteReference;
+                var checkList = ((TestEditorSubObjectsSpriteAtlasList)obj).testSpriteReference;
                 for (int currElement = 0; currElement < checkList.Length; currElement++)
                 {
                     if (currElement == selectedElement)
@@ -1051,7 +1327,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 
             // Test
             AssetReferenceDrawerUtilities.SetSubAssets(property, subAssets[selectedId], propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
@@ -1090,7 +1366,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var atlas = SetUpSpriteAtlas(numAtlasObjects, out subAssets);
             var property = SetupForSetSubAssets(atlas, numReferences);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
 
@@ -1098,7 +1374,7 @@ namespace UnityEditor.AddressableAssets.Tests
             AssetReferenceDrawerUtilities.SetMainAssets(ref m_AssetReferenceDrawer.m_ReferencesSame, property, atlas, null, propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
             foreach (var obj in property.serializedObject.targetObjects)
             {
-                Assert.AreEqual(((TestSubObjectsSpriteAtlas)obj).testSpriteReference.AssetGUID, atlasGuid);
+                Assert.AreEqual(((TestEditorSubObjectsSpriteAtlas)obj).testSpriteReference.AssetGUID, atlasGuid);
             }
 
             // Cleanup
@@ -1114,7 +1390,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var subAssets = new List<Object>();
             var atlas = SetUpSpriteAtlas(numAtlasObjects, out subAssets);
             var property = SetupForSetSubAssetsList(atlas, numReferences, selectedElement, numElements, false);
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlasList).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlasList).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("Element " + selectedElement);
@@ -1125,7 +1401,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Check that only the selected element of each object's reference list was set
             foreach (var obj in property.serializedObject.targetObjects)
             {
-                var checkList = ((TestSubObjectsSpriteAtlasList)obj).testSpriteReference;
+                var checkList = ((TestEditorSubObjectsSpriteAtlasList)obj).testSpriteReference;
                 for (int currElement = 0; currElement < checkList.Length; currElement++)
                 {
                     if (currElement == selectedElement)
@@ -1148,13 +1424,13 @@ namespace UnityEditor.AddressableAssets.Tests
             var atlas = SetUpSpriteAtlas(1, out subAssets);
             var property = SetupForSetSubAssets(atlas, 1);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
 
             // Test
             AssetReferenceDrawerUtilities.SetMainAssets(ref m_AssetReferenceDrawer.m_ReferencesSame, property, null, null, propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
-            Assert.AreEqual(((TestSubObjectsSpriteAtlas)property.serializedObject.targetObject).testSpriteReference.Asset, null);
+            Assert.AreEqual(((TestEditorSubObjectsSpriteAtlas)property.serializedObject.targetObject).testSpriteReference.Asset, null);
 
             // Cleanup
             TearDownTestDir();
@@ -1169,7 +1445,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var subAssets = new List<Object>();
             var atlas = SetUpSpriteAtlas(numAtlasObjects, out subAssets);
             var property = SetupForSetSubAssetsList(atlas, numReferences, selectedElement, numElements, true, numReferences);
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlasList).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlasList).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("Element " + selectedElement);
@@ -1180,7 +1456,7 @@ namespace UnityEditor.AddressableAssets.Tests
             // Check that only the selected element of each object's reference list was set to null
             foreach (var obj in property.serializedObject.targetObjects)
             {
-                var checkList = ((TestSubObjectsSpriteAtlasList)obj).testSpriteReference;
+                var checkList = ((TestEditorSubObjectsSpriteAtlasList)obj).testSpriteReference;
                 for (int currElement = 0; currElement < checkList.Length; currElement++)
                 {
                     if (currElement == selectedElement)
@@ -1205,7 +1481,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 
             // Test
             EditorUtility.ClearDirty(property.serializedObject.targetObject);
@@ -1231,7 +1507,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_AssetName = atlas.name;
 
             // Test
@@ -1253,7 +1529,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_AssetName = atlas.name;
 
             // Test
@@ -1311,7 +1587,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_AssetName = atlas.name;
 
             m_AssetReferenceDrawer.assetProperty = property;
@@ -1337,7 +1613,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_AssetName = atlas.name;
             m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName = "testSprite3";
             m_AssetReferenceDrawer.m_AssetRefObject.SubObjectGUID = string.Empty;
@@ -1364,7 +1640,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_AssetName = atlas.name;
             m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName = "testSprite3";
             var packables = atlas.GetPackables();
@@ -1402,7 +1678,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
 
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_AssetName = atlas.name;
             m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName = "testSprite";
             var packables = atlas.GetPackables();
@@ -1438,7 +1714,7 @@ namespace UnityEditor.AddressableAssets.Tests
             AssetDatabase.Refresh();
 
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_AssetName = atlas.name;
             m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName = "testSprite";
             var packables = atlas.GetPackables();
@@ -1470,7 +1746,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_AssetName = atlas.name;
             m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName = "testSprite3";
             var packables = atlas.GetPackables();
@@ -1506,7 +1782,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_AssetName = atlas.name;
             m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName = "testSprite3";
             var packables = atlas.GetPackables();
@@ -1541,7 +1817,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var assetPath = AssetDatabase.GetAssetOrScenePath(atlas);
             var atlasGuid = AssetDatabase.AssetPathToGUID(assetPath);
             m_AssetReferenceDrawer.m_label = new GUIContent("testSpriteReference");
-            FieldInfo propertyFieldInfo = typeof(TestSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             m_AssetReferenceDrawer.m_AssetName = atlas.name;
             m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName = "testSprite3";
             var packables = atlas.GetPackables();

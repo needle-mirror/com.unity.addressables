@@ -1110,14 +1110,19 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <remarks>
         /// You can cache content catalog by providing the hash file created for the catalog by the Addressables content build
-        /// at the same URL as the catalog JSON file. The Addressables system uses this hash file to determine if the cached catalog
+        /// at the same URL as the catalog file. The Addressables system uses this hash file to determine if the cached catalog
         /// needs to be updated. If the value in the hash file has not changed since the last time you loaded the same catalog,
         /// this function loads the cached version instead of downloading the catalog. If the hash value has changed or if no
         /// hash file is provided, Addressables downloads the catalog from the specified path before loading it into memory.
         ///
+        /// The path must end with the catalog file name. Addressables reads that name from the
+        /// end to get the catalog's extension and to find the matching hash file. If the path
+        /// has a query string, the catalog file name must be its last value, as in a Unity CCD
+        /// URL ending `?path=/catalog_a1b2.bin`.
+        ///
         /// See also: [Managing catalogs at runtime](xref:addressables-api-load-content-catalog-async)
         /// </remarks>
-        /// <param name="catalogPath">The path to the runtime data.</param>
+        /// <param name="catalogPath">The path to the runtime data. Must end with the catalog file name.</param>
         /// <param name="providerSuffix">This value, if not null or empty, will be appended to all provider ids loaded from this data.</param>
         /// <returns>The operation handle for the request.</returns>
         public static AsyncOperationHandle<IResourceLocator> LoadContentCatalogAsync(string catalogPath, string providerSuffix = null)
@@ -1135,9 +1140,14 @@ namespace UnityEngine.AddressableAssets
         /// this function loads the cached version instead of downloading the catalog. If the hash value has changed or if no
         /// hash file is provided, Addressables downloads the catalog from the specified path before loading it into memory.
         ///
+        /// The path must end with the catalog file name. Addressables reads that name from the
+        /// end to get the catalog's extension and to find the matching hash file. If the path
+        /// has a query string, the catalog file name must be its last value, as in a Unity CCD
+        /// URL ending `?path=/catalog_a1b2.bin`.
+        ///
         /// See also: [Managing catalogs at runtime](xref:addressables-api-load-content-catalog-async)
         /// </remarks>
-        /// <param name="catalogPath">The path to the runtime data.</param>
+        /// <param name="catalogPath">The path to the runtime data. Must end with the catalog file name.</param>
         /// <param name="autoReleaseHandle">If true, the async operation handle will be automatically released on completion. Typically,
         /// there is no reason to hold on to the handle for this operation.</param>
         /// <param name="providerSuffix">This value, if not null or empty, will be appended to all provider ids loaded from this data.</param>
@@ -1631,7 +1641,8 @@ namespace UnityEngine.AddressableAssets
         /// is the download size in bytes.
         /// </summary>
         /// <returns>The operation handle for the request.</returns>
-        /// <param name="keys">The keys of the asset(s) to get the download size of.</param>
+        /// <param name="keys">The keys of the asset(s) to get the download size of. An element may also be
+        /// an <see cref="IResourceLocation"/>, or a list of them, to skip resolving keys again.</param>
         public static AsyncOperationHandle<long> GetDownloadSizeAsync(IEnumerable keys)
         {
             return s_Addressables.GetDownloadSizeAsync(keys);

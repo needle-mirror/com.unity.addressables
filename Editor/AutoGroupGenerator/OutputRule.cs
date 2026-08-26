@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
@@ -32,7 +33,7 @@ namespace AutoGroupGenerator
         #region Methods
         private void OnValidate()
         {
-            if (m_Template == null)
+            if (m_Template == null && AddressableAssetSettingsDefaultObject.Settings != null)
             {
                 m_Template = AddressableUtil.FindDefaultAddressableGroupTemplate();
             }

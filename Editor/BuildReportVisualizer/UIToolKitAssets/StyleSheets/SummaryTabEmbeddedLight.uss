@@ -1,0 +1,14 @@
+/* Theme values for the Summary tab, matching Build Analysis' light theme. Declared on the scroll
+   view because this sheet is attached to the tab root, so :root would not match anything here. */
+.SummaryTabScroll {
+    --summary-tab-status-success-text: #008126;
+    --summary-tab-status-success-border: rgba(0, 129, 38, 0.37);
+    --summary-tab-status-success-background: rgba(0, 129, 38, 0.1);
+    --summary-tab-status-failed-text: #B10C0C;
+    --summary-tab-status-failed-border: rgba(177, 12, 12, 0.37);
+    --summary-tab-status-failed-background: rgba(177, 12, 12, 0.1);
+    --summary-tab-kpi-icon-build-size: resource('BuildAnalysis/Icons/BuildSize.png');
+    --summary-tab-kpi-icon-duration: resource('BuildAnalysis/Icons/Time.png');
+    --summary-tab-kpi-icon-bundles: resource('Packages/com.unity.addressables/Editor/Icons/Groups Window/Light Theme/Asset Bundle/AssetBundle.png');
+    --summary-tab-kpi-icon-assets: resource('BuildAnalysis/Icons/Draft.png');
+}

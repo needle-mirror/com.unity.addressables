@@ -346,10 +346,27 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
             remove { m_DestroyedAction?.Remove(value); }
         }
 
+        // Typeless listeners share m_CompletedActionT with the typed ones so that all completion
+        // callbacks are invoked in subscription order. They are stored through a wrapper that keeps
+        // the original delegate reachable, so unsubscribing can locate the matching entry again
+        // (a plain `Completed -= s => value(s)` lambda would never match and silently fail to remove).
+        sealed class TypelessCompletedCallback
+        {
+            Action<AsyncOperationHandle> m_Callback;
+
+            public TypelessCompletedCallback(Action<AsyncOperationHandle> callback)
+            {
+                m_Callback = callback;
+            }
+
+            public void Invoke(AsyncOperationHandle<TObject> handle) => m_Callback(handle);
+            public bool Wraps(Action<AsyncOperationHandle> callback) => Equals(m_Callback, callback);
+        }
+
         internal event Action<AsyncOperationHandle> CompletedTypeless
         {
-            add { Completed += s => value(s); }
-            remove { Completed -= s => value(s); }
+            add { Completed += new TypelessCompletedCallback(value).Invoke; }
+            remove { m_CompletedActionT?.Remove(action => action.Target is TypelessCompletedCallback wrapper && wrapper.Wraps(value)); }
         }
 
         /// <inheritdoc />

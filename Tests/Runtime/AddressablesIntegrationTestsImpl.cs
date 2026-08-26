@@ -19,19 +19,15 @@ using UnityEngine.ResourceManagement.Util;
 using System.Text.RegularExpressions;
 using System.Linq;
 using System.Text;
-using NUnit.Framework.Internal;
+using UnityEditor.AddressableAssets.Tests.Runtime.TestObjects;
 using UnityEngine.AddressableAssets.ResourceProviders.Tests;
-using UnityEngine.AddressableAssets.Tests;
-using UnityEngine.Lumin;
 using UnityEngine.Networking;
 using UnityEngine.U2D;
-using Logger = UnityEngine.Logger;
 using Object = UnityEngine.Object;
 using Texture2D = UnityEngine.Texture2D;
 
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEditor.AddressableAssets.Settings;
 #endif
 
 namespace AddressableAssetsIntegrationTests
@@ -239,7 +235,7 @@ namespace AddressableAssetsIntegrationTests
             //Setup
             yield return Init();
             string keyString = "mixed";
-            string otherAvailableTypesForKey = "UnityEngine.GameObject, UnityEngine.AddressableAssets.Tests.TestObject";
+            string otherAvailableTypesForKey = "UnityEngine.GameObject, UnityEditor.AddressableAssets.Tests.Runtime.TestObjects.TestObject";
             AsyncOperationHandle<TextAsset> handle = new AsyncOperationHandle<TextAsset>();
 
             try //Test
@@ -256,7 +252,7 @@ namespace AddressableAssetsIntegrationTests
                 if (!isEqual)
                 {
                     // order isn't guaranteed
-                    message = message.Replace("UnityEngine.GameObject, UnityEngine.AddressableAssets.Tests.TestObject", "UnityEngine.AddressableAssets.Tests.TestObject, UnityEngine.GameObject");
+                    message = message.Replace("UnityEngine.GameObject, UnityEditor.AddressableAssets.Tests.Runtime.TestObjects.TestObject", "UnityEditor.AddressableAssets.Tests.Runtime.TestObjects.TestObject, UnityEngine.GameObject");
                     isEqual = message == handle.OperationException.Message;
                 }
 
@@ -2217,6 +2213,299 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
+        public IEnumerator GetDownloadSizeAsync_WithPreResolvedBundleLocations_ReturnsBundleSizes()
+        {
+            yield return Init();
+            long expectedSize = 0;
+            var locMap = new ResourceLocationMap("TestLocator");
+
+            var bundleLoc1 = new ResourceLocationBase("preResolvedBundle1", "http://nonExistingUrlForAddressableTests1337.com/preResolved1.bundle",
+                typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource));
+            var sizeData1 = (bundleLoc1.Data = CreateLocationSizeData("preResolvedBundle1", 1000, 123, "preResolvedHash1")) as ILocationSizeData;
+            if (sizeData1 != null)
+                expectedSize += sizeData1.ComputeSize(bundleLoc1, null);
+
+            var bundleLoc2 = new ResourceLocationBase("preResolvedBundle2", "http://nonExistingUrlForAddressableTests1337.com/preResolved2.bundle",
+                typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource));
+            var sizeData2 = (bundleLoc2.Data = CreateLocationSizeData("preResolvedBundle2", 500, 123, "preResolvedHash2")) as ILocationSizeData;
+            if (sizeData2 != null)
+                expectedSize += sizeData2.ComputeSize(bundleLoc2, null);
+
+            var assetLoc = new ResourceLocationBase("preResolvedAsset", "myAsset.asset", typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc1, bundleLoc2);
+
+            locMap.Add("preResolvedBundle1", bundleLoc1);
+            locMap.Add("preResolvedBundle2", bundleLoc2);
+            locMap.Add("preResolvedAsset", assetLoc);
+            m_Addressables.AddResourceLocator(locMap);
+
+            // Bundle locations, one per key. These used to report 0, because only
+            // dependencies were counted and a bundle location has none of its own.
+            var byLocation = m_Addressables.GetDownloadSizeAsync(new List<object> {bundleLoc1, bundleLoc2});
+            yield return byLocation;
+            long byLocationSize = byLocation.Result;
+            Assert.AreEqual(expectedSize, byLocationSize);
+            byLocation.Release();
+
+            // The same bundles passed as one IList<IResourceLocation> key.
+            var byList = m_Addressables.GetDownloadSizeAsync(new List<object> {new List<IResourceLocation> {bundleLoc1, bundleLoc2}});
+            yield return byList;
+            Assert.AreEqual(expectedSize, byList.Result);
+            byList.Release();
+
+            // A bundle reached both directly and as a dependency is counted once.
+            var mixed = m_Addressables.GetDownloadSizeAsync(new List<object> {"preResolvedAsset", bundleLoc1});
+            yield return mixed;
+            Assert.AreEqual(expectedSize, mixed.Result);
+            mixed.Release();
+
+            // Asking by key and by location must agree on the same set.
+            var byKey = m_Addressables.GetDownloadSizeAsync((object)"preResolvedAsset");
+            yield return byKey;
+            Assert.AreEqual(byLocationSize, byKey.Result);
+            byKey.Release();
+
+            m_Addressables.RemoveResourceLocator(locMap);
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSizeAsync_WithCatalogLocationAmongOtherKeys_StillCountsOtherKeys()
+        {
+            yield return Init();
+            long expectedSize = 0;
+            var locMap = new ResourceLocationMap("TestLocator");
+
+            var bundleLoc = new ResourceLocationBase("mixedBatchBundle", "http://nonExistingUrlForAddressableTests1337.com/mixedBatch.bundle",
+                typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource));
+            var sizeData = (bundleLoc.Data = CreateLocationSizeData("mixedBatchBundle", 1000, 123, "mixedBatchHash")) as ILocationSizeData;
+            if (sizeData != null)
+                expectedSize += sizeData.ComputeSize(bundleLoc, null);
+
+            var assetLoc = new ResourceLocationBase("mixedBatchAsset", "myAsset.asset", typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc);
+
+            locMap.Add("mixedBatchBundle", bundleLoc);
+            locMap.Add("mixedBatchAsset", assetLoc);
+
+            var catalogLoc = new ResourceLocationBase("catalog", "FakeCatalogId", typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider));
+            m_Addressables.AddResourceLocator(locMap, "mixedBatchLocalHash", catalogLoc);
+
+            // Catalog size is a separate remote request and cannot be summed here,
+            // but it must not discard the rest of the batch as the old code did.
+            LogAssert.Expect(LogType.Warning, new Regex("ignored catalog location"));
+            var dOp = m_Addressables.GetDownloadSizeAsync(new List<object> {catalogLoc, "mixedBatchAsset"});
+            yield return dOp;
+            Assert.AreEqual(expectedSize, dOp.Result);
+            dOp.Release();
+
+            m_Addressables.RemoveResourceLocator(locMap);
+        }
+
+        // A size provider that is not AssetBundleRequestOptions, standing in for content
+        // that is not an AssetBundle. Reports the same size in every fixture.
+        sealed class FixedRemoteSizeData : ILocationSizeData
+        {
+            public long Size;
+
+            public long ComputeSize(IResourceLocation location, ResourceManager resourceManager)
+            {
+                return Size;
+            }
+        }
+
+        static ResourceLocationBase RemoteBundleLocation(string name)
+        {
+            return new ResourceLocationBase(name, $"http://nonExistingUrlForAddressableTests1337.com/{name}.bundle",
+                typeof(AssetBundleProvider).FullName, typeof(IAssetBundleResource));
+        }
+
+        // The catalog location has no dependencies, so the catalog size path fails fast on
+        // its missing remote hash rather than making a request.
+        IResourceLocation AddLocatorWithCatalog(string name, ResourceLocationMap locMap)
+        {
+            var catalogLoc = new ResourceLocationBase(name, $"FakeCatalogId_{name}",
+                typeof(ContentCatalogProvider).FullName, typeof(ContentCatalogProvider));
+            m_Addressables.AddResourceLocator(locMap, $"{name}LocalHash", catalogLoc);
+            return catalogLoc;
+        }
+
+        static void AssertTookCatalogSizePath(AsyncOperationHandle<long> op)
+        {
+            Assert.AreEqual(AsyncOperationStatus.Failed, op.Status,
+                "A lone catalog location must take the catalog size path, not the content sum");
+            Assert.IsNotNull(op.OperationException);
+            StringAssert.Contains("no dependencies pointing to a remote location", op.OperationException.Message);
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSizeAsync_NonBundleLocationWithSizeData_IsCounted()
+        {
+            yield return Init();
+            const long expectedSize = 4242;
+            var locMap = new ResourceLocationMap("TestLocator");
+
+            // Not typed as a bundle, and not served by AssetBundleProvider. Only its
+            // ILocationSizeData says it costs anything to download.
+            var remoteLoc = new ResourceLocationBase("customRemoteContent", "http://nonExistingUrlForAddressableTests1337.com/custom.dat",
+                "Test.CustomRemoteContentProvider", typeof(TextAsset));
+            remoteLoc.Data = new FixedRemoteSizeData {Size = expectedSize};
+
+            var assetLoc = new ResourceLocationBase("customRemoteAsset", "myAsset.asset", typeof(BundledAssetProvider).FullName, typeof(object), remoteLoc);
+
+            locMap.Add("customRemoteContent", remoteLoc);
+            locMap.Add("customRemoteAsset", assetLoc);
+            m_Addressables.AddResourceLocator(locMap);
+
+            // Reached as a dependency of a key.
+            var byKey = m_Addressables.GetDownloadSizeAsync((object)"customRemoteAsset");
+            yield return byKey;
+            Assert.AreEqual(expectedSize, byKey.Result, "A non-bundle dependency that reports a size must be counted");
+            byKey.Release();
+
+            // Requested directly as a resolved location.
+            var byLocation = m_Addressables.GetDownloadSizeAsync((object)remoteLoc);
+            yield return byLocation;
+            Assert.AreEqual(expectedSize, byLocation.Result);
+            byLocation.Release();
+
+            // Requested inside a pre-resolved location list.
+            var byList = m_Addressables.GetDownloadSizeAsync(new List<object> {new List<IResourceLocation> {remoteLoc}});
+            yield return byList;
+            Assert.AreEqual(expectedSize, byList.Result);
+            byList.Release();
+
+            m_Addressables.RemoveResourceLocator(locMap);
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSizeAsync_WithBundleAndNonBundleSizeProviders_SumsBoth()
+        {
+            yield return Init();
+            const long customSize = 900;
+            long expectedSize = customSize;
+            var locMap = new ResourceLocationMap("TestLocator");
+
+            var bundleLoc = RemoteBundleLocation("mixedProviderBundle");
+            var bundleSizeData = (bundleLoc.Data = CreateLocationSizeData("mixedProviderBundle", 1000, 123, "mixedProviderHash")) as ILocationSizeData;
+            if (bundleSizeData != null)
+                expectedSize += bundleSizeData.ComputeSize(bundleLoc, null);
+
+            var customLoc = new ResourceLocationBase("mixedProviderCustom", "http://nonExistingUrlForAddressableTests1337.com/custom.dat",
+                "Test.CustomRemoteContentProvider", typeof(TextAsset));
+            customLoc.Data = new FixedRemoteSizeData {Size = customSize};
+
+            locMap.Add("mixedProviderBundle", bundleLoc);
+            locMap.Add("mixedProviderCustom", customLoc);
+            m_Addressables.AddResourceLocator(locMap);
+
+            // Two different size providers in one request, and dedupe must not drop
+            // either of them just because their resource types differ.
+            var dOp = m_Addressables.GetDownloadSizeAsync(new List<object> {bundleLoc, customLoc});
+            yield return dOp;
+            Assert.AreEqual(expectedSize, dOp.Result);
+            dOp.Release();
+
+            m_Addressables.RemoveResourceLocator(locMap);
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSizeAsync_WithCatalogLocationInsideLocationList_IsDetected()
+        {
+            yield return Init();
+            long expectedSize = 0;
+            var locMap = new ResourceLocationMap("TestLocator");
+
+            var bundleLoc = RemoteBundleLocation("listedCatalogBundle");
+            var sizeData = (bundleLoc.Data = CreateLocationSizeData("listedCatalogBundle", 1000, 123, "listedCatalogHash")) as ILocationSizeData;
+            if (sizeData != null)
+                expectedSize += sizeData.ComputeSize(bundleLoc, null);
+
+            locMap.Add("listedCatalogBundle", bundleLoc);
+            var catalogLoc = AddLocatorWithCatalog("listedCatalog", locMap);
+
+            // A catalog reached inside a pre-resolved list must be recognised as a
+            // catalog, not walked as content.
+            LogAssert.Expect(LogType.Warning, new Regex("ignored catalog location"));
+            var dOp = m_Addressables.GetDownloadSizeAsync(new List<object> {new List<IResourceLocation> {catalogLoc, bundleLoc}});
+            yield return dOp;
+            Assert.AreEqual(expectedSize, dOp.Result);
+            dOp.Release();
+
+            m_Addressables.RemoveResourceLocator(locMap);
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSizeAsync_WithLoneCatalogLocation_TakesCatalogSizePath()
+        {
+            yield return Init();
+            var locMap = new ResourceLocationMap("TestLocator");
+            var catalogLoc = AddLocatorWithCatalog("loneCatalog", locMap);
+
+            using (new IgnoreFailingLogMessage())
+            {
+                // Alone as a bare location key.
+                var bare = m_Addressables.GetDownloadSizeAsync((object)catalogLoc);
+                yield return bare;
+                AssertTookCatalogSizePath(bare);
+                bare.Release();
+
+                // Alone inside a pre-resolved list, which used to return 0.
+                var listed = m_Addressables.GetDownloadSizeAsync(new List<object> {new List<IResourceLocation> {catalogLoc}});
+                yield return listed;
+                AssertTookCatalogSizePath(listed);
+                listed.Release();
+            }
+
+            m_Addressables.RemoveResourceLocator(locMap);
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSizeAsync_WithTwoCatalogLocations_WarnsForEachAndReturnsZero()
+        {
+            yield return Init();
+            var locMap1 = new ResourceLocationMap("TestLocator1");
+            var locMap2 = new ResourceLocationMap("TestLocator2");
+            var catalogLoc1 = AddLocatorWithCatalog("firstCatalog", locMap1);
+            var catalogLoc2 = AddLocatorWithCatalog("secondCatalog", locMap2);
+
+            // Two catalogs cannot be summed, so neither is guessed at. The old single
+            // field silently kept only the last one.
+            LogAssert.Expect(LogType.Warning, new Regex("ignored catalog location"));
+            LogAssert.Expect(LogType.Warning, new Regex("ignored catalog location"));
+            var dOp = m_Addressables.GetDownloadSizeAsync(new List<object> {catalogLoc1, catalogLoc2});
+            yield return dOp;
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, dOp.Status);
+            Assert.AreEqual(0, dOp.Result);
+            dOp.Release();
+
+            m_Addressables.RemoveResourceLocator(locMap1);
+            m_Addressables.RemoveResourceLocator(locMap2);
+        }
+
+        [UnityTest]
+        public IEnumerator GetDownloadSizeAsync_WithCatalogAndContentThatReportsNoSize_WarnsAndReturnsZero()
+        {
+            yield return Init();
+            var locMap = new ResourceLocationMap("TestLocator");
+
+            // No size data, so nothing lands in the size set. The request still asked
+            // for content, so the catalog must not be measured on its own.
+            var bundleLoc = RemoteBundleLocation("noSizeDataBundle");
+            var assetLoc = new ResourceLocationBase("noSizeDataAsset", "myAsset.asset", typeof(BundledAssetProvider).FullName, typeof(object), bundleLoc);
+
+            locMap.Add("noSizeDataBundle", bundleLoc);
+            locMap.Add("noSizeDataAsset", assetLoc);
+            var catalogLoc = AddLocatorWithCatalog("sizelessContentCatalog", locMap);
+
+            LogAssert.Expect(LogType.Warning, new Regex("ignored catalog location"));
+            var dOp = m_Addressables.GetDownloadSizeAsync(new List<object> {catalogLoc, "noSizeDataAsset"});
+            yield return dOp;
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, dOp.Status);
+            Assert.AreEqual(0, dOp.Result);
+            dOp.Release();
+
+            m_Addressables.RemoveResourceLocator(locMap);
+        }
+
+        [UnityTest]
         public IEnumerator GetResourceLocationsWithCorrectKeyAndWrongTypeReturnsEmptyResult()
         {
             yield return Init();
@@ -3669,7 +3958,10 @@ namespace AddressableAssetsIntegrationTests
                 typeof(IAssetBundleResource)));
 
             Assert.IsTrue(Caching.IsVersionCached(cab));
+            bool ignoreValue = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
             yield return request.SendWebRequest();
+            LogAssert.ignoreFailingMessages = ignoreValue;
             Assert.IsFalse(Caching.IsVersionCached(cab));
 #else
             Assert.Ignore("Caching not enabled.");
@@ -3702,7 +3994,10 @@ namespace AddressableAssetsIntegrationTests
                 typeof(IAssetBundleResource)));
 
             Assert.IsTrue(Caching.IsVersionCached(cab));
+            bool ignoreValue = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
             yield return request.SendWebRequest();
+            LogAssert.ignoreFailingMessages = ignoreValue;
             Assert.IsFalse(Caching.IsVersionCached(cab));
 #else
             Assert.Ignore("Caching not enabled.");

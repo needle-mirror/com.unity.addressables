@@ -100,8 +100,8 @@ To use the properties in the **Update a Previous Build** section, you must enabl
 | __MonoScript Bundle Naming Prefix__ | Choose how to name the AssetBundle that contains all MonoScripts. The bundle ensures that Unity loads all MonoScripts before any MonoBehaviours can reference them. It also decreases the number of duplicated or complex MonoScript dependencies and so, reduces runtime memory overhead. |
 | __Allow Nested Folders__ | Places AssetBundles into subfolders if there's a slash in the Addressables key.|
 | __TypeTree Option__| Determine how to include [TypeTrees in AssetBundle builds](memory-assets.md#typetree-management):<ul><li>**Include**: Includes TypeTree data in the AssetBundle.</li><li>**Extract**: Places TypeTree data in a separate file, which reduces the build size of Addressables. **Important**: This changes all AssetBundles in already deployed projects, so only use it in new projects.</li><li>**Disable**: Disables TypeTree data from AssetBundles, which removes the ability to load AssetBundles across different Unity versions.</li></ul>|
-| __Archive Content Directories__| Archive and compress content directories after performing a content build.|
-| __Target Archive Size (MB)__|Determine the target size in MB for each archive.|
+| __Archive Content Directories__| Determine how Unity packs content directory artifacts after a content build:<ul><li>**None**: Writes artifact files to the output path as individual loose files.</li><li>**Uncompressed**: Packs artifact files into archive files without compression. Archives are significantly larger than LZ4 archives. However, uncompressed archives can be beneficial for patching purposes.</li><li>**LZ4**: Packs artifact files into archive files compressed with LZ4. This is the default.</li></ul>|
+| __Target Archive Size (MB)__|Determine the target size in MB for each archive. Applies to both the __Uncompressed__ and __LZ4__ archive modes.|
 
 
 ## Build and Play Mode Scripts

@@ -48,6 +48,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         private string m_SettingsAssetPath;
 
         /// <summary>
+        /// The input the build was started with.
+        /// </summary>
+        public AddressablesDataBuilderInput BuilderInput;
+
+        internal AddressableFolderEnumerator FolderEnumerator => BuilderInput?.FolderEnumerator;
+
+        /// <summary>
         /// Indicates whether the build contains asset bundle data.
         /// </summary>
         public bool ContainsAssetBundleData = false;

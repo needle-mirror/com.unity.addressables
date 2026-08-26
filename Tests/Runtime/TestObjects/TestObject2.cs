@@ -1,8 +1,6 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-namespace UnityEngine.AddressableAssets.Tests
+namespace UnityEditor.AddressableAssets.Tests.Runtime.TestObjects
 {
     public class TestObject2 : ScriptableObject
     {

@@ -5,6 +5,7 @@ using System.Linq;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.AddressableAssets.Tests.Runtime.TestObjects;
 using UnityEditor.U2D;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -338,8 +339,8 @@ namespace UnityEditor.AddressableAssets.Tests
             // Sub-object entries get ParentEntry = the main asset entry. When the main asset is
             // marked addressable directly, the root of the chain is not a folder.
             var path = GetAssetPath("folderKeySubObjects.asset");
-            AssetDatabase.CreateAsset(UnityEngine.AddressableAssets.Tests.TestObject.Create("main"), path);
-            AssetDatabase.AddObjectToAsset(UnityEngine.AddressableAssets.Tests.TestObject2.Create("sub"), path);
+            AssetDatabase.CreateAsset(TestObject.Create("main"), path);
+            AssetDatabase.AddObjectToAsset(TestObject2.Create("sub"), path);
             AssetDatabase.SaveAssets();
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 

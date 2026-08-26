@@ -179,13 +179,16 @@ namespace UnityEditor.AddressableAssets.GUI
         GUIContent m_GroupAssetEntryProvider =
             new GUIContent("Group Asset Entry Provider", "The provider to use for loading entries from group assets. Modify only if you have a custom group asset entry provider.");
 
-        GUIContent m_ArchiveContentDirectories =
+        GUIContent m_ContentDirectoryArchiveMode =
             new GUIContent("Archive Content Directories",
-                "If enabled, content directory files are archived and compressed after building.");
+                "How content directory files are packed after building." +
+                "\n- None: artifact files are written to the output path as individual loose files." +
+                "\n- Uncompressed: artifact files are packed into archives without compression." +
+                "\n- LZ4: artifact files are packed into archives compressed with LZ4.");
 
         GUIContent m_TargetArchiveSizeInMB =
             new GUIContent("Target Archive Size (MB)",
-                "Target size per archive in MB. Files are distributed across archives using hash-based bucketing and the actual compression ratio depends on content, so individual archives may be larger or smaller than this value.");
+                "Target size per archive in MB, applied to both the Uncompressed and LZ4 archive modes. Files are distributed across archives using hash-based bucketing and the actual compression ratio depends on content, so individual archives may be larger or smaller than this value.");
 #endif
 
         GUIContent m_RemoteCatBuildandLoadPaths =
@@ -745,11 +748,12 @@ namespace UnityEditor.AddressableAssets.GUI
 #endif
 
 #if ENABLE_CONTENT_DIRECTORIES
-                bool archiveCD = EditorGUILayout.Toggle(m_ArchiveContentDirectories, m_AasTarget.ArchiveContentDirectories);
-                if (archiveCD != m_AasTarget.ArchiveContentDirectories)
-                    m_QueuedChanges.Add(() => m_AasTarget.ArchiveContentDirectories = archiveCD);
+                ContentDirectoryArchiveMode archiveMode = (ContentDirectoryArchiveMode)EditorGUILayout.Popup(m_ContentDirectoryArchiveMode,
+                    (int)m_AasTarget.ContentDirectoryArchiveMode, new[] {"None", "Uncompressed", "LZ4"});
+                if (archiveMode != m_AasTarget.ContentDirectoryArchiveMode)
+                    m_QueuedChanges.Add(() => m_AasTarget.ContentDirectoryArchiveMode = archiveMode);
 
-                if (m_AasTarget.ArchiveContentDirectories)
+                if (archiveMode != ContentDirectoryArchiveMode.None)
                 {
                     float targetSizeMb = EditorGUILayout.DelayedFloatField(m_TargetArchiveSizeInMB, m_AasTarget.TargetArchiveSizeInMB);
                     if (targetSizeMb != m_AasTarget.TargetArchiveSizeInMB)

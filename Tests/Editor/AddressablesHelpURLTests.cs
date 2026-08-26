@@ -27,7 +27,7 @@ namespace UnityEditor.AddressableAssets.Tests
             (typeof(BundledAssetGroupSchema), "group-inspector-settings-reference.html"),
             (typeof(ContentUpdateGroupSchema), "content-update-build-settings.html"),
             (typeof(PlayerDataGroupSchema), "GroupSchemas.html"),
-            (typeof(ContentDirectoryGroupSchema), "GroupSchemas.html"),
+            (typeof(ContentDirectoryGroupSchema), "convert-content-directories.html"),
             (typeof(CacheInitializationSettings), "AddressableAssetSettings.html#initialization-objects"),
             #if !ENABLE_JSON_CATALOG
                         (typeof(BinaryCatalogInitializationSettings), "build-content-catalogs.html"),

@@ -200,9 +200,12 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             GroupName = bundle.Group.Name;
             BundleName = "";
             FileSizePlusRefs = bundle.FileSize;
-            foreach (var b in Bundle.ExpandedDependencies)
-                FileSizePlusRefs += b.FileSize;
-            RefsTo = Bundle.ExpandedDependencies.Count;
+            if (Bundle.ExpandedDependencies != null)
+            {
+                foreach (var b in Bundle.ExpandedDependencies)
+                    FileSizePlusRefs += b.FileSize;
+            }
+            RefsTo = Bundle.ExpandedDependencies?.Count ?? 0;
             RefsBy = Bundle.DependentBundles.Count;
         }
     }

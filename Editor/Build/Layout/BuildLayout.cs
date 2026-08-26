@@ -155,6 +155,10 @@ namespace UnityEditor.AddressableAssets.Build.Layout
         [SerializeField]
         public GUID AddressablesBuildSessionGUID;
 
+        // Restores AddressablesBuildSessionGUID when its value in the file is missing or unreadable
+        [SerializeField]
+        internal string BuildSessionGuidString;
+
         /// <summary>
         /// If the build was a new build or an update for a previous build
         /// </summary>
@@ -296,6 +300,7 @@ namespace UnityEditor.AddressableAssets.Build.Layout
             public double Duration;
             public string BuildError;
             public GUID BuildSessionGUID;
+            public string BuildSessionGuidString;
             public int DuplicatedAssetCount;
         }
 
@@ -336,6 +341,7 @@ namespace UnityEditor.AddressableAssets.Build.Layout
         {
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
 
+            BuildSessionGuidString = AddressablesBuildSessionGUID.ToString();
             string versionElementString = "\"UnityVersion\":";
             string headerJson = null;
             string bodyJson = JsonUtility.ToJson(this, prettyPrint);
@@ -351,6 +357,7 @@ namespace UnityEditor.AddressableAssets.Build.Layout
                     Duration = this.Duration,
                     BuildError = this.BuildError,
                     BuildSessionGUID = this.AddressablesBuildSessionGUID,
+                    BuildSessionGuidString = this.BuildSessionGuidString,
                     DuplicatedAssetCount = this.DuplicatedAssetCount
                 };
                 headerJson = JsonUtility.ToJson(header, false);
@@ -437,6 +444,7 @@ namespace UnityEditor.AddressableAssets.Build.Layout
                     return false;
                 }
 
+                RestoreSessionGuidFromString();
                 m_HeaderRead = true;
             }
             catch (Exception e)
@@ -484,6 +492,7 @@ namespace UnityEditor.AddressableAssets.Build.Layout
 
                 string fileJsonText = m_StreamReader.ReadToEnd();
                 EditorJsonUtility.FromJsonOverwrite(fileJsonText, this);
+                RestoreSessionGuidFromString();
                 m_HeaderRead = true;
                 m_BodyRead = true;
             }
@@ -498,6 +507,12 @@ namespace UnityEditor.AddressableAssets.Build.Layout
             }
 
             return true;
+        }
+
+        private void RestoreSessionGuidFromString()
+        {
+            if (AddressablesBuildSessionGUID.Empty() && !string.IsNullOrEmpty(BuildSessionGuidString))
+                GUID.TryParse(BuildSessionGuidString, out AddressablesBuildSessionGUID);
         }
 
         /// <summary>
@@ -1078,13 +1093,13 @@ namespace UnityEditor.AddressableAssets.Build.Layout
             /// A list of the direct dependencies of the AssetBundle
             /// </summary>
             [SerializeReference]
-            public List<Bundle> Dependencies;
+            public List<Bundle> Dependencies = new List<Bundle>();
 
             /// <summary>
             /// The second order dependencies and greater of a bundle
             /// </summary>
             [SerializeReference]
-            public List<Bundle> ExpandedDependencies;
+            public List<Bundle> ExpandedDependencies = new List<Bundle>();
         }
 
         /// <summary>

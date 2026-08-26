@@ -16,7 +16,7 @@ namespace UnityEditor.AddressableAssets.Tests
 {
     public class BinaryStorageBufferTests
     {
-        [StructLayout(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
         struct SimpleStruct : IEquatable<SimpleStruct>
         {
             public int intVal;
@@ -392,6 +392,124 @@ namespace UnityEditor.AddressableAssets.Tests
             Debug.Log($"{label}: {ms:F1}ms total ({iterations:N0} ops, {nsPerOp:F0} ns/op, {allocStr})");
         }
 
+        // Writes arrayCount object arrays of elementsPerArray ComplexObjects each and returns
+        // their offsets. ComplexObject.Serializer reports size = 0, so readers built from this
+        // need minCachedObjSize = 0 for caching to engage.
+        static uint[] WriteComplexObjectArrays(BinaryStorageBuffer.Writer wr, int arrayCount, int elementsPerArray)
+        {
+            var ids = new uint[arrayCount];
+            for (int i = 0; i < arrayCount; i++)
+            {
+                var arr = new ComplexObject[elementsPerArray];
+                for (int j = 0; j < elementsPerArray; j++)
+                    arr[j] = new ComplexObject(i * 1000 + j);
+                ids[i] = wr.WriteObjects(arr, false);
+            }
+            return ids;
+        }
+
+        [Test]
+        public void ReadObjectList_SameOffset_ReturnsSameInstance()
+        {
+            var wr = new BinaryStorageBuffer.Writer(1024 * 1024, new ComplexObject.Serializer());
+            var ids = WriteComplexObjectArrays(wr, 1, 8);
+            using var r = new BinaryStorageBuffer.Reader(wr.SerializeToByteArray(), 64, 0, new ComplexObject.Serializer());
+
+            var first = r.ReadObjectList<ComplexObject, ComplexObject>(ids[0], out _);
+            var second = r.ReadObjectList<ComplexObject, ComplexObject>(ids[0], out _);
+
+            Assert.AreSame(first, second);
+        }
+
+        [Test]
+        public void ReadObjectList_ReturnsSameContentsAsReadObjectArray()
+        {
+            const int elementsPerArray = 8;
+            var wr = new BinaryStorageBuffer.Writer(1024 * 1024, new ComplexObject.Serializer());
+            var ids = WriteComplexObjectArrays(wr, 1, elementsPerArray);
+            using var r = new BinaryStorageBuffer.Reader(wr.SerializeToByteArray(), 64, 0, new ComplexObject.Serializer());
+
+            var asArray = r.ReadObjectArray<ComplexObject>(ids[0], out _);
+            var asList = r.ReadObjectList<ComplexObject, ComplexObject>(ids[0], out _);
+
+            Assert.AreEqual(elementsPerArray, asList.Count);
+            Assert.AreEqual(asArray.Length, asList.Count);
+            for (int i = 0; i < asArray.Length; i++)
+                Assert.AreEqual(asArray[i], asList[i], $"element {i} differs");
+        }
+
+        // The LRU cache is keyed (offset, Type). Without the ObjectListCacheKey marker, the
+        // List<T> stored here would occupy the slot ReadObjectArray<T> keys with typeof(T[]),
+        // and one of the two reads would throw InvalidCastException.
+        [Test]
+        public void ReadObjectList_AndReadObjectArray_SameOffset_DoNotCollide()
+        {
+            const int elementsPerArray = 8;
+            var wr = new BinaryStorageBuffer.Writer(1024 * 1024, new ComplexObject.Serializer());
+            var ids = WriteComplexObjectArrays(wr, 1, elementsPerArray);
+            using var r = new BinaryStorageBuffer.Reader(wr.SerializeToByteArray(), 64, 0, new ComplexObject.Serializer());
+
+            // List first, then array, then each again so both directions hit a warm cache.
+            var list1 = r.ReadObjectList<ComplexObject, ComplexObject>(ids[0], out _);
+            var array1 = r.ReadObjectArray<ComplexObject>(ids[0], out _, true, true);
+            var list2 = r.ReadObjectList<ComplexObject, ComplexObject>(ids[0], out _);
+            var array2 = r.ReadObjectArray<ComplexObject>(ids[0], out _, true, true);
+
+            Assert.AreSame(list1, list2);
+            Assert.AreSame(array1, array2);
+            Assert.AreEqual(elementsPerArray, list2.Count);
+            Assert.AreEqual(elementsPerArray, array2.Length);
+        }
+
+        [Test]
+        public void ReadObjectList_MaxValueOffset_ReturnsNull()
+        {
+            var wr = new BinaryStorageBuffer.Writer(1024 * 1024, new ComplexObject.Serializer());
+            WriteComplexObjectArrays(wr, 1, 4);
+            using var r = new BinaryStorageBuffer.Reader(wr.SerializeToByteArray(), 64, 0, new ComplexObject.Serializer());
+
+            Assert.IsNull(r.ReadObjectList<ComplexObject, ComplexObject>(uint.MaxValue, out var size));
+            Assert.AreEqual(0u, size);
+        }
+
+        [Test]
+        public void ReadObjectList_CacheFullListFalse_ReturnsDistinctInstances()
+        {
+            var wr = new BinaryStorageBuffer.Writer(1024 * 1024, new ComplexObject.Serializer());
+            var ids = WriteComplexObjectArrays(wr, 1, 8);
+            using var r = new BinaryStorageBuffer.Reader(wr.SerializeToByteArray(), 64, 0, new ComplexObject.Serializer());
+
+            var first = r.ReadObjectList<ComplexObject, ComplexObject>(ids[0], out _, cacheFullList: false);
+            var second = r.ReadObjectList<ComplexObject, ComplexObject>(ids[0], out _, cacheFullList: false);
+
+            Assert.AreNotSame(first, second);
+            CollectionAssert.AreEqual(first, second);
+        }
+
+        // Sharing is best-effort under LRU pressure; correctness is not. With a cache far
+        // smaller than the working set, entries get evicted and rebuilt — contents must still
+        // be right even when the returned instance differs.
+        [Test]
+        public void ReadObjectList_AfterEviction_StillReturnsCorrectContents()
+        {
+            const int arrayCount = 64;
+            const int elementsPerArray = 4;
+            var wr = new BinaryStorageBuffer.Writer(1024 * 1024, new ComplexObject.Serializer());
+            var ids = WriteComplexObjectArrays(wr, arrayCount, elementsPerArray);
+            using var r = new BinaryStorageBuffer.Reader(wr.SerializeToByteArray(), 2, 0, new ComplexObject.Serializer());
+
+            var expected = new List<ComplexObject>[arrayCount];
+            for (int i = 0; i < arrayCount; i++)
+                expected[i] = r.ReadObjectList<ComplexObject, ComplexObject>(ids[i], out _, cacheFullList: false);
+
+            for (int i = 0; i < arrayCount; i++)
+            {
+                var reread = r.ReadObjectList<ComplexObject, ComplexObject>(ids[i], out _);
+                Assert.AreEqual(elementsPerArray, reread.Count);
+                CollectionAssert.AreEqual(expected[i], reread, $"array {i} differs after eviction");
+            }
+        }
+
         // Random value-type reads. Exercises ReadValue<T> (no per-call allocation expected).
         [Test]
         public void PerfTestReadValue()
@@ -634,17 +752,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [TestCase(-1, 0)]
         public void ContentCatalogData_SerializesTimeout_Correctly(int timeout, int expectedTimeout)
         {
-            AssetBundleRequestOptions options = new AssetBundleRequestOptions();
-            options.Timeout = timeout;
-
-            BinaryContentCatalogData.AssetBundleRequestOptionsSerializationAdapter adapter = new BinaryContentCatalogData.AssetBundleRequestOptionsSerializationAdapter();
-            BinaryStorageBuffer.Writer writer = new BinaryStorageBuffer.Writer();
-            var id = adapter.Serialize(writer, options);
-
-            var byteArray = writer.SerializeToByteArray();
-            BinaryStorageBuffer.Reader reader = new BinaryStorageBuffer.Reader(byteArray);
-
-            var result = adapter.Deserialize(reader, typeof(AssetBundleRequestOptions), id, out var _) as AssetBundleRequestOptions;
+            var result = RoundTripThroughAdapter(new AssetBundleRequestOptions { Timeout = timeout });
 
             Assert.AreEqual(expectedTimeout, result.Timeout);
         }
@@ -658,19 +766,66 @@ namespace UnityEditor.AddressableAssets.Tests
         [TestCase(0, 0)]
         public void ContentCatalogData_SerializesRedirectLimit_Correctly(int redirectLimit, int expectedRedirectLimit)
         {
-            AssetBundleRequestOptions options = new AssetBundleRequestOptions();
-            options.RedirectLimit = redirectLimit;
-
-            BinaryContentCatalogData.AssetBundleRequestOptionsSerializationAdapter adapter = new BinaryContentCatalogData.AssetBundleRequestOptionsSerializationAdapter();
-            BinaryStorageBuffer.Writer writer = new BinaryStorageBuffer.Writer();
-            var id = adapter.Serialize(writer, options);
-
-            var byteArray = writer.SerializeToByteArray();
-            BinaryStorageBuffer.Reader reader = new BinaryStorageBuffer.Reader(byteArray);
-
-            var result = adapter.Deserialize(reader, typeof(AssetBundleRequestOptions), id, out var _) as AssetBundleRequestOptions;
+            var result = RoundTripThroughAdapter(new AssetBundleRequestOptions { RedirectLimit = redirectLimit });
 
             Assert.AreEqual(expectedRedirectLimit, result.RedirectLimit);
+        }
+
+        // Writes options through the binary adapter and reads them back.
+        static AssetBundleRequestOptions RoundTripThroughAdapter(AssetBundleRequestOptions options)
+        {
+            var adapter = new BinaryContentCatalogData.AssetBundleRequestOptionsSerializationAdapter();
+            var writer = new BinaryStorageBuffer.Writer();
+            var id = adapter.Serialize(writer, options);
+
+            var reader = new BinaryStorageBuffer.Reader(writer.SerializeToByteArray());
+            return adapter.Deserialize(reader, typeof(AssetBundleRequestOptions), id, out var _) as AssetBundleRequestOptions;
+        }
+
+        [Test]
+        [TestCase(CacheProbeMode.CachedVersions)]
+        [TestCase(CacheProbeMode.IsVersionCached)]
+        public void ContentCatalogData_SerializesCacheProbeMode_Correctly(CacheProbeMode mode)
+        {
+            var result = RoundTripThroughAdapter(new AssetBundleRequestOptions { CacheProbeMode = mode });
+
+            Assert.AreEqual(mode, result.CacheProbeMode);
+        }
+
+        // CacheProbeMode shares one packed int with AssetLoadMode and four bools, so a wrong
+        // mask shows up as a neighbour changing rather than as this field failing.
+        [Test]
+        public void ContentCatalogData_PackedFlagFields_DoNotInterfere()
+        {
+            var allSet = new AssetBundleRequestOptions
+            {
+                AssetLoadMode = AssetLoadMode.AllPackedAssetsAndDependencies,
+                ChunkedTransfer = true,
+                UseCrcForCachedBundle = true,
+                UseUnityWebRequestForLocalBundles = true,
+                ClearOtherCachedVersionsWhenLoaded = true,
+                CacheProbeMode = CacheProbeMode.IsVersionCached
+            };
+
+            var result = RoundTripThroughAdapter(allSet);
+
+            Assert.AreEqual(AssetLoadMode.AllPackedAssetsAndDependencies, result.AssetLoadMode);
+            Assert.IsTrue(result.ChunkedTransfer);
+            Assert.IsTrue(result.UseCrcForCachedBundle);
+            Assert.IsTrue(result.UseUnityWebRequestForLocalBundles);
+            Assert.IsTrue(result.ClearOtherCachedVersionsWhenLoaded);
+            Assert.AreEqual(CacheProbeMode.IsVersionCached, result.CacheProbeMode);
+
+            // An all-defaults pass is also the backward-compatibility case: a catalog written
+            // before CacheProbeMode existed has that bit clear, which must read as CachedVersions.
+            var allClear = RoundTripThroughAdapter(new AssetBundleRequestOptions());
+
+            Assert.AreEqual(AssetLoadMode.RequestedAssetAndDependencies, allClear.AssetLoadMode);
+            Assert.IsFalse(allClear.ChunkedTransfer);
+            Assert.IsFalse(allClear.UseCrcForCachedBundle);
+            Assert.IsFalse(allClear.UseUnityWebRequestForLocalBundles);
+            Assert.IsFalse(allClear.ClearOtherCachedVersionsWhenLoaded);
+            Assert.AreEqual(CacheProbeMode.CachedVersions, allClear.CacheProbeMode);
         }
 
 #if ENABLE_CONTENT_DIRECTORIES

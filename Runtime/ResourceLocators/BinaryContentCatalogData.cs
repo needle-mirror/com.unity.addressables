@@ -496,26 +496,18 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                 }
                 public string InternalId { get; internal set; }
                 public string ProviderId { get; internal set; }
-                List<IResourceLocation> _deps;
-                static void ProcDependencies(ResourceLocation l, ResourceLocation d, int i, int count)
-                {
-                    if (d._deps == null)
-                        d._deps = new List<IResourceLocation>(count);
-                    d._deps.Add(l);
-                }
+                IList<IResourceLocation> _deps;
 
-                public IList<IResourceLocation> Dependencies
-                {
-                    get
-                    {
-                        if (_deps == null)
-                        {
-                            _deps = new List<IResourceLocation>();
-                            reader.ProcessObjectArray<ResourceLocation, ResourceLocation>(dependencyDataOffset, out var size, this, ProcDependencies, true);
-                        }
-                        return _deps;
-                    }
-                }
+                static readonly List<IResourceLocation> s_NoDependencies = new List<IResourceLocation>();
+
+                /// <summary>
+                /// The dependencies of this location. The returned list is shared by every location
+                /// with the same dependency set, so it must not be modified — a modification affects
+                /// every location packed into that bundle.
+                /// </summary>
+                public IList<IResourceLocation> Dependencies =>
+                    _deps ??= reader.ReadObjectList<IResourceLocation, ResourceLocation>(dependencyDataOffset, out _)
+                              ?? s_NoDependencies;
                 uint dependencyDataOffset;
                 public int DependencyHashCode => dependencyDataOffset.GetHashCode();
                 public bool HasDependencies => dependencyDataOffset != uint.MaxValue;
@@ -540,21 +532,65 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             public IEnumerable<object> Keys => keyData.Keys;
             string providerSuffix;
 
-            //TODO: this is VERY expensive with this locator since it will expand the entire thing into memory and then throw most of it away.
             public IEnumerable<IResourceLocation> AllLocations
             {
                 get
                 {
-                    var allLocs = new HashSet<IResourceLocation>(new ResourceLocationComparer());
-                    foreach (var kvp in keyData)
+                    var locationComparer = new ResourceLocationComparer();
+
+                    // Identical location sets collapse to one offset when written, so a
+                    // repeated offset has nothing new to yield.
+                    var seenSets = new HashSet<uint>();
+
+                    // Raw offsets, so skipping a record named by many keys costs no hashing.
+                    var seenLocations = new HashSet<uint>();
+
+                    // Two records can still describe one location, and resolving an id can
+                    // turn two spellings into one path, so compare the built location.
+                    var seenValues = new HashSet<int>();
+
+                    foreach (var locationSetOffset in keyData.Values)
                     {
-                        if (Locate(kvp.Key, null, out var locs))
+                        if (!seenSets.Add(locationSetOffset))
+                            continue;
+
+                        var locationOffsets = TryReadLocationSet(locationSetOffset);
+                        if (locationOffsets == null)
+                            continue;
+
+                        foreach (var locationOffset in locationOffsets)
                         {
-                            foreach (var l in locs)
-                                allLocs.Add(l);
+                            if (!seenLocations.Add(locationOffset))
+                                continue;
+
+                            var location = reader.ReadObject<ResourceLocation>(locationOffset, out _);
+                            if (location == null)
+                                continue;
+
+                            if (!seenValues.Add(locationComparer.GetHashCode(location)))
+                                continue;
+
+                            // A cached record can come back, so check before appending.
+                            if (providerSuffix != null && !location.ProviderId.EndsWith(providerSuffix))
+                                location.ProviderId += providerSuffix;
+
+                            yield return location;
                         }
                     }
-                    return allLocs;
+                }
+            }
+
+            uint[] TryReadLocationSet(uint locationSetOffset)
+            {
+                try
+                {
+                    return reader.ReadValueArray<uint>(locationSetOffset, out _, false);
+                }
+                catch (Exception ex)
+                {
+                    // An unreadable set skips instead of ending the enumeration, as Locate does.
+                    Debug.LogException(ex);
+                    return null;
                 }
             }
 
@@ -599,15 +635,14 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                     locations = null;
                     return false;
                 }
+
                 try
                 {
                     sharedContext.type = type;
-                    var count = reader.ProcessObjectArray<ResourceLocation, LocateProcContext>(
-                        locationSetOffset, out var sizeRead,
+                    reader.ProcessObjectArray<ResourceLocation, LocateProcContext>(
+                        locationSetOffset, out _,
                         sharedContext, ProcFunc);
                     locations = sharedContext.locations;
-                    sharedContext.locations = null;
-                    sharedContext.type = null;
 
                     if (providerSuffix != null && locations != null)
                     {
@@ -627,6 +662,11 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                     Debug.LogException(ex);
                     locations = null;
                     return false;
+                }
+                finally
+                {
+                    sharedContext.locations = null;
+                    sharedContext.type = null;
                 }
             }
         }
@@ -669,6 +709,13 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                         get => (flags & 16) == 16;
                         set => flags = (flags & ~16) | (int)(value ? 16 : 0);
                     }
+
+                    // Mapped rather than cast, so adding an enum member cannot spill into a neighbouring bit.
+                    public CacheProbeMode cacheProbeMode
+                    {
+                        get => (flags & 32) == 32 ? CacheProbeMode.IsVersionCached : CacheProbeMode.CachedVersions;
+                        set => flags = (flags & ~32) | (value == CacheProbeMode.IsVersionCached ? 32 : 0);
+                    }
                 }
 
                 public uint hashId;
@@ -701,7 +748,8 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                     ChunkedTransfer = com.chunkedTransfer,
                     UseUnityWebRequestForLocalBundles = com.useUnityWebRequestForLocalBundles,
                     UseCrcForCachedBundle = com.useCrcForCachedBundle,
-                    ClearOtherCachedVersionsWhenLoaded = com.clearOtherCachedVersionsWhenLoaded
+                    ClearOtherCachedVersionsWhenLoaded = com.clearOtherCachedVersionsWhenLoaded,
+                    CacheProbeMode = com.cacheProbeMode
                 };
                 size = sdSize + comSize + hashSize + bnSize;
                 return res;
@@ -732,6 +780,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
                         assetLoadMode = options.AssetLoadMode,
                         chunkedTransfer = options.ChunkedTransfer,
                         clearOtherCachedVersionsWhenLoaded = options.ClearOtherCachedVersionsWhenLoaded,
+                        cacheProbeMode = options.CacheProbeMode,
                         useCrcForCachedBundle = options.UseCrcForCachedBundle,
                         useUnityWebRequestForLocalBundles = options.UseUnityWebRequestForLocalBundles
                     })

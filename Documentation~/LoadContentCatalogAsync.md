@@ -18,6 +18,8 @@ If you give the catalog hash file at the same URL as the catalog, Unity caches t
 
 The hash file needs to be in the same location and have the same name as the catalog. The only difference to the path should be the extension.
 
+The path must end with the catalog `.bin` or `.json` file name, and can optionally take a query string, for example `/catalog.bin?token=abcd` or`/entries/content/?token=abcd&path=catalog.bin` for a path without a filename. Addressables reads that name from the end of the path to get the catalog's extension and to find the hash file beside it.
+
 `LoadContentCatalogAsync` comes with a parameter `autoReleaseHandle`. In order for the system to download a new remote catalog, any prior calls to `LoadContentCatalogAsync` that point to the catalog you want to load need to be released. Otherwise, the system picks up the content catalog load operation from the operation cache. If the cached operation is picked up, the new remote catalog isn't downloaded. If set to true, the parameter `autoReleaseHandle` makes sure that the operation doesn't stay in the operation cache after completing.
 
 Once you load a catalog, you can't unload it. However, you can update a loaded catalog. You must release the operation handle for the operation that loaded the catalog before updating a catalog. Refer to [Updating catalogs](#update-catalogs) for more information.

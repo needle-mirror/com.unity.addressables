@@ -112,6 +112,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
 #if ENABLE_CONTENT_DIRECTORIES
         const float k_BannerHeight = 28f;
+        const float k_BannerBackgroundOverdraw = 2f;
 #endif
 
         public AddressableAssetsSettingsGroupEditor(AddressableAssetsWindow w)
@@ -1049,9 +1050,10 @@ namespace UnityEditor.AddressableAssets.GUI
 
             bool needsRepaint = false;
 
-            //Using EditorStyles.helpbox.Draw ensure that a skin-appropriate background is drawn so the banner matches the active editor theme
+            //Using EditorStyles.helpbox.Draw ensure that a skin-appropriate background is drawn so the banner matches the active editor theme.
+            //The background is drawn slightly past the bottom of the banner so the style's transparent edge is covered by the tree view below it instead of showing as a gap.
             if (Event.current.type == EventType.Repaint)
-                EditorStyles.helpBox.Draw(rect, GUIContent.none, 0);
+                EditorStyles.helpBox.Draw(new Rect(rect.x, rect.y, rect.width, rect.height + k_BannerBackgroundOverdraw), GUIContent.none, 0);
 
             // Add padding
             Rect contentRect = new Rect(rect.x + 8, rect.y, rect.width - 16, rect.height);
@@ -1084,17 +1086,38 @@ namespace UnityEditor.AddressableAssets.GUI
             labelStyle.alignment = TextAnchor.MiddleLeft;
             labelStyle.wordWrap = false;
 
+            GUIStyle linkStyle = new GUIStyle(EditorStyles.linkLabel);
+            linkStyle.alignment = TextAnchor.MiddleLeft;
+            linkStyle.wordWrap = false;
+            linkStyle.font = labelStyle.font;
+            linkStyle.fontSize = labelStyle.fontSize;
+            linkStyle.fontStyle = labelStyle.fontStyle;
+            linkStyle.padding = labelStyle.padding;
+            linkStyle.contentOffset = labelStyle.contentOffset;
+            linkStyle.fixedHeight = 0f;
+
             string message = "For the most up to date way of managing local content, use the Content Directory schema.";
+
+            GUIContent linkContent = new GUIContent("Read more...");
+            float linkWidth = linkStyle.CalcSize(linkContent).x;
+            float messageMaxWidth = Mathf.Max(0f, textRect.width - linkWidth);
 
             Vector2 messageSize = labelStyle.CalcSize(new GUIContent(message));
 
             // Truncate if needed
-            if (messageSize.x > textRect.width)
+            if (messageSize.x > messageMaxWidth)
             {
-                message = TruncateTextWithEllipsis(message, textRect.width, labelStyle);
+                message = TruncateTextWithEllipsis(message, messageMaxWidth, labelStyle);
+                messageSize = labelStyle.CalcSize(new GUIContent(message));
             }
 
-            UnityEngine.GUI.Label(textRect, message, labelStyle);
+            float messageWidth = Mathf.Min(messageSize.x, messageMaxWidth);
+            UnityEngine.GUI.Label(new Rect(textRect.x, textRect.y, messageWidth, textRect.height), message, labelStyle);
+
+            Rect linkRect = new Rect(textRect.x + messageWidth, textRect.y, linkWidth, textRect.height);
+            EditorGUIUtility.AddCursorRect(linkRect, MouseCursor.Link);
+            if (UnityEngine.GUI.Button(linkRect, linkContent, linkStyle))
+                Application.OpenURL(AddressableAssetUtility.GenerateContentDirectoriesDocsURL());
 
             return needsRepaint;
         }

@@ -1,0 +1,21 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <ui:Template path="Packages/com.unity.addressables/Editor/BuildReportVisualizer/UIToolKitAssets/UXML/MainPanelEmbedded.uxml" name="MainPanelTemplate" />
+    <ui:Template path="Packages/com.unity.addressables/Editor/BuildReportVisualizer/UIToolKitAssets/UXML/DetailsPanel.uxml" name="DetailsPanelTemplate" />
+    <!-- The strip sits above the splitter so it spans the full width; the TabView's content
+         container is hidden and MiddlePane holds the selected tab. -->
+    <ui:VisualElement name="ReportContentRoot" style="flex-grow: 1;">
+        <ui:TabView name="TabsView" class="TabsView">
+            <ui:Tab label="Summary" />
+            <ui:Tab label="Explore" />
+            <ui:Tab label="Potential Issues" />
+        </ui:TabView>
+        <ui:TwoPaneSplitView name="MiddleRightPaneSplitter" fixed-pane-index="1" fixed-pane-initial-size="400" orientation="Horizontal" fixed-pane-initial-dimension="300" style="flex-grow: 1; min-height: 0;">
+            <ui:VisualElement name="MiddlePane" style="flex-grow: 1;">
+                <ui:Instance template="MainPanelTemplate" name="MainPanel" style="flex-grow: 1; flex-direction: column;" />
+            </ui:VisualElement>
+            <ui:VisualElement name="RightPane">
+                <ui:Instance template="DetailsPanelTemplate" name="DetailsPanel" style="flex-grow: 1; min-height: 0; max-width: 100%;" />
+            </ui:VisualElement>
+        </ui:TwoPaneSplitView>
+    </ui:VisualElement>
+</ui:UXML>

@@ -20,7 +20,7 @@ namespace UnityEditor.AddressableAssets.Settings
         public string LocatorId { get; private set; }
         public Dictionary<object, HashSet<AddressableAssetEntry>> m_keyToEntries;
         public Dictionary<CacheKey, IList<IResourceLocation>> m_Cache;
-        public AddressableAssetTree m_AddressableAssetTree;
+        AddressableFolderEnumerator m_FolderEnumerator;
         HashSet<object> m_Keys = null;
         AddressableAssetSettings m_Settings;
         bool m_dirty = true;
@@ -34,45 +34,42 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (m_Keys == null)
                 {
                     var visitedFolders = new HashSet<string>();
-                    using (new AddressablesFileEnumerationScope(m_AddressableAssetTree))
+                    m_Keys = new HashSet<object>();
+                    foreach (var kvp in m_keyToEntries)
                     {
-                        m_Keys = new HashSet<object>();
-                        foreach (var kvp in m_keyToEntries)
+                        var hasNonFolder = false;
+                        foreach (var e in kvp.Value)
                         {
-                            var hasNonFolder = false;
-                            foreach (var e in kvp.Value)
+                            if (AssetDatabase.IsValidFolder(e.AssetPath))
                             {
-                                if (AssetDatabase.IsValidFolder(e.AssetPath))
+                                if (!visitedFolders.Contains(e.AssetPath))
                                 {
-                                    if (!visitedFolders.Contains(e.AssetPath))
+                                    foreach (var f in m_FolderEnumerator.Enumerate(e.AssetPath, true))
                                     {
-                                        foreach (var f in EnumerateAddressableFolder(e.AssetPath, m_Settings, true))
-                                        {
-                                            m_Keys.Add(f.Replace(e.AssetPath, e.address));
-                                            m_Keys.Add(AssetDatabase.AssetPathToGUID(f));
-                                        }
-
-                                        visitedFolders.Add(e.AssetPath);
+                                        m_Keys.Add(f.Replace(e.AssetPath, e.address));
+                                        m_Keys.Add(AssetDatabase.AssetPathToGUID(f));
                                     }
 
-                                    if (IsLabelsEnabled(e))
-                                    {
-                                        foreach (var l in e.labels)
-                                            m_Keys.Add(l);
-                                    }
+                                    visitedFolders.Add(e.AssetPath);
+                                }
 
-                                    if (IsFolderKeysEnabled(e))
-                                        m_Keys.Add(e.address);
-                                }
-                                else
+                                if (IsLabelsEnabled(e))
                                 {
-                                    hasNonFolder = true;
+                                    foreach (var l in e.labels)
+                                        m_Keys.Add(l);
                                 }
+
+                                if (IsFolderKeysEnabled(e))
+                                    m_Keys.Add(e.address);
                             }
-
-                            if (hasNonFolder)
-                                m_Keys.Add(kvp.Key);
+                            else
+                            {
+                                hasNonFolder = true;
+                            }
                         }
+
+                        if (hasNonFolder)
+                            m_Keys.Add(kvp.Key);
                     }
                 }
 
@@ -111,20 +108,20 @@ namespace UnityEditor.AddressableAssets.Settings
         void RebuildInternalData()
         {
             m_Keys = null;
-            m_AddressableAssetTree = BuildAddressableTree(m_Settings);
+
+            m_FolderEnumerator?.Dispose();
+            m_FolderEnumerator = new AddressableFolderEnumerator(m_Settings, false, null);
+
             m_Cache = new Dictionary<CacheKey, IList<IResourceLocation>>();
             m_keyToEntries = new Dictionary<object, HashSet<AddressableAssetEntry>>(m_Settings.labelTable.Count);
-            using (new AddressablesFileEnumerationScope(m_AddressableAssetTree))
+            foreach (AddressableAssetGroup g in m_Settings.groups)
             {
-                foreach (AddressableAssetGroup g in m_Settings.groups)
-                {
-                    if (g == null)
-                        continue;
+                if (g == null)
+                    continue;
 
-                    foreach (AddressableAssetEntry e in g.entries)
-                    {
-                        AddEntriesToTables(m_keyToEntries, e);
-                    }
+                foreach (AddressableAssetEntry e in g.entries)
+                {
+                    AddEntriesToTables(m_keyToEntries, e);
                 }
             }
 
@@ -217,7 +214,7 @@ namespace UnityEditor.AddressableAssets.Settings
             return true;
         }
 
-        static void GatherEntryLocations(AddressableAssetEntry entry, Type type, IList<IResourceLocation> locations, AddressableAssetTree assetTree)
+        static void GatherEntryLocations(AddressableAssetEntry entry, Type type, IList<IResourceLocation> locations, AddressableFolderEnumerator enumerator)
         {
             if (!string.IsNullOrEmpty(entry.address) && entry.address.Contains('[') && entry.address.Contains(']'))
             {
@@ -225,39 +222,36 @@ namespace UnityEditor.AddressableAssets.Settings
                 return;
             }
 
-            using (new AddressablesFileEnumerationScope(assetTree))
+            entry.GatherAllAssets(null, true, true, false, e =>
             {
-                entry.GatherAllAssets(null, true, true, false, e =>
+                if (e.IsScene)
                 {
-                    if (e.IsScene)
+                    if (type == null || type == typeof(object) || type == typeof(SceneInstance) || AddressableAssetUtility.MapEditorTypeToRuntimeType(e.MainAssetType, false) == type)
+                        locations.Add(new ResourceLocationBase(e.address, e.AssetPath, typeof(SceneProvider).FullName, typeof(SceneInstance)));
+                }
+                else if (type == null || (type.IsAssignableFrom(e.MainAssetType) && type != typeof(object)))
+                {
+                    locations.Add(new ResourceLocationBase(e.address, e.AssetPath, typeof(AssetDatabaseProvider).FullName, e.MainAssetType));
+                    return true;
+                }
+                else
+                {
+                    ObjectIdentifier[] ids = ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(e.guid), EditorUserBuildSettings.activeBuildTarget);
+                    if (ids.Length > 0)
                     {
-                        if (type == null || type == typeof(object) || type == typeof(SceneInstance) || AddressableAssetUtility.MapEditorTypeToRuntimeType(e.MainAssetType, false) == type)
-                            locations.Add(new ResourceLocationBase(e.address, e.AssetPath, typeof(SceneProvider).FullName, typeof(SceneInstance)));
-                    }
-                    else if (type == null || (type.IsAssignableFrom(e.MainAssetType) && type != typeof(object)))
-                    {
-                        locations.Add(new ResourceLocationBase(e.address, e.AssetPath, typeof(AssetDatabaseProvider).FullName, e.MainAssetType));
+                        foreach (var t in AddressableAssetEntry.GatherMainAndReferencedSerializedTypes(ids))
+                        {
+                            if (type.IsAssignableFrom(t))
+                                locations.Add(
+                                    new ResourceLocationBase(e.address, e.AssetPath, typeof(AssetDatabaseProvider).FullName, AddressableAssetUtility.MapEditorTypeToRuntimeType(t, false)));
+                        }
+
                         return true;
                     }
-                    else
-                    {
-                        ObjectIdentifier[] ids = ContentBuildInterface.GetPlayerObjectIdentifiersInAsset(new GUID(e.guid), EditorUserBuildSettings.activeBuildTarget);
-                        if (ids.Length > 0)
-                        {
-                            foreach (var t in AddressableAssetEntry.GatherMainAndReferencedSerializedTypes(ids))
-                            {
-                                if (type.IsAssignableFrom(t))
-                                    locations.Add(
-                                        new ResourceLocationBase(e.address, e.AssetPath, typeof(AssetDatabaseProvider).FullName, AddressableAssetUtility.MapEditorTypeToRuntimeType(t, false)));
-                            }
+                }
 
-                            return true;
-                        }
-                    }
-
-                    return false;
-                });
-            }
+                return false;
+            }, enumerator);
         }
 
         public bool Locate(object key, Type type, out IList<IResourceLocation> locations)
@@ -290,21 +284,21 @@ namespace UnityEditor.AddressableAssets.Settings
                             if (mainObjectTypes.Count > 0)
                             {
                                 foreach (Type t in mainObjectTypes)
-                                    GatherEntryLocations(e, t, locations, m_AddressableAssetTree);
+                                    GatherEntryLocations(e, t, locations, m_FolderEnumerator);
                             }
                             else
                             {
-                                GatherEntryLocations(e, null, locations, m_AddressableAssetTree);
+                                GatherEntryLocations(e, null, locations, m_FolderEnumerator);
                             }
                         }
                         else
                         {
-                            GatherEntryLocations(e, null, locations, m_AddressableAssetTree);
+                            GatherEntryLocations(e, null, locations, m_FolderEnumerator);
                         }
                     }
                     else
                     {
-                        GatherEntryLocations(e, type, locations, m_AddressableAssetTree);
+                        GatherEntryLocations(e, type, locations, m_FolderEnumerator);
                     }
                 }
             }

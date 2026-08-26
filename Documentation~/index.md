@@ -6,7 +6,7 @@ uid: addressables-home
 
 The Addressables package provides a user interface in the Unity Editor to organize and manage the assets in your project, to create content builds that you can ship along with a Player build. It also has an API that you can use to load and release assets at runtime.
 
-The Addressables package was originally designed on top of Unity's [AssetBundle](xref:um-asset-bundles-intro) system, but is also compatible with the newer [content directories system](xref:um-content-directories). Addressables automatically manages dependencies, asset locations, and provides simpler workflows for memory management which you otherwise have to handle manually in the AssetBundle and content directories systems.
+The Addressables package was originally designed on top of Unity's [AssetBundle](xref:um-asset-bundles-intro) system, but is also compatible with the newer [content directories system](https://docs.unity3d.com/6000.6/Documentation/Manual/content-directories.html). Addressables automatically manages dependencies, asset locations, and provides simpler workflows for memory management which you otherwise have to handle manually in the AssetBundle and content directories systems.
 
 When you make an asset Addressable, you can use that asset's address to load it locally or from a content delivery network, rather than using its file name, AssetBundle location, or content directory location. This means you can change the location of assets in a project without needing to rewrite code.
 

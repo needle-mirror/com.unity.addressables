@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -33,10 +32,11 @@ namespace UnityEngine.AddressableAssets
                 }
             }
 
-            ContentCatalogProvider ccp = m_Addressables.ResourceManager.ResourceProviders
-                .FirstOrDefault(rp => rp is ContentCatalogProvider) as ContentCatalogProvider;
-            if (ccp != null)
-                ccp.DisableCatalogUpdateOnStart = false;
+            foreach (var rp in m_Addressables.ResourceManager.ResourceProviders)
+            {
+                if (rp is ContentCatalogProvider ccp)
+                    ccp.DisableCatalogUpdateOnStart = false;
+            }
 
             m_DepOp = m_Addressables.ResourceManager.CreateGroupOperation<string>(locations);
             return m_Addressables.ResourceManager.StartOperation(this, m_DepOp);

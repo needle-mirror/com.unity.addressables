@@ -23,6 +23,8 @@ namespace AutoGroupGenerator
         private const int k_QuickButtonWidth = 300;
 
         private const int k_QuickButtonHeight = 30;
+
+        private const string k_MissingSettingsMessage = "Assign an AutoGroupGenerator settings asset to generate Addressable groups.";
         #endregion
 
         #region Static Methods
@@ -108,6 +110,18 @@ namespace AutoGroupGenerator
                 };
 
                 DrawCentered(drawSettings, k_QuickButtonWidth);
+
+                if (m_Settings == null)
+                {
+                    GUILayout.Space(k_Space);
+
+                    Action drawMissingSettingsHelp = () =>
+                    {
+                        EditorGUILayout.HelpBox(k_MissingSettingsMessage, MessageType.Info);
+                    };
+
+                    DrawCentered(drawMissingSettingsHelp, k_QuickButtonWidth);
+                }
             }
 
             GUILayout.Space(k_Space);
@@ -123,10 +137,12 @@ namespace AutoGroupGenerator
                 }
                 else
                 {
-
-                    if (GUILayout.Button(k_QuickButtonLabel, buttonMinWidth, buttonHeight))
+                    using (new EditorGUI.DisabledScope(m_Settings == null))
                     {
-                        RunAutoGroupGeneratorTool(false);
+                        if (GUILayout.Button(k_QuickButtonLabel, buttonMinWidth, buttonHeight))
+                        {
+                            RunAutoGroupGeneratorTool(false);
+                        }
                     }
                 }
 
@@ -143,6 +159,13 @@ namespace AutoGroupGenerator
         {
             if (m_IsProcessing)
                 return;
+
+            if (m_Settings == null)
+            {
+                Debug.LogError($"{Constants.PackageShortName}: {k_MissingSettingsMessage}");
+
+                return;
+            }
 
             RunBlockingLoop(InitializeCommands());
         }
@@ -418,6 +441,9 @@ namespace AutoGroupGenerator
 
         private void StopAssetEditingIfNeeded()
         {
+            if (m_DataContainer == null)
+                return;
+
             if (m_DataContainer.AssetEditingInProgress)
             {
                 AssetDatabase.StopAssetEditing();

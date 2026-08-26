@@ -16,7 +16,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
     /// Content Directories provide an alternative to AssetBundles for organizing and loading addressable content.
     /// </summary>
     [DisplayName("Content Directory")]
-    [AddressablesHelpURL("GroupSchemas.html")]
+    [AddressablesHelpURL(AddressableAssetUtility.kContentDirectoriesDocsPage)]
     public class ContentDirectoryGroupSchema : AddressableAssetGroupSchema,
         ISerializationCallbackReceiver,
         IBuildableSchema,

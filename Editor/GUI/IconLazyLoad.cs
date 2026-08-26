@@ -27,6 +27,7 @@ internal class IconLazyLoad
         AssetEntryTreeViewItem m_TreeViewItem;
         Image m_Icon;
         string m_AssetPath;
+        System.Action<Texture2D> m_OnTextureLoaded;
 
         /// <summary>
         /// Creates an icon request for a UI Image element
@@ -38,6 +39,7 @@ internal class IconLazyLoad
             m_TreeViewItem = null;
             m_Icon = icon;
             m_AssetPath = assetPath;
+            m_OnTextureLoaded = null;
         }
 
         /// <summary>
@@ -50,6 +52,40 @@ internal class IconLazyLoad
             m_TreeViewItem = treeViewItem;
             m_Icon = null;
             m_AssetPath = assetPath;
+            m_OnTextureLoaded = null;
+        }
+
+        /// <summary>
+        /// Creates an icon request driven by a callback, for use with arbitrary item types
+        /// </summary>
+        /// <param name="assetPath">Path to the asset whose icon should be loaded</param>
+        /// <param name="onTextureLoaded">Called with the loaded Texture2D when the icon is ready</param>
+        public IconRequest(string assetPath, System.Action<Texture2D> onTextureLoaded)
+        {
+            m_TreeViewItem = null;
+            m_Icon = null;
+            m_AssetPath = assetPath;
+            m_OnTextureLoaded = onTextureLoaded;
+        }
+
+        public string AssetPath
+        {
+            get => m_AssetPath;
+        }
+
+        public bool HasCallback
+        {
+            get => m_OnTextureLoaded != null;
+        }
+
+        /// <summary>
+        /// Delivers an already resolved icon to the callback
+        /// </summary>
+        /// <param name="icon">The icon to hand to the callback</param>
+        public void Complete(Texture2D icon)
+        {
+            if (m_OnTextureLoaded != null)
+                m_OnTextureLoaded.Invoke(icon);
         }
 
         /// <summary>
@@ -61,6 +97,8 @@ internal class IconLazyLoad
                 m_Icon.image = BuildReportUtility.GetIcon(m_AssetPath);
             if(m_TreeViewItem != null)
                 m_TreeViewItem.assetIcon = BuildReportUtility.GetIcon(m_AssetPath) as Texture2D;
+            if(m_OnTextureLoaded != null)
+                m_OnTextureLoaded.Invoke(AssetDatabase.GetCachedIcon(m_AssetPath) as Texture2D);
         }
     }
 
@@ -93,7 +131,34 @@ internal class IconLazyLoad
                     return false;
             }
             var prefabType = reader.ReadLine();
-            return prefabType != null && prefabType.StartsWith("PrefabInstance");
+            if (prefabType == null)
+                return false;
+            if (prefabType.StartsWith("PrefabInstance"))
+                return true;
+
+            // Newer editors may not write the variant's PrefabInstance first, so look for a PrefabInstance without a parent transform
+            var inPrefabInstance = false;
+            string line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                if (line.StartsWith("--- "))
+                {
+                    inPrefabInstance = false;
+                    continue;
+                }
+                if (line.StartsWith("PrefabInstance:"))
+                {
+                    inPrefabInstance = true;
+                    continue;
+                }
+                if (inPrefabInstance && line.TrimStart().StartsWith("m_TransformParent:"))
+                {
+                    if (line.Contains("{fileID: 0}"))
+                        return true;
+                    inPrefabInstance = false;
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -197,6 +262,20 @@ internal class IconLazyLoad
     }
 
     /// <summary>
+    /// Registers an asset path to have its icon loaded lazily, delivering the result via a callback.
+    /// Use this when the target item type is not an AssetEntryTreeViewItem or Image.
+    /// </summary>
+    /// <param name="assetPath">Path to the asset whose icon should be loaded</param>
+    /// <param name="onTextureLoaded">Called with the loaded Texture2D on a future Editor frame</param>
+    internal void LoadIconLazy(string assetPath, System.Action<Texture2D> onTextureLoaded)
+    {
+        if (string.IsNullOrEmpty(assetPath) || onTextureLoaded == null)
+            return;
+        AddLazyIconLoadCallback();
+        m_needsIconRefresh.Enqueue(new IconRequest(assetPath, onTextureLoaded));
+    }
+
+    /// <summary>
     /// Registers an Image element to have its icon loaded lazily from the specified asset path
     /// This overload is used for build report UI where Image elements need icons loaded
     /// </summary>
@@ -260,30 +339,30 @@ internal class IconLazyLoad
     /// Get a useful icon for <paramref name="entry"/> without causing a full deserialization of the asset
     /// This is unlike <seealso cref="AssetDatabase.GetCachedIcon"/> which will deserialize an asset if the icon is not cached
     /// </summary>
-    /// <param name="entry">Entry to get an icon for</param>
+    /// <param name="assetPath">Path to the asset to get an icon for</param>
     /// <param name="performFileReads">
     /// Whether we should perform disk reads in order to determine the icon.
     /// Slightly slower, but is required to determine ScriptableObject icons and if a Prefab is a Variant
     /// </param>
     /// <returns></returns>
-    private Texture2D FastIconFromPath(AddressableAssetEntry entry, bool performFileReads = false)
+    private Texture2D FastIconFromPath(string assetPath, bool performFileReads = false)
     {
-        if (entry.AssetPath == null)
+        if (assetPath == null)
             return null;
-        if (!File.Exists(entry.AssetPath))
+        if (!File.Exists(assetPath))
             return null;
-        var isPrefab = entry.AssetPath.EndsWith(".prefab");
-        var isAsset = entry.AssetPath.EndsWith(".asset");
+        var isPrefab = assetPath.EndsWith(".prefab");
+        var isAsset = assetPath.EndsWith(".asset");
 
         // We removed the dependency for a file read on Scriptable Objects in 6000.6; so it's now faster to just make the call
 #if UNITY_6000_6_OR_NEWER
         if (isAsset)
-            return AssetDatabase.GetCachedIcon(entry.AssetPath) as Texture2D;
+            return AssetDatabase.GetCachedIcon(assetPath) as Texture2D;
 
         if (!performFileReads)
         {
             if (isPrefab)
-                return PrefabIcons.PrefabIcon(entry.AssetPath);
+                return PrefabIcons.PrefabIcon(assetPath);
             return null;
         }
 #else
@@ -292,7 +371,7 @@ internal class IconLazyLoad
         {
             if (isPrefab)
             {
-                return PrefabIcons.PrefabIcon(entry.AssetPath);
+                return PrefabIcons.PrefabIcon(assetPath);
             }
 
             return null;
@@ -300,22 +379,22 @@ internal class IconLazyLoad
 
         if (isAsset)
         {
-            var guid = GetTypeGuidFromAsset(entry.AssetPath);
+            var guid = GetTypeGuidFromAsset(assetPath);
             if (guid == null) return null;
             if (!m_scriptGuidToIconCache.ContainsKey(guid))
             {
-                m_scriptGuidToIconCache[guid] = AssetDatabase.GetCachedIcon(entry.AssetPath);
+                m_scriptGuidToIconCache[guid] = AssetDatabase.GetCachedIcon(assetPath);
             }
             return m_scriptGuidToIconCache[guid] as Texture2D;
         }
 #endif
         if (isPrefab)
         {
-            if (PrefabIcons.IsPrefabVariant(entry.AssetPath))
+            if (PrefabIcons.IsPrefabVariant(assetPath))
             {
-                return PrefabIcons.PrefabVariantIcon(entry.AssetPath);
+                return PrefabIcons.PrefabVariantIcon(assetPath);
             }
-            return PrefabIcons.PrefabIcon(entry.AssetPath);
+            return PrefabIcons.PrefabIcon(assetPath);
         }
         return null;
     }
@@ -325,8 +404,24 @@ internal class IconLazyLoad
     /// </summary>
     private Texture2D GetBestTempIcon(AddressableAssetEntry entry, bool performFileRead = false)
     {
-        var icon = FastIconFromPath(entry, performFileRead);
+        var icon = FastIconFromPath(entry.AssetPath, performFileRead);
         return icon == null ? AssetPreview.GetMiniTypeThumbnail(entry.MainAssetType) : icon;
+    }
+
+    /// <summary>
+    /// A cheap type icon to show while the real icon loads, for callers that only have an asset path.
+    /// This reads the asset's type from the AssetDatabase without loading the asset, so it is only suitable for
+    /// callers that ask for a small number of them - drawing the rows that are on screen, rather than every row.
+    /// </summary>
+    /// <param name="assetPath">Path to the asset that needs a placeholder</param>
+    /// <returns>A type icon, or null if the asset's type could not be determined.</returns>
+    internal Texture2D GetPlaceholderIcon(string assetPath)
+    {
+        if (string.IsNullOrEmpty(assetPath))
+            return null;
+
+        var mainAssetType = AssetDatabase.GetMainAssetTypeAtPath(assetPath);
+        return mainAssetType == null ? null : AssetPreview.GetMiniTypeThumbnail(mainAssetType);
     }
 
     /// <summary>
@@ -414,9 +509,20 @@ internal class IconLazyLoad
                 if (item.entry.AssetPath.EndsWith(".prefab") || item.entry.AssetPath.EndsWith(".asset"))
                 {
                     // Always allow file reads in this path...
-                    item.assetIcon = FastIconFromPath(item.entry, true);
+                    item.assetIcon = FastIconFromPath(item.entry.AssetPath, true);
                     continue;
                 }
+            }
+
+            // Callback requests carry no TreeViewItem, so they miss the branch above. Give them the same fast path
+            // rather than letting Execute() go straight to AssetDatabase.GetCachedIcon, which may deserialize the asset.
+            if (request.HasCallback)
+            {
+                var icon = FastIconFromPath(request.AssetPath, true);
+                if (icon == null)
+                    icon = AssetDatabase.GetCachedIcon(request.AssetPath) as Texture2D;
+                request.Complete(icon);
+                continue;
             }
 
             request.Execute();

@@ -1,18 +1,11 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using UnityEditor.AddressableAssets.Tests.Runtime.TestObjects;
 using UnityEngine;
-using UnityEngine.ResourceManagement;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
-using UnityEngine.ResourceManagement.Util;
-using UnityEngine.ResourceManagement.ResourceProviders;
-using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.TestTools;
 using UnityEngine.U2D;
-using NUnit.Framework;
-
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -137,10 +130,10 @@ public static class AddressablesTestUtility
         var spriteEntry = settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(spritePath), group, false, false);
         spriteEntry.address = "sprite";
 
-        var so = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
-        var sub = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
+        var so = ScriptableObject.CreateInstance<TestObject>();
+        var sub = ScriptableObject.CreateInstance<TestObject>();
         sub.name = "sub-shown";
-        var sub2 = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
+        var sub2 = ScriptableObject.CreateInstance<TestObject>();
         sub2.hideFlags |= HideFlags.HideInHierarchy;
         sub2.name = "sub2-hidden";
         so.name = "main";
@@ -168,7 +161,7 @@ public static class AddressablesTestUtility
 
         //AssetDatabase.StopAssetEditing();
 
-        ScriptableObject assetWithDifferentTypedSubAssets = ScriptableObject.CreateInstance<UnityEngine.AddressableAssets.Tests.TestObject>();
+        ScriptableObject assetWithDifferentTypedSubAssets = ScriptableObject.CreateInstance<TestObject>();
         AssetDatabase.CreateAsset(assetWithDifferentTypedSubAssets, $"{RootFolder}/assetWithDifferentTypedSubAssets.asset");
 
         Material mat = new Material(Shader.Find("Transparent/Diffuse"));

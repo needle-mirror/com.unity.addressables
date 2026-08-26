@@ -607,7 +607,7 @@ namespace UnityEditor.AddressableAssets
 
 #if ENABLE_CONTENT_DIRECTORIES
             numberOfSerializedFiles = CountSerializedFiles(result);
-            if (currentSettings.ArchiveContentDirectories)
+            if (currentSettings.ContentDirectoryArchiveMode != ContentDirectoryArchiveMode.None)
                 archivingEnabled = (int)ArchivingStatus.Enabled;
             else
                 archivingEnabled = (int)ArchivingStatus.Disabled;

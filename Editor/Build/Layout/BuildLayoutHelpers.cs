@@ -66,6 +66,19 @@ namespace UnityEditor.AddressableAssets.Build.Layout
             return EnumerateBundles(layout).SelectMany(b => b.Files);
         }
 
+        /// <summary>
+        /// Returns the total file size in bytes of all AssetBundles in a BuildLayout, including the built-in bundles.
+        /// </summary>
+        /// <param name="layout">The BuildLayout generated during a build</param>
+        /// <returns>The total bundle file size in bytes</returns>
+        internal static ulong GetTotalBuildSize(BuildLayout layout)
+        {
+            ulong totalSize = 0;
+            foreach (BuildLayout.Bundle b in EnumerateBundles(layout))
+                totalSize += b.FileSize;
+            return totalSize;
+        }
+
         private static Dictionary<System.Type, AssetType> m_SystemTypeToAssetType = null;
         private static Dictionary<System.Type, AssetType> SystemTypeToAssetType
         {

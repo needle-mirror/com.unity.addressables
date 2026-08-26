@@ -182,5 +182,7 @@ namespace UnityEditor.AddressableAssets.Build
         /// The logger used to record build diagnostics and warnings during an Addressables build.
         /// </summary>
         public IBuildLogger Logger { get; internal set; }
+
+        internal AddressableFolderEnumerator FolderEnumerator;
     }
 }

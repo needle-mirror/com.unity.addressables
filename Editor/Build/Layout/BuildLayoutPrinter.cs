@@ -249,7 +249,7 @@ namespace UnityEditor.AddressableAssets.Build.Layout
             int ExplicitAssetCount = 0;
             int SceneBundleCount = 0;
             int AssetBundleCount = 0;
-            ulong TotalBuildSize = 0;
+            ulong TotalBuildSize = BuildLayoutHelpers.GetTotalBuildSize(layout);
             ulong MonoScriptSize = 0;
             ulong BundleOverheadSize = 0;
 
@@ -264,7 +264,6 @@ namespace UnityEditor.AddressableAssets.Build.Layout
                 bool sceneBundle = BuildLayoutHelpers.EnumerateAssets(b).FirstOrDefault(x => x.AssetPath.EndsWith(".unity", StringComparison.OrdinalIgnoreCase)) != null;
                 SceneBundleCount += sceneBundle ? 1 : 0;
                 AssetBundleCount += sceneBundle ? 0 : 1;
-                TotalBuildSize += b.FileSize;
             }
 
             ExplicitAssetCount = BuildLayoutHelpers.EnumerateAssets(layout).Count();

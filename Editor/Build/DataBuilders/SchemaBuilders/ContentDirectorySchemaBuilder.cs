@@ -25,6 +25,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
     /// </summary>
     public partial class ContentDirectorySchemaBuilder : ISchemaBuilder
     {
+        internal const string kContentDirectoryBuildName = "Content Directory";
+
         string m_CatalogBuildPath;
         string m_BuildReportDirectory;
 
@@ -154,6 +156,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
             foreach (var catalogId in m_CatalogIdToEntriesMap.Keys)
             {
                 var aaSettings = aaContext.Settings;
+                var archiveMode = aaSettings.ContentDirectoryArchiveMode;
                 using (m_Logger.ScopedStep(LogLevel.Info, $"Building content directory {catalogId}"))
                 {
                     bool hasContentDirectoryGroup = m_CatalogIdToFirstGroupMap.TryGetValue(catalogId, out var firstGroup);
@@ -161,9 +164,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                     var buildParams = new BuildContentDirectoryParameters();
                     buildParams.rootAssetPaths = globalRootAssetPaths;
                     buildParams.outputPath = m_CatalogIdToBuildPathMap[catalogId];
+                    buildParams.name = kContentDirectoryBuildName;
                     if (!Directory.Exists(buildParams.outputPath))
                         Directory.CreateDirectory(buildParams.outputPath);
-                    if (aaContext.Settings.ArchiveContentDirectories)
+                    if (archiveMode != ContentDirectoryArchiveMode.None)
                         buildParams.options |= BuildContentOptions.SkipExportToOutputPath;
                     if (aaSettings.DisableWriteTypeTree)
                         buildParams.options |= UnityEditor.BuildContentOptions.DisableWriteTypeTree
@@ -212,13 +216,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                         if (hasContentDirectoryGroup)
                         {
                             string outputPath = buildParams.outputPath;
-                            if (aaContext.Settings.ArchiveContentDirectories)
+                            if (archiveMode != ContentDirectoryArchiveMode.None)
                             {
                                 var contentLayout = LoadContentLayout();
                                 using (m_Logger.ScopedStep(LogLevel.Info, "Archiving Content Directories"))
                                 {
                                     var createdFiles = ContentDirectoryArchiver.ArchiveFromUDS(contentLayout, outputPath,
-                                        (long)(aaContext.Settings.TargetArchiveSizeInMB * 1024 * 1024), m_Logger);
+                                        (long)(aaSettings.TargetArchiveSizeInMB * 1024 * 1024), archiveMode, m_Logger);
                                     foreach (var file in createdFiles)
                                         m_FileRegistry.AddFile(file);
 
@@ -256,17 +260,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
         void PopulateContentDirectoryFilePathsFromLayout(string outputPath, ContentLayout contentLayout)
         {
             foreach (var artifact in contentLayout.BinaryArtifacts)
-                m_ContentDirectoryFilePaths.Add(Path.Combine(outputPath, artifact.ContentHash + GetExtension(artifact)));
+                m_ContentDirectoryFilePaths.Add(Path.Combine(outputPath, artifact.ContentHash + ContentDirectoryFileCategory.GetExtensionForCategory(artifact.Category)));
             m_ContentDirectoryFilePaths.Add(Path.Combine(outputPath, ContentDirectoryArchiver.kBuildManifestHashFileName));
-        }
-
-        string GetExtension(ContentLayout.BinaryArtifact artifact)
-        {
-            if (artifact.Category == ContentDirectoryFileCategory.ContentFile)
-                return ".cf";
-            if (artifact.Category == ContentDirectoryFileCategory.Manifest)
-                return ".json";
-            return String.Empty;
         }
 
         /// <summary>
@@ -449,137 +444,120 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
 
             string catalogId = schema.CatalogId;
             using (m_Logger.ScopedStep(LogLevel.Verbose, "ContentDirectorySchema.ProcessGroupSchema",
-                       ("Catalog", catalogId)))
+                       ("Catalog", catalogId),
+                       ("Group", schema.Group.Name)))
             {
-
-                if (!m_CatalogIdToEntriesMap.ContainsKey(catalogId))
+                if (!m_CatalogIdToEntriesMap.TryGetValue(catalogId, out var buildEntries))
                 {
-                    m_CatalogIdToEntriesMap[catalogId] = new List<BuildEntryData>();
+                    buildEntries = new List<BuildEntryData>();
+                    m_CatalogIdToEntriesMap[catalogId] = buildEntries;
                     m_CatalogIdToGroupGuidsMap[catalogId] = new List<string>();
                 }
 
-                // Track first group for PostProcessDirectory and all group GUIDs for build results
+                // Track first group for build results, plus every group GUID in this catalog.
                 if (!m_CatalogIdToFirstGroupMap.ContainsKey(catalogId))
                     m_CatalogIdToFirstGroupMap[catalogId] = schema.Group;
                 m_CatalogIdToGroupGuidsMap[catalogId].Add(schema.Group.Guid);
 
                 // Gather all assets including subassets and sprites for sprite atlas
                 var allEntries = new List<AddressableAssetEntry>();
-                using (m_Logger.ScopedStep(LogLevel.Verbose, "GatherAllAssets", true))
+                using (m_Logger.ScopedStep(LogLevel.Verbose, "GatherAllAssets"))
                 {
                     foreach (var entry in schema.Group.entries)
-                    {
-                        using (m_Logger.ScopedStep(LogLevel.Verbose, "GatherAssets",
-                                   ("Address", entry.address),
-                                   ("Path", entry.AssetPath),
-                                   ("Guid", entry.guid)))
-                        {
-                            entry.GatherAllAssets(allEntries, includeSelf: true, recurseAll: true, includeSubObjects: true);
-                        }
-                    }
+                        entry.GatherAllAssets(allEntries, includeSelf: true, recurseAll: true, includeSubObjects: true,
+                            entryFilter: null, aaContext: aaContext);
                 }
+
+                var allEntriesCount = allEntries.Count;
+                var requiredCapacity = buildEntries.Count + allEntriesCount;
+                if (buildEntries.Capacity < requiredCapacity)
+                    buildEntries.Capacity = requiredCapacity;
+
+                int atlasSpriteCount = 0;
+                int sceneCount = 0;
+                int subAssetCount = 0;
+                int skippedCount = 0;
 
                 foreach (var entry in allEntries)
                 {
-                    var targetAsset = entry.TargetAsset;
-                    if (targetAsset == null)
+                    // Check the parent's cached type before touching TargetAsset.
+                    // An atlas child builds a Sprite clone that is thrown away.
+                    if (entry.ParentEntry != null && entry.ParentEntry.MainAssetType == typeof(SpriteAtlas))
                     {
-                        Debug.LogWarning($"Skipping entry with null TargetAsset: {entry.address}");
+                        RecordSpriteAtlasChild(contentDirectoryGroupSchema, entry);
+                        atlasSpriteCount++;
                         continue;
                     }
-                    using (m_Logger.ScopedStep(LogLevel.Verbose, "GatherSpriteAtlases",
-                               ("Address", entry.address),
-                               ("Path", entry.AssetPath),
-                               ("Guid", entry.guid)))
+
+                    UnityEngine.Object targetAsset = null;
+                    var isSubObject = entry.IsSubObject;
+                    if (isSubObject)
                     {
-                        if (entry.ParentEntry != null && entry.ParentEntry.TargetAsset.GetType() == typeof(SpriteAtlas))
+                        targetAsset = entry.TargetAsset;
+                        if (targetAsset == null)
                         {
-                            var parentKey = entry.ParentEntry.address;
-
-                            var spriteLabels = new List<string>();
-                            if (contentDirectoryGroupSchema.IncludeLabelsInCatalog)
-                                spriteLabels.AddRange(entry.labels);
-                            string spriteFolderKey = contentDirectoryGroupSchema.IncludeFolderKeysInCatalog ? entry.ParentFolderAddress : null;
-                            bool isSpriteFolderChild = !string.IsNullOrEmpty(spriteFolderKey) && spriteFolderKey != entry.address;
-                            if (isSpriteFolderChild)
-                                spriteLabels.Add(spriteFolderKey);
-
-                            var spriteChildData = new SpriteChildEntryData
-                            {
-                                address = entry.address,
-                                labels = spriteLabels,
-                                includeAddressKey = contentDirectoryGroupSchema.IncludeAddressesForFolderChildren || !isSpriteFolderChild
-                            };
-
-                            if (m_SpriteAtlasKeyToSprites.ContainsKey(parentKey))
-                                m_SpriteAtlasKeyToSprites[parentKey].Add(spriteChildData);
-                            else
-                                m_SpriteAtlasKeyToSprites.Add(parentKey, new List<SpriteChildEntryData> { spriteChildData });
+                            Debug.LogWarning($"Skipping entry with null TargetAsset: {entry.address}");
+                            skippedCount++;
                             continue;
                         }
                     }
-
-                    string entryGuid = entry.guid;
-                    Type convertedType;
-                    using (m_Logger.ScopedStep(LogLevel.Verbose, "GatherSubassets",
-                               ("Address", entry.address),
-                               ("Path", entry.AssetPath),
-                               ("Guid", entry.guid)))
+                    else if (string.IsNullOrEmpty(entry.AssetPath))
                     {
-                        // For subassets, use parent's GUID since subassets don't have their own GUID
-                        if (string.IsNullOrEmpty(entryGuid) && entry.IsSubAsset && entry.ParentEntry != null)
-                            entryGuid = entry.ParentEntry.guid;
+                        Debug.LogWarning($"Skipping entry with no asset path: {entry.address}");
+                        skippedCount++;
+                        continue;
+                    }
 
-                        // For subassets, use the actual subasset type (e.g., Sprite) rather than MainAssetType
-                        // (e.g., Texture2D). This ensures type filtering works correctly when loading by GUID-based keys.
-                        Type assetType = (entry.IsSubAsset && entry.TargetAsset != null)
-                            ? entry.TargetAsset.GetType()
-                            : entry.MainAssetType;
-                        convertedType = AddressableAssetUtility.MapEditorTypeToRuntimeType(assetType, false);
-                        if (IsEditorTypeOrNull(convertedType))
-                        {
-                            LogEditorTypeStrippedWarning(entry.MainAssetType, entry.AssetPath, isAssetPath: true);
-                            continue;
-                        }
+                    // For subassets, use parent's GUID since subassets don't have their own GUID
+                    string entryGuid = entry.guid;
+                    if (string.IsNullOrEmpty(entryGuid) && entry.IsSubAsset && entry.ParentEntry != null)
+                        entryGuid = entry.ParentEntry.guid;
+
+                    Type assetType = isSubObject ? targetAsset.GetType() : entry.MainAssetType;
+                    Type convertedType = AddressableAssetUtility.MapEditorTypeToRuntimeType(assetType, false);
+                    if (IsEditorTypeOrNull(convertedType))
+                    {
+                        LogEditorTypeStrippedWarning(entry.MainAssetType, entry.AssetPath, isAssetPath: true);
+                        skippedCount++;
+                        continue;
                     }
 
                     // Add to AddressableRootAsset and track the ID
                     int id;
                     bool isScene = entry.IsScene;
-                    using (m_Logger.ScopedStep(LogLevel.Verbose, "CreateLoadable",
-                               ("IsScene", isScene.ToString()),
-                               ("Address", entry.address),
-                               ("Path", entry.AssetPath),
-                               ("Guid", entry.guid)))
+                    if (isScene)
                     {
+                        var sceneId = LoadableSceneIdEditorUtility.CreateLoadableSceneId(new GUID(entryGuid));
+                        id = m_GlobalRootAsset.AddScene(sceneId);
+                        WarnOnDuplicateSubObjectAddress(m_keyToSceneIdMap, entry);
+                        m_keyToSceneIdMap[entry.address] = id;
+                        sceneCount++;
+                    }
+                    else
+                    {
+                        LoadableObjectId loadableObjId;
+                        if (isSubObject)
+                        {
+                            loadableObjId = LoadableObjectIdEditorUtility.CreateLoadableObjectId(targetAsset.GetEntityId());
+                        }
+                        else if (!TryCreateMainAssetLoadableObjectId(entry.AssetPath, out loadableObjId))
+                        {
+                            Debug.LogWarning($"Skipping entry whose main object could not be identified: {entry.address}");
+                            skippedCount++;
+                            continue;
+                        }
 
-                        if (isScene)
-                        {
-                            var sceneId = LoadableSceneIdEditorUtility.CreateLoadableSceneId(entry.AssetPath);
-                            id = m_GlobalRootAsset.AddScene(sceneId);
-                            m_keyToSceneIdMap[entry.address] = id;
-                        }
-                        else
-                        {
-                            var loadableObjId = LoadableObjectIdEditorUtility.CreateLoadableObjectId(targetAsset.GetEntityId());
-                            id = m_GlobalRootAsset.AddAsset(loadableObjId);
-                            m_keyToAssetIdMap[entry.address] = id;
-                        }
+                        id = m_GlobalRootAsset.AddAsset(loadableObjId);
+                        WarnOnDuplicateSubObjectAddress(m_keyToAssetIdMap, entry);
+                        m_keyToAssetIdMap[entry.address] = id;
                     }
 
-                    // Build labels list
-                    var labels = new List<string>();
-                    if (contentDirectoryGroupSchema.IncludeLabelsInCatalog)
-                        labels.AddRange(entry.labels);
-                    string folderKey = contentDirectoryGroupSchema.IncludeFolderKeysInCatalog ? entry.ParentFolderAddress : null;
-                    bool isFolderChild = !string.IsNullOrEmpty(folderKey) && folderKey != entry.address;
-                    if (isFolderChild)
-                        labels.Add(folderKey);
-                    if (entry.MainAsset != entry.TargetAsset && entry.MainAssetType != typeof(SpriteAtlas))
-                    {
-                        string guidBasedKey = $"{entryGuid}[{targetAsset.name}]";
-                        labels.Add(guidBasedKey);
-                    }
+                    if (entry.IsSubAsset)
+                        subAssetCount++;
+
+                    List<string> labels = CollectLabels(contentDirectoryGroupSchema, entry, out bool isFolderChild);
+                    if (isSubObject && entry.MainAssetType != typeof(SpriteAtlas))
+                        (labels ??= new List<string>()).Add($"{entryGuid}[{targetAsset.name}]");
 
                     // Store entry data for catalog generation
                     var buildEntry = new BuildEntryData
@@ -592,7 +570,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                         id = id,
                         includeAddressKey = contentDirectoryGroupSchema.IncludeAddressesForFolderChildren || !isFolderChild
                     };
-                    m_CatalogIdToEntriesMap[catalogId].Add(buildEntry);
+                    buildEntries.Add(buildEntry);
 
                     EvaluateIsSubObject(buildEntry);
                 }
@@ -602,9 +580,94 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                 if (!m_CatalogIdToBuildPathMap.ContainsKey(catalogId))
                     m_CatalogIdToBuildPathMap[catalogId] = contentDirectoryGroupSchema.BuildPath.GetValue(aaContext.Settings);
                 m_CatalogIdToLoadPathMap[catalogId] = contentDirectoryGroupSchema.LoadPath.GetValue(aaContext.Settings);
+
+                m_Logger.AddArgSafe("Gathered", allEntriesCount.ToString());
+                m_Logger.AddArgSafe("SubAssets", subAssetCount.ToString());
+                m_Logger.AddArgSafe("Scenes", sceneCount.ToString());
+                m_Logger.AddArgSafe("AtlasSprites", atlasSpriteCount.ToString());
+                m_Logger.AddArgSafe("Skipped", skippedCount.ToString());
             }
 
             return string.Empty;
+        }
+
+        /// <summary>
+        /// Builds the id for an asset's main object without loading it. HierarchyIterator is
+        /// positioned on the main representation when constructed and reads its EntityId from
+        /// the asset database index, so nothing is deserialized.
+        /// </summary>
+        internal static bool TryCreateMainAssetLoadableObjectId(string assetPath, out LoadableObjectId loadableObjectId)
+        {
+            loadableObjectId = default;
+
+            var hierarchy = new HierarchyIterator(assetPath, false);
+
+            // A resolvable local file id means the iterator is sitting on a real object.
+            if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(hierarchy.entityId, out _, out _))
+                return false;
+
+            loadableObjectId = LoadableObjectIdEditorUtility.CreateLoadableObjectId(hierarchy.entityId);
+            return true;
+        }
+
+        void WarnOnDuplicateSubObjectAddress(Dictionary<string, int> keyToIdMap, AddressableAssetEntry entry)
+        {
+            if (!entry.IsSubObject || !keyToIdMap.ContainsKey(entry.address))
+                return;
+
+            string owner = entry.ParentEntry != null ? entry.ParentEntry.AssetPath : entry.address;
+            Debug.LogWarning(
+                $"Two objects named the same inside '{owner}' both produce the Addressable address " +
+                $"'{entry.address}'. Only one can be loaded by that key. Rename one of the objects.");
+        }
+
+        /// <summary>
+        /// Builds the extra catalog keys, labels and folder entries. Returns null when there
+        /// are none.
+        /// </summary>
+        List<string> CollectLabels(ContentDirectoryGroupSchema schema, AddressableAssetEntry entry, out bool isFolderChild)
+        {
+            List<string> labels = null;
+            isFolderChild = false;
+
+            if (!schema.IncludeLabelsInCatalog)
+            {
+                labels = new List<string>();
+                return labels;
+            }
+
+            if (entry.labels.Count > 0)
+                labels = new List<string>(entry.labels);
+
+            if (!schema.IncludeFolderKeysInCatalog)
+                return labels;
+
+            string folderKey = entry.ParentFolderAddress;
+            isFolderChild = !string.IsNullOrEmpty(folderKey) && folderKey != entry.address;
+            if (isFolderChild)
+                (labels ??= new List<string>()).Add(folderKey);
+
+            return labels;
+        }
+
+        /// <summary>
+        /// Records a sprite that belongs to a Sprite Atlas. The sprite itself is never loaded;
+        /// its catalog entry is emitted later from the parent atlas.
+        /// </summary>
+        void RecordSpriteAtlasChild(ContentDirectoryGroupSchema schema, AddressableAssetEntry entry)
+        {
+            var spriteChildData = new SpriteChildEntryData
+            {
+                address = entry.address,
+                labels = CollectLabels(schema, entry, out bool isSpriteFolderChild),
+                includeAddressKey = schema.IncludeAddressesForFolderChildren || !isSpriteFolderChild
+            };
+
+            var parentKey = entry.ParentEntry.address;
+            if (m_SpriteAtlasKeyToSprites.TryGetValue(parentKey, out var sprites))
+                sprites.Add(spriteChildData);
+            else
+                m_SpriteAtlasKeyToSprites.Add(parentKey, new List<SpriteChildEntryData> {spriteChildData});
         }
 
         void EvaluateIsSubObject(BuildEntryData buildEntry)
@@ -612,23 +675,18 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
             if (buildEntry.isScene)
                 return;
 
-            using (m_Logger.ScopedStep(LogLevel.Verbose, "EvaluateIsSubObject",
-                       ("Id", buildEntry.id.ToString()),
-                        ("Guid", buildEntry.guid)))
+            int bracketIdx = buildEntry.key.IndexOf('[');
+            if (bracketIdx > 0)
             {
-                int bracketIdx = buildEntry.key.IndexOf('[');
-                if (bracketIdx > 0)
+                string parentKey = buildEntry.key.Substring(0, bracketIdx + 1);
+                if (!m_parentKeyToSubAssetInfo.TryGetValue(parentKey, out var info))
                 {
-                    string parentKey = buildEntry.key.Substring(0, bracketIdx + 1);
-                    if (!m_parentKeyToSubAssetInfo.TryGetValue(parentKey, out var info))
-                    {
-                        info = new SubAssetInfo();
-                        m_parentKeyToSubAssetInfo[parentKey] = info;
-                    }
-
-                    info.Ids.Add(buildEntry.id);
-                    info.ElementTypes.Add(buildEntry.type);
+                    info = new SubAssetInfo();
+                    m_parentKeyToSubAssetInfo[parentKey] = info;
                 }
+
+                info.Ids.Add(buildEntry.id);
+                info.ElementTypes.Add(buildEntry.type);
             }
         }
 
@@ -663,7 +721,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                 var keys = new List<string>();
                 if (spriteEntry.includeAddressKey)
                     keys.Add(spriteEntry.address);
-                keys.AddRange(spriteEntry.labels);
+                if (spriteEntry.labels != null)
+                    keys.AddRange(spriteEntry.labels);
 
                 ContentCatalogDataEntry spriteAddressableEntry = new ContentCatalogDataEntry(
                     typeof(Sprite),
@@ -712,7 +771,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                     assetData
                 );
 
-                listEntry.Keys.AddRange(entry.labels);
+                if (entry.labels != null)
+                    listEntry.Keys.AddRange(entry.labels);
                 catalogEntries.Add(listEntry);
             }
         }
@@ -757,7 +817,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                 assetData
             );
 
-            addressableEntry.Keys.AddRange(entry.labels);
+            if (entry.labels != null)
+                addressableEntry.Keys.AddRange(entry.labels);
             catalogEntries.Add(addressableEntry);
 
             AddSubAssetListCatalogEntry(entry, subAssetInfo, loadPath, keys, assetData, catalogEntries);

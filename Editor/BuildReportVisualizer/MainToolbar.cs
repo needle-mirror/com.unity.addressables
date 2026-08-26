@@ -8,17 +8,21 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
     class MainToolbar : IAddressableView
     {
         BuildReportListView m_ReportsList;
+        BuildReportContentView m_ContentView;
 
         bool m_LeftPaneCollapsed = false;
-        bool m_RightPaneCollapse = false;
 
-        internal MainToolbar(BuildReportListView reportsList)
+        internal MainToolbar(BuildReportListView reportsList, BuildReportContentView contentView)
         {
             m_ReportsList = reportsList;
+            m_ContentView = contentView;
         }
 
         public void CreateGUI(VisualElement rootVisualElement)
         {
+            var toolbarTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(BuildReportUtility.MainToolbarUxmlPath);
+            toolbarTree.CloneTree(rootVisualElement.Q<VisualElement>(BuildReportUtility.MainToolbarContainer));
+
             var mainToolbar = rootVisualElement.Q<UnityEditor.UIElements.Toolbar>(BuildReportUtility.MainToolbar);
 
             //var themeStyle = AssetDatabase.LoadAssetAtPath(EditorGUIUtility.isProSkin ? BuildReportUtility.MainToolbarButtonsDarkUssPath : BuildReportUtility.MainToolbarButtonsLightUssPath, typeof(StyleSheet)) as StyleSheet;
@@ -51,22 +55,13 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             var mainToolbarCollapseRightPaneButton = rootVisualElement.Q<ToolbarButton>(BuildReportUtility.MainToolbarCollapseRightPaneButton);
             var mainToolbarCollapseRightPaneButtonIcon = mainToolbarCollapseRightPaneButton.Q<Image>(BuildReportUtility.MainToolbarCollapseRightPaneButtonIcon);
             mainToolbarCollapseRightPaneButtonIcon.image = inspectorIcon;
-            var middleRightPaneSplitter = rootVisualElement.Q<TwoPaneSplitView>(BuildReportUtility.MiddleRightPaneSplitter);
             mainToolbarCollapseRightPaneButton.clicked += () =>
             {
-                if (m_RightPaneCollapse)
-                {
-                    AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.BuildReportDetailsOpen);
-                    middleRightPaneSplitter.UnCollapse();
-                    mainToolbarCollapseRightPaneButtonIcon.image = inspectorIcon;
-                }
-                else
-                {
-                    AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.BuildReportDetailsClose);
-                    middleRightPaneSplitter.CollapseChild(1);
-                    mainToolbarCollapseRightPaneButtonIcon.image = inspectorIcon;
-                }
-                m_RightPaneCollapse = !m_RightPaneCollapse;
+                bool visible = !m_ContentView.DetailsPaneVisible;
+                AddressableAnalytics.ReportUsageEvent(visible
+                    ? AddressableAnalytics.UsageEventType.BuildReportDetailsOpen
+                    : AddressableAnalytics.UsageEventType.BuildReportDetailsClose);
+                m_ContentView.SetDetailsPaneVisible(visible);
             };
 
             var mainToolbarAddReportButton = rootVisualElement.Q<ToolbarMenu>(BuildReportUtility.MainToolbarAddReportButton);

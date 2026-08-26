@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.AddressableAssets.ResourceProviders;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -37,10 +36,11 @@ namespace UnityEngine.AddressableAssets
             if (locations.Count == 0)
                 return m_Addressables.ResourceManager.CreateCompletedOperation(default(List<IResourceLocator>), "Content update not available.");
 
-            ContentCatalogProvider ccp = m_Addressables.ResourceManager.ResourceProviders
-                .FirstOrDefault(rp => rp is ContentCatalogProvider) as ContentCatalogProvider;
-            if (ccp != null)
-                ccp.DisableCatalogUpdateOnStart = false;
+            foreach (var rp in m_Addressables.ResourceManager.ResourceProviders)
+            {
+                if (rp is ContentCatalogProvider ccp)
+                    ccp.DisableCatalogUpdateOnStart = false;
+            }
 
             m_DepOp = m_Addressables.ResourceManager.CreateGroupOperation<object>(locations);
             m_AutoCleanBundleCache = autoCleanBundleCache;

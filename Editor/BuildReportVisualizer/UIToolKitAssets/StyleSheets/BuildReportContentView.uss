@@ -1,0 +1,11 @@
+#MiddleRightPaneSplitter {
+    background-color: var(--unity-colors-window-secondary-background);
+}
+
+#MiddlePane {
+    min-width: 500px;
+}
+
+#RightPane {
+    min-width: 354px;
+}

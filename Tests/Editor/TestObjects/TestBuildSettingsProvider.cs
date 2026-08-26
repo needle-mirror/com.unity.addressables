@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 
-namespace UnityEditor.AddressableAssets.Tests
+namespace UnityEditor.AddressableAssets.Tests.Editor.TestObjects
 {
     /// <summary>
     /// Test implementation of IBuildSettingsProvider that allows setting values for testing.

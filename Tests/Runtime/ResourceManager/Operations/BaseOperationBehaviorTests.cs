@@ -75,6 +75,90 @@ namespace UnityEngine.ResourceManagement.Tests
         }
 
         [Test]
+        public void TypelessCompleted_WhenUnsubscribed_RemovedCallbackIsNotInvokedAndRemainingCallbackIs()
+        {
+            var op = new MockOperation<int>();
+            AsyncOperationHandle handle = m_RM.StartOperation(op, default(AsyncOperationHandle));
+
+            bool removedCallbackInvoked = false;
+            bool remainingCallbackInvoked = false;
+            Action<AsyncOperationHandle> removedCallback = x => removedCallbackInvoked = true;
+            Action<AsyncOperationHandle> remainingCallback = x => remainingCallbackInvoked = true;
+
+            handle.Completed += removedCallback;
+            handle.Completed += remainingCallback;
+            handle.Completed -= removedCallback;
+
+            op.Complete(1, true, string.Empty);
+            m_RM.Update(0.0f);
+
+            Assert.IsFalse(removedCallbackInvoked);
+            Assert.IsTrue(remainingCallbackInvoked);
+            handle.Release();
+        }
+
+        [Test]
+        public void TypelessCompleted_WhenDuplicateSubscriptionUnsubscribed_MostRecentlyAddedMatchIsRemoved()
+        {
+            var op = new MockOperation<int>();
+            AsyncOperationHandle handle = m_RM.StartOperation(op, default(AsyncOperationHandle));
+
+            var invocationOrder = new List<string>();
+            Action<AsyncOperationHandle> callbackA = x => invocationOrder.Add("A");
+            Action<AsyncOperationHandle> callbackB = x => invocationOrder.Add("B");
+
+            handle.Completed += callbackA;
+            handle.Completed += callbackB;
+            handle.Completed += callbackA;
+            handle.Completed -= callbackA;
+
+            op.Complete(1, true, string.Empty);
+            m_RM.Update(0.0f);
+
+            // C# event -= removes the most recently added match, so the surviving order is A, B
+            CollectionAssert.AreEqual(new[] {"A", "B"}, invocationOrder);
+            handle.Release();
+        }
+
+        [Test]
+        public void AsyncOperationHandle_TaskIsDelayedWhenTypelessCompletedHasListeners()
+        {
+            var op = m_RM.CreateCompletedOperationInternal<int>(1, true, null);
+            AsyncOperationHandle handle = op;
+
+            var status = AsyncOperationStatus.None;
+            handle.Completed += x => status = x.Status;
+
+            // typeless listeners must also count as completed-event listeners, so the
+            // Task result stays pending until the deferred callbacks run
+            var task = op.Task;
+            Assert.IsFalse(task.IsCompleted);
+
+            m_RM.Update(0.0f);
+
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, status);
+            Assert.IsTrue(task.IsCompleted);
+            op.Release();
+        }
+
+        [Test]
+        public void TypelessCompleted_TypedListenerAddedDuringCallback_IsInvokedInSamePass()
+        {
+            var op = m_RM.CreateCompletedOperation<int>(1, string.Empty);
+            AsyncOperationHandle handle = op;
+
+            bool nestedCallbackInvoked = false;
+            handle.Completed += x => op.Completed += y => nestedCallbackInvoked = true;
+
+            // callbacks are deferred to next update; the nested typed listener is added from
+            // within a typeless callback and must still run in the same deferred pass
+            m_RM.Update(0.0f);
+
+            Assert.IsTrue(nestedCallbackInvoked);
+            op.Release();
+        }
+
+        [Test]
         public void ReferenceCount_WhenHandleIsInvalid_ReturnsZero()
         {
             var handle = default(AsyncOperationHandle);

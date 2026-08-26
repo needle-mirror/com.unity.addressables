@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:BuildReportVisualizer="UnityEditor.AddressableAssets.BuildReportVisualizer" xmlns:AddressablesGUI="UnityEditor.AddressableAssets.GUIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <ui:Template path="Packages/com.unity.addressables/Editor/BuildReportVisualizer/UIToolKitAssets/UXML/ContentTab.uxml" name="ContentTabTemplate" />
+    <ui:Template path="Packages/com.unity.addressables/Editor/BuildReportVisualizer/UIToolKitAssets/UXML/SummaryTabEmbedded.uxml" name="SummaryTabTemplate" />
+    <ui:Template path="Packages/com.unity.addressables/Editor/BuildReportVisualizer/UIToolKitAssets/UXML/PotentialIssues.uxml" name="PotentialIssuesTabTemplate" />
+    <!-- All three stay in the tree; BuildReportContentView shows whichever tab is selected. -->
+    <ui:Instance template="SummaryTabTemplate" name="SummaryTab" style="flex-grow: 1;" />
+    <ui:Instance template="ContentTabTemplate" name="ContentTab" style="flex-grow: 1;" />
+    <ui:Instance template="PotentialIssuesTabTemplate" name="PotentialIssuesTab" style="flex-grow: 1;" />
+</ui:UXML>

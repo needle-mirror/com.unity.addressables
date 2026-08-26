@@ -556,6 +556,31 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         }
 
         [SerializeField]
+        [Tooltip("How the local cache is asked whether a bundle version is already downloaded.")]
+        internal CacheProbeMode m_CacheProbeMode = CacheProbeMode.CachedVersions;
+
+        /// <summary>
+        /// How the local cache is asked whether a bundle version is already downloaded.
+        /// </summary>
+        public CacheProbeMode CacheProbeMode
+        {
+            get
+            {
+                if (UseDefaultSchemaSettings)
+                    return GetDefaultSchemaSettings().cacheProbeMode;
+                return m_CacheProbeMode;
+            }
+            set
+            {
+                if (m_CacheProbeMode != value)
+                {
+                    m_CacheProbeMode = value;
+                    SetDirty(true);
+                }
+            }
+        }
+
+        [SerializeField]
         [Tooltip("If true, local asset bundles will be loaded through UnityWebRequest.")]
         bool m_UseUWRForLocalBundles = false;
 
@@ -1016,6 +1041,8 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
         private bool m_ShowPaths = true;
         private static GUIStyle s_SmallHelpBoxStyle;
+        private static GUIStyle s_SmallHelpBoxLabelStyle;
+        private static GUIStyle s_SmallHelpBoxLinkStyle;
 
         void DrawContentDirectoryPromotionHelpBox()
         {
@@ -1027,12 +1054,41 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 };
             }
 
+            if (s_SmallHelpBoxLabelStyle == null)
+            {
+                s_SmallHelpBoxLabelStyle = new GUIStyle(EditorStyles.label)
+                {
+                    fontSize = 10,
+                    wordWrap = true
+                };
+            }
+
+            if (s_SmallHelpBoxLinkStyle == null)
+            {
+                s_SmallHelpBoxLinkStyle = new GUIStyle(EditorStyles.linkLabel)
+                {
+                    fontSize = 10
+                };
+            }
+
             var content = new GUIContent(
                 "For the most up to date way of managing local content, use the Content Directory schema. " +
                 "To enable this, add the Content Directory schema to your group and disable this schema.",
                 EditorGUIUtility.IconContent("console.infoicon.sml").image);
 
-            EditorGUILayout.LabelField(content, s_SmallHelpBoxStyle);
+            EditorGUILayout.BeginVertical(s_SmallHelpBoxStyle);
+            {
+                GUILayout.Label(content, s_SmallHelpBoxLabelStyle);
+                EditorGUILayout.BeginHorizontal();
+                {
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Read more...", s_SmallHelpBoxLinkStyle))
+                        Application.OpenURL(AddressableAssetUtility.GenerateContentDirectoriesDocsURL());
+                    EditorGUIUtility.AddCursorRect(GUILayoutUtility.GetLastRect(), MouseCursor.Link);
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+            EditorGUILayout.EndVertical();
         }
 
         /// <summary>
@@ -1164,6 +1220,15 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             new GUIContent("Enabled, Excluding Cached", "Bundles that have already been downloaded and cached will not have their CRC check when loading, otherwise CRC check will be performed.")
         };
 
+        GUIContent m_CacheProbeModeContent = new GUIContent("Cache Probe Mode",
+            "How Addressables checks whether a bundle version is already in the local cache.");
+
+        private GUIContent[] m_CacheProbeModePopupContent = new GUIContent[]
+        {
+            new GUIContent("Cached Versions (Fast)", "Reads no files. Fastest, but a damaged cache entry can report as present; rely on CRC checks to catch it."),
+            new GUIContent("Version Marker File (Strict)", "Reads each entry's marker file, so a damaged entry reports as missing. Costs roughly a millisecond per cached bundle.")
+        };
+
         GUIContent m_IncludeAddressInCatalogContent = new GUIContent("Include Addresses in Catalog",
             "If disabled, addresses from this group will not be included in the catalog.  This is useful for reducing the size of the catalog if addresses are not needed.");
 
@@ -1242,6 +1307,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                     }
                 }
                 CRCPropertyPopupField(so, buildTargetSupportsBundleCaching);
+                CacheProbeModePopupField(so, buildTargetSupportsBundleCaching);
 
                 EditorGUI.BeginChangeCheck();
                 SerializedProperty serializedProperty = so.FindProperty(nameof(m_BundleNaming));
@@ -1321,6 +1387,51 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             {
                 Undo.RecordObject(undoTarget, undoTarget.name + nameof(UseAssetBundleCrcForCachedBundles));
                 UseAssetBundleCrcForCachedBundles = useCrcForCached;
+            }
+        }
+
+        void CacheProbeModePopupField(SerializedObject so, bool buildTargetSupportsCaching)
+        {
+            // Without bundle caching there is nothing to probe, so the control is hidden.
+            if (!buildTargetSupportsCaching)
+                return;
+
+            int enumIndex = CacheProbeMode == CacheProbeMode.IsVersionCached ? 1 : 0;
+
+            int newEnumIndex = EditorGUILayout.Popup(m_CacheProbeModeContent, enumIndex, m_CacheProbeModePopupContent);
+            if (enumIndex != newEnumIndex)
+                SetCacheProbeModeFromPopupIndex(newEnumIndex, so.targetObject);
+        }
+
+        /// <summary>
+        /// Applies a Cache Probe Mode dropdown selection, recording undo.
+        /// </summary>
+        /// <param name="newEnumIndex">The newly selected popup index (0 or 1).</param>
+        /// <param name="undoTarget">The object to record for undo.</param>
+        internal void SetCacheProbeModeFromPopupIndex(int newEnumIndex, UnityEngine.Object undoTarget)
+        {
+            var mode = newEnumIndex == 1 ? CacheProbeMode.IsVersionCached : CacheProbeMode.CachedVersions;
+            if (CacheProbeMode == mode)
+                return;
+
+            Undo.RecordObject(undoTarget, undoTarget.name + nameof(CacheProbeMode));
+            CacheProbeMode = mode;
+        }
+
+        void CacheProbeModePopupFieldMulti(SerializedObject so, bool buildTargetSupportsCaching, List<BundledAssetGroupSchema> otherBundledSchemas, ref List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>> queuedChanges)
+        {
+            if (buildTargetSupportsCaching)
+            {
+                ShowMixedValueAdvancedProperty(this, otherBundledSchemas, (a, b) => a.CacheProbeMode != b.CacheProbeMode);
+
+                EditorGUI.BeginChangeCheck();
+                CacheProbeModePopupField(so, buildTargetSupportsCaching);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    AddQueuedChanges(ref queuedChanges, (src, dst) => dst.CacheProbeMode = src.CacheProbeMode);
+                    EditorUtility.SetDirty(this);
+                }
+                EditorGUI.showMixedValue = false;
             }
         }
 
@@ -1527,6 +1638,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                     }
                 }
                 CRCPropertyPopupFieldMulti(so, buildTargetSupportsBundleCaching, otherBundledSchemas, ref queuedChanges);
+                CacheProbeModePopupFieldMulti(so, buildTargetSupportsBundleCaching, otherBundledSchemas, ref queuedChanges);
 
                 ShowMixedValueAdvancedProperty(this, otherBundledSchemas, (a, b) => a.BundleNaming != b.BundleNaming);
                 EditorGUI.BeginChangeCheck();
@@ -1613,6 +1725,11 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             /// </summary>
             public bool useAssetBundleCrcForCachedBundles;
             /// <summary>
+            /// The recommended way to ask the cache whether a bundle version is downloaded.
+            /// Every platform recommends <see cref="CacheProbeMode.CachedVersions"/>.
+            /// </summary>
+            public CacheProbeMode cacheProbeMode;
+            /// <summary>
             /// The recommended naming style for AssetBundle file name.
             /// </summary>
             public BundleNamingStyle bundleNaming;
@@ -1642,6 +1759,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultLocalSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 defaultLocalSettings.useAssetBundleCrc = false;
                 defaultLocalSettings.useAssetBundleCrcForCachedBundles = false;
+                defaultLocalSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 defaultLocalSettings.bundleNaming = BundleNamingStyle.NoHash;
                 defaultLocalSettings.stripDownloadOptions = true;
 
@@ -1650,6 +1768,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultRemoteSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 defaultRemoteSettings.useAssetBundleCrc = true;
                 defaultRemoteSettings.useAssetBundleCrcForCachedBundles = false;
+                defaultRemoteSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 defaultRemoteSettings.bundleNaming = BundleNamingStyle.NoHash;
                 defaultRemoteSettings.stripDownloadOptions = false;
 #elif UNITY_PS4
@@ -1658,6 +1777,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultLocalSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 defaultLocalSettings.useAssetBundleCrc = false;
                 defaultLocalSettings.useAssetBundleCrcForCachedBundles = false;
+                defaultLocalSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 defaultLocalSettings.bundleNaming = BundleNamingStyle.NoHash;
                 defaultLocalSettings.stripDownloadOptions = true;
 
@@ -1666,6 +1786,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultRemoteSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 defaultRemoteSettings.useAssetBundleCrc = true;
                 defaultRemoteSettings.useAssetBundleCrcForCachedBundles = false;
+                defaultRemoteSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 defaultRemoteSettings.bundleNaming = BundleNamingStyle.NoHash;
                 defaultRemoteSettings.stripDownloadOptions = false;
 #elif UNITY_PS5
@@ -1674,6 +1795,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultLocalSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 defaultLocalSettings.useAssetBundleCrc = false;
                 defaultLocalSettings.useAssetBundleCrcForCachedBundles = false;
+                defaultLocalSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 defaultLocalSettings.bundleNaming = BundleNamingStyle.NoHash;
                 defaultLocalSettings.stripDownloadOptions = true;
 
@@ -1682,6 +1804,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultRemoteSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 defaultRemoteSettings.useAssetBundleCrc = true;
                 defaultRemoteSettings.useAssetBundleCrcForCachedBundles = false;
+                defaultRemoteSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 defaultRemoteSettings.bundleNaming = BundleNamingStyle.NoHash;
                 defaultRemoteSettings.stripDownloadOptions = false;
 #elif UNITY_GAMECORE || UNITY_GAMECORE_XBOXONE || UNITY_GAMECORE_XBOXSERIES || UNITY_XBOXONE
@@ -1690,6 +1813,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultLocalSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 defaultLocalSettings.useAssetBundleCrc = false;
                 defaultLocalSettings.useAssetBundleCrcForCachedBundles = false;
+                defaultLocalSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 defaultLocalSettings.bundleNaming = BundleNamingStyle.NoHash;
                 defaultLocalSettings.stripDownloadOptions = true;
 
@@ -1698,6 +1822,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultRemoteSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 defaultRemoteSettings.useAssetBundleCrc = true;
                 defaultRemoteSettings.useAssetBundleCrcForCachedBundles = false;
+                defaultRemoteSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 defaultRemoteSettings.bundleNaming = BundleNamingStyle.NoHash;
                 defaultRemoteSettings.stripDownloadOptions = false;
 #else
@@ -1706,6 +1831,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultLocalSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 defaultLocalSettings.useAssetBundleCrc = false;
                 defaultLocalSettings.useAssetBundleCrcForCachedBundles = false;
+                defaultLocalSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 defaultLocalSettings.bundleNaming = BundleNamingStyle.AppendHash;
                 defaultLocalSettings.stripDownloadOptions = true;
 
@@ -1714,6 +1840,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 defaultRemoteSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 defaultRemoteSettings.useAssetBundleCrc = true;
                 defaultRemoteSettings.useAssetBundleCrcForCachedBundles = false;
+                defaultRemoteSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 defaultRemoteSettings.stripDownloadOptions = false;
 #endif
                 defaultSettings[DefaultSchemaSettingsBuildTargetGroup.Default] = new DefaultSchemaSettings[2] { defaultLocalSettings, defaultRemoteSettings };
@@ -1727,6 +1854,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 windowsLocalSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 windowsLocalSettings.useAssetBundleCrc = false;
                 windowsLocalSettings.useAssetBundleCrcForCachedBundles = false;
+                windowsLocalSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 windowsLocalSettings.bundleNaming = BundleNamingStyle.OnlyHash; // help avoid max path limit
                 windowsLocalSettings.stripDownloadOptions = true;
 
@@ -1736,6 +1864,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 windowsRemoteSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 windowsRemoteSettings.useAssetBundleCrc = true;
                 windowsRemoteSettings.useAssetBundleCrcForCachedBundles = false;
+                windowsRemoteSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 windowsRemoteSettings.bundleNaming = BundleNamingStyle.OnlyHash; // help avoid max path limit
                 windowsRemoteSettings.stripDownloadOptions = false;
 
@@ -1750,6 +1879,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 iOSLocalSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 iOSLocalSettings.useAssetBundleCrc = false;
                 iOSLocalSettings.useAssetBundleCrcForCachedBundles = false;
+                iOSLocalSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 iOSLocalSettings.bundleNaming = BundleNamingStyle.AppendHash;
                 iOSLocalSettings.stripDownloadOptions = true;
 
@@ -1759,6 +1889,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 iOSRemoteSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenWhenNewVersionLoaded; // frequent content updates
                 iOSRemoteSettings.useAssetBundleCrc = true;
                 iOSRemoteSettings.useAssetBundleCrcForCachedBundles = false;
+                iOSRemoteSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 iOSRemoteSettings.bundleNaming = BundleNamingStyle.AppendHash;
                 iOSRemoteSettings.stripDownloadOptions = false;
 
@@ -1773,6 +1904,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 androidLocalSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 androidLocalSettings.useAssetBundleCrc = false;
                 androidLocalSettings.useAssetBundleCrcForCachedBundles = false;
+                androidLocalSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 androidLocalSettings.bundleNaming = BundleNamingStyle.AppendHash;
                 androidLocalSettings.stripDownloadOptions = false;
 
@@ -1782,6 +1914,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 androidRemoteSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenWhenNewVersionLoaded; // frequent content updates
                 androidRemoteSettings.useAssetBundleCrc = true;
                 androidRemoteSettings.useAssetBundleCrcForCachedBundles = false;
+                androidRemoteSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 androidRemoteSettings.bundleNaming = BundleNamingStyle.AppendHash;
                 androidRemoteSettings.stripDownloadOptions = false;
 
@@ -1796,6 +1929,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 webGLSettings.assetBundledCacheClearBehavior = CacheClearBehavior.ClearWhenSpaceIsNeededInCache;
                 webGLSettings.useAssetBundleCrc = true;
                 webGLSettings.useAssetBundleCrcForCachedBundles = false;
+                webGLSettings.cacheProbeMode = CacheProbeMode.CachedVersions;
                 webGLSettings.bundleNaming = BundleNamingStyle.AppendHash;
                 webGLSettings.stripDownloadOptions = false;
 

@@ -136,6 +136,7 @@ public class VerifyPublicBuildScripts
     /// <param name="buildScriptPath">The filepath of the build script</param>
     /// <returns>IEnumerator for async test</returns>
     [UnityTest]
+    [Ignore("Compilation and domain reload per case is too slow for CI. Tracked in CBD-2425.")]
     public IEnumerator Verify_BuildScript_HasNoInternalApis([ValueSource(nameof(BuildScripts))] string buildScriptPath)
     {
         var fullPath = String.Join($"{Path.DirectorySeparatorChar}", new[] { m_PackagePath, buildScriptPath });
@@ -168,6 +169,7 @@ public class VerifyPublicBuildScripts
     /// <param name="buildScriptPaths">File paths of the build scripts to compile as a group</param>
     /// <returns>IEnumerator for async test</returns>
     [UnityTest]
+    [Ignore("Compilation and domain reload per case is too slow for CI. Tracked in CBD-2425.")]
     public IEnumerator Verify_BuildScriptGroup_HasNoInternalApis([ValueSource(nameof(BuildScriptGroups))] BuildScriptGroupData group)
     {
         foreach (var buildScriptPath in group.Files)

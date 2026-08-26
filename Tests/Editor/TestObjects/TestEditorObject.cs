@@ -1,12 +1,13 @@
+using UnityEditor;
 using UnityEngine;
 
-namespace UnityEditor.AddressableAssets.Tests
+namespace UnityEditor.AddressableAssets.Tests.Editor.TestObjects
 {
-    public class TestObject : ScriptableObject
+    public class TestEditorObject : ScriptableObject
     {
-        public static TestObject Create(string name, string assetPath = null)
+        public static TestEditorObject Create(string name, string assetPath = null)
         {
-            var obj = CreateInstance<TestObject>();
+            var obj = CreateInstance<TestEditorObject>();
             obj.name = name;
             if (!string.IsNullOrEmpty(assetPath))
             {
@@ -19,7 +20,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
         internal void AddTestSubObject()
         {
-            TestSubObject n = ScriptableObject.CreateInstance<TestSubObject>();
+            TestEditorSubObject n = ScriptableObject.CreateInstance<TestEditorSubObject>();
             n.name = "testSubObject";
             AssetDatabase.AddObjectToAsset(n, this);
             AssetDatabase.SaveAssets();

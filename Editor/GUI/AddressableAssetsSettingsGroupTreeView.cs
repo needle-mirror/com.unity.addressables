@@ -343,7 +343,7 @@ namespace UnityEditor.AddressableAssets.GUI
         protected override TreeViewItemAdapter BuildRootAdapter()
         {
             var root = new TreeViewItemAdapter(-1, -1);
-            using (new AddressablesFileEnumerationScope(BuildAddressableTree(m_Editor.settings)))
+            using (var enumerator = new AddressableFolderEnumerator(m_Editor.settings, false, null))
             {
                 SortGroups();
                 var guidMap = new Dictionary<string, AddressableAssetGroup>();
@@ -355,7 +355,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
 
                 foreach (var groupGuid in GetTreeViewState().sortOrderList)
-                    AddGroupChildrenBuild(guidMap[groupGuid], root);
+                    AddGroupChildrenBuild(guidMap[groupGuid], root, enumerator);
             }
 
             return root;
@@ -756,7 +756,7 @@ namespace UnityEditor.AddressableAssets.GUI
             return false;
         }
 
-        void AddGroupChildrenBuild(AddressableAssetGroup group, TreeViewItemAdapter root)
+        void AddGroupChildrenBuild(AddressableAssetGroup group, TreeViewItemAdapter root, AddressableFolderEnumerator enumerator = null)
         {
             int depth = 0;
 
@@ -795,7 +795,7 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 foreach (var entry in group.entries)
                 {
-                    AddAndRecurseEntriesBuild(entry, groupItem, depth + 1, IsExpanded(groupItem.id));
+                    AddAndRecurseEntriesBuild(entry, groupItem, depth + 1, IsExpanded(groupItem.id), enumerator);
                 }
             }
         }
@@ -816,7 +816,7 @@ namespace UnityEditor.AddressableAssets.GUI
             return false;
         }
 
-        void AddAndRecurseEntriesBuild(AddressableAssetEntry entry, AssetEntryTreeViewItem parent, int depth, bool expanded)
+        void AddAndRecurseEntriesBuild(AddressableAssetEntry entry, AssetEntryTreeViewItem parent, int depth, bool expanded, AddressableFolderEnumerator enumerator = null)
         {
             var item = new AssetEntryTreeViewItem(entry, depth);
             parent.AddChild(item);
@@ -826,22 +826,22 @@ namespace UnityEditor.AddressableAssets.GUI
                 return;
             }
 
-            RecurseEntryChildren(entry, item, depth);
+            RecurseEntryChildren(entry, item, depth, enumerator);
         }
 
-        internal void RecurseEntryChildren(AddressableAssetEntry entry, AssetEntryTreeViewItem item, int depth)
+        internal void RecurseEntryChildren(AddressableAssetEntry entry, AssetEntryTreeViewItem item, int depth, AddressableFolderEnumerator enumerator = null)
         {
             item.checkedForChildren = true;
             var subAssets = new List<AddressableAssetEntry>();
             bool includeSubObjects = ProjectConfigData.ShowSubObjectsInGroupView && !entry.IsFolder && !string.IsNullOrEmpty(entry.guid);
-            entry.GatherAllAssets(subAssets, false, false, includeSubObjects);
+            entry.GatherAllAssets(subAssets, false, false, includeSubObjects, null, enumerator);
             if (subAssets.Count > 0)
             {
                 foreach (var e in subAssets)
                 {
                     if (e.guid.Length > 0 && e.address.Contains('[') && e.address.Contains(']'))
                         Debug.LogErrorFormat("Subasset address '{0}' cannot contain '[ ]'.", e.address);
-                    AddAndRecurseEntriesBuild(e, item, depth + 1, IsExpanded(item.id));
+                    AddAndRecurseEntriesBuild(e, item, depth + 1, IsExpanded(item.id), enumerator);
                 }
             }
         }

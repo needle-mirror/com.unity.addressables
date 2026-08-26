@@ -53,6 +53,11 @@
             "name": "Unity",
             "expression": "6000.6.0b1",
             "define": "ENABLE_CONTENT_DIRECTORIES"
+        },
+        {
+            "name": "Unity",
+            "expression": "6000.7.0b1",
+            "define": "ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS"
         }
     ],
     "noEngineReferences": false

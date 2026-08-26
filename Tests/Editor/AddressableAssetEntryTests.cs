@@ -5,12 +5,13 @@ using System.Linq;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.AddressableAssets.Tests.Editor.TestObjects;
+using UnityEditor.AddressableAssets.Tests.Runtime.TestObjects;
 using UnityEditor.Build.Content;
 using UnityEditor.SceneManagement;
 using UnityEditor.U2D;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
-using UnityEngine.AddressableAssets.Tests;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -27,12 +28,12 @@ namespace UnityEditor.AddressableAssets.Tests
         protected override void OnInit()
         {
             var path = GetAssetPath("subObjectTest.asset");
-            AssetDatabase.CreateAsset(UnityEngine.AddressableAssets.Tests.TestObject.Create("test"), path);
+            AssetDatabase.CreateAsset(TestObject.Create("test"), path);
 
-            AssetDatabase.AddObjectToAsset(UnityEngine.AddressableAssets.Tests.TestObject2.Create("test2"), path);
-            AssetDatabase.AddObjectToAsset(UnityEngine.AddressableAssets.Tests.TestObject2.Create("test3"), path);
-            AssetDatabase.AddObjectToAsset(UnityEngine.AddressableAssets.Tests.TestObject2.Create("test4"), path);
-            AssetDatabase.AddObjectToAsset(UnityEngine.AddressableAssets.Tests.TestObject2.Create("test5"), path);
+            AssetDatabase.AddObjectToAsset(TestObject2.Create("test2"), path);
+            AssetDatabase.AddObjectToAsset(TestObject2.Create("test3"), path);
+            AssetDatabase.AddObjectToAsset(TestObject2.Create("test4"), path);
+            AssetDatabase.AddObjectToAsset(TestObject2.Create("test5"), path);
             AssetDatabase.SaveAssets();
 
             m_guid = AssetDatabase.AssetPathToGUID(path);
@@ -216,8 +217,8 @@ namespace UnityEditor.AddressableAssets.Tests
             bool foundOnlyTestObjects = true;
             foreach (var entry in entries)
             {
-                if (entry.ResourceType != typeof(UnityEngine.AddressableAssets.Tests.TestObject) &&
-                    (entry.ResourceType != typeof(UnityEngine.AddressableAssets.Tests.TestObject2)))
+                if (entry.ResourceType != typeof(TestObject) &&
+                    (entry.ResourceType != typeof(TestObject2)))
                 {
                     foundOnlyTestObjects = false;
                 }
@@ -369,6 +370,210 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void GatherSubObjectEntries_CachesTargetAssetAndTypeOnSubEntries()
+        {
+            var mainAssetEntry = Settings.DefaultGroup.GetAssetEntry(m_guid);
+            var subObjects = AssetDatabase.LoadAllAssetRepresentationsAtPath(mainAssetEntry.AssetPath);
+
+            var entries = new List<AddressableAssetEntry>();
+            Settings.DefaultGroup.GatherAllAssets(entries, false, true, true);
+
+            Assert.AreEqual(subObjects.Length, entries.Count);
+            foreach (var entry in entries)
+            {
+                // Read the cached fields directly. Going through TargetAsset would
+                // populate them and hide a regression where gathering stops caching.
+                Assert.IsTrue(subObjects.Contains(entry.m_TargetAsset), $"{entry.address} did not cache its sub-object at gather time.");
+                Assert.AreEqual(entry.m_TargetAsset.GetType(), entry.m_cachedMainAssetType);
+            }
+        }
+
+        [Test]
+        public void GatherSubObjectEntries_CachedObjectSurvivesAssetPathRead()
+        {
+            var entries = new List<AddressableAssetEntry>();
+            Settings.DefaultGroup.GatherAllAssets(entries, false, true, true);
+            Assert.IsNotEmpty(entries);
+
+            foreach (var entry in entries)
+            {
+                Assert.IsEmpty(entry.AssetPath);
+
+                Assert.IsNotNull(entry.m_TargetAsset, $"{entry.address} lost its cached sub-object.");
+                Assert.IsNotNull(entry.m_cachedMainAssetType, $"{entry.address} lost its cached type.");
+            }
+        }
+
+        [Test]
+        public void GatherSubObjectEntries_WhenSubObjectNamesCollide_EachEntryKeepsItsOwnObject()
+        {
+            // Setup: one asset with two sub-objects sharing a name.
+            var path = GetAssetPath("duplicateSubObjectNames.asset");
+            AssetDatabase.CreateAsset(TestObject.Create("main"), path);
+            AssetDatabase.AddObjectToAsset(TestObject2.Create("dupe"), path);
+            AssetDatabase.AddObjectToAsset(TestObject2.Create("dupe"), path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+
+            var guid = AssetDatabase.AssetPathToGUID(path);
+            var entry = Settings.CreateOrMoveEntry(guid, m_testGroup, false);
+
+            try
+            {
+                var entries = new List<AddressableAssetEntry>();
+                entry.GatherAllAssets(entries, false, true, true);
+
+                Assert.AreEqual(2, entries.Count);
+
+                // Read AssetPath first. It is the access that used to clear the cached
+                // sub-object, which sent TargetAsset back to matching by name.
+                Assert.IsEmpty(entries[0].AssetPath);
+                Assert.IsEmpty(entries[1].AssetPath);
+
+                // Matching by name alone would hand both entries the first sub-object.
+                Assert.AreNotSame(entries[0].TargetAsset, entries[1].TargetAsset);
+            }
+            finally
+            {
+                Settings.RemoveAssetEntry(guid, false);
+                AssetDatabase.DeleteAsset(path);
+            }
+        }
+
+        [Test]
+        public void AssetPath_ReadDoesNotClearDerivedCaches()
+        {
+            var entry = new AddressableAssetEntry(m_guid, "address", m_testGroup, false);
+            var cachedObject = TestObject.Create("cached");
+
+            // Both are set before the path is ever resolved, which is what the gather
+            // phase does. IsFolder is a deliberate lie: the lazy fallback would say false.
+            entry.IsFolder = true;
+            entry.m_TargetAsset = cachedObject;
+
+            Assert.IsNotEmpty(entry.AssetPath, "First read should resolve the guid.");
+
+            Assert.IsTrue(entry.IsFolder, "Reading AssetPath cleared the explicit IsFolder.");
+            Assert.AreSame(cachedObject, entry.m_TargetAsset, "Reading AssetPath cleared the cached object.");
+        }
+
+        [Test]
+        public void RepointToNewPath_ClearsDerivedCachesOnlyWhenPathChanges()
+        {
+            var entry = new AddressableAssetEntry(m_guid, "address", m_testGroup, false);
+            var cachedObject = TestObject.Create("cached");
+            var originalPath = entry.AssetPath;
+
+            entry.IsFolder = true;
+            entry.m_TargetAsset = cachedObject;
+
+            // Same path means the asset did not move, so nothing derived from it is stale.
+            entry.RepointToNewPath(originalPath);
+            Assert.IsTrue(entry.IsFolder, "An unchanged path should not clear IsFolder.");
+            Assert.AreSame(cachedObject, entry.m_TargetAsset, "An unchanged path should not clear the cached object.");
+
+            entry.RepointToNewPath("Assets/SomewhereElse/moved.asset");
+            Assert.AreEqual("Assets/SomewhereElse/moved.asset", entry.AssetPath);
+            Assert.IsNull(entry.m_TargetAsset, "A moved asset should drop the cached object.");
+            Assert.IsFalse(entry.IsFolder, "A moved asset should recompute IsFolder.");
+        }
+
+        [Test]
+        public void AssetPath_HonorsInjectedPathAndStaysRetryable()
+        {
+            // An entry with no guid still reports a path someone else supplied. The
+            // icon loader and the startup purge both depend on this.
+            var injected = new AddressableAssetEntry("", "address", m_testGroup, false);
+            injected.m_cachedAssetPath = "Assets/Injected/thing.prefab";
+            Assert.AreEqual("Assets/Injected/thing.prefab", injected.AssetPath);
+
+            // A guid that resolves to nothing must leave the cache empty, so a later
+            // reimport still resolves. Caching the miss would strand the entry.
+            var unresolved = new AddressableAssetEntry("00000000000000000000000000000000", "address", m_testGroup, false);
+            Assert.IsEmpty(unresolved.AssetPath, "An unresolvable guid should report no path.");
+            Assert.IsEmpty(unresolved.m_cachedAssetPath, "An unresolvable guid should stay retryable.");
+        }
+
+        [Test]
+        public void GatherSpriteAtlasEntries_CachesMainAssetTypeOnSubEntries()
+        {
+            var atlasPath = CreateSpriteAtlasWithSprite("typeCacheAtlas");
+            var guid = AssetDatabase.AssetPathToGUID(atlasPath);
+            Settings.CreateOrMoveEntry(guid, m_testGroup);
+            AssetDatabase.ImportAsset(atlasPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+            try
+            {
+                var entries = new List<AddressableAssetEntry>();
+                m_testGroup.GetAssetEntry(guid).GatherAllAssets(entries, false, true, true);
+                Assert.IsNotEmpty(entries);
+
+                foreach (var entry in entries)
+                {
+                    // Read the field directly. MainAssetType would look the type up and
+                    // hide a regression where gathering stops caching it.
+                    Assert.AreEqual(typeof(Sprite), entry.m_cachedMainAssetType, $"{entry.address} did not cache its sprite type.");
+                }
+            }
+            finally
+            {
+                Settings.RemoveAssetEntry(guid, false);
+                AssetDatabase.DeleteAsset(atlasPath);
+                AssetDatabase.DeleteAsset(GetAssetPath("typeCacheAtlasTexture.png"));
+            }
+        }
+
+        [Test]
+        public void SetCachedMainAssetType_CachesRealTypesAndIgnoresNull()
+        {
+            var entry = new AddressableAssetEntry(m_guid, "address", m_testGroup, false);
+            Assert.IsNull(entry.m_cachedMainAssetType);
+
+            entry.SetCachedMainAssetType(null);
+            Assert.IsNull(entry.m_cachedMainAssetType, "A failed type lookup must not be cached.");
+
+            entry.SetCachedMainAssetType(typeof(GameObject));
+            Assert.AreEqual(typeof(GameObject), entry.m_cachedMainAssetType);
+
+            // Resolving the path lazily is not a move, so it must not drop the cached type.
+            Assert.IsNotEmpty(entry.AssetPath);
+            Assert.AreEqual(typeof(GameObject), entry.m_cachedMainAssetType,
+                "Reading AssetPath must not clear the cached main asset type.");
+        }
+
+        [Test]
+        public void GatherFolderEntries_CachesMainAssetTypeOnSubEntries()
+        {
+            // Setup
+            var folderAssetPath = GetAssetPath("cachedTypeFolder");
+            var prefabPath = folderAssetPath + "/testAsset_cachedType.prefab";
+            Directory.CreateDirectory(folderAssetPath);
+            var prefabGuid = CreateAsset(prefabPath, Path.GetFileNameWithoutExtension(prefabPath));
+            AssetDatabase.ImportAsset(folderAssetPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+            var folderAssetGUID = AssetDatabase.AssetPathToGUID(folderAssetPath);
+            var folderAssetEntry = Settings.CreateOrMoveEntry(folderAssetGUID, m_testGroup, false);
+
+            try
+            {
+                var entries = new List<AddressableAssetEntry>();
+                folderAssetEntry.GatherAllAssets(entries, false, true, true);
+
+                var prefabEntry = entries.FirstOrDefault(e => e.guid == prefabGuid);
+                Assert.NotNull(prefabEntry);
+                Assert.AreEqual(typeof(GameObject), prefabEntry.m_cachedMainAssetType,
+                    "Gathering should keep the type it already looked up.");
+            }
+            finally
+            {
+                Settings.RemoveAssetEntry(folderAssetPath);
+                Directory.Delete(folderAssetPath, true);
+            }
+        }
+
+        [Test]
         public void WhenGettingFolderSubEntry_OnlyReturnsIfValidSubEntry()
         {
             AddressableAssetEntry mainFolderEntry = null;
@@ -515,7 +720,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 addrFolderEntry = Settings.CreateOrMoveEntry(folderGuid, m_testGroup, false);
 
                 string testAssetPath = Path.Combine(addressableFolderPath, "testObject.asset").Replace('\\', '/');
-                var testAsset = TestObject.Create("testObject", testAssetPath);
+                var testAsset = TestEditorObject.Create("testObject", testAssetPath);
                 testAsset.AddTestSubObject();
 
                 //Test
@@ -649,7 +854,7 @@ namespace UnityEditor.AddressableAssets.Tests
             group.AddAssetEntry(entry);
 
             Assert.IsNull(entry.m_cachedMainAssetType);
-            Assert.AreEqual(typeof(UnityEngine.AddressableAssets.Tests.TestObject), entry.MainAssetType);
+            Assert.AreEqual(typeof(TestObject), entry.MainAssetType);
 
             // Test
             AssetDatabase.CreateAsset(group, path);
@@ -879,8 +1084,8 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void WhenTargetAssetNotFoundInAssetDatabase_ReloadObject()
         {
-            var obj = UnityEngine.AddressableAssets.Tests.TestObject.Create("test_targetAsset");
-            var obj2 = UnityEngine.AddressableAssets.Tests.TestObject.Create("test_targetAsset2");
+            var obj = TestObject.Create("test_targetAsset");
+            var obj2 = TestObject.Create("test_targetAsset2");
             string path = GetAssetPath("test_targetAsset.asset");
 
             AssetDatabase.CreateAsset(obj, path);
@@ -898,16 +1103,17 @@ namespace UnityEditor.AddressableAssets.Tests
             AssetDatabase.DeleteAsset(path);
         }
 
-        string CreateSpriteAtlasWithSprite()
+        // Pass a name so two tests can each own their atlas instead of sharing one.
+        string CreateSpriteAtlasWithSprite(string assetName = "testAtlas")
         {
             // create a Sprite atlas, + sprite
-            var spriteAtlasPath = GetAssetPath("testAtlas.spriteatlas");
+            var spriteAtlasPath = GetAssetPath(assetName + ".spriteatlas");
             SpriteAtlas spriteAtlas = new SpriteAtlas();
             AssetDatabase.CreateAsset(spriteAtlas, spriteAtlasPath);
 
             Texture2D texture = Texture2D.whiteTexture;
             byte[] data = texture.EncodeToPNG();
-            var texturePath = GetAssetPath("testTexture.png");
+            var texturePath = GetAssetPath(assetName + "Texture.png");
             File.WriteAllBytes(texturePath, data);
             AssetDatabase.ImportAsset(texturePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 

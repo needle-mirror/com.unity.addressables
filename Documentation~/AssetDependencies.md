@@ -32,7 +32,7 @@ An implicit asset is a dependency that Unity automatically includes. If an expli
 - **Non-Addressable dependencies**: Unity includes these in the referencing asset's AssetBundle or content directory.
 
 > [!TIP]
-> Use the [Build Layout Report](xref:addressables-build-layout-report) tool to view detailed information about AssetBundles and their dependencies, or the [Build Analysis window](xref:um-build-analysis-window-reference) for content directory information.
+> Use the [Build Layout Report](xref:addressables-build-layout-report) tool to view detailed information about AssetBundles and their dependencies, or the [Build Analysis window](https://docs.unity3d.com/6000.6/Documentation/Manual/build-analysis-window-reference.html) for content directory information.
 
 ## Avoiding asset duplication in AssetBundle builds
 

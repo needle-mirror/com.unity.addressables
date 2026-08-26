@@ -260,7 +260,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     internalToOutputBundleName = new Dictionary<string, string>(),
                     buildStartTime = now,
                     ContainsAssetBundleData = false,
-                    ContainsContentDirectoryData = false
+                    ContainsContentDirectoryData = false,
+                    BuilderInput = builderInput
                 };
 
                 m_BuildContext = new BuildContext(aaContext, Log);
@@ -694,6 +695,21 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         public static List<AddressableAssetEntry> PrepGroupBundlePacking(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, BundledAssetGroupSchema schema,
             Func<AddressableAssetEntry, bool> entryFilter = null)
         {
+            return PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema, entryFilter, null);
+        }
+
+        /// <summary>
+        /// Processes an AddressableAssetGroup, sharing the folder walk the build is already doing.
+        /// </summary>
+        /// <param name="assetGroup">The AddressableAssetGroup to be processed.</param>
+        /// <param name="bundleInputDefs">The list of bundle definitions fed into the build pipeline AssetBundleBuild</param>
+        /// <param name="schema">The BundledAssetGroupSchema of used to process the assetGroup.</param>
+        /// <param name="entryFilter">A filter to remove AddressableAssetEntries from being processed in the build.</param>
+        /// <param name="aaContext">Shares this build's folder walk. Pass null to walk folders fresh.</param>
+        /// <returns>The total list of AddressableAssetEntries that were processed.</returns>
+        public static List<AddressableAssetEntry> PrepGroupBundlePacking(AddressableAssetGroup assetGroup, List<AssetBundleBuild> bundleInputDefs, BundledAssetGroupSchema schema,
+            Func<AddressableAssetEntry, bool> entryFilter, AddressableAssetsBuildContext aaContext)
+        {
             var labelStringBuilder = new StringBuilder();
             var combinedEntries = new List<AddressableAssetEntry>();
             var packingMode = schema.BundleMode;
@@ -709,7 +725,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                         {
                             if (entryFilter != null && !entryFilter(a))
                                 continue;
-                            a.GatherAllAssets(allEntries, true, true, false, entryFilter);
+                            a.GatherAllAssets(allEntries, true, true, false, entryFilter, aaContext);
                         }
 
                         combinedEntries.AddRange(allEntries);
@@ -723,7 +739,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                             if (entryFilter != null && !entryFilter(a))
                                 continue;
                             var allEntries = new List<AddressableAssetEntry>();
-                            a.GatherAllAssets(allEntries, true, true, false, entryFilter);
+                            a.GatherAllAssets(allEntries, true, true, false, entryFilter, aaContext);
                             combinedEntries.AddRange(allEntries);
                             GenerateBuildInputDefinitions(allEntries, bundleInputDefs, CalculateGroupHash(namingMode, assetGroup, allEntries), a.address, ignoreUnsupportedFilesInBuild);
                         }
@@ -754,7 +770,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                             {
                                 if (entryFilter != null && !entryFilter(a))
                                     continue;
-                                a.GatherAllAssets(allEntries, true, true, false, entryFilter);
+                                a.GatherAllAssets(allEntries, true, true, false, entryFilter, aaContext);
                             }
 
                             combinedEntries.AddRange(allEntries);

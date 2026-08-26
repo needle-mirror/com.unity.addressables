@@ -45,6 +45,30 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
     }
 
     /// <summary>
+    /// How to ask the local cache whether an AssetBundle version is already downloaded.
+    /// </summary>
+    public enum CacheProbeMode
+    {
+        /// <summary>
+        /// Ask <see cref="Caching.GetCachedVersions(string, System.Collections.Generic.List{Hash128})"/>.
+        /// The default.
+        /// </summary>
+        /// <remarks>
+        /// Use the CRC options on the group's schema to validate a bundle's contents.
+        /// </remarks>
+        CachedVersions = 0,
+
+        /// <summary>
+        /// Ask <see cref="Caching.IsVersionCached(CachedAssetBundle)"/>.
+        /// </summary>
+        /// <remarks>
+        /// A cache hit reads that file from disk. Choose it when you want a damaged
+        /// cache entry to report as missing rather than relying on CRC checks.
+        /// </remarks>
+        IsVersionCached
+    }
+
+    /// <summary>
     /// Wrapper for asset bundles.
     ///
     /// WARNING: Loading bundles directly using LoadAssetAsync&lt;IAssetBundleResource&gt;() is NOT RECOMMENDED
@@ -98,6 +122,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             RedirectLimit = abro.RedirectLimit;
             RetryCount = abro.RetryCount;
             UseUnityWebRequestForLocalBundles = abro.UseUnityWebRequestForLocalBundles;
+            UseCrcForCachedBundle = abro.UseCrcForCachedBundle;
+            ClearOtherCachedVersionsWhenLoaded = abro.ClearOtherCachedVersionsWhenLoaded;
+            CacheProbeMode = abro.CacheProbeMode;
         }
 
         [FormerlySerializedAs("m_hash")]
@@ -290,6 +317,21 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             set { m_ClearOtherCachedVersionsWhenLoaded = value; }
         }
 
+        [SerializeField]
+#if UNITY_6000_0_OR_NEWER
+        [DataMember(Name = "CacheProbeMode")]
+#endif
+        CacheProbeMode m_CacheProbeMode = CacheProbeMode.CachedVersions;
+
+        /// <summary>
+        /// How the local cache is asked whether this bundle version is already downloaded.
+        /// </summary>
+        public CacheProbeMode CacheProbeMode
+        {
+            get { return m_CacheProbeMode; }
+            set { m_CacheProbeMode = value; }
+        }
+
         /// <summary>
         /// Computes the amount of data needed to be downloaded for this bundle.
         /// </summary>
@@ -301,14 +343,9 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             var id = resourceManager == null ? location.InternalId : resourceManager.TransformInternalId(location);
             if (!ResourceManagerConfig.IsPathRemote(id))
                 return 0;
-            var locHash = Hash128.Parse(Hash);
-#if ENABLE_CACHING
-            //If we have a hash, ensure that our desired version is cached.
-            if (locHash.isValid
-                && Caching.IsVersionCached(new CachedAssetBundle(BundleName, locHash)))
-                return 0;
-#endif
-            return BundleSize;
+
+            var status = AssetBundleResource.GetCacheStatus(this);
+            return status == AssetBundleResource.CacheStatus.Cached ? 0 : BundleSize;
         }
     }
 
@@ -466,7 +503,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 #endif
         }
 
-        internal static CacheStatus GetCacheStatus(AssetBundleRequestOptions options)
+        internal static CacheStatus QueryCacheIsVersionCached(AssetBundleRequestOptions options)
         {
 #if !ENABLE_CACHING
             return CacheStatus.NotCached;
@@ -481,6 +518,58 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 return Caching.IsVersionCached(cachedBundle) ? CacheStatus.Cached : CacheStatus.NotCached;
             }
             return CacheStatus.NotCached;
+#endif
+        }
+
+        /// <summary>
+        /// Reads a bundle's cache status
+        /// </summary>
+        /// <param name="options">The bundle's request options. May be null.</param>
+        /// <returns>Whether the bundle is cached, or Unknown when there are no options.</returns>
+        internal static CacheStatus GetCacheStatus(AssetBundleRequestOptions options)
+        {
+            if (options == null)
+                return CacheStatus.Unknown;
+
+            // Caching.IsVersionCached reads the __info file from inside every folder inside
+            // the cache to check if the asset bundle exists. The time this takes to run is one
+            // consideration, but the other is the sheer number of IO operations that happen
+            // in a single frame. GetCachedVersions just reads the directory structure to
+            // determine what asset bundles exist. There is a thread running that is supposed
+            // to keep the cached folders up to date and clean so this should be good enough.
+            //
+            // The version match in QueryCachedVersions has been lost twice. Do not simplify it
+            // back. CRC checks should be used to validate downloads are correct.
+            if (options.CacheProbeMode == CacheProbeMode.IsVersionCached)
+                return QueryCacheIsVersionCached(options);
+
+            return QueryCachedVersions(options);
+        }
+
+        [ThreadStatic]
+        static List<Hash128> s_CachedVersions;
+
+        static CacheStatus QueryCachedVersions(AssetBundleRequestOptions options)
+        {
+#if !ENABLE_CACHING
+            return CacheStatus.NotCached;
+#else
+            if (options == null)
+                return CacheStatus.Unknown;
+
+            // Caching.GetCachedVersions throws on an empty name rather than answering.
+            if (string.IsNullOrEmpty(options.BundleName))
+                return CacheStatus.NotCached;
+
+            var hash = Hash128.Parse(options.Hash);
+            if (!hash.isValid)
+                return CacheStatus.NotCached;
+
+            if (s_CachedVersions == null)
+                s_CachedVersions = new List<Hash128>();
+            s_CachedVersions.Clear();
+            Caching.GetCachedVersions(options.BundleName, s_CachedVersions);
+            return s_CachedVersions.Contains(hash) ? CacheStatus.Cached : CacheStatus.NotCached;
 #endif
         }
 
@@ -976,6 +1065,10 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
 #endif
                     downloadHandler.Dispose();
                     downloadHandler = null;
+
+                    // Set the cache status back to unknown to trigger re-check
+                    m_CacheStatus = CacheStatus.Unknown;
+
                     CompleteOperation(this, true, null);
                 }
 #if ENABLE_CACHING
@@ -1009,6 +1102,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                         {
                             message = $"Web request failed to load from cache. The cached AssetBundle will be cleared from the cache and re-downloaded. Retrying...\n{uwrResult}";
                             Caching.ClearCachedVersion(m_Options.BundleName, Hash128.Parse(m_Options.Hash));
+                            m_CacheStatus =  CacheStatus.Unknown;
                             // When attempted to load from cache we always retry on first attempt and failed
                             if (m_Retries == 0 && canRetryRequest)
                             {

@@ -188,6 +188,16 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void CurrentHash_IsNotSerialized()
+        {
+            // The settings hash is recomputed lazily and must never be written to the settings asset -
+            // persisting it caused the on-disk hash to flip between a real value and zero as it was
+            // invalidated/recalculated, creating spurious source control diffs (CBD-2000).
+            var serializedSettings = new UnityEditor.SerializedObject(Settings);
+            Assert.IsNull(serializedSettings.FindProperty("m_currentHash"));
+        }
+
+        [Test]
         public void AddRemovelabel()
         {
             var initialValue = Settings.currentHash;
@@ -455,6 +465,15 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void FindAssetEntry_NullOrEmptyGuid_ReturnsNull()
+        {
+            Assert.IsNull(Settings.FindAssetEntry(null));
+            Assert.IsNull(Settings.FindAssetEntry(null, true));
+            Assert.IsNull(Settings.FindAssetEntry(""));
+            Assert.IsNull(Settings.FindAssetEntry("", true));
+        }
+
+        [Test]
         public void FindAssetEntry_IncludeImplicitIsTrue_ReturnsImplicitEntries()
         {
             var folderPath = GetAssetPath("aaFolder");
@@ -616,6 +635,27 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.ActivePlayerDataBuilderIndex = Settings.ActivePlayerDataBuilderIndex + 1;
             var dc = EditorUtility.GetDirtyCount(Settings);
             Assert.AreEqual(prevDC + 1, dc);
+        }
+
+        [Test(Description = "UUM-146979: ProfileValueReference.Id is treated differently when null or empty string")]
+        public void RemoteCatalogBuildPath_WhenIdIsEmptyString_ReResolvesPathVariableInsteadOfStayingEmpty()
+        {
+            ProfileValueReference prevRemoteCatalogBuildPath = Settings.RemoteCatalogBuildPath;
+            try
+            {
+                var staleRemoteCatalogBuildPath = new ProfileValueReference();
+                staleRemoteCatalogBuildPath.Id = string.Empty;
+                Settings.RemoteCatalogBuildPath = staleRemoteCatalogBuildPath;
+
+                ProfileValueReference resolved = Settings.RemoteCatalogBuildPath;
+
+                Assert.AreEqual(Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kRemoteBuildPath).Id, resolved.Id);
+                Assert.IsFalse(string.IsNullOrEmpty(resolved.GetValue(Settings)));
+            }
+            finally
+            {
+                Settings.RemoteCatalogBuildPath = prevRemoteCatalogBuildPath;
+            }
         }
 
         [Test]

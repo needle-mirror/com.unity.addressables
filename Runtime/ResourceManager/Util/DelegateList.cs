@@ -42,20 +42,43 @@ internal class DelegateList<T>
         {
             if (node.Value == action)
             {
-                if (m_invoking)
-                {
-                    node.Value = null;
-                }
-                else
-                {
-                    m_callbacks.Remove(node);
-                    m_releaseFunc(node);
-                }
-
+                RemoveNode(node);
                 return;
             }
 
             node = node.Next;
+        }
+    }
+
+    public void Remove(Predicate<Action<T>> match)
+    {
+        if (m_callbacks == null)
+            return;
+
+        // search backward so the most recently added match is removed, like C# event -= semantics
+        var node = m_callbacks.Last;
+        while (node != null)
+        {
+            if (node.Value != null && match(node.Value))
+            {
+                RemoveNode(node);
+                return;
+            }
+
+            node = node.Previous;
+        }
+    }
+
+    void RemoveNode(LinkedListNode<Action<T>> node)
+    {
+        if (m_invoking)
+        {
+            node.Value = null;
+        }
+        else
+        {
+            m_callbacks.Remove(node);
+            m_releaseFunc(node);
         }
     }
 

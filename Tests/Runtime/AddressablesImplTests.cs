@@ -77,6 +77,26 @@ namespace AddressableAssetsIntegrationTests
             Assert.AreEqual(ExpectedAssetBundlesLoadedCount, opLoadedBundleCount);
         }
 
+        // A provider's own bundle resource type. The download gate must accept it.
+        interface ITestBundleSubtype : IAssetBundleResource
+        {
+        }
+
+        static IResourceLocation DownloadGateLocation(Type resourceType)
+        {
+            return new ResourceLocationBase("downloadGate", "downloadGate.bundle", typeof(AssetBundleProvider).FullName, resourceType);
+        }
+
+        [Test]
+        public void IsDownloadableLocation_AcceptsAssetBundleResourceAndItsSubtypes()
+        {
+            Assert.IsTrue(AddressablesImpl.IsDownloadableLocation(DownloadGateLocation(typeof(IAssetBundleResource))));
+            Assert.IsTrue(AddressablesImpl.IsDownloadableLocation(DownloadGateLocation(typeof(ITestBundleSubtype))),
+                "A provider's own IAssetBundleResource subtype must still download");
+            Assert.IsFalse(AddressablesImpl.IsDownloadableLocation(DownloadGateLocation(typeof(object))));
+            Assert.IsFalse(AddressablesImpl.IsDownloadableLocation(DownloadGateLocation(typeof(GameObject))));
+        }
+
         [UnityTest]
         public IEnumerator CustomExceptionHandler()
         {

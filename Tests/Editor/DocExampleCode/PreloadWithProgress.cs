@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using UnityEngine.ResourceManagement.ResourceLocations;
+
 namespace AddressableAssets.DocExampleCode
 {
     #region doc_Preload
@@ -7,6 +10,7 @@ namespace AddressableAssets.DocExampleCode
     using UnityEngine.AddressableAssets;
     using UnityEngine.Events;
     using UnityEngine.ResourceManagement.AsyncOperations;
+    using UnityEngine.ResourceManagement.ResourceProviders;
 
     internal class PreloadWithProgress : MonoBehaviour
     {
@@ -49,6 +53,34 @@ namespace AddressableAssets.DocExampleCode
 
             AsyncOperationHandle<long> getDownloadSize =
                 Addressables.GetDownloadSizeAsync(key);
+
+            #endregion
+        }
+
+        IEnumerator TotalExample()
+        {
+            #region doc_DownloadSizeTotal
+
+            // Everything in every loaded catalog that reports a download size, without
+            // resolving a single key.
+            var allDownloads = new List<IResourceLocation>();
+            foreach (var locator in Addressables.ResourceLocators)
+            {
+                foreach (var location in locator.AllLocations)
+                {
+                    if (location.Data is ILocationSizeData)
+                        allDownloads.Add(location);
+                }
+            }
+
+            AsyncOperationHandle<long> getTotalDownloadSize =
+                Addressables.GetDownloadSizeAsync(allDownloads);
+            yield return getTotalDownloadSize;
+
+            if (getTotalDownloadSize.Status == AsyncOperationStatus.Succeeded)
+                Debug.Log($"Total download size: {getTotalDownloadSize.Result}");
+
+            getTotalDownloadSize.Release(); //Release the operation handle
 
             #endregion
         }

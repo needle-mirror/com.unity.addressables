@@ -45,6 +45,23 @@ Always release the download operation handle after you have read the `Result` ob
 >[!NOTE]
 > On the WebGL platform, this API always returns the size of the AssetBundle, even if the AssetBundle has been cached. Cached AssetBundles aren't stored on the local file system, but persisted as part of the IndexedDB of the browser.  [WebGL Caching](https://docs.unity3d.com/Manual/webgl-caching.html)
 
+### Check the total download size
+
+To check the total download size of the remote content, pass the locations that report a download size from every loaded catalog rather than passing every key:
+
+[!code-cs[sample](../Tests/Editor/DocExampleCode/PreloadWithProgress.cs#doc_DownloadSizeTotal)]
+
+AssetBundles report a size through `AssetBundleRequestOptions` which implements `ILocationSizeData`.
+
+You don't need to remove duplicates yourself. `GetDownloadSizeAsync` collects the locations into a set, so an AssetBundle shared by two catalogs, or listed under several keys, counts once.
+
+The approach of listing locations rather than passing every key is more efficient because resolving a key costs a lookup on every loaded locator and a read of that location's dependencies. A catalog can also hold far more keys than AssetBundles. Listing locations skips both, and builds each location once however many keys name it.
+
+For a subset, such as one label, one group, or one scene and its dependencies, use the overloads that take a key because they only look at what the key reaches. Listing locations walks every catalog, which is inefficent.
+
+> [!NOTE]
+> A [Play Mode Script](xref:addressables-groups-window) that doesn't build AssetBundles, such as **Use Asset Database**, has no AssetBundle locations to list, so the total is zero.
+
 ## Clear the dependency cache
 
 If you want to clear any AssetBundles cached by Addressables, call [`Addressables.ClearDependencyCacheAsync`](xref:UnityEngine.AddressableAssets.Addressables.ClearDependencyCacheAsync*). This method clears the cached AssetBundles containing the assets identified by a key along with any AssetBundles containing those assets' dependencies.

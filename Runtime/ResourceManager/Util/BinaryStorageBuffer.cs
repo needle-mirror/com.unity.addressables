@@ -277,6 +277,10 @@ namespace UnityEngine.ResourceManagement.Util
         // null (value types).
         sealed class ObjectArrayCacheKey<T> { }
 
+        // Cache-key marker for ReadObjectList, distinct from typeof(T[]) so a cached
+        // List<T> is never handed back to ReadObjectArray<T>, which would fail the cast.
+        sealed class ObjectListCacheKey<T> { }
+
         public unsafe class Reader : IDisposable
         {
             byte[] m_Buffer;
@@ -476,25 +480,34 @@ namespace UnityEngine.ResourceManagement.Util
             }
 
 
-            public uint ReadObjectArray<T>(ref List<T> results, uint id, out uint size, bool cacheValues = true)
+            // Returns a List<T> cached under the array's offset, so repeated reads of the same
+            // offset share one instance instead of each caller materializing its own copy.
+            public List<T> ReadObjectList<T, TElement>(uint id, out uint size, bool cacheValues = true, bool cacheFullList = true)
+                where TElement : T
             {
                 if (id == uint.MaxValue)
                 {
                     size = 0;
-                    return 0;
+                    return null;
                 }
+
+                if (m_Cache.TryGet(typeof(ObjectListCacheKey<T>), id, out var cached, out size))
+                    return (List<T>)cached;
 
                 uint count = ValidateObjectArrayHeader(id);
                 {
                     byte* pData = m_BufferPtr + (id - sizeof(uint));
                     uint totalSize = 0;
+                    var results = new List<T>((int)count);
                     for (int i = 0; i < count; i++)
                     {
-                        results.Add(ReadObject<T>(*((uint*)&pData[sizeof(uint) * (1 + i)]), out var objSize, cacheValues));
+                        results.Add(ReadObject<TElement>(*((uint*)&pData[sizeof(uint) * (1 + i)]), out var objSize, cacheValues));
                         totalSize += objSize;
                     }
                     size = totalSize;
-                    return count;
+                    if (cacheFullList && size >= m_MinCachedObjectSize)
+                        m_Cache.TryAdd(id, typeof(ObjectListCacheKey<T>), results, size);
+                    return results;
                 }
             }
 

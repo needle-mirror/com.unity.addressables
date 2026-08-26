@@ -10,6 +10,7 @@ using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.AddressableAssets.Tests.Runtime.TestObjects;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.SceneManagement;
 using UnityEditor.U2D;
@@ -255,7 +256,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var guid = GUID.Generate();
             group.Initialize(Settings, groupName, guid.ToString(), false);
             AddressableAssetEntry addressableEntry = new AddressableAssetEntry("dummy", "test", null, false);
-            addressableEntry.SetCachedPath(TestFolder + "/test.prefab");
+            addressableEntry.RepointToNewPath(TestFolder + "/test.prefab");
             group.AddAssetEntry(addressableEntry);
             return group;
         }
@@ -972,6 +973,195 @@ namespace UnityEditor.AddressableAssets.Tests
             Directory.Delete(buildPath, true);
             if (File.Exists(buildPath + ".meta"))
                 File.Delete(buildPath + ".meta");
+        }
+
+        [Test]
+        public void CreateLoadableSceneId_FromGuidAndFromPath_Match()
+        {
+            string scenePath = GetAssetPath("sceneIdEquivalence.unity");
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+            EditorSceneManager.SaveScene(scene, scenePath);
+            m_CreatedAssetPaths.Add(scenePath);
+
+            string sceneGuid = AssetDatabase.AssetPathToGUID(scenePath);
+
+            // ProcessGroupSchema builds scene ids from the guid so the path overload
+            // does not have to resolve it again.
+            var fromGuid = LoadableSceneIdEditorUtility.CreateLoadableSceneId(new GUID(sceneGuid));
+            var fromPath = LoadableSceneIdEditorUtility.CreateLoadableSceneId(scenePath);
+
+            Assert.AreNotEqual(default(LoadableSceneId), fromGuid);
+            Assert.AreEqual(fromPath, fromGuid);
+        }
+
+        [Test]
+        public void SpriteAtlasChildren_ParentMainAssetTypeMatchesLoadedParentType()
+        {
+            // [UUM-140909] macOS trunk may emit Assert "[Assert] Image invalid format!" during atlas pack/import.
+            bool prevIgnoreFailing = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+            AddressableAssetGroup group = null;
+            try
+            {
+                string atlasPath = CreateSpriteAtlasWithSprites("parentTypeAtlas");
+                string atlasGuid = AssetDatabase.AssetPathToGUID(atlasPath);
+                m_CreatedAssetGuids.Add(atlasGuid);
+
+                group = ScriptableObject.CreateInstance<AddressableAssetGroup>();
+                group.Initialize(Settings, "AtlasParentTypeGroup", GUID.Generate().ToString(), false);
+                var atlasEntry = Settings.CreateOrMoveEntry(atlasGuid, group, false, false);
+                atlasEntry.address = "parentTypeAtlas";
+
+                var allEntries = new List<AddressableAssetEntry>();
+                atlasEntry.GatherAllAssets(allEntries, true, true, true);
+
+                var spriteChildren = allEntries.Where(e => e.ParentEntry != null).ToList();
+                Assert.IsNotEmpty(spriteChildren, "Expected the atlas to yield sprite children.");
+
+                // ProcessGroupSchema identifies atlas children from the parent's cached type
+                // rather than loading the parent object, so the two must agree.
+                foreach (var child in spriteChildren)
+                {
+                    Assert.AreEqual(typeof(SpriteAtlas), child.ParentEntry.MainAssetType);
+                    Assert.AreEqual(child.ParentEntry.TargetAsset.GetType(), child.ParentEntry.MainAssetType);
+                }
+            }
+            finally
+            {
+                LogAssert.ignoreFailingMessages = prevIgnoreFailing;
+                if (group != null)
+                    Settings.RemoveGroup(group);
+            }
+        }
+
+        [Test]
+        public void GenerateCatalogLocations_EntryWithNoLabels_EmitsAddressAndGuidKeys()
+        {
+            string buildPath = Path.Combine(TestFolder, "ContentDirectories_NoLabels");
+            Settings.profileSettings.SetValue(Settings.activeProfileId, "Local.LoadPath", buildPath);
+            Directory.CreateDirectory(buildPath);
+
+            AddressableAssetGroup group = Settings.CreateGroup("NoLabelsGroup", false, false, false, null, typeof(ContentDirectoryGroupSchema));
+            try
+            {
+                var schema = group.GetSchema<ContentDirectoryGroupSchema>();
+
+                string prefabGuid = CreateAsset(GetAssetPath("noLabelPrefab.prefab"), "noLabelPrefab");
+                m_CreatedAssetGuids.Add(prefabGuid);
+                var entry = Settings.CreateOrMoveEntry(prefabGuid, group, false, false);
+                entry.address = "noLabelPrefab";
+                Assert.IsEmpty(entry.labels);
+
+                schemaBuilder.Init(null, input, null, null);
+                Assert.IsEmpty(schemaBuilder.ProcessGroupSchema(aaContext, schema));
+
+                StubBuildManifest(buildPath);
+                var locations = schemaBuilder.GenerateCatalogLocations(aaContext, addressablesBuildResult);
+                var catalogEntry = locations[schema.CatalogId].Single(e => e.InternalId == "noLabelPrefab");
+
+                // An entry with no labels and no folder key carries no label list at all,
+                // so its keys are just the address and the guid.
+                CollectionAssert.AreEquivalent(new object[] {"noLabelPrefab", prefabGuid}, catalogEntry.Keys);
+            }
+            finally
+            {
+                Settings.RemoveGroup(group);
+                Directory.Delete(buildPath, true);
+                if (File.Exists(buildPath + ".meta"))
+                    File.Delete(buildPath + ".meta");
+            }
+        }
+
+        [Test]
+        public void ProcessGroupSchema_DuplicateSubObjectNames_Warns()
+        {
+            // Two sub-objects sharing a name give their entries the same address.
+            string path = GetAssetPath("cdDuplicateSubObjectNames.asset");
+            AssetDatabase.CreateAsset(TestObject.Create("main"), path);
+            AssetDatabase.AddObjectToAsset(TestObject2.Create("dupe"), path);
+            AssetDatabase.AddObjectToAsset(TestObject2.Create("dupe"), path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            m_CreatedAssetPaths.Add(path);
+
+            string guid = AssetDatabase.AssetPathToGUID(path);
+            m_CreatedAssetGuids.Add(guid);
+
+            AddressableAssetGroup group = Settings.CreateGroup("DuplicateSubObjectGroup", false, false, false, null, typeof(ContentDirectoryGroupSchema));
+            try
+            {
+                var entry = Settings.CreateOrMoveEntry(guid, group, false, false);
+                entry.address = "dupeHost";
+
+                schemaBuilder.Init(null, input, null, null);
+
+                LogAssert.Expect(LogType.Warning, $"Two objects named the same inside '{path}' both produce the Addressable address " +
+                                                  "'dupeHost[dupe]'. Only one can be loaded by that key. Rename one of the objects.");
+                Assert.IsEmpty(schemaBuilder.ProcessGroupSchema(aaContext, group.GetSchema<ContentDirectoryGroupSchema>()));
+            }
+            finally
+            {
+                Settings.RemoveGroup(group);
+            }
+        }
+
+        [Test]
+        public void TryCreateMainAssetLoadableObjectId_MatchesLoadedObject()
+        {
+            // The gate for building ids from the asset database index instead of a loaded
+            // object. If these ever diverge the approach is wrong.
+            string prefabGuid = CreateAsset(GetAssetPath("noLoadPrefab.prefab"), "noLoadPrefab");
+            m_CreatedAssetGuids.Add(prefabGuid);
+
+            string materialPath = GetAssetPath("noLoadMaterial.mat");
+            AssetDatabase.CreateAsset(new Material(Shader.Find("Standard")), materialPath);
+            m_CreatedAssetPaths.Add(materialPath);
+
+            string texturePath = CreateTextureWithMultipleSprites("noLoadTexture");
+            m_CreatedAssetGuids.Add(AssetDatabase.AssetPathToGUID(texturePath));
+
+            foreach (string path in new[] {AssetDatabase.GUIDToAssetPath(prefabGuid), materialPath, texturePath})
+            {
+                Assert.IsTrue(ContentDirectorySchemaBuilder.TryCreateMainAssetLoadableObjectId(path, out var fromHierarchy),
+                    $"Could not identify the main object of {path} without loading it.");
+
+                var loaded = AssetDatabase.LoadMainAssetAtPath(path);
+                Assert.IsNotNull(loaded, $"Could not load {path} for comparison.");
+                var fromLoadedObject = LoadableObjectIdEditorUtility.CreateLoadableObjectId(loaded.GetEntityId());
+
+                if (fromHierarchy != fromLoadedObject)
+                {
+                    LoadableObjectIdEditorUtility.TryDeconstructLoadableObjectId(fromHierarchy, out var hGuid, out long hLocalId, out var hType);
+                    LoadableObjectIdEditorUtility.TryDeconstructLoadableObjectId(fromLoadedObject, out var lGuid, out long lLocalId, out var lType);
+                    Assert.Fail($"{path}: from hierarchy ({hGuid}, {hLocalId}, {hType}) does not match from loaded object ({lGuid}, {lLocalId}, {lType}).");
+                }
+            }
+        }
+
+        [Test]
+        public void ProcessGroupSchema_DoesNotResolveTargetAssetForMainAssets()
+        {
+            string prefabGuid = CreateAsset(GetAssetPath("unloadedPrefab.prefab"), "unloadedPrefab");
+            m_CreatedAssetGuids.Add(prefabGuid);
+
+            AddressableAssetGroup group = Settings.CreateGroup("NoLoadGroup", false, false, false, null, typeof(ContentDirectoryGroupSchema));
+            try
+            {
+                var entry = Settings.CreateOrMoveEntry(prefabGuid, group, false, false);
+                entry.address = "unloadedPrefab";
+                Assert.IsNull(entry.m_TargetAsset, "Precondition: the entry should have no cached object yet.");
+
+                schemaBuilder.Init(null, input, null, null);
+                Assert.IsEmpty(schemaBuilder.ProcessGroupSchema(aaContext, group.GetSchema<ContentDirectoryGroupSchema>()));
+
+                // The id comes from the asset database index now, so nothing walks the entry's
+                // load path and its object cache stays empty.
+                Assert.IsNull(entry.m_TargetAsset, "ProcessGroupSchema still loads the main asset.");
+            }
+            finally
+            {
+                Settings.RemoveGroup(group);
+            }
         }
     }
 }

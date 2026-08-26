@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
+using UnityEditor.AddressableAssets.Tests.Runtime.TestObjects;
 using UnityEngine;
 
 namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
@@ -108,6 +109,47 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
 
             Assert.IsTrue(rule.m_ResourcesToDependencies[k_CheckDupePrefabA].Contains(new GUID(AssetDatabase.AssetPathToGUID(k_CheckDupeMyMaterial))));
             Assert.IsTrue(rule.m_ResourcesToDependencies[k_CheckDupePrefabA].Contains(new GUID(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA))));
+        }
+
+        [Test]
+        public void CheckResourcesDupe_DoesNotReportDependencyFromRemovedSerializedField()
+        {
+            string resourcesPath = GetAssetPath("Resources");
+            if (!Directory.Exists(resourcesPath))
+                Directory.CreateDirectory(resourcesPath);
+
+            var instance = ScriptableObject.CreateInstance<TestObject>();
+            string scriptGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(MonoScript.FromScriptableObject(instance)));
+            Object.DestroyImmediate(instance);
+
+            string materialGuid = AssetDatabase.AssetPathToGUID(k_CheckDupeMyMaterial);
+            string staleAssetPath = GetAssetPath("Resources/checkDupe_staleField.asset");
+            File.WriteAllText(staleAssetPath,
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!114 &11400000\n" +
+                "MonoBehaviour:\n" +
+                "  m_ObjectHideFlags: 0\n" +
+                "  m_CorrespondingSourceObject: {fileID: 0}\n" +
+                "  m_PrefabInstance: {fileID: 0}\n" +
+                "  m_PrefabAsset: {fileID: 0}\n" +
+                "  m_GameObject: {fileID: 0}\n" +
+                "  m_Enabled: 1\n" +
+                "  m_EditorHideFlags: 0\n" +
+                "  m_Script: {fileID: 11500000, guid: " + scriptGuid + ", type: 3}\n" +
+                "  m_Name: checkDupe_staleField\n" +
+                "  m_EditorClassIdentifier: \n" +
+                "  m_RemovedMaterial: {fileID: 2100000, guid: " + materialGuid + ", type: 2}\n");
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+
+            Assert.Contains(k_CheckDupeMyMaterial, AssetDatabase.GetDependencies(staleAssetPath),
+                "Expected the stale serialized reference to still be recorded by the AssetDatabase.");
+
+            var rule = new CheckResourcesDupeDependencies();
+            rule.BuiltInResourcesToDependenciesMap(new string[] {staleAssetPath});
+
+            Assert.IsTrue(rule.m_ResourcesToDependencies.ContainsKey(staleAssetPath));
+            Assert.IsFalse(rule.m_ResourcesToDependencies[staleAssetPath].Contains(new GUID(materialGuid)));
         }
     }
 }

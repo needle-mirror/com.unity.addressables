@@ -8,7 +8,6 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
     /// <summary>
     /// The synchronous operation used to calculate the required download size of a key or set of keys. Encapsulated in an operation
     /// to simplify operation chaining.
-    /// Internally this calls Caching.IsVersionCached so it generates more IO than it appears on the surface.
     /// </summary>
     internal class GetDownloadSizeOperation : AsyncOperationBase<long>
     {

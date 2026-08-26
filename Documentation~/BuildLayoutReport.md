@@ -6,7 +6,7 @@ uid: addressables-build-layout-report
 
 The build layout report provides detailed information and statistics about Addressables builds. The format of the report depends on whether you're using AssetBundles or content directories as the [content build system](content-build-systems.md):
 
-* **Content directories**: Uses the [**Build Analysis** window](xref:um-build-analysis-window-reference) to display the details of the content build.
+* **Content directories**: Uses the [**Build Analysis** window](https://docs.unity3d.com/6000.6/Documentation/Manual/build-analysis-window-reference.html) to display the details of the content build.
 * **AssetBundles**: Uses the [**Addressables Report** window](addressables-report-window.md) to display the details of the content build at  `Library/com.unity.addressables/buildlayout.json`.
 
 When the **Debug Build Layout** setting is enabled in the [**Preferences** window](addressables-preferences.md), Unity creates the report whenever you build Addressables content.
@@ -22,11 +22,11 @@ To create a build report, you must enable the **Debug Build Layout** setting, wh
 1. Open the [**Addressables Report** window](addressables-report-window.md) (**Window** > **Asset Management** > **Addressables** > **Addressables Report**) to view the report.
 
 >[!TIP]
-> Enable the [**Open Addressables Report**](addressables-preferences.md) setting to automatically open the report in the **Addressables Report** window after the build completes. If the content build contains content directories, the **Addressables Report** window displays a button to open the [**Build Analysis** window](xref:um-build-analysis-window-reference) to inspect the build further.
+> To open a report as soon as a build completes, enable **Open Build Analysis after build** in the [**Preferences** window](addressables-preferences.md). In Unity 6.7 and later, this opens the [**Build Analysis** window](https://docs.unity3d.com/6000.6/Documentation/Manual/build-analysis-window-reference.html). In Unity 6.6 and earlier, this setting is labeled **Open Addressables Report after build** and opens the **Addressables Report** window. When the **Addressables Report** window displays a build that contains content directories, it also displays a button to open the **Build Analysis** window to inspect the build further.
 
 ## Additional resources
 
 * [Addressables Report window reference](addressables-report-window.md)
 * [Addressables Preferences reference](addressables-preferences.md)
-* [Build Analysis window reference](xref:um-build-analysis-window-reference)
+* [Build Analysis window reference](https://docs.unity3d.com/6000.6/Documentation/Manual/build-analysis-window-reference.html)
 

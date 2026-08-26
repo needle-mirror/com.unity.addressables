@@ -187,21 +187,27 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                     countedBundles.Add(b);
                 }
 
-                foreach (var depB in b.ExpandedDependencies)
+                if (b.ExpandedDependencies != null)
                 {
-                    if (!countedBundles.Contains(depB))
+                    foreach (var depB in b.ExpandedDependencies)
                     {
-                        FileSizePlusRefs += depB.FileSize;
-                        countedBundles.Add(depB);
+                        if (!countedBundles.Contains(depB))
+                        {
+                            FileSizePlusRefs += depB.FileSize;
+                            countedBundles.Add(depB);
+                        }
                     }
                 }
 
-                foreach (var depB in b.Dependencies)
+                if (b.Dependencies != null)
                 {
-                    if (!countedBundles.Contains(depB))
+                    foreach (var depB in b.Dependencies)
                     {
-                        FileSizePlusRefs += depB.FileSize;
-                        countedBundles.Add(depB);
+                        if (!countedBundles.Contains(depB))
+                        {
+                            FileSizePlusRefs += depB.FileSize;
+                            countedBundles.Add(depB);
+                        }
                     }
                 }
             }
@@ -333,15 +339,18 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         {
             var indirectlyReferencedBundleReportItems = new List<TreeViewItemData<GroupsViewBuildReportItem>>();
             var indirectlyReferencedBundles = new List<BuildLayout.Bundle>();
-            foreach (var depBundle in bundle.ExpandedDependencies)
+            if (bundle.ExpandedDependencies != null)
             {
-                if (!directlyReferencedBundles.Contains(depBundle))
+                foreach (var depBundle in bundle.ExpandedDependencies)
                 {
-                    var reportBundle = new GroupsViewBuildReportBundle(depBundle);
-                    if (includeAllDependencies || EntryAppearsInSearch(reportBundle, m_SearchValue))
+                    if (!directlyReferencedBundles.Contains(depBundle))
                     {
-                        indirectlyReferencedBundleReportItems.Add(new TreeViewItemData<GroupsViewBuildReportItem>(++id, reportBundle));
-                        indirectlyReferencedBundles.Add(depBundle);
+                        var reportBundle = new GroupsViewBuildReportBundle(depBundle);
+                        if (includeAllDependencies || EntryAppearsInSearch(reportBundle, m_SearchValue))
+                        {
+                            indirectlyReferencedBundleReportItems.Add(new TreeViewItemData<GroupsViewBuildReportItem>(++id, reportBundle));
+                            indirectlyReferencedBundles.Add(depBundle);
+                        }
                     }
                 }
             }

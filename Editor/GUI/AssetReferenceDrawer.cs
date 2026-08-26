@@ -20,6 +20,8 @@ namespace UnityEditor.AddressableAssets.GUI
     {
         public string newGuid;
         public string newGuidPropertyPath;
+        internal bool assetPropertyIsValid;
+        internal EditorWindow hostInspectorWindow;
         internal string m_AssetName;
         internal Rect assetDropDownRect;
         internal const string noAssetString = "None (AddressableAsset)";
@@ -97,7 +99,6 @@ namespace UnityEditor.AddressableAssets.GUI
             string labelText = label.text;
             m_ReferencesSame = true;
             m_AssetRefObject = property.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
-            assetProperty = property;
 
             labelText = ObjectNames.NicifyVariableName(labelText);
             if (labelText != label.text || string.IsNullOrEmpty(label.text))
@@ -112,35 +113,46 @@ namespace UnityEditor.AddressableAssets.GUI
                 return;
             }
 
-            EditorGUI.BeginProperty(position, label, property);
-            if (m_Restrictions == null)
-                m_Restrictions = AssetReferenceDrawerUtilities.GatherFilters(property);
-            string guid = m_AssetRefObject.AssetGUID;
-            var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
+            assetProperty = property;
+            assetPropertyIsValid = true;
 
-            var isNotAddressable = ApplySelectionChanges(property, aaSettings, ref guid);
+            try
+            {
+                EditorGUI.BeginProperty(position, label, property);
+                if (m_Restrictions == null)
+                    m_Restrictions = AssetReferenceDrawerUtilities.GatherFilters(property);
+                string guid = m_AssetRefObject.AssetGUID;
+                var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
 
-            assetDropDownRect = EditorGUI.PrefixLabel(position, label);
-            var nameToUse = AssetReferenceDrawerUtilities.GetNameForAsset(ref m_ReferencesSame, property, isNotAddressable, fieldInfo, m_label.text);
+                var isNotAddressable = ApplySelectionChanges(property, aaSettings, ref guid);
 
-            bool isDragging = Event.current.type == EventType.DragUpdated && position.Contains(Event.current.mousePosition);
-            bool isDropping = Event.current.type == EventType.DragPerform && position.Contains(Event.current.mousePosition);
+                assetDropDownRect = EditorGUI.PrefixLabel(position, label);
+                var nameToUse = AssetReferenceDrawerUtilities.GetNameForAsset(ref m_ReferencesSame, property, isNotAddressable, fieldInfo, m_label.text);
 
-            bool shouldDrawSubAssetsControl = false;
-            List<Object> subAssetsList = PrepareForSubAssetsControl(ref shouldDrawSubAssetsControl);
-            if (shouldDrawSubAssetsControl)
-                assetDropDownRect = new Rect(assetDropDownRect.position, new Vector2(assetDropDownRect.width / 2, assetDropDownRect.height));
+                bool isDragging = Event.current.type == EventType.DragUpdated && position.Contains(Event.current.mousePosition);
+                bool isDropping = Event.current.type == EventType.DragPerform && position.Contains(Event.current.mousePosition);
 
-            RefreshSubAsset();
+                bool shouldDrawSubAssetsControl = false;
+                List<Object> subAssetsList = PrepareForSubAssetsControl(ref shouldDrawSubAssetsControl);
+                if (shouldDrawSubAssetsControl)
+                    assetDropDownRect = new Rect(assetDropDownRect.position, new Vector2(assetDropDownRect.width / 2, assetDropDownRect.height));
 
-            bool isEnterKeyPressed = Event.current.type == EventType.KeyDown && Event.current.isKey && (Event.current.keyCode == KeyCode.KeypadEnter || Event.current.keyCode == KeyCode.Return);
-            DrawControl(property, nameToUse, isNotAddressable, guid, isEnterKeyPressed);
-            if (shouldDrawSubAssetsControl)
-                DrawSubAssetsControl(property, subAssetsList, isEnterKeyPressed);
+                RefreshSubAsset();
 
-            HandleDragAndDrop(property, isDragging, isDropping, guid);
+                bool isEnterKeyPressed = Event.current.type == EventType.KeyDown && Event.current.isKey && (Event.current.keyCode == KeyCode.KeypadEnter || Event.current.keyCode == KeyCode.Return);
+                DrawControl(property, nameToUse, isNotAddressable, guid, isEnterKeyPressed);
+                if (shouldDrawSubAssetsControl)
+                    DrawSubAssetsControl(property, subAssetsList, isEnterKeyPressed);
 
-            EditorGUI.EndProperty();
+                HandleDragAndDrop(property, isDragging, isDropping, guid);
+
+                EditorGUI.EndProperty();
+            }
+            finally
+            {
+                assetPropertyIsValid = false;
+            }
+
         }
 
         private List<Object> PrepareForSubAssetsControl(ref bool shouldDrawSubAssetsControl)
@@ -244,6 +256,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (isPickerPressed || enterKeyRequestsPopup)
             {
                 newGuidPropertyPath = property.propertyPath;
+                hostInspectorWindow = EditorWindow.focusedWindow;
                 var nonAddressedOption = isNotAddressable ? m_AssetName : string.Empty;
                 EditorWindow.GetWindow<AssetReferencePopup>(true, "Select Addressable Asset").Initialize(this, guid, nonAddressedOption, enterKeyRequestsPopup, Event.current.mousePosition);
             }
@@ -265,11 +278,11 @@ namespace UnityEditor.AddressableAssets.GUI
         private void HandleDragAndDrop(SerializedProperty property, bool isDragging, bool isDropping, string guid)
         {
             var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
-            //During the drag, doing a light check on asset validity.  The in-depth check happens during a drop, and should include a log if it fails.
+            //Validate during the drag to set the cursor, and again on the drop since DragPerform can arrive without a preceding rejection.
             var rejectedDrag = false;
-            if (isDragging)
+            if (isDragging || isDropping)
             {
-                if (aaSettings == null)
+                if (aaSettings == null && isDragging)
                     rejectedDrag = true;
                 else
                 {
@@ -277,7 +290,8 @@ namespace UnityEditor.AddressableAssets.GUI
                     rejectedDrag = AssetReferenceDrawerUtilities.ValidateDrag(m_AssetRefObject, Restrictions, aaEntries, DragAndDrop.objectReferences, DragAndDrop.paths);
                 }
 
-                DragAndDrop.visualMode = rejectedDrag ? DragAndDropVisualMode.Rejected : DragAndDropVisualMode.Copy;
+                if (isDragging)
+                    DragAndDrop.visualMode = rejectedDrag ? DragAndDropVisualMode.Rejected : DragAndDropVisualMode.Copy;
             }
 
             if (!rejectedDrag && isDropping)
@@ -490,6 +504,14 @@ namespace UnityEditor.AddressableAssets.GUI
             subassetPopupWindow.Initialize(selIndex, objNames, subAssets, property, this, mouseLocation);
             return subassetPopupWindow;
         }
+
+        internal virtual void RepaintHostWindow()
+        {
+            if (hostInspectorWindow != null)
+            {
+                hostInspectorWindow.Repaint();
+            }
+        }
     }
 
     class SubassetPopup : EditorWindow
@@ -613,10 +635,16 @@ namespace UnityEditor.AddressableAssets.GUI
         AssetReferenceTreeView m_Tree;
         TreeViewStateAdapter m_TreeState;
         bool m_ShouldClose;
+        IconLazyLoad m_IconLoader = new IconLazyLoad();
 
         void ForceClose()
         {
             m_ShouldClose = true;
+        }
+
+        private void OnDestroy()
+        {
+            m_IconLoader.RemoveLazyIconLoadCallback();
         }
 
         string m_CurrentName = string.Empty;
@@ -669,6 +697,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (m_TreeState == null)
                     m_TreeState = new TreeViewStateAdapter();
                 m_Tree = new AssetReferenceTreeView(m_TreeState, m_Drawer, this, m_GUID, m_NonAddressedAsset);
+                m_Tree.SetLazyLoader(m_IconLoader, Repaint);
                 m_Tree.Reload();
                 m_Tree.SetInitialSelection(m_Drawer.m_AssetName);
             }
@@ -691,9 +720,12 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        sealed class AssetRefTreeViewItem : TreeViewItemAdapter
+        internal sealed class AssetRefTreeViewItem : TreeViewItemAdapter
         {
             public string AssetPath;
+
+            // Set once this row has queued its icon, so repainting a visible row does not queue it again every frame.
+            public bool IconRequested;
 
             private string m_Guid;
 
@@ -711,7 +743,6 @@ namespace UnityEditor.AddressableAssets.GUI
                 : base(id, depth, displayName)
             {
                 AssetPath = path;
-                icon = AssetDatabase.GetCachedIcon(path) as Texture2D;
             }
         }
 
@@ -722,6 +753,14 @@ namespace UnityEditor.AddressableAssets.GUI
             string m_GUID;
             string m_NonAddressedAsset;
             Texture2D m_WarningIcon;
+            IconLazyLoad m_LazyLoader;
+            System.Action m_RepaintCallback;
+
+            internal void SetLazyLoader(IconLazyLoad loader, System.Action repaintCallback)
+            {
+                m_LazyLoader = loader;
+                m_RepaintCallback = repaintCallback;
+            }
 
             internal bool IsEnterKeyPressed { get; set; }
 
@@ -788,9 +827,45 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
 
                     SetFocus();
-                    if (m_Drawer.assetProperty != null && oldGuid != null)
+                    if (m_Drawer.assetProperty != null && m_Drawer.assetPropertyIsValid && oldGuid != null)
+                    {
                         m_Drawer.ApplySelectionChanges(m_Drawer.assetProperty, AddressableAssetSettingsDefaultObject.Settings, ref oldGuid);
+                    }
+                    else
+                    {
+                        m_Drawer.RepaintHostWindow();
+                    }
                 }
+            }
+
+            //Lazy Loading occurs here to ensure only rows visible on screen get queued for icon load. Prevents queuing all icons up. Placeholder icons are selected in the meantime.
+            protected override void RowGUI(RowGUIArgs args)
+            {
+                if (m_LazyLoader != null && m_RepaintCallback != null
+                    && args.item is AssetRefTreeViewItem item
+                    && ShouldRequestIcon(item))
+                {
+                    item.IconRequested = true;
+                    item.icon = m_LazyLoader.GetPlaceholderIcon(item.AssetPath);
+                    m_LazyLoader.LoadIconLazy(item.AssetPath, tex => { item.icon = tex; m_RepaintCallback.Invoke(); });
+                }
+
+                base.RowGUI(args);
+            }
+
+            /// <summary>
+            /// Whether a row still needs its icon loading. The 'None' row carries no asset path and the
+            /// 'Make Addressable' row carries a sentinel rather than a path, so neither has an icon to load.
+            /// </summary>
+            /// <param name="item">The row being drawn.</param>
+            /// <returns>True when a lazy icon load should be queued for this row.</returns>
+            internal static bool ShouldRequestIcon(AssetRefTreeViewItem item)
+            {
+                return item != null
+                    && !item.IconRequested
+                    && item.icon == null
+                    && !string.IsNullOrEmpty(item.AssetPath)
+                    && item.AssetPath != AssetReferenceDrawer.forceAddressableString;
             }
 
             protected override IList<TreeViewItemAdapter> BuildRowsAdapter(TreeViewItemAdapter root)

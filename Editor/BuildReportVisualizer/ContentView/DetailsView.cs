@@ -14,7 +14,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
     {
         DetailsViewTab m_ActiveContentsTab;
         VisualElement m_Root;
-        BuildReportWindow m_Window;
+        IBuildReportHost m_Host;
 
         DetailsContentView m_Contents;
         DetailsSummaryView m_Summary;
@@ -22,9 +22,9 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         object m_DetailsRootObject;
         object m_DetailsActiveObject;
 
-        internal DetailsView(BuildReportWindow window)
+        internal DetailsView(IBuildReportHost host)
         {
-            m_Window = window;
+            m_Host = host;
             m_ActiveContentsTab = DetailsViewTab.ReferencesTo;
         }
 
@@ -32,8 +32,8 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         {
             m_Root = rootVisualElement;
 
-            m_Summary = new DetailsSummaryView(rootVisualElement, m_Window);
-            m_Contents = new DetailsContentView(rootVisualElement, m_Window);
+            m_Summary = new DetailsSummaryView(rootVisualElement, m_Host);
+            m_Contents = new DetailsContentView(rootVisualElement, m_Host);
 
             rootVisualElement.Q<RibbonButton>("ReferencesToTab").clicked += () =>
             {

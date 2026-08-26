@@ -15,8 +15,37 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
     {
         internal class ContentDirectoryFileCategory
         {
+            public const string Texture = "texture";
+            public const string Mesh = "mesh";
+            public const string Audio = "audio";
+            public const string Video = "video";
             public const string ContentFile = "contentfile";
             public const string Manifest = "manifest";
+
+            /// Returns the file extension (including the leading dot) that the native content
+            /// directory build gives an artifact of the given category.
+            /// Directly mirrors kArtifactCategoryToExtension in the native build pipeline.
+            internal static string GetExtensionForCategory(string category)
+            {
+                if (string.IsNullOrEmpty(category))
+                    return string.Empty;
+
+                switch (category.ToLowerInvariant())
+                {
+                    case Texture:
+                    case Mesh:
+                        return ".resS";
+                    case Audio:
+                    case Video:
+                        return ".resource";
+                    case ContentFile:
+                        return ".cf";
+                    case Manifest:
+                        return ".json";
+                    default:
+                        return "." + category;
+                }
+            }
         }
 
         /// <summary>
@@ -93,18 +122,49 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
         internal static class ContentDirectoryArchiver
         {
             // Inflates a desired post-compression archive size into the raw bucket size needed
-            // to land near it. Update both this constant AND the compression call in
-            // ProcessArchiveWorkItems together when changing or extending compression support.
-            //   LZ4  : ~1.5x (typical Unity content compresses to ~60-75% of raw)
-            //   LZMA : ~3.0x (would apply if LZMA is added to ProcessArchiveWorkItems)
+            // to land near it. Keep GetInflationFactor and GetBuildCompression in sync when
+            // changing or extending compression support.
+            //   Uncompressed : 1.0x (archive size tracks raw size)
+            //   LZ4          : ~1.5x (typical Unity content compresses to ~60-75% of raw)
             const double k_LZ4InflationFactor = 1.5;
+            const double k_UncompressedInflationFactor = 1.0;
 
-            internal static void ArchiveAndUpdateRegistry(string archiveOutputDirectory, long targetCompressedSize, List<string> filePaths, FileRegistry registry, IBuildLogger log = null)
+            internal static double GetInflationFactor(ContentDirectoryArchiveMode archiveMode)
             {
+                switch (archiveMode)
+                {
+                    case ContentDirectoryArchiveMode.Uncompressed:
+                        return k_UncompressedInflationFactor;
+                    case ContentDirectoryArchiveMode.Lz4:
+                        return k_LZ4InflationFactor;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(archiveMode), archiveMode,
+                            "Archiving is disabled for this mode; the archiver should not be invoked.");
+                }
+            }
+
+            internal static BuildCompression GetBuildCompression(ContentDirectoryArchiveMode archiveMode)
+            {
+                switch (archiveMode)
+                {
+                    case ContentDirectoryArchiveMode.Uncompressed:
+                        return BuildCompression.Uncompressed;
+                    case ContentDirectoryArchiveMode.Lz4:
+                        return BuildCompression.LZ4;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(archiveMode), archiveMode,
+                            "Archiving is disabled for this mode; the archiver should not be invoked.");
+                }
+            }
+
+            internal static void ArchiveAndUpdateRegistry(string archiveOutputDirectory, long targetCompressedSize, List<string> filePaths, FileRegistry registry,
+                ContentDirectoryArchiveMode archiveMode = ContentDirectoryArchiveMode.Lz4, IBuildLogger log = null)
+            {
+                double inflationFactor = GetInflationFactor(archiveMode);
                 var filteredFiles = FilterFiles(filePaths, out var sizes, out var totalSize);
-                long targetUncompressedSize = (long)(targetCompressedSize * k_LZ4InflationFactor);
+                long targetUncompressedSize = (long)(targetCompressedSize * inflationFactor);
                 var workItems = CreateArchiveWorkItems(archiveOutputDirectory, filteredFiles, sizes, totalSize, targetUncompressedSize);
-                ProcessArchiveWorkItems(workItems, log);
+                ProcessArchiveWorkItems(workItems, archiveMode, log);
                 CleanupRegistry(registry, filteredFiles, workItems);
             }
 
@@ -117,9 +177,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
             /// <param name="contentLayout">The loaded ContentLayout containing artifact information</param>
             /// <param name="archiveOutputDirectory">Directory where archives will be written</param>
             /// <param name="targetCompressedSize">Target size for each archive in bytes</param>
+            /// <param name="archiveMode">The archive mode that selects the compression applied to each archive</param>
+            /// <param name="log">Optional build logger</param>
             /// <returns>Array of file paths that were created (BuildManifestHash.txt and archive files)</returns>
-            internal static string[] ArchiveFromUDS(ContentLayout contentLayout, string archiveOutputDirectory, long targetCompressedSize, IBuildLogger log = null)
+            internal static string[] ArchiveFromUDS(ContentLayout contentLayout, string archiveOutputDirectory, long targetCompressedSize,
+                ContentDirectoryArchiveMode archiveMode = ContentDirectoryArchiveMode.Lz4, IBuildLogger log = null)
             {
+                double inflationFactor = GetInflationFactor(archiveMode);
                 var createdFiles = new List<string>();
 
                 var manifestHashFilePath = Path.Combine(archiveOutputDirectory, kBuildManifestHashFileName);
@@ -128,9 +192,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
 
                 var (resourceFiles, sizes, totalSize) = CreateResourceFilesFromLayout(contentLayout);
 
-                long targetUncompressedSize = (long)(targetCompressedSize * k_LZ4InflationFactor);
+                long targetUncompressedSize = (long)(targetCompressedSize * inflationFactor);
                 var workItems = CreateArchiveWorkItems(archiveOutputDirectory, resourceFiles, sizes, totalSize, targetUncompressedSize);
-                ProcessArchiveWorkItems(workItems, log);
+                ProcessArchiveWorkItems(workItems, archiveMode, log);
 
                 foreach (var item in workItems)
                     createdFiles.Add(item.archivePath);
@@ -138,7 +202,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                 return createdFiles.ToArray();
             }
 
-            static (List<ResourceFile> resourceFiles, List<long> sizes, long totalSize) CreateResourceFilesFromLayout(ContentLayout layout)
+            internal static (List<ResourceFile> resourceFiles, List<long> sizes, long totalSize) CreateResourceFilesFromLayout(ContentLayout layout)
             {
                 var artifacts = layout?.BinaryArtifacts;
                 var resourceFiles = new List<ResourceFile>(artifacts?.Count ?? 0);
@@ -146,14 +210,20 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                 long totalSize = 0;
                 if (artifacts != null)
                 {
+                    var addedAlias = new HashSet<string>(artifacts.Count);
                     foreach (var art in artifacts)
                     {
                         var file = new ResourceFile
                         {
                             fileName = kUdsScheme + art.ContentHash,
-                            fileAlias = art.ContentHash,
+                            fileAlias = art.ContentHash + ContentDirectoryFileCategory.GetExtensionForCategory(art.Category),
                             serializedFile = art.Category == ContentDirectoryFileCategory.ContentFile,
                         };
+
+                        // Prevent duplicate BinaryArtifacts with the same category to be added twice to the final archive.
+                        if (!addedAlias.Add(file.fileAlias))
+                            continue;
+
                         resourceFiles.Add(file);
                         var size = (long)art.Size;
                         sizes.Add(size);
@@ -245,11 +315,12 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                 }
             }
 
-            internal static void ProcessArchiveWorkItems(List<(string archivePath, long uncompressedSize, List<ResourceFile> files)> workItems, IBuildLogger log)
+            internal static void ProcessArchiveWorkItems(List<(string archivePath, long uncompressedSize, List<ResourceFile> files)> workItems,
+                ContentDirectoryArchiveMode archiveMode, IBuildLogger log)
             {
                 var comparer = new ResourceFileComparer();
                 var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount) };
-                var compression = BuildCompression.LZ4;
+                var compression = GetBuildCompression(archiveMode);
 
                 using (log.ScopedStep(LogLevel.Info, "Archiving work items", true))
                 {

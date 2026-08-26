@@ -49,7 +49,7 @@ public class RevertUnchangedAssetsToPreviousAssetState
 
         foreach (var assetGroup in groups)
         {
-            List<AssetEntryRevertOperation> operations = DetermineRequiredAssetEntryUpdates(assetGroup, updateContext);
+            List<AssetEntryRevertOperation> operations = DetermineRequiredAssetEntryUpdates(assetGroup, updateContext, aaContext.FolderEnumerator);
             if (operations != null && operations.Count > 0)
                 ApplyAssetEntryUpdates(operations, updateContext);
         }
@@ -147,7 +147,8 @@ public class RevertUnchangedAssetsToPreviousAssetState
         return true;
     }
 
-    internal static List<AssetEntryRevertOperation> DetermineRequiredAssetEntryUpdates(AddressableAssetGroup group, ContentUpdateScript.ContentUpdateContext contentUpdateContext)
+    internal static List<AssetEntryRevertOperation> DetermineRequiredAssetEntryUpdates(AddressableAssetGroup group, ContentUpdateScript.ContentUpdateContext contentUpdateContext,
+        AddressableFolderEnumerator enumerator = null)
     {
         var bundleSchema = group.GetSchema<BundledAssetGroupSchema>();
         if (!group.HasSchema<BundledAssetGroupSchema>() || bundleSchema == null || !bundleSchema.IsEnabled)
@@ -158,7 +159,7 @@ public class RevertUnchangedAssetsToPreviousAssetState
         List<AssetEntryRevertOperation> operations = new List<AssetEntryRevertOperation>();
 
         List<AddressableAssetEntry> allEntries = new List<AddressableAssetEntry>();
-        group.GatherAllAssets(allEntries, true, true, false);
+        group.GatherAllAssets(allEntries, true, true, false, null, enumerator);
         foreach (AddressableAssetEntry entry in allEntries)
         {
             if (entry.IsFolder)

@@ -4,14 +4,13 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
-using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.CatalogBuilders;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.AddressableAssets.Tests.Runtime.TestObjects;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Utilities;
@@ -315,7 +314,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 schema.BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.NoHash;
                 Settings.DefaultGroup = assetGroup;
 
-                var testObject = UnityEngine.AddressableAssets.Tests.TestObject.Create("TestScriptableObject", GetAssetPath(assetNamePrefix + "TestScriptableObject.asset"));
+                var testObject = TestObject.Create("TestScriptableObject", GetAssetPath(assetNamePrefix + "TestScriptableObject.asset"));
                 if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(testObject, out string guid, out long id))
                     return;
                 Settings.CreateOrMoveEntry(guid, assetGroup, false, false);

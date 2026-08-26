@@ -1,20 +1,19 @@
 using UnityEditor.AddressableAssets.Build.Layout;
 using UnityEngine;
 using UnityEngine.UIElements;
-using static UnityEditor.AddressableAssets.BuildReportVisualizer.BuildReportWindow;
 
 namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 {
     class DetailsSummaryView
     {
-        BuildReportWindow m_Window;
+        IBuildReportHost m_Host;
         protected VisualElement m_DetailsSummary;
         VisualTreeAsset m_DetailsPanelSummaryNavigableItem;
         VisualTreeAsset m_DetailsPanelSummaryNavigableBundle;
 
-        internal DetailsSummaryView(VisualElement root, BuildReportWindow window)
+        internal DetailsSummaryView(VisualElement root, IBuildReportHost host)
         {
-            m_Window = window;
+            m_Host = host;
 
             m_DetailsPanelSummaryNavigableItem = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(BuildReportUtility.DetailsPanelSummaryNavigableItem);
             m_DetailsPanelSummaryNavigableBundle = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(BuildReportUtility.DetailsPanelSummaryNavigableBundle);
@@ -68,13 +67,13 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 BuildReportUtility.CreateButton("Search in this view", () =>
                 {
                     string newSearchValue = bundle.Name;
-                    m_Window.m_ActiveContentView.m_SearchField.Q<TextField>().value = newSearchValue;
+                    m_Host.ActiveContentView.m_SearchField.Q<TextField>().value = newSearchValue;
                 }),
                 BuildReportUtility.CreateButton("Select in Group", () =>
                 {
                     AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.BuildReportDetailsSelectInGroup);
-                    m_Window.NavigateToView(ContentViewType.GroupsView);
-                    m_Window.SelectItemInView(BuildReportUtility.ComputeDataHash(bundle.Group.Name, bundle.Name), true);
+                    m_Host.NavigateToView(ContentViewType.GroupsView);
+                    m_Host.SelectItemInView(BuildReportUtility.ComputeDataHash(bundle.Group.Name, bundle.Name), true);
                 })));
         }
 
@@ -107,19 +106,19 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 BuildReportUtility.CreateButton("Select in Group", () =>
                 {
                     AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.BuildReportDetailsSelectInGroup);
-                    m_Window.NavigateToView(ContentViewType.GroupsView);
-                    m_Window.SelectItemInView(BuildReportUtility.ComputeDataHash(reportAsset.ExplicitAsset.AddressableName));
+                    m_Host.NavigateToView(ContentViewType.GroupsView);
+                    m_Host.SelectItemInView(BuildReportUtility.ComputeDataHash(reportAsset.ExplicitAsset.AddressableName));
                 }),
                 BuildReportUtility.CreateButton("Search in this view", () =>
                 {
                     string newSearchValue = reportAsset.ExplicitAsset.AddressableName;
-                    m_Window.m_ActiveContentView.m_SearchField.Q<TextField>().value = newSearchValue;
+                    m_Host.ActiveContentView.m_SearchField.Q<TextField>().value = newSearchValue;
                 })));
             m_DetailsSummary.Add(CreateButtonRow(BuildReportUtility.CreateButton("Select in Bundle", () =>
                 {
                     AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.BuildReportDetailsSelectInBundle);
-                    m_Window.NavigateToView(ContentViewType.BundleView);
-                    m_Window.SelectItemInView(BuildReportUtility.ComputeDataHash(reportAsset.ExplicitAsset.Bundle.Name, reportAsset.ExplicitAsset.AddressableName));
+                    m_Host.NavigateToView(ContentViewType.BundleView);
+                    m_Host.SelectItemInView(BuildReportUtility.ComputeDataHash(reportAsset.ExplicitAsset.Bundle.Name, reportAsset.ExplicitAsset.AddressableName));
                 })));
         }
 
@@ -138,7 +137,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 BuildReportUtility.CreateButton("Search in this view", () =>
                 {
                     string newSearchValue = reportAsset.DataFromOtherAsset.AssetPath;
-                    m_Window.m_ActiveContentView.m_SearchField.Q<TextField>().value = newSearchValue;
+                    m_Host.ActiveContentView.m_SearchField.Q<TextField>().value = newSearchValue;
                 }),
                 BuildReportUtility.CreateButton("Select in Editor", () =>
                 {

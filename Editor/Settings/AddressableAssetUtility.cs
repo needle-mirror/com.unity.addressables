@@ -411,6 +411,20 @@ namespace UnityEditor.AddressableAssets.Settings
             return $"https://docs.unity3d.com/Packages/com.unity.addressables@{GetVersionFromPackageData()}/manual/{page}";
         }
 
+        /// <summary>
+        /// The manual page describing Content Directories and how to convert a project to use them.
+        /// </summary>
+        internal const string kContentDirectoriesDocsPage = "convert-content-directories.html";
+
+        /// <summary>
+        /// Generates the documentation URL used by every Content Directory announcement, warning and help box in the Editor UI.
+        /// </summary>
+        /// <returns>Returns the versioned URL of the Content Directories manual page.</returns>
+        internal static string GenerateContentDirectoriesDocsURL()
+        {
+            return GenerateDocsURL(kContentDirectoriesDocsPage);
+        }
+
         internal static bool IsUsingVCIntegration()
         {
             return Provider.isActive && Provider.enabled;

@@ -434,50 +434,55 @@ namespace Tests.Editor
                 "NumberOfSerializedFiles should be 0 when the build result carries no content directory results to sum.");
         }
 
-        [Test]
-        public void GenerateBuildData_ArchivingEnabledReflectsSetting()
+        [TestCase(ContentDirectoryArchiveMode.None, false)]
+        [TestCase(ContentDirectoryArchiveMode.Uncompressed, true)]
+        [TestCase(ContentDirectoryArchiveMode.Lz4, true)]
+        public void GenerateBuildData_ArchivingEnabledReflectsSetting(ContentDirectoryArchiveMode archiveMode, bool expectedEnabled)
         {
-            var originalArchiving = testSettings.ArchiveContentDirectories;
+            var originalArchiveMode = testSettings.ContentDirectoryArchiveMode;
             try
             {
-                testSettings.ArchiveContentDirectories = true;
-                var enabledData = AddressableAnalytics.GenerateBuildData(builderInput, CreateTestResult(0, false, null), AddressableAnalytics.BuildType.Inconclusive);
-                Assert.AreEqual((int)AddressableAnalytics.ArchivingStatus.Enabled, enabledData.ArchivingEnabled,
-                    "ArchivingEnabled should be Enabled (1) when ArchiveContentDirectories is true.");
-
-                testSettings.ArchiveContentDirectories = false;
-                var disabledData = AddressableAnalytics.GenerateBuildData(builderInput, CreateTestResult(0, false, null), AddressableAnalytics.BuildType.Inconclusive);
-                Assert.AreEqual((int)AddressableAnalytics.ArchivingStatus.Disabled, disabledData.ArchivingEnabled,
-                    "ArchivingEnabled should be Disabled (0) when ArchiveContentDirectories is false.");
+                testSettings.ContentDirectoryArchiveMode = archiveMode;
+                var data = AddressableAnalytics.GenerateBuildData(builderInput, CreateTestResult(0, false, null), AddressableAnalytics.BuildType.Inconclusive);
+                int expected = expectedEnabled
+                    ? (int)AddressableAnalytics.ArchivingStatus.Enabled
+                    : (int)AddressableAnalytics.ArchivingStatus.Disabled;
+                Assert.AreEqual(expected, data.ArchivingEnabled,
+                    $"ArchivingEnabled should reflect whether ContentDirectoryArchiveMode {archiveMode} archives content.");
             }
             finally
             {
-                testSettings.ArchiveContentDirectories = originalArchiving;
+                testSettings.ContentDirectoryArchiveMode = originalArchiveMode;
             }
         }
 
         [Test]
         public void GenerateBuildData_ArchiveSizeIsTrackedOnlyWhenArchivingEnabled()
         {
-            var originalArchiving = testSettings.ArchiveContentDirectories;
+            var originalArchiveMode = testSettings.ContentDirectoryArchiveMode;
             var originalArchiveSize = testSettings.TargetArchiveSizeInMB;
             try
             {
                 testSettings.TargetArchiveSizeInMB = 512f;
 
-                testSettings.ArchiveContentDirectories = true;
-                var enabledData = AddressableAnalytics.GenerateBuildData(builderInput, CreateTestResult(0, false, null), AddressableAnalytics.BuildType.Inconclusive);
-                Assert.AreEqual(512f, enabledData.ArchiveSize,
-                    "ArchiveSize should report TargetArchiveSizeInMB when archiving is enabled.");
+                testSettings.ContentDirectoryArchiveMode = ContentDirectoryArchiveMode.Lz4;
+                var lz4Data = AddressableAnalytics.GenerateBuildData(builderInput, CreateTestResult(0, false, null), AddressableAnalytics.BuildType.Inconclusive);
+                Assert.AreEqual(512f, lz4Data.ArchiveSize,
+                    "ArchiveSize should report TargetArchiveSizeInMB for the Lz4 archive mode.");
 
-                testSettings.ArchiveContentDirectories = false;
+                testSettings.ContentDirectoryArchiveMode = ContentDirectoryArchiveMode.Uncompressed;
+                var uncompressedData = AddressableAnalytics.GenerateBuildData(builderInput, CreateTestResult(0, false, null), AddressableAnalytics.BuildType.Inconclusive);
+                Assert.AreEqual(512f, uncompressedData.ArchiveSize,
+                    "ArchiveSize should report TargetArchiveSizeInMB for the Uncompressed archive mode.");
+
+                testSettings.ContentDirectoryArchiveMode = ContentDirectoryArchiveMode.None;
                 var disabledData = AddressableAnalytics.GenerateBuildData(builderInput, CreateTestResult(0, false, null), AddressableAnalytics.BuildType.Inconclusive);
                 Assert.AreEqual(-1f, disabledData.ArchiveSize,
                     "ArchiveSize should be -1 (untracked) when archiving is disabled, regardless of TargetArchiveSizeInMB.");
             }
             finally
             {
-                testSettings.ArchiveContentDirectories = originalArchiving;
+                testSettings.ContentDirectoryArchiveMode = originalArchiveMode;
                 testSettings.TargetArchiveSizeInMB = originalArchiveSize;
             }
         }

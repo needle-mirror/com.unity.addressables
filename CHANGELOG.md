@@ -4,6 +4,41 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2026-08-26
+- Added a Content Directory archive mode setting with `None`, `Uncompressed` and `LZ4` options, replacing the `Archive Content Directories` toggle. Existing projects keep their previous behavior on upgrade. `AddressableAssetSettings.ArchiveContentDirectories` is obsolete; use `AddressableAssetSettings.ContentDirectoryArchiveMode` instead.
+- Changed the `Target Archive Size (MB)` setting to apply to uncompressed Content Directory archives as well as LZ4-compressed ones.
+- Fixed an issue where Content Directory artifacts would not always have the appropriate file extension.
+- Fixed unsubscribing from the non-generic `AsyncOperationHandle.Completed` event not removing the callback, which was still invoked when the operation completed.
+- Fixed `UpdateCatalogs()`/`CheckForCatalogUpdates()` not clearing `DisableCatalogUpdateOnStart` on all registered content catalog providers, which could cause remote catalog updates to be silently skipped when binary catalogs were used.
+- Fixed the Auto Group Generator window throwing a `NullReferenceException` when generating groups with no settings asset assigned. The generate button is now disabled and the window explains that a settings asset must be assigned.
+- Fixed the Auto Group Generator window losing its assigned settings asset after a domain reload.
+- Fixed an "AddressableAssetSettings not found. Ensure Addressables are initialized." exception thrown when creating an Auto Group Generator output rule asset in a project where Addressables has not been initialized.
+- Updated Addressables binary catalog to be able to cache identical dependency lists instead of re-serializing it for each entry that refers to it. Note that this means that dependency lists are now shared between catalog entries with identical dependencies.
+- Fixed the Addressables settings asset's hash field being reset and rewritten on every settings change, which caused unnecessary source control diffs/conflicts.
+- Added the Addressables build report to the Build Analysis window, shown when an Addressables build is selected.
+- Changed the AssetReferenceDrawer to use lazy loading for its icons, preventing editor hang when a large amount of Addressable Assets are present.
+- Changed Content Directory builds to be named "Content Directory" in the Build Analysis window, instead of being named after the build's output folder.
+- Fixed the "Check Resources to Addressable Duplicate Dependencies" analyze rule reporting duplicates for stale serialized references left behind when a field is removed from a script.
+- Fixed a warning ("ProfileValueReference: GetValue called with empty id.") that could be logged during a build when Build Remote Catalog is disabled.
+- Added a *Cache Probe Mode* setting to Asset Bundle groups, controlling how Addressables checks whether an AssetBundle version is already cached. The new default, *Cached Versions*, uses Caching.GetCachedVersions and shoudl be much faster with a lot of cached content. Choose *Version Marker File* to restore the previous check and use Caching.IsVersionCached.
+- Fixed `AssetBundleRequestOptions`' copy constructor dropping `UseCrcForCachedBundle` and `ClearOtherCachedVersionsWhenLoaded`, which reset those options on remote builtin entries during a content update.
+- Fixed an AssetBundle's cached status being kept after a download completed or after a corrupt cache entry was cleared.
+- Improved Addressables build times for projects using Content Directory groups, particularly those with multi-sprite textures, Sprite Atlases or many addressable folders.
+- Content Directory builds no longer load every addressable asset in order to identify it, reducing build time and peak Editor memory.
+- Fixed `GetDownloadSizeAsync` returning 0 when passed already-resolved AssetBundle locations.
+- Fixed `GetDownloadSizeAsync` ignoring locations that report a download size through `ILocationSizeData` but are not typed as AssetBundles.
+- Fixed `GetDownloadSizeAsync` ignoring the remaining keys in a request that also contained a content catalog location, and not recognising a catalog location passed inside a list of resolved locations.
+- Fixed `DownloadDependenciesAsync` and `ClearDependencyCacheAsync` skipping locations whose resource type derives from `IAssetBundleResource` rather than being exactly that type.
+- Reduced Addressables build time in projects that use addressable folders by walking each folder once per build instead of once per folder entry.
+- Added `AddressableAssetsBuildContext.BuilderInput`, plus overloads of `AddressableAssetEntry.GatherAllAssets` and `BuildScriptSchemaDriven.PrepGroupBundlePacking` that take an `AddressableAssetsBuildContext`, so a custom build script can share the build's folder enumeration.
+- Fixed `IResourceLocator.AllLocations` on binary content catalogs resolving every key, which made listing a catalog's content scale with key count rather than with content.
+
+## [4.0.2] - 2026-08-03
+- Fixed issue where ArgumentNullException is thrown when dragging Sprite onto AssetReferenceAtlasedSprite field.
+- Fixed an issue where text in the groups window would be the wrong color when not focused
+- Renamed the Addressables Analyze window rule groups from "Fixable Rules" and "Unfixable Rules" to "Auto Fix Rules" and "Manual Fix Required Rules".
+- Fixed "InvalidOperationException: Sequence contains no elements" and "ArgumentOutOfRangeException" errors thrown when removing a report from the Addressables Report window, and fixed Remove Report removing the wrong report when more than one report was listed.
+
 ## [4.0.1] - 2026-07-23
 - Fixed a bug where the Groups window would throw an error if null groups were present after upgrading.
 

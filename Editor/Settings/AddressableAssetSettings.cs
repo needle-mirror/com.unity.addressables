@@ -482,8 +482,9 @@ namespace UnityEditor.AddressableAssets.Settings
         [SerializeField]
         string m_DefaultGroup;
 
-        [FormerlySerializedAs("m_cachedHash")]
-        [SerializeField]
+        // Not serialized - this is recomputed lazily and persisting it caused the settings asset's on-disk
+        // hash to flip between a real value and zero as it was invalidated/recalculated, creating spurious
+        // source control diffs (CBD-2000).
         Hash128 m_currentHash;
         Hash128 m_selfHash;
 
@@ -559,8 +560,13 @@ namespace UnityEditor.AddressableAssets.Settings
         [SerializedTypeRestriction(type = typeof(IResourceProvider))]
         internal SerializedType m_GroupAssetEntryProviderType;
 
+        // Legacy archiving toggle, retained (serialized) only so MigrateContentDirectoryArchiveMode
+        // can read the previously stored value. m_ContentDirectoryArchiveMode is the source of truth.
         [SerializeField]
-        bool m_ArchiveContentDirectories = true;
+        internal bool m_ArchiveContentDirectories = true;
+
+        [SerializeField]
+        ContentDirectoryArchiveMode m_ContentDirectoryArchiveMode = Build.ContentDirectoryArchiveMode.Lz4;
 
         [SerializeField]
         float m_TargetArchiveSizeInMB = 2000f;
@@ -1041,18 +1047,30 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         /// <summary>
-        /// If true, content-directory build artifacts are archived into a single compressed
-        /// file rather than being left as individual files on disk.
+        /// Determines whether content-directory build artifacts are packed into archive files,
+        /// and which compression is applied when they are.
         /// </summary>
+        public ContentDirectoryArchiveMode ContentDirectoryArchiveMode
+        {
+            get { return m_ContentDirectoryArchiveMode; }
+            set { m_ContentDirectoryArchiveMode = value; }
+        }
+
+        /// <summary>
+        /// If true, content-directory build artifacts are archived rather than being left
+        /// as individual files on disk.
+        /// </summary>
+        [Obsolete("Use ContentDirectoryArchiveMode instead. The getter returns true for any mode other than ContentDirectoryArchiveMode.None; the setter selects ContentDirectoryArchiveMode.Lz4 for true and ContentDirectoryArchiveMode.None for false.")]
         public bool ArchiveContentDirectories
         {
-            get { return m_ArchiveContentDirectories; }
-            set { m_ArchiveContentDirectories = value; }
+            get { return m_ContentDirectoryArchiveMode != ContentDirectoryArchiveMode.None; }
+            set { m_ContentDirectoryArchiveMode = value ? ContentDirectoryArchiveMode.Lz4 : ContentDirectoryArchiveMode.None; }
         }
 
         /// <summary>
         /// Target size in megabytes for each content-directory archive file.
         /// Content will be split across multiple archives when this limit is exceeded.
+        /// Applies to every <see cref="ContentDirectoryArchiveMode"/> that archives content.
         /// Minimum value is 1 MB.
         /// </summary>
         public float TargetArchiveSizeInMB
@@ -1229,7 +1247,7 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-                if (m_RemoteCatalogBuildPath?.Id == null)
+                if (string.IsNullOrEmpty(m_RemoteCatalogBuildPath?.Id))
                 {
                     m_RemoteCatalogBuildPath = new ProfileValueReference();
                     m_RemoteCatalogBuildPath.SetVariableByName(this, kRemoteBuildPath);
@@ -1995,12 +2013,34 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="entryFilter">A method to filter entries.  Entries will be processed if filter is null, or it returns TRUE</param>
         public void GetAllAssets(List<AddressableAssetEntry> assets, bool includeSubObjects, Func<AddressableAssetGroup, bool> groupFilter = null, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
-            using (var cache = new AddressablesFileEnumerationCache(this, false, null))
+            GetAllAssets(assets, includeSubObjects, groupFilter, entryFilter, null);
+        }
+
+        /// <summary>
+        /// Gets all asset entries from all groups, sharing the folder walk held by an enumerator.
+        /// </summary>
+        /// <param name="enumerator">Reuses this enumerator's folder walk. Pass null to walk fresh.</param>
+        internal void GetAllAssets(List<AddressableAssetEntry> assets, bool includeSubObjects, Func<AddressableAssetGroup, bool> groupFilter,
+            Func<AddressableAssetEntry, bool> entryFilter, AddressableFolderEnumerator enumerator)
+        {
+            if (enumerator != null)
             {
-                foreach (var g in groups)
-                    if (g != null && (groupFilter == null || groupFilter(g)))
-                        g.GatherAllAssets(assets, true, true, includeSubObjects, entryFilter);
+                GatherAssetsFromGroups(assets, includeSubObjects, groupFilter, entryFilter, enumerator);
+                return;
             }
+
+            // Still worth one enumerator for this call alone, so a folder several groups
+            // share is walked once rather than once per group.
+            using (var owned = new AddressableFolderEnumerator(this, false, null))
+                GatherAssetsFromGroups(assets, includeSubObjects, groupFilter, entryFilter, owned);
+        }
+
+        void GatherAssetsFromGroups(List<AddressableAssetEntry> assets, bool includeSubObjects, Func<AddressableAssetGroup, bool> groupFilter,
+            Func<AddressableAssetEntry, bool> entryFilter, AddressableFolderEnumerator enumerator)
+        {
+            foreach (var g in groups)
+                if (g != null && (groupFilter == null || groupFilter(g)))
+                    g.GatherAllAssets(assets, true, true, includeSubObjects, entryFilter, enumerator);
         }
 
         internal void GatherAllAssetReferenceDrawableEntries(List<IReferenceEntryData> assets)
@@ -2525,9 +2565,12 @@ namespace UnityEditor.AddressableAssets.Settings
         /// </summary>
         /// <param name="guid">The asset guid.</param>
         /// <param name="includeImplicit">Whether or not to include implicit asset entries in the search.</param>
-        /// <returns>The found entry or null.</returns>
+        /// <returns>The found entry or null. A null or empty guid returns null.</returns>
         public AddressableAssetEntry FindAssetEntry(string guid, bool includeImplicit)
         {
+            if (string.IsNullOrEmpty(guid))
+                return null;
+
             AddressableAssetEntry foundEntry = null;
             if (m_FindAssetEntryCache != null)
             {
@@ -2799,7 +2842,8 @@ namespace UnityEditor.AddressableAssets.Settings
             }
             else
             {
-                if (AssetDatabase.GetMainAssetTypeAtPath(path) != null && BuildUtility.IsEditorAssembly(AssetDatabase.GetMainAssetTypeAtPath(path).Assembly))
+                var mainAssetType = AssetDatabase.GetMainAssetTypeAtPath(path);
+                if (mainAssetType != null && BuildUtility.IsEditorAssembly(mainAssetType.Assembly))
                     return null;
                 entry = CreateEntry(guid, guid, targetParent, true, postEvent);
             }
@@ -3083,7 +3127,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     bool inEditorSceneList = BuiltinSceneCache.Contains(new GUID(guid));
 
                     //update entry cached path
-                    entry?.SetCachedPath(str);
+                    entry?.RepointToNewPath(str);
 
                     //move to Resources
                     if (isAlreadyAddressable && endedInResources)

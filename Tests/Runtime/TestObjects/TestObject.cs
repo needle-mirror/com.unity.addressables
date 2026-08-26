@@ -1,11 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
-namespace UnityEngine.AddressableAssets.Tests
+namespace UnityEditor.AddressableAssets.Tests.Runtime.TestObjects
 {
     [CreateAssetMenu(order = 0, fileName = "to", menuName = "Test/TestObject")]
     public class TestObject : ScriptableObject

@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
@@ -19,8 +20,11 @@ using UnityEngine.U2D;
 using UnityEditor.U2D;
 using UnityEditor.Presets;
 using UnityEditor.TestTools;
+using UnityEngine.TestTools;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders;
+using UnityEditor.AddressableAssets.Tests.Editor.TestObjects;
+using UnityEditor.AddressableAssets.Tests.Runtime.TestObjects;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEditor.Build;
 using UnityEngine.AddressableAssets;
@@ -119,7 +123,7 @@ namespace BuildLayoutGenerationTaskPerPlatformTests
 
         string CreateScriptableObjectAsset(string assetPath, string objectName)
         {
-            TestObject.Create(objectName, assetPath);
+            TestEditorObject.Create(objectName, assetPath);
             return AssetDatabase.AssetPathToGUID(assetPath);
         }
 
@@ -127,6 +131,16 @@ namespace BuildLayoutGenerationTaskPerPlatformTests
         {
             string guid = CreatePrefabAsset($"{m_TestAssetsRoot}/{name}.prefab", name);
             return MakeAddressable(group, guid);
+        }
+
+        string CreateAddressableEmptyPrefab(string name, AddressableAssetGroup group)
+        {
+            string assetPath = $"{m_TestAssetsRoot}/{name}.prefab";
+            GameObject go = new GameObject(name);
+            go.transform.localPosition = UnityEngine.Random.onUnitSphere;
+            PrefabUtility.SaveAsPrefabAsset(go, assetPath);
+            UnityEngine.Object.DestroyImmediate(go, false);
+            return MakeAddressable(group, AssetDatabase.AssetPathToGUID(assetPath));
         }
 
         string CreateAddressableScriptableObject(string name, AddressableAssetGroup group)
@@ -244,10 +258,11 @@ namespace BuildLayoutGenerationTaskPerPlatformTests
         {
 
             var layoutTEPFilePath = string.Empty;
+            BuildLayout layout = null;
+            Action<string, BuildLayout> onLayoutCompleted = (x, y) => layout = y;
+            BuildLayoutGenerationTask.LayoutCompleted += onLayoutCompleted;
             try
             {
-                BuildLayout layout = null;
-                BuildLayoutGenerationTask.s_LayoutCompleteCallback = (x, y) => layout = y;
                 buildResult = Settings.BuildPlayerContentImpl();
                 if (layout != null)
                     layoutTEPFilePath = BuildScriptBase.GetLayoutTEPFilePath(layout.BuildStart);
@@ -255,7 +270,7 @@ namespace BuildLayoutGenerationTaskPerPlatformTests
             }
             finally
             {
-                BuildLayoutGenerationTask.s_LayoutCompleteCallback = null;
+                BuildLayoutGenerationTask.LayoutCompleted -= onLayoutCompleted;
                 if (File.Exists(layoutTEPFilePath))
                     File.Delete(layoutTEPFilePath);
             }
@@ -303,7 +318,7 @@ namespace BuildLayoutGenerationTaskPerPlatformTests
 
                 var baseDir = Path.GetDirectoryName(EditorApplication.applicationPath);
                 var webExtractFiles = Directory.GetFiles(baseDir, "WebExtract*", SearchOption.AllDirectories);
-                string webExtractPath = webExtractFiles[0];
+                string webExtractPath = webExtractFiles.First(f => Path.GetFileName(f) == "WebExtract" || Path.GetFileName(f) == "WebExtract.exe");
 
                 Assert.IsTrue(File.Exists(filePath), "Param filePath does not point to an existing file.");
 
@@ -831,6 +846,47 @@ namespace BuildLayoutGenerationTaskPerPlatformTests
             finally // cleanup
             {
                 Settings.BuildRemoteCatalog = prevBuildRemoteCatalog;
+                if (group != null)
+                    Settings.RemoveGroup(group);
+                if (File.Exists(layoutFilePath))
+                    File.Delete(layoutFilePath);
+                DeletePrefab("p1");
+            }
+        }
+
+        [Test(Description = "UUM-146979: null ProfileValueReference.Id becomes empty string")]
+        public void WhenBuildRemoteCatalogIsDisabledAndRemoteCatalogBuildPathIdIsStale_RemoteCatalogBuildPathIsEmptyWithNoWarning()
+        {
+            string layoutFilePath = BuildLayoutGenerationTask.GetLayoutFilePathForFormat(ProjectConfigData.BuildLayoutReportFileFormat);
+            AddressableAssetGroup group = null;
+            bool prevBuildRemoteCatalog = Settings.BuildRemoteCatalog;
+            ProfileValueReference prevRemoteCatalogBuildPath = Settings.RemoteCatalogBuildPath;
+
+            try
+            {
+                Settings.BuildRemoteCatalog = false;
+                var staleRemoteCatalogBuildPath = new ProfileValueReference();
+                staleRemoteCatalogBuildPath.Id = string.Empty;
+                Settings.RemoteCatalogBuildPath = staleRemoteCatalogBuildPath;
+
+                group = CreateGroup("Group1");
+                CreateAddressableEmptyPrefab("p1", group);
+                AssetDatabase.SaveAssets();
+
+                // A successful build always logs its duration; consume it so
+                // NoUnexpectedReceived only trips on the stale-path warning.
+                LogAssert.Expect(LogType.Log, new Regex("Addressable content successfully built"));
+
+                BuildLayout layout = BuildAndExtractLayout();
+
+                // Test
+                LogAssert.NoUnexpectedReceived();
+                Assert.AreEqual(string.Empty, layout.RemoteCatalogBuildPath);
+            }
+            finally // cleanup
+            {
+                Settings.BuildRemoteCatalog = prevBuildRemoteCatalog;
+                Settings.RemoteCatalogBuildPath = prevRemoteCatalogBuildPath;
                 if (group != null)
                     Settings.RemoveGroup(group);
                 if (File.Exists(layoutFilePath))

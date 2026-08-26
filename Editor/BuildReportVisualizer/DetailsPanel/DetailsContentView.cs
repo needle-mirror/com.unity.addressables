@@ -15,7 +15,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
         protected Label m_ActiveContentsName;
         protected ListView m_ContentItemsListView;
-        BuildReportWindow m_Window;
+        IBuildReportHost m_Host;
         protected VisualElement m_ContentsPane;
         protected Image m_ActiveContentIcon;
         VisualElement m_Toolbar;
@@ -30,9 +30,9 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
         protected Dictionary<VisualElement, List<Action>> m_ButtonCallBackTracker = new Dictionary<VisualElement, List<Action>>();
 
-        public DetailsContentView(VisualElement root, BuildReportWindow window)
+        public DetailsContentView(VisualElement root, IBuildReportHost host)
         {
-            m_Window = window;
+            m_Host = host;
             m_ContentsPane = root.Q<VisualElement>(BuildReportUtility.DetailsContentsList);
             m_ActiveContentsName = root.Q<Label>(BuildReportUtility.BreadcrumbToolbarName);
             m_ActiveContentIcon = root.Q<Image>(BuildReportUtility.BreadcrumbToolbarIcon);
@@ -176,7 +176,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                     string isInBundleString = "(in this Bundle)";
                     if (newSearchValue.EndsWith(isInBundleString))
                         newSearchValue = newSearchValue.Substring(0, newSearchValue.Length - isInBundleString.Length - 1);
-                    m_Window.m_ActiveContentView.m_SearchField.Q<TextField>().value = newSearchValue;
+                    m_Host.ActiveContentView.m_SearchField.Q<TextField>().value = newSearchValue;
                 });
             });
 
@@ -474,7 +474,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                     evt.menu.AppendAction("Search in this window", (e) =>
                     {
                         string newSearchValue = label.text;
-                        m_Window.m_ActiveContentView.m_SearchField.Q<TextField>().value = newSearchValue;
+                        m_Host.ActiveContentView.m_SearchField.Q<TextField>().value = newSearchValue;
                     });
                 }));
             }

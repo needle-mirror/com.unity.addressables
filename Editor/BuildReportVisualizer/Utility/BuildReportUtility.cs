@@ -16,9 +16,9 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public static readonly string MainToolbar = nameof(MainToolbar);
         public static readonly string MainToolbarCollapseLeftPaneButton = nameof(MainToolbarCollapseLeftPaneButton);
         public static readonly string MainToolbarCollapseRightPaneButton = nameof(MainToolbarCollapseRightPaneButton);
+        public static readonly string MainToolbarCollapseRightPaneButtonIcon = nameof(MainToolbarCollapseRightPaneButtonIcon);
         public static readonly string MainToolbarAddReportButton = nameof(MainToolbarAddReportButton);
         public static readonly string MainToolbarCollapseLeftPaneButtonIcon = nameof(MainToolbarCollapseLeftPaneButtonIcon);
-        public static readonly string MainToolbarCollapseRightPaneButtonIcon = nameof(MainToolbarCollapseRightPaneButtonIcon);
         public static readonly string MainToolbarAddReportButtonIcon = nameof(MainToolbarAddReportButtonIcon);
         public static readonly string SearchField = nameof(SearchField);
 
@@ -34,6 +34,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public static readonly string ReportsListItemBuildDuration = nameof(ReportsListItemBuildDuration);
 
 
+        public static readonly string ReportContentRoot = nameof(ReportContentRoot);
         public static readonly string MainPanel = nameof(MainPanel);
         public static readonly string DetailsPanel = nameof(DetailsPanel);
 
@@ -44,6 +45,9 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public static readonly string AssetsDetailsView = nameof(AssetsDetailsView);
         public static readonly string LeftMiddlePaneSplitter = nameof(LeftMiddlePaneSplitter);
         public static readonly string MiddleRightPaneSplitter = nameof(MiddleRightPaneSplitter);
+        public static readonly string MiddleRightPanesContainer = nameof(MiddleRightPanesContainer);
+        public static readonly string MainToolbarContainer = nameof(MainToolbarContainer);
+        public static readonly string LeftPane = nameof(LeftPane);
 
         public static readonly string ContentViewTypeDropdown = nameof(ContentViewTypeDropdown);
 
@@ -124,7 +128,24 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public static readonly string DetailsPanelSummaryNavigableBundle = UxmlFilesPath + "DetailsPanelSummaryNavigableBundle.uxml";
         public static readonly string DrillableListViewItemPath = UxmlFilesPath + "DrillableListViewItem.uxml";
 
-        // Summary Foldouts
+        public static readonly string EmbeddedReportUxmlPath = UxmlFilesPath + "EmbeddedReport.uxml";
+        public static readonly string EmbeddedReportContent = nameof(EmbeddedReportContent);
+        public static readonly string ReportToolbarHelpButton = nameof(ReportToolbarHelpButton);
+        public static readonly string ReportToolbarToggleDetailsButton = nameof(ReportToolbarToggleDetailsButton);
+
+        // Shared by both tab-strip buttons; the per-button classes carry only the icon, with a
+        // "--dark"/"--light" suffixed variant per theme.
+        public const string ReportToolbarButtonClass = "ReportToolbarButton";
+        public const string ReportToolbarHelpClass = "ReportToolbarHelp";
+        public const string ReportToolbarDetailsClass = "ReportToolbarDetails";
+        public const string ReportToolbarDarkSuffix = "--dark";
+        public const string ReportToolbarLightSuffix = "--light";
+
+        public const string TepFileName = "AddressablesBuildTEP.json";
+
+        // Summary tab
+        public static readonly string SummaryTabScroll = nameof(SummaryTabScroll);
+
         public static readonly string SummaryTabBuildFilesFoldout = nameof(SummaryTabBuildFilesFoldout);
         public static readonly string SummaryTabBundlesUpdatedCount = nameof(SummaryTabBundlesUpdatedCount);
         public static readonly string SummaryTabBundlesUpdatedSize = nameof(SummaryTabBundlesUpdatedSize);
@@ -134,8 +155,8 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public static readonly string SummaryTabBundlesPlayerSize = nameof(SummaryTabBundlesPlayerSize);
 
         public static readonly string SummaryTabTotalSizeFoldout = nameof(SummaryTabTotalSizeFoldout);
-        public const string SummaryTabLabelElementNameFormat = "SummaryTabLabel_{0}";
-        public const string SummaryTabSizeElementNameFormat = "SummaryTabSize_{0}";
+
+
         public const string SummaryTabScene = "Scene";
         public const string SummaryTabScriptableObject = "ScriptableObject";
         public const string SummaryTabPrefab = "Prefab";
@@ -156,14 +177,45 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public static readonly string SummaryTabInefficientBundlesIndentedRow = nameof(SummaryTabInefficientBundlesIndentedRow);
         public static readonly string SummaryTabIndentedRows = nameof(SummaryTabIndentedRows);
         public static readonly string SummaryTabIssuesFoldout = nameof(SummaryTabIssuesFoldout);
+
+        // Row element names built by SummaryRowBuilder for the standalone window's Summary tab.
+        public const string SummaryTabLabelElementNameFormat = "SummaryTabLabel_{0}";
+        public const string SummaryTabSizeElementNameFormat = "SummaryTabSize_{0}";
+        public static readonly string SummaryTabHeaderTitle = nameof(SummaryTabHeaderTitle);
+        public static readonly string SummaryTabHeaderSubtitle = nameof(SummaryTabHeaderSubtitle);
+        public static readonly string SummaryTabHeaderPlatformIcon = nameof(SummaryTabHeaderPlatformIcon);
+        public static readonly string SummaryTabHeaderTimeRange = nameof(SummaryTabHeaderTimeRange);
+        public static readonly string SummaryTabStatusBadge = nameof(SummaryTabStatusBadge);
+        public static readonly string SummaryTabStatusBadgeIcon = nameof(SummaryTabStatusBadgeIcon);
+        public static readonly string SummaryTabStatusBadgeText = nameof(SummaryTabStatusBadgeText);
+
+        public static readonly string SummaryTabTotalBundleSizeValue = nameof(SummaryTabTotalBundleSizeValue);
+        public static readonly string SummaryTabBuildDurationValue = nameof(SummaryTabBuildDurationValue);
+        public static readonly string SummaryTabBundleCountValue = nameof(SummaryTabBundleCountValue);
+        public static readonly string SummaryTabAssetCountValue = nameof(SummaryTabAssetCountValue);
+
+        public static readonly string SummaryTabDetailsLeftLabels = nameof(SummaryTabDetailsLeftLabels);
+        public static readonly string SummaryTabDetailsLeftValues = nameof(SummaryTabDetailsLeftValues);
+        public static readonly string SummaryTabDetailsRightLabels = nameof(SummaryTabDetailsRightLabels);
+        public static readonly string SummaryTabDetailsRightValues = nameof(SummaryTabDetailsRightValues);
+
+        public static readonly string SummaryTabContentDirectories = nameof(SummaryTabContentDirectories);
+        public static readonly string SummaryTabPotentialIssues = nameof(SummaryTabPotentialIssues);
         public static readonly string SummaryTabIssuesIcon = nameof(SummaryTabIssuesIcon);
+        public static readonly string SummaryTabIssuesMessage = nameof(SummaryTabIssuesMessage);
+        public static readonly string SummaryTabIssuesDetail = nameof(SummaryTabIssuesDetail);
+        public static readonly string SummaryTabIssuesViewButton = nameof(SummaryTabIssuesViewButton);
 
         public const string SummaryTabUssPath = StyleSheetsPath + "SummaryTab.uss";
         public const string SummaryTabDarkUssPath = StyleSheetsPath + "SummaryTabDark.uss";
         public const string SummaryTabLightUssPath = StyleSheetsPath + "SummaryTabLight.uss";
-
         public const string SummaryTabCardDarkUssPath = StyleSheetsPath + "SummaryTabCardDark.uss";
         public const string SummaryTabCardLightUssPath = StyleSheetsPath + "SummaryTabCardLight.uss";
+
+        // The Build Analysis styled Summary tab, drawn only when the report is embedded.
+        public const string SummaryTabEmbeddedUssPath = StyleSheetsPath + "SummaryTabEmbedded.uss";
+        public const string SummaryTabEmbeddedDarkUssPath = StyleSheetsPath + "SummaryTabEmbeddedDark.uss";
+        public const string SummaryTabEmbeddedLightUssPath = StyleSheetsPath + "SummaryTabEmbeddedLight.uss";
 
         public static readonly string BuildPerformanceReportButton = nameof(BuildPerformanceReportButton);
         public static readonly string BuildFilesContentViewButton = nameof(BuildFilesContentViewButton);
@@ -213,8 +265,9 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public static readonly string DrillableListViewItemName = nameof(DrillableListViewItemName);
         public static readonly string DrillableListViewItemIcon = nameof(DrillableListViewItemIcon);
 
-        // Ribbon
+        // Main tabs
         public static readonly string TabsRibbon = nameof(TabsRibbon);
+        public static readonly string TabsView = nameof(TabsView);
         public static readonly string SummaryTab = nameof(SummaryTab);
         public static readonly string ContentTab = nameof(ContentTab);
         public static readonly string PotentialIssuesTab = nameof(PotentialIssuesTab);
@@ -230,11 +283,27 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public const string UxmlFilesPath = UIToolKitAssetsPath + "UXML/";
         public const string StyleSheetsPath = UIToolKitAssetsPath + "StyleSheets/";
 
+        public const string BuildReportBrowserUxmlPath = UxmlFilesPath + "BuildReportBrowser.uxml";
+        public const string BuildReportContentViewUxmlPath = UxmlFilesPath + "BuildReportContentView.uxml";
+        public const string BuildReportContentViewEmbeddedUxmlPath = UxmlFilesPath + "BuildReportContentViewEmbedded.uxml";
+        public const string MainToolbarUxmlPath = UxmlFilesPath + "MainToolbar.uxml";
+        public const string ReportsListPanelUxmlPath = UxmlFilesPath + "ReportsListPanel.uxml";
+        public const string ReportsListItemUxmlPath = UxmlFilesPath + "ReportsListItem.uxml";
+        public const string BuildReportContentViewUssPath = StyleSheetsPath + "BuildReportContentView.uss";
+        public const string BuildReportContentViewEmbeddedUssPath = StyleSheetsPath + "BuildReportContentViewEmbedded.uss";
+
         public const string MainToolbarButtonsUssPath = StyleSheetsPath + "MainToolbarButtons.uss";
         public const string MainToolbarButtonsDarkUssPath = StyleSheetsPath + "MainToolbarButtonsDark.uss";
         public const string MainToolbarButtonsLightUssPath = StyleSheetsPath + "MainToolbarButtonsLight.uss";
-        public const string SideBarDark = "Packages/com.unity.addressables/Editor/BuildReportVisualizer/BuildReport Resources/Icons/Button_LeftPanel_DarkTheme@2x.png";
-        public const string SideBarLight = "Packages/com.unity.addressables/Editor/BuildReportVisualizer/BuildReport Resources/Icons/Button_LeftPanel_LightTheme@2x.png";
+
+        public const string IconsPath = "Packages/com.unity.addressables/Editor/BuildReportVisualizer/BuildReport Resources/Icons/";
+        public const string SideBarDark = IconsPath + "Button_LeftPanel_DarkTheme@2x.png";
+        public const string SideBarLight = IconsPath + "Button_LeftPanel_LightTheme@2x.png";
+
+        // Build Analysis' status glyphs, from the editor's shared resources. Only the embedded report
+        // draws them, and that exists from 6000.7 on, which is also when Icons/EditorUI arrived.
+        public const string BuildStatusSuccessIcon = "EditorUI/True";
+        public const string BuildStatusFailedIcon = "EditorUI/False";
 
 
         internal static string GetAssetBundleIconPath()
@@ -260,6 +329,30 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         internal static string GetDetailsViewStylesheetPath()
         {
             return EditorGUIUtility.isProSkin ? BuildReportUtility.DetailsViewDarkPath : BuildReportUtility.DetailsViewLightPath;
+        }
+
+        // IconContent picks the d_ variant for the dark skin on its own.
+        internal static Texture2D GetBuildStatusIcon(bool succeeded)
+        {
+            return EditorGUIUtility.IconContent(succeeded ? BuildStatusSuccessIcon : BuildStatusFailedIcon).image as Texture2D;
+        }
+
+        // BuildAnalysisWindow is editor-internal, so the menu item is the only way in. It opens on whichever build it last showed (CBD-2201).
+        internal const string BuildAnalysisWindowMenuItem = "Window/Analysis/Build Analysis";
+
+        internal static void OpenBuildAnalysisWindow()
+        {
+            EditorApplication.ExecuteMenuItem(BuildAnalysisWindowMenuItem);
+        }
+
+        // From 6000.7 on, Build Analysis draws the Addressables report, so open that instead.
+        internal static void ShowBuildReportWindow()
+        {
+#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+            OpenBuildAnalysisWindow();
+#else
+            BuildReportWindow.ShowWindowAfterBuild();
+#endif
         }
 
         public static Texture GetIcon(string path)
@@ -308,6 +401,8 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             return ret;
         }
 
+        // The standalone window's reports list styles its platform icon by class, off the package's
+        // own PNGs. See the .ReportsListItemPlatformIcon rules in ReportListItem.uss.
         public static string GetIconClassName(BuildTarget target)
         {
             string iconClassName;
@@ -356,6 +451,59 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             }
             return iconClassName;
         }
+
+        // The embedded report's Summary header instead draws the editor's own platform icons, the ones
+        // Build Analysis shows. These are the ids it ends up loading; it gets there through
+        // BuildTargetDiscovery, which is internal to UnityEditor.
+        static string GetPlatformIconName(BuildTarget target)
+        {
+            switch (target)
+            {
+                case BuildTarget.StandaloneWindows:
+                case BuildTarget.StandaloneWindows64:
+                    return "BuildSettings.Windows";
+                case BuildTarget.StandaloneOSX:
+                    return "BuildSettings.OSX";
+                case BuildTarget.StandaloneLinux64:
+                    return "BuildSettings.Linux";
+                case BuildTarget.Android:
+                    return "BuildSettings.Android";
+                case BuildTarget.iOS:
+                    return "BuildSettings.iPhone";
+                case BuildTarget.tvOS:
+                    return "BuildSettings.tvOS";
+                case BuildTarget.WebGL:
+                    return "BuildSettings.WebGL";
+                case BuildTarget.WSAPlayer:
+                    return "BuildSettings.Metro";
+                case BuildTarget.PS4:
+                    return "BuildSettings.PS4";
+                case BuildTarget.PS5:
+                    return "BuildSettings.PS5";
+                case BuildTarget.XboxOne:
+                    return "BuildSettings.XboxOne";
+                case BuildTarget.GameCoreXboxOne:
+                    return "BuildSettings.GameCoreXboxOne";
+                case BuildTarget.GameCoreXboxSeries:
+                    return "BuildSettings.GameCoreScarlett";
+                case BuildTarget.Switch:
+                    return "BuildSettings.Switch";
+                default:
+                    return null;
+            }
+        }
+
+        // Returns null for platforms the report has no icon for, so callers can hide the image
+        // instead of drawing an empty box.
+        internal static Texture2D GetPlatformIcon(BuildTarget target)
+        {
+            string iconName = GetPlatformIconName(target);
+            if (string.IsNullOrEmpty(iconName))
+                return null;
+
+            return EditorGUIUtility.IconContent(iconName).image as Texture2D;
+        }
+
         public static string GetDenominatedBytesString(ulong bytes)
         {
             if (bytes < 1024)
@@ -378,6 +526,29 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             ulong gbytes = mbytes / 1024;
             dec = Mathf.FloorToInt(((mbytes % 1024) / 1024f) * 100);
             return $"{gbytes}.{dec:D2} GB";
+        }
+
+        // Matches the duration format of the Build Analysis window's Overview tab, so the embedded
+        // report and the window's own tabs read the same.
+        internal static string GetDurationString(double seconds)
+        {
+            if (seconds <= 0)
+                return "0s";
+
+            var duration = TimeSpan.FromSeconds(seconds);
+
+            if (duration.TotalDays >= 1)
+                return $"{(int)duration.TotalDays}d {duration.Hours}h {duration.Minutes}m";
+            if (duration.TotalHours >= 1)
+                return $"{(int)duration.TotalHours}h {duration.Minutes}m {duration.Seconds}s";
+            if (duration.TotalMinutes >= 1)
+                return $"{(int)duration.TotalMinutes}m {duration.Seconds}s";
+            if (duration.TotalSeconds >= 10)
+                return $"{duration.Seconds}s";
+            if (duration.TotalSeconds >= 1)
+                return $"{duration.TotalSeconds:0.#}s";
+
+            return $"{(int)duration.TotalMilliseconds}ms";
         }
 
         internal static string GetDeliminatedList(char delimChar, List<string> lst)

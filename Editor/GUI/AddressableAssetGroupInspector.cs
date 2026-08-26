@@ -205,7 +205,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 AddressablesGUIUtility.DrawErrorBoxWithLink(
                     $"Cannot enable \"{AddressableAssetUtility.GetCachedTypeDisplayName(bundledSchema.GetType())}\" and \"{AddressableAssetUtility.GetCachedTypeDisplayName(contentDirSchema.GetType())}\" schemas at the same time. Disable one to resolve.",
                     "Read more...",
-                    AddressableAssetUtility.GenerateDocsURL("group-inspector-settings-reference.html"));
+                    AddressableAssetUtility.GenerateContentDirectoriesDocsURL());
                 GUILayout.Space(6);
             }
 
@@ -222,7 +222,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 bool foldoutActive = AddressablesGUIUtility.GetFoldoutValue(foldoutKey);
 
                 string helpUrl = null;
-                if (schemaType == typeof(BundledAssetGroupSchema))
+                if (schemaType == typeof(BundledAssetGroupSchema) || schemaType == typeof(ContentDirectoryGroupSchema))
                     helpUrl = AddressableAssetUtility.GenerateDocsURL("group-inspector-settings-reference.html");
                 if (schemaType == typeof(ContentUpdateGroupSchema))
                     helpUrl = AddressableAssetUtility.GenerateDocsURL("group-inspector-settings-reference.html#content-update-group-schema");

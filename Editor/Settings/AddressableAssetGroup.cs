@@ -659,9 +659,29 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="entryFilter">Optional predicate to run against each entry, only returning those that pass.  A null filter will return all entries</param>
         public virtual void GatherAllAssets(List<AddressableAssetEntry> results, bool includeSelf, bool recurseAll, bool includeSubObjects, Func<AddressableAssetEntry, bool> entryFilter = null)
         {
+            GatherAllAssets(results, includeSelf, recurseAll, includeSubObjects, entryFilter, null);
+        }
+
+        /// <summary>
+        /// Gathers all asset entries, sharing the folder walk held by an enumerator.
+        /// </summary>
+        /// <param name="enumerator">Reuses this enumerator's folder walk. Pass null to walk fresh.</param>
+        internal void GatherAllAssets(List<AddressableAssetEntry> results, bool includeSelf, bool recurseAll, bool includeSubObjects,
+            Func<AddressableAssetEntry, bool> entryFilter, AddressableFolderEnumerator enumerator)
+        {
+            // A subclass may override the public GatherAllAssets. Route derived groups
+            // through it so their behaviour is kept at the cost of the shared folder walk.
+            //
+            // The enumerator check is what stops that being infinite.
+            if (enumerator != null && GetType() != typeof(AddressableAssetGroup))
+            {
+                GatherAllAssets(results, includeSelf, recurseAll, includeSubObjects, entryFilter);
+                return;
+            }
+
             foreach (var e in entries)
                 if (entryFilter == null || entryFilter(e))
-                    e.GatherAllAssets(results, includeSelf, recurseAll, includeSubObjects, entryFilter);
+                    e.GatherAllAssets(results, includeSelf, recurseAll, includeSubObjects, entryFilter, enumerator);
         }
 
         internal void GatherAllDirectAssetReferenceEntryData(List<IReferenceEntryData> results, HashSet<string> processed)

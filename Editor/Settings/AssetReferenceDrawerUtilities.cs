@@ -71,7 +71,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
 
                 Object subObject = null;
-                if (target.GetType() == typeof(Sprite))
+                if (target.GetType() == typeof(Sprite) && AddressableAssetSettingsDefaultObject.Settings != null)
                 {
                     var atlasEntries = new List<AddressableAssetEntry>();
                     AddressableAssetSettingsDefaultObject.Settings.GetAllAssets(atlasEntries, false, null,
@@ -98,6 +98,9 @@ namespace UnityEditor.AddressableAssets.Settings
                 }
 
                 guid = SetSingleAsset(ref assetRefObject, property, target, subObject);
+
+                if (string.IsNullOrEmpty(guid))
+                    return false;
 
                 var success = true;
                 if (property.serializedObject.targetObjects.Length > 1)
@@ -369,6 +372,8 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             if (t == null || t == typeof(AssetReference))
                 return FormatNoAssetString(string.Empty);
+            if (IsAtlasedSpriteReference(t))
+                return FormatNoAssetString("Sprite Atlas"); // main asset type is a sprite atlas
             t = GetGenericType(t);
             if (t == null || t == typeof(AssetReference))
                 return FormatNoAssetString(string.Empty);
@@ -376,6 +381,15 @@ namespace UnityEditor.AddressableAssets.Settings
         }
 
         static string FormatNoAssetString(string n) => string.IsNullOrEmpty(n) ? noAssetString : string.Format(noAssetTypeStringformat, n);
+
+        static bool IsAtlasedSpriteReference(Type t)
+        {
+            if (t.HasElementType)
+                t = t.GetElementType();
+            else if (t.GenericTypeArguments.Length > 0)
+                t = t.GenericTypeArguments[0];
+            return typeof(AssetReferenceAtlasedSprite).IsAssignableFrom(t);
+        }
 
         internal static Type GetGenericType(Type t)
         {
@@ -415,17 +429,34 @@ namespace UnityEditor.AddressableAssets.Settings
                         return true;
                 }
             }
-            else if (dropObjReferences != null)
+            else if (dropObjReferences != null && dropObjReferences.Length > 0)
             {
                 foreach (Object obj in dropObjReferences)
                 {
-                    if (AssetDatabase.IsSubAsset(obj) && !ValidateAsset(assetReferenceObject, restrictions, obj))
-                        return true;
+                    if (AssetDatabase.IsSubAsset(obj))
+                    {
+                        if (!ValidateAsset(assetReferenceObject, restrictions, obj))
+                            return true;
+                    }
+                    else
+                    {
+                        if (!ValidateAsset(assetReferenceObject, restrictions, AssetDatabase.GetAssetPath(obj)))
+                            return true;
+
+                        if (!CanAssignMainAsset(assetReferenceObject, obj))
+                            return true;
+
+                        foreach (var restriction in restrictions)
+                        {
+                            if (!restriction.ValidateAsset(obj))
+                                return true;
+                        }
+                    }
                 }
             }
-            else
+            else if (dropPaths != null)
             {
-                foreach (var path in DragAndDrop.paths)
+                foreach (var path in dropPaths)
                 {
                     if (!ValidateAsset(assetReferenceObject, restrictions, path))
                         return true;
@@ -433,6 +464,13 @@ namespace UnityEditor.AddressableAssets.Settings
             }
 
             return false;
+        }
+
+        static bool CanAssignMainAsset(AssetReference assetRef, Object obj)
+        {
+            if (assetRef is AssetReferenceSprite)
+                return true;
+            return assetRef.ValidateAsset(obj);
         }
 
         static internal bool CheckForNewEntry(ref string assetName, AddressableAssetSettings aaSettings, string guid, string checkToForceAddressable)

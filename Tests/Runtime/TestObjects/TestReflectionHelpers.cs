@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace AddressableTests
+namespace UnityEditor.AddressableAssets.Tests.Runtime.TestObjects
 {
     static class TestReflectionHelpers
     {
@@ -9,7 +9,7 @@ namespace AddressableTests
             System.Type t = System.Type.GetType("UnityEngine.IO.File, UnityEngine.CoreModule");
             if (t != null)
             {
-                System.Reflection.PropertyInfo pInfo = t.GetProperty("MainThreadIORestrictionMode", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+                PropertyInfo pInfo = t.GetProperty("MainThreadIORestrictionMode", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
                 if (pInfo != null)
                     pInfo.SetValue(null, errorOnMainThreadFileIO ? 1 : 0);
             }

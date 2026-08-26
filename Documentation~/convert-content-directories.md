@@ -1,6 +1,6 @@
 # Convert Addressables projects to content directories
 
-If you created a project using Addressables before version 4.0, you can convert it to use [content directories](xref:um-content-directories) as the content build system. For more information about using content directories in Addressables, refer to [Choose a content build system](content-build-systems.md). The workflow to update to content directories is as follows:
+If you created a project using Addressables before version 4.0, you can convert it to use [content directories](https://docs.unity3d.com/6000.6/Documentation/Manual/content-directories.html) as the content build system. For more information about using content directories in Addressables, refer to [Choose a content build system](content-build-systems.md). The workflow to update to content directories is as follows:
 
 1. [Convert existing groups to content directories](#convert-existing-groups-to-content-directories).
 1. [Validate the build](#validate-the-build).
@@ -8,7 +8,8 @@ If you created a project using Addressables before version 4.0, you can convert 
 
 ## Prerequisites
 
-Install Addressables version 4.0 from the **Package Manager** window.
+* Install Unity 6.6 or higher.
+* Install Addressables version 4.0 from the **Package Manager** window.
 
 ## Convert existing groups to content directories
 
@@ -33,14 +34,14 @@ The Default Build Script builds both AssetBundles and content directories at the
 
 ### Read-only warnings and errors
 
-Some restrictions are in place for read-only files to optimize the content build process. These files are no longer automatically modified at build time to save processing overhead. You therefore might need to update read-only files manually. You can use the [**Project Auditor**](xref:um-project-auditor) window to fix these issues as follows:
+Some restrictions are in place for read-only files to optimize the content build process. These files are no longer automatically modified at build time to save processing overhead. You therefore might need to update read-only files manually. You can use the [**Project Auditor**](https://docs.unity3d.com/Manual/project-auditor/project-auditor.html) window to fix these issues as follows:
 
 1. Open the **Project Auditor** window (**Window** > **Analysis** > **Project Auditor**). If it's your first time using Project Auditor, you might be prompted to download the Project Auditor Rules package.
 1. Select **Start Analysis**.
 1. Expand the **Top Ten Issues** panel.
 1. Select **Quick Fix** on any issues that say **Mesh requires Read/Write access** or **Texture requires Read/Write access**.
 
-You can also use the [**Build Analysis** window](xref:um-build-analysis-window-reference) to inspect the output of a build.
+You can also use the [**Build Analysis** window](https://docs.unity3d.com/6000.6/Documentation/Manual/build-analysis-window-reference.html) to inspect the output of a build.
 
 ## Validate the build
 
@@ -53,7 +54,7 @@ In projects that use the AssetBundle system, some assets might be marked as Addr
 
 ## Additional resources
 
-* [Introduction to content directories](xref:um-content-directories-introduction)
+* [Introduction to content directories](https://docs.unity3d.com/6000.6/Documentation/Manual/content-directories-introduction.html)
 * [Choose a content build system](content-build-systems.md)
 * [Add assets to groups](groups-create.md)
 * [Create a content build](builds-full-build.md)

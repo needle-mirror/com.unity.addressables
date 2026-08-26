@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AddressableAssets.Initialization;
@@ -177,6 +178,586 @@ namespace UnityEditor.AddressableAssets.Tests
             }
         }
 
+        static BinaryContentCatalogData CatalogFrom(List<ContentCatalogDataEntry> entries)
+        {
+            var catalog = new BinaryContentCatalogData();
+            catalog.SetData(entries);
+            return catalog;
+        }
+
+        // Builds a catalog shaped like a real one: far more asset entries than bundles, assets
+        // reaching bundles through dependencies, and three distinct resource types.
+        static BinaryContentCatalogData BuildMixedCatalog(int assetCount, int bundleCount)
+        {
+            var entries = new List<ContentCatalogDataEntry>();
+            var bundleKeys = new List<object>();
+
+            for (int i = 0; i < bundleCount; i++)
+            {
+                var bundleName = $"bundle{i}.bundle";
+                entries.Add(new ContentCatalogDataEntry(typeof(IAssetBundleResource),
+                    $"http://bundles.test/{bundleName}", "AssetBundleProvider",
+                    new object[] {bundleName}, null,
+                    new AssetBundleRequestOptions {BundleName = bundleName, BundleSize = 100 + i}));
+                bundleKeys.Add(bundleName);
+            }
+
+            for (int i = 0; i < assetCount; i++)
+            {
+                entries.Add(new ContentCatalogDataEntry(typeof(GameObject),
+                    $"Assets/asset{i}.prefab", "BundledAssetProvider",
+                    new object[] {$"asset{i}", "sharedLabel"},
+                    new List<object> {bundleKeys[i % bundleCount]}));
+            }
+
+            entries.Add(new ContentCatalogDataEntry(typeof(TextAsset),
+                "Assets/text.txt", "BundledAssetProvider",
+                new object[] {"textKey"}, new List<object> {bundleKeys[0]}));
+
+            return CatalogFrom(entries);
+        }
+
+        const string kDuplicatedId = "Assets/duplicated.prefab";
+        const string kMultiTypeId = "Assets/multiType.asset";
+
+        // Two shapes the writer keeps as separate records because their primary keys or
+        // types differ, even though the location they describe does not: one asset
+        // addressed twice, and one asset serialized under two types.
+        static BinaryContentCatalogData BuildCatalogWithSharedInternalIds()
+        {
+            var entries = new List<ContentCatalogDataEntry>
+            {
+                // Same id and same type, so these are one location.
+                new ContentCatalogDataEntry(typeof(GameObject), kDuplicatedId,
+                    "BundledAssetProvider", new object[] {"firstKey"}),
+                new ContentCatalogDataEntry(typeof(GameObject), kDuplicatedId,
+                    "BundledAssetProvider", new object[] {"secondKey"}),
+
+                // Same id but different types, so these are two locations.
+                new ContentCatalogDataEntry(typeof(GameObject), kMultiTypeId,
+                    "BundledAssetProvider", new object[] {"multiTypeGameObject"}),
+                new ContentCatalogDataEntry(typeof(TextAsset), kMultiTypeId,
+                    "BundledAssetProvider", new object[] {"multiTypeText"}),
+            };
+
+            return CatalogFrom(entries);
+        }
+
+        const string kTokenizedBundleId = "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/shared.bundle";
+
+        // One bundle path spelled two ways. The writer keeps two records because the raw
+        // strings differ, but reading the catalog resolves both to the same path.
+        static BinaryContentCatalogData BuildCatalogWithTokenizedAndLiteralInternalIds()
+        {
+            var entries = new List<ContentCatalogDataEntry>
+            {
+                new ContentCatalogDataEntry(typeof(IAssetBundleResource), kTokenizedBundleId,
+                    "AssetBundleProvider", new object[] {"tokenizedKey"}),
+                new ContentCatalogDataEntry(typeof(IAssetBundleResource),
+                    UnityEngine.AddressableAssets.Addressables.RuntimePath + "/shared.bundle",
+                    "AssetBundleProvider", new object[] {"literalKey"}),
+            };
+
+            return CatalogFrom(entries);
+        }
+
+        readonly List<BinaryStorageBuffer.Reader> m_CatalogReaders = new List<BinaryStorageBuffer.Reader>();
+
+        [TearDown]
+        public void DisposeCatalogReaders()
+        {
+            // Each reader pins its buffer with a GCHandle, so leaving them to finalization holds
+            // the catalog bytes for the rest of the run.
+            foreach (var reader in m_CatalogReaders)
+                reader.Dispose();
+            m_CatalogReaders.Clear();
+        }
+
+        BinaryStorageBuffer.Reader ReaderOver(byte[] data)
+        {
+            var reader = new BinaryStorageBuffer.Reader(data, 512, 0, new BinaryContentCatalogData.Serializer());
+            m_CatalogReaders.Add(reader);
+            return reader;
+        }
+
+        BinaryStorageBuffer.Reader ReadCatalog(BinaryContentCatalogData catalog)
+        {
+            return ReaderOver(catalog.SerializeToByteArray());
+        }
+
+        BinaryContentCatalogData.ResourceLocator LoadLocator(BinaryContentCatalogData catalog, out BinaryStorageBuffer.Reader reader)
+        {
+            reader = ReadCatalog(catalog);
+            var loaded = new BinaryContentCatalogData(reader);
+            return loaded.CreateCustomLocator("", null) as BinaryContentCatalogData.ResourceLocator;
+        }
+
+        static List<string> Ordered(IEnumerable<string> ids)
+        {
+            return ids.OrderBy(s => s, StringComparer.Ordinal).ToList();
+        }
+
+        // No Distinct, so a repeated location would show up as a longer list.
+        static List<string> AllLocationIds(IResourceLocator locator)
+        {
+            return Ordered(locator.AllLocations.Select(l => l.InternalId));
+        }
+
+        // What AllLocations used to do: resolve every key and dedupe the results.
+        static HashSet<IResourceLocation> KeyResolvedLocations(IResourceLocator locator)
+        {
+            var locations = new HashSet<IResourceLocation>(new ResourceLocationComparer());
+            foreach (var key in locator.Keys)
+            {
+                if (locator.Locate(key, null, out var found))
+                {
+                    foreach (var location in found)
+                        locations.Add(location);
+                }
+            }
+
+            return locations;
+        }
+
+        static List<string> KeyResolvedLocationIds(IResourceLocator locator)
+        {
+            return Ordered(KeyResolvedLocations(locator).Select(l => l.InternalId));
+        }
+
+        // Two entries can share an internal id, so these views keep the type as well.
+        static string IdAndType(IResourceLocation location)
+        {
+            return $"{location.InternalId}|{location.ResourceType.Name}";
+        }
+
+        static List<string> AllLocationIdsAndTypes(IResourceLocator locator)
+        {
+            return Ordered(locator.AllLocations.Select(IdAndType));
+        }
+
+        static List<string> KeyResolvedIdsAndTypes(IResourceLocator locator)
+        {
+            return Ordered(KeyResolvedLocations(locator).Select(IdAndType));
+        }
+
+        // The filter the download-size docs recommend: what GetDownloadSizeAsync counts.
+        static List<string> SizeBearingIds(IResourceLocator locator)
+        {
+            return Ordered(locator.AllLocations
+                .Where(l => l.Data is ILocationSizeData)
+                .Select(l => l.InternalId));
+        }
+
+        [Test]
+        public void AllLocations_MatchesKeyResolvedLocations()
+        {
+            const int assetCount = 200;
+            const int bundleCount = 10;
+            var locator = LoadLocator(BuildMixedCatalog(assetCount, bundleCount), out _);
+
+            var scanned = AllLocationIds(locator);
+
+            // The scan never resolves a key, so this is what proves it still reaches every
+            // location - including bundles only an asset's dependencies name.
+            Assert.AreEqual(KeyResolvedLocationIds(locator), scanned);
+
+            // One yield per entry: the assets, the bundles, and the text asset.
+            Assert.AreEqual(assetCount + bundleCount + 1, scanned.Count);
+            Assert.AreEqual(scanned.Distinct().Count(), scanned.Count, "AllLocations repeated a location.");
+        }
+
+        [Test]
+        public void AllLocations_MatchesKeyResolvedLocations_OnOptimizedCatalog()
+        {
+            const int assetCount = 200;
+            const int bundleCount = 10;
+            var original = LoadLocator(BuildMixedCatalog(assetCount, bundleCount), out _);
+
+            // Optimizing rewrites dependency keys to short hex, so a location can no longer be
+            // recognised by its key. The scan reads records instead.
+            var optimizedCatalog = BinaryContentCatalogData.CreateOptimizedCopy(
+                new BinaryContentCatalogData(ReadCatalog(BuildMixedCatalog(assetCount, bundleCount))));
+            var optimized = LoadLocator(optimizedCatalog, out _);
+
+            var scanned = AllLocationIds(optimized);
+
+            Assert.AreEqual(KeyResolvedLocationIds(optimized), scanned);
+
+            // Optimizing rewrites keys, not content, so the locations are unchanged.
+            Assert.AreEqual(AllLocationIds(original), scanned);
+            Assert.AreEqual(SizeBearingIds(original), SizeBearingIds(optimized));
+        }
+
+        // Counts how many locations an enumeration actually builds. The reader's own cache
+        // stats compile out unless BINARY_STORAGE_BUFFER_STATS is defined, so they always
+        // report zero here.
+        class CountingLocationAdapter :
+            BinaryStorageBuffer.ISerializationAdapter<BinaryContentCatalogData.ResourceLocator.ResourceLocation>
+        {
+            readonly BinaryStorageBuffer.ISerializationAdapter m_Inner =
+                new BinaryContentCatalogData.ResourceLocator.ResourceLocation.Serializer(true);
+
+            public int Built;
+
+            public IEnumerable<BinaryStorageBuffer.ISerializationAdapter> Dependencies => m_Inner.Dependencies;
+
+            public uint Serialize(BinaryStorageBuffer.Writer writer, object val)
+            {
+                return m_Inner.Serialize(writer, val);
+            }
+
+            public object Deserialize(BinaryStorageBuffer.Reader reader, Type t, uint offset, out uint size)
+            {
+                Built++;
+                return m_Inner.Deserialize(reader, t, offset, out size);
+            }
+        }
+
+        // Registered last so it overrides the location adapter the catalog serializer pulls in.
+        BinaryContentCatalogData.ResourceLocator LoadCountingLocator(BinaryContentCatalogData catalog, out CountingLocationAdapter counter)
+        {
+            counter = new CountingLocationAdapter();
+            var reader = new BinaryStorageBuffer.Reader(catalog.SerializeToByteArray(), 512, 0,
+                new BinaryContentCatalogData.Serializer(), counter);
+            m_CatalogReaders.Add(reader);
+            var loaded = new BinaryContentCatalogData(reader);
+            return loaded.CreateCustomLocator("", null) as BinaryContentCatalogData.ResourceLocator;
+        }
+
+        [Test]
+        public void AllLocations_BuildsOnlyWhatIsEnumerated()
+        {
+            var locator = LoadCountingLocator(BuildMixedCatalog(200, 10), out var counter);
+
+            // Loading a binary catalog reads keys, not locations.
+            Assert.AreEqual(0, counter.Built);
+
+            var first = locator.AllLocations.Take(1).ToList();
+
+            // Asking for one location builds one.
+            // the old implementation expanded every location into a set before it
+            // returned anything.
+            Assert.AreEqual(1, first.Count);
+            Assert.AreEqual(1, counter.Built);
+        }
+
+        [Test]
+        public void AllLocations_BuildsEachLocationOnce()
+        {
+            const int assetCount = 200;
+            const int bundleCount = 10;
+            var locator = LoadCountingLocator(BuildMixedCatalog(assetCount, bundleCount), out var counter);
+
+            var scanned = AllLocationIds(locator);
+
+            // One build per entry, however many keys name it
+            Assert.AreEqual(assetCount + bundleCount + 1, scanned.Count);
+            Assert.AreEqual(scanned.Count, counter.Built);
+        }
+
+        [Test]
+        public void AllLocations_FilteredBySizeData_ListsEveryBundleOnce()
+        {
+            const int bundleCount = 10;
+            var locator = LoadLocator(BuildMixedCatalog(200, bundleCount), out _);
+
+            // The bundles are the only entries in this catalog that report a size.
+            var expected = Ordered(Enumerable.Range(0, bundleCount)
+                .Select(i => $"http://bundles.test/bundle{i}.bundle"));
+
+            Assert.AreEqual(expected, SizeBearingIds(locator));
+        }
+
+        [Test]
+        public void ResourceLocationMap_AllLocations_RepeatsALocationPerKey()
+        {
+            var map = new ResourceLocationMap("TestLocator");
+            var bundle = new ResourceLocationBase("single.bundle", "http://bundles.test/single.bundle",
+                "AssetBundleProvider", typeof(IAssetBundleResource));
+            bundle.Data = new AssetBundleRequestOptions {BundleName = "single.bundle", BundleSize = 100};
+            var asset = new ResourceLocationBase("asset", "Assets/asset.prefab",
+                "BundledAssetProvider", typeof(GameObject));
+
+            map.Add("single.bundle", bundle);
+            map.Add("alias", bundle);
+            map.Add("asset", asset);
+
+            Assert.AreEqual(2, SizeBearingIds(map).Count);
+            Assert.AreEqual(1, SizeBearingIds(map).Distinct().Count());
+        }
+
+        // A provider's own bundle resource type: the shape an exact-type filter misses.
+        interface ITestBundleSubtype : IAssetBundleResource
+        {
+        }
+
+        // Size data that is not AssetBundleRequestOptions, standing in for remote content
+        // served by a custom provider.
+        sealed class TestRemoteSizeData : ILocationSizeData
+        {
+            public long ComputeSize(IResourceLocation location,
+                UnityEngine.ResourceManagement.ResourceManager resourceManager)
+            {
+                return 1;
+            }
+        }
+
+        // Every catalog fixture types its bundles as IAssetBundleResource exactly, so this is
+        // the only test that can tell the documented filter apart from a type comparison.
+        [Test]
+        public void SizeBearingFilter_KeepsSubtypedBundlesAndCustomSizeProviders()
+        {
+            var map = new ResourceLocationMap("TestLocator");
+
+            // A bundle a custom provider types as its own IAssetBundleResource.
+            var subtypedBundle = new ResourceLocationBase("subtyped.bundle",
+                "http://bundles.test/subtyped.bundle", "AssetBundleProvider", typeof(ITestBundleSubtype));
+            subtypedBundle.Data = new AssetBundleRequestOptions {BundleName = "subtyped.bundle", BundleSize = 100};
+
+            // Remote content that is not a bundle but reports a size, which the size path counts.
+            var customContent = new ResourceLocationBase("custom", "http://content.test/custom.dat",
+                "CustomRemoteProvider", typeof(TextAsset));
+            customContent.Data = new TestRemoteSizeData();
+
+            // An asset location reports no size of its own.
+            var asset = new ResourceLocationBase("asset", "Assets/asset.prefab",
+                "BundledAssetProvider", typeof(GameObject));
+
+            map.Add("subtyped.bundle", subtypedBundle);
+            map.Add("custom", customContent);
+            map.Add("asset", asset);
+
+            Assert.AreEqual(
+                Ordered(new[] {"http://bundles.test/subtyped.bundle", "http://content.test/custom.dat"}),
+                SizeBearingIds(map));
+        }
+
+        [Test]
+        public void AllLocations_CollapsesEntriesSharingInternalIdAndType()
+        {
+            var locator = LoadCountingLocator(BuildCatalogWithSharedInternalIds(), out var counter);
+
+            var scanned = AllLocationIdsAndTypes(locator);
+
+            // Read before the key resolution below, which builds locations of its own.
+            var builtByScan = counter.Built;
+
+            // Three locations out of four entries: the two that differ only in primary
+            // key describe one location, so scanning records must not report both.
+            Assert.AreEqual(3, scanned.Count);
+            Assert.AreEqual(1, scanned.Count(s => s == $"{kDuplicatedId}|{nameof(GameObject)}"));
+
+            // Only the resolved id shows the duplicate, so every record is built.
+            Assert.AreEqual(4, builtByScan);
+
+            // The answer resolving every key gave before the scan replaced it.
+            Assert.AreEqual(KeyResolvedIdsAndTypes(locator), scanned);
+        }
+
+        [Test]
+        public void AllLocations_KeepsEntriesSharingInternalIdWithDifferentTypes()
+        {
+            var locator = LoadLocator(BuildCatalogWithSharedInternalIds(), out _);
+
+            var typesAtSharedId = locator.AllLocations
+                .Where(l => l.InternalId == kMultiTypeId)
+                .Select(l => l.ResourceType)
+                .ToList();
+
+            // A catalog holds one entry per serialized type at an asset path, so
+            // collapsing on the id alone would throw one of them away.
+            CollectionAssert.AreEquivalent(new[] {typeof(GameObject), typeof(TextAsset)}, typesAtSharedId);
+        }
+
+        [Test]
+        public void AllLocations_CollapsesEntriesWhoseIdsResolveToOnePath()
+        {
+            var locator = LoadCountingLocator(BuildCatalogWithTokenizedAndLiteralInternalIds(), out var counter);
+
+            var scanned = AllLocationIdsAndTypes(locator);
+
+            // Read before the key resolution below, which builds locations of its own.
+            var builtByScan = counter.Built;
+
+            // A record stores the id as written, and the two records here are written
+            // differently, so only the path they resolve to shows they are one location.
+            var resolvedId = UnityEngine.AddressableAssets.Addressables.ResolveInternalId(kTokenizedBundleId);
+            Assert.AreEqual(new List<string> {$"{resolvedId}|{nameof(IAssetBundleResource)}"}, scanned);
+
+            // Recognising this duplicate takes the built location, not just its record.
+            Assert.AreEqual(2, builtByScan);
+
+            // The answer resolving every key gave before the scan replaced it.
+            Assert.AreEqual(KeyResolvedIdsAndTypes(locator), scanned);
+        }
+
+        const string kAliasedId = "Assets/aliased.prefab";
+
+        // One asset named three ways alongside a second asset, both under a shared label.
+        // The two aliases give the first asset identical location sets.
+        static BinaryContentCatalogData BuildCatalogWithAliasedKeys()
+        {
+            const string bundleKey = "aliased.bundle";
+            var entries = new List<ContentCatalogDataEntry>
+            {
+                new ContentCatalogDataEntry(typeof(IAssetBundleResource),
+                    "http://bundles.test/aliased.bundle", "AssetBundleProvider",
+                    new object[] {bundleKey}, null,
+                    new AssetBundleRequestOptions {BundleName = bundleKey, BundleSize = 100}),
+
+                new ContentCatalogDataEntry(typeof(GameObject), kAliasedId,
+                    "BundledAssetProvider",
+                    new object[] {"aliasedAddress", "aliasedGuid", "sharedLabel"},
+                    new List<object> {bundleKey}),
+
+                new ContentCatalogDataEntry(typeof(GameObject), "Assets/other.prefab",
+                    "BundledAssetProvider",
+                    new object[] {"otherAddress", "sharedLabel"},
+                    new List<object> {bundleKey}),
+            };
+
+            return CatalogFrom(entries);
+        }
+
+        // Every location BuildCatalogWithAliasedKeys holds, however many keys name it.
+        static List<string> AliasedCatalogIds()
+        {
+            return Ordered(new[]
+            {
+                "http://bundles.test/aliased.bundle",
+                kAliasedId,
+                "Assets/other.prefab"
+            });
+        }
+
+        // Maps each key to the offset of the location set it points at.
+        static Dictionary<object, uint> ReadKeyLocationSetOffsets(BinaryStorageBuffer.Reader reader)
+        {
+            var header = reader.ReadValue<BinaryContentCatalogData.ResourceLocator.Header>(0, out _);
+            var keyDataArray = reader.ReadValueArray<BinaryContentCatalogData.ResourceLocator.KeyData>(
+                header.keysOffset, out _, false);
+
+            var offsets = new Dictionary<object, uint>();
+            foreach (var keyData in keyDataArray)
+                offsets.Add(reader.ReadObject(keyData.keyNameOffset, out _), keyData.locationSetOffset);
+
+            return offsets;
+        }
+
+        [Test]
+        public void BinaryCatalog_KeysWithIdenticalLocationSets_ShareOneLocationSetOffset()
+        {
+            var reader = ReadCatalog(BuildCatalogWithAliasedKeys());
+
+            var offsets = ReadKeyLocationSetOffsets(reader);
+
+            // The writer hashes array content, so two keys naming one location share an offset.
+            // AllLocations leans on this to skip an alias without reading its set.
+            Assert.AreEqual(offsets["aliasedAddress"], offsets["aliasedGuid"]);
+
+            // A key whose set differs keeps its own offset, so the skip cannot swallow it.
+            Assert.AreNotEqual(offsets["aliasedAddress"], offsets["otherAddress"]);
+            Assert.AreNotEqual(offsets["aliasedAddress"], offsets["sharedLabel"]);
+        }
+
+        [Test]
+        public void AllLocations_AliasedKeys_ListsEachLocationOnce()
+        {
+            var locator = LoadLocator(BuildCatalogWithAliasedKeys(), out _);
+
+            var scanned = AllLocationIds(locator);
+
+            // Three entries, however many keys name them.
+            Assert.AreEqual(AliasedCatalogIds(), scanned);
+
+            // The shared label's set holds two locations, so skipping sets must not lose one.
+            Assert.AreEqual(KeyResolvedLocationIds(locator), scanned);
+        }
+
+        // Points the second record of a location set past the end of the buffer, so reading
+        // that set fails after the first record has already been collected.
+        static byte[] WithCorruptSecondLocationInSet(byte[] data, uint locationSetOffset)
+        {
+            var corrupted = (byte[])data.Clone();
+            Array.Copy(BitConverter.GetBytes((uint)(corrupted.Length - sizeof(uint))), 0,
+                corrupted, (int)(locationSetOffset + sizeof(uint)), sizeof(uint));
+            return corrupted;
+        }
+
+        [Test]
+        public void Locate_AfterAFailedQuery_DoesNotLeakItsLocationsIntoTheNextQuery()
+        {
+            var data = BuildCatalogWithAliasedKeys().SerializeToByteArray();
+            var setOffsets = ReadKeyLocationSetOffsets(ReaderOver(data));
+
+            // sharedLabel names both assets, so the first is collected before the second fails.
+            var catalog = new BinaryContentCatalogData(
+                ReaderOver(WithCorruptSecondLocationInSet(data, setOffsets["sharedLabel"])));
+            var locator = catalog.CreateCustomLocator("", null) as BinaryContentCatalogData.ResourceLocator;
+
+            LogAssert.Expect(LogType.Exception, new Regex("Data offset .* out of bounds"));
+            LogAssert.Expect(LogType.Exception, new Regex("NullReferenceException"));
+
+            // Asking for a concrete type makes the unreadable record throw rather than be collected.
+            Assert.IsFalse(locator.Locate("sharedLabel", typeof(GameObject), out _));
+
+            // otherAddress names one asset and its own set is intact, so a leaked list shows up
+            // here as the failed query's location arriving alongside it.
+            Assert.IsTrue(locator.Locate("otherAddress", typeof(GameObject), out var locations));
+            Assert.AreEqual(new[] {"Assets/other.prefab"}, locations.Select(l => l.InternalId).ToArray());
+        }
+
+        // Points one key's location set past the end of the buffer, so reading that set
+        // throws instead of handing back records.
+        byte[] WithCorruptLocationSetOffset(byte[] data, object key)
+        {
+            var reader = ReaderOver(data);
+            var header = reader.ReadValue<BinaryContentCatalogData.ResourceLocator.Header>(0, out _);
+            var keyDataArray = reader.ReadValueArray<BinaryContentCatalogData.ResourceLocator.KeyData>(
+                header.keysOffset, out _, false);
+            var index = Array.FindIndex(keyDataArray,
+                k => Equals(reader.ReadObject(k.keyNameOffset, out _), key));
+
+            // KeyData is two uints, and locationSetOffset is the second. One past the end
+            // of the buffer, not uint.MaxValue, which the reader reads as an empty set.
+            var corrupted = (byte[])data.Clone();
+            Array.Copy(BitConverter.GetBytes((uint)(data.Length + sizeof(uint))), 0,
+                corrupted, (int)header.keysOffset + index * 2 * sizeof(uint) + sizeof(uint), sizeof(uint));
+            return corrupted;
+        }
+
+        [Test]
+        public void AllLocations_UnreadableLocationSet_KeepsListingTheRest()
+        {
+            var data = BuildCatalogWithAliasedKeys().SerializeToByteArray();
+            var catalog = new BinaryContentCatalogData(
+                ReaderOver(WithCorruptLocationSetOffset(data, "sharedLabel")));
+            var locator = catalog.CreateCustomLocator("", null);
+
+            LogAssert.Expect(LogType.Exception, new Regex("Data offset .* out of bounds"));
+
+            // Every location sharedLabel names is named by an intact key too, so skipping
+            // its set loses nothing. The throw used to end the enumeration outright, which
+            // left CleanBundleCacheOperation with no cache dirs rather than most of them.
+            Assert.AreEqual(AliasedCatalogIds(), AllLocationIds(locator));
+        }
+
+        [Test]
+        public void AllLocations_UnreadableRecordInASet_KeepsListingTheRest()
+        {
+            var data = BuildCatalogWithAliasedKeys().SerializeToByteArray();
+            var setOffsets = ReadKeyLocationSetOffsets(ReaderOver(data));
+            var catalog = new BinaryContentCatalogData(
+                ReaderOver(WithCorruptSecondLocationInSet(data, setOffsets["sharedLabel"])));
+            var locator = catalog.CreateCustomLocator("", null);
+
+            LogAssert.Expect(LogType.Exception, new Regex("Data offset .* out of bounds"));
+
+            // The reader logs a bad record and hands back null, so the scan drops that one
+            // record and reads on. The remaining keys still name all three locations.
+            Assert.AreEqual(AliasedCatalogIds(), AllLocationIds(locator));
+        }
+
         [Test]
         public void BinaryCatalogSerializerWithInternalIdResolvingDisabled_DoesNotModifyInternalIds()
         {
@@ -249,6 +830,176 @@ namespace UnityEditor.AddressableAssets.Tests
             sw.Stop();
         }
 
+        // Builds a catalog where every asset entry shares one dependency set (a single bundle),
+        // mirroring the UUM-148750 repro: many Addressables packed into the same bundle.
+        // depSetCount > 1 produces that many distinct bundles, assets spread evenly across them.
+        static BinaryContentCatalogData.ResourceLocator CreateSharedDependencyCatalog(
+            int assetCount, int depsPerSet, out List<object> assetKeys, int depSetCount = 1, int bufferCacheSize = 1024)
+        {
+            var locType = typeof(UnityEngine.Object);
+            var entries = new List<ContentCatalogDataEntry>();
+            var depKeysPerSet = new List<List<object>>();
+
+            for (int s = 0; s < depSetCount; s++)
+            {
+                var depKeys = new List<object>();
+                for (int i = 0; i < depsPerSet; i++)
+                {
+                    var d = new ContentCatalogDataEntry(
+                        typeof(AssetBundle),
+                        $"internalId/set{s}/bundle{i}.bundle",
+                        "AssetBundleProvider",
+                        new object[] { $"set{s}_bundle{i}.bundle" },
+                        null,
+                        new AssetBundleRequestOptions { BundleName = $"set{s}_bundle{i}" });
+                    entries.Add(d);
+                    depKeys.Add(d.Keys[0]);
+                }
+                depKeysPerSet.Add(depKeys);
+            }
+
+            assetKeys = new List<object>();
+            for (int i = 0; i < assetCount; i++)
+            {
+                var key = $"asset_{i}";
+                entries.Add(new ContentCatalogDataEntry(
+                    locType,
+                    $"internalId/asset_{i}.asset",
+                    "BundledAssetProvider",
+                    new object[] { key },
+                    depKeysPerSet[i % depSetCount]));
+                assetKeys.Add(key);
+            }
+
+            var catalog = new BinaryContentCatalogData();
+            catalog.SetData(entries);
+            var data = catalog.SerializeToByteArray();
+            var loaded = new BinaryContentCatalogData(new BinaryStorageBuffer.Reader(
+                data, bufferCacheSize, 0, new BinaryContentCatalogData.Serializer()));
+            return loaded.CreateCustomLocator("", null) as BinaryContentCatalogData.ResourceLocator;
+        }
+
+        static IResourceLocation LocateSingle(BinaryContentCatalogData.ResourceLocator locator, object key)
+        {
+            Assert.IsTrue(locator.Locate(key, typeof(UnityEngine.Object), out var locs), $"failed to locate {key}");
+            Assert.AreEqual(1, locs.Count, $"expected exactly one location for {key}");
+            return locs[0];
+        }
+
+        // UUM-148750: locations packed into the same bundle each rebuilt their own copy of the
+        // identical dependency list. 400 locations produced 400 list instances; they should
+        // share one.
+        [Test]
+        public void BinaryCatalog_LocationsSharingDependencySet_ShareDependencyListInstance()
+        {
+            const int assetCount = 400;
+            var locator = CreateSharedDependencyCatalog(assetCount, 34, out var assetKeys);
+
+            var distinct = new HashSet<IList<IResourceLocation>>(new ReferenceEqualityComparer());
+            foreach (var key in assetKeys)
+                distinct.Add(LocateSingle(locator, key).Dependencies);
+
+            Assert.AreEqual(1, distinct.Count,
+                $"expected 1 shared dependency list across {assetCount} locations, found {distinct.Count}");
+        }
+
+        [Test]
+        public void BinaryCatalog_DistinctDependencySets_DoNotShareListInstance()
+        {
+            const int depSetCount = 4;
+            var locator = CreateSharedDependencyCatalog(40, 6, out var assetKeys, depSetCount);
+
+            var distinct = new HashSet<IList<IResourceLocation>>(new ReferenceEqualityComparer());
+            foreach (var key in assetKeys)
+                distinct.Add(LocateSingle(locator, key).Dependencies);
+
+            Assert.AreEqual(depSetCount, distinct.Count,
+                "each distinct dependency set should get its own list instance");
+        }
+
+        // Sharing must not disturb contents or ordering: DependenciesEqual compares index-wise.
+        [Test]
+        public void BinaryCatalog_DependencyContents_UnchangedWhenShared()
+        {
+            const int depsPerSet = 12;
+            var locator = CreateSharedDependencyCatalog(10, depsPerSet, out var assetKeys);
+
+            var expected = LocateSingle(locator, assetKeys[0]).Dependencies;
+            Assert.AreEqual(depsPerSet, expected.Count);
+
+            foreach (var key in assetKeys)
+            {
+                var deps = LocateSingle(locator, key).Dependencies;
+                Assert.AreEqual(depsPerSet, deps.Count);
+                for (int i = 0; i < deps.Count; i++)
+                {
+                    Assert.AreEqual(expected[i].InternalId, deps[i].InternalId, $"{key} dep {i} InternalId");
+                    Assert.AreEqual(expected[i].PrimaryKey, deps[i].PrimaryKey, $"{key} dep {i} PrimaryKey");
+                    Assert.AreEqual(expected[i].ProviderId, deps[i].ProviderId, $"{key} dep {i} ProviderId");
+                    Assert.AreEqual(expected[i].ResourceType, deps[i].ResourceType, $"{key} dep {i} ResourceType");
+                }
+            }
+        }
+
+        // ReadObjectList returns null for the uint.MaxValue sentinel; the getter must still
+        // hand back an empty list, as it did before the shared-list change.
+        [Test]
+        public void BinaryCatalog_LocationsWithoutDependencies_ReturnEmptyList()
+        {
+            var locType = typeof(UnityEngine.Object);
+            var catalog = new BinaryContentCatalogData();
+            catalog.SetData(new List<ContentCatalogDataEntry>
+            {
+                new ContentCatalogDataEntry(locType, "internalId/no_deps.asset", "BundledAssetProvider", new object[] { "no_deps" })
+            });
+            var loaded = new BinaryContentCatalogData(new BinaryStorageBuffer.Reader(
+                catalog.SerializeToByteArray(), 128, 0, new BinaryContentCatalogData.Serializer()));
+            var locator = loaded.CreateCustomLocator("", null) as BinaryContentCatalogData.ResourceLocator;
+
+            var loc = LocateSingle(locator, "no_deps");
+            Assert.IsFalse(loc.HasDependencies);
+            Assert.IsNotNull(loc.Dependencies);
+            Assert.AreEqual(0, loc.Dependencies.Count);
+        }
+
+        // The payoff: DependenciesEqual leads with ReferenceEquals, so sharing turns the
+        // operation-cache probe back into a reference compare instead of walking every entry
+        // and string-comparing it.
+        [Test]
+        public void BinaryCatalog_DependenciesEqual_UsesReferenceFastPath()
+        {
+            var locator = CreateSharedDependencyCatalog(2, 34, out var assetKeys);
+
+            var a = LocateSingle(locator, assetKeys[0]);
+            var b = LocateSingle(locator, assetKeys[1]);
+
+            Assert.AreNotSame(a, b);
+            Assert.AreSame(a.Dependencies, b.Dependencies);
+            Assert.AreEqual(a.DependencyHashCode, b.DependencyHashCode);
+            Assert.IsTrue(LocationUtils.DependenciesEqual(a.Dependencies, b.Dependencies));
+        }
+
+        // Guards the invariant itself: a refactor that reverts to per-location lists would
+        // silently reintroduce UUM-148750 without this failing.
+        [Test]
+        public void BinaryCatalog_DependencyListIsSharedNotCopied()
+        {
+            var locator = CreateSharedDependencyCatalog(3, 5, out var assetKeys);
+
+            var first = LocateSingle(locator, assetKeys[0]).Dependencies;
+            var second = LocateSingle(locator, assetKeys[1]).Dependencies;
+            var firstAgain = LocateSingle(locator, assetKeys[0]).Dependencies;
+
+            Assert.AreSame(first, second, "locations sharing a dependency set must share the list");
+            Assert.AreSame(first, firstAgain, "repeated access must not rebuild the list");
+        }
+
+        sealed class ReferenceEqualityComparer : IEqualityComparer<IList<IResourceLocation>>
+        {
+            public bool Equals(IList<IResourceLocation> x, IList<IResourceLocation> y) => ReferenceEquals(x, y);
+            public int GetHashCode(IList<IResourceLocation> obj) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
+        }
+
         [Test]
         public void AssetBundleRequestOptionsTest()
         {
@@ -260,7 +1011,10 @@ namespace UnityEditor.AddressableAssets.Tests
                 RedirectLimit = 4,
                 RetryCount = 7,
                 Timeout = 12,
-                AssetLoadMode = AssetLoadMode.AllPackedAssetsAndDependencies
+                AssetLoadMode = AssetLoadMode.AllPackedAssetsAndDependencies,
+                UseCrcForCachedBundle = true,
+                ClearOtherCachedVersionsWhenLoaded = true,
+                CacheProbeMode = CacheProbeMode.IsVersionCached
             };
             var dataEntry = new ContentCatalogDataEntry(typeof(ContentCatalogData), "internalId", "provider", new object[] { 1 }, null, options);
             var entries = new List<ContentCatalogDataEntry>();
@@ -283,6 +1037,56 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(locOptions.RetryCount, options.RetryCount);
             Assert.AreEqual(locOptions.Timeout, options.Timeout);
             Assert.AreEqual(locOptions.AssetLoadMode, options.AssetLoadMode);
+            Assert.AreEqual(locOptions.UseCrcForCachedBundle, options.UseCrcForCachedBundle);
+            Assert.AreEqual(locOptions.ClearOtherCachedVersionsWhenLoaded, options.ClearOtherCachedVersionsWhenLoaded);
+            Assert.AreEqual(locOptions.CacheProbeMode, options.CacheProbeMode);
+        }
+
+        // The copy constructor is used by content update to duplicate remote builtin entries,
+        // so a field missing here is silently reset rather than reported.
+        [Test]
+        public void AssetBundleRequestOptions_CopyConstructor_CopiesEveryField()
+        {
+            var source = new AssetBundleRequestOptions
+            {
+                Hash = new Hash128(5, 6, 7, 8).ToString(),
+                Crc = 456,
+                Timeout = 21,
+                ChunkedTransfer = true,
+                RedirectLimit = 9,
+                RetryCount = 3,
+                BundleName = "bundle",
+                AssetLoadMode = AssetLoadMode.AllPackedAssetsAndDependencies,
+                BundleSize = 4096,
+                UseCrcForCachedBundle = true,
+                UseUnityWebRequestForLocalBundles = true,
+                ClearOtherCachedVersionsWhenLoaded = true,
+                CacheProbeMode = CacheProbeMode.IsVersionCached
+            };
+
+            var copy = new AssetBundleRequestOptions(source);
+
+            Assert.AreEqual(source.Hash, copy.Hash);
+            Assert.AreEqual(source.Crc, copy.Crc);
+            Assert.AreEqual(source.Timeout, copy.Timeout);
+            Assert.AreEqual(source.ChunkedTransfer, copy.ChunkedTransfer);
+            Assert.AreEqual(source.RedirectLimit, copy.RedirectLimit);
+            Assert.AreEqual(source.RetryCount, copy.RetryCount);
+            Assert.AreEqual(source.BundleName, copy.BundleName);
+            Assert.AreEqual(source.AssetLoadMode, copy.AssetLoadMode);
+            Assert.AreEqual(source.BundleSize, copy.BundleSize);
+            Assert.AreEqual(source.UseCrcForCachedBundle, copy.UseCrcForCachedBundle);
+            Assert.AreEqual(source.UseUnityWebRequestForLocalBundles, copy.UseUnityWebRequestForLocalBundles);
+            Assert.AreEqual(source.ClearOtherCachedVersionsWhenLoaded, copy.ClearOtherCachedVersionsWhenLoaded);
+            Assert.AreEqual(source.CacheProbeMode, copy.CacheProbeMode);
+        }
+
+        // GetCacheStatus reads CacheProbeMode off the options, so it must reject null first.
+        // Entries built with StripDownloadOptions carry no options at all.
+        [Test]
+        public void GetCacheStatus_WithNullOptions_ReturnsUnknown()
+        {
+            Assert.AreEqual(AssetBundleResource.CacheStatus.Unknown, AssetBundleResource.GetCacheStatus(null));
         }
 
         // Exposes BinaryContentCatalogData's protected header constants (as a subclass) so

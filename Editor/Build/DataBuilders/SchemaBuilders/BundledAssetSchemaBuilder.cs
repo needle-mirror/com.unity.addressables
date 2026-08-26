@@ -502,7 +502,7 @@ IBundleWriteData writeData, Dictionary<string, ContentCatalogDataEntry> location
                 var bundleInputDefs = new List<AssetBundleBuild>();
                 using (m_Logger.ScopedStep(LogLevel.Verbose, "PrepGroupBundlePacking"))
                 {
-                    var list = BuildScriptSchemaDriven.PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema);
+                    var list = BuildScriptSchemaDriven.PrepGroupBundlePacking(assetGroup, bundleInputDefs, schema, null, aaContext);
                     aaContext.assetEntries.AddRange(list);
                 }
 
@@ -730,6 +730,7 @@ IBundleWriteData writeData, Dictionary<string, ContentCatalogDataEntry> location
                             {
                                 Crc = schema.UseAssetBundleCrc ? info.Crc : 0,
                                 UseCrcForCachedBundle = schema.UseAssetBundleCrcForCachedBundles,
+                                CacheProbeMode = schema.CacheProbeMode,
                                 UseUnityWebRequestForLocalBundles = schema.UseUnityWebRequestForLocalBundles,
                                 Hash = schema.UseAssetBundleCache ? info.Hash.ToString() : "",
                                 ChunkedTransfer = schema.ChunkedTransfer,

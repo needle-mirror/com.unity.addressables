@@ -1,0 +1,381 @@
+/* Mirrors the Build Analysis Overview tab so the embedded report reads as part of that window.
+   Source of truth for these values: Modules/BuildAnalysis/EditorResourcesPackage/Editor Default
+   Resources/BuildAnalysis/StyleSheets/{BuildHeader,StatCard,OverviewTab,BuildAnalysisWindow}.uss.
+   Theme-dependent colors and icons live in SummaryTabDark.uss / SummaryTabLight.uss. */
+
+.SummaryTabScroll {
+    flex-grow: 1;
+    padding: 0;
+    background-color: var(--unity-colors-window-secondary-background);
+    overflow: hidden;
+}
+
+/* ===== Header ===== */
+
+.SummaryTabHeader {
+    height: 64px;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: stretch;
+    padding: 12px;
+    background-color: var(--unity-colors-inspector_titlebar-background);
+    border-bottom-width: 1px;
+    border-color: var(--unity-colors-default-border);
+}
+
+.SummaryTabHeaderLine {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    min-width: 0;
+}
+
+.SummaryTabHeaderLine > .SummaryTabHeaderTitle,
+.SummaryTabHeaderLine > .SummaryTabHeaderSubtitleRow {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.SummaryTabHeaderTitle {
+    font-size: 14px;
+    -unity-font-style: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.SummaryTabHeaderSubtitleRow {
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+    font-size: 11px;
+}
+
+.SummaryTabHeaderSubtitle {
+    opacity: 0.7;
+    flex-grow: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.SummaryTabHeaderPlatformIcon {
+    width: 12px;
+    height: 12px;
+    margin-right: 4px;
+    flex-shrink: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+.SummaryTabHeaderTimeRange {
+    font-size: 11px;
+    opacity: 0.75;
+    margin-left: 12px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-right;
+}
+
+.SummaryTabStatusBadge {
+    flex-direction: row;
+    align-items: center;
+    height: 22px;
+    min-height: 22px;
+    padding-left: 3px;
+    padding-right: 3px;
+    border-width: 1px;
+    border-color: var(--unity-colors-default-border);
+    border-radius: 4px;
+    background-color: var(--unity-colors-window-secondary-background);
+    margin-left: 12px;
+    flex-shrink: 0;
+}
+
+.SummaryTabStatusBadge--success {
+    background-color: var(--summary-tab-status-success-background);
+    border-color: var(--summary-tab-status-success-border);
+}
+
+.SummaryTabStatusBadge--failed {
+    background-color: var(--summary-tab-status-failed-background);
+    border-color: var(--summary-tab-status-failed-border);
+}
+
+.SummaryTabStatusBadgeIcon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-right: 3px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+.SummaryTabStatusBadgeText {
+    font-size: 11px;
+    -unity-font-style: bold;
+}
+
+.SummaryTabStatusBadge--success .SummaryTabStatusBadgeText {
+    color: var(--summary-tab-status-success-text);
+}
+
+.SummaryTabStatusBadge--failed .SummaryTabStatusBadgeText {
+    color: var(--summary-tab-status-failed-text);
+}
+
+/* ===== Stat cards ===== */
+
+.SummaryTabStatCardRow {
+    flex-direction: row;
+    padding: 8px 0 0 8px;
+}
+
+.SummaryTabStatCardRow > .SummaryTabStatCard {
+    flex-grow: 1;
+    min-width: 0;
+    margin-right: 8px;
+}
+
+.SummaryTabStatCard {
+    height: 50px;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 10px;
+    background-color: var(--unity-colors-inspector_titlebar-background);
+    border-width: 1px;
+    border-radius: 4px;
+    border-color: var(--unity-colors-default-border);
+}
+
+.SummaryTabStatCardIcon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    flex-shrink: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+#SummaryTabStatCardBundleSize .SummaryTabStatCardIcon {
+    background-image: var(--summary-tab-kpi-icon-build-size);
+}
+
+#SummaryTabStatCardDuration .SummaryTabStatCardIcon {
+    background-image: var(--summary-tab-kpi-icon-duration);
+}
+
+#SummaryTabStatCardBundles .SummaryTabStatCardIcon {
+    background-image: var(--summary-tab-kpi-icon-bundles);
+}
+
+#SummaryTabStatCardAssets .SummaryTabStatCardIcon {
+    background-image: var(--summary-tab-kpi-icon-assets);
+}
+
+.SummaryTabStatCardText {
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+}
+
+.SummaryTabStatCardValue {
+    font-size: 11.5px;
+    -unity-font-style: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.SummaryTabStatCardLabel {
+    font-size: 10px;
+    margin-top: 2px;
+    opacity: 0.8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ===== Sections ===== */
+
+.SummaryTabSections {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    margin-bottom: 8px;
+    padding: 8px;
+}
+
+.SummaryTabSection {
+    padding: 0;
+    margin-bottom: 12px;
+    background-color: var(--unity-colors-inspector_titlebar-background);
+    border-width: 1px;
+    border-color: var(--unity-colors-default-border);
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.SummaryTabSectionContent {
+    font-size: 11.5px;
+    padding-left: 4px;
+    padding-right: 8px;
+    padding-bottom: 8px;
+}
+
+.SummaryTabSectionFoldout {
+    margin: 0;
+    padding: 8px 8px 0 8px;
+}
+
+.SummaryTabSectionFoldout > .unity-foldout__toggle {
+    padding-bottom: 8px;
+    -unity-font-style: bold;
+}
+
+.SummaryTabSectionFoldout > .unity-foldout__toggle:hover:enabled {
+    background-color: var(--theme-foldout-background-color-hover);
+}
+
+/* ===== Build Details grid ===== */
+
+/* Two label/value column pairs side by side: the label columns never shrink, so every value in a
+   column lines up at the width of that column's widest label without a hard-coded size. */
+.SummaryTabDetailsGrid {
+    flex-direction: row;
+    align-items: stretch;
+    min-width: 0;
+    flex-wrap: nowrap;
+}
+
+.SummaryTabDetailsGroup {
+    flex-direction: row;
+    align-items: stretch;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.SummaryTabDetailsLabels {
+    flex-direction: column;
+    flex-grow: 0;
+    flex-shrink: 0;
+    margin-right: 20px;
+}
+
+.SummaryTabDetailsValues {
+    flex-direction: column;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.SummaryTabDetailsSpacer {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 40px;
+    min-width: 40px;
+    max-width: 75px;
+}
+
+.SummaryTabDetailsLabel {
+    font-size: 11px;
+    flex-shrink: 0;
+    height: 21px;
+    min-height: 21px;
+}
+
+.SummaryTabDetailsValue {
+    font-size: 11px;
+    flex-grow: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 21px;
+    min-height: 21px;
+}
+
+.SummaryTabDetailsValueContainer {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-grow: 1;
+    min-width: 0;
+    height: 21px;
+    min-height: 21px;
+}
+
+.SummaryTabDetailsValueContainer > .SummaryTabDetailsValue {
+    height: auto;
+}
+
+.SummaryTabDetailsActionButton {
+    margin-left: 8px;
+    margin-top: -5px;
+    align-self: flex-start;
+    flex-shrink: 0;
+}
+
+/* ===== Content Directories banner ===== */
+
+/* Sits directly under the header, so it insets to the same 8px as the stat card row below it and
+   leaves the vertical gap to that row's own top padding. Its slot stays bare so it costs nothing
+   when the build has no content directories. */
+.SummaryTabContentDirectoriesBanner {
+    margin-left: 8px;
+    margin-right: 8px;
+    margin-top: 8px;
+    margin-bottom: 0;
+    padding: 5px;
+    flex-shrink: 0;
+}
+
+.SummaryTabContentDirectoriesBanner .unity-help-box__label {
+    font-size: 12px;
+}
+
+/* ===== Potential Issues card ===== */
+
+.SummaryTabIssuesCard {
+    flex-direction: column;
+    padding: 8px;
+}
+
+.SummaryTabIssuesBody {
+    flex-direction: row;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.SummaryTabIssuesIcon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-right: 8px;
+    margin-top: 1px;
+}
+
+.SummaryTabIssuesText {
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.SummaryTabIssuesMessage {
+    font-size: 11.5px;
+    white-space: normal;
+}
+
+.SummaryTabIssuesDetail {
+    font-size: 11.5px;
+    white-space: normal;
+    opacity: 0.8;
+    margin-top: 6px;
+}
+
+.SummaryTabIssuesActions {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 8px;
+}

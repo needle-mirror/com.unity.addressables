@@ -76,6 +76,9 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 #if UNITY_6000_5_OR_NEWER
 
+#if UNITY_6000_7_OR_NEWER
+        [Ignore("ContentBuildInterface.ArchiveAndCompress cannot read type-tree-extracted serialized files written in serialized file format v26; the build logs a type tree read failure.")]
+#endif
         [Test]
         public void ContentUpdateState_WithTTExtractionEnabled_ContainsExpectedTypeTreeHashes()
         {
@@ -111,6 +114,9 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.ExtractTypeTreeData = prevTTSetting;
         }
 
+#if UNITY_6000_7_OR_NEWER
+        [Ignore("ContentBuildInterface.ArchiveAndCompress cannot read type-tree-extracted serialized files written in serialized file format v26; the build logs a type tree read failure.")]
+#endif
         [Test]
         public void ContentUpdateState_StrippingTypeTreeHashes_ProducesExpectedFile()
         {
@@ -1793,6 +1799,129 @@ namespace UnityEditor.AddressableAssets.Tests
                 AssetDatabase.DeleteAsset(mainAssetPath);
                 AssetDatabase.DeleteAsset(refAssetPath);
                 AssetDatabase.DeleteAsset(materialAssetPath);
+            }
+        }
+
+        [Test]
+        public void ClearContentUpdateNotifications_ClearsGroupAndEntryFlags_WithFolderEntry()
+        {
+            var group = Settings.CreateGroup("ClearFlagsGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+            string folderPath = GetAssetPath("ClearFlagsFolder");
+            string prefabPath = folderPath + "/clearFlags.prefab";
+            GameObject prefabObject = null;
+
+            try
+            {
+                Directory.CreateDirectory(folderPath);
+                prefabObject = new GameObject("clearFlags");
+                PrefabUtility.SaveAsPrefabAsset(prefabObject, prefabPath);
+                AssetDatabase.ImportAsset(folderPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+                var folderEntry = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(folderPath), group);
+                folderEntry.FlaggedDuringContentUpdateRestriction = true;
+                group.FlaggedDuringContentUpdateRestriction = true;
+
+                // Recurses into the folder, which no longer gathers at all.
+                ContentUpdateScript.ClearContentUpdateNotifications(group);
+
+                Assert.IsFalse(group.FlaggedDuringContentUpdateRestriction);
+                Assert.IsFalse(folderEntry.FlaggedDuringContentUpdateRestriction);
+            }
+            finally
+            {
+                if (prefabObject != null)
+                    GameObject.DestroyImmediate(prefabObject);
+                AssetDatabase.DeleteAsset(folderPath);
+                Settings.RemoveGroup(group);
+            }
+        }
+
+        [Test]
+        public void ClearContentUpdateNotifications_ClearsFlagsOnTheGatheredFolderChildren()
+        {
+            var group = Settings.CreateGroup("ClearFolderChildFlagsGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+            string folderPath = GetAssetPath("ClearFolderChildFlags");
+            string prefabPath = folderPath + "/folderChild.prefab";
+            GameObject prefabObject = null;
+
+            try
+            {
+                Directory.CreateDirectory(folderPath);
+                prefabObject = new GameObject("folderChild");
+                PrefabUtility.SaveAsPrefabAsset(prefabObject, prefabPath);
+                AssetDatabase.ImportAsset(folderPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+                var folderEntry = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(folderPath), group);
+
+                // GatherAllAssets stores the children on the folder entry, and the content
+                // update flagging pass flags those same instances.
+                folderEntry.GatherAllAssets(new List<AddressableAssetEntry>(), false, true, false);
+                Assert.IsNotEmpty(folderEntry.SubAssets);
+
+                var child = folderEntry.SubAssets[0];
+                child.FlaggedDuringContentUpdateRestriction = true;
+                group.FlaggedDuringContentUpdateRestriction = true;
+
+                ContentUpdateScript.ClearContentUpdateNotifications(group);
+
+                // Re-gathering here would build fresh entries and clear a different instance,
+                // leaving this one flagged.
+                Assert.IsFalse(child.FlaggedDuringContentUpdateRestriction);
+            }
+            finally
+            {
+                if (prefabObject != null)
+                    GameObject.DestroyImmediate(prefabObject);
+                AssetDatabase.DeleteAsset(folderPath);
+                Settings.RemoveGroup(group);
+            }
+        }
+
+        [Test]
+        public void ClearContentUpdateNotifications_AfterShallowGather_StillClearsDeepFolderChild()
+        {
+            var group = Settings.CreateGroup("ShallowGatherFolderGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+            string folderPath = GetAssetPath("ShallowGatherFolder");
+            string nestedPath = folderPath + "/nested";
+            string prefabPath = nestedPath + "/deepChild.prefab";
+            GameObject prefabObject = null;
+
+            try
+            {
+                Directory.CreateDirectory(nestedPath);
+                prefabObject = new GameObject("deepChild");
+                PrefabUtility.SaveAsPrefabAsset(prefabObject, prefabPath);
+                AssetDatabase.ImportAsset(folderPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+                var folderEntry = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(folderPath), group);
+
+                // The flagging pass gathers recursively, so the child in the subfolder is
+                // the instance it flags.
+                folderEntry.GatherAllAssets(new List<AddressableAssetEntry>(), false, true, false);
+                var deepChild = folderEntry.SubAssets.Find(e => e.AssetPath == prefabPath);
+                Assert.IsNotNull(deepChild, "A recursive gather should reach the child in the subfolder.");
+
+                deepChild.FlaggedDuringContentUpdateRestriction = true;
+                group.FlaggedDuringContentUpdateRestriction = true;
+
+                // What the Groups window does when the folder is expanded. It must not
+                // replace SubAssets with its shallower list.
+                folderEntry.GatherAllAssets(new List<AddressableAssetEntry>(), false, false, false);
+                CollectionAssert.Contains(folderEntry.SubAssets, deepChild, "A shallow gather replaced the folder's child list.");
+
+                ContentUpdateScript.ClearContentUpdateNotifications(group);
+
+                Assert.IsFalse(deepChild.FlaggedDuringContentUpdateRestriction);
+            }
+            finally
+            {
+                if (prefabObject != null)
+                    GameObject.DestroyImmediate(prefabObject);
+                AssetDatabase.DeleteAsset(folderPath);
+                Settings.RemoveGroup(group);
             }
         }
     }

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor.AddressableAssets.Build.Layout;
-// using UnityEditor.AddressableAssets.Settings; // Re-enable with the "Learn More" link in CreateContentDirectoriesBanner.
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -14,7 +14,8 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public VisualElement tabRootElement;
         internal ScrollView scrollbarElement;
 
-        BuildReportWindow m_Window;
+        IBuildReportHost m_Host;
+        bool m_IsEmbedded;
 
         class SummaryRow
         {
@@ -49,10 +50,11 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
         BuildReportHelperConsumer m_HelperConsumer;
 
-        internal MainPanelSummaryTab(BuildReportWindow window, BuildReportHelperConsumer helperConsumer)
+        internal MainPanelSummaryTab(IBuildReportHost host, BuildReportHelperConsumer helperConsumer, bool isEmbedded)
         {
             m_HelperConsumer = helperConsumer;
-            m_Window = window;
+            m_Host = host;
+            m_IsEmbedded = isEmbedded;
         }
 
         public void Consume(BuildLayout buildReport)
@@ -79,7 +81,8 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             }
 
 #if ENABLE_CONTENT_DIRECTORIES
-            if (buildReport.ContentDirectories?.Count > 0)
+            // The banner links to Build Analysis; suppress it when this view is already embedded there.
+            if (!m_IsEmbedded && buildReport.ContentDirectories?.Count > 0)
                 scrollbarElement.Add(CreateContentDirectoriesBanner());
 #endif
 
@@ -107,7 +110,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 SummaryRowBuilder duplicatedAssets = new SummaryRowBuilder("Potential Issues")
                     .With(new PotentialIssuesCard($"{buildReport.DuplicatedAssets.Count} Duplicate Assets were detected in the build.  \n\n" +
                     $"Removing duplicated Assets could result in up to {BuildReportUtility.GetDenominatedBytesString(duplicatedSize)} reduced build size.",
-                    () => m_Window.NavigateToView(BuildReportWindow.PotentialIssuesType.DuplicatedAssetsView)));
+                    () => m_Host.NavigateToView(PotentialIssuesType.DuplicatedAssetsView)));
 
                 scrollbarElement.Add(duplicatedAssets.Build());
             }
@@ -159,10 +162,9 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             banner.style.marginBottom = 0f;
             banner.style.paddingTop = banner.style.paddingBottom = banner.style.paddingLeft = banner.style.paddingRight = new Length(5f, LengthUnit.Pixel);
             banner.buttonText = "Open Build Analysis";
-            banner.onButtonClicked += OpenBuildAnalysis;
-            // Re-enable once Content Directory / Build Analysis documentation exists, then point linkHref at it.
-            // banner.linkText = "Learn More";
-            // banner.linkHref = AddressableAssetUtility.GenerateDocsURL("index.html");
+            banner.onButtonClicked += BuildReportUtility.OpenBuildAnalysisWindow;
+            banner.linkText = "Learn More";
+            banner.linkHref = AddressableAssetUtility.GenerateContentDirectoriesDocsURL();
 
             Label messageLabel = banner.Q<Label>(className: HelpBox.labelUssClassName);
             if (messageLabel != null)
@@ -171,10 +173,6 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             return banner;
         }
 
-        static void OpenBuildAnalysis()
-        {
-            EditorApplication.ExecuteMenuItem("Window/Analysis/Build Analysis");
-        }
 #endif
 
         internal static ulong CalculateDuplicatedSize(IEnumerable<BuildReportHelperDuplicateImplicitAsset> duplicateAssets)

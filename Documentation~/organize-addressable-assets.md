@@ -7,7 +7,7 @@ To create and organize Addressable assets, you must do the following:
 * [Assign an asset as Addressable](#assign-an-asset-as-addressable).
 * [Organize Addressable assets with groups](#manage-addressable-groups), which determine where Unity loads assets from and builds them to, and how the content is compressed.
 
-Once you make an asset Addressable, the Addressables system adds it to a default group, unless you place it in a specific group. When you make a [content build](Builds.md), Unity packs assets in a group into [content directories](xref:um-content-directories) or [AssetBundles](xref:um-asset-bundles) according to the group's settings. You can load these assets using the [Addressables API](LoadingAddressableAssets.md).
+Once you make an asset Addressable, the Addressables system adds it to a default group, unless you place it in a specific group. When you make a [content build](Builds.md), Unity packs assets in a group into [content directories](https://docs.unity3d.com/6000.6/Documentation/Manual/content-directories.html) or [AssetBundles](xref:um-asset-bundles) according to the group's settings. You can load these assets using the [Addressables API](LoadingAddressableAssets.md).
 
 You can optionally use [profiles](AddressableAssetsProfiles.md) to create variables for the build process, and use [labels](Labels.md) to determine how to group Addressable assets together.
 

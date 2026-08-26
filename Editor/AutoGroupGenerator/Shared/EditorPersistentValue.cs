@@ -12,6 +12,8 @@ namespace AutoGroupGenerator
     public struct EditorPersistentValue<T>
     {
         #region Fields
+        private static readonly bool k_IsStringValue = typeof(T) == typeof(string);
+
         private readonly string _persistenceKey;
 
         private readonly Action _onValueChanged;
@@ -57,6 +59,14 @@ namespace AutoGroupGenerator
         {
             try
             {
+                if (k_IsStringValue)
+                {
+                    EditorPrefs.SetString(_persistenceKey, (string)(object)value ?? string.Empty);
+
+                    return;
+                }
+
+
                 string jsonValue = JsonUtility.ToJson(value);
 
                 EditorPrefs.SetString(_persistenceKey, jsonValue);
@@ -73,6 +83,12 @@ namespace AutoGroupGenerator
             {
                 if (EditorPrefs.HasKey(_persistenceKey))
                 {
+                    if (k_IsStringValue)
+                    {
+                        return (T)(object)EditorPrefs.GetString(_persistenceKey);
+                    }
+
+
                     string jsonValue = EditorPrefs.GetString(_persistenceKey);
 
                     T value = JsonUtility.FromJson<T>(jsonValue);

@@ -25,6 +25,13 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
         const string k_CacheLocationId = "CacheLocationID";
         const string k_RemoteLocationId = "RemoteLocationID";
         const string k_CatalogExt = ".bin"; // default CatalogExtension when InternalOp.m_Owner is null
+
+        // The load path Addressables generates for CCD. The catalog filename is appended
+        // last, so it lands inside the ?path= query value (UUM-153444).
+        const string k_CcdPrefix =
+            "https://p.client-api.unity3dusercontent.com/client_api/v1/environments/prod/" +
+            "buckets/b1/release_by_badge/latest/entry_by_path/content/?path=/";
+
         private const string k_TempAssetFolder = "Assets/TempFolder";
         private const string k_TempBuildFolder = "TempBuildFolder";
         private readonly string m_RuntimeCatalogFilename;
@@ -100,6 +107,22 @@ namespace UnityEngine.AddressableAssets.ResourceProviders.Tests
             Assert.AreEqual(k_CacheLocationId + k_CatalogExt, loadedId);
         }
 
+
+        [Test]
+        public void DetermineIdToLoad_IfRemoteCatalogIsCcdUrl_SwapsExtensionInsideTheQuery()
+        {
+            var contentCatalogOp = new ContentCatalogProvider.InternalOp();
+
+            IResourceLocation[] dependencies = MakeHashDependencies();
+            dependencies[(int)ContentCatalogProvider.DependencyHashIndex.Remote] =
+                new ResourceLocationBase(string.Empty, k_CcdPrefix + "catalog_a1b2.hash",
+                    typeof(ContentCatalogProvider).FullName, typeof(object));
+
+            var location = new ResourceLocationBase(k_LocationName, k_LocationId, typeof(ContentCatalogProvider).FullName, typeof(object), dependencies);
+            var loadedId = contentCatalogOp.DetermineIdToLoad(location, new List<object> {"newHash", "hash", "hash"});
+
+            Assert.AreEqual(k_CcdPrefix + "catalog_a1b2" + k_CatalogExt, loadedId);
+        }
 
         [Test]
         public void DetermineIdToLoad_IfNoDependencies_ReturnsMainId()

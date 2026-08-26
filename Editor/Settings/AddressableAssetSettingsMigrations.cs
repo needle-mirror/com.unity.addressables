@@ -1,3 +1,4 @@
+using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
@@ -59,8 +60,27 @@ namespace UnityEditor.AddressableAssets.Settings
                 settings.CatalogFormatMigrated = true;
             }
 
+#if ENABLE_CONTENT_DIRECTORIES
+            MigrateContentDirectoryArchiveMode(settings);
+#endif
+
             MigrateStaleCrcCachedFlags(settings);
         }
+
+#if ENABLE_CONTENT_DIRECTORIES
+        internal static void MigrateContentDirectoryArchiveMode(AddressableAssetSettings settings)
+        {
+            // Map the legacy archiving bool onto the new mode so upgraded projects keep the
+            // behaviour they were configured for. LZ4 was the only compression the bool implied.
+            if (settings.ContentDirectoryArchiveModeMigrated)
+                return;
+
+            settings.ContentDirectoryArchiveMode = settings.m_ArchiveContentDirectories
+                ? Build.ContentDirectoryArchiveMode.Lz4
+                : Build.ContentDirectoryArchiveMode.None;
+            settings.ContentDirectoryArchiveModeMigrated = true;
+        }
+#endif
 
         internal static void MigrateStaleCrcCachedFlags(AddressableAssetSettings settings)
         {
@@ -171,6 +191,24 @@ namespace UnityEditor.AddressableAssets.Settings
                 EditorUtility.SetDirty(this);
             }
         }
+
+#if ENABLE_CONTENT_DIRECTORIES
+        [SerializeField]
+        internal bool m_ContentDirectoryArchiveModeMigrated = false;
+        /// <summary>
+        /// Tracks whether <see cref="AddressableAssetSettings.MigrateContentDirectoryArchiveMode"/>
+        /// has already mapped the legacy ArchiveContentDirectories bool onto ContentDirectoryArchiveMode.
+        /// </summary>
+        internal bool ContentDirectoryArchiveModeMigrated
+        {
+            get { return m_ContentDirectoryArchiveModeMigrated; }
+            set
+            {
+                m_ContentDirectoryArchiveModeMigrated = value;
+                EditorUtility.SetDirty(this);
+            }
+        }
+#endif
 
         [SerializeField]
         bool m_CrcCachedBundleFlagMigrated = false;

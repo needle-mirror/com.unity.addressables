@@ -5,6 +5,7 @@ using UnityEngine;
 using NUnit.Framework;
 using UnityEngine.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Tests.Editor.TestObjects;
 using UnityEditor.U2D;
 using UnityEngine.U2D;
 
@@ -16,28 +17,28 @@ namespace UnityEditor.AddressableAssets.Tests
         private string m_SpriteAtlasPath;
         private string m_TexturePath;
         private string m_InheritedObjectPath;
-        TestObject mainSO;
-        TestSubObject subSO;
-        TestSubObject subSO2;
-        InheritedTestObject inheritedSO;
+        TestEditorObject mainSO;
+        TestEditorSubObject _editorSubSo;
+        TestEditorSubObject _editorSubSo2;
+        InheritedTestEditorObject _inheritedTestEditorSo;
 
         protected override void OnInit()
         {
-            mainSO = ScriptableObject.CreateInstance<TestObject>();
-            subSO = ScriptableObject.CreateInstance<TestSubObject>();
-            subSO2 = ScriptableObject.CreateInstance<TestSubObject>();
-            subSO.name = "sub";
+            mainSO = ScriptableObject.CreateInstance<TestEditorObject>();
+            _editorSubSo = ScriptableObject.CreateInstance<TestEditorSubObject>();
+            _editorSubSo2 = ScriptableObject.CreateInstance<TestEditorSubObject>();
+            _editorSubSo.name = "sub";
 
             m_ScriptableObjectPath = GetAssetPath("testScriptableObject.asset");
             AssetDatabase.CreateAsset(mainSO, m_ScriptableObjectPath);
-            AssetDatabase.AddObjectToAsset(subSO, m_ScriptableObjectPath);
-            AssetDatabase.AddObjectToAsset(subSO2, m_ScriptableObjectPath);
+            AssetDatabase.AddObjectToAsset(_editorSubSo, m_ScriptableObjectPath);
+            AssetDatabase.AddObjectToAsset(_editorSubSo2, m_ScriptableObjectPath);
             AssetDatabase.SaveAssets();
             AssetDatabase.ImportAsset(m_ScriptableObjectPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 
             m_InheritedObjectPath = GetAssetPath("testInheritedObject.asset");
-            inheritedSO = ScriptableObject.CreateInstance<InheritedTestObject>();
-            AssetDatabase.CreateAsset(inheritedSO, m_InheritedObjectPath);
+            _inheritedTestEditorSo = ScriptableObject.CreateInstance<InheritedTestEditorObject>();
+            AssetDatabase.CreateAsset(_inheritedTestEditorSo, m_InheritedObjectPath);
             AssetDatabase.ImportAsset(m_InheritedObjectPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 
             // create a Sprite atlas, + sprite
@@ -96,10 +97,10 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void AssetReference_SetEditorAsset_SucceedsOnMatchedTypeAssetReference()
         {
-            AssetReference typeCorrectReference = new AssetReferenceT<TestSubObject>("badguid");
-            typeCorrectReference.SetEditorAsset(subSO);
+            AssetReference typeCorrectReference = new AssetReferenceT<TestEditorSubObject>("badguid");
+            typeCorrectReference.SetEditorAsset(_editorSubSo);
             Assert.NotNull(typeCorrectReference.editorAsset, "Attempting to set editor asset on an AssetReferenceT should return the first matching object at the guid");
-            Assert.AreEqual(subSO, typeCorrectReference.editorAsset, "Attempting to set editor asset on an AssetReferenceT should return the first matching object at the guid");
+            Assert.AreEqual(_editorSubSo, typeCorrectReference.editorAsset, "Attempting to set editor asset on an AssetReferenceT should return the first matching object at the guid");
         }
 
         [Test]
@@ -114,38 +115,38 @@ namespace UnityEditor.AddressableAssets.Tests
         public void AssetReference_SetEditorAsset_CorrectlyRetrievesSubAsset()
         {
             AssetReference untypedAssetReference = new AssetReference("badguid");
-            untypedAssetReference.SetEditorAsset(subSO);
+            untypedAssetReference.SetEditorAsset(_editorSubSo);
             Assert.AreEqual(mainSO, untypedAssetReference.editorAsset, "Attempting to use SetEditorAsset on untyped AssetReference should give main asset as editorAsset, subAsset as subAsset");
-            Assert.AreEqual(subSO.name, untypedAssetReference.SubObjectName,
+            Assert.AreEqual(_editorSubSo.name, untypedAssetReference.SubObjectName,
                 "Attempting to use SetEditorAsset on a subObject in an untyped AssetReference should make the requested asset the subasset of the assetReference.");
         }
 
         [Test]
         public void AssetReference_SetEditorAsset_CorrectlySetsSubAssetWhenUsingTypedReference()
         {
-            AssetReferenceT<TestSubObject> typedAssetReference = new AssetReferenceT<TestSubObject>("badguid");
-            typedAssetReference.SetEditorAsset(subSO);
-            Assert.AreEqual(subSO, typedAssetReference.editorAsset, "When using a typed asset reference, the editor asset should be set to the requested object even if its a subobject.");
-            AssetReference typedAssetReference2 = new AssetReferenceT<TestSubObject>("badguid");
-            typedAssetReference2.SetEditorAsset(subSO);
-            Assert.AreEqual(subSO, typedAssetReference2.editorAsset, "When using a typed asset reference, the editor asset should be set to the requested object even if its a subobject.");
+            AssetReferenceT<TestEditorSubObject> typedAssetReference = new AssetReferenceT<TestEditorSubObject>("badguid");
+            typedAssetReference.SetEditorAsset(_editorSubSo);
+            Assert.AreEqual(_editorSubSo, typedAssetReference.editorAsset, "When using a typed asset reference, the editor asset should be set to the requested object even if its a subobject.");
+            AssetReference typedAssetReference2 = new AssetReferenceT<TestEditorSubObject>("badguid");
+            typedAssetReference2.SetEditorAsset(_editorSubSo);
+            Assert.AreEqual(_editorSubSo, typedAssetReference2.editorAsset, "When using a typed asset reference, the editor asset should be set to the requested object even if its a subobject.");
         }
 
         [Test]
         public void AssetReference_SetEditorAsset_ReturnsNullIfObjectTypeIsIncorrect()
         {
             AssetReferenceT<Sprite> incorrectlyTypedAssetReference = new AssetReferenceT<Sprite>("badguid");
-            incorrectlyTypedAssetReference.SetEditorAsset(subSO);
+            incorrectlyTypedAssetReference.SetEditorAsset(_editorSubSo);
             Assert.IsNull(incorrectlyTypedAssetReference.editorAsset, "Attempting to set an editor asset of an incorrect type should return null.");
         }
 
         [Test]
         public void AssetReference_SetEditorAsset_ReturnsCorrectObjectIfMultipleOfSameTypeExist()
         {
-            AssetReferenceT<TestSubObject> typedAssetReference = new AssetReferenceT<TestSubObject>("badguid");
-            typedAssetReference.SetEditorAsset(subSO2);
-            Assert.AreEqual(subSO2, typedAssetReference.editorAsset, "When using a typed asset reference, the editor asset should be set to the requested object even if its a subobject.");
-            Assert.AreNotEqual(subSO, typedAssetReference.editorAsset,
+            AssetReferenceT<TestEditorSubObject> typedAssetReference = new AssetReferenceT<TestEditorSubObject>("badguid");
+            typedAssetReference.SetEditorAsset(_editorSubSo2);
+            Assert.AreEqual(_editorSubSo2, typedAssetReference.editorAsset, "When using a typed asset reference, the editor asset should be set to the requested object even if its a subobject.");
+            Assert.AreNotEqual(_editorSubSo, typedAssetReference.editorAsset,
                 "When using a typed asset reference, the editor asset should be set to specifically the requested object, not just an object with the same type and guid.");
         }
 
@@ -201,18 +202,18 @@ namespace UnityEditor.AddressableAssets.Tests
         public void AssetReferenceEditorAssetForSubObject_DifferentType()
         {
             var guid = AssetDatabase.AssetPathToGUID(m_ScriptableObjectPath);
-            AssetReferenceT<TestSubObject> typeReference = new AssetReferenceT<TestSubObject>(guid);
+            AssetReferenceT<TestEditorSubObject> typeReference = new AssetReferenceT<TestEditorSubObject>(guid);
             typeReference.SubObjectName = "sub";
 
             //Test
-            Assert.AreEqual(typeReference.editorAsset, AssetDatabase.LoadAssetAtPath<TestSubObject>(m_ScriptableObjectPath),
+            Assert.AreEqual(typeReference.editorAsset, AssetDatabase.LoadAssetAtPath<TestEditorSubObject>(m_ScriptableObjectPath),
                 "AssetReference with explicit type should get first instance of that type at that guid.");
             AssetReference asBase = typeReference;
             Assert.IsNotNull(asBase.editorAsset);
-            Assert.AreEqual(asBase.editorAsset, AssetDatabase.LoadAssetAtPath<TestSubObject>(m_ScriptableObjectPath),
+            Assert.AreEqual(asBase.editorAsset, AssetDatabase.LoadAssetAtPath<TestEditorSubObject>(m_ScriptableObjectPath),
                 "AssetReference with explicit type declared under generic AssetReference should still get the first instance of the specific type at the guid.");
             AssetReference baseReference = new AssetReference(guid);
-            Assert.AreEqual(baseReference.editorAsset, AssetDatabase.LoadAssetAtPath<TestObject>(m_ScriptableObjectPath), "Generic AssetReference should get the asset of the main type at the guid.");
+            Assert.AreEqual(baseReference.editorAsset, AssetDatabase.LoadAssetAtPath<TestEditorObject>(m_ScriptableObjectPath), "Generic AssetReference should get the asset of the main type at the guid.");
         }
 
         [Test]
@@ -228,7 +229,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsNull(asBase.editorAsset,
                 "Attempting to get an object type not located at a guid should return a null value even if the method of the generic AssetReference class is being called.");
             AssetReference baseReference = new AssetReference(guid);
-            Assert.AreEqual(baseReference.editorAsset, AssetDatabase.LoadAssetAtPath<TestObject>(m_ScriptableObjectPath), "Generic AssetReference should get the asset of the main type at the guid.");
+            Assert.AreEqual(baseReference.editorAsset, AssetDatabase.LoadAssetAtPath<TestEditorObject>(m_ScriptableObjectPath), "Generic AssetReference should get the asset of the main type at the guid.");
         }
 
         [Test]
@@ -256,10 +257,10 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void AssetReference_SetEditorAsset_AcceptsDerivedType()
         {
-            AssetReferenceT<TestObject> baseTypeReference = new AssetReferenceT<TestObject>("badguid");
-            baseTypeReference.SetEditorAsset(inheritedSO);
+            AssetReferenceT<TestEditorObject> baseTypeReference = new AssetReferenceT<TestEditorObject>("badguid");
+            baseTypeReference.SetEditorAsset(_inheritedTestEditorSo);
             Assert.NotNull(baseTypeReference.editorAsset, "AssetReferenceT should accept assets of derived types.");
-            Assert.AreEqual(inheritedSO, baseTypeReference.editorAsset, "AssetReferenceT should correctly store a derived type asset.");
+            Assert.AreEqual(_inheritedTestEditorSo, baseTypeReference.editorAsset, "AssetReferenceT should correctly store a derived type asset.");
         }
 
         [Test]
@@ -290,6 +291,27 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual(expected, val, "Type restricted is expected in display string shown");
             val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(List<AssetReferenceGameObject>));
             Assert.AreEqual(expected, val, "Type restricted is expected in display string shown");
+
+            expected = "None (Addressable Sprite)";
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(AssetReferenceSprite));
+            Assert.AreEqual(expected, val, "Sprite type is expected in display string shown");
+
+            expected = "None (Addressable Sprite Atlas)";
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(AssetReferenceAtlasedSprite));
+            Assert.AreEqual(expected, val, "Sprite Atlas is expected in display string shown");
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(AssetReferenceAtlasedSprite[]));
+            Assert.AreEqual(expected, val, "Sprite Atlas is expected in display string shown");
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(List<AssetReferenceAtlasedSprite>));
+            Assert.AreEqual(expected, val, "Sprite Atlas is expected in display string shown");
+            val = AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(SubclassedAtlasedSpriteReference));
+            Assert.AreEqual(expected, val, "Sprite Atlas is expected in display string shown for custom subclasses");
+        }
+
+        class SubclassedAtlasedSpriteReference : AssetReferenceAtlasedSprite
+        {
+            public SubclassedAtlasedSpriteReference(string guid) : base(guid)
+            {
+            }
         }
 
 #if UNITY_EDITOR

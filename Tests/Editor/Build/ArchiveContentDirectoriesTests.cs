@@ -502,7 +502,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             var log = new BuildLog();
             ContentDirectorySchemaBuilder.ContentDirectoryArchiver.ArchiveAndUpdateRegistry(
-                m_TestDir, 4096L * 1024 * 1024, filePaths, registry, log);
+                m_TestDir, 4096L * 1024 * 1024, filePaths, registry, ContentDirectoryArchiveMode.Lz4, log);
 
             string tep = log.FormatForTraceEventProfiler();
             int traceEventsPos = tep.IndexOf("traceEvents", System.StringComparison.Ordinal);

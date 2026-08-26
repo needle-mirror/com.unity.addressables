@@ -1,13 +1,9 @@
 using System.Collections.Generic;
-using System.IO;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
-using UnityEditor.AddressableAssets.Build.DataBuilders;
-using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.AddressableAssets.Tests.Runtime.TestObjects;
 using UnityEditor.SceneManagement;
-using UnityEditor.VersionControl;
 using UnityEngine;
-using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.SceneManagement;
 
 namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
