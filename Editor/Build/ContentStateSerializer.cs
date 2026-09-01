@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
@@ -25,14 +24,8 @@ namespace UnityEditor.AddressableAssets.Build
                 {
                     var settings = new DataContractSerializerSettings
                     {
-                        KnownTypes = new[]
-                        {
-                            typeof(AssetBundleRequestOptions),
-                            typeof(SerializableGUID),
-                            typeof(SerializableHash128)
-                        },
-                        PreserveObjectReferences = true,
-                        DataContractSurrogate = new ContentStateSurrogate()
+                        KnownTypes = new[] { typeof(AssetBundleRequestOptions) },
+                        PreserveObjectReferences = true
                     };
                     s_Serializer = new DataContractSerializer(typeof(AddressablesContentState), settings);
                 }
@@ -145,12 +138,7 @@ namespace UnityEditor.AddressableAssets.Build
 
             var jsonSettings = new DataContractJsonSerializerSettings
             {
-                KnownTypes = new[]
-                {
-                    typeof(AssetBundleRequestOptions),
-                    typeof(SerializableGUID),
-                    typeof(SerializableHash128)
-                },
+                KnownTypes = new[] { typeof(AssetBundleRequestOptions) },
                 UseSimpleDictionaryFormat = true
             };
             var jsonSerializer = new DataContractJsonSerializer(typeof(AddressablesContentState), jsonSettings);
@@ -234,64 +222,5 @@ namespace UnityEditor.AddressableAssets.Build
 
         public static implicit operator SerializableHash128(Hash128 hash) => new SerializableHash128(hash);
         public static implicit operator Hash128(SerializableHash128 serializable) => serializable.ToHash128();
-    }
-
-    /// <summary>
-    /// Data contract surrogate to handle Unity types during serialization.
-    /// </summary>
-    internal class ContentStateSurrogate : IDataContractSurrogate
-    {
-        public Type GetDataContractType(Type type)
-        {
-            if (type == typeof(GUID))
-                return typeof(SerializableGUID);
-            if (type == typeof(Hash128))
-                return typeof(SerializableHash128);
-            return type;
-        }
-
-        public object GetDeserializedObject(object obj, Type targetType)
-        {
-            if (targetType == typeof(GUID) && obj is SerializableGUID serializableGuid)
-                return serializableGuid.ToGUID();
-            if (targetType == typeof(Hash128) && obj is SerializableHash128 serializableHash)
-                return serializableHash.ToHash128();
-            return obj;
-        }
-
-        public object GetObjectToSerialize(object obj, Type targetType)
-        {
-            if (obj is GUID guid)
-                return new SerializableGUID(guid);
-            if (obj is Hash128 hash)
-                return new SerializableHash128(hash);
-            return obj;
-        }
-
-        public object GetCustomDataToExport(System.Reflection.MemberInfo memberInfo, Type dataContractType)
-        {
-            return null;
-        }
-
-        public object GetCustomDataToExport(Type clrType, Type dataContractType)
-        {
-            return null;
-        }
-
-        public void GetKnownCustomDataTypes(System.Collections.ObjectModel.Collection<Type> customDataTypes)
-        {
-        }
-
-        public Type GetReferencedTypeOnImport(string typeName, string typeNamespace, object customData)
-        {
-            return null;
-        }
-
-        public System.CodeDom.CodeTypeDeclaration ProcessImportedType(
-            System.CodeDom.CodeTypeDeclaration typeDeclaration,
-            System.CodeDom.CodeCompileUnit compileUnit)
-        {
-            return typeDeclaration;
-        }
     }
 }

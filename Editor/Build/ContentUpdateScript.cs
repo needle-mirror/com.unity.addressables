@@ -71,14 +71,30 @@ namespace UnityEditor.AddressableAssets.Build
         /// <summary>
         /// Asset states GUID.
         /// </summary>
-        [DataMember]
         public GUID guid;
 
         /// <summary>
         /// Asset State hash.
         /// </summary>
-        [DataMember]
         public Hash128 hash;
+
+        // GUID and Hash128 expose nothing the serializer can see, so they are persisted through the
+        // string wrappers below.  These are declared here rather than supplied by an
+        // IDataContractSurrogate because that interface does not exist when a project's API
+        // Compatibility Level is .NET Standard.
+        [DataMember(Name = "guid")]
+        private SerializableGUID SerializedGuid
+        {
+            get => new SerializableGUID(guid);
+            set => guid = value.ToGUID();
+        }
+
+        [DataMember(Name = "hash")]
+        private SerializableHash128 SerializedHash
+        {
+            get => new SerializableHash128(hash);
+            set => hash = value.ToHash128();
+        }
 
         /// <summary>
         /// Check if one asset state is equal to another.
@@ -219,8 +235,34 @@ namespace UnityEditor.AddressableAssets.Build
         /// </summary>
         [OptionalField]
         [SerializeField]
-        [DataMember]
         public Hash128[] typeTreeHashes;
+
+        [DataMember(Name = "typeTreeHashes")]
+        private SerializableHash128[] SerializedTypeTreeHashes
+        {
+            get
+            {
+                if (typeTreeHashes == null)
+                    return null;
+
+                var hashes = new SerializableHash128[typeTreeHashes.Length];
+                for (int i = 0; i < hashes.Length; i++)
+                    hashes[i] = new SerializableHash128(typeTreeHashes[i]);
+                return hashes;
+            }
+            set
+            {
+                if (value == null)
+                {
+                    typeTreeHashes = null;
+                    return;
+                }
+
+                typeTreeHashes = new Hash128[value.Length];
+                for (int i = 0; i < value.Length; i++)
+                    typeTreeHashes[i] = value[i].ToHash128();
+            }
+        }
 #endif
     }
 

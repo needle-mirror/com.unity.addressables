@@ -154,6 +154,91 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void Serialize_Deserialize_RoundTrip_PreservesAssetStateGuidAndHash()
+        {
+            // Arrange
+            var guid = new GUID("0123456789abcdef0123456789abcdef");
+            var hash = Hash128.Parse("fedcba9876543210fedcba9876543210");
+            var dependencyGuid = new GUID("abcdefabcdefabcdefabcdefabcdefab");
+            var dependencyHash = Hash128.Parse("11112222333344445555666677778888");
+
+            var original = CreateSampleContentState();
+            original.cachedInfos[0].asset = new AssetState { guid = guid, hash = hash };
+            original.cachedInfos[0].dependencies = new[]
+            {
+                new AssetState { guid = dependencyGuid, hash = dependencyHash }
+            };
+            var path = Path.Combine(m_TempDir, "roundtrip_guid_hash.bin");
+
+            // Act
+            ContentStateSerializer.Serialize(original, path);
+            var result = ContentStateSerializer.Deserialize(path);
+
+            // Assert
+            Assert.AreEqual(guid, result.cachedInfos[0].asset.guid);
+            Assert.AreEqual(hash, result.cachedInfos[0].asset.hash);
+            Assert.AreEqual(1, result.cachedInfos[0].dependencies.Length);
+            Assert.AreEqual(dependencyGuid, result.cachedInfos[0].dependencies[0].guid);
+            Assert.AreEqual(dependencyHash, result.cachedInfos[0].dependencies[0].hash);
+        }
+
+        [Test]
+        public void Serialize_Deserialize_RoundTrip_PreservesDefaultAssetStateGuidAndHash()
+        {
+            // Arrange
+            var original = CreateSampleContentState();
+            original.cachedInfos[0].asset = new AssetState();
+            var path = Path.Combine(m_TempDir, "roundtrip_default_guid_hash.bin");
+
+            // Act
+            ContentStateSerializer.Serialize(original, path);
+            var result = ContentStateSerializer.Deserialize(path);
+
+            // Assert
+            Assert.AreEqual(new GUID(), result.cachedInfos[0].asset.guid);
+            Assert.AreEqual(new Hash128(), result.cachedInfos[0].asset.hash);
+        }
+
+#if UNITY_6000_5_OR_NEWER
+        [Test]
+        public void Serialize_Deserialize_RoundTrip_PreservesTypeTreeHashes()
+        {
+            // Arrange
+            var original = CreateSampleContentState();
+            original.typeTreeHashes = new[]
+            {
+                Hash128.Parse("00112233445566778899aabbccddeeff"),
+                Hash128.Parse("ffeeddccbbaa99887766554433221100")
+            };
+            var path = Path.Combine(m_TempDir, "roundtrip_type_tree_hashes.bin");
+
+            // Act
+            ContentStateSerializer.Serialize(original, path);
+            var result = ContentStateSerializer.Deserialize(path);
+
+            // Assert
+            Assert.IsNotNull(result.typeTreeHashes);
+            Assert.AreEqual(original.typeTreeHashes, result.typeTreeHashes);
+        }
+
+        [Test]
+        public void Serialize_Deserialize_RoundTrip_WithNullTypeTreeHashes_Succeeds()
+        {
+            // Arrange
+            var original = CreateSampleContentState();
+            original.typeTreeHashes = null;
+            var path = Path.Combine(m_TempDir, "roundtrip_null_type_tree_hashes.bin");
+
+            // Act
+            ContentStateSerializer.Serialize(original, path);
+            var result = ContentStateSerializer.Deserialize(path);
+
+            // Assert
+            Assert.IsNull(result.typeTreeHashes);
+        }
+#endif
+
+        [Test]
         public void Serialize_WithEmptyArrays_Succeeds()
         {
             // Arrange
