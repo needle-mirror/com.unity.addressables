@@ -108,6 +108,39 @@ namespace UnityEditor.AddressableAssets.GUI
             m_CachedSessionStates.Add(stateKey, foldoutState);
         }
 
+        /// <summary>
+        /// Draws a toggle that writes through a property setter rather than the serialized field.
+        /// </summary>
+        /// <param name="so">The serialized object owning the property, used to record the undo step.</param>
+        /// <param name="label">The label and tooltip to draw.</param>
+        /// <param name="propertyName">The property name, used to name the undo step.</param>
+        /// <param name="currentValue">The value to draw.</param>
+        /// <param name="applyValue">Called with the new value when the user changes the toggle.</param>
+        internal static void SetterBackedToggle(SerializedObject so, GUIContent label, string propertyName,
+            bool currentValue, Action<bool> applyValue)
+        {
+            if (!DrawToggle(label, currentValue, out bool newValue))
+                return;
+
+            Undo.RecordObject(so.targetObject, so.targetObject.name + propertyName);
+            applyValue(newValue);
+        }
+
+        /// <summary>
+        /// Draws a toggle and reports whether the user changed it. The caller decides
+        /// when to apply the value, so nothing is written during the GUI pass.
+        /// </summary>
+        /// <param name="label">The label and tooltip to draw.</param>
+        /// <param name="currentValue">The value to draw.</param>
+        /// <param name="newValue">The value the control now shows.</param>
+        /// <returns>True when the user changed the toggle.</returns>
+        internal static bool DrawToggle(GUIContent label, bool currentValue, out bool newValue)
+        {
+            EditorGUI.BeginChangeCheck();
+            newValue = EditorGUILayout.Toggle(label, currentValue);
+            return EditorGUI.EndChangeCheck();
+        }
+
         internal static float HeaderHeight = 20f;
 
         internal static void DrawDivider()

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using UnityEngine;
@@ -259,14 +260,59 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 #endif
         }
 
-        static readonly GUIContent k_IncludeLabelsInCatalogContent = new GUIContent("Include Labels in Catalog",
-            "If disabled, labels from this group will not be included in the catalog.  This is useful for reducing the size of the catalog if labels are not needed.");
+        internal const string k_AdvancedOptionsFoldoutKey = "Addressables.ContentDirectoryGroup.AdvancedOptions";
 
-        static readonly GUIContent k_IncludeFolderKeysInCatalogContent = new GUIContent("Include Folder Keys in Catalog",
-            "If enabled, each addressable folder's address is included as a shared key on every asset in that folder, so the folder's address can be used to load every asset inside it in one call.  If disabled, this is useful for reducing the size of the catalog if whole-folder loading is not needed.");
+        // SessionState backed, so the open or closed state survives a domain reload.
+        static FoldoutSessionStateValue s_AdvancedOptionsFoldout = new FoldoutSessionStateValue(k_AdvancedOptionsFoldoutKey);
 
-        static readonly GUIContent k_IncludeAddressesForFolderChildrenContent = new GUIContent("Include Individual Addresses for Folder Assets",
-            "If disabled, assets inside an addressable folder will not have their own individual address included in the catalog -- only the folder's shared key will be included.  GUIDs are unaffected.  Disable this if you always load these assets via the folder to reduce the size of the catalog.");
+        static readonly GUIContent k_AdvancedOptionsContent = new GUIContent("Advanced Options");
+
+        internal const string k_IncludedInCatalogFoldoutKey = "Addressables.ContentDirectoryGroup.IncludedInCatalog";
+
+        static FoldoutSessionStateValue s_IncludedInCatalogFoldout = new FoldoutSessionStateValue(k_IncludedInCatalogFoldoutKey);
+
+        static readonly GUIContent k_IncludedInCatalogContent = new GUIContent("Included in Catalog");
+
+        // Tests save and restore the foldouts through these. Going via IsActive keeps
+        // the cached value in step with SessionState; writing SessionState alone does not.
+        internal static bool AdvancedOptionsFoldoutActive
+        {
+            get => s_AdvancedOptionsFoldout.IsActive;
+            set => s_AdvancedOptionsFoldout.IsActive = value;
+        }
+
+        internal static bool IncludedInCatalogFoldoutActive
+        {
+            get => s_IncludedInCatalogFoldout.IsActive;
+            set => s_IncludedInCatalogFoldout.IsActive = value;
+        }
+
+        internal static readonly GUIContent k_IncludeLabelsInCatalogContent = new GUIContent("Labels",
+            "Includes this group's labels in the catalog. Disable to reduce catalog size if labels are not needed.");
+
+        internal static readonly GUIContent k_IncludeFolderKeysInCatalogContent = new GUIContent("Folder Key",
+            "Adds each folder's address as a shared key on its assets, so you can load the whole folder in one call. Disabling reduces the catalog size if whole folder loading is not required.");
+
+        internal static readonly GUIContent k_IncludeAddressesForFolderChildrenContent = new GUIContent("Individual Asset Addresses",
+            "Includes each asset's own address in the catalog, in addition to its folder's shared key. Disable if assets are always loaded via their folder to reduce catalog size. GUIDs are unaffected.");
+
+        // Which catalog toggles the user changed in one GUI pass.
+        [Flags]
+        internal enum CatalogToggles
+        {
+            None = 0,
+            Labels = 1 << 0,
+            FolderKeys = 1 << 1,
+            AddressesForFolderChildren = 1 << 2
+        }
+
+        // The catalog toggle values as drawn in one GUI pass.
+        internal struct CatalogToggleValues
+        {
+            public bool IncludeLabels;
+            public bool IncludeFolderKeys;
+            public bool IncludeAddressesForFolderChildren;
+        }
 
         // Overriding the OnGUI here prevents the Include in Build setting from being shown twice
         // Currently the GUI for it is created in AssetInspectorGUI.DrawIncludeInBuildToggle
@@ -277,16 +323,72 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             BuildAndLoadPathUIHelper.DrawPathPair(this, SchemaSerializedObject,
                 ref m_BuildPath, ref m_LoadPath, ref m_UseCustomPaths, ref m_ShowPaths,
                 ref m_SelectedPathPairIndex);
-            EditorGUILayout.PropertyField(SchemaSerializedObject.FindProperty(nameof(m_IncludeLabelsInCatalog)), k_IncludeLabelsInCatalogContent, true);
-            EditorGUILayout.PropertyField(SchemaSerializedObject.FindProperty(nameof(m_IncludeFolderKeysInCatalog)), k_IncludeFolderKeysInCatalogContent, true);
-            if (m_IncludeFolderKeysInCatalog)
-            {
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(SchemaSerializedObject.FindProperty(nameof(m_IncludeAddressesForFolderChildren)), k_IncludeAddressesForFolderChildrenContent, true);
-                EditorGUI.indentLevel--;
-            }
+            var changedToggles = CatalogToggles.None;
+            CatalogToggleValues toggleValues = default;
+            if (BeginAdvancedOptions())
+                changedToggles = ShowCatalogToggles(out toggleValues);
+
+            // Flush the drawn properties before any setter replaces the cached object.
             SchemaSerializedObject.ApplyModifiedProperties();
+
+            if (changedToggles != CatalogToggles.None)
+            {
+                Undo.RecordObject(this, name + "CatalogToggles");
+                SetCatalogToggleOptions(this, changedToggles, toggleValues);
+            }
             EditorGUI.EndDisabledGroup();
+        }
+
+        /// <inheritdoc/>
+        public override void ShowAllProperties()
+        {
+            m_ShowPaths = true;
+            s_AdvancedOptionsFoldout.IsActive = true;
+            s_IncludedInCatalogFoldout.IsActive = true;
+        }
+
+        bool BeginAdvancedOptions()
+        {
+            s_AdvancedOptionsFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(
+                s_AdvancedOptionsFoldout.IsActive, k_AdvancedOptionsContent,
+                () => Application.OpenURL(AddressableAssetUtility.GenerateDocsURL(
+                    "group-inspector-settings-reference.html#content-directory-advanced-options")),
+                10);
+            return s_AdvancedOptionsFoldout.IsActive;
+        }
+
+        // Shared by OnGUI and OnGUIMultiple.
+        CatalogToggles ShowCatalogToggles(out CatalogToggleValues values)
+        {
+            values = new CatalogToggleValues
+            {
+                IncludeLabels = IncludeLabelsInCatalog,
+                IncludeFolderKeys = IncludeFolderKeysInCatalog,
+                IncludeAddressesForFolderChildren = IncludeAddressesForFolderChildren
+            };
+
+            var changed = CatalogToggles.None;
+            EditorGUI.indentLevel++;
+            s_IncludedInCatalogFoldout.IsActive = EditorGUILayout.Foldout(s_IncludedInCatalogFoldout.IsActive, k_IncludedInCatalogContent, true);
+            if (s_IncludedInCatalogFoldout.IsActive)
+            {
+                if (AddressablesGUIUtility.DrawToggle(k_IncludeLabelsInCatalogContent, values.IncludeLabels, out values.IncludeLabels))
+                    changed |= CatalogToggles.Labels;
+                if (AddressablesGUIUtility.DrawToggle(k_IncludeFolderKeysInCatalogContent, values.IncludeFolderKeys, out values.IncludeFolderKeys))
+                    changed |= CatalogToggles.FolderKeys;
+
+                // Gate on the drawn value, not the field, which stays stale until the caller applies.
+                if (values.IncludeFolderKeys)
+                {
+                    EditorGUI.indentLevel++;
+                    if (AddressablesGUIUtility.DrawToggle(k_IncludeAddressesForFolderChildrenContent,
+                            values.IncludeAddressesForFolderChildren, out values.IncludeAddressesForFolderChildren))
+                        changed |= CatalogToggles.AddressesForFolderChildren;
+                    EditorGUI.indentLevel--;
+                }
+            }
+            EditorGUI.indentLevel--;
+            return changed;
         }
 
         /// <inheritdoc/>
@@ -305,34 +407,30 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                     ref m_BuildPath, ref m_LoadPath, ref m_UseCustomPaths, ref m_ShowPaths,
                     ref m_SelectedPathPairIndex);
 
-                EditorGUI.BeginChangeCheck();
-                EditorGUILayout.PropertyField(SchemaSerializedObject.FindProperty(nameof(m_IncludeLabelsInCatalog)), k_IncludeLabelsInCatalogContent, true);
-                EditorGUILayout.PropertyField(SchemaSerializedObject.FindProperty(nameof(m_IncludeFolderKeysInCatalog)), k_IncludeFolderKeysInCatalogContent, true);
-                if (m_IncludeFolderKeysInCatalog)
-                {
-                    EditorGUI.indentLevel++;
-                    EditorGUILayout.PropertyField(SchemaSerializedObject.FindProperty(nameof(m_IncludeAddressesForFolderChildren)), k_IncludeAddressesForFolderChildrenContent, true);
-                    EditorGUI.indentLevel--;
-                }
-                bool catalogTogglesModified = EditorGUI.EndChangeCheck();
+                var changedToggles = CatalogToggles.None;
+                CatalogToggleValues toggleValues = default;
+                if (BeginAdvancedOptions())
+                    changedToggles = ShowCatalogToggles(out toggleValues);
 
-                // Apply pending SerializedProperty edits to this schema's own fields before they
-                // are read (by SetCatalogToggleOptions) to propagate to the other selected schemas.
-                if (catalogTogglesModified)
-                    SchemaSerializedObject.ApplyModifiedProperties();
-
-                if (pathPairModified || catalogTogglesModified)
+                if (pathPairModified || changedToggles != CatalogToggles.None)
                 {
                     Undo.SetCurrentGroupName("ContentDirectoryGroupSchemas BuildAndLoad Undos");
+
+                    // Flush the path edits while the cached object is still the one they were
+                    // drawn against, and before any setter replaces it. SetPathPairOption also
+                    // reads this schema's path fields, so they have to be written by now.
+                    SchemaSerializedObject.ApplyModifiedProperties();
+
+                    Undo.RecordObject(this, "ContentDirectoryGroupSchema BuildAndLoad" + name);
+                    SetCatalogToggleOptions(this, changedToggles, toggleValues);
+
                     foreach (var schema in otherContentDirectorySchemas)
                     {
                         Undo.RecordObject(schema, "ContentDirectoryGroupSchema BuildAndLoad" + schema.name);
                         if (pathPairModified)
                             SetPathPairOption(this, schema);
-                        if (catalogTogglesModified)
-                            SetCatalogToggleOptions(this, schema);
+                        SetCatalogToggleOptions(schema, changedToggles, toggleValues);
                     }
-                    SchemaSerializedObject.ApplyModifiedProperties();
                     Undo.CollapseUndoOperations(Undo.GetCurrentGroup());
                 }
             }
@@ -356,18 +454,17 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         }
 
 
-        void SetCatalogToggleOptions(ContentDirectoryGroupSchema src, ContentDirectoryGroupSchema dst)
+        internal static void SetCatalogToggleOptions(ContentDirectoryGroupSchema schema,
+            CatalogToggles toggles, CatalogToggleValues values)
         {
-            if (dst.m_IncludeLabelsInCatalog != src.m_IncludeLabelsInCatalog)
-                dst.m_IncludeLabelsInCatalog = src.m_IncludeLabelsInCatalog;
+            if ((toggles & CatalogToggles.Labels) != 0)
+                schema.IncludeLabelsInCatalog = values.IncludeLabels;
 
-            if (dst.m_IncludeFolderKeysInCatalog != src.m_IncludeFolderKeysInCatalog)
-                dst.m_IncludeFolderKeysInCatalog = src.m_IncludeFolderKeysInCatalog;
+            if ((toggles & CatalogToggles.FolderKeys) != 0)
+                schema.IncludeFolderKeysInCatalog = values.IncludeFolderKeys;
 
-            if (dst.m_IncludeAddressesForFolderChildren != src.m_IncludeAddressesForFolderChildren)
-                dst.m_IncludeAddressesForFolderChildren = src.m_IncludeAddressesForFolderChildren;
-
-            dst.SetDirty(true);
+            if ((toggles & CatalogToggles.AddressesForFolderChildren) != 0)
+                schema.IncludeAddressesForFolderChildren = values.IncludeAddressesForFolderChildren;
         }
 
         internal int DetermineSelectedIndex(List<ProfileGroupType> groupTypes, int defaultValue, AddressableAssetSettings addressableAssetSettings, HashSet<string> vars)

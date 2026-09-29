@@ -30,7 +30,7 @@ Previously, if you had assets in a folder named `Resources/MyPrefabs/`, you coul
 1. Rename or move the `Resources/MyPrefabs` folder out of any `Resources` folder (Addressables ignores assets that remain under a `Resources` folder path) &mdash; for example to `Assets/MyPrefabs`.
 2. In the Project window enable the __Addressable__ checkbox on the folder itself (not each file individually). This makes every asset under the folder Addressable, addressed as `<folder address>/<relative path>`.
 3. Update any keys used for loading. If you move Resources/MyPrefabs/ into Assets, you'll need to change the loading key to Assets/MyPrefabs. It should exeactly match what is listed in the Addressables Group window.
-3. Confirm __Include Folder Keys in Catalog__ is enabled on the group's [Content Packing & Loading schema](ContentPackingAndLoadingSchema.md) (enabled by default). This makes the folder's own address load every asset inside it.
+3. Confirm __Folder Key__ is enabled on the group's [Content Packing & Loading schema](ContentPackingAndLoadingSchema.md) (enabled by default). This makes the folder's own address load every asset inside it.
 4. Replace the load call:
 
    ```csharp

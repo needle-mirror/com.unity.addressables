@@ -12,13 +12,13 @@ When you select an [Addressable group](groups-create.md), you can control its se
 
 To add schemas to an Addressable Asset Group, select the **Add Schema** button. You can choose from the following:
 
-* __Content Directory__: Defines the settings for building and loading Addressable assets using the content directory system. Select this option for new projects with assets that you plan on distributing locally.
+* [__Content Directory__](#content-directory-schema): Defines the settings for building and loading Addressable assets using the content directory system. Select this option for new projects with assets that you plan on distributing locally.
 * [__Content Packing & Loading__](#content-packing--loading-schema): Defines the settings for building and loading Addressable assets using the AssetBundle system. Select this option if you're using an older project that uses AssetBundles, or you want to distribute assets remotely.
 * [__Content Update Restrictions__](#content-update-restriction): Defines settings for making differential updates of an earlier build.
 
 ## Build & Load Paths
 
-Both the __Content Directory__ and __Content Packing & Loading__ schemas contain the same **Build & Load Paths** section. This is the only entry in the __Content Directory__ schema.
+Both the __Content Directory__ and __Content Packing & Loading__ schemas contain the same **Build & Load Paths** section, followed by their own **Advanced Options** foldout.
 
 >[!IMPORTANT]
 >While the __Content Directory__ schema has a __RemoteBuildPath__ option, content directories don't support remote content delivery yet. Use the __Content Packing & Loading__ schema to build remote AssetBundles instead.
@@ -34,6 +34,20 @@ When you choose a Profile variable, a preview of the path is displayed in the __
 
 > [!WARNING]
 > If you change the local build or load paths from their default values, you must copy the local build artifacts from your custom build location to the project's `StreamingAssets` folder before making a Player build. Changing these paths also prevents building your Addressables as part of the Player build.
+
+## Content Directory schema
+
+Defines the settings for building and loading Addressable assets using the content directory system.
+
+### Content Directory Advanced Options
+
+The __Included in Catalog__ group controls which keys this group contributes to the content catalog. By default all keys are included. Every key type you leave out makes the catalog smaller.
+
+| **Property**| **Description** |
+|:---|---|
+|__Labels__|Include label strings in the catalog. If you don't use labels to load assets, you can disable this property to decrease the size of the catalog. |
+|__Folder Key__|Include the address of each Addressable folder as a shared key on every asset inside it. Enable this to load every asset in an Addressable folder with one call, for example `Addressables.LoadAssetsAsync<GameObject>(folderAddress, ...)`, similar to `Resources.LoadAll`. If you don't need to load a whole folder at once, you can disable this property to decrease the size of the catalog.|
+|__Individual Asset Addresses__|Only displayed when __Folder Key__ is enabled. Include each asset's own address in the catalog, alongside its folder's shared key. If you disable it, only the folder's shared key is included. GUIDs are unaffected, so an [`AssetReference`](xref:addressables-asset-references) into a folder asset keeps working. Disable this if you always load these assets through the folder and never reference an individual asset by its own address, to further decrease the size of the catalog.|
 
 ## Content Packing & Loading schema
 
@@ -51,12 +65,19 @@ Defines the settings for building and loading Addressable assets using the Asset
 | __Cache Probe Mode__| Set how Addressables checks whether an AssetBundle version is already in the local cache: <ul><li>__Cached Versions (Fast)__: Works out the cached versions from the cache directory names and reads no files. This is the default. A damaged cache entry can report as present, so rely on __Asset Bundle CRC__ to catch it.</li><li>__Version Marker File (Strict)__: Reads each cache entry's marker file, so a damaged entry reports as missing and is downloaded again. This costs roughly a millisecond per cached AssetBundle, so asking about thousands of them takes seconds.</li></ul> Choose __Version Marker File__ when the group has CRC checks turned off for cached AssetBundles and you still need a damaged entry to be re-downloaded.|
 | __Bundle Naming Mode__| Set how to construct the file names of AssetBundles:<ul><li>__Filename__: Leave the file name unchanged.</li><li>__Append Hash to Filename__: Append the AssetBundle content hash to the file name. (default)</li><li>__Use Hash of AssetBundle__: Replace the file name with the AssetBundle hash.</li><li> __Use Hash of Filename__: Replace the file name with a hash of the file name.</li></ul>|
 |__Strip Bundle Download Options__|Strips unused AssetBundle download data from the catalog to reduce its size. Only enable this for local groups. It applies only to binary catalogs, and is unavailable if [__Use UnityWebRequest for Local Asset Bundles__](AddressableAssetSettings.md#downloads) is enabled.|
-|__Include Addresses in Catalog__|Include the address strings in the catalog. If you don't use address strings to load assets in the group, you can disable this property to decrease the size of the catalog.|
-|__Include GUIDs in Catalog__|Include GUID strings in the catalog. You must include GUID strings to access an asset with an [`AssetReference`](xref:addressables-asset-references). If you don't use `AssetReference` or GUID strings to load assets, you can disable this property to decrease the size of the catalog.|
-|__Include Labels in Catalog__|Include label strings in the catalog. If you don't use labels to load assets, you can disable this property to decrease the size of the catalog. |
-|__Include Folder Keys in Catalog__|Include the address of each addressable folder as a shared key on every asset inside it. Enable this to load every asset in an addressable folder with one call, for example `Addressables.LoadAssetsAsync<GameObject>(folderAddress, ...)`, similar to `Resources.LoadAll`. If you don't need to load a whole folder at once, you can disable this property to decrease the size of the catalog.|
-|__Exclude Individual Addresses for Folder Assets__|Only shown when __Include Folder Keys in Catalog__ is enabled. If enabled, assets inside an addressable folder don't get their own individual address added to the catalog &mdash; only the folder's shared key is added. GUIDs are unaffected, so [`AssetReference`](xref:addressables-asset-references) into folder assets keeps working. Use this if you always load these assets via the folder and never reference an individual asset by its own full address, to further decrease the size of the catalog.|
-| __Bundle Mode__| Select how to pack the assets in this group into AssetBundles:<ul><li>__Pack Together__: Create a single AssetBundle containing all assets.</li><li>__Pack Separately__: Create an AssetBundle for each primary asset in the group. Subassets, such as sprites in a sprite sheet are packed together. Assets within a folder added to the group are also packed together.</li><li>__Pack Together by Label__: Create an AssetBundle for assets sharing the same combination of labels.</li></ul>|
+| __Bundle Packing Mode__| Select how to pack the assets in this group into AssetBundles:<ul><li>__Pack Together__: Create a single AssetBundle containing all assets.</li><li>__Pack Separately__: Create an AssetBundle for each primary asset in the group. Subassets, such as sprites in a sprite sheet are packed together. Assets within a folder added to the group are also packed together.</li><li>__Pack Together by Label__: Create an AssetBundle for assets sharing the same combination of labels.</li></ul>|
+
+#### Included in Catalog
+
+This group controls which keys this group adds to the content catalog. Every key you leave out makes the catalog smaller.
+
+| **Property**| **Description** |
+|:---|---|
+|__Addresses__|Include the address strings in the catalog. If you don't use address strings to load assets in the group, you can disable this property to decrease the size of the catalog.|
+|__GUIDs__|Include GUID strings in the catalog. You must include GUID strings to access an asset with an [`AssetReference`](xref:addressables-asset-references). If you don't use `AssetReference` or GUID strings to load assets, you can disable this property to decrease the size of the catalog.|
+|__Labels__|Include label strings in the catalog. If you don't use labels to load assets, you can disable this property to decrease the size of the catalog. |
+|__Folder Key__|Include the address of each Addressable folder as a shared key on every asset inside it. Enable this to load every asset in an Addressable folder with one call, for example `Addressables.LoadAssetsAsync<GameObject>(folderAddress, ...)`, similar to `Resources.LoadAll`. If you don't need to load a whole folder at once, you can disable this property to decrease the size of the catalog.|
+|__Individual Asset Addresses__|Only displayed when __Folder Key__ is enabled. Include each asset's own address in the catalog, alongside its folder's shared key. If you disable it, only the folder's shared key is included. GUIDs are unaffected, so an [`AssetReference`](xref:addressables-asset-references) into a folder asset keeps working. Disable this if you always load these assets through the folder and never reference an individual asset by its own address, to further decrease the size of the catalog.|
 
 ## Content Update Restriction
 

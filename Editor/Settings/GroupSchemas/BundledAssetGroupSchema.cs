@@ -1098,6 +1098,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             m_ShowPaths = true;
             AdvancedOptionsFoldout.IsActive = true;
+            IncludedInCatalogFoldout.IsActive = true;
         }
 
         /// <inheritdoc/>
@@ -1193,20 +1194,31 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             if (queuedChanges != null)
             {
                 Undo.SetCurrentGroupName("BundledAssetGroupSchemasUndos");
+
+                Undo.RecordObject(this, "BundledAssetGroupSchema" + name);
                 foreach (var schema in otherBundledSchemas)
                     Undo.RecordObject(schema, "BundledAssetGroupSchema" + schema.name);
 
                 foreach (var change in queuedChanges)
                 {
-                    foreach (var schema in otherBundledSchemas)
-                        change.Invoke(this, schema);
+                    if (otherBundledSchemas.Count == 0)
+                        change.Invoke(this, this);
+                    else
+                        foreach (var schema in otherBundledSchemas)
+                            change.Invoke(this, schema);
                 }
                 Undo.CollapseUndoOperations(Undo.GetCurrentGroup());
             }
             EditorGUI.EndDisabledGroup();
         }
 
-        static GUI.FoldoutSessionStateValue AdvancedOptionsFoldout = new GUI.FoldoutSessionStateValue("Addressables.BundledAssetGroup.AdvancedOptions");
+        static FoldoutSessionStateValue AdvancedOptionsFoldout = new FoldoutSessionStateValue("Addressables.BundledAssetGroup.AdvancedOptions");
+
+        internal const string k_IncludedInCatalogFoldoutKey = "Addressables.BundledAssetGroup.IncludedInCatalog";
+
+        static FoldoutSessionStateValue IncludedInCatalogFoldout = new FoldoutSessionStateValue(k_IncludedInCatalogFoldoutKey);
+
+        static readonly GUIContent k_IncludedInCatalogContent = new GUIContent("Included in Catalog");
 
         GUIContent m_StripDownloadOptionsContent = new GUIContent("Strip Bundle Download Options", "Strip unused asset bundle download data from catalog.  This should only be enabled for local groups and is disabled if UnityWebRequests are enabled for local bundles.");
         GUIContent m_CompressionContent = new GUIContent("Asset Bundle Compression", "Compression method to use for asset bundles.");
@@ -1229,20 +1241,20 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             new GUIContent("Version Marker File (Strict)", "Reads each entry's marker file, so a damaged entry reports as missing. Costs roughly a millisecond per cached bundle.")
         };
 
-        GUIContent m_IncludeAddressInCatalogContent = new GUIContent("Include Addresses in Catalog",
-            "If disabled, addresses from this group will not be included in the catalog.  This is useful for reducing the size of the catalog if addresses are not needed.");
+        internal GUIContent m_IncludeAddressInCatalogContent = new GUIContent("Addresses",
+            "Includes this group's addresses in the catalog. Disable to reduce catalog size if addresses are not needed.");
 
-        GUIContent m_IncludeGUIDInCatalogContent = new GUIContent("Include GUIDs in Catalog",
-            "If disabled, guids from this group will not be included in the catalog.  This is useful for reducing the size of the catalog if guids are not needed.");
+        internal GUIContent m_IncludeGUIDInCatalogContent = new GUIContent("GUIDs",
+            "Includes this group's GUIDs in the catalog. Disable to reduce catalog size if GUIDs are not needed.");
 
-        GUIContent m_IncludeLabelsInCatalogContent = new GUIContent("Include Labels in Catalog",
-            "If disabled, labels from this group will not be included in the catalog.  This is useful for reducing the size of the catalog if labels are not needed.");
+        internal GUIContent m_IncludeLabelsInCatalogContent = new GUIContent("Labels",
+            "Includes this group's labels in the catalog. Disable to reduce catalog size if labels are not needed.");
 
-        GUIContent m_IncludeFolderKeysInCatalogContent = new GUIContent("Include Folder Keys in Catalog",
-            "If enabled, each addressable folder's address is included as a shared key on every asset in that folder, so the folder's address can be used to load every asset inside it in one call.  If disabled, this is useful for reducing the size of the catalog if whole-folder loading is not needed.");
+        internal GUIContent m_IncludeFolderKeysInCatalogContent = new GUIContent("Folder Key",
+            "Adds each folder's address as a shared key on its assets, so you can load the whole folder in one call. Disabling reduces the catalog size if whole folder loading is not required.");
 
-        GUIContent m_IncludeAddressesForFolderChildrenContent = new GUIContent("Include Individual Addresses for Folder Assets",
-            "If disabled, assets inside an addressable folder will not have their own individual address included in the catalog -- only the folder's shared key will be included.  GUIDs are unaffected.  Disable this if you always load these assets via the folder to reduce the size of the catalog.");
+        internal GUIContent m_IncludeAddressesForFolderChildrenContent = new GUIContent("Individual Asset Addresses",
+            "Includes each asset's own address in the catalog, in addition to its folder's shared key. Disable if assets are always loaded via their folder to reduce catalog size. GUIDs are unaffected.");
 
         GUIContent m_CacheClearBehaviorContent = new GUIContent("Cache Clear Behavior", "Controls how old cached asset bundles are cleared.");
         GUIContent m_BundleNamingModeContent = new GUIContent("Bundle Naming Mode", "Controls the final file naming mode for bundles in this group.");
@@ -1251,8 +1263,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         private const string k_UseDefaultsLabel = "Use Defaults";
         GUIContent m_UseDefaultSettingsContent = new GUIContent(k_UseDefaultsLabel, $"Determines whether to use the default schema settings.");
         GUIContent m_UseDefaultSettingsContentDisabled = new GUIContent(k_UseDefaultsLabel, "This option is available when \"Build & Load Paths\" is set to \"Local\" or \"Remote\".");
-
-        private float m_PostBlockContentSpace = 10;
 
         void ShowAdvancedProperties(SerializedObject so)
         {
@@ -1328,20 +1338,36 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 }
                 EditorGUI.EndDisabledGroup();
             }
-            GUILayout.Space(m_PostBlockContentSpace);
 
-
-            EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeAddressInCatalog)), m_IncludeAddressInCatalogContent, true);
-            EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeGUIDInCatalog)), m_IncludeGUIDInCatalogContent, true);
-            EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeLabelsInCatalog)), m_IncludeLabelsInCatalogContent, true);
-            EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeFolderKeysInCatalog)), m_IncludeFolderKeysInCatalogContent, true);
-            if (m_IncludeFolderKeysInCatalog)
+            EditorGUI.indentLevel++;
+            IncludedInCatalogFoldout.IsActive = EditorGUILayout.Foldout(IncludedInCatalogFoldout.IsActive, k_IncludedInCatalogContent, true);
+            if (IncludedInCatalogFoldout.IsActive)
             {
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(so.FindProperty(nameof(m_IncludeAddressesForFolderChildren)), m_IncludeAddressesForFolderChildrenContent, true);
-                EditorGUI.indentLevel--;
+                GUI.AddressablesGUIUtility.SetterBackedToggle(so, m_IncludeAddressInCatalogContent, nameof(IncludeAddressInCatalog),
+                    IncludeAddressInCatalog, value => IncludeAddressInCatalog = value);
+                GUI.AddressablesGUIUtility.SetterBackedToggle(so, m_IncludeGUIDInCatalogContent, nameof(IncludeGUIDInCatalog),
+                    IncludeGUIDInCatalog, value => IncludeGUIDInCatalog = value);
+                GUI.AddressablesGUIUtility.SetterBackedToggle(so, m_IncludeLabelsInCatalogContent, nameof(IncludeLabelsInCatalog),
+                    IncludeLabelsInCatalog, value => IncludeLabelsInCatalog = value);
+                GUI.AddressablesGUIUtility.SetterBackedToggle(so, m_IncludeFolderKeysInCatalogContent, nameof(IncludeFolderKeysInCatalog),
+                    IncludeFolderKeysInCatalog, value => IncludeFolderKeysInCatalog = value);
+                if (m_IncludeFolderKeysInCatalog)
+                {
+                    EditorGUI.indentLevel++;
+                    GUI.AddressablesGUIUtility.SetterBackedToggle(so, m_IncludeAddressesForFolderChildrenContent, nameof(IncludeAddressesForFolderChildren),
+                        IncludeAddressesForFolderChildren, value => IncludeAddressesForFolderChildren = value);
+                    EditorGUI.indentLevel--;
+                }
             }
-            EditorGUILayout.PropertyField(so.FindProperty(nameof(m_BundleMode)), m_BundlePackModeContent, true);
+            EditorGUI.indentLevel--;
+
+            EditorGUI.BeginChangeCheck();
+            var bundleMode = (BundlePackingMode)EditorGUILayout.EnumPopup(m_BundlePackModeContent, BundleMode);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(so.targetObject, so.targetObject.name + nameof(BundleMode));
+                BundleMode = bundleMode;
+            }
         }
 
         void CRCPropertyPopupField(SerializedObject so, bool buildTargetSupportsCaching)
@@ -1476,28 +1502,34 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         void ShowAdvancedPropertiesMulti(SerializedObject so, List<BundledAssetGroupSchema> otherSchemas, ref List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>> queuedChanges)
         {
             ShowSelectedPropertyDefaultSettingsMulti(so, otherSchemas, ref queuedChanges);
-            GUILayout.Space(m_PostBlockContentSpace);
 
-            ShowSelectedPropertyMulti(so, nameof(m_IncludeAddressInCatalog), m_IncludeAddressInCatalogContent, otherSchemas, ref queuedChanges,
-                (src, dst) => dst.IncludeAddressInCatalog = src.IncludeAddressInCatalog, ref m_IncludeAddressInCatalog);
-            ShowSelectedPropertyMulti(so, nameof(m_IncludeGUIDInCatalog), m_IncludeGUIDInCatalogContent, otherSchemas, ref queuedChanges,
-                (src, dst) => dst.IncludeGUIDInCatalog = src.IncludeGUIDInCatalog, ref m_IncludeGUIDInCatalog);
-            ShowSelectedPropertyMulti(so, nameof(m_IncludeLabelsInCatalog), m_IncludeLabelsInCatalogContent, otherSchemas, ref queuedChanges,
-                (src, dst) => dst.IncludeLabelsInCatalog = src.IncludeLabelsInCatalog, ref m_IncludeLabelsInCatalog);
-            ShowSelectedPropertyMulti(so, nameof(m_IncludeFolderKeysInCatalog), m_IncludeFolderKeysInCatalogContent, otherSchemas, ref queuedChanges,
-                (src, dst) => dst.IncludeFolderKeysInCatalog = src.IncludeFolderKeysInCatalog, ref m_IncludeFolderKeysInCatalog);
-            if (m_IncludeFolderKeysInCatalog)
+            EditorGUI.indentLevel++;
+            IncludedInCatalogFoldout.IsActive = EditorGUILayout.Foldout(IncludedInCatalogFoldout.IsActive, k_IncludedInCatalogContent, true);
+            if (IncludedInCatalogFoldout.IsActive)
             {
-                EditorGUI.indentLevel++;
-                ShowSelectedPropertyMulti(so, nameof(m_IncludeAddressesForFolderChildren), m_IncludeAddressesForFolderChildrenContent, otherSchemas, ref queuedChanges,
-                    (src, dst) => dst.IncludeAddressesForFolderChildren = src.IncludeAddressesForFolderChildren, ref m_IncludeAddressesForFolderChildren);
-                EditorGUI.indentLevel--;
+                ShowSelectedPropertyMulti(so, nameof(m_IncludeAddressInCatalog), m_IncludeAddressInCatalogContent, otherSchemas, ref queuedChanges,
+                    (schema, value) => schema.IncludeAddressInCatalog = value, m_IncludeAddressInCatalog);
+                ShowSelectedPropertyMulti(so, nameof(m_IncludeGUIDInCatalog), m_IncludeGUIDInCatalogContent, otherSchemas, ref queuedChanges,
+                    (schema, value) => schema.IncludeGUIDInCatalog = value, m_IncludeGUIDInCatalog);
+                ShowSelectedPropertyMulti(so, nameof(m_IncludeLabelsInCatalog), m_IncludeLabelsInCatalogContent, otherSchemas, ref queuedChanges,
+                    (schema, value) => schema.IncludeLabelsInCatalog = value, m_IncludeLabelsInCatalog);
+                ShowSelectedPropertyMulti(so, nameof(m_IncludeFolderKeysInCatalog), m_IncludeFolderKeysInCatalogContent, otherSchemas, ref queuedChanges,
+                    (schema, value) => schema.IncludeFolderKeysInCatalog = value, m_IncludeFolderKeysInCatalog);
+                if (m_IncludeFolderKeysInCatalog)
+                {
+                    EditorGUI.indentLevel++;
+                    ShowSelectedPropertyMulti(so, nameof(m_IncludeAddressesForFolderChildren), m_IncludeAddressesForFolderChildrenContent, otherSchemas, ref queuedChanges,
+                        (schema, value) => schema.IncludeAddressesForFolderChildren = value, m_IncludeAddressesForFolderChildren);
+                    EditorGUI.indentLevel--;
+                }
             }
-            ShowSelectedPropertyMulti(so, nameof(m_BundleMode), m_BundlePackModeContent, otherSchemas, ref queuedChanges, (src, dst) => dst.BundleMode = src.BundleMode, ref m_BundleMode);
+            EditorGUI.indentLevel--;
+            ShowSelectedPropertyMulti(so, nameof(m_BundleMode), m_BundlePackModeContent, otherSchemas, ref queuedChanges,
+                (schema, value) => schema.BundleMode = value, m_BundleMode);
         }
 
         void ShowSelectedPropertyMulti<T>(SerializedObject so, string propertyName, GUIContent label, List<BundledAssetGroupSchema> otherSchemas,
-            ref List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>> queuedChanges, Action<BundledAssetGroupSchema, BundledAssetGroupSchema> a, ref T propertyValue)
+            ref List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>> queuedChanges, Action<BundledAssetGroupSchema, T> applyValue, T currentValue)
         {
             SerializedProperty serializedProperty = so.FindProperty(propertyName);
             Type propertySystemType = typeof(T);
@@ -1505,17 +1537,14 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 label = new GUIContent(serializedProperty.displayName);
             ShowMixedValue(serializedProperty, otherSchemas, propertySystemType, propertyName);
 
-            T newValue = default(T);
-            SerializedPropertyType serializedPropertyType = SerializedPropertyType.Generic;
+            T newValue = currentValue;
             EditorGUI.BeginChangeCheck();
             if (propertySystemType == typeof(bool))
             {
-                newValue = (T)(object)EditorGUILayout.Toggle(label, (bool)(object)propertyValue);
-                serializedPropertyType = SerializedPropertyType.Boolean;
+                newValue = (T)(object)EditorGUILayout.Toggle(label, (bool)(object)currentValue);
             }
             else if (propertySystemType.IsEnum)
             {
-                serializedPropertyType = SerializedPropertyType.Enum;
                 if (propertySystemType == typeof(BundleNamingStyle))
                 {
                     Rect rect = EditorGUILayout.GetControlRect();
@@ -1524,53 +1553,27 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 }
                 else
                 {
-                    int enumValue = Convert.ToInt32(EditorGUILayout.EnumPopup(label, (Enum)(object)propertyValue));
+                    int enumValue = Convert.ToInt32(EditorGUILayout.EnumPopup(label, (Enum)(object)currentValue));
                     newValue = (T)(object)enumValue;
                 }
             }
             else if (propertySystemType == typeof(int))
             {
-                newValue = (T)(object)EditorGUILayout.IntField(label, (int)(object)propertyValue);
-                serializedPropertyType = SerializedPropertyType.Integer;
+                newValue = (T)(object)EditorGUILayout.IntField(label, (int)(object)currentValue);
             }
             else
             {
-                EditorGUILayout.PropertyField(serializedProperty, label, true);
-                so.ApplyModifiedProperties();
+                // Only these draw a value the setter can take. A PropertyField would write
+                // the serialized field directly and skip the setter.
+                Debug.LogError($"{nameof(ShowSelectedPropertyMulti)} cannot draw {propertySystemType}.");
             }
             if (EditorGUI.EndChangeCheck())
             {
-                if (serializedPropertyType != SerializedPropertyType.Generic)
+                AddQueuedChanges(ref queuedChanges, (src, dst) =>
                 {
-                    HashSet<SerializedProperty> properties = new HashSet<SerializedProperty>() { serializedProperty };
-                    foreach (AddressableAssetGroupSchema otherSchema in otherSchemas)
-                        properties.Add(otherSchema.SchemaSerializedObject.FindProperty(propertyName));
-
-                    foreach (SerializedProperty propertyForValueDestination in properties)
-                    {
-                        var destinationSerializedObject = propertyForValueDestination.serializedObject;
-                        switch (serializedPropertyType)
-                        {
-                            case SerializedPropertyType.Boolean:
-                                propertyForValueDestination.boolValue = (bool)(object)newValue;
-                                break;
-                            case SerializedPropertyType.Integer:
-                                propertyForValueDestination.intValue = (int)(object)newValue;
-                                break;
-                            case SerializedPropertyType.Enum:
-                                propertyForValueDestination.enumValueIndex = (int)(object)newValue;
-                                break;
-                        }
-
-                        destinationSerializedObject.ApplyModifiedProperties();
-                    }
-                }
-                else if (a != null)
-                {
-                    if (queuedChanges == null)
-                        queuedChanges = new List<Action<BundledAssetGroupSchema, BundledAssetGroupSchema>>();
-                    queuedChanges.Add(a);
-                }
+                    applyValue(src, newValue);
+                    applyValue(dst, newValue);
+                });
             }
 
             EditorGUI.showMixedValue = false;

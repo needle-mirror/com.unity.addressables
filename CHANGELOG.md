@@ -4,6 +4,14 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.1.1] - 2026-09-29
+- Fixed duplicated Content Files error during archiving when two assets have an identical binary result in the build.
+- Changed the "Open Addressables Report after build" preference to open the Build Analysis window on Unity 6.7+.
+- Fixed remote catalogs failing to load from Unity CCD URLs with catalog filename in a query parameter.
+- Fixed catalogs served from one CCD bucket sharing a single local cache file.
+- Fixed the "include in catalog" group schema options not posting a `GroupSchemaModified` modification event when toggled in the Inspector with a single group selected.
+- Changed the group schema Inspectors to group their catalog options under an "Included in Catalog" foldout, and shortened the labels and tooltips. The Content Directory schema now has an "Advanced Options" foldout, matching Content Packing & Loading.
+
 ## [4.1.0] - 2026-08-26
 - Added a Content Directory archive mode setting with `None`, `Uncompressed` and `LZ4` options, replacing the `Archive Content Directories` toggle. Existing projects keep their previous behavior on upgrade. `AddressableAssetSettings.ArchiveContentDirectories` is obsolete; use `AddressableAssetSettings.ContentDirectoryArchiveMode` instead.
 - Changed the `Target Archive Size (MB)` setting to apply to uncompressed Content Directory archives as well as LZ4-compressed ones.
