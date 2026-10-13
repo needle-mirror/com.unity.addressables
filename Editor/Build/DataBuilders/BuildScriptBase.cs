@@ -5,7 +5,7 @@ using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
 using UnityEditor.AddressableAssets.BuildReportVisualizer;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
 using UnityEditor.Build;
 #endif
 using UnityEditor.Build.Pipeline.Interfaces;
@@ -89,7 +89,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 return;
             }
             var layoutHeader = BuildLayout.Open(buildLayoutPath, true, false);
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
             if (BuildHistory.TryGetBuildReportDirectory(layoutHeader.AddressablesBuildSessionGUID, out string buildReportTepDirectory))
                 AddressablesBuildHistorySupport.TryCopyTep(tepPath, buildReportTepDirectory);
 #endif

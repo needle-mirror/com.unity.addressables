@@ -369,7 +369,8 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 if (!s_CachedDisplayNames.TryGetValue(type, out result))
                 {
-                    var displayNameAtr = type.GetCustomAttribute<DisplayNameAttribute>();
+                    // Not inherited, so subclasses are not shown with the base class name.
+                    var displayNameAtr = type.GetCustomAttribute<DisplayNameAttribute>(false);
                     if (displayNameAtr != null)
                     {
                         result = (string)displayNameAtr.DisplayName;

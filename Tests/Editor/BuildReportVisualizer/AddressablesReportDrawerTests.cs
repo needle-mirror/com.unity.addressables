@@ -1,4 +1,4 @@
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -133,6 +133,43 @@ namespace Tests.Editor.BuildReportVisualizer
             drawer.OnBuildSelected(RegisteredSummary());
 
             Assert.AreNotSame(first, drawer.ShownReport);
+        }
+
+        [Test]
+        public void OnBuildSelected_FailedBuildWithoutRuntimeSettings_ShowsTheReport()
+        {
+            // Matches the layout GenerateErrorReport registers for a failed build, which has no runtime settings.
+            BuildLayout failedLayout = new BuildLayout
+            {
+                AddressablesBuildSessionGUID = GUID.Generate(),
+                BuildTarget = BuildTarget.Android,
+                BuildStart = DateTime.Now,
+                BuildError = "Something went wrong",
+                AddressablesEditorSettings = new BuildLayout.AddressablesEditorData
+                {
+                    ActiveProfile = new BuildLayout.Profile { Name = k_ProfileName }
+                }
+            };
+            string failedLayoutPath = Path.Combine(Path.GetTempPath(), $"testLayout_{failedLayout.AddressablesBuildSessionGUID}.json");
+
+            try
+            {
+                failedLayout.WriteToFile(failedLayoutPath, false);
+                AddressablesBuildHistorySupport.RegisterBuild(failedLayout, failedLayoutPath);
+                Assert.IsTrue(BuildHistory.TryGetFilePath(failedLayout.AddressablesBuildSessionGUID, "BuildReportSummary.json", out string summaryPath));
+
+                var drawer = CreateDrawer();
+                drawer.OnBuildSelected(BuildReportSummary.Load(summaryPath));
+
+                Assert.IsNotNull(drawer.ShownReport);
+                Assert.AreEqual("Something went wrong", drawer.ShownReport.BuildError);
+            }
+            finally
+            {
+                BuildHistory.DeleteHistory(new[] { failedLayout.AddressablesBuildSessionGUID });
+                if (File.Exists(failedLayoutPath))
+                    File.Delete(failedLayoutPath);
+            }
         }
 
         [Test]

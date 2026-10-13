@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.Layout;
 using UnityEditor.AddressableAssets.Diagnostics;
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
+using UnityEditor.Build.Analysis;
+#endif
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -181,23 +185,20 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         // Row element names built by SummaryRowBuilder for the standalone window's Summary tab.
         public const string SummaryTabLabelElementNameFormat = "SummaryTabLabel_{0}";
         public const string SummaryTabSizeElementNameFormat = "SummaryTabSize_{0}";
-        public static readonly string SummaryTabHeaderTitle = nameof(SummaryTabHeaderTitle);
-        public static readonly string SummaryTabHeaderSubtitle = nameof(SummaryTabHeaderSubtitle);
-        public static readonly string SummaryTabHeaderPlatformIcon = nameof(SummaryTabHeaderPlatformIcon);
-        public static readonly string SummaryTabHeaderTimeRange = nameof(SummaryTabHeaderTimeRange);
-        public static readonly string SummaryTabStatusBadge = nameof(SummaryTabStatusBadge);
-        public static readonly string SummaryTabStatusBadgeIcon = nameof(SummaryTabStatusBadgeIcon);
-        public static readonly string SummaryTabStatusBadgeText = nameof(SummaryTabStatusBadgeText);
 
-        public static readonly string SummaryTabTotalBundleSizeValue = nameof(SummaryTabTotalBundleSizeValue);
-        public static readonly string SummaryTabBuildDurationValue = nameof(SummaryTabBuildDurationValue);
-        public static readonly string SummaryTabBundleCountValue = nameof(SummaryTabBundleCountValue);
-        public static readonly string SummaryTabAssetCountValue = nameof(SummaryTabAssetCountValue);
+        // Hosts and element names in the embedded Summary tab.
+        public static readonly string SummaryTabHeader = nameof(SummaryTabHeader);
 
-        public static readonly string SummaryTabDetailsLeftLabels = nameof(SummaryTabDetailsLeftLabels);
-        public static readonly string SummaryTabDetailsLeftValues = nameof(SummaryTabDetailsLeftValues);
-        public static readonly string SummaryTabDetailsRightLabels = nameof(SummaryTabDetailsRightLabels);
-        public static readonly string SummaryTabDetailsRightValues = nameof(SummaryTabDetailsRightValues);
+        public static readonly string SummaryTabStatCards = nameof(SummaryTabStatCards);
+        public static readonly string SummaryTabStatCardBundleSize = nameof(SummaryTabStatCardBundleSize);
+        public static readonly string SummaryTabStatCardDuration = nameof(SummaryTabStatCardDuration);
+        public static readonly string SummaryTabStatCardBundles = nameof(SummaryTabStatCardBundles);
+        public static readonly string SummaryTabStatCardAssets = nameof(SummaryTabStatCardAssets);
+
+        public static readonly string SummaryTabBuildDetailsSection = nameof(SummaryTabBuildDetailsSection);
+        public static readonly string SummaryTabDetailsGrid = nameof(SummaryTabDetailsGrid);
+        public static readonly string SummaryTabShowLocalCatalogButton = nameof(SummaryTabShowLocalCatalogButton);
+        public static readonly string SummaryTabRelatedBuilds = nameof(SummaryTabRelatedBuilds);
 
         public static readonly string SummaryTabContentDirectories = nameof(SummaryTabContentDirectories);
         public static readonly string SummaryTabPotentialIssues = nameof(SummaryTabPotentialIssues);
@@ -214,8 +215,6 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
         // The Build Analysis styled Summary tab, drawn only when the report is embedded.
         public const string SummaryTabEmbeddedUssPath = StyleSheetsPath + "SummaryTabEmbedded.uss";
-        public const string SummaryTabEmbeddedDarkUssPath = StyleSheetsPath + "SummaryTabEmbeddedDark.uss";
-        public const string SummaryTabEmbeddedLightUssPath = StyleSheetsPath + "SummaryTabEmbeddedLight.uss";
 
         public static readonly string BuildPerformanceReportButton = nameof(BuildPerformanceReportButton);
         public static readonly string BuildFilesContentViewButton = nameof(BuildFilesContentViewButton);
@@ -300,11 +299,6 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public const string SideBarDark = IconsPath + "Button_LeftPanel_DarkTheme@2x.png";
         public const string SideBarLight = IconsPath + "Button_LeftPanel_LightTheme@2x.png";
 
-        // Build Analysis' status glyphs, from the editor's shared resources. Only the embedded report
-        // draws them, and that exists from 6000.7 on, which is also when Icons/EditorUI arrived.
-        public const string BuildStatusSuccessIcon = "EditorUI/True";
-        public const string BuildStatusFailedIcon = "EditorUI/False";
-
 
         internal static string GetAssetBundleIconPath()
         {
@@ -331,13 +325,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             return EditorGUIUtility.isProSkin ? BuildReportUtility.DetailsViewDarkPath : BuildReportUtility.DetailsViewLightPath;
         }
 
-        // IconContent picks the d_ variant for the dark skin on its own.
-        internal static Texture2D GetBuildStatusIcon(bool succeeded)
-        {
-            return EditorGUIUtility.IconContent(succeeded ? BuildStatusSuccessIcon : BuildStatusFailedIcon).image as Texture2D;
-        }
-
-        // BuildAnalysisWindow is editor-internal, so the menu item is the only way in. It opens on whichever build it last showed (CBD-2201).
+        // BuildAnalysisWindow is editor-internal; the menu item opens it on whichever build it last showed.
         internal const string BuildAnalysisWindowMenuItem = "Window/Analysis/Build Analysis";
 
         internal static void OpenBuildAnalysisWindow()
@@ -345,11 +333,28 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             EditorApplication.ExecuteMenuItem(BuildAnalysisWindowMenuItem);
         }
 
-        // From 6000.7 on, Build Analysis draws the Addressables report, so open that instead.
+        // Opens the window on the build with this session GUID. An empty GUID keeps the window's own selection.
+        internal static void OpenBuildAnalysisWindow(GUID buildSessionGUID)
+        {
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
+            if (buildSessionGUID.Empty())
+                OpenBuildAnalysisWindow();
+            else
+                BuildAnalysisUtility.OpenWindow(buildSessionGUID);
+#else
+            OpenBuildAnalysisWindow();
+#endif
+        }
+
+        // From 6000.7 on, Build Analysis draws the Addressables report, so open that instead, on the build that just finished.
+        // The last registered build can have left the history since, so only select it while its entry still exists.
         internal static void ShowBuildReportWindow()
         {
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
-            OpenBuildAnalysisWindow();
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
+            GUID buildSessionGUID = AddressablesBuildHistorySupport.LastRegisteredBuildSessionGUID;
+            if (!buildSessionGUID.Empty() && !UnityEditor.Build.BuildHistory.TryGetBuildReportDirectory(buildSessionGUID, out _))
+                buildSessionGUID = default;
+            OpenBuildAnalysisWindow(buildSessionGUID);
 #else
             BuildReportWindow.ShowWindowAfterBuild();
 #endif
@@ -450,58 +455,6 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                     break;
             }
             return iconClassName;
-        }
-
-        // The embedded report's Summary header instead draws the editor's own platform icons, the ones
-        // Build Analysis shows. These are the ids it ends up loading; it gets there through
-        // BuildTargetDiscovery, which is internal to UnityEditor.
-        static string GetPlatformIconName(BuildTarget target)
-        {
-            switch (target)
-            {
-                case BuildTarget.StandaloneWindows:
-                case BuildTarget.StandaloneWindows64:
-                    return "BuildSettings.Windows";
-                case BuildTarget.StandaloneOSX:
-                    return "BuildSettings.OSX";
-                case BuildTarget.StandaloneLinux64:
-                    return "BuildSettings.Linux";
-                case BuildTarget.Android:
-                    return "BuildSettings.Android";
-                case BuildTarget.iOS:
-                    return "BuildSettings.iPhone";
-                case BuildTarget.tvOS:
-                    return "BuildSettings.tvOS";
-                case BuildTarget.WebGL:
-                    return "BuildSettings.WebGL";
-                case BuildTarget.WSAPlayer:
-                    return "BuildSettings.Metro";
-                case BuildTarget.PS4:
-                    return "BuildSettings.PS4";
-                case BuildTarget.PS5:
-                    return "BuildSettings.PS5";
-                case BuildTarget.XboxOne:
-                    return "BuildSettings.XboxOne";
-                case BuildTarget.GameCoreXboxOne:
-                    return "BuildSettings.GameCoreXboxOne";
-                case BuildTarget.GameCoreXboxSeries:
-                    return "BuildSettings.GameCoreScarlett";
-                case BuildTarget.Switch:
-                    return "BuildSettings.Switch";
-                default:
-                    return null;
-            }
-        }
-
-        // Returns null for platforms the report has no icon for, so callers can hide the image
-        // instead of drawing an empty box.
-        internal static Texture2D GetPlatformIcon(BuildTarget target)
-        {
-            string iconName = GetPlatformIconName(target);
-            if (string.IsNullOrEmpty(iconName))
-                return null;
-
-            return EditorGUIUtility.IconContent(iconName).image as Texture2D;
         }
 
         public static string GetDenominatedBytesString(ulong bytes)

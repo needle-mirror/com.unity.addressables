@@ -93,19 +93,19 @@ namespace UnityEditor.AddressableAssets.GUI
             m_DataBuildersRl.drawElementCallback = DrawDataBuilderCallback;
             m_DataBuildersRl.elementHeightCallback = GetDataBuilderElementHeight;
             m_DataBuildersRl.headerHeight = 0;
-            m_DataBuildersRl.onAddDropdownCallback = OnAddDataBuilder;
+            m_DataBuildersRl.onAddCallback = OnAddDataBuilder;
             m_DataBuildersRl.onRemoveCallback = OnRemoveDataBuilder;
 
             m_GroupTemplateObjectsRl = new ReorderableList(m_AasTarget.GroupTemplateObjects, typeof(ScriptableObject), true, true, true, true);
             m_GroupTemplateObjectsRl.drawElementCallback = DrawGroupTemplateObjectCallback;
             m_GroupTemplateObjectsRl.headerHeight = 0;
-            m_GroupTemplateObjectsRl.onAddDropdownCallback = OnAddGroupTemplateObject;
+            m_GroupTemplateObjectsRl.onAddCallback = OnAddGroupTemplateObject;
             m_GroupTemplateObjectsRl.onRemoveCallback = OnRemoveGroupTemplateObject;
 
             m_InitObjectsRl = new ReorderableList(m_AasTarget.InitializationObjects, typeof(ScriptableObject), true, true, true, true);
             m_InitObjectsRl.drawElementCallback = DrawInitializationObjectCallback;
             m_InitObjectsRl.headerHeight = 0;
-            m_InitObjectsRl.onAddDropdownCallback = OnAddInitializationObject;
+            m_InitObjectsRl.onAddCallback = OnAddInitializationObject;
             m_InitObjectsRl.onRemoveCallback = OnRemoveInitializationObject;
 
             m_ProfilesHeader = new GUIContent("Profiles", "Settings affect profiles.");
@@ -122,10 +122,10 @@ namespace UnityEditor.AddressableAssets.GUI
         }
 
         GUIContent m_ManageGroups =
-            new GUIContent("Manage Groups", "Open the Addressables Groups window");
+            new GUIContent("Manage Groups…", "Open the Addressables Groups window");
 
         GUIContent m_ManageProfiles =
-            new GUIContent("Manage Profiles", "Open the Addressables Profiles window");
+            new GUIContent("Manage Profiles…", "Open the Addressables Profiles window");
 
         GUIContent m_LogRuntimeExceptions =
             new GUIContent("Log Runtime Exceptions",
@@ -684,7 +684,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
 
                 EditorGUILayout.BeginHorizontal();
-                GroupsPopupUtility.DrawGroupsDropdown(m_SharedBundleSettingsGroup, m_AasTarget.GetSharedBundleGroup(), !useDefaultGroup, false, true, SetSharedBundleSettingsCustomGroupIndex, null);
+                GroupsPopupUtility.DrawBundledGroupsDropdown(m_SharedBundleSettingsGroup, m_AasTarget.GetSharedBundleGroup(), !useDefaultGroup, false, true, SetSharedBundleSettingsCustomGroupIndex, null);
                 EditorGUILayout.EndHorizontal();
 
                 var idx = m_AasTarget.SharedBundleSettingsCustomGroupIndex;
@@ -937,7 +937,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             var so = m_AasTarget.DataBuilders[index];
             var builder = so as IDataBuilder;
-            var label = builder == null ? "" : builder.Name;
+            var label = builder == null ? "None" : builder.Name;
 
             // Adding Simulated Load Delay foldout
             if (m_AasTarget.DataBuilders[index] is BuildScriptFastMode)
@@ -950,8 +950,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 // Draw object field. Blank label passed to force correct indentation.
                 Rect objectRect = new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight);
                 var nb = EditorGUI.ObjectField(objectRect, s_BlankLabel, so, typeof(ScriptableObject), false) as ScriptableObject;
-                if (nb != so)
-                    m_AasTarget.SetDataBuilderAtIndex(index, nb as IDataBuilder);
+                if (nb != so && nb is IDataBuilder dataBuilder)
+                    m_AasTarget.SetDataBuilderAtIndex(index, dataBuilder);
 
                 // Create Load Delay float, Edited rect axis to position correctly
                 if (DataBuildersInternalFoldout.IsActive)
@@ -974,8 +974,8 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 Rect objectRect = new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight);
                 var nb = EditorGUI.ObjectField(objectRect, label, so, typeof(ScriptableObject), false) as ScriptableObject;
-                if (nb != so)
-                  m_AasTarget.SetDataBuilderAtIndex(index, nb as IDataBuilder);
+                if (nb != so && nb is IDataBuilder dataBuilder)
+                    m_AasTarget.SetDataBuilderAtIndex(index, dataBuilder);
             }
         }
 
@@ -994,19 +994,10 @@ namespace UnityEditor.AddressableAssets.GUI
             m_AasTarget.RemoveDataBuilder(list.index);
         }
 
-        void OnAddDataBuilder(Rect buttonRect, ReorderableList list)
+        void OnAddDataBuilder(ReorderableList list)
         {
-            var assetPath = EditorUtility.OpenFilePanelWithFilters("Data Builder", "Assets", new[] {"Data Builder", "asset"});
-            if (string.IsNullOrEmpty(assetPath))
-                return;
-            var builder = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath.Substring(assetPath.IndexOf("Assets/", StringComparison.Ordinal)));
-            if (!typeof(IDataBuilder).IsAssignableFrom(builder.GetType()))
-            {
-                Debug.LogWarningFormat("Asset at {0} does not implement the IDataBuilder interface.", assetPath);
-                return;
-            }
-
-            m_AasTarget.AddDataBuilder(builder as IDataBuilder);
+            m_AasTarget.DataBuilders.Add(null);
+            EditorUtility.SetDirty(m_AasTarget);
         }
 
         void DrawGroupTemplateObjectCallback(Rect rect, int index, bool isActive, bool isFocused)
@@ -1016,11 +1007,12 @@ namespace UnityEditor.AddressableAssets.GUI
             ScriptableObject newObj = null;
             if (groupTObj == null)
             {
-                newObj = EditorGUI.ObjectField(rect, "Missing", null, typeof(ScriptableObject), false) as ScriptableObject;
+                string label = ReferenceEquals(so, null) ? "None" : "Missing";
+                newObj = EditorGUI.ObjectField(rect, label, null, typeof(AddressableAssetGroupTemplate), false) as ScriptableObject;
             }
             else
             {
-                newObj = EditorGUI.ObjectField(rect, groupTObj.Name, so, typeof(ScriptableObject), false) as ScriptableObject;
+                newObj = EditorGUI.ObjectField(rect, groupTObj.Name, so, typeof(AddressableAssetGroupTemplate), false) as ScriptableObject;
             }
 
             if (newObj != so)
@@ -1032,40 +1024,18 @@ namespace UnityEditor.AddressableAssets.GUI
             m_AasTarget.RemoveGroupTemplateObject(list.index);
         }
 
-        void OnAddGroupTemplateObject(Rect buttonRect, ReorderableList list)
+        void OnAddGroupTemplateObject(ReorderableList list)
         {
-            var assetPath = EditorUtility.OpenFilePanelWithFilters("Assets Group Templates", "Assets", new[] {"Group Template Object", "asset"});
-            if (string.IsNullOrEmpty(assetPath))
-                return;
-            if (assetPath.StartsWith(Application.dataPath, StringComparison.Ordinal) == false)
-            {
-                Debug.LogWarningFormat("Path at {0} is not an Asset of this project.", assetPath);
-                return;
-            }
-
-            string relativePath = assetPath.Remove(0, Application.dataPath.Length - 6);
-            var templateObj = AssetDatabase.LoadAssetAtPath<ScriptableObject>(relativePath);
-            if (templateObj == null)
-            {
-                Debug.LogWarningFormat("Failed to load Asset at {0}.", assetPath);
-                return;
-            }
-
-            if (!typeof(IGroupTemplate).IsAssignableFrom(templateObj.GetType()))
-            {
-                Debug.LogWarningFormat("Asset at {0} does not implement the IGroupTemplate interface.", assetPath);
-                return;
-            }
-
-            m_AasTarget.AddGroupTemplateObject(templateObj as IGroupTemplate);
+            m_AasTarget.GroupTemplateObjects.Add(null);
+            EditorUtility.SetDirty(m_AasTarget);
         }
 
         void DrawInitializationObjectCallback(Rect rect, int index, bool isActive, bool isFocused)
         {
             var so = m_AasTarget.InitializationObjects[index];
             var initObj = so as IObjectInitializationDataProvider;
-            var label = initObj == null ? "" : initObj.Name;
-            var nb = EditorGUI.ObjectField(rect, label, so, typeof(ScriptableObject), false) as ScriptableObject;
+            var label = initObj == null ? "None" : initObj.Name;
+            var nb = EditorGUI.ObjectField(rect, label, so, typeof(IObjectInitializationDataProvider), false) as ScriptableObject;
             if (nb != so)
                 m_AasTarget.SetInitializationObjectAtIndex(index, nb as IObjectInitializationDataProvider);
         }
@@ -1075,19 +1045,10 @@ namespace UnityEditor.AddressableAssets.GUI
             m_AasTarget.RemoveInitializationObject(list.index);
         }
 
-        void OnAddInitializationObject(Rect buttonRect, ReorderableList list)
+        void OnAddInitializationObject(ReorderableList list)
         {
-            var assetPath = EditorUtility.OpenFilePanelWithFilters("Initialization Object", "Assets", new[] {"Initialization Object", "asset"});
-            if (string.IsNullOrEmpty(assetPath))
-                return;
-            var initObj = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath.Substring(assetPath.IndexOf("Assets/", StringComparison.Ordinal)));
-            if (!typeof(IObjectInitializationDataProvider).IsAssignableFrom(initObj.GetType()))
-            {
-                Debug.LogWarningFormat("Asset at {0} does not implement the IObjectInitializationDataProvider interface.", assetPath);
-                return;
-            }
-
-            m_AasTarget.AddInitializationObject(initObj as IObjectInitializationDataProvider);
+            m_AasTarget.InitializationObjects.Add(null);
+            EditorUtility.SetDirty(m_AasTarget);
         }
 
         void DrawRemoteCatalogPaths()

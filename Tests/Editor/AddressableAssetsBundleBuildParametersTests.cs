@@ -103,6 +103,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Settings.DisableVisibleSubAssetRepresentations = oldValue;
         }
 
+#if !UNITY_7000_0_OR_NEWER
         [Test]
         public void Constructor_WithBuilderInput_DevelopmentBuild_SetsScriptOptions()
         {
@@ -120,6 +121,26 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsTrue((scriptSettings.options & ScriptCompilationOptions.DevelopmentBuild) != 0,
                 "GetScriptCompilationSettings().options should include DevelopmentBuild");
         }
+#else
+        [Test]
+        public void Constructor_WithBuilderInput_DevelopmentBuild_DoesNotSetScriptOptions()
+        {
+            var bundleToAssetGroup = new Dictionary<string, string>();
+            var builderInput = new AddressablesDataBuilderInput(Settings);
+            builderInput.DevelopmentBuild = true;
+            builderInput.ExtraScriptingDefines = new[] { AddressableAssetsBundleBuildParameters.k_AddressablesAddDefines };
+
+            var testParams = new AddressableAssetsBundleBuildParameters(Settings, bundleToAssetGroup, builderInput, "Unused");
+
+            // Starting with Unity 7.0, Development Build no longer affects script compilation
+            Assert.AreEqual(ScriptCompilationOptions.None, testParams.ScriptOptions,
+                "ScriptOptions should not be affected by builderInput.DevelopmentBuild");
+
+            var scriptSettings = testParams.GetScriptCompilationSettings();
+            Assert.AreEqual(ScriptCompilationOptions.None, scriptSettings.options,
+                "GetScriptCompilationSettings().options should not be affected by builderInput.DevelopmentBuild");
+        }
+#endif
 
         [Test]
         public void Constructor_WithBuilderInput_NonDevelopmentBuild_DoesNotSetScriptOptions()
@@ -131,11 +152,11 @@ namespace UnityEditor.AddressableAssets.Tests
 
             var testParams = new AddressableAssetsBundleBuildParameters(Settings, bundleToAssetGroup, builderInput, "Unused");
 
-            Assert.IsFalse((testParams.ScriptOptions & ScriptCompilationOptions.DevelopmentBuild) != 0,
+            Assert.AreEqual(ScriptCompilationOptions.None, testParams.ScriptOptions,
                 "ScriptOptions should not include DevelopmentBuild when builderInput.DevelopmentBuild is false");
 
             var scriptSettings = testParams.GetScriptCompilationSettings();
-            Assert.IsFalse((scriptSettings.options & ScriptCompilationOptions.DevelopmentBuild) != 0,
+            Assert.AreEqual(ScriptCompilationOptions.None, scriptSettings.options,
                 "GetScriptCompilationSettings().options should not include DevelopmentBuild");
         }
 
@@ -182,7 +203,12 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Assert.AreEqual(BuildTargetGroup.Standalone, scriptSettings.group);
             Assert.AreEqual(EditorUserBuildSettings.activeBuildTarget, scriptSettings.target);
+#if !UNITY_7000_0_OR_NEWER
             Assert.IsTrue((scriptSettings.options & ScriptCompilationOptions.DevelopmentBuild) != 0);
+#else
+            // Starting with Unity 7.0, Development Build no longer affects script compilation
+            Assert.AreEqual(ScriptCompilationOptions.None, scriptSettings.options);
+#endif
             CollectionAssert.AreEquivalent(
                 new[] { AddressableAssetsBundleBuildParameters.k_AddressablesAddDefines, "CUSTOM_DEFINE_1", "CUSTOM_DEFINE_2" },
                 scriptSettings.extraScriptingDefines);
@@ -199,7 +225,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var testParams = new AddressableAssetsBundleBuildParameters(Settings, bundleToAssetGroup, builderInput, "Unused");
 
             // Without ADDRESSABLES_ADD_DEFINES in the array, development build and extra scripting defines should not be applied
-            Assert.IsFalse((testParams.ScriptOptions & ScriptCompilationOptions.DevelopmentBuild) != 0,
+            Assert.AreEqual(ScriptCompilationOptions.None, testParams.ScriptOptions,
                 "ScriptOptions should not include DevelopmentBuild when ADDRESSABLES_ADD_DEFINES is not in ExtraScriptingDefines");
 
             var scriptSettings = testParams.GetScriptCompilationSettings();

@@ -269,32 +269,6 @@ namespace UnityEditor.AddressableAssets.Build
                 return new SerializableHash128(hash);
             return obj;
         }
-
-        public object GetCustomDataToExport(System.Reflection.MemberInfo memberInfo, Type dataContractType)
-        {
-            return null;
-        }
-
-        public object GetCustomDataToExport(Type clrType, Type dataContractType)
-        {
-            return null;
-        }
-
-        public void GetKnownCustomDataTypes(System.Collections.ObjectModel.Collection<Type> customDataTypes)
-        {
-        }
-
-        public Type GetReferencedTypeOnImport(string typeName, string typeNamespace, object customData)
-        {
-            return null;
-        }
-
-        public System.CodeDom.CodeTypeDeclaration ProcessImportedType(
-            System.CodeDom.CodeTypeDeclaration typeDeclaration,
-            System.CodeDom.CodeCompileUnit compileUnit)
-        {
-            return typeDeclaration;
-        }
     }
 }
 #endif

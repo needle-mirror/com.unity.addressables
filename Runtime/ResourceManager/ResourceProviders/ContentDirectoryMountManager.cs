@@ -43,6 +43,7 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
         // Mounted directories, keyed by resolved (placeholder-expanded) path so entries sharing
         // the same symbolic load path collapse onto one mount.
         static readonly Dictionary<string, ContentDirectoryHandle> s_Mounts = new Dictionary<string, ContentDirectoryHandle>();
+        static readonly List<ContentDirectoryHandle> s_DeferredUnmounts = new List<ContentDirectoryHandle>();
 
         /// <summary>
         /// Resolves runtime placeholders (e.g. <c>{UnityEngine.AddressableAssets.Addressables.RuntimePath}</c>)
@@ -96,6 +97,26 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
             foreach (var kvp in s_Mounts)
                 ContentLoadManager.UnregisterContentDirectory(kvp.Value);
             s_Mounts.Clear();
+        }
+
+        /// <summary>
+        /// Removes every mount from the table without unmounting it, so later calls to <see cref="EnsureMounted"/>
+        /// mount again instead of reusing them. The detached mounts stay mounted until <see cref="UnmountDeferred"/>.
+        /// </summary>
+        internal static void DeferUnmountAll()
+        {
+            s_DeferredUnmounts.AddRange(s_Mounts.Values);
+            s_Mounts.Clear();
+        }
+
+        /// <summary>
+        /// Unmounts every Content Directory detached by <see cref="DeferUnmountAll"/>.
+        /// </summary>
+        internal static void UnmountDeferred()
+        {
+            foreach (var handle in s_DeferredUnmounts)
+                ContentLoadManager.UnregisterContentDirectory(handle);
+            s_DeferredUnmounts.Clear();
         }
 
         /// <summary>

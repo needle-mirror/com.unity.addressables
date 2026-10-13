@@ -42,6 +42,9 @@ public class VerifyPublicSceneProvider
     /// </summary>
     /// <returns>IEnumerator for async test</returns>
     [UnityTest]
+#if UNITY_7000_0_OR_NEWER
+    [Ignore("Domain reload logs an assembly location error on trunk. Tracked in CBD-2441.")]
+#endif
     public IEnumerator Verify_ISceneProvider_CanBeImplementedExternally()
     {
         var content =

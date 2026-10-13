@@ -35,9 +35,15 @@ public class AddressablesPlayerBuildProcessor : BuildPlayerProcessor
         get { return 1; }
     }
 
+    // Import Workers run [InitializeOnLoadMethod]s on startup so ensure we never remove link.xml that a player build may still need. Fix for bug UUM-157651.
+    internal static Func<bool> ShouldSkipTemporaryCleanup = () =>
+        AssetDatabase.IsAssetImportWorkerProcess() || BuildPipeline.isBuildingPlayer;
+
     [InitializeOnLoadMethod]
-    private static void CleanTemporaryPlayerBuildData()
+    internal static void CleanTemporaryPlayerBuildData()
     {
+        if (ShouldSkipTemporaryCleanup())
+            return;
         RemovePlayerBuildLinkXML(AddressableAssetSettingsDefaultObject.Settings);
     }
 

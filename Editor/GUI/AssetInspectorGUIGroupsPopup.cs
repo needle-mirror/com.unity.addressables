@@ -18,6 +18,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         private AddressableAssetGroup m_InitialSelection;
         private bool m_AllowReadOnlyGroups;
+        private bool m_RequireBundledSchema;
         private bool m_StayOpenAfterSelection;
         private Rect m_ActivatorRect;
 
@@ -33,12 +34,13 @@ namespace UnityEditor.AddressableAssets.GUI
 
         private bool m_ShouldClose;
 
-        public GroupsPopupContent(Rect activatorRect, AddressableAssetGroup initialSelection, bool allowReadOnlyGroups, bool stayOpenAfterSelection,
+        public GroupsPopupContent(Rect activatorRect, AddressableAssetGroup initialSelection, bool allowReadOnlyGroups, bool requireBundledSchema, bool stayOpenAfterSelection,
             Action<AddressableAssetSettings, List<AddressableAssetEntry>, AddressableAssetGroup> action, AddressableAssetSettings settingsContext, List<AddressableAssetEntry> entriesContext)
         {
             m_ActivatorRect = activatorRect;
             m_InitialSelection = initialSelection;
             m_AllowReadOnlyGroups = allowReadOnlyGroups;
+            m_RequireBundledSchema = requireBundledSchema;
             m_StayOpenAfterSelection = stayOpenAfterSelection;
 
             m_Action = action;
@@ -101,8 +103,14 @@ namespace UnityEditor.AddressableAssets.GUI
 
             if (m_Tree.GetRows().Count == 0)
             {
-                string helpMessage = "The Shared Bundle Settings Group must have an enabled Content Packing & Loading schema attached to it. It appears none of the Groups that match your search criteria " +
-                    "have this schema attached and enabled. A quick fix is to create an empty Group with the Content Packing & Loading schema, then set the shared Group to that empty Group.";
+                string helpMessage = m_RequireBundledSchema
+                    ? "The Shared Bundle Settings Group must have an enabled Content Packing & Loading schema attached to it. It appears none of the Groups that match your search criteria " +
+                        "have this schema attached and enabled. A quick fix is to create an empty Group with the Content Packing & Loading schema, then set the shared Group to that empty Group."
+#if ENABLE_CONTENT_DIRECTORIES
+                    : "None of the Groups that match your search criteria have an enabled Content Packing & Loading (AssetBundle) or Content Directory schema.";
+#else
+                    : "None of the Groups that match your search criteria have an enabled Content Packing & Loading (AssetBundle) schema.";
+#endif
                 // Reserve room for the info icon so the message height accounts for the narrower text area and is not clipped.
                 const float helpBoxIconWidth = 55f;
                 float helpBoxHeight = EditorStyles.helpBox.CalcHeight(new GUIContent(helpMessage), remainingRect.width - helpBoxIconWidth);
@@ -241,8 +249,13 @@ namespace UnityEditor.AddressableAssets.GUI
                         if (group == null)
                             continue;
 
-                        var bundledSchema = group.GetSchema<BundledAssetGroupSchema>();
-                        if (bundledSchema == null || !bundledSchema.IsEnabled)
+                        if (m_Popup.m_RequireBundledSchema)
+                        {
+                            var bundledSchema = group.GetSchema<BundledAssetGroupSchema>();
+                            if (bundledSchema == null || !bundledSchema.IsEnabled)
+                                continue;
+                        }
+                        else if (!AddressableAssetInspectorGUI.GroupHasEnabledBuildableSchema(group))
                             continue;
 
                         if (!m_ShowReadOnlyGroups && group.ReadOnly)
@@ -262,14 +275,32 @@ namespace UnityEditor.AddressableAssets.GUI
         static Texture s_GroupsCaretTexture = null;
         static Texture s_FolderTexture = null;
 
-        internal static void ShowGroupsPopup(Rect activatorRect, AddressableAssetGroup initialSelection, bool allowReadOnlyGroups, bool stayOpenAfterSelection,
+        internal static void ShowBuildableGroupsPopup(Rect activatorRect, AddressableAssetGroup initialSelection, bool allowReadOnlyGroups, bool stayOpenAfterSelection,
             Action<AddressableAssetSettings, List<AddressableAssetEntry>, AddressableAssetGroup> action, AddressableAssetSettings settingsContext, List<AddressableAssetEntry> entriesContext)
         {
-            var content = new GroupsPopupContent(activatorRect, initialSelection, allowReadOnlyGroups, stayOpenAfterSelection, action, settingsContext, entriesContext);
+            ShowGroupsPopup(activatorRect, initialSelection, allowReadOnlyGroups, false, stayOpenAfterSelection, action, settingsContext, entriesContext);
+        }
+
+        static void ShowGroupsPopup(Rect activatorRect, AddressableAssetGroup initialSelection, bool allowReadOnlyGroups, bool requireBundledSchema, bool stayOpenAfterSelection,
+            Action<AddressableAssetSettings, List<AddressableAssetEntry>, AddressableAssetGroup> action, AddressableAssetSettings settingsContext, List<AddressableAssetEntry> entriesContext)
+        {
+            var content = new GroupsPopupContent(activatorRect, initialSelection, allowReadOnlyGroups, requireBundledSchema, stayOpenAfterSelection, action, settingsContext, entriesContext);
             PopupWindow.Show(activatorRect, content);
         }
 
-        internal static void DrawGroupsDropdown(GUIContent dropdownlabelContent, AddressableAssetGroup displayGroup, bool enabledDropdown, bool mixedValueDropdown, bool allowReadOnlyGroups,
+        internal static void DrawBundledGroupsDropdown(GUIContent dropdownlabelContent, AddressableAssetGroup displayGroup, bool enabledDropdown, bool mixedValueDropdown, bool allowReadOnlyGroups,
+        Action<AddressableAssetSettings, List<AddressableAssetEntry>, AddressableAssetGroup> action, List<AddressableAssetEntry> entriesContext)
+        {
+            DrawGroupsDropdown(dropdownlabelContent, displayGroup, enabledDropdown, mixedValueDropdown, allowReadOnlyGroups, true, action, entriesContext);
+        }
+
+        internal static void DrawBuildableGroupsDropdown(GUIContent dropdownlabelContent, AddressableAssetGroup displayGroup, bool enabledDropdown, bool mixedValueDropdown, bool allowReadOnlyGroups,
+        Action<AddressableAssetSettings, List<AddressableAssetEntry>, AddressableAssetGroup> action, List<AddressableAssetEntry> entriesContext)
+        {
+            DrawGroupsDropdown(dropdownlabelContent, displayGroup, enabledDropdown, mixedValueDropdown, allowReadOnlyGroups, false, action, entriesContext);
+        }
+
+        static void DrawGroupsDropdown(GUIContent dropdownlabelContent, AddressableAssetGroup displayGroup, bool enabledDropdown, bool mixedValueDropdown, bool allowReadOnlyGroups, bool requireBundledSchema,
         Action<AddressableAssetSettings, List<AddressableAssetEntry>, AddressableAssetGroup> action, List<AddressableAssetEntry> entriesContext)
         {
             using (new EditorGUI.DisabledScope(!enabledDropdown))
@@ -327,6 +358,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                 }
 
+                bool isFieldMousePress = Event.current.type == EventType.MouseDown && Event.current.button == 0 && groupFieldRectNoPicker.Contains(Event.current.mousePosition);
                 UnityEngine.GUI.SetNextControlName(s_GroupsDropdownControlName);
                 EditorGUI.DropdownButton(groupFieldRect, groupGUIContent, FocusType.Keyboard, EditorStyles.objectField);
                 EditorGUIUtility.SetIconSize(new Vector2(iconSize.x, iconSize.y));
@@ -352,7 +384,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         if (isPickerPressed || enterKeyRequestsPopup)
                         {
                             AddressableAssetGroup initialSelection = !mixedValueDropdown ? displayGroup : null;
-                            ShowGroupsPopup(groupFieldRect, initialSelection, allowReadOnlyGroups, true, action, settings, entriesContext);
+                            ShowGroupsPopup(groupFieldRect, initialSelection, allowReadOnlyGroups, requireBundledSchema, true, action, settings, entriesContext);
                             Event.current.Use();
                         }
 
@@ -362,22 +394,14 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                 }
 
-                if (!mixedValueDropdown && displayGroup != null)
+                if (!mixedValueDropdown && displayGroup != null && isFieldMousePress)
                 {
-                    if (Event.current.clickCount == 1 && groupFieldRectNoPicker.Contains(Event.current.mousePosition))
-                    {
-                        UnityEngine.GUI.FocusControl(s_GroupsDropdownControlName);
-                        AddressableAssetsWindow.Init();
-                        var window = EditorWindow.GetWindow<AddressableAssetsWindow>();
-                        window.SelectGroupInGroupEditor(displayGroup, false);
-                    }
-
-                    if (Event.current.clickCount == 2 && groupFieldRectNoPicker.Contains(Event.current.mousePosition))
-                    {
-                        AddressableAssetsWindow.Init();
-                        var window = EditorWindow.GetWindow<AddressableAssetsWindow>();
-                        window.SelectGroupInGroupEditor(displayGroup, true);
-                    }
+                    // Mouseup likely won't be detected until after focus change, so clear hotControl to prevent tab lock (see UUM-150024)
+                    GUIUtility.hotControl = 0;
+                    UnityEngine.GUI.FocusControl(s_GroupsDropdownControlName);
+                    bool doubleClickDetected = Event.current.clickCount == 2;
+                    AddressableAssetsWindow.Init();
+                    EditorWindow.GetWindow<AddressableAssetsWindow>().SelectGroupInGroupEditor(displayGroup, doubleClickDetected);
                 }
             }
         }

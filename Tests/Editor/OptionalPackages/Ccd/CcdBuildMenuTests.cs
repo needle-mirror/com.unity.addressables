@@ -21,7 +21,6 @@ using UnityEngine.AddressableAssets;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
-using System.Runtime.Remoting.Contexts;
 using static UnityEngine.Networking.UnityWebRequest;
 using static UnityEditor.MaterialProperty;
 using UnityEditor.PackageManager;
@@ -923,14 +922,14 @@ namespace UnityEditor.AddressableAssets.Tests.OptionalPackages.Ccd
             Assert.True(success);
         }
 
-        static Tuple<bool, string>[] buildRemoteCatalogValues = new Tuple<bool, string>[]
+        static System.Tuple<bool, string>[] buildRemoteCatalogValues = new System.Tuple<bool, string>[]
         {
-            new Tuple<bool, string>(true, "Remote Catalog"),
-            new Tuple<bool, string>(false, "First Group")
+            new System.Tuple<bool, string>(true, "Remote Catalog"),
+            new System.Tuple<bool, string>(false, "First Group")
         };
 
         [Test]
-        public async Task VerifyTargetEnvironmentNotFound([ValueSource(nameof(buildRemoteCatalogValues))] Tuple<bool, string> remoteCatalogPair)
+        public async Task VerifyTargetEnvironmentNotFound([ValueSource(nameof(buildRemoteCatalogValues))] System.Tuple<bool, string> remoteCatalogPair)
         {
             LogAssert.Expect(LogType.Error, new Regex(".*Unable to find remote environment badenvironment.*", RegexOptions.Singleline));
             m_Settings.activeProfileId = m_Settings.profileSettings.GetProfileId(k_ProfileAutomaticAndLocal);
@@ -942,7 +941,7 @@ namespace UnityEditor.AddressableAssets.Tests.OptionalPackages.Ccd
 
 
         [Test]
-        public async Task VerifyTargetEnvironmentInternalError([ValueSource(nameof(buildRemoteCatalogValues))] Tuple<bool, string> remoteCatalogPair)
+        public async Task VerifyTargetEnvironmentInternalError([ValueSource(nameof(buildRemoteCatalogValues))] System.Tuple<bool, string> remoteCatalogPair)
         {
             // we have to delete the automatic profile bucket from the cache so CreateBucketAsync is called
             DeleteBucketFromCache(EditorUserBuildSettings.activeBuildTarget.ToString());

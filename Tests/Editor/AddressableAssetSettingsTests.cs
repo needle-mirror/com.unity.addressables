@@ -1618,6 +1618,27 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void SettingSchemaProviderTypes_UpdatesSettingsProviderTypes()
+        {
+            var settings = AddressableAssetSettings.Create(ConfigFolder, k_TestConfigName + "_GlobalSettingsTest", false, false);
+            var group = settings.CreateGroup("GlobalSettingsTest", false, false, false, null, typeof(BundledAssetGroupSchema));
+            var otherGroup = settings.CreateGroup("OtherGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+            settings.BundledAssetProviderType = new SerializedType() { Value = typeof(BundledAssetProvider) };
+            settings.AssetBundleProviderType = new SerializedType() { Value = typeof(AssetBundleProvider) };
+
+            var schema = group.GetSchema<BundledAssetGroupSchema>();
+            schema.BundledAssetProviderType = new SerializedType() { Value = typeof(ResourceProviderBase) };
+            schema.AssetBundleProviderType = new SerializedType() { Value = typeof(ResourceProviderBase) };
+
+            Assert.AreEqual(typeof(ResourceProviderBase), settings.BundledAssetProviderType.Value, "Settings should show the provider type set on the schema.");
+            Assert.AreEqual(typeof(ResourceProviderBase), settings.AssetBundleProviderType.Value, "Settings should show the provider type set on the schema.");
+
+            var otherSchema = otherGroup.GetSchema<BundledAssetGroupSchema>();
+            Assert.AreEqual(typeof(BundledAssetProvider), otherSchema.BundledAssetProviderType.Value, "Other groups should not be changed.");
+            Assert.AreEqual(typeof(AssetBundleProvider), otherSchema.AssetBundleProviderType.Value, "Other groups should not be changed.");
+        }
+
+        [Test]
         public void CanSetGroupSettings_AssetBundleProviderType()
         {
             var settings = AddressableAssetSettings.Create(ConfigFolder, k_TestConfigName + "_GlobalSettingsTest", false, false);

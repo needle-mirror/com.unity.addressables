@@ -36,7 +36,6 @@ namespace UnityEditor.AddressableAssets.GUI
                 new MultiColumnHeaderState.Column(),
                 new MultiColumnHeaderState.Column(),
                 new MultiColumnHeaderState.Column(),
-                new MultiColumnHeaderState.Column(),
             };
 
             int counter = 0;
@@ -50,21 +49,12 @@ namespace UnityEditor.AddressableAssets.GUI
             retVal[counter].autoResize = true;
             counter++;
 
-            retVal[counter].headerContent = new GUIContent("Group Name \\ Addressable Name", "Address used to load asset at runtime");
+            retVal[counter].headerContent = new GUIContent("Name", "Address used to load asset at runtime");
             retVal[counter].minWidth = 100;
             retVal[counter].width = 260;
             retVal[counter].maxWidth = 10000;
             retVal[counter].headerTextAlignment = TextAlignment.Left;
             retVal[counter].canSort = true;
-            retVal[counter].autoResize = true;
-            counter++;
-
-            retVal[counter].headerContent = new GUIContent("Type", "Asset type");
-            retVal[counter].minWidth = 40;
-            retVal[counter].width = 40;
-            retVal[counter].maxWidth = 10000;
-            retVal[counter].headerTextAlignment = TextAlignment.Left;
-            retVal[counter].canSort = false;
             retVal[counter].autoResize = true;
             counter++;
 

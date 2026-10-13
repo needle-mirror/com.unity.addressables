@@ -1,11 +1,15 @@
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using UnityEditor.AddressableAssets.Build.Layout;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.Build;
+using UnityEditor.Build.Analysis;
 using UnityEngine;
 using UnityEngine.UIElements;
+using BuildResult = UnityEditor.Build.Reporting.BuildResult;
 
 namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 {
@@ -13,18 +17,16 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
     /// Draws the report's Summary tab with the anatomy of the Build Analysis window's Overview tab:
     /// a build header, a row of stat cards, a Build Details section and a potential issues card.
     /// </summary>
+    /// <remarks>The header, stat cards and Build Details are Build Analysis' own elements, declared in SummaryTabEmbedded.uxml.</remarks>
     internal class MainPanelSummaryTabEmbedded : IAddressableView, IBuildReportConsumer
     {
         internal const string k_DefaultBuildName = "Addressables Build";
         internal const string k_NoRemoteCatalog = "No Remote Catalog Built";
-        internal const string k_StatusSuccessClass = "SummaryTabStatusBadge--success";
-        internal const string k_StatusFailedClass = "SummaryTabStatusBadge--failed";
+        internal const string k_DetailValueNameFormat = "SummaryTabDetailValue_{0}";
 
         const string k_ContentDirectoriesBannerClass = "SummaryTabContentDirectoriesBanner";
-        const string k_DetailsLabelClass = "SummaryTabDetailsLabel";
-        const string k_DetailsValueClass = "SummaryTabDetailsValue";
-        const string k_DetailsValueContainerClass = "SummaryTabDetailsValueContainer";
-        const string k_DetailsActionButtonClass = "SummaryTabDetailsActionButton";
+        const string k_RelatedBuildsLabel = "Related Builds";
+        internal const string k_NoRelatedBuilds = "None";
 
         public VisualElement tabRootElement;
         internal ScrollView scrollbarElement;
@@ -33,23 +35,23 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         BuildReportHelperConsumer m_HelperConsumer;
         bool m_IsEmbedded;
 
-        Label m_Title;
-        Label m_Subtitle;
-        Image m_PlatformIcon;
-        VisualElement m_StatusBadge;
-        Image m_StatusIcon;
-        Label m_StatusText;
-        Label m_TimeRange;
+        // Labels of the detail rows in SummaryTabEmbedded.uxml.
+        static readonly string[] k_DetailLabels =
+        {
+            "Addressables", "Assets pulled", "Package Version", "Editor Version", "Player Build Version",
+            "Addressable Profile", "Local Catalog(s)", "Remote Catalog(s)", "Remote Catalog Location", "Local Catalog Location",
+        };
 
-        Label m_TotalBundleSizeValue;
-        Label m_BuildDurationValue;
-        Label m_BundleCountValue;
-        Label m_AssetCountValue;
-
-        VisualElement m_DetailsLeftLabels;
-        VisualElement m_DetailsLeftValues;
-        VisualElement m_DetailsRightLabels;
-        VisualElement m_DetailsRightValues;
+        BuildHeader m_Header;
+        StatCard m_BundleSizeCard;
+        StatCard m_DurationCard;
+        StatCard m_BundlesCard;
+        StatCard m_AssetsCard;
+        BuildDetailsGrid m_DetailsGrid;
+        readonly Dictionary<string, Label> m_DetailValues = new Dictionary<string, Label>();
+        Button m_ShowLocalCatalogButton;
+        Label m_RelatedBuildsValue;
+        RelatedBuildLinks m_RelatedBuilds;
 
         VisualElement m_ContentDirectories;
         VisualElement m_PotentialIssues;
@@ -69,35 +71,15 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         {
             tabRootElement = rootVisualElement.Q<VisualElement>(BuildReportUtility.SummaryTab);
 
-            // Clear the style sheets defined in the template uxml file so they can be applied from
-            // here in the order of: 1. base, 2. theming.
+            // Theme values come from the Build Analysis window, so no per-skin sheet is needed.
             tabRootElement.styleSheets.Clear();
             tabRootElement.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>(BuildReportUtility.SummaryTabEmbeddedUssPath));
-            tabRootElement.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>(EditorGUIUtility.isProSkin
-                ? BuildReportUtility.SummaryTabEmbeddedDarkUssPath
-                : BuildReportUtility.SummaryTabEmbeddedLightUssPath));
 
             scrollbarElement = tabRootElement.Q<ScrollView>(BuildReportUtility.SummaryTabScroll);
             scrollbarElement.verticalScrollerVisibility = ScrollerVisibility.Auto;
             scrollbarElement.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
 
-            m_Title = tabRootElement.Q<Label>(BuildReportUtility.SummaryTabHeaderTitle);
-            m_Subtitle = tabRootElement.Q<Label>(BuildReportUtility.SummaryTabHeaderSubtitle);
-            m_PlatformIcon = tabRootElement.Q<Image>(BuildReportUtility.SummaryTabHeaderPlatformIcon);
-            m_StatusBadge = tabRootElement.Q<VisualElement>(BuildReportUtility.SummaryTabStatusBadge);
-            m_StatusIcon = tabRootElement.Q<Image>(BuildReportUtility.SummaryTabStatusBadgeIcon);
-            m_StatusText = tabRootElement.Q<Label>(BuildReportUtility.SummaryTabStatusBadgeText);
-            m_TimeRange = tabRootElement.Q<Label>(BuildReportUtility.SummaryTabHeaderTimeRange);
-
-            m_TotalBundleSizeValue = tabRootElement.Q<Label>(BuildReportUtility.SummaryTabTotalBundleSizeValue);
-            m_BuildDurationValue = tabRootElement.Q<Label>(BuildReportUtility.SummaryTabBuildDurationValue);
-            m_BundleCountValue = tabRootElement.Q<Label>(BuildReportUtility.SummaryTabBundleCountValue);
-            m_AssetCountValue = tabRootElement.Q<Label>(BuildReportUtility.SummaryTabAssetCountValue);
-
-            m_DetailsLeftLabels = tabRootElement.Q<VisualElement>(BuildReportUtility.SummaryTabDetailsLeftLabels);
-            m_DetailsLeftValues = tabRootElement.Q<VisualElement>(BuildReportUtility.SummaryTabDetailsLeftValues);
-            m_DetailsRightLabels = tabRootElement.Q<VisualElement>(BuildReportUtility.SummaryTabDetailsRightLabels);
-            m_DetailsRightValues = tabRootElement.Q<VisualElement>(BuildReportUtility.SummaryTabDetailsRightValues);
+            CreateLayout();
 
             m_ContentDirectories = tabRootElement.Q<VisualElement>(BuildReportUtility.SummaryTabContentDirectories);
             m_PotentialIssues = tabRootElement.Q<VisualElement>(BuildReportUtility.SummaryTabPotentialIssues);
@@ -118,7 +100,9 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
         /// <param name="buildName">Name of the build as the host knows it, shown as the header
         /// title. Falls back to a generic title when the host has no name for the build.</param>
-        internal void Consume(BuildLayout buildReport, string buildName)
+        /// <param name="relatedBuilds">Builds this one ran nested in or contains, shown as links that open
+        /// them in the Build Analysis window. The row reads None when null or empty.</param>
+        internal void Consume(BuildLayout buildReport, string buildName, IReadOnlyList<BuildReportSummary> relatedBuilds = null)
         {
             ClearGUI();
 
@@ -127,6 +111,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             BindHeader(buildReport, buildName);
             BindStatCards(buildReport, summary);
             BindBuildDetails(buildReport, summary);
+            BindRelatedBuilds(relatedBuilds ?? Array.Empty<BuildReportSummary>());
             BindContentDirectories(buildReport);
             BindPotentialIssues(buildReport);
 
@@ -139,25 +124,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public void ClearGUI()
         {
             m_ContentDirectories.Clear();
-
-            m_Title.text = string.Empty;
-            m_Subtitle.text = string.Empty;
-            m_PlatformIcon.image = null;
-            m_StatusText.text = string.Empty;
-            m_StatusIcon.image = null;
-            m_StatusBadge.RemoveFromClassList(k_StatusSuccessClass);
-            m_StatusBadge.RemoveFromClassList(k_StatusFailedClass);
-            m_TimeRange.text = string.Empty;
-
-            m_TotalBundleSizeValue.text = string.Empty;
-            m_BuildDurationValue.text = string.Empty;
-            m_BundleCountValue.text = string.Empty;
-            m_AssetCountValue.text = string.Empty;
-
-            m_DetailsLeftLabels.Clear();
-            m_DetailsLeftValues.Clear();
-            m_DetailsRightLabels.Clear();
-            m_DetailsRightValues.Clear();
+            ClearLayout();
             m_LocalCatalogDirectory = string.Empty;
 
             BuildReportUtility.SetElementDisplay(m_PotentialIssues, false);
@@ -165,61 +132,111 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             scrollbarElement.visible = false;
         }
 
+        void CreateLayout()
+        {
+            m_Header = tabRootElement.Q<BuildHeader>(BuildReportUtility.SummaryTabHeader);
+            m_BundleSizeCard = tabRootElement.Q<StatCard>(BuildReportUtility.SummaryTabStatCardBundleSize);
+            m_DurationCard = tabRootElement.Q<StatCard>(BuildReportUtility.SummaryTabStatCardDuration);
+            m_BundlesCard = tabRootElement.Q<StatCard>(BuildReportUtility.SummaryTabStatCardBundles);
+            m_AssetsCard = tabRootElement.Q<StatCard>(BuildReportUtility.SummaryTabStatCardAssets);
+
+            m_DetailsGrid = tabRootElement.Q<BuildDetailsGrid>(BuildReportUtility.SummaryTabDetailsGrid);
+            m_DetailValues.Clear();
+            foreach (string label in k_DetailLabels)
+            {
+                Label value = m_DetailsGrid.Q<Label>(DetailValueName(label));
+                RegisterCopyTextToClipboardCallback(value);
+                m_DetailValues.Add(label, value);
+            }
+
+            m_ShowLocalCatalogButton = m_DetailsGrid.Q<Button>(BuildReportUtility.SummaryTabShowLocalCatalogButton);
+            m_ShowLocalCatalogButton.text = BuildAnalysisConstants.k_ShowInFileBrowserLabel;
+            m_ShowLocalCatalogButton.clicked += OnShowLocalCatalogClicked;
+
+            // The row shows one link per build, or its value label reading None when there are none.
+            m_RelatedBuildsValue = m_DetailsGrid.Q<Label>(DetailValueName(k_RelatedBuildsLabel));
+            m_RelatedBuilds = m_DetailsGrid.Q<RelatedBuildLinks>(BuildReportUtility.SummaryTabRelatedBuilds);
+        }
+
+        void ClearLayout()
+        {
+            // BuildHeader has no empty state. The tab is hidden while cleared, so blanking the text is enough.
+            m_Header.Bind(new BuildEntry(), string.Empty);
+
+            m_BundleSizeCard.value = string.Empty;
+            m_DurationCard.value = string.Empty;
+            m_BundlesCard.value = string.Empty;
+            m_AssetsCard.value = string.Empty;
+
+            foreach (string label in k_DetailLabels)
+                SetDetail(label, string.Empty);
+            m_ShowLocalCatalogButton.SetEnabled(false);
+            BindRelatedBuilds(Array.Empty<BuildReportSummary>());
+        }
+
         void BindHeader(BuildLayout report, string buildName)
         {
-            m_Title.text = string.IsNullOrEmpty(buildName) ? k_DefaultBuildName : buildName;
-            m_Subtitle.text = $"{report.BuildTarget} • {GetBuildTypeDescription(report.BuildType)}";
-
-            Texture2D platformIcon = BuildReportUtility.GetPlatformIcon(report.BuildTarget);
-            m_PlatformIcon.image = platformIcon;
-            BuildReportUtility.SetElementDisplay(m_PlatformIcon, platformIcon != null);
-
             bool succeeded = string.IsNullOrEmpty(report.BuildError);
-            m_StatusText.text = succeeded ? "Success" : "Failure";
-            m_StatusIcon.image = BuildReportUtility.GetBuildStatusIcon(succeeded);
-            m_StatusBadge.EnableInClassList(k_StatusSuccessClass, succeeded);
-            m_StatusBadge.EnableInClassList(k_StatusFailedClass, !succeeded);
-            m_StatusBadge.tooltip = succeeded ? string.Empty : report.BuildError;
-
-            m_TimeRange.text = FormatTimeRange(report.BuildStart, report.Duration);
+            m_Header.Bind(new BuildEntry
+            {
+                BuildName = string.IsNullOrEmpty(buildName) ? k_DefaultBuildName : buildName,
+                Platform = report.BuildTarget,
+                BuildResult = succeeded ? BuildResult.Succeeded : BuildResult.Failed,
+                BuildStartedAt = report.BuildStart,
+                TotalTimeMs = (long)Math.Round(report.Duration * 1000d),
+            }, $"{report.BuildTarget} • {GetBuildTypeDescription(report.BuildType)}");
         }
 
         void BindStatCards(BuildLayout report, BuildLayoutSummary summary)
         {
-            m_TotalBundleSizeValue.text = BuildReportUtility.GetDenominatedBytesString(summary.BundleSummary.TotalCompressedSize);
-            m_BuildDurationValue.text = BuildReportUtility.GetDurationString(report.Duration);
-            m_BundleCountValue.text = summary.BundleSummary.Count.ToString();
-            m_AssetCountValue.text = summary.TotalAssetCount.ToString();
+            m_BundleSizeCard.value = BuildReportUtility.GetDenominatedBytesString(summary.BundleSummary.TotalCompressedSize);
+            m_DurationCard.value = BuildReportUtility.GetDurationString(report.Duration);
+            m_BundlesCard.value = summary.BundleSummary.Count.ToString();
+            m_AssetsCard.value = summary.TotalAssetCount.ToString();
         }
 
         void BindBuildDetails(BuildLayout report, BuildLayoutSummary summary)
         {
-            AddDetailRow(m_DetailsLeftLabels, m_DetailsLeftValues, "Addressables",
-                FormatAssetCount(summary.ExplicitAssetCount, summary.TotalAssetCount));
-            AddDetailRow(m_DetailsLeftLabels, m_DetailsLeftValues, "Assets pulled",
-                FormatAssetCount(summary.ImplicitAssetCount, summary.TotalAssetCount));
-            AddDetailRow(m_DetailsLeftLabels, m_DetailsLeftValues, "Package Version",
-                FormatPackageVersion(report.PackageVersion));
-            AddDetailRow(m_DetailsLeftLabels, m_DetailsLeftValues, "Editor Version", report.UnityVersion);
-            if (!string.IsNullOrEmpty(report.PlayerBuildVersion))
-                AddDetailRow(m_DetailsLeftLabels, m_DetailsLeftValues, "Player Build Version", report.PlayerBuildVersion);
+            SetDetail("Addressables", FormatAssetCount(summary.ExplicitAssetCount, summary.TotalAssetCount));
+            SetDetail("Assets pulled", FormatAssetCount(summary.ImplicitAssetCount, summary.TotalAssetCount));
+            SetDetail("Package Version", FormatPackageVersion(report.PackageVersion));
+            SetDetail("Editor Version", report.UnityVersion);
+            SetOptionalDetail("Player Build Version", report.PlayerBuildVersion);
 
-            AddDetailRow(m_DetailsRightLabels, m_DetailsRightValues, "Addressable Profile",
-                report.AddressablesEditorSettings?.ActiveProfile?.Name ?? "None");
+            SetDetail("Addressable Profile", report.AddressablesEditorSettings?.ActiveProfile?.Name ?? "None");
 
             GetCatalogNames(report, out List<string> localCatalogNames, out List<string> remoteCatalogNames);
-            if (localCatalogNames.Count > 0)
-                AddDetailRow(m_DetailsRightLabels, m_DetailsRightValues, "Local Catalog(s)", string.Join(", ", localCatalogNames));
-            if (remoteCatalogNames.Count > 0)
-                AddDetailRow(m_DetailsRightLabels, m_DetailsRightValues, "Remote Catalog(s)", string.Join(", ", remoteCatalogNames));
+            SetOptionalDetail("Local Catalog(s)", string.Join(", ", localCatalogNames));
+            SetOptionalDetail("Remote Catalog(s)", string.Join(", ", remoteCatalogNames));
 
-            AddDetailRow(m_DetailsRightLabels, m_DetailsRightValues, "Remote Catalog Location",
+            SetDetail("Remote Catalog Location",
                 string.IsNullOrEmpty(report.RemoteCatalogBuildPath) ? k_NoRemoteCatalog : report.RemoteCatalogBuildPath);
 
             m_LocalCatalogDirectory = NormalizeToDirectory(report.LocalCatalogBuildPath);
-            AddDetailRow(m_DetailsRightLabels, m_DetailsRightValues, "Local Catalog Location",
-                report.LocalCatalogBuildPath, "Show in Explorer", OnShowLocalCatalogClicked,
-                !string.IsNullOrEmpty(m_LocalCatalogDirectory));
+            SetDetail("Local Catalog Location", report.LocalCatalogBuildPath);
+            m_ShowLocalCatalogButton.SetEnabled(!string.IsNullOrEmpty(m_LocalCatalogDirectory));
+        }
+
+        void BindRelatedBuilds(IReadOnlyList<BuildReportSummary> relatedBuilds)
+        {
+            // With no related builds the links are empty, so the row's value label shows None instead.
+            bool hasRelatedBuilds = relatedBuilds.Count > 0;
+            m_RelatedBuilds.SetBuilds(relatedBuilds);
+            m_RelatedBuildsValue.text = hasRelatedBuilds ? string.Empty : k_NoRelatedBuilds;
+            m_RelatedBuildsValue.style.display = hasRelatedBuilds ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        void SetDetail(string label, string value)
+        {
+            Label valueElement = m_DetailValues[label];
+            valueElement.text = value ?? string.Empty;
+            valueElement.tooltip = value;
+        }
+
+        void SetOptionalDetail(string label, string value)
+        {
+            SetDetail(label, value);
+            m_DetailsGrid.SetRowVisible(m_DetailValues[label], !string.IsNullOrEmpty(value));
         }
 
         void BindContentDirectories(BuildLayout report)
@@ -227,7 +244,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 #if ENABLE_CONTENT_DIRECTORIES
             // The banner links to Build Analysis; suppress it when this view is already embedded there.
             if (!m_IsEmbedded && report.ContentDirectories?.Count > 0)
-                m_ContentDirectories.Add(CreateContentDirectoriesBanner());
+                m_ContentDirectories.Add(CreateContentDirectoriesBanner(report.ContentDirectories[0].BuildSessionGUID));
 #endif
         }
 
@@ -244,40 +261,9 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             BuildReportUtility.SetElementDisplay(m_PotentialIssues, true);
         }
 
-        void AddDetailRow(VisualElement labelColumn, VisualElement valueColumn, string label, string value)
+        internal static string DetailValueName(string label)
         {
-            AddDetailRow(labelColumn, valueColumn, label, value, null, null, false);
-        }
-
-        void AddDetailRow(VisualElement labelColumn, VisualElement valueColumn, string label, string value,
-            string buttonText, Action buttonAction, bool buttonEnabled)
-        {
-            var labelElement = new Label($"{label}:");
-            labelElement.AddToClassList(k_DetailsLabelClass);
-            labelColumn.Add(labelElement);
-
-            var valueElement = new Label(value ?? string.Empty);
-            valueElement.AddToClassList(k_DetailsValueClass);
-            valueElement.tooltip = value;
-            valueElement.selection.isSelectable = true;
-            RegisterCopyTextToClipboardCallback(valueElement);
-
-            if (buttonText == null)
-            {
-                valueColumn.Add(valueElement);
-                return;
-            }
-
-            var container = new VisualElement();
-            container.AddToClassList(k_DetailsValueContainerClass);
-            container.Add(valueElement);
-
-            var button = new Button(buttonAction) { text = buttonText };
-            button.AddToClassList(k_DetailsActionButtonClass);
-            button.SetEnabled(buttonEnabled);
-            container.Add(button);
-
-            valueColumn.Add(container);
+            return string.Format(CultureInfo.InvariantCulture, k_DetailValueNameFormat, label);
         }
 
         void OnShowLocalCatalogClicked()
@@ -319,19 +305,6 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
             float percentage = ((float)count / totalCount) * 100f;
             return $"{count} ({percentage.ToString("0.##", CultureInfo.InvariantCulture)}%)";
-        }
-
-        internal static string FormatTimeRange(DateTime buildStart, double durationSeconds)
-        {
-            if (buildStart == DateTime.MinValue)
-                return "Unknown";
-
-            DateTime endTime = buildStart.AddSeconds(Math.Max(0, durationSeconds));
-            return string.Format(
-                CultureInfo.InvariantCulture,
-                "{0:MM/dd/yyyy} • {0:HH:mm} to {1:HH:mm}",
-                buildStart,
-                endTime);
         }
 
         internal static string GetBuildTypeDescription(BuildType buildType)
@@ -386,12 +359,12 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         }
 
 #if ENABLE_CONTENT_DIRECTORIES
-        static HelpBox CreateContentDirectoriesBanner()
+        static HelpBox CreateContentDirectoriesBanner(GUID buildSessionGUID)
         {
             HelpBox banner = new HelpBox("This build includes content built using Content Directories. To view that content, use the Build Analysis window.", HelpBoxMessageType.Info);
             banner.AddToClassList(k_ContentDirectoriesBannerClass);
             banner.buttonText = "Open Build Analysis";
-            banner.onButtonClicked += BuildReportUtility.OpenBuildAnalysisWindow;
+            banner.onButtonClicked += () => BuildReportUtility.OpenBuildAnalysisWindow(buildSessionGUID);
             banner.linkText = "Learn More";
             banner.linkHref = AddressableAssetUtility.GenerateContentDirectoriesDocsURL();
             return banner;
@@ -411,3 +384,4 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         }
     }
 }
+#endif

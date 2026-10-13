@@ -4,6 +4,23 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.1.2] - 2026-10-13
+- Update dependency on Scriptable Build Pipeline to 4.0.2
+- Content directory builds run by an Addressables build now appear nested under it in the Build Analysis window.
+- Fixed a `NullReferenceException` when clearing content update flags on a folder entry with a null child.
+- Fixed issue where the AddressableAssetSettings inspector tab would become non intractable if docked with the Groups window inspector when the Shared Bundle Settings is set to Custom Group and a click is detected in the Shared Bundle Settings Group property field, thus changing the window focus.
+- Fixed an issue where in the group selector within the inspector for an Addressable asset would not be able to select Content Directory groups.
+- Fixed a `NullReferenceException` when using "Add Reports from Folder" in the Addressables Report window.
+- Fixed an issue where we were running the wrong legacy binary formatter tool to convert files on ARM64 OSX machines
+- Fixed compile errors in the Addressables test assemblies when the MSBuild compilation pipeline is enabled.
+- Fixed the Build Details section of the Build Analysis window not showing the related builds of an Addressables build.
+- Fixed an issue where the Asset Provider and Asset Bundle Provider shown in the AddressableAssetSettings inspector did not match the provider types used in the build when they were set on a BundledAssetGroupSchema through script. (UUM-154191)
+- Fixed an issue where custom provider types deriving from a built-in provider were displayed with the base provider's name in type dropdowns.
+- Fixed an editor crash when exiting Play mode with a scene loaded from a Content Directory.
+- Added the ability to open the Build Analysis Window from the Addressables Report and link it to a specific job.
+- Updated the Addressables Report UX in the Build Analysis window on Unity 6.7+.
+- Fixed an issue where an import worker spawning during a player build would cause the Addressables link.xml to be deleted, thus causing 'Unknown managed type references' errors.
+
 ## [4.1.1] - 2026-09-29
 - Fixed duplicated Content Files error during archiving when two assets have an identical binary result in the build.
 - Changed the "Open Addressables Report after build" preference to open the Build Analysis window on Unity 6.7+.

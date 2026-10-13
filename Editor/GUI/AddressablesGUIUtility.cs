@@ -12,11 +12,17 @@ namespace UnityEditor.AddressableAssets.GUI
     {
         bool? m_Value;
         private string m_Key;
+        private bool m_DefaultValue;
 
-        public FoldoutSessionStateValue(string key)
+        public FoldoutSessionStateValue(string key) : this(key, true)
+        {
+        }
+
+        public FoldoutSessionStateValue(string key, bool defaultValue)
         {
             m_Value = null;
             m_Key = key;
+            m_DefaultValue = defaultValue;
         }
 
         public bool IsActive
@@ -27,7 +33,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     throw new NullReferenceException("FoldoutSessionStateValue does not have a valid key set");
 
                 if (m_Value.HasValue == false)
-                    m_Value = SessionState.GetBool(m_Key, true);
+                    m_Value = SessionState.GetBool(m_Key, m_DefaultValue);
                 return m_Value.Value;
             }
             set
@@ -86,6 +92,38 @@ namespace UnityEditor.AddressableAssets.GUI
             return text.Substring(0, maxChars - 3) + "...";
         }
 
+        internal static string TruncateWithEllipsis(string text, float maxWidth, GUIStyle style)
+        {
+            if (string.IsNullOrEmpty(text))
+                return text;
+            if (maxWidth <= 0f)
+                return string.Empty;
+
+            GUIContent content = new GUIContent(text);
+            if (style.CalcSize(content).x <= maxWidth)
+                return text;
+
+            int low = 1;
+            int high = text.Length - 1;
+            int best = 0;
+            while (low <= high)
+            {
+                int mid = (low + high) / 2;
+                content.text = text.Substring(0, mid) + "...";
+                if (style.CalcSize(content).x <= maxWidth)
+                {
+                    best = mid;
+                    low = mid + 1;
+                }
+                else
+                {
+                    high = mid - 1;
+                }
+            }
+
+            return best == 0 ? "..." : text.Substring(0, best) + "...";
+        }
+
         internal static bool GetFoldoutValue(string stateKey)
         {
             if (m_CachedSessionStates.TryGetValue(stateKey, out var val))
@@ -100,6 +138,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (m_CachedSessionStates.TryGetValue(stateKey, out var val))
             {
                 val.IsActive = isActive;
+                m_CachedSessionStates[stateKey] = val;
                 return;
             }
 
@@ -139,6 +178,17 @@ namespace UnityEditor.AddressableAssets.GUI
             EditorGUI.BeginChangeCheck();
             newValue = EditorGUILayout.Toggle(label, currentValue);
             return EditorGUI.EndChangeCheck();
+        }
+
+        static GUIStyle s_BoldFoldoutStyle;
+        internal static GUIStyle BoldFoldoutStyle
+        {
+            get
+            {
+                if (s_BoldFoldoutStyle == null)
+                    s_BoldFoldoutStyle = new GUIStyle(EditorStyles.foldout) { fontStyle = FontStyle.Bold };
+                return s_BoldFoldoutStyle;
+            }
         }
 
         internal static float HeaderHeight = 20f;
@@ -351,7 +401,8 @@ namespace UnityEditor.AddressableAssets.GUI
         }
 
         public static bool BeginFoldoutHeaderGroupWithHelp(bool isActive, GUIContent content, Action helpAction = null, int indent = 0, Action<Rect> menuAction = null,
-                                                           AddressableAssetGroupSchema schema = null, AddressableAssetGroup groupTarget = null, AddressableAssetGroup[] groupTargets = null)
+                                                           AddressableAssetGroupSchema schema = null, AddressableAssetGroup groupTarget = null, AddressableAssetGroup[] groupTargets = null,
+                                                           bool drawEnableToggle = true)
         {
             Rect headerRect = EditorGUILayout.GetControlRect();
             headerRect.height = HeaderHeight;
@@ -404,7 +455,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
             // Layout order: foldout arrow | icon | checkbox | label
             // All elements vertically centered in the header
-            float currentX = headerRect.x + 7f;
+            float currentX = headerRect.x + 4f;
             float verticalCenter = headerRect.y + (HeaderHeight - 16f) / 2f;
 
             // Get schema icon if available - draw BEFORE the checkbox
@@ -418,15 +469,14 @@ namespace UnityEditor.AddressableAssets.GUI
                 EditorGUI.BeginDisabledGroup(schema is ICanBeEnabled canBeEnabled && !canBeEnabled.IsEnabled);
                 UnityEngine.GUI.DrawTexture(iconRect, schemaIcon, ScaleMode.ScaleToFit);
                 EditorGUI.EndDisabledGroup();
-                currentX += 18f; // Icon width + padding
+                currentX += 20f;
             }
 
-            // Draw checkbox after icon - MUST be drawn before click detection so it can receive input
-            if (schema != null && schema is ICanBeEnabled)
+            if (drawEnableToggle && schema != null && schema is ICanBeEnabled)
             {
                 toggleRect = new Rect(currentX, verticalCenter, 16f, 16f);
                 schemaIsEnabled = DrawEnableButton(toggleRect, schema, groupTarget, groupTargets);
-                currentX += 18f; // Checkbox width + padding
+                currentX += 20f;
             }
 
             // Handle foldout click - exclude the checkbox area to allow it to receive clicks

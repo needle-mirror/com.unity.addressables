@@ -1039,6 +1039,90 @@ namespace BuildLayoutGenerationTaskPerPlatformTests
                 DeletePrefab("p1");
             }
         }
+
+        class ContextCapturingPackedMode : BuildScriptPackedMode
+        {
+            internal AddressableAssetsBuildContext CapturedContext;
+
+            protected override TResult DoBuild<TResult>(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext)
+            {
+                CapturedContext = aaContext;
+                return base.DoBuild<TResult>(builderInput, aaContext);
+            }
+        }
+
+        [Test]
+        public void WhenAddressablesBuildSucceeds_LayoutUsesBuildContextSessionGUID()
+        {
+            string layoutFilePath = BuildLayoutGenerationTask.GetLayoutFilePathForFormat(ProjectConfigData.BuildLayoutReportFileFormat);
+            AddressableAssetGroup group = null;
+            var buildScript = ScriptableObject.CreateInstance<ContextCapturingPackedMode>();
+            BuildLayout layout = null;
+            Action<string, BuildLayout> onLayoutCompleted = (x, y) => layout = y;
+            BuildLayoutGenerationTask.LayoutCompleted += onLayoutCompleted;
+            try
+            {
+                group = CreateGroup("Group1");
+                CreateAddressablePrefab("p1", group);
+                AssetDatabase.SaveAssets();
+
+                var result = buildScript.BuildData<AddressablesPlayerBuildResult>(new AddressablesDataBuilderInput(Settings));
+                Assert.IsTrue(string.IsNullOrEmpty(result.Error), result.Error);
+
+                Assert.IsNotNull(layout, "Build should produce a layout.");
+                Assert.IsNotNull(buildScript.CapturedContext, "Build should pass a context to DoBuild.");
+                Assert.IsFalse(layout.AddressablesBuildSessionGUID.Empty());
+                Assert.AreEqual(buildScript.CapturedContext.buildSessionGuid, layout.AddressablesBuildSessionGUID,
+                    "The layout should use the build context's session GUID.");
+            }
+            finally
+            {
+                BuildLayoutGenerationTask.LayoutCompleted -= onLayoutCompleted;
+                if (layout != null)
+                {
+                    string layoutTEPFilePath = BuildScriptBase.GetLayoutTEPFilePath(layout.BuildStart);
+                    if (File.Exists(layoutTEPFilePath))
+                        File.Delete(layoutTEPFilePath);
+                }
+                UnityEngine.Object.DestroyImmediate(buildScript);
+                if (group != null)
+                    Settings.RemoveGroup(group);
+                if (File.Exists(layoutFilePath))
+                    File.Delete(layoutFilePath);
+                DeletePrefab("p1");
+            }
+        }
+
+        [Test]
+        public void GenerateErrorReport_UsesBuildContextSessionGUID()
+        {
+            DateTime buildStart = DateTime.Now;
+            string reportPath = BuildLayoutGenerationTask.TimeStampedReportPath(buildStart);
+            GUID sessionGuid = GUID.Generate();
+            // The report is written either way; disabling the layout keeps it out of Build History.
+            ProjectConfigData.GenerateBuildLayout = false;
+            try
+            {
+                AddressableAssetsBuildContext aaContext = new AddressableAssetsBuildContext
+                {
+                    Settings = Settings,
+                    buildStartTime = buildStart,
+                    buildSessionGuid = sessionGuid
+                };
+
+                BuildLayoutGenerationTask.GenerateErrorReport("test error", aaContext, null);
+
+                Assert.IsTrue(File.Exists(reportPath), "The error report should be written.");
+                BuildLayout layout = BuildLayout.Open(reportPath, true, false);
+                Assert.AreEqual(sessionGuid, layout.AddressablesBuildSessionGUID,
+                    "The error report should use the build context's session GUID.");
+            }
+            finally
+            {
+                if (File.Exists(reportPath))
+                    File.Delete(reportPath);
+            }
+        }
     }
 
     [RequirePlatformSupport(BuildTarget.StandaloneWindows, BuildTarget.StandaloneWindows64)]

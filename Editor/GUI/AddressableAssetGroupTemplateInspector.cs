@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 
 // ReSharper disable DelegateSubtraction
@@ -12,7 +13,6 @@ namespace UnityEditor.AddressableAssets.GUI
     class AddressableAssetGroupTemplateInspector : Editor
     {
         List<Type> m_SchemaTypes;
-        bool[] m_FoldoutState;
 
         AddressableAssetGroupTemplate m_AddressableAssetGroupTarget;
 
@@ -50,11 +50,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (m_AddressableAssetGroupTarget != null)
             {
                 m_SchemaTypes = AddressableAssetUtility.GetTypes<AddressableAssetGroupSchema>();
-                m_FoldoutState = new bool[m_AddressableAssetGroupTarget.SchemaObjects.Count];
             }
-
-            for (int i = 0; i < m_FoldoutState.Length; i++)
-                m_FoldoutState[i] = true;
         }
 
         //        void InitializeMultiSelectGroupSchemas()
@@ -129,12 +125,11 @@ namespace UnityEditor.AddressableAssets.GUI
 
         void DrawSingleGroup()
         {
-            EditorGUILayout.LabelField("Group Template Description");
-            m_AddressableAssetGroupTarget.Description = EditorGUILayout.TextArea(m_AddressableAssetGroupTarget.Description);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("m_Description"), new GUIContent("Group Template Description"));
+            GUILayout.Space(10);
 
             int displayCount = m_AddressableAssetGroupTarget.SchemaDisplayOrder.Count;
-            if (m_FoldoutState == null || m_FoldoutState.Length != displayCount)
-                m_FoldoutState = new bool[displayCount];
+            bool doDrawDivider = false;
 
             for (int displayIndex = 0; displayIndex < displayCount; displayIndex++)
             {
@@ -142,36 +137,31 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (schema == null)
                     continue;
                 int currentDisplayIndex = displayIndex;
+                var schemaType = schema.GetType();
 
-                AddressablesGUIUtility.DrawDivider();
-                EditorGUILayout.BeginHorizontal();
-                m_FoldoutState[displayIndex] = EditorGUILayout.Foldout(m_FoldoutState[displayIndex], AddressableAssetUtility.GetCachedTypeDisplayName(schema.GetType()));
+                string foldoutKey = "Addressables.GroupTemplateSchema." + schemaType.Name;
+                bool foldoutActive = AddressablesGUIUtility.GetFoldoutValue(foldoutKey);
 
-                GUILayout.FlexibleSpace();
-                GUIStyle gearIconStyle = UnityEngine.GUI.skin.FindStyle("IconButton") ?? EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).FindStyle("IconButton");
+                string helpUrl = null;
+                if (schemaType == typeof(BundledAssetGroupSchema) || schemaType == typeof(ContentDirectoryGroupSchema))
+                    helpUrl = AddressableAssetUtility.GenerateDocsURL("group-inspector-settings-reference.html");
+                if (schemaType == typeof(ContentUpdateGroupSchema))
+                    helpUrl = AddressableAssetUtility.GenerateDocsURL("group-inspector-settings-reference.html#content-update-group-schema");
+                Action helpAction = null;
+                if (!string.IsNullOrEmpty(helpUrl))
+                    helpAction = () => { Application.OpenURL(helpUrl); };
 
-                if (EditorGUILayout.DropdownButton(EditorGUIUtility.IconContent("_Menu"), FocusType.Keyboard, gearIconStyle))
+                Action<Rect> menuAction = rect =>
                 {
                     var menu = new GenericMenu();
                     menu.AddItem(AddressableAssetGroup.RemoveSchemaContent, false, () =>
                     {
-                        var schemaName = AddressableAssetUtility.GetCachedTypeDisplayName(schema.GetType());
+                        var schemaName = AddressableAssetUtility.GetCachedTypeDisplayName(schemaType);
                         if (EditorUtility.DisplayDialog("Remove selected schema?", "Are you sure you want to remove " + schemaName + " schema?\n\nYou cannot undo this action.", "Yes", "No"))
                         {
                             int actualIndex = m_AddressableAssetGroupTarget.GetActualIndexFromDisplayIndex(currentDisplayIndex);
                             if (actualIndex != -1)
-                            {
                                 m_AddressableAssetGroupTarget.RemoveSchema(actualIndex);
-                                var newFoldoutstate = new bool[displayCount - 1];
-                                for (int j = 0; j < newFoldoutstate.Length; j++)
-                                {
-                                    if (j < currentDisplayIndex)
-                                        newFoldoutstate[j] = m_FoldoutState[j];
-                                    else
-                                        newFoldoutstate[j] = m_FoldoutState[j + 1];
-                                }
-                                m_FoldoutState = newFoldoutstate;
-                            }
                         }
                     });
                     menu.AddItem(AddressableAssetGroup.MoveSchemaUpContent, false, () =>
@@ -183,9 +173,6 @@ namespace UnityEditor.AddressableAssets.GUI
                             var temp = displayOrder[currentDisplayIndex];
                             displayOrder[currentDisplayIndex] = displayOrder[currentDisplayIndex - 1];
                             displayOrder[currentDisplayIndex - 1] = temp;
-                            bool tempFoldout = m_FoldoutState[currentDisplayIndex];
-                            m_FoldoutState[currentDisplayIndex] = m_FoldoutState[currentDisplayIndex - 1];
-                            m_FoldoutState[currentDisplayIndex - 1] = tempFoldout;
                             EditorUtility.SetDirty(m_AddressableAssetGroupTarget);
                         }
                     });
@@ -198,39 +185,55 @@ namespace UnityEditor.AddressableAssets.GUI
                             var temp = displayOrder[currentDisplayIndex];
                             displayOrder[currentDisplayIndex] = displayOrder[currentDisplayIndex + 1];
                             displayOrder[currentDisplayIndex + 1] = temp;
-                            bool tempFoldout = m_FoldoutState[currentDisplayIndex];
-                            m_FoldoutState[currentDisplayIndex] = m_FoldoutState[currentDisplayIndex + 1];
-                            m_FoldoutState[currentDisplayIndex + 1] = tempFoldout;
                             EditorUtility.SetDirty(m_AddressableAssetGroupTarget);
                         }
                     });
                     menu.AddSeparator("");
                     menu.AddItem(AddressableAssetGroup.ExpandSchemaContent, false, () =>
                     {
-                        m_FoldoutState[currentDisplayIndex] = true;
+                        if (foldoutActive == false)
+                        {
+                            foldoutActive = true;
+                            AddressablesGUIUtility.SetFoldoutValue(foldoutKey, foldoutActive);
+                        }
                         schema.ShowAllProperties();
                     });
                     menu.ShowAsContext();
-                }
+                };
 
-                EditorGUILayout.EndHorizontal();
+                GUIContent foldoutContent = new GUIContent(AddressableAssetUtility.GetCachedTypeDisplayName(schemaType));
+                EditorGUI.BeginChangeCheck();
 
-                if (m_FoldoutState[displayIndex])
+                foldoutActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(
+                    foldoutActive, foldoutContent, helpAction, 0,
+                    menuAction, schema, null, Array.Empty<AddressableAssetGroup>(),
+                    drawEnableToggle: false);
+
+                if (EditorGUI.EndChangeCheck())
+                    AddressablesGUIUtility.SetFoldoutValue(foldoutKey, foldoutActive);
+                EditorGUI.EndFoldoutHeaderGroup();
+
+                if (foldoutActive)
                 {
                     try
                     {
-                        EditorGUI.indentLevel++;
                         schema.OnGUI();
-                        EditorGUI.indentLevel--;
                     }
                     catch (Exception se)
                     {
                         Debug.LogException(se);
                     }
+
+                    GUILayout.Space(10);
                 }
+
+                if (foldoutActive && displayIndex == displayCount - 1)
+                    doDrawDivider = true;
             }
 
-            AddressablesGUIUtility.DrawDivider();
+            if (doDrawDivider)
+                AddressablesGUIUtility.DrawDivider();
+            GUILayout.Space(10);
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             GUIStyle addSchemaButton = new GUIStyle(UnityEngine.GUI.skin.button);
@@ -452,21 +455,8 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             if (!m_AddressableAssetGroupTarget.AddSchema(schemaType))
                 return;
-            //            if (multiSelect)
-            //            {
-            //                for (int i = 0; i < m_AddressableAssetGroupTargets.Length - 1; i++)
-            //                {
-            //                   if(!m_AddressableAssetGroupTargets[i].AddSchema(schemaType))
-            //                        return;
-            //                }
-            //                InitializeMultiSelectGroupSchemas();
-            //            }
 
-            var newFoldoutState = new bool[m_AddressableAssetGroupTarget.SchemaObjects.Count];
-            for (int i = 0; i < m_FoldoutState.Length; i++)
-                newFoldoutState[i] = m_FoldoutState[i];
-            m_FoldoutState = newFoldoutState;
-            m_FoldoutState[m_FoldoutState.Length - 1] = true;
+            AddressablesGUIUtility.SetFoldoutValue("Addressables.GroupTemplateSchema." + schemaType.Name, true);
         }
     }
 }

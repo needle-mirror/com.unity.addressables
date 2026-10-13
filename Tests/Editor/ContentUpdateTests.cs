@@ -1924,6 +1924,43 @@ namespace UnityEditor.AddressableAssets.Tests
                 Settings.RemoveGroup(group);
             }
         }
+
+        [Test]
+        public void ClearContentUpdateNotifications_SkipsNullFolderChildren()
+        {
+            var group = Settings.CreateGroup("NullFolderChildGroup", false, false, false, null, typeof(BundledAssetGroupSchema));
+            string folderPath = GetAssetPath("NullFolderChild");
+            string prefabPath = folderPath + "/nullSibling.prefab";
+            GameObject prefabObject = null;
+
+            try
+            {
+                Directory.CreateDirectory(folderPath);
+                prefabObject = new GameObject("nullSibling");
+                PrefabUtility.SaveAsPrefabAsset(prefabObject, prefabPath);
+                AssetDatabase.ImportAsset(folderPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+                var folderEntry = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(folderPath), group);
+                folderEntry.GatherAllAssets(new List<AddressableAssetEntry>(), false, true, false);
+                Assert.IsNotEmpty(folderEntry.SubAssets);
+
+                var child = folderEntry.SubAssets[0];
+                folderEntry.SubAssets.Insert(0, null);
+                child.FlaggedDuringContentUpdateRestriction = true;
+                group.FlaggedDuringContentUpdateRestriction = true;
+
+                Assert.DoesNotThrow(() => ContentUpdateScript.ClearContentUpdateNotifications(group));
+                Assert.IsFalse(child.FlaggedDuringContentUpdateRestriction);
+            }
+            finally
+            {
+                if (prefabObject != null)
+                    GameObject.DestroyImmediate(prefabObject);
+                AssetDatabase.DeleteAsset(folderPath);
+                Settings.RemoveGroup(group);
+            }
+        }
     }
 
     namespace ContentUpdatePerPlatformTests

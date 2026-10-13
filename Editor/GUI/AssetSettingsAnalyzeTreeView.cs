@@ -798,7 +798,19 @@ namespace UnityEditor.AddressableAssets.GUI
                         args.rowRect.height), new GUIContent(icon, string.Empty));
             }
 
+            string fullLabel = args.label;
+            float textOffset = GetContentIndent(args.item) + (args.item.icon != null ? 20f : 2f);
+            if (Event.current.type == EventType.Repaint && !args.isRenaming)
+            {
+                float textWidth = args.rowRect.width - textOffset;
+                args.label = AddressablesGUIUtility.TruncateWithEllipsis(fullLabel, textWidth, EditorStyles.label);
+            }
             base.RowGUI(args);
+            if (args.label != fullLabel)
+            {
+                Rect tooltipRect = new Rect(args.rowRect.x + textOffset, args.rowRect.y, args.rowRect.width - textOffset, args.rowRect.height);
+                UnityEngine.GUI.Label(tooltipRect, new GUIContent(string.Empty, fullLabel));
+            }
         }
 
         Texture2D m_ErrorIcon;

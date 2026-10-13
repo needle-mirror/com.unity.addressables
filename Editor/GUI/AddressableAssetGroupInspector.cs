@@ -23,7 +23,7 @@ namespace UnityEditor.AddressableAssets.GUI
         // Each schema list contains only schemas of the same type (e.g. BundledAssetGroupSchema).
         List<List<AddressableAssetGroupSchema>> m_GroupSchemas;
 
-        private GUIContent m_InspectAASettings = new GUIContent("Inspect Top Level Settings", "View Addressable Asset Settings");
+        private GUIContent m_InspectAASettings = new GUIContent("Open Settings", "View Addressable Asset Settings");
 
         void OnEnable()
         {
@@ -330,12 +330,10 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     try
                     {
-                        EditorGUI.indentLevel++;
                         if (m_GroupTargets.Length == 1)
                             schema.OnGUI();
                         else
                             schema.OnGUIMultiple(GetSchemasForOtherTargets(schema));
-                        EditorGUI.indentLevel--;
                     }
                     catch (Exception se)
                     {

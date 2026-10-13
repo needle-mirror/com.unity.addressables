@@ -16,7 +16,7 @@ namespace UnityEditor.AddressableAssets.Build
         public AddressableAssetSettings AddressableSettings { get; private set; }
 
         /// <summary>
-        /// Toggle Development Build and DEVELOPMENT_BUILD define.
+        /// Toggle Development Build. Before Unity 7.0, this also defines DEVELOPMENT_BUILD for the scripts compiled by the build.
         /// </summary>
         public bool DevelopmentBuild { get; set; }
 

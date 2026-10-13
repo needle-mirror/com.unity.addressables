@@ -60,16 +60,19 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         public AddressableAssetsBundleBuildParameters(AddressableAssetSettings aaSettings, Dictionary<string, string> bundleToAssetGroup, AddressablesDataBuilderInput builderInput,
             string outputFolder) : this(aaSettings, bundleToAssetGroup, builderInput.Target, builderInput.TargetGroup, outputFolder)
         {
-            // If ADDRESSABLES_ADD_DEFINES is in the passed-in extra scripting defines, apply development build and extra scripting defines
+            // If ADDRESSABLES_ADD_DEFINES is in the passed-in extra scripting defines, apply the extra scripting defines
             bool addDefines = builderInput.ExtraScriptingDefines != null &&
                 System.Array.IndexOf(builderInput.ExtraScriptingDefines, k_AddressablesAddDefines) >= 0;
             if (!addDefines)
                 return;
 
+#if !UNITY_7000_0_OR_NEWER
+            // Starting with Unity 7.0, Development Build no longer affects script compilation
             if (builderInput.DevelopmentBuild)
             {
                  ScriptOptions |= ScriptCompilationOptions.DevelopmentBuild;
             }
+#endif
             if (builderInput.ExtraScriptingDefines != null)
             {
                 m_ExtraScriptingDefines = StripEditorScriptingDefines(builderInput.ExtraScriptingDefines);

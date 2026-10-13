@@ -1,4 +1,4 @@
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.Layout;
@@ -54,7 +54,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 return;
             }
 
-            m_ContentView.Consume(layout, summary.BuildName);
+            m_ContentView.Consume(layout, summary.BuildName, BuildAnalysisUtility.GetRelatedBuilds(buildSessionGuid));
             m_ShownBuild = buildSessionGuid;
         }
 

@@ -108,11 +108,37 @@ namespace UnityEngine.AddressableAssets
 
 #if ENABLE_CONTENT_DIRECTORIES
             // Content Directories stay mounted for the lifetime of the system; unmount them all here.
+#if UNITY_EDITOR
+            if (UnityEditor.EditorApplication.isPlaying && !UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                // Wait until edit mode has been entered to unmount content directories
+                // This avoids unmounting the dependencies of scenes before the scenes themselves have finished unloading
+                ContentDirectoryMountManager.DeferUnmountAll();
+                UnityEditor.EditorApplication.playModeStateChanged -= UnmountContentDirectoriesOnEnteredEditMode;
+                UnityEditor.EditorApplication.playModeStateChanged += UnmountContentDirectoriesOnEnteredEditMode;
+            }
+            else
+            {
+                ContentDirectoryMountManager.UnmountAll();
+            }
+#else
             ContentDirectoryMountManager.UnmountAll();
+#endif
 #endif
 
             m_ResourceManager.Dispose();
         }
+
+#if ENABLE_CONTENT_DIRECTORIES && UNITY_EDITOR
+        static void UnmountContentDirectoriesOnEnteredEditMode(UnityEditor.PlayModeStateChange change)
+        {
+            if (change != UnityEditor.PlayModeStateChange.EnteredEditMode)
+                return;
+
+            UnityEditor.EditorApplication.playModeStateChanged -= UnmountContentDirectoriesOnEnteredEditMode;
+            ContentDirectoryMountManager.UnmountDeferred();
+        }
+#endif
 
         public Func<IResourceLocation, string> InternalIdTransformFunc
         {

@@ -1,10 +1,15 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 #if UNITY_6000_5_OR_NEWER
 using UnityEngine.Assemblies;
+#endif
+#if UNITY_EDITOR
+using UnityEditor;
 #endif
 
 namespace UnityEngine.ResourceManagement.Util
@@ -34,45 +39,223 @@ namespace UnityEngine.ResourceManagement.Util
     {
         static readonly Assembly s_CorelibAssembly = typeof(object).Assembly;
 
-        static readonly Dictionary<string, Assembly> s_SimpleNameToAssembly = new Dictionary<string, Assembly>(StringComparer.Ordinal);
-        static readonly Dictionary<long, Type> s_ResolveCache = new Dictionary<long, Type>();
-        static readonly HashSet<string> s_WarnedCollisions = new HashSet<string>(StringComparer.Ordinal);
-        static readonly object s_Lock = new object();
-        static bool s_Initialized;
+        static readonly object s_LifecycleLock = new object();
+        // Null until Initialize and after Shutdown. Shutdown swaps it out, so work
+        // that captured an older state can only write to that older state.
+        static volatile State s_State;
+
+        // Tests read the generation through this.
+        internal static int Generation => s_State?.Generation ?? 0;
+
+        // Tests: the load callback of the current lifecycle.
+        internal static Action<Assembly> LoadCallback
+        {
+            get
+            {
+                var state = s_State;
+                return asm => OnAssemblyLoaded(state, asm);
+            }
+        }
+
+        // Tests: runs just before a resolve writes its cache entry.
+        internal static Action BeforeResolveCacheWrite;
+
+        internal static bool HasCachedResolve(string assemblyName, string typeName)
+        {
+            var state = s_State;
+            return state != null && state.ResolveCache.ContainsKey(CacheKey(assemblyName, typeName));
+        }
+
+        // Returns the generation of a cached miss, or -1 if none is cached.
+        internal static int GetCachedMissGeneration(string assemblyName, string typeName)
+        {
+            var state = s_State;
+            if (state != null && state.ResolveCache.TryGetValue(CacheKey(assemblyName, typeName), out var cached) && cached.Type == null)
+                return cached.Generation;
+            return -1;
+        }
+
+        static (string, string) CacheKey(string assemblyName, string typeName)
+        {
+            return (assemblyName ?? string.Empty, typeName);
+        }
+
+        readonly struct Entry
+        {
+            public readonly Type Type;
+            public readonly int Generation;
+
+            public Entry(Type type, int generation)
+            {
+                Type = type;
+                Generation = generation;
+            }
+        }
+
+        // Everything one Initialize..Shutdown lifecycle caches.
+        sealed class State
+        {
+            public readonly ConcurrentDictionary<string, Assembly> SimpleNameToAssembly = new ConcurrentDictionary<string, Assembly>(StringComparer.Ordinal);
+            // Unresolved entries count only while their generation is current.
+            public readonly ConcurrentDictionary<(string, string), Entry> ResolveCache = new ConcurrentDictionary<(string, string), Entry>();
+            // Simple names whose Assembly.Load failed, mapped to the generation of the failure.
+            public readonly ConcurrentDictionary<string, int> FailedLoads = new ConcurrentDictionary<string, int>(StringComparer.Ordinal);
+#if ADDRESSABLES_LOG_ALL
+            public readonly HashSet<string> WarnedCollisions = new HashSet<string>(StringComparer.Ordinal);
+#endif
+            public readonly AssemblyLoadEventHandler LoadHandler;
+            public readonly Func<AssemblyName, Assembly> AssemblyResolver;
+
+            // Accepts late loads; cleared by Shutdown.
+            public volatile bool Accepting;
+            // Bumped on loads; older unresolved entries expire.
+            int m_Generation;
+
+            public int Generation => Volatile.Read(ref m_Generation);
+
+            public State()
+            {
+                LoadHandler = (sender, args) => OnAssemblyLoaded(this, args.LoadedAssembly);
+                AssemblyResolver = ResolveAssembly;
+            }
+
+            public void BumpGeneration()
+            {
+                Interlocked.Increment(ref m_Generation);
+            }
+
+            public void Register(Assembly asm)
+            {
+                if (asm == null || asm.IsDynamic)
+                    return;
+                string name;
+                try { name = asm.GetName().Name; }
+                catch { return; }
+                if (string.IsNullOrEmpty(name))
+                    return;
+                if (SimpleNameToAssembly.TryAdd(name, asm))
+                    return;
+#if ADDRESSABLES_LOG_ALL
+                if (SimpleNameToAssembly.TryGetValue(name, out var existing) && !ReferenceEquals(existing, asm))
+                {
+                    lock (WarnedCollisions)
+                    {
+                        if (WarnedCollisions.Add(name))
+                            Debug.LogWarning($"Multiple loaded assemblies share the simple name '{name}'. Type resolution will use the first registered. Avoid asmdef name collisions.");
+                    }
+                }
+#endif
+            }
+
+            Assembly ResolveAssembly(AssemblyName name)
+            {
+                var simple = name.Name;
+                if (string.IsNullOrEmpty(simple))
+                    return s_CorelibAssembly;
+                if (SimpleNameToAssembly.TryGetValue(simple, out var asm))
+                    return asm;
+                if (FailedLoads.TryGetValue(simple, out var failedGeneration) && failedGeneration == Generation)
+                    return s_CorelibAssembly;
+                var generation = Generation;
+                Assembly loaded = null;
+                try
+                {
+                    loaded = Assembly.Load(new AssemblyName(simple));
+                }
+                catch (Exception)
+                {
+                    // Falls through: the failure is cached below.
+                }
+                if (loaded == null)
+                {
+                    FailedLoads[simple] = generation;
+                    return s_CorelibAssembly;
+                }
+                if (Accepting)
+                    Register(loaded);
+                return loaded;
+            }
+        }
+
+#if UNITY_EDITOR
+        // Drops the AppDomain hook before an editor code reload.
+        [InitializeOnLoadMethod]
+        static void SubscribeToReload()
+        {
+            AssemblyReloadEvents.beforeAssemblyReload += Shutdown;
+        }
+#endif
+
+        // Covers Enter Play Mode without a domain reload.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            Shutdown();
+        }
 
         /// <summary>Warms up the resolver's loaded-assembly cache. Call once, early.</summary>
         public static void Initialize()
         {
-            lock (s_Lock)
+            GetState();
+        }
+
+        static State GetState()
+        {
+            var state = s_State;
+            if (state != null)
+                return state;
+            lock (s_LifecycleLock)
             {
-                if (s_Initialized)
-                    return;
-                s_Initialized = true;
-                foreach (var asm in GetLoadedAssemblies())
-                    RegisterAssembly(asm);
-                AppDomain.CurrentDomain.AssemblyLoad += (_, args) => RegisterAssembly(args.LoadedAssembly);
+                state = s_State;
+                if (state != null)
+                    return state;
+                state = new State();
+                // Subscribe before scanning so no load falls in the gap.
+                state.Accepting = true;
+                AppDomain.CurrentDomain.AssemblyLoad += state.LoadHandler;
+                try
+                {
+                    foreach (var asm in GetLoadedAssemblies())
+                        state.Register(asm);
+                }
+                catch
+                {
+                    state.Accepting = false;
+                    AppDomain.CurrentDomain.AssemblyLoad -= state.LoadHandler;
+                    throw;
+                }
+                s_State = state;
+                return state;
             }
         }
 
-        static void RegisterAssembly(Assembly asm)
+        /// <summary>Removes the load hook and drops cached assemblies and types.</summary>
+        internal static void Shutdown()
         {
-            if (asm == null || asm.IsDynamic)
-                return;
-            string name;
-            try { name = asm.GetName().Name; }
-            catch { return; }
-            if (string.IsNullOrEmpty(name))
-                return;
-            lock (s_Lock)
+            lock (s_LifecycleLock)
             {
-                if (s_SimpleNameToAssembly.TryGetValue(name, out var existing))
-                {
-                    if (!ReferenceEquals(existing, asm) && s_WarnedCollisions.Add(name))
-                        Debug.LogWarning($"Multiple loaded assemblies share the simple name '{name}'. Type resolution will use the first registered. Avoid asmdef name collisions.");
+                var state = s_State;
+                s_State = null;
+                if (state == null)
                     return;
-                }
-                s_SimpleNameToAssembly[name] = asm;
+                state.Accepting = false;
+                AppDomain.CurrentDomain.AssemblyLoad -= state.LoadHandler;
             }
+        }
+
+        internal static void OnAssemblyLoaded(Assembly asm)
+        {
+            var state = s_State;
+            if (state != null)
+                OnAssemblyLoaded(state, asm);
+        }
+
+        static void OnAssemblyLoaded(State state, Assembly asm)
+        {
+            if (state == null || !state.Accepting || asm.IsDynamic)
+                return;
+            state.Register(asm);
+            state.BumpGeneration();
         }
 
         /// <summary>
@@ -141,14 +324,13 @@ namespace UnityEngine.ResourceManagement.Util
         {
             if (string.IsNullOrEmpty(typeName))
                 return null;
-            Initialize();
+            // Everything below touches only this state, even if Shutdown runs meanwhile.
+            var state = GetState();
 
-            long key = ((long)(assemblyName == null ? 0 : assemblyName.GetHashCode()) << 32) ^ (uint)typeName.GetHashCode();
-            lock (s_Lock)
-            {
-                if (s_ResolveCache.TryGetValue(key, out var cached))
-                    return cached;
-            }
+            var key = CacheKey(assemblyName, typeName);
+            if (state.ResolveCache.TryGetValue(key, out var cached) && (cached.Type != null || cached.Generation == state.Generation))
+                return cached.Type;
+            int generation = state.Generation;
 
             Type resolved = null;
             try
@@ -156,11 +338,11 @@ namespace UnityEngine.ResourceManagement.Util
                 if (string.IsNullOrEmpty(assemblyName))
                 {
                     // The callbacks are not redundant here: generic arguments can still embed assembly names.
-                    resolved = Type.GetType(typeName, ResolveAssembly, ResolveType, throwOnError: false);
+                    resolved = Type.GetType(typeName, state.AssemblyResolver, ResolveType, throwOnError: false);
                 }
                 else
                 {
-                    resolved = Type.GetType(typeName + ", " + assemblyName, ResolveAssembly, ResolveType, throwOnError: false);
+                    resolved = Type.GetType(typeName + ", " + assemblyName, state.AssemblyResolver, ResolveType, throwOnError: false);
                     if (resolved == null)
                         resolved = Type.GetType(typeName, throwOnError: false);
                 }
@@ -171,38 +353,9 @@ namespace UnityEngine.ResourceManagement.Util
                     Debug.LogException(ex);
             }
 
-            lock (s_Lock)
-            {
-                s_ResolveCache[key] = resolved;
-            }
+            BeforeResolveCacheWrite?.Invoke();
+            state.ResolveCache[key] = new Entry(resolved, generation);
             return resolved;
-        }
-
-        static Assembly ResolveAssembly(AssemblyName name)
-        {
-            var simple = name.Name;
-            if (string.IsNullOrEmpty(simple))
-                return s_CorelibAssembly;
-            lock (s_Lock)
-            {
-                if (s_SimpleNameToAssembly.TryGetValue(simple, out var asm))
-                    return asm;
-            }
-            try
-            {
-                var loaded = Assembly.Load(new AssemblyName(simple));
-                if (loaded != null)
-                    RegisterAssembly(loaded);
-                return loaded ?? s_CorelibAssembly;
-            }
-            catch (FileNotFoundException)
-            {
-                return s_CorelibAssembly;
-            }
-            catch (Exception)
-            {
-                return s_CorelibAssembly;
-            }
         }
 
         static Type ResolveType(Assembly asm, string typeName, bool ignoreCase)

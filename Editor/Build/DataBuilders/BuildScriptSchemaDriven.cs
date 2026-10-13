@@ -165,6 +165,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             InitializeBuildContext(builderInput, out AddressableAssetsBuildContext aaContext);
 
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
+            using (var buildHistoryScope = BeginBuildHistoryScope(aaContext))
+#endif
             try
             {
                 using (Log.ScopedStep(LogLevel.Info, "ProcessAllGroups"))
@@ -189,6 +192,14 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     ClearContentUpdateNotifications(m_IncludedGroupsInBuild);
                 }
             }
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
+            catch (Exception e) when (buildHistoryScope != null)
+            {
+                // Builds that ran inside the scope record this build as their parent, so register it as failed.
+                RegisterFailedBuild(e.Message, builderInput, aaContext);
+                throw;
+            }
+#endif
             finally
             {
                 using (Log.ScopedStep(LogLevel.Info, "Cleanup"))
@@ -213,6 +224,33 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             BuildLayoutGenerationTask.GenerateErrorReport(errorString, aaContext, builderInput.PreviousContentState);
             return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, errorString);
         }
+
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
+        private static IDisposable BeginBuildHistoryScope(AddressableAssetsBuildContext aaContext)
+        {
+            // Only builds that generate a layout are registered, so only they can be a parent.
+            if (!ProjectConfigData.GenerateBuildLayout)
+                return null;
+            return UnityEditor.Build.BuildHistory.BeginExternalBuild(aaContext.GetOrCreateBuildSessionGuid());
+        }
+
+        private void RegisterFailedBuild(string error, AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext)
+        {
+            // The build may have registered its layout before it failed.
+            if (UnityEditor.Build.BuildHistory.TryGetBuildReportDirectory(aaContext.GetOrCreateBuildSessionGuid(), out _))
+                return;
+
+            try
+            {
+                BuildLayoutGenerationTask.GenerateErrorReport(error, aaContext, builderInput.PreviousContentState);
+            }
+            catch (Exception e)
+            {
+                // Log it so the build's own exception is the one that propagates.
+                Debug.LogException(e);
+            }
+        }
+#endif
 
         internal void InitializeBuildContext(AddressablesDataBuilderInput builderInput, out AddressableAssetsBuildContext aaContext)
         {

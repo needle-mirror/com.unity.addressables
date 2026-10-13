@@ -91,6 +91,10 @@ namespace UnityEditor.AddressableAssets.Tests
             [Values(EnterPlayModeOptions.None, EnterPlayModeOptions.DisableDomainReload | EnterPlayModeOptions.DisableSceneReload)]
             EnterPlayModeOptions playmodeOption)
         {
+#if UNITY_7000_0_OR_NEWER
+            if (playmodeOption == EnterPlayModeOptions.None)
+                Assert.Ignore("Domain reload logs an assembly location error on trunk. Tracked in CBD-2441.");
+#endif
             EditorSettings.enterPlayModeOptionsEnabled = true;
             EditorSettings.enterPlayModeOptions = playmodeOption;
 
@@ -116,6 +120,10 @@ namespace UnityEditor.AddressableAssets.Tests
             [Values(EnterPlayModeOptions.None, EnterPlayModeOptions.DisableDomainReload | EnterPlayModeOptions.DisableSceneReload)]
             EnterPlayModeOptions playmodeOption)
         {
+#if UNITY_7000_0_OR_NEWER
+            if (playmodeOption == EnterPlayModeOptions.None)
+                Assert.Ignore("Domain reload logs an assembly location error on trunk. Tracked in CBD-2441.");
+#endif
             EditorSettings.enterPlayModeOptionsEnabled = true;
             EditorSettings.enterPlayModeOptions = playmodeOption;
 
@@ -139,6 +147,10 @@ namespace UnityEditor.AddressableAssets.Tests
         [Values(EnterPlayModeOptions.None, EnterPlayModeOptions.DisableDomainReload | EnterPlayModeOptions.DisableSceneReload)]
         EnterPlayModeOptions playmodeOption)
         {
+#if UNITY_7000_0_OR_NEWER
+            if (playmodeOption == EnterPlayModeOptions.None)
+                Assert.Ignore("Domain reload logs an assembly location error on trunk. Tracked in CBD-2441.");
+#endif
             EditorSettings.enterPlayModeOptionsEnabled = true;
             EditorSettings.enterPlayModeOptions = playmodeOption;
 

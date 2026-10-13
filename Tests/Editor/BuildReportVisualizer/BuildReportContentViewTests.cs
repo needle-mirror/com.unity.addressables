@@ -32,9 +32,8 @@ namespace Tests.Editor.BuildReportVisualizer
             return view;
         }
 
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
-        // The embedded design only ships where the Build Analysis window does, so its tests are gated
-        // the same way AddressablesReportDrawerTests is.
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
+        // The embedded design needs the Editor's shared Build Analysis elements.
         static BuildReportContentView CreateView(VisualElement root = null)
         {
             var view = new BuildReportContentView(true);
@@ -122,14 +121,28 @@ namespace Tests.Editor.BuildReportVisualizer
 
             // Master's Summary builds rows into a scroll view rather than the card header.
             Assert.IsNotNull(root.Q<VisualElement>(BuildReportUtility.SummaryTab));
-            Assert.IsNull(root.Q<Label>(BuildReportUtility.SummaryTabHeaderTitle),
+            Assert.IsNull(root.Q<VisualElement>(BuildReportUtility.SummaryTabHeader),
                 "The card header belongs to the embedded Summary tab.");
 
             // Master lets the column be toggled from any tab, so Summary must not force it closed.
             Assert.IsTrue(view.DetailsPaneVisible);
         }
 
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
+        [Test]
+        public void StandaloneContentView_BuildAnalysisConsume_FillsTheLegacySummaryTab()
+        {
+            var root = new VisualElement();
+            var view = new BuildReportContentView();
+            view.CreateGUI(root);
+            var layout = CreateLayout("profile");
+
+            Assert.DoesNotThrow(() => view.Consume(layout, "Addressables", null));
+
+            Assert.AreSame(layout, view.BuildReport);
+            Assert.IsNull(root.Q<VisualElement>(BuildReportUtility.SummaryTabHeader),
+                "The card header belongs to the embedded Summary tab.");
+        }
 
         [Test]
         public void CreateGUI_EndsTheTabStripWithHelpThenTheDetailsToggle()
@@ -175,7 +188,7 @@ namespace Tests.Editor.BuildReportVisualizer
         public void DetailsToggle_IsEnabledOnlyOnExploreAndPotentialIssues()
         {
             var view = CreateView();
-            view.Consume(CreateLayout("profile"));
+            view.Consume(CreateLayout("profile"), null, null);
             var details = view.TabView.Q<ToolbarToggle>(BuildReportUtility.ReportToolbarToggleDetailsButton);
 
             Assert.IsFalse(details.enabledSelf, "Summary is the starting tab.");
@@ -236,7 +249,7 @@ namespace Tests.Editor.BuildReportVisualizer
             var root = new VisualElement();
             var view = new BuildReportContentView(true);
             view.CreateGUI(root);
-            view.Consume(CreateLayout("profile"));
+            view.Consume(CreateLayout("profile"), null, null);
 
             view.NavigateToView(ContentViewType.AssetsView);
 
@@ -250,7 +263,7 @@ namespace Tests.Editor.BuildReportVisualizer
         public void DetailsPanePreference_SurvivesTabsThatCollapseTheColumn()
         {
             var view = CreateView();
-            view.Consume(CreateLayout("profile"));
+            view.Consume(CreateLayout("profile"), null, null);
 
             view.NavigateToView(ContentViewType.AssetsView);
             view.SetDetailsPaneVisible(false);
@@ -264,6 +277,18 @@ namespace Tests.Editor.BuildReportVisualizer
             Assert.IsTrue(view.DetailsPaneVisible);
         }
 
+        [Test]
+        public void NavigateToView_MovesTheTabSelection()
+        {
+            var view = CreateView();
+            view.Consume(CreateLayout("profile"), null, null);
+
+            view.NavigateToView(ContentViewType.AssetsView);
+            Assert.AreEqual((int)RibbonTabType.ContentTab, view.TabView.selectedTabIndex);
+
+            view.NavigateToView(PotentialIssuesType.DuplicatedAssetsView);
+            Assert.AreEqual((int)RibbonTabType.PotentialIssues, view.TabView.selectedTabIndex);
+        }
 #endif
 
         [Test]
@@ -296,21 +321,6 @@ namespace Tests.Editor.BuildReportVisualizer
             Assert.AreEqual(2, searchFields.Count);
             Assert.AreNotSame(contentViews[0], contentViews[1]);
         }
-
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
-        [Test]
-        public void NavigateToView_MovesTheTabSelection()
-        {
-            var view = CreateView();
-            view.Consume(CreateLayout("profile"));
-
-            view.NavigateToView(ContentViewType.AssetsView);
-            Assert.AreEqual((int)RibbonTabType.ContentTab, view.TabView.selectedTabIndex);
-
-            view.NavigateToView(PotentialIssuesType.DuplicatedAssetsView);
-            Assert.AreEqual((int)RibbonTabType.PotentialIssues, view.TabView.selectedTabIndex);
-        }
-#endif
 
         [Test]
         public void LayoutCompleted_InvokesEverySubscriberAndSkipsUnsubscribed()

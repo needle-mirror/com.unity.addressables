@@ -308,13 +308,18 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        static bool GroupHasEnabledBuildableSchema(AddressableAssetGroup group)
+        internal static bool GroupHasEnabledBuildableSchema(AddressableAssetGroup group)
         {
             foreach (var schema in group.Schemas)
             {
-                if (schema != null && schema.IsEnabled &&
-                    (schema is BundledAssetGroupSchema || schema is ContentDirectoryGroupSchema))
+                if (schema == null || !schema.IsEnabled)
+                    continue;
+                if (schema is BundledAssetGroupSchema)
                     return true;
+#if ENABLE_CONTENT_DIRECTORIES
+                if (schema is ContentDirectoryGroupSchema)
+                    return true;
+#endif
             }
             return false;
         }
@@ -568,7 +573,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                 }
             }
-            GroupsPopupUtility.DrawGroupsDropdown(s_GroupsDropdownLabelContent, displayGroup, enabledDropdown, mixedValueDropdown, false, AddressableAssetUtility.MoveEntriesToGroup, entries);
+            GroupsPopupUtility.DrawBuildableGroupsDropdown(s_GroupsDropdownLabelContent, displayGroup, enabledDropdown, mixedValueDropdown, false, AddressableAssetUtility.MoveEntriesToGroup, entries);
         }
 
 

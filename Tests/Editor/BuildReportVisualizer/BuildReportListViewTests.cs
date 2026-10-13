@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -54,10 +55,53 @@ namespace Tests.Editor.BuildReportVisualizer
         [TestCase("1.22.3", true)]
         [TestCase("2.0.1", true)]
         [TestCase("2.3.16", true)]
+        [TestCase("com.unity.addressables: 2.3.16", true)]
+        [TestCase(null, false)]
+        [TestCase("", false)]
+        [TestCase("2.3", false)]
+        [TestCase("com.unity.addressables: ", false)]
         public void TestValidBuildLayout(string version, bool isValid)
         {
             var listView = new BuildReportListView(null);
             Assert.AreEqual(isValid, listView.BuildLayoutIsValid(version));
+        }
+
+        [Test]
+        public void AddReportsFromFolder_SkipsJsonFilesThatAreNotBuildReports()
+        {
+            string folder = Path.Combine(Path.GetTempPath(), $"BuildReports_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(folder);
+            try
+            {
+                string reportPath = Path.Combine(folder, "buildlayout_report.json");
+                string tepPath = Path.Combine(folder, "buildlayoutTEP_report.json");
+                File.WriteAllText(reportPath, "{\"PackageVersion\":\"com.unity.addressables: 2.3.16\"}");
+                File.WriteAllText(tepPath, "{\"Date\":\"2026-08-18 2:13:07 PM\",\"UnityVersion\":\"6000.7.0a5\",\"traceEvents\":[]}");
+
+                var listView = new BuildReportListView(null);
+
+                Assert.DoesNotThrow(() => listView.AddReportsFromFolder(folder, null, true));
+
+                CollectionAssert.AreEqual(new[] {reportPath.Replace("\\", "/")},
+                    listView.BuildReportItems.Select(x => x.FilePath));
+            }
+            finally
+            {
+                Directory.Delete(folder, true);
+            }
+        }
+
+        [Test]
+        public void AddReportsFromFolder_DoesNotThrowForMissingOrEmptyFolder()
+        {
+            var listView = new BuildReportListView(null);
+
+            Assert.DoesNotThrow(() => listView.AddReportsFromFolder("", null, true));
+            Assert.DoesNotThrow(() => listView.AddReportsFromFolder(null, null, true));
+            Assert.DoesNotThrow(() => listView.AddReportsFromFolder(
+                Path.Combine(Path.GetTempPath(), $"DoesNotExist_{Guid.NewGuid():N}"), null, true));
+
+            Assert.IsEmpty(listView.BuildReportItems);
         }
 
         [Test]

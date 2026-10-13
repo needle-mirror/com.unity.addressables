@@ -48,7 +48,6 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             Notification,
             Id,
-            Type,
             Path,
             Labels
         }
@@ -57,7 +56,6 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             ColumnId.Notification,
             ColumnId.Id,
-            ColumnId.Type,
             ColumnId.Path,
             ColumnId.Labels
         };
@@ -71,6 +69,8 @@ namespace UnityEditor.AddressableAssets.GUI
         public AddressableAssetEntryTreeView(AddressableAssetEntryTreeViewState state, MultiColumnHeaderState mchs, AddressableAssetsSettingsGroupEditor ed) : base(state, new AddressableAssetSettingsGroupHeader(mchs, ed.settings))
         {
             showBorder = true;
+            showAlternatingRowBackgrounds = true;
+            rowHeight = EditorGUIUtility.singleLineHeight;
             m_Editor = ed;
             columnIndexForTreeFoldouts = 1;
             multiColumnHeader.sortingChanged += OnSortingChanged;
@@ -677,7 +677,6 @@ namespace UnityEditor.AddressableAssets.GUI
             switch (col)
             {
                 case ColumnId.Notification:
-                case ColumnId.Type:
                     break;
                 case ColumnId.Path:
                     orderedKids = kids.Order(l => l.entry.AssetPath, ascending);
@@ -885,30 +884,6 @@ namespace UnityEditor.AddressableAssets.GUI
             }
         }
 
-        protected override void BeforeRowsGUI()
-        {
-            base.BeforeRowsGUI();
-
-            if (Event.current.type == EventType.Repaint)
-            {
-                var rows = GetRows();
-                if (rows.Count > 0)
-                {
-                    int first;
-                    int last;
-                    GetFirstAndLastVisibleRows(out first, out last);
-                    for (int rowId = first; rowId <= last; rowId++)
-                    {
-                        var aeI = rows[rowId] as AssetEntryTreeViewItem;
-                        if (aeI != null && aeI.entry != null)
-                        {
-                            DefaultStyles.backgroundEven.Draw(GetRowRect(rowId), false, false, false, false);
-                        }
-                    }
-                }
-            }
-        }
-
         protected override void RowGUI(RowGUIArgs args)
         {
             var item = args.item as AssetEntryTreeViewItem;
@@ -968,26 +943,47 @@ namespace UnityEditor.AddressableAssets.GUI
                     {
                         item.icon = GetGroupIcon(item.group, args.selected);
                     }
+                    else if (item.entry != null)
+                    {
+                        item.icon = item.assetIcon;
+                    }
                     args.rowRect = cellRect;
+
+                    string fullLabel = args.label;
+                    float textOffset = GetContentIndent(item) + (item.icon != null ? 20f : 2f);
+                    if (Event.current.type == EventType.Repaint && !args.isRenaming)
+                    {
+                        float textWidth = cellRect.width - textOffset;
+                        args.label = AddressablesGUIUtility.TruncateWithEllipsis(fullLabel, textWidth, EditorStyles.label);
+                    }
                     base.RowGUI(args);
+                    if (args.label != fullLabel)
+                    {
+                        Rect tooltipRect = new Rect(cellRect.x + textOffset, cellRect.y, cellRect.width - textOffset, cellRect.height);
+                        UnityEngine.GUI.Label(tooltipRect, new GUIContent(string.Empty, fullLabel));
+                    }
                 }
                 break;
                 case ColumnId.Path:
-                    if (item.entry != null && Event.current.type == EventType.Repaint)
+                    if (item.entry != null)
                     {
                         var path = item.entry.AssetPath;
                         if (string.IsNullOrEmpty(path))
                             path = item.entry.ReadOnly ? "" : "Missing File";
-                        DefaultGUI.Label(cellRect, path, args.selected, args.focused);
+                        var truncated = path;
+                        if (Event.current.type == EventType.Repaint)
+                        {
+                            truncated = AddressablesGUIUtility.TruncateWithEllipsis(path, cellRect.width, DefaultStyles.label);
+                            DefaultGUI.Label(cellRect, truncated, args.selected, args.focused);
+                        }
+                        if (truncated != path)
+                        {
+                            UnityEngine.GUI.Label(cellRect, new GUIContent(string.Empty, path));
+                        }
                     }
-
-                    break;
-                case ColumnId.Type:
-                    if (item.assetIcon != null)
-                        UnityEngine.GUI.DrawTexture(cellRect, item.assetIcon, ScaleMode.ScaleToFit, true);
                     break;
                 case ColumnId.Labels:
-                    if (item.entry != null && EditorGUI.DropdownButton(cellRect, new GUIContent(m_Editor.settings.labelTable.GetString(item.entry.labels, cellRect.width)), FocusType.Passive))
+                    if (item.entry != null && !item.entry.IsSubAsset && EditorGUI.DropdownButton(cellRect, new GUIContent(m_Editor.settings.labelTable.GetString(item.entry.labels, cellRect.width)), FocusType.Passive))
                     {
                         var selection = GetItemsForContext(args.item.id);
                         Dictionary<string, int> labelCounts = new Dictionary<string, int>();
@@ -1177,7 +1173,8 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             foreach (var templateObject in m_Editor.settings.GroupTemplateObjects)
             {
-                Assert.IsNotNull(templateObject);
+                if (templateObject == null)
+                    continue;
                 menu.AddItem(new GUIContent("Create New Group/" + templateObject.name), false, CreateNewGroup, templateObject);
             }
 
@@ -1297,6 +1294,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (isGroup)
                 {
                     var group = selectedNodes.First().group;
+                    if (selectedNodes.Count == 1)
+                        menu.AddItem(new GUIContent("Show in Project"), false, ShowGroupInProject, selectedNodes);
                     menu.AddItem(new GUIContent("Simplify Addressable Names"), false, SimplifyAddresses, selectedNodes);
                     if (selectedNodes.Count == 1)
                     {
@@ -1335,6 +1334,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
                 else if (isEntry)
                 {
+                    if (selectedNodes.Count == 1 && !isMissingPath)
+                        menu.AddItem(new GUIContent("Show in Project"), false, ShowEntryInProject, selectedNodes);
+
                     menu.AddItem(new GUIContent("Move Addressables to Group..."), false, MoveEntriesToGroup, new Tuple<Event, List<AssetEntryTreeViewItem>>(Event.current, selectedNodes));
                     menu.AddItem(new GUIContent("Move Addressables to New Group with settings from..."), false, MoveEntriesToNewGroupWithSettings, new Tuple<Event, List<AssetEntryTreeViewItem>>(Event.current, selectedNodes));
 
@@ -1355,8 +1357,16 @@ namespace UnityEditor.AddressableAssets.GUI
             }
             else
             {
-                if (isEntry)
+                if (isGroup)
                 {
+                    if (selectedNodes.Count == 1)
+                        menu.AddItem(new GUIContent("Show in Project"), false, ShowGroupInProject, selectedNodes);
+                }
+                else if (isEntry)
+                {
+                    if (selectedNodes.Count == 1 && !isMissingPath)
+                        menu.AddItem(new GUIContent("Show in Project"), false, ShowEntryInProject, selectedNodes);
+
                     if (selectedNodes.Count == 1)
                         menu.AddItem(new GUIContent("Copy Address to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
                     else if (selectedNodes.Count > 1)
@@ -1384,6 +1394,29 @@ namespace UnityEditor.AddressableAssets.GUI
             Selection.activeObject = group;
         }
 
+        void ShowEntryInProject(object context)
+        {
+            List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
+            if (selectedNodes == null || selectedNodes.Count == 0)
+                return;
+            var entry = selectedNodes.First().entry;
+            if (entry == null || string.IsNullOrEmpty(entry.AssetPath))
+                return;
+            var asset = AssetDatabase.LoadAssetAtPath<Object>(entry.AssetPath);
+            if (asset != null)
+                EditorGUIUtility.PingObject(asset);
+        }
+
+        void ShowGroupInProject(object context)
+        {
+            List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
+            if (selectedNodes == null || selectedNodes.Count == 0)
+                return;
+            var group = selectedNodes.First().group;
+            if (group != null)
+                EditorGUIUtility.PingObject(group);
+        }
+
         internal static void CopyAddressesToClipboard(object context)
         {
             List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
@@ -1407,7 +1440,7 @@ namespace UnityEditor.AddressableAssets.GUI
             }
 
             Vector2 mousePosition = pair.Item1 == null ? Vector2.zero : pair.Item1.mousePosition;
-            m_DeferredPopup = () => GroupsPopupUtility.ShowGroupsPopup(new Rect(mousePosition, Vector2.zero), null, false, false, MoveEntriesToNewGroupWithSettings, m_Editor.settings, entries);
+            m_DeferredPopup = () => GroupsPopupUtility.ShowBuildableGroupsPopup(new Rect(mousePosition, Vector2.zero), null, false, false, MoveEntriesToNewGroupWithSettings, m_Editor.settings, entries);
             m_Editor.window?.Repaint();
         }
 
@@ -1442,7 +1475,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
             AddressableAssetGroup initialSelection = !mixedGroups ? entries[0].parentGroup : null;
             Vector2 mousePosition = pair.Item1 == null ? Vector2.zero : pair.Item1.mousePosition;
-            m_DeferredPopup = () => GroupsPopupUtility.ShowGroupsPopup(new Rect(mousePosition, Vector2.zero), initialSelection, false, false, AddressableAssetUtility.MoveEntriesToGroup, m_Editor.settings, entries);
+            m_DeferredPopup = () => GroupsPopupUtility.ShowBuildableGroupsPopup(new Rect(mousePosition, Vector2.zero), initialSelection, false, false, AddressableAssetUtility.MoveEntriesToGroup, m_Editor.settings, entries);
             m_Editor.window?.Repaint();
         }
 

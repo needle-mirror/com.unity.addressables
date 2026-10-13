@@ -68,22 +68,26 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             HashSet<string> remoteCatalogNames = new HashSet<string>();
             HashSet<string> localCatalogNames = new HashSet<string>();
 
-            string catalogFileExt = buildReport.AddressablesEditorSettings.EnableJsonCatalog ? ".json" : ".bin";
+            string catalogFileExt = buildReport.AddressablesEditorSettings?.EnableJsonCatalog == true ? ".json" : ".bin";
 
-            foreach (var catalogPath in buildReport.AddressablesRuntimeSettings.CatalogLoadPaths)
+            var catalogLoadPaths = buildReport.AddressablesRuntimeSettings?.CatalogLoadPaths;
+            if (catalogLoadPaths != null)
             {
-                string catalogFileName = Path.GetFileName(catalogPath);
+                foreach (var catalogPath in catalogLoadPaths)
+                {
+                    string catalogFileName = Path.GetFileName(catalogPath);
 
-                if (Path.GetExtension(catalogFileName).Equals(".hash"))
-                    remoteCatalogNames.Add(Path.ChangeExtension(catalogFileName, catalogFileExt));
-                else
-                    localCatalogNames.Add(catalogFileName);
+                    if (Path.GetExtension(catalogFileName).Equals(".hash"))
+                        remoteCatalogNames.Add(Path.ChangeExtension(catalogFileName, catalogFileExt));
+                    else
+                        localCatalogNames.Add(catalogFileName);
+                }
             }
 
 #if ENABLE_CONTENT_DIRECTORIES
             // The banner links to Build Analysis; suppress it when this view is already embedded there.
             if (!m_IsEmbedded && buildReport.ContentDirectories?.Count > 0)
-                scrollbarElement.Add(CreateContentDirectoriesBanner());
+                scrollbarElement.Add(CreateContentDirectoriesBanner(buildReport.ContentDirectories[0].BuildSessionGUID));
 #endif
 
             SummaryRowBuilder generalInfo = new SummaryRowBuilder("General Information");
@@ -94,7 +98,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
             generalInfo.With("Local catalog build location", buildReport.LocalCatalogBuildPath)
                 .With("Remote catalog build location", string.IsNullOrEmpty(buildReport.RemoteCatalogBuildPath) ? "No remote catalog built" : buildReport.RemoteCatalogBuildPath)
-                .With("Profile", buildReport.AddressablesEditorSettings.ActiveProfile.Name)
+                .With("Profile", buildReport.AddressablesEditorSettings?.ActiveProfile?.Name ?? "None")
                 .With("Platform", buildReport.BuildTarget.ToString())
                 .With("Player Build Version", buildReport.PlayerBuildVersion)
                 .With("Build Duration", TimeSpan.FromSeconds(buildReport.Duration).ToString("g"))
@@ -155,14 +159,14 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         }
 
 #if ENABLE_CONTENT_DIRECTORIES
-        static HelpBox CreateContentDirectoriesBanner()
+        static HelpBox CreateContentDirectoriesBanner(GUID buildSessionGUID)
         {
             HelpBox banner = new HelpBox("This build includes content built using Content Directories. To view that content, use the Build Analysis window.", HelpBoxMessageType.Info);
             banner.style.marginTop = banner.style.marginLeft = banner.style.marginRight = new Length(5f, LengthUnit.Pixel);
             banner.style.marginBottom = 0f;
             banner.style.paddingTop = banner.style.paddingBottom = banner.style.paddingLeft = banner.style.paddingRight = new Length(5f, LengthUnit.Pixel);
             banner.buttonText = "Open Build Analysis";
-            banner.onButtonClicked += BuildReportUtility.OpenBuildAnalysisWindow;
+            banner.onButtonClicked += () => BuildReportUtility.OpenBuildAnalysisWindow(buildSessionGUID);
             banner.linkText = "Learn More";
             banner.linkHref = AddressableAssetUtility.GenerateContentDirectoriesDocsURL();
 

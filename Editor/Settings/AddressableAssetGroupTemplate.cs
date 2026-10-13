@@ -20,6 +20,7 @@ namespace UnityEditor.AddressableAssets.Settings
         private List<string> m_SchemaDisplayOrder = new List<string>();
 
         [SerializeField]
+        [TextArea(2, 10)]
         private string m_Description;
 
         [SerializeField]

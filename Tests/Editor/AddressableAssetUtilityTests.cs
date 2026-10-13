@@ -102,6 +102,22 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.AreEqual("TestSubClass_DisplayName", subName);
         }
 
+        [System.ComponentModel.DisplayName("DisplayNameBase_DisplayName")]
+        public class DisplayNameBaseClass
+        {
+        }
+
+        public class DisplayNameDerivedClass : DisplayNameBaseClass
+        {
+        }
+
+        [Test]
+        public void GetCachedTypeDisplayName_WithInheritedAttribute_ReturnsTypeName()
+        {
+            var derivedName = AddressableAssetUtility.GetCachedTypeDisplayName(typeof(DisplayNameDerivedClass));
+            Assert.AreEqual(typeof(DisplayNameDerivedClass).Name, derivedName);
+        }
+
         [Test]
         public void GetCachedTypeDisplayName_WithNullType_ReturnsNONE()
         {

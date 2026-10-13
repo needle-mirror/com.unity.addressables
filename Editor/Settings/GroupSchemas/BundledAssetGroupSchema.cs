@@ -379,8 +379,32 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             {
                 m_BundledAssetProviderType = value;
                 SetDirty(true);
+                var owningSettings = GetOwningSettingsToSync();
+                if (owningSettings != null && owningSettings.m_BundledAssetProviderType.Value != value.Value)
+                {
+                    owningSettings.m_BundledAssetProviderType = value;
+                    MarkOwningSettingsDirty(owningSettings);
+                }
             }
         }
+
+        // Keeps the settings inspector in sync with the provider used by the build.
+        AddressableAssetSettings GetOwningSettingsToSync()
+        {
+            if (!IsEnabled || Group == null)
+                return null;
+            return Group.Settings;
+        }
+
+        // Same as SetDirty(), including the version control checkout.
+        static void MarkOwningSettingsDirty(AddressableAssetSettings owningSettings)
+        {
+            if (!owningSettings.IsPersisted)
+                return;
+            EditorUtility.SetDirty(owningSettings);
+            AddressableAssetUtility.OpenAssetIfUsingVCIntegration(owningSettings);
+        }
+
         [SerializeField]
         [Tooltip("If true, assetbundle download data will be stripped from the catalog.  This should only be enabled for local groups.  Only applies to binary catalogs.")]
         bool m_StripDownloadOptions = false;
@@ -771,6 +795,12 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             {
                 m_AssetBundleProviderType = value;
                 SetDirty(true);
+                var owningSettings = GetOwningSettingsToSync();
+                if (owningSettings != null && owningSettings.m_AssetBundleProviderType.Value != value.Value)
+                {
+                    owningSettings.m_AssetBundleProviderType = value;
+                    MarkOwningSettingsDirty(owningSettings);
+                }
             }
         }
 
@@ -1121,13 +1151,13 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 ref m_BuildPath, ref m_LoadPath, ref m_UseCustomPaths, ref m_ShowPaths,
                 ref m_SelectedPathPairIndex);
 
-            AdvancedOptionsFoldout.IsActive = GUI.AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(AdvancedOptionsFoldout.IsActive, new GUIContent("Advanced Options"), () =>
-            {
-                string url = AddressableAssetUtility.GenerateDocsURL("group-inspector-settings-reference.html#advanced-options");
-                Application.OpenURL(url);
-            }, 10);
+            AdvancedOptionsFoldout.IsActive = EditorGUILayout.Foldout(AdvancedOptionsFoldout.IsActive, k_AdvancedOptionsContent, true, AddressablesGUIUtility.BoldFoldoutStyle);
             if (AdvancedOptionsFoldout.IsActive)
+            {
+                EditorGUI.indentLevel++;
                 ShowAdvancedProperties(SchemaSerializedObject);
+                EditorGUI.indentLevel--;
+            }
             SchemaSerializedObject.ApplyModifiedProperties();
             EditorGUI.EndDisabledGroup();
         }
@@ -1178,16 +1208,13 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             if (otherBundledSchemas.Count > 0)
             {
                 EditorGUI.BeginChangeCheck();
-                AdvancedOptionsFoldout.IsActive = GUI.AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(AdvancedOptionsFoldout.IsActive, new GUIContent("Advanced Options"), () =>
-                {
-                    string url = AddressableAssetUtility.GenerateDocsURL("group-inspector-settings-reference.html#advanced-options");
-                    Application.OpenURL(url);
-                }, 10);
+                AdvancedOptionsFoldout.IsActive = EditorGUILayout.Foldout(AdvancedOptionsFoldout.IsActive, k_AdvancedOptionsContent, true, AddressablesGUIUtility.BoldFoldoutStyle);
                 if (AdvancedOptionsFoldout.IsActive)
                 {
+                    EditorGUI.indentLevel++;
                     ShowAdvancedPropertiesMulti(SchemaSerializedObject, otherBundledSchemas, ref queuedChanges);
+                    EditorGUI.indentLevel--;
                 }
-                EditorGUI.EndFoldoutHeaderGroup();
             }
 
             SchemaSerializedObject.ApplyModifiedProperties();
@@ -1212,13 +1239,15 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             EditorGUI.EndDisabledGroup();
         }
 
-        static FoldoutSessionStateValue AdvancedOptionsFoldout = new FoldoutSessionStateValue("Addressables.BundledAssetGroup.AdvancedOptions");
+        static FoldoutSessionStateValue AdvancedOptionsFoldout = new FoldoutSessionStateValue("Addressables.BundledAssetGroup.AdvancedOptions", false);
 
         internal const string k_IncludedInCatalogFoldoutKey = "Addressables.BundledAssetGroup.IncludedInCatalog";
 
         static FoldoutSessionStateValue IncludedInCatalogFoldout = new FoldoutSessionStateValue(k_IncludedInCatalogFoldoutKey);
 
         static readonly GUIContent k_IncludedInCatalogContent = new GUIContent("Included in Catalog");
+
+        static readonly GUIContent k_AdvancedOptionsContent = new GUIContent("Advanced Options");
 
         GUIContent m_StripDownloadOptionsContent = new GUIContent("Strip Bundle Download Options", "Strip unused asset bundle download data from catalog.  This should only be enabled for local groups and is disabled if UnityWebRequests are enabled for local bundles.");
         GUIContent m_CompressionContent = new GUIContent("Asset Bundle Compression", "Compression method to use for asset bundles.");
@@ -1339,10 +1368,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 EditorGUI.EndDisabledGroup();
             }
 
-            EditorGUI.indentLevel++;
             IncludedInCatalogFoldout.IsActive = EditorGUILayout.Foldout(IncludedInCatalogFoldout.IsActive, k_IncludedInCatalogContent, true);
             if (IncludedInCatalogFoldout.IsActive)
             {
+                EditorGUI.indentLevel++;
                 GUI.AddressablesGUIUtility.SetterBackedToggle(so, m_IncludeAddressInCatalogContent, nameof(IncludeAddressInCatalog),
                     IncludeAddressInCatalog, value => IncludeAddressInCatalog = value);
                 GUI.AddressablesGUIUtility.SetterBackedToggle(so, m_IncludeGUIDInCatalogContent, nameof(IncludeGUIDInCatalog),
@@ -1358,8 +1387,8 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                         IncludeAddressesForFolderChildren, value => IncludeAddressesForFolderChildren = value);
                     EditorGUI.indentLevel--;
                 }
+                EditorGUI.indentLevel--;
             }
-            EditorGUI.indentLevel--;
 
             EditorGUI.BeginChangeCheck();
             var bundleMode = (BundlePackingMode)EditorGUILayout.EnumPopup(m_BundlePackModeContent, BundleMode);
@@ -1503,10 +1532,10 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             ShowSelectedPropertyDefaultSettingsMulti(so, otherSchemas, ref queuedChanges);
 
-            EditorGUI.indentLevel++;
             IncludedInCatalogFoldout.IsActive = EditorGUILayout.Foldout(IncludedInCatalogFoldout.IsActive, k_IncludedInCatalogContent, true);
             if (IncludedInCatalogFoldout.IsActive)
             {
+                EditorGUI.indentLevel++;
                 ShowSelectedPropertyMulti(so, nameof(m_IncludeAddressInCatalog), m_IncludeAddressInCatalogContent, otherSchemas, ref queuedChanges,
                     (schema, value) => schema.IncludeAddressInCatalog = value, m_IncludeAddressInCatalog);
                 ShowSelectedPropertyMulti(so, nameof(m_IncludeGUIDInCatalog), m_IncludeGUIDInCatalogContent, otherSchemas, ref queuedChanges,
@@ -1522,8 +1551,8 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                         (schema, value) => schema.IncludeAddressesForFolderChildren = value, m_IncludeAddressesForFolderChildren);
                     EditorGUI.indentLevel--;
                 }
+                EditorGUI.indentLevel--;
             }
-            EditorGUI.indentLevel--;
             ShowSelectedPropertyMulti(so, nameof(m_BundleMode), m_BundlePackModeContent, otherSchemas, ref queuedChanges,
                 (schema, value) => schema.BundleMode = value, m_BundleMode);
         }

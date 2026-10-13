@@ -944,7 +944,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         private BuildLayout GenerateBuildLayout(AddressableAssetsBuildContext aaContext, LayoutLookupTables lookup)
         {
             BuildLayout layout = new BuildLayout();
-            layout.AddressablesBuildSessionGUID = GUID.Generate();
+            layout.AddressablesBuildSessionGUID = aaContext.GetOrCreateBuildSessionGuid();
             layout.BuildStart = aaContext.buildStartTime;
 
             //TODO: This should be able to grab a single schema and not do all this checking. We discussed doing an IPrimarySchema interface for these main build schemas, so
@@ -1485,7 +1485,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             }
 
             ProjectConfigData.AddBuildReportFilePath(destinationPath);
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
             AddressablesBuildHistorySupport.RegisterBuild(layout, destinationPath);
 #endif
             RaiseLayoutCompleted(destinationPath, layout);
@@ -1507,7 +1507,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 return;
 
             BuildLayout layout = new BuildLayout();
-            layout.AddressablesBuildSessionGUID = GUID.Generate();
+            layout.AddressablesBuildSessionGUID = aaContext.GetOrCreateBuildSessionGuid();
             layout.BuildStart = aaContext.buildStartTime;
             layout.BuildError = error;
             SetLayoutMetaData(layout, aaSettings);
@@ -1526,7 +1526,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             {
                 if (ProjectConfigData.BuildLayoutReportFileFormat == ProjectConfigData.ReportFileFormat.JSON)
                     WriteLegacyJsonLayout(destinationPath);
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
                 AddressablesBuildHistorySupport.RegisterBuild(layout, destinationPath);
 #endif
             }

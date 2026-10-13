@@ -263,7 +263,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         internal const string k_AdvancedOptionsFoldoutKey = "Addressables.ContentDirectoryGroup.AdvancedOptions";
 
         // SessionState backed, so the open or closed state survives a domain reload.
-        static FoldoutSessionStateValue s_AdvancedOptionsFoldout = new FoldoutSessionStateValue(k_AdvancedOptionsFoldoutKey);
+        static FoldoutSessionStateValue s_AdvancedOptionsFoldout = new FoldoutSessionStateValue(k_AdvancedOptionsFoldoutKey, false);
 
         static readonly GUIContent k_AdvancedOptionsContent = new GUIContent("Advanced Options");
 
@@ -349,11 +349,8 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
         bool BeginAdvancedOptions()
         {
-            s_AdvancedOptionsFoldout.IsActive = AddressablesGUIUtility.BeginFoldoutHeaderGroupWithHelp(
-                s_AdvancedOptionsFoldout.IsActive, k_AdvancedOptionsContent,
-                () => Application.OpenURL(AddressableAssetUtility.GenerateDocsURL(
-                    "group-inspector-settings-reference.html#content-directory-advanced-options")),
-                10);
+            s_AdvancedOptionsFoldout.IsActive = EditorGUILayout.Foldout(
+                s_AdvancedOptionsFoldout.IsActive, k_AdvancedOptionsContent, true, AddressablesGUIUtility.BoldFoldoutStyle);
             return s_AdvancedOptionsFoldout.IsActive;
         }
 
@@ -372,6 +369,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             s_IncludedInCatalogFoldout.IsActive = EditorGUILayout.Foldout(s_IncludedInCatalogFoldout.IsActive, k_IncludedInCatalogContent, true);
             if (s_IncludedInCatalogFoldout.IsActive)
             {
+                EditorGUI.indentLevel++;
                 if (AddressablesGUIUtility.DrawToggle(k_IncludeLabelsInCatalogContent, values.IncludeLabels, out values.IncludeLabels))
                     changed |= CatalogToggles.Labels;
                 if (AddressablesGUIUtility.DrawToggle(k_IncludeFolderKeysInCatalogContent, values.IncludeFolderKeys, out values.IncludeFolderKeys))
@@ -386,6 +384,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                         changed |= CatalogToggles.AddressesForFolderChildren;
                     EditorGUI.indentLevel--;
                 }
+                EditorGUI.indentLevel--;
             }
             EditorGUI.indentLevel--;
             return changed;

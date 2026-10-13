@@ -1,7 +1,7 @@
 {
   "name": "com.unity.addressables",
   "displayName": "Addressables",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "unity": "6000.0",
   "description": "The Addressables package provides a user interface in the Unity Editor to organize and manage the assets in your project, to create content builds that you can ship along with a Player build. It also has an API that you can use to load and release assets at runtime.\n\nThe Addressables package was originally designed on top of Unity's AssetBundle system, but is also compatible with the newer content directories system. Addressables automatically manages dependencies, asset locations, and provides simpler workflows for memory management which you otherwise have to handle manually in the AssetBundle and content directories systems.\n\nWhen you make an asset Addressable, you can use that asset's address to load it locally or from a content delivery network, rather than using its file name, AssetBundle location, or content directory location. This means you can change the location of assets in a project without needing to rewrite code.",
   "keywords": [
@@ -12,7 +12,7 @@
     "assetbundles"
   ],
   "dependencies": {
-    "com.unity.scriptablebuildpipeline": "4.0.1",
+    "com.unity.scriptablebuildpipeline": "4.0.2",
     "com.unity.modules.assetbundle": "1.0.0",
     "com.unity.modules.imageconversion": "1.0.0",
     "com.unity.modules.jsonserialize": "1.0.0",
@@ -59,15 +59,15 @@
     }
   ],
   "_upm": {
-    "changelog": "- Fixed duplicated Content Files error during archiving when two assets have an identical binary result in the build.\n- Changed the \"Open Addressables Report after build\" preference to open the Build Analysis window on Unity 6.7+.\n- Fixed remote catalogs failing to load from Unity CCD URLs with catalog filename in a query parameter.\n- Fixed catalogs served from one CCD bucket sharing a single local cache file.\n- Fixed the \"include in catalog\" group schema options not posting a `GroupSchemaModified` modification event when toggled in the Inspector with a single group selected.\n- Changed the group schema Inspectors to group their catalog options under an \"Included in Catalog\" foldout, and shortened the labels and tooltips. The Content Directory schema now has an \"Advanced Options\" foldout, matching Content Packing & Loading."
+    "changelog": "- Update dependency on Scriptable Build Pipeline to 4.0.2\n- Content directory builds run by an Addressables build now appear nested under it in the Build Analysis window.\n- Fixed a `NullReferenceException` when clearing content update flags on a folder entry with a null child.\n- Fixed issue where the AddressableAssetSettings inspector tab would become non intractable if docked with the Groups window inspector when the Shared Bundle Settings is set to Custom Group and a click is detected in the Shared Bundle Settings Group property field, thus changing the window focus.\n- Fixed an issue where in the group selector within the inspector for an Addressable asset would not be able to select Content Directory groups.\n- Fixed a `NullReferenceException` when using \"Add Reports from Folder\" in the Addressables Report window.\n- Fixed an issue where we were running the wrong legacy binary formatter tool to convert files on ARM64 OSX machines\n- Fixed compile errors in the Addressables test assemblies when the MSBuild compilation pipeline is enabled.\n- Fixed the Build Details section of the Build Analysis window not showing the related builds of an Addressables build.\n- Fixed an issue where the Asset Provider and Asset Bundle Provider shown in the AddressableAssetSettings inspector did not match the provider types used in the build when they were set on a BundledAssetGroupSchema through script. (UUM-154191)\n- Fixed an issue where custom provider types deriving from a built-in provider were displayed with the base provider's name in type dropdowns.\n- Fixed an editor crash when exiting Play mode with a scene loaded from a Content Directory.\n- Added the ability to open the Build Analysis Window from the Addressables Report and link it to a specific job.\n- Updated the Addressables Report UX in the Build Analysis window on Unity 6.7+.\n- Fixed an issue where an import worker spawning during a player build would cause the Addressables link.xml to be deleted, thus causing 'Unknown managed type references' errors."
   },
   "upmCi": {
-    "footprint": "d6b7b279745587f1188e13359ed61ee2ce839c33"
+    "footprint": "e90f4bccafeaed269a43b3696adaec43ce85bfd3"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.addressables@4.1/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/Addressables.git",
     "type": "git",
-    "revision": "8908d2fc131fbd266151eff0b661dbe698cd5603"
+    "revision": "f28f6f53b7d14c3b35f0921c1d7a397bd210dfde"
   }
 }

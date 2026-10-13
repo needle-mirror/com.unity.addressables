@@ -47,7 +47,7 @@ namespace UnityEditor.AddressableAssets
                 $"A debug build layout file will be generated as part of the build process. The file will put written to {BuildLayoutGenerationTask.m_LayoutFilePath}");
 
             // The label follows the window BuildScriptBase.ShowBuildReportWindow opens.
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
             internal static readonly GUIContent autoOpenAddressablesReport = EditorGUIUtility.TrTextContent("Open Build Analysis after build",
                 "Opens the Build Analysis window, which draws the Addressables report, once a content build finishes.");
 #else

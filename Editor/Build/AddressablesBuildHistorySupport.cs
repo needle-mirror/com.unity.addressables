@@ -1,4 +1,4 @@
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
 using System;
 using System.IO;
 using UnityEditor.AddressableAssets.Build.Layout;
@@ -19,12 +19,17 @@ namespace UnityEditor.AddressableAssets.Build
         internal const string kBuildTypeName = "Addressables";
         internal const string kPackageName = "com.unity.addressables";
 
+        // The build Build Analysis opens on once a content build finishes. Empty when the last registration failed.
+        internal static GUID LastRegisteredBuildSessionGUID { get; set; }
+
         internal static void RegisterBuild(BuildLayout layout, string writtenLayoutPath)
         {
+            LastRegisteredBuildSessionGUID = default;
             try
             {
                 ExternalBuildInfo buildInfo = CreateBuildInfo(layout);
                 string directory = BuildHistory.RegisterExternalBuild(buildInfo);
+                LastRegisteredBuildSessionGUID = buildInfo.BuildSessionGUID;
                 TryCopyIntoEntry(writtenLayoutPath, directory, kLayoutFileName);
             }
             catch (Exception e)

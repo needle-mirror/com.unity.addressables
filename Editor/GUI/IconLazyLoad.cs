@@ -512,6 +512,14 @@ internal class IconLazyLoad
                     item.assetIcon = FastIconFromPath(item.entry.AssetPath, true);
                     continue;
                 }
+
+                if (item.entry.IsFolder)
+                {
+                    var folderIcon = AssetDatabase.GetCachedIcon(item.entry.AssetPath) as Texture2D;
+                    if (folderIcon != null)
+                        item.assetIcon = folderIcon;
+                    continue;
+                }
             }
 
             // Callback requests carry no TreeViewItem, so they miss the branch above. Give them the same fast path

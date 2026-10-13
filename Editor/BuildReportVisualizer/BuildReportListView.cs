@@ -202,13 +202,19 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
         bool BuildLayoutIsValid(BuildLayout layout)
         {
-            return BuildLayoutIsValid(layout.PackageVersion);
+            return layout != null && BuildLayoutIsValid(layout.PackageVersion);
         }
         internal bool BuildLayoutIsValid(string packageVersion)
         {
+            if (string.IsNullOrEmpty(packageVersion))
+                return false;
+
             int startOfVersionIndex = packageVersion.IndexOf(":", StringComparison.Ordinal);
             string versionString = packageVersion.Substring(startOfVersionIndex + 1);
             var versionNumbers = versionString.Split(".");
+
+            if (versionNumbers.Length < 3)
+                return false;
 
             int versionNumber = 0;
             int majorVersionNumber = 0;
@@ -239,8 +245,17 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             string parsedFilePath = filePath.Replace("\\", "/");
             if (IndexOfFilePathInProjectConfig(parsedFilePath) < 0)
             {
-                var layout = LoadLayout(filePath); // can consider adding error logs when file fails to load
-                if (layout != null && BuildLayoutIsValid(layout))
+                BuildLayout layout;
+                try
+                {
+                    layout = LoadLayout(filePath);
+                }
+                catch (Exception)
+                {
+                    return;
+                }
+
+                if (BuildLayoutIsValid(layout))
                 {
                     ProjectConfigData.AddBuildReportFilePath(parsedFilePath);
                     m_BuildReportItems.Insert(0, new BuildReportListItem(m_BuildReportItems.Count, parsedFilePath, layout));
@@ -262,16 +277,16 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         // Only rebuild when adding a bunch of files at once
         internal void AddReportsFromFolder(string folderPath, ListView listView, bool logWarning)
         {
-            if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
+            if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
+                return;
+
+            foreach (string file in Directory.EnumerateFiles(folderPath, "*.json", SearchOption.TopDirectoryOnly))
             {
-                foreach (string file in Directory.EnumerateFiles(folderPath, "*.json", SearchOption.TopDirectoryOnly))
-                {
-                    AddReportFromFile(file, listView, logWarning, false);
-                }
+                AddReportFromFile(file, listView, logWarning, false);
             }
 
             AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.BuildReportImportedManually);
-            listView.Rebuild();
+            listView?.Rebuild();
         }
 
         internal void RemoveReport(DropdownMenuAction action)

@@ -29,7 +29,7 @@ namespace Tests.Editor.BuildReportVisualizer
                 window.Close();
         }
 
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
         [Test]
         public void ShowBuildReportWindow_OpensTheBuildAnalysisWindow()
         {

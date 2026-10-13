@@ -71,7 +71,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
             //Dropdown selector
             EditorGUI.BeginChangeCheck();
-            var newIndex = EditorGUILayout.Popup(k_BuildAndLoadPathsGUIContent, selected.HasValue ? selected.Value : options.Count - 1, options.ToArray());
+            var popupRect = EditorGUILayout.GetControlRect();
+            popupRect.x -= 1; popupRect.width += 1;
+            var newIndex = EditorGUI.Popup(popupRect, k_BuildAndLoadPathsGUIContent.text, selected.HasValue ? selected.Value : options.Count - 1, options.ToArray());
             if (EditorGUI.EndChangeCheck() && newIndex != selected)
             {
                 selected = newIndex;
@@ -132,7 +134,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
             //Dropdown selector
             EditorGUI.BeginChangeCheck();
-            var newIndex = EditorGUILayout.Popup(k_BuildAndLoadPathsGUIContent, selected.HasValue ? selected.Value : -1, options.ToArray());
+            var popupRect = EditorGUILayout.GetControlRect();
+            popupRect.x -= 1; popupRect.width += 1;
+            var newIndex = EditorGUI.Popup(popupRect, k_BuildAndLoadPathsGUIContent.text, selected.HasValue ? selected.Value : -1, options.ToArray());
             if (EditorGUI.EndChangeCheck() && newIndex != selected)
             {
                 modified = true;
@@ -272,7 +276,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             ref bool showPaths,
             bool showMixedValue)
         {
-            EditorGUI.indentLevel++;
             showPaths = EditorGUILayout.Foldout(showPaths, k_PathsPreviewGUIContent, true);
             if (showPaths)
             {
@@ -282,8 +285,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 EditorGUILayout.HelpBox(String.Format("Build Path: {0}", showMixedValue ? "-" : buildPathValue), MessageType.None);
                 EditorGUILayout.HelpBox(String.Format("Load Path: {0}", showMixedValue ? "-" : loadPathValue), MessageType.None);
             }
-
-            EditorGUI.indentLevel--;
         }
     }
 }

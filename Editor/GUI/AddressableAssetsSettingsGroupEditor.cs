@@ -112,7 +112,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
 #if ENABLE_CONTENT_DIRECTORIES
         const float k_BannerHeight = 28f;
-        const float k_BannerBackgroundOverdraw = 2f;
+        const float k_BannerBackgroundOverdraw = 4f;
 #endif
 
         public AddressableAssetsSettingsGroupEditor(AddressableAssetsWindow w)
@@ -301,9 +301,9 @@ namespace UnityEditor.AddressableAssets.GUI
 
 
                 {
-                    var guiMode = new GUIContent("New", "Create a new group");
-                    Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarDropDown);
-                    if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
+                    var guiMode = new GUIContent(EditorGUIUtility.IconContent("Toolbar Plus More").image, "Create a new group");
+                    Rect rMode = GUILayoutUtility.GetRect(guiMode, EditorStyles.toolbarButton);
+                    if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarButton))
                     {
                         var menu = new GenericMenu();
                         foreach (var templateObject in settings.GroupTemplateObjects)
@@ -318,8 +318,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                 }
 
-                if (toolbarPos.width > 430)
-                    CreateProfileDropdown();
+                CreateProfileDropdown();
 
                 {
                     var guiMode = new GUIContent("Tools", "Tools used to configure or analyze Addressable Assets");
@@ -1102,16 +1101,8 @@ namespace UnityEditor.AddressableAssets.GUI
             float linkWidth = linkStyle.CalcSize(linkContent).x;
             float messageMaxWidth = Mathf.Max(0f, textRect.width - linkWidth);
 
-            Vector2 messageSize = labelStyle.CalcSize(new GUIContent(message));
-
-            // Truncate if needed
-            if (messageSize.x > messageMaxWidth)
-            {
-                message = TruncateTextWithEllipsis(message, messageMaxWidth, labelStyle);
-                messageSize = labelStyle.CalcSize(new GUIContent(message));
-            }
-
-            float messageWidth = Mathf.Min(messageSize.x, messageMaxWidth);
+            message = AddressablesGUIUtility.TruncateWithEllipsis(message, messageMaxWidth, labelStyle);
+            float messageWidth = labelStyle.CalcSize(new GUIContent(message)).x;
             UnityEngine.GUI.Label(new Rect(textRect.x, textRect.y, messageWidth, textRect.height), message, labelStyle);
 
             Rect linkRect = new Rect(textRect.x + messageWidth, textRect.y, linkWidth, textRect.height);
@@ -1122,27 +1113,6 @@ namespace UnityEditor.AddressableAssets.GUI
             return needsRepaint;
         }
 
-        string TruncateTextWithEllipsis(string text, float maxWidth, GUIStyle style)
-        {
-            if (string.IsNullOrEmpty(text))
-                return text;
-
-            string ellipsis = "...";
-            float ellipsisWidth = style.CalcSize(new GUIContent(ellipsis)).x;
-
-            for (int i = text.Length - 1; i >= 0; i--)
-            {
-                string truncated = text.Substring(0, i);
-                float width = style.CalcSize(new GUIContent(truncated)).x;
-
-                if (width + ellipsisWidth <= maxWidth)
-                {
-                    return truncated + ellipsis;
-                }
-            }
-
-            return ellipsis;
-        }
 #endif
     }
 }

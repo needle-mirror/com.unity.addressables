@@ -29,6 +29,13 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         [SerializeField]
         bool m_IsEmbedded;
 
+        // The Build Analysis styled layout needs the Editor's shared elements.
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
+        bool UsesBuildAnalysisLayout => m_IsEmbedded;
+#else
+        bool UsesBuildAnalysisLayout => false;
+#endif
+
         BuildLayout m_BuildReport;
 
         VisualElement m_Root;
@@ -40,9 +47,11 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         bool m_HasLaidOut;
 
         ContentView m_ActiveContentView;
-        // Exactly one of these is built, picked by m_IsEmbedded.
+        // Exactly one of these is built, picked by UsesBuildAnalysisLayout.
         MainPanelSummaryTab m_MainPanelSummaryTab;
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
         MainPanelSummaryTabEmbedded m_MainPanelSummaryTabEmbedded;
+#endif
         BuildReportHelperConsumer m_HelperConsumer;
         DetailsView m_DetailsView;
 
@@ -89,6 +98,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         {
         }
 
+        /// <param name="isEmbedded">The view is drawn inside the Build Analysis window.</param>
         public BuildReportContentView(bool isEmbedded)
         {
             m_IsEmbedded = isEmbedded;
@@ -96,7 +106,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
         public void CreateGUI(VisualElement rootVisualElement)
         {
-            string uxmlPath = m_IsEmbedded
+            string uxmlPath = UsesBuildAnalysisLayout
                 ? BuildReportUtility.BuildReportContentViewEmbeddedUxmlPath
                 : BuildReportUtility.BuildReportContentViewUxmlPath;
             var contentViewTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
@@ -104,12 +114,12 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
             // Embedded hoists the tab strip above the splitter, so its root has to cover both.
             m_ContentSplit = rootVisualElement.Q<TwoPaneSplitView>(BuildReportUtility.MiddleRightPaneSplitter);
-            m_Root = m_IsEmbedded ? rootVisualElement.Q<VisualElement>(BuildReportUtility.ReportContentRoot) : m_ContentSplit;
+            m_Root = UsesBuildAnalysisLayout ? rootVisualElement.Q<VisualElement>(BuildReportUtility.ReportContentRoot) : m_ContentSplit;
             m_HasLaidOut = false;
             m_AppliedDetailsPaneVisible = null;
             m_ContentSplit.RegisterCallback<GeometryChangedEvent>(OnFirstGeometry);
             m_Root.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>(BuildReportUtility.BuildReportContentViewUssPath));
-            if (m_IsEmbedded)
+            if (UsesBuildAnalysisLayout)
                 m_Root.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>(BuildReportUtility.BuildReportContentViewEmbeddedUssPath));
 
             // Resolve the tabs first: the views below are created against their own tab's root.
@@ -117,7 +127,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             m_TabContents[(int)RibbonTabType.ContentTab] = m_Root.Q<VisualElement>(BuildReportUtility.ContentTab);
             m_TabContents[(int)RibbonTabType.PotentialIssues] = m_Root.Q<VisualElement>(BuildReportUtility.PotentialIssuesTab);
 
-            if (m_IsEmbedded)
+            if (UsesBuildAnalysisLayout)
             {
                 m_TabView = m_Root.Q<TabView>(BuildReportUtility.TabsView);
                 m_CurrentTab = Mathf.Max(0, m_TabView.selectedTabIndex);
@@ -138,12 +148,14 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             // Create panels
             m_ActiveContentView.CreateGUI(m_TabContents[(int)RibbonTabType.ContentTab]);
             m_DetailsView.CreateGUI(m_Root);
-            if (m_IsEmbedded)
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
+            if (UsesBuildAnalysisLayout)
             {
                 m_MainPanelSummaryTabEmbedded = new MainPanelSummaryTabEmbedded(this, m_HelperConsumer, m_IsEmbedded);
                 m_MainPanelSummaryTabEmbedded.CreateGUI(m_Root);
             }
             else
+#endif
             {
                 m_MainPanelSummaryTab = new MainPanelSummaryTab(this, m_HelperConsumer, m_IsEmbedded);
                 m_MainPanelSummaryTab.CreateGUI(m_Root);
@@ -163,13 +175,13 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             m_PotentialIssuesViewTypeDropdown.choices = s_PotentialIssuesViewTypes;
             m_PotentialIssuesViewTypeDropdown.RegisterValueChangedCallback(OnViewDropDownChanged);
 
-            if (m_IsEmbedded)
+            if (UsesBuildAnalysisLayout)
             {
                 m_TabView.activeTabChanged += OnActiveTabChanged;
 
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
                 // Behind the define because viewportUssClassName only exists from 6000.3, and the
-                // package supports 6000.0. Nothing is lost: m_IsEmbedded needs the define anyway.
+                // package supports 6000.0. Nothing is lost: the Build Analysis layout needs the define anyway.
                 VisualElement tabStrip = m_TabView.Q<VisualElement>(className: TabView.viewportUssClassName);
                 if (tabStrip == null)
                     throw new InvalidOperationException($"TabView content viewport .{TabView.viewportUssClassName} not found.");
@@ -225,7 +237,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         // Summary clears the details pane, so there the column collapses and the toggle greys out.
         // Embedded only: the standalone window keeps master's always-toggleable behaviour.
         bool CurrentTabUsesDetailsPane =>
-            !m_IsEmbedded ||
+            !UsesBuildAnalysisLayout ||
             (RibbonTabType)m_CurrentTab == RibbonTabType.ContentTab || (RibbonTabType)m_CurrentTab == RibbonTabType.PotentialIssues;
 
         void UpdateDetailsToggleEnabled(int index)
@@ -271,35 +283,47 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 m_ContentSplit.CollapseChild(k_DetailsPaneIndex);
         }
 
+        // IBuildReportHost only exposes this overload, so it must work for embedded views too.
         public void Consume(BuildLayout report)
         {
-            Consume(report, null);
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
+            Consume(report, null, null);
+#else
+            ConsumeReport(report);
+            m_MainPanelSummaryTab.Consume(report);
+#endif
         }
 
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
         /// <param name="buildName">Name of the build as the host knows it, shown as the title of
         /// the Summary tab. Pass null when the host has no name for the build.</param>
-        internal void Consume(BuildLayout report, string buildName)
+        /// <param name="relatedBuilds">Builds the report's build ran nested in or contains, listed in the
+        /// Build Details of the Summary tab. Ignored by the standalone Summary tab.</param>
+        internal void Consume(BuildLayout report, string buildName, IReadOnlyList<UnityEditor.Build.BuildReportSummary> relatedBuilds)
+        {
+            ConsumeReport(report);
+            if (UsesBuildAnalysisLayout)
+                m_MainPanelSummaryTabEmbedded.Consume(report, buildName, relatedBuilds);
+            else
+                m_MainPanelSummaryTab.Consume(report);
+        }
+#endif
+
+        void ConsumeReport(BuildLayout report)
         {
             m_BuildReport = report;
             m_HelperConsumer.Consume(m_BuildReport);
-            ConsumeSummaryTab(m_BuildReport, buildName);
             m_ActiveContentView?.Consume(m_BuildReport);
             m_CachedPotentialIssuesViews.Clear();
             m_CachedContentViews.Clear();
         }
 
-        void ConsumeSummaryTab(BuildLayout report, string buildName)
-        {
-            if (m_IsEmbedded)
-                m_MainPanelSummaryTabEmbedded.Consume(report, buildName);
-            else
-                m_MainPanelSummaryTab.Consume(report);
-        }
-
         public void ClearViews()
         {
             m_MainPanelSummaryTab?.ClearGUI();
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
             m_MainPanelSummaryTabEmbedded?.ClearGUI();
+#endif
             m_ActiveContentView?.ClearGUI();
             m_DetailsView?.ClearGUI();
         }
@@ -471,7 +495,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             if (m_CurrentTab == (int)tab)
                 return false;
 
-            if (m_IsEmbedded)
+            if (UsesBuildAnalysisLayout)
             {
                 // Raises activeTabChanged, which routes to ChangeTab.
                 m_TabView.selectedTabIndex = (int)tab;

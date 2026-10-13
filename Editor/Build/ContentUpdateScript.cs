@@ -927,8 +927,9 @@ namespace UnityEditor.AddressableAssets.Build
         {
             foreach (var e in entries)
             {
-                if (e != null)
-                    e.FlaggedDuringContentUpdateRestriction = false;
+                if (e == null)
+                    continue;
+                e.FlaggedDuringContentUpdateRestriction = false;
                 if (e.IsFolder)
                 {
                     ClearContentUpdateFlagForEntries(e.SubAssets);

@@ -1,4 +1,4 @@
-#if ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS
+#if ENABLE_BUILD_ANALYSIS_INTEGRATION
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -75,6 +75,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
                 AddressablesBuildHistorySupport.RegisterBuild(layout, layoutPath);
                 Assert.IsTrue(BuildHistory.TryGetBuildReportDirectory(guid, out string buildReportDirectory), "The registered build should have a build report directory.");
+                Assert.AreEqual(guid, AddressablesBuildHistorySupport.LastRegisteredBuildSessionGUID);
                 AddressablesBuildHistorySupport.TryCopyTep(tepPath, buildReportDirectory);
 
                 Assert.IsTrue(BuildHistory.TryGetFilePath(guid, "AddressablesBuildLayout.json", out string entryLayoutPath), "Layout file should exist in the build history entry.");
@@ -108,6 +109,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 AddressablesBuildHistorySupport.RegisterBuild(layout, layoutPath);
                 LogAssert.Expect(LogType.Warning, new Regex("Failed to register the Addressables build"));
                 AddressablesBuildHistorySupport.RegisterBuild(layout, layoutPath);
+                Assert.IsTrue(AddressablesBuildHistorySupport.LastRegisteredBuildSessionGUID.Empty(), "A failed registration must not leave a build for Build Analysis to open.");
 
                 // The first entry is left intact by the failed re-registration.
                 Assert.IsTrue(BuildHistory.TryGetFilePath(guid, "AddressablesBuildLayout.json", out _));

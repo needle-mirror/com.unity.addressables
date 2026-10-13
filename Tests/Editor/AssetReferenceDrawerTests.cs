@@ -1544,7 +1544,7 @@ namespace UnityEditor.AddressableAssets.Tests
         [Test]
         public void SerializedPropertyExtensions_GetPropertyPathArrayName()
         {
-            string arrayPath = SerializedPropertyExtensions.GetPropertyPathArrayName("MainList.Array.data[111].SubList.Array.data[222]");
+            string arrayPath = UnityEditor.AddressableAssets.GUI.SerializedPropertyExtensions.GetPropertyPathArrayName("MainList.Array.data[111].SubList.Array.data[222]");
             Assert.AreEqual("MainList.Array.data[111].SubList.Array", arrayPath);
         }
 

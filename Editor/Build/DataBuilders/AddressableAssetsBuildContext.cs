@@ -69,6 +69,16 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         /// </summary>
         public DateTime buildStartTime;
 
+        // Created once, so the build history scope and the build layout share it.
+        internal GUID buildSessionGuid;
+
+        internal GUID GetOrCreateBuildSessionGuid()
+        {
+            if (buildSessionGuid.Empty())
+                buildSessionGuid = GUID.Generate();
+            return buildSessionGuid;
+        }
+
         /// <summary>
         /// The current runtime data being built.
         /// </summary>

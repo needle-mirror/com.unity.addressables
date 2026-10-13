@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -78,15 +79,56 @@ namespace UnityEditor.AddressableAssets.Build
 #if UNITY_EDITOR_WIN
             return Path.Combine(toolsPath, "win/AddressablesFormatConverter.exe");
 #elif UNITY_EDITOR_OSX
-#if UNITY_EDITOR_ARM64
-            return Path.Combine(toolsPath, "osx-arm64/AddressablesFormatConverter");
-#else
+            // There is no scripting define for the Editor's CPU architecture, so check it at runtime.
+            // An x64 Editor running under Rosetta reports X64 and gets the x64 tool, which Rosetta can also run.
+            if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+                return Path.Combine(toolsPath, "osx-arm64/AddressablesFormatConverter");
             return Path.Combine(toolsPath, "osx-x64/AddressablesFormatConverter");
-#endif
 #elif UNITY_EDITOR_LINUX
             return Path.Combine(toolsPath, "linux/AddressablesFormatConverter");
 #else
             return Path.Combine(toolsPath, "win/AddressablesFormatConverter.exe");
+#endif
+        }
+
+        /// <summary>
+        /// Makes sure the converter tool can be launched on macOS and Linux.
+        /// The package can be extracted without the execute bit set on the tool, which makes starting it fail with "Access denied".
+        /// </summary>
+        /// <param name="toolPath">Path to the converter tool executable.</param>
+        internal static void EnsureExecutable(string toolPath)
+        {
+#if !UNITY_EDITOR_WIN
+            try
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "/bin/chmod",
+                    Arguments = $"+x \"{toolPath}\"",
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using (var process = Process.Start(startInfo))
+                {
+                    if (!process.WaitForExit(10000))
+                    {
+                        process.Kill();
+                        process.WaitForExit();
+                        Debug.LogWarning($"Timed out making the format converter tool executable at {toolPath}.");
+                        return;
+                    }
+
+                    if (process.ExitCode != 0)
+                        Debug.LogWarning($"Could not make the format converter tool executable at {toolPath}: {process.StandardError.ReadToEnd()}");
+                }
+            }
+            catch (Exception e)
+            {
+                // Let the launch attempt that follows report the actual failure.
+                Debug.LogWarning($"Could not make the format converter tool executable at {toolPath}: {e.Message}");
+            }
 #endif
         }
 
@@ -110,6 +152,8 @@ namespace UnityEditor.AddressableAssets.Build
             }
 
             var convertedPath = legacyPath + ".converted";
+
+            EnsureExecutable(converterPath);
 
             try
             {

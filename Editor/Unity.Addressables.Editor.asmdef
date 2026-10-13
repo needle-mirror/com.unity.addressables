@@ -36,8 +36,8 @@
         },
         {
             "name": "Unity",
-            "expression": "6000.7.0b1",
-            "define": "ENABLE_BUILD_HISTORY_EXTERNAL_BUILDS"
+            "expression": "6000.7.0b8",
+            "define": "ENABLE_BUILD_ANALYSIS_INTEGRATION"
         }
     ],
     "noEngineReferences": false

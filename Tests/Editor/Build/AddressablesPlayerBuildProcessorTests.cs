@@ -237,4 +237,53 @@ public class AddressablesPlayerBuildProcessorTests
             AddressablesPlayerBuildProcessor.BuildAddressablesOverride = originalOverride;
         }
     }
+
+    [Test]
+    // Check normal cleanup still deletes link.xml
+    [TestCase(false, false)]
+    // Check that acting as Import worker or a build leaves link.xml in place
+    [TestCase(true, true)]
+    public void CleanTemporaryPlayerBuildData_RespectsSkipCleanup(bool skipCleanup, bool expectLinkXmlPreserved)
+    {
+        string projectPath = Path.Combine(m_Settings.ConfigFolder, "link.xml");
+        File.WriteAllText(projectPath, "<linker/>");
+        AssetDatabase.ImportAsset(projectPath, ImportAssetOptions.ForceSynchronousImport);
+
+        // CleanTemporaryPlayerBuildData resolves the default settings, so point them at the test settings.
+        // If no default config is registered yet, the setter creates one, which must be removed later.
+        bool hadDefaultConfig = EditorBuildSettings.TryGetConfigObject(AddressableAssetSettingsDefaultObject.kDefaultConfigObjectName, out AddressableAssetSettingsDefaultObject _);
+        var previousSettings = AddressableAssetSettingsDefaultObject.Settings;
+        var originalSkip = AddressablesPlayerBuildProcessor.ShouldSkipTemporaryCleanup;
+        try
+        {
+            AddressableAssetSettingsDefaultObject.Settings = m_Settings;
+            AddressablesPlayerBuildProcessor.ShouldSkipTemporaryCleanup = () => skipCleanup;
+            AddressablesPlayerBuildProcessor.CleanTemporaryPlayerBuildData();
+            Assert.AreEqual(expectLinkXmlPreserved, File.Exists(projectPath),
+                expectLinkXmlPreserved
+                    ? "link.xml must not be removed while a player build may still need it"
+                    : "link.xml is expected to be removed on editor load outside of a player build");
+        }
+        finally
+        {
+            AddressablesPlayerBuildProcessor.ShouldSkipTemporaryCleanup = originalSkip;
+            AddressableAssetSettingsDefaultObject.Settings = previousSettings;
+
+            // Remove the default config if setter created one, or the next Settings read logs "Invalid guid"
+            if (!hadDefaultConfig)
+            {
+                EditorBuildSettings.RemoveConfigObject(AddressableAssetSettingsDefaultObject.kDefaultConfigObjectName);
+                AssetDatabase.DeleteAsset(AddressableAssetSettingsDefaultObject.kDefaultConfigFolder + "/DefaultObject.asset");
+            }
+            if (File.Exists(projectPath))
+                AddressablesPlayerBuildProcessor.RemovePlayerBuildLinkXML(m_Settings);
+        }
+    }
+
+    [Test]
+    public void ShouldSkipTemporaryCleanup_InMainEditorOutsidePlayerBuild_ReturnsFalse()
+    {
+        // Check the cleanup is not skipped during normal editor use
+        Assert.IsFalse(AddressablesPlayerBuildProcessor.ShouldSkipTemporaryCleanup());
+    }
 }

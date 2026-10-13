@@ -1777,60 +1777,6 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
-        public void TypeNameResolver_NullAssembly_ResolvesCorelibType()
-        {
-            Assert.AreEqual(typeof(string), TypeNameResolver.Resolve(null, "System.String"));
-            Assert.AreEqual(typeof(int), TypeNameResolver.Resolve("", "System.Int32"));
-        }
-
-        [Test]
-        public void TypeNameResolver_UnknownAssembly_ReturnsNullNoThrow()
-        {
-            Assert.IsNull(TypeNameResolver.Resolve("Definitely.Not.A.Real.Assembly.ZZZ", "Definitely.Not.A.Real.Type.ZZZ"));
-        }
-
-        [Test]
-        public void TypeNameResolver_GetSimpleAssemblyName_NullForCorelib()
-        {
-            Assert.IsNull(TypeNameResolver.GetSimpleAssemblyName(typeof(string)));
-            Assert.AreEqual("UnityEngine.CoreModule", TypeNameResolver.GetSimpleAssemblyName(typeof(UnityEngine.Vector3)));
-        }
-
-        [Test]
-        public void TypeNameResolver_Initialize_IsIdempotentAndResolveStillWorks()
-        {
-            // Repeated calls must not throw, and resolution must keep working.
-            TypeNameResolver.Initialize();
-            TypeNameResolver.Initialize();
-            TypeNameResolver.Initialize();
-
-            Assert.AreEqual(typeof(string), TypeNameResolver.Resolve(null, "System.String"));
-            Assert.AreEqual(typeof(UnityEngine.Vector3), TypeNameResolver.Resolve("UnityEngine.CoreModule", "UnityEngine.Vector3"));
-        }
-
-        [Test]
-        public void NormalizeTypeName_CorelibGenericArguments_OmitRuntimeSpecificAssembly()
-        {
-            var corelibName = typeof(object).Assembly.GetName().Name;
-            foreach (var t in new[] { typeof(List<string>), typeof(Dictionary<string, int>), typeof(List<List<string>>) })
-            {
-                var name = TypeNameResolver.NormalizeTypeName(t);
-                Assert.IsFalse(name.Contains(corelibName), $"normalized name '{name}' embeds the writer's corelib identity '{corelibName}'");
-                Assert.AreEqual(t, TypeNameResolver.Resolve(TypeNameResolver.GetSimpleAssemblyName(t), name));
-            }
-        }
-
-        [Test]
-        [TestCase("mscorlib")]
-        [TestCase("System.Private.CoreLib")]
-        public void TypeNameResolver_NullAssembly_ResolvesGenericWithForeignCorelibArgs(string corelib)
-        {
-            // The writer no longer emits these names, but legacy/foreign-runtime catalogs contain them.
-            var typeName = "System.Collections.Generic.List`1[[System.String, " + corelib + "]]";
-            Assert.AreEqual(typeof(List<string>), TypeNameResolver.Resolve(null, typeName));
-        }
-
-        [Test]
         public void TypeRoundTrip_GenericOverCorelibType()
         {
             var wr = new BinaryStorageBuffer.Writer();
