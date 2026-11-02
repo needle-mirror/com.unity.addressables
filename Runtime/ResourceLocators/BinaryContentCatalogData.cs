@@ -93,8 +93,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             m_Entries = entries;
         }
 
-        [UnityEditor.MenuItem("Window/Asset Management/Addressables/Optimize Binary Catalog", priority = 2051)]
-        private static void OptimizeBinaryCatalogMenuCommand()
+        internal static void OptimizeBinaryCatalogMenuCommand()
         {
             var catalogPath = UnityEditor.EditorUtility.OpenFilePanelWithFilters("Select Binary Catalog", Path.GetDirectoryName(Application.dataPath), new string[] { "Binary Catalog", "bin" });
             if (string.IsNullOrEmpty(catalogPath))
@@ -102,8 +101,8 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             var resultDir = catalogPath.Replace(".bin", "-optimized");
             if (Directory.Exists(resultDir))
             {
-                if (!UnityEditor.EditorUtility.DisplayDialog("Delete Folder Confirmation",
-                    $"{resultDir} exists, do you want to overwrite?  All files in folder will be deleted.", "Yes", "No (Cancel)"))
+                if (!UnityEditor.EditorUtility.DisplayDialog("Overwrite Existing Folder",
+                    $"{resultDir} already exists. Overwriting it deletes all files in the folder.", "Overwrite Folder", "Cancel"))
                     return;
                 Directory.Delete(resultDir, true);
             }
@@ -124,8 +123,7 @@ namespace UnityEngine.AddressableAssets.ResourceLocators
             UnityEditor.EditorUtility.OpenWithDefaultApp(resultDir);
         }
 
-        [UnityEditor.MenuItem("Window/Asset Management/Addressables/Extract Binary Catalog", priority = 2052)]
-        private static void ExtractBinaryCatalogMenuCommand()
+        internal static void ExtractBinaryCatalogMenuCommand()
         {
             var catalogPath = UnityEditor.EditorUtility.OpenFilePanelWithFilters("Select Binary Catalog", Path.GetDirectoryName(Application.dataPath), new string[] { "Binary Catalog", "bin" });
             if (string.IsNullOrEmpty(catalogPath))

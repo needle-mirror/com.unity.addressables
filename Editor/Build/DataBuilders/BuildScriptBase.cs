@@ -78,22 +78,29 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             var tepPath = Path.Combine(directory, BuildReportUtility.TepFileName);
             File.WriteAllText(tepPath, tepLogger.FormatForTraceEventProfiler());
 
-            if (!ProjectConfigData.GenerateBuildLayout || ProjectConfigData.BuildLayoutReportFileFormat == ProjectConfigData.ReportFileFormat.TXT)
+            // The report reads its Build Steps from this, not from the profile beside it.
+            string stepsPath = string.Empty;
+            if (log is ILogBuildSteps stepsLogger)
+            {
+                stepsPath = Path.Combine(directory, BuildReportUtility.StepsFileName);
+                BuildStepsReport.Write(stepsLogger, stepsPath);
+            }
+
+            // Only recorded when GenerateBuildLayout is on, so that needs no check.
+            BuildLayoutGenerationTask.LayoutIdentity identity = BuildLayoutGenerationTask.LastLayoutIdentity;
+            if (!identity.IsValid)
             {
                 return;
             }
-            var buildLayoutPath = BuildLayoutGenerationTask.GetLayoutFilePathForFormat(ProjectConfigData.BuildLayoutReportFileFormat);
-            if (!File.Exists(buildLayoutPath))
-            {
-                Debug.Log($"Missing expected build layout {buildLayoutPath}; skipping copying TEP to BuildReport directory");
-                return;
-            }
-            var layoutHeader = BuildLayout.Open(buildLayoutPath, true, false);
 #if ENABLE_BUILD_ANALYSIS_INTEGRATION
-            if (BuildHistory.TryGetBuildReportDirectory(layoutHeader.AddressablesBuildSessionGUID, out string buildReportTepDirectory))
+            if (BuildHistory.TryGetBuildReportDirectory(identity.SessionGUID, out string buildReportTepDirectory))
+            {
                 AddressablesBuildHistorySupport.TryCopyTep(tepPath, buildReportTepDirectory);
+                if (!string.IsNullOrEmpty(stepsPath))
+                    AddressablesBuildHistorySupport.TryCopyBuildSteps(stepsPath, buildReportTepDirectory);
+            }
 #endif
-            var buildStart = layoutHeader.BuildStart;
+            var buildStart = identity.BuildStart;
             var timestampedLayoutPath = GetLayoutTEPFilePath(buildStart);
             // Re-entering Play Mode reuses the same build layout report, so
             // BuildStart (and therefore this filename) can repeat. Skip the
@@ -104,8 +111,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
         internal static string GetLayoutTEPFilePath(DateTime buildStart)
         {
-            string stringNow = string.Format("{0:D4}.{1:D2}.{2:D2}.{3:D2}.{4:D2}.{5:D2}", buildStart.Year, buildStart.Month, buildStart.Day, buildStart.Hour, buildStart.Minute, buildStart.Second);
-            return $"{Addressables.BuildReportPath}buildlayoutTEP_{stringNow}.json";
+            return $"{Addressables.BuildReportPath}buildlayoutTEP_{BuildUtility.TimeStamp(buildStart)}.json";
         }
 
         /// <summary>
@@ -133,6 +139,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             AddressablesRuntimeProperties.ClearCachedPropertyValues();
 
             TResult result = default;
+
+            // Scoped so a nested build puts the outer build's identity back when it finishes.
+            using var identityScope = new BuildLayoutGenerationTask.LayoutIdentityScope(default);
+
             // Append the file registry to the results
             using (m_Log.ScopedStep(LogLevel.Info, $"Building {this.Name}"))
             {
@@ -175,6 +185,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
             }
 
             WriteBuildLog(m_Log, Path.GetDirectoryName(Application.dataPath) + "/" + Addressables.LibraryPath);
+
+            // Opened only now so the report finds the Build Steps WriteBuildLog just copied into its entry.
+            if (BuildLayoutGenerationTask.LastLayoutIdentity.IsValid)
+                DisplayBuildReport();
 
             if (result is AddressableAssetBuildResult)
             {
@@ -225,8 +239,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                     if (assetGroup == null || !assetGroup.IncludeInBuild)
                         continue;
 
-                    using (Log.ScopedStep(LogLevel.Verbose, "ProcessGroup",
-                           ("Name", assetGroup.Name),
+                    string groupName = assetGroup.Name;
+                    using (Log.ScopedStep(LogLevel.Verbose, $"ProcessGroup {groupName}",
+                           ("Name", groupName),
                            ("Guid", assetGroup.Guid)))
                     {
 
@@ -484,10 +499,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 bool buildReportSettingCheck = ProjectConfigData.UserHasBeenInformedAboutBuildReportSettingPreBuild;
                 if (!buildReportSettingCheck && !Application.isBatchMode && !ProjectConfigData.GenerateBuildLayout)
                 {
-                    bool turnOnBuildLayout = EditorUtility.DisplayDialog("Addressables Build Report",
-                        "There's a new Addressables Build Report you can check out after your content build.  " +
-                        "However, this requires that 'Debug Build Layout' is turned on.  The setting can be found in Edit > Preferences > Addressables.  Would you like to turn it on?",
-                        "Yes", "No");
+                    bool turnOnBuildLayout = EditorUtility.DisplayDialog("Enable Build Report",
+                        "To use the new Addressables Build Report, turn on Debug Build Layout. You can change this later in Preferences.",
+                        "Enable", "Cancel");
                     if (turnOnBuildLayout)
                         ProjectConfigData.GenerateBuildLayout = true;
                     ProjectConfigData.UserHasBeenInformedAboutBuildReportSettingPreBuild = true;
@@ -501,12 +515,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         protected virtual void DisplayBuildReport()
         {
             if (!Application.isBatchMode && ProjectConfigData.AutoOpenAddressablesReport && ProjectConfigData.GenerateBuildLayout)
-            {
-                using (Log.ScopedStep(LogLevel.Info, "DisplayBuildReport"))
-                {
-                    BuildReportUtility.ShowBuildReportWindow();
-                }
-            }
+                BuildReportUtility.ShowBuildReportWindow();
         }
 
         /// <summary>

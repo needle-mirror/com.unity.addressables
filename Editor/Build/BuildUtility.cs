@@ -71,6 +71,11 @@ namespace UnityEditor.AddressableAssets.Build
             return result;
         }
 
+        internal static string TimeStamp(System.DateTime now)
+        {
+            return string.Format("{0:D4}.{1:D2}.{2:D2}.{3:D2}.{4:D2}.{5:D2}", now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second);
+        }
+
         /// <summary>
         /// Used during the build to check for unsaved scenes and provide a user popup if there are any.
         /// </summary>
@@ -92,8 +97,8 @@ namespace UnityEditor.AddressableAssets.Build
             if (dirtyScenes.Count > 0)
             {
                 if (EditorUtility.DisplayDialog(
-                        "Unsaved Scenes", "Modified Scenes must be saved to continue.",
-                        "Save and Continue", "Cancel"))
+                        "Unsaved Scenes", "One or more scenes have unsaved changes. Save to continue.",
+                        "Save Scenes", "Cancel"))
                 {
                     EditorSceneManager.SaveScenes(dirtyScenes.ToArray());
                 }

@@ -210,6 +210,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.IsFalse(AddressableAssetUtility.IsPathValidForEntry("Packages/com.company.demo/package.json"));
         }
 
+        [Test]
         public void WhenPathIsNotPackageImportFile_IsPathValidForEntry_ReturnsTrue()
         {
             Assert.IsTrue(AddressableAssetUtility.IsPathValidForEntry("Packages/com.company.demo/folder/package.json"));

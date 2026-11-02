@@ -56,7 +56,7 @@
         },
         {
             "name": "Unity",
-            "expression": "6000.7.0b8",
+            "expression": "6000.7.0b10",
             "define": "ENABLE_BUILD_ANALYSIS_INTEGRATION"
         }
     ],

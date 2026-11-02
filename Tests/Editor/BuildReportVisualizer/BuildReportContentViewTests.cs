@@ -145,6 +145,17 @@ namespace Tests.Editor.BuildReportVisualizer
         }
 
         [Test]
+        public void StandaloneContentView_SetRelatedBuilds_DoesNothing()
+        {
+            var root = new VisualElement();
+            var view = new BuildReportContentView();
+            view.CreateGUI(root);
+            view.Consume(CreateLayout("profile"), "Addressables", null);
+
+            Assert.DoesNotThrow(() => view.SetRelatedBuilds(null));
+        }
+
+        [Test]
         public void CreateGUI_EndsTheTabStripWithHelpThenTheDetailsToggle()
         {
             var root = new VisualElement();
@@ -201,6 +212,21 @@ namespace Tests.Editor.BuildReportVisualizer
         }
 
         [Test]
+        public void DetailsToggle_IsDisabledWhileLoading()
+        {
+            var view = CreateView();
+            view.Consume(CreateLayout("profile"), null, null);
+            var details = view.TabView.Q<ToolbarToggle>(BuildReportUtility.ReportToolbarToggleDetailsButton);
+
+            view.SetLoading(true);
+            view.NavigateToView(ContentViewType.AssetsView);
+            Assert.IsFalse(details.enabledSelf, "Changing tab while loading keeps the toggle disabled.");
+
+            view.SetLoading(false);
+            Assert.IsTrue(details.enabledSelf);
+        }
+
+        [Test]
         public void DetailsToggle_StartsOnAndDrivesTheDetailsPane()
         {
             var window = EditorWindow.GetWindow<HostWindow>();
@@ -238,7 +264,10 @@ namespace Tests.Editor.BuildReportVisualizer
 
             var splitter = contentRoot.Q<TwoPaneSplitView>(BuildReportUtility.MiddleRightPaneSplitter);
             Assert.AreSame(view.TabView, contentRoot[0], "The strip comes first, spanning both panes.");
-            Assert.AreSame(splitter, contentRoot[1]);
+            VisualElement body = contentRoot.Q<VisualElement>(BuildReportUtility.ReportBody);
+            Assert.AreSame(body, contentRoot[1]);
+            Assert.AreSame(body, splitter.parent, "The body holds the splitter and the loading overlay over it.");
+            Assert.IsNotNull(body.Q<UnityEditor.Build.Analysis.LoadingOverlay>(BuildReportUtility.ReportLoadingOverlay));
             Assert.IsNull(view.TabView.Q<TwoPaneSplitView>(BuildReportUtility.MiddleRightPaneSplitter),
                 "The splitter must not be inside the TabView, or the strip is confined to MiddlePane again.");
         }

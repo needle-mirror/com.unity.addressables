@@ -2,6 +2,8 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
@@ -62,10 +64,17 @@ namespace Tests.Editor.BuildReportVisualizer
 
         static AddressablesReportDrawer CreateDrawer()
         {
+            return CreateDrawer(out _);
+        }
+
+        static AddressablesReportDrawer CreateDrawer(out VisualElement content)
+        {
             var drawer = new AddressablesReportDrawer();
-            drawer.CreateContent();
+            content = drawer.CreateContent();
             return drawer;
         }
+
+        static bool IsShown(VisualElement element) => element.style.display.value == DisplayStyle.Flex;
 
         static BuildReportSummary CreateSummary(GUID buildSessionGuid)
         {
@@ -100,43 +109,47 @@ namespace Tests.Editor.BuildReportVisualizer
         }
 
         [Test]
-        public void OnBuildSelected_ConsumesTheLayoutFromTheBuildHistoryEntry()
+        public void ApplyBuild_ConsumesTheLayoutFromTheBuildHistoryEntry()
         {
             var drawer = CreateDrawer();
+            BuildReportSummary summary = RegisteredSummary();
 
-            drawer.OnBuildSelected(RegisteredSummary());
+            Assert.IsTrue(drawer.ApplyBuild(summary, drawer.LoadBuildAsync(summary, CancellationToken.None).Result),
+                "A shown report keeps the window's selection.");
 
             Assert.IsNotNull(drawer.ShownReport);
             Assert.AreEqual(k_ProfileName, drawer.ShownReport.AddressablesEditorSettings.ActiveProfile.Name);
         }
 
         [Test]
-        public void OnBuildSelected_SameBuildTwice_KeepsTheParsedLayout()
+        public void ApplyBuild_SameBuildTwice_KeepsTheParsedLayout()
         {
             var drawer = CreateDrawer();
+            BuildReportSummary summary = RegisteredSummary();
 
-            drawer.OnBuildSelected(RegisteredSummary());
+            drawer.ApplyBuild(summary, drawer.LoadBuildAsync(summary, CancellationToken.None).Result);
             BuildLayout first = drawer.ShownReport;
-            drawer.OnBuildSelected(RegisteredSummary());
+            drawer.ApplyBuild(summary, drawer.LoadBuildAsync(summary, CancellationToken.None).Result);
 
             Assert.AreSame(first, drawer.ShownReport, "Reselecting the same build should not parse the layout again.");
         }
 
         [Test]
-        public void OnBuildSelected_AfterDeselect_ParsesTheLayoutAgain()
+        public void ApplyBuild_AfterDeselect_ParsesTheLayoutAgain()
         {
             var drawer = CreateDrawer();
+            BuildReportSummary summary = RegisteredSummary();
 
-            drawer.OnBuildSelected(RegisteredSummary());
+            drawer.ApplyBuild(summary, drawer.LoadBuildAsync(summary, CancellationToken.None).Result);
             BuildLayout first = drawer.ShownReport;
             drawer.OnBuildDeselected();
-            drawer.OnBuildSelected(RegisteredSummary());
+            drawer.ApplyBuild(summary, drawer.LoadBuildAsync(summary, CancellationToken.None).Result);
 
             Assert.AreNotSame(first, drawer.ShownReport);
         }
 
         [Test]
-        public void OnBuildSelected_FailedBuildWithoutRuntimeSettings_ShowsTheReport()
+        public void ApplyBuild_FailedBuildWithoutRuntimeSettings_ShowsTheReport()
         {
             // Matches the layout GenerateErrorReport registers for a failed build, which has no runtime settings.
             BuildLayout failedLayout = new BuildLayout
@@ -159,7 +172,8 @@ namespace Tests.Editor.BuildReportVisualizer
                 Assert.IsTrue(BuildHistory.TryGetFilePath(failedLayout.AddressablesBuildSessionGUID, "BuildReportSummary.json", out string summaryPath));
 
                 var drawer = CreateDrawer();
-                drawer.OnBuildSelected(BuildReportSummary.Load(summaryPath));
+                BuildReportSummary summary = BuildReportSummary.Load(summaryPath);
+                drawer.ApplyBuild(summary, drawer.LoadBuildAsync(summary, CancellationToken.None).Result);
 
                 Assert.IsNotNull(drawer.ShownReport);
                 Assert.AreEqual("Something went wrong", drawer.ShownReport.BuildError);
@@ -173,13 +187,113 @@ namespace Tests.Editor.BuildReportVisualizer
         }
 
         [Test]
-        public void OnBuildSelected_BuildWithoutAnAddressablesLayout_Warns()
+        public void LoadBuildAsync_BuildWithoutAnAddressablesLayout_Warns()
         {
             var drawer = CreateDrawer();
-            drawer.OnBuildSelected(RegisteredSummary());
+            BuildReportSummary summary = RegisteredSummary();
+            drawer.ApplyBuild(summary, drawer.LoadBuildAsync(summary, CancellationToken.None).Result);
+            BuildReportSummary missing = CreateSummary(GUID.Generate());
 
             LogAssert.Expect(LogType.Warning, new Regex("No Addressables build report was found"));
-            drawer.OnBuildSelected(CreateSummary(GUID.Generate()));
+            Assert.IsFalse(drawer.ApplyBuild(missing, drawer.LoadBuildAsync(missing, CancellationToken.None).Result),
+                "No report is shown, so selecting the build again retries.");
+        }
+
+        [Test]
+        public void LoadBuildAsync_CorruptLayout_ErrorNamesTheFile()
+        {
+            Assert.IsTrue(BuildHistory.TryGetFilePath(m_RegisteredBuild, AddressablesBuildHistorySupport.kLayoutFileName, out string layoutPath));
+            File.WriteAllText(layoutPath, "{ not json");
+
+            var drawer = CreateDrawer();
+            var e = Assert.Throws<AggregateException>(() => _ = drawer.LoadBuildAsync(RegisteredSummary(), CancellationToken.None).Result);
+
+            StringAssert.Contains(layoutPath, e.InnerException.Message);
+        }
+
+        [Test]
+        public void LoadBuildAsync_ShowsTheLoadingOverlayUntilTheReportIsApplied()
+        {
+            var drawer = CreateDrawer();
+            Assume.That(drawer.LoadingOverlay, Is.Not.Null, "The embedded layout declares the overlay.");
+            BuildReportSummary summary = RegisteredSummary();
+
+            Task<object> load = drawer.LoadBuildAsync(summary, CancellationToken.None);
+
+            Assert.IsTrue(IsShown(drawer.LoadingOverlay), "The read runs in the background, so the report says it is loading.");
+            drawer.ApplyBuild(summary, load.Result);
+            Assert.IsFalse(IsShown(drawer.LoadingOverlay));
+            Assert.IsNotNull(drawer.ShownReport);
+        }
+
+        [Test]
+        public void OnBuildDeselected_WhileLoading_HidesTheLoadingOverlay()
+        {
+            var drawer = CreateDrawer();
+            Task<object> load = drawer.LoadBuildAsync(RegisteredSummary(), CancellationToken.None);
+
+            drawer.OnBuildDeselected();
+
+            Assert.IsFalse(IsShown(drawer.LoadingOverlay), "The window drops the result, so ApplyBuild never hides it.");
+
+            // Nothing reads load.Result here, so wait for the background read before TearDown deletes the layout.
+            load.Wait();
+        }
+
+        [Test]
+        public void LoadBuildAsync_SameBuildAgain_DoesNotShowTheLoadingOverlay()
+        {
+            var drawer = CreateDrawer();
+            BuildReportSummary summary = RegisteredSummary();
+            drawer.ApplyBuild(summary, drawer.LoadBuildAsync(summary, CancellationToken.None).Result);
+
+            Task<object> load = drawer.LoadBuildAsync(summary, CancellationToken.None);
+
+            Assert.IsTrue(load.IsCompleted, "The shown report is reused, so there is nothing to read.");
+            Assert.IsFalse(IsShown(drawer.LoadingOverlay));
+        }
+
+        [Test]
+        public void OnBuildListRefreshed_DropsLinksToBuildsTheHistoryNoLongerHas()
+        {
+            var drawer = CreateDrawer(out VisualElement content);
+            BuildReportSummary summary = RegisteredSummary();
+            drawer.ApplyBuild(summary, drawer.LoadBuildAsync(summary, CancellationToken.None).Result);
+            // The registered build has no related builds, so this link is stale.
+            content.Q<RelatedBuildLinks>(BuildReportUtility.SummaryTabRelatedBuilds).SetBuilds(
+                new[] { new BuildReportSummary { BuildSessionGUID = GUID.Generate(), BuildName = "Deleted" } });
+
+            drawer.OnBuildListRefreshed();
+
+            Assert.IsEmpty(content.Query<Label>(className: RelatedBuildLinks.linkUssClassName).ToList());
+            Assert.AreEqual(MainPanelSummaryTabEmbedded.k_NoRelatedBuilds,
+                content.Q<Label>(MainPanelSummaryTabEmbedded.DetailValueName("Related Builds")).text);
+        }
+
+        [Test]
+        public void OnBuildListRefreshed_KeepsTheParsedLayout()
+        {
+            var drawer = CreateDrawer();
+            BuildReportSummary summary = RegisteredSummary();
+            drawer.ApplyBuild(summary, drawer.LoadBuildAsync(summary, CancellationToken.None).Result);
+            BuildLayout shown = drawer.ShownReport;
+            Assert.IsNotNull(shown);
+
+            drawer.OnBuildListRefreshed();
+
+            Assert.AreSame(shown, drawer.ShownReport, "Refreshing the row should not parse the layout again.");
+        }
+
+        [Test]
+        public void OnBuildListRefreshed_AfterAFailedLoad_DoesNothing()
+        {
+            var drawer = CreateDrawer();
+            LogAssert.Expect(LogType.Warning, new Regex("No Addressables build report was found"));
+            BuildReportSummary missing = CreateSummary(GUID.Generate());
+            drawer.ApplyBuild(missing, drawer.LoadBuildAsync(missing, CancellationToken.None).Result);
+
+            Assert.DoesNotThrow(() => drawer.OnBuildListRefreshed());
+            Assert.IsNull(drawer.ShownReport);
         }
     }
 }

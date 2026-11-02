@@ -19,7 +19,7 @@ To create a build report, you must enable the **Debug Build Layout** setting, wh
 1. Select __Addressables__ from the list of preference types.
 1. Enable the __Debug Build Layout__ option.
 1. [Perform a build](builds-full-build.md) of Addressables content.
-1. Open the [**Addressables Report** window](addressables-report-window.md) (**Window** > **Asset Management** > **Addressables** > **Addressables Report**) to view the report.
+1. Open the [**Addressables Report** window](addressables-report-window.md) (**Window** > **Asset Management** > **Addressables** > **Report**) to view the report.
 
 >[!TIP]
 > To open a report as soon as a build completes, enable **Open Build Analysis after build** in the [**Preferences** window](addressables-preferences.md). In Unity 6.7 and later, this opens the [**Build Analysis** window](https://docs.unity3d.com/6000.6/Documentation/Manual/build-analysis-window-reference.html). In Unity 6.6 and earlier, this setting is labeled **Open Addressables Report after build** and opens the **Addressables Report** window. When the **Addressables Report** window displays a build that contains content directories, it also displays a button to open the **Build Analysis** window to inspect the build further.

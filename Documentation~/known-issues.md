@@ -16,7 +16,7 @@ If a project ever had Addressables 3.0.0+ installed and is then downgraded to an
 
 To resolve these issues, remove the unsupported objects from the Addressable Asset Settings and clear the affected build reports as follows:
 
-1. Open the Addressable Asset Settings Inspector (menu: **Window** &gt; **Asset Management** &gt; **Addressables** &gt; **Settings**).
+1. Open the Addressable Asset Settings Inspector by selecting the `AddressableAssetSettings` asset in the Project window, or by choosing **Tools &gt; Show Settings in Inspector** from the Addressables Groups window.
 2. Expand the [**Build and Play Mode Scripts**](AddressableAssetSettings.md#build-and-play-mode-scripts) section. Select the **Schema Driven Build** entry, and select the **&minus;** button at the bottom of the list to remove it.
 3. Expand the [**Asset Group Templates**](AddressableAssetSettings.md#asset-group-templates) section. Select the **Content Directory** entry, and select the **&minus;** button at the bottom of the list to remove it.
 4. If the Report window still logs errors, remove the affected build reports from the build report list in the left sidebar panel of the Addressables Report window. To do this, right-click in the window and select **Remove Report** to remove the selected report, or **Remove All Reports** to remove them all.

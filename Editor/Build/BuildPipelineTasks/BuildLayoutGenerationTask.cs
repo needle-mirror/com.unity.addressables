@@ -96,9 +96,43 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             return $"{m_LayoutFilePath}.{ext}";
         }
 
+        /// <summary>Which build a layout was written for.</summary>
+        internal struct LayoutIdentity
+        {
+            internal bool IsValid;
+            internal GUID SessionGUID;
+            internal DateTime BuildStart;
+        }
+
+        // Scoped to one BuildData call: a build that writes no layout must not claim the previous build's.
+        internal static LayoutIdentity LastLayoutIdentity { get; private set; }
+
+        /// <summary>Restores the caller's identity on dispose, so a nested build leaves it intact.</summary>
+        internal readonly struct LayoutIdentityScope : IDisposable
+        {
+            readonly LayoutIdentity m_Previous;
+
+            internal LayoutIdentityScope(LayoutIdentity identity)
+            {
+                m_Previous = LastLayoutIdentity;
+                LastLayoutIdentity = identity;
+            }
+
+            public void Dispose() => LastLayoutIdentity = m_Previous;
+        }
+
+        static void RecordLayoutIdentity(BuildLayout layout)
+        {
+            LastLayoutIdentity = new LayoutIdentity
+            {
+                IsValid = true,
+                SessionGUID = layout.AddressablesBuildSessionGUID,
+                BuildStart = layout.BuildStart
+            };
+        }
+
         /// <summary>
-        /// Refreshes the fixed-path json layout, which identifies the most recent build to
-        /// <see cref="DataBuilders.BuildScriptBase.WriteBuildLog"/>.
+        /// Refreshes the fixed-path json layout read by analytics, and documented in Preferences for users to read directly.
         /// </summary>
         internal static string WriteLegacyJsonLayout(string sourcePath)
         {
@@ -112,8 +146,12 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
         internal static string TimeStampedReportPath(DateTime now)
         {
-            string stringNow = string.Format("{0:D4}.{1:D2}.{2:D2}.{3:D2}.{4:D2}.{5:D2}", now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second);
-            return $"{m_ReportsFilePath}_{stringNow}.json";
+            return $"{m_ReportsFilePath}_{BuildUtility.TimeStamp(now)}.json";
+        }
+
+        internal static string TimeStampedProfilerReportPath(DateTime now)
+        {
+            return $"{m_ReportsFilePath}_{BuildUtility.TimeStamp(now)}.profiler";
         }
 
         static AssetBucket GetOrCreate(Dictionary<BucketIdentifier, AssetBucket> buckets, BuildLayout.File file, string asset)
@@ -1461,11 +1499,16 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
         {
             BuildLayout layout = CreateBuildLayout();
 
-            string destinationPath = TimeStampedReportPath(layout.BuildStart);
+            string layoutDestinationPath = TimeStampedReportPath(layout.BuildStart);
+            string profilerDestinationPath = TimeStampedProfilerReportPath(layout.BuildStart);
+
+            using (m_Log.ScopedStep(LogLevel.Info, "Writing Build Layout Profiler File"))
+                ProfilerData.MoveToFile(layout, profilerDestinationPath, layoutDestinationPath);
+
             using (m_Log.ScopedStep(LogLevel.Info, "Writing BuildReport File"))
             {
-                layout.WriteToFile(destinationPath, k_PrettyPrint);
-                layout.m_FilePath = destinationPath;
+                layout.WriteToFile(layoutDestinationPath, k_PrettyPrint);
+                layout.m_FilePath = layoutDestinationPath;
             }
 
             if (ProjectConfigData.BuildLayoutReportFileFormat == ProjectConfigData.ReportFileFormat.TXT)
@@ -1475,20 +1518,21 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                     string txtFilePath = GetLayoutFilePathForFormat(ProjectConfigData.ReportFileFormat.TXT);
                     using (FileStream s = File.Open(txtFilePath, FileMode.Create))
                         BuildLayoutPrinter.WriteBundleLayout(s, layout);
-                    m_Log.AddEntry(LogLevel.Info, $"Text build layout written to {txtFilePath} and json build layout written to {destinationPath}");
+                    m_Log.AddEntry(LogLevel.Info, $"Text build layout written to {txtFilePath} and json build layout written to {layoutDestinationPath}");
                 }
             }
             else
             {
-                string legacyJsonFilePath = WriteLegacyJsonLayout(destinationPath);
+                string legacyJsonFilePath = WriteLegacyJsonLayout(layoutDestinationPath);
                 m_Log.AddEntry(LogLevel.Info, $"Json build layout written to {legacyJsonFilePath}");
             }
 
-            ProjectConfigData.AddBuildReportFilePath(destinationPath);
+            ProjectConfigData.AddBuildReportFilePath(layoutDestinationPath);
+            RecordLayoutIdentity(layout);
 #if ENABLE_BUILD_ANALYSIS_INTEGRATION
-            AddressablesBuildHistorySupport.RegisterBuild(layout, destinationPath);
+            AddressablesBuildHistorySupport.RegisterBuild(layout, layoutDestinationPath);
 #endif
-            RaiseLayoutCompleted(destinationPath, layout);
+            RaiseLayoutCompleted(layoutDestinationPath, layout);
             return ReturnCode.Success;
         }
 
@@ -1526,6 +1570,7 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
             {
                 if (ProjectConfigData.BuildLayoutReportFileFormat == ProjectConfigData.ReportFileFormat.JSON)
                     WriteLegacyJsonLayout(destinationPath);
+                RecordLayoutIdentity(layout);
 #if ENABLE_BUILD_ANALYSIS_INTEGRATION
                 AddressablesBuildHistorySupport.RegisterBuild(layout, destinationPath);
 #endif

@@ -49,9 +49,9 @@ namespace UnityEditor.AddressableAssets.GUI
             bool pathPairMigrationCheck = ProjectConfigData.UserHasBeenInformedAboutPathPairMigration;
             if (!pathPairMigrationCheck && NeedsPathPairMigration(settings))
             {
-                bool doPathPairMigration = EditorUtility.DisplayDialog("Path Pair Migration",
-                    "Addressables has migrated to a new path pair format. This is necessary for some advanced features like CCD integration." +
-                    "We can automatically migrate path pairs like 'RemoteLoadPath' to the new format 'Remote.LoadPath'.  Would you like us to do that for you?", "Yes", "No");
+                bool doPathPairMigration = EditorUtility.DisplayDialog("Migrate Path Pairs",
+                    "Addressables now uses a new path pair format. Your path pairs, like 'RemoteLoadPath', can be migrated automatically to the new format, 'Remote.LoadPath'.",
+                    "Migrate Path Pairs", "Skip");
                 if (doPathPairMigration)
                     DoPathPairMigration(settings);
                 ProjectConfigData.UserHasBeenInformedAboutPathPairMigration = true;
@@ -64,9 +64,9 @@ namespace UnityEditor.AddressableAssets.GUI
             if (!allowNestedFolderCheck && settings.AllowNestedBundleFolders)
             {
                 bool enableNestedFolders = EditorUtility.DisplayDialog(
-                "Enable Nested Bundle Folders",
-                "A new checkbox has been added to the Asset Settings to Allow Nested Folders. Previously if a group was marked Pack Separately and there is a slash in an Addressables key, the bundles would be put in subfolders. Most users will not want this functionality unless they have specific build processes that depend on it. Allow nested folders?",
-                "Yes", "No");
+                "Allow Nested Bundle Folders",
+                "Folders can now be nested inside other folders. Not allowing this may change AssetBundle filenames for Pack Separately groups with slashes in addresses. Allow nested folders for this project? You can change this later in Addressable Asset Settings.",
+                "Allow", "Don't Allow");
 
                 settings.AllowNestedBundleFolders = enableNestedFolders;
                 ProjectConfigData.UserHasBeenInformedAbouNestedFolderStructure = true;

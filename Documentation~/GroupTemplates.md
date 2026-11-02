@@ -17,7 +17,7 @@ A group template defines which types of schema objects Unity creates for a new g
 To create your own build scripts, define the additional settings in a custom schema object and create a custom group template. To create a group template, perform the following steps:
 
 1. In the **Project** window, navigate to the folder you want to save the new group template to. The default template is in the `AssetGroups` subfolder of `AddressablesAssetsData`.
-1. Right-click and select **Create** > **Addressables** > **Group Templates** > **Blank Group Template**.
+1. Right-click and select **Create** > **Addressables** > **Blank Group Template**.
 1. Optionally rename the template and add a description to it.
 1. Select the new template, and in the **Inspector** select **Add Schema** to start adding [schema objects](GroupSchemas.md) to the template.
 

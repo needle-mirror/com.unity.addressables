@@ -7,6 +7,7 @@ using UnityEditor.AddressableAssets.Build.Layout;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Build;
 using UnityEditor.Build.Analysis;
+using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
 using UnityEngine.UIElements;
 using BuildResult = UnityEditor.Build.Reporting.BuildResult;
@@ -22,6 +23,17 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
     {
         internal const string k_DefaultBuildName = "Addressables Build";
         internal const string k_NoRemoteCatalog = "No Remote Catalog Built";
+        internal const string k_NoBuildSteps = "No build steps data is available for this build.";
+
+        internal const string k_ContentDirectoryStepTooltip =
+            "Substeps for " + BuildReportUtility.ContentDirectoryStepName + " are under Build Steps in the related " +
+            "content directory build, which you can find in Build Details > Related Builds.";
+
+        // The build's folder is a timestamp and a hash, so point at the menu item rather than at a path.
+        internal static readonly string k_BuildTaskStepTooltip =
+            "This is a build task. To see its substeps, right-click this build in the Build List, select " +
+            $"\"{BuildAnalysisConstants.k_ShowInFileBrowserLabel}\", and open {BuildReportUtility.TepFileName}.";
+
         internal const string k_DetailValueNameFormat = "SummaryTabDetailValue_{0}";
 
         const string k_ContentDirectoriesBannerClass = "SummaryTabContentDirectoriesBanner";
@@ -48,6 +60,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         StatCard m_BundlesCard;
         StatCard m_AssetsCard;
         BuildDetailsGrid m_DetailsGrid;
+        BuildStepsElement m_BuildSteps;
         readonly Dictionary<string, Label> m_DetailValues = new Dictionary<string, Label>();
         Button m_ShowLocalCatalogButton;
         Label m_RelatedBuildsValue;
@@ -108,10 +121,11 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
             BuildLayoutSummary summary = BuildLayoutSummary.GetSummaryWithoutAssetTypes(buildReport);
 
-            BindHeader(buildReport, buildName);
+            BindHeader(buildReport, summary, buildName);
             BindStatCards(buildReport, summary);
             BindBuildDetails(buildReport, summary);
             BindRelatedBuilds(relatedBuilds ?? Array.Empty<BuildReportSummary>());
+            BindBuildSteps(buildReport);
             BindContentDirectories(buildReport);
             BindPotentialIssues(buildReport);
 
@@ -119,6 +133,12 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             tabRootElement.MarkDirtyRepaint();
             scrollbarElement.visible = true;
             scrollbarElement.MarkDirtyRepaint();
+        }
+
+        /// <summary>Replaces the Related Builds row without reconsuming the report.</summary>
+        internal void SetRelatedBuilds(IReadOnlyList<BuildReportSummary> relatedBuilds)
+        {
+            BindRelatedBuilds(relatedBuilds ?? Array.Empty<BuildReportSummary>());
         }
 
         public void ClearGUI()
@@ -139,6 +159,9 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             m_DurationCard = tabRootElement.Q<StatCard>(BuildReportUtility.SummaryTabStatCardDuration);
             m_BundlesCard = tabRootElement.Q<StatCard>(BuildReportUtility.SummaryTabStatCardBundles);
             m_AssetsCard = tabRootElement.Q<StatCard>(BuildReportUtility.SummaryTabStatCardAssets);
+
+            m_BuildSteps = tabRootElement.Q<BuildStepsElement>(BuildReportUtility.SummaryTabBuildSteps);
+            m_BuildSteps.emptyStateText = k_NoBuildSteps;
 
             m_DetailsGrid = tabRootElement.Q<BuildDetailsGrid>(BuildReportUtility.SummaryTabDetailsGrid);
             m_DetailValues.Clear();
@@ -168,13 +191,15 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             m_BundlesCard.value = string.Empty;
             m_AssetsCard.value = string.Empty;
 
+            m_BuildSteps.Bind(Array.Empty<BuildAnalysisStep>(), 0);
+
             foreach (string label in k_DetailLabels)
                 SetDetail(label, string.Empty);
             m_ShowLocalCatalogButton.SetEnabled(false);
             BindRelatedBuilds(Array.Empty<BuildReportSummary>());
         }
 
-        void BindHeader(BuildLayout report, string buildName)
+        void BindHeader(BuildLayout report, BuildLayoutSummary summary, string buildName)
         {
             bool succeeded = string.IsNullOrEmpty(report.BuildError);
             m_Header.Bind(new BuildEntry
@@ -184,7 +209,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 BuildResult = succeeded ? BuildResult.Succeeded : BuildResult.Failed,
                 BuildStartedAt = report.BuildStart,
                 TotalTimeMs = (long)Math.Round(report.Duration * 1000d),
-            }, $"{report.BuildTarget} • {GetBuildTypeDescription(report.BuildType)}");
+            }, $"{report.BuildTarget} • {GetBuildTypeDescription(report, summary)}");
         }
 
         void BindStatCards(BuildLayout report, BuildLayoutSummary summary)
@@ -193,6 +218,51 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             m_DurationCard.value = BuildReportUtility.GetDurationString(report.Duration);
             m_BundlesCard.value = summary.BundleSummary.Count.ToString();
             m_AssetsCard.value = summary.TotalAssetCount.ToString();
+        }
+
+        // The build wrote its steps beside its report, so there is nothing to parse here.
+        void BindBuildSteps(BuildLayout report)
+        {
+            if (!BuildStepsReport.TryGetFilePath(report, out string path)
+                || !BuildStepsReport.TryRead(path, out BuildStepData[] steps))
+            {
+                m_BuildSteps.Bind(Array.Empty<BuildAnalysisStep>(), 0);
+                return;
+            }
+
+            double totalMs = report.Duration * 1000d;
+            // Read during Bind, so it has to be set first.
+            m_BuildSteps.stepTooltip = step => GetStepTooltip(steps, step);
+            m_BuildSteps.Bind(ToAnalysisSteps(steps), (long)Math.Round(totalMs));
+        }
+
+        internal static string GetStepTooltip(BuildStepData[] steps, BuildAnalysisStep step)
+        {
+            if (step.Name == BuildReportUtility.ContentDirectoryStepName)
+                return k_ContentDirectoryStepTooltip;
+
+            // ToAnalysisSteps numbers steps by their index in this array.
+            if (step.Id >= 0 && step.Id < steps.Length && steps[step.Id].IsBuildTask)
+                return k_BuildTaskStepTooltip;
+
+            return null;
+        }
+
+        static BuildAnalysisStep[] ToAnalysisSteps(BuildStepData[] steps)
+        {
+            var converted = new BuildAnalysisStep[steps.Length];
+            for (int i = 0; i < steps.Length; i++)
+            {
+                converted[i] = new BuildAnalysisStep
+                {
+                    Id = i,
+                    Name = steps[i].Name,
+                    Depth = steps[i].Depth,
+                    DurationMs = (long)Math.Round(steps[i].DurationMs)
+                };
+            }
+
+            return converted;
         }
 
         void BindBuildDetails(BuildLayout report, BuildLayoutSummary summary)
@@ -307,11 +377,19 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             return $"{count} ({percentage.ToString("0.##", CultureInfo.InvariantCulture)}%)";
         }
 
-        internal static string GetBuildTypeDescription(BuildType buildType)
+        // What the build produced, which is not the same question as how it was built.
+        internal static string GetBuildTypeDescription(BuildLayout report, BuildLayoutSummary summary)
         {
-            return buildType == BuildType.UpdateBuild
-                ? "Addressables Content Update Build"
-                : "Addressables AssetBundle Build";
+            if (report.BuildType == BuildType.UpdateBuild)
+                return "Addressables Content Update Build";
+
+            bool hasContentDirectories = report.ContentDirectories?.Count > 0;
+            if (!hasContentDirectories)
+                return "Addressables AssetBundle Build";
+
+            return summary.BundleSummary.Count > 0
+                ? "Addressables AssetBundle and Content Directory Build"
+                : "Addressables Content Directory Build";
         }
 
         // Catalogs are listed by file name. A load path with a .hash extension belongs to a remote

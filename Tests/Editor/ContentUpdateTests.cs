@@ -594,6 +594,129 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void BuildContentUpdate_WhenFolderAssetIsMovedOut_OnlyItPointsAtANewBundle()
+        {
+            WithEnableJsonCatalog(true, () =>
+            {
+                string folderPath = CreatePrefabsInFolder("MovedOutOfFolder", "Hero", "Villain");
+                bool previousBuildRemoteCatalog = Settings.BuildRemoteCatalog;
+                AddressableAssetGroup staticGroup = null;
+                AddressableAssetGroup contentGroup = null;
+                try
+                {
+                    Settings.BuildRemoteCatalog = true;
+                    Settings.RemoteCatalogBuildPath = new ProfileValueReference();
+                    Settings.RemoteCatalogBuildPath.SetVariableByName(Settings, AddressableAssetSettings.kRemoteBuildPath);
+                    Settings.RemoteCatalogLoadPath = new ProfileValueReference();
+                    Settings.RemoteCatalogLoadPath.SetVariableByName(Settings, AddressableAssetSettings.kRemoteLoadPath);
+                    staticGroup = CreatePreventUpdatesGroup("MovedOutOfFolderGroup");
+                    var folderEntry = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(folderPath), staticGroup);
+                    var shipped = GetBundlesByAssetName(BuildContent(), folderEntry.address);
+
+                    ModifyPrefab($"{folderPath}/Hero.prefab");
+                    contentGroup = CreateContentUpdateGroup("MovedOutOfFolderContentUpdate");
+                    var cacheData = ContentUpdateScript.LoadContentState(PreviousContentStatePath);
+                    var update = Settings.BuildPlayerContentImpl(new AddressablesDataBuilderInput(Settings, cacheData.playerVersion) { PreviousContentState = cacheData });
+                    Assert.IsTrue(string.IsNullOrEmpty(update.Error), update.Error);
+                    var updated = GetBundlesByAssetName(update, folderEntry.address);
+
+                    Assert.AreEqual(shipped["Villain"], updated["Villain"]);
+                    StringAssert.Contains(contentGroup.Name.ToLowerInvariant() + "_", updated["Hero"]);
+                }
+                finally
+                {
+                    Settings.BuildRemoteCatalog = previousBuildRemoteCatalog;
+                    if (contentGroup != null)
+                        Settings.RemoveGroup(contentGroup);
+                    if (staticGroup != null)
+                        Settings.RemoveGroup(staticGroup);
+                    AssetDatabase.DeleteAsset(folderPath);
+                }
+            });
+        }
+
+        // Maps each asset the folder key loads to the bundle it loads from.
+        Dictionary<string, string> GetBundlesByAssetName(AddressablesPlayerBuildResult build, string folderKey)
+        {
+            var locator = GetLocatorFromCatalog(build.FileRegistry.GetFilePaths());
+            Assert.IsTrue(locator.Locate(folderKey, typeof(GameObject), out var locations));
+            var bundles = new Dictionary<string, string>();
+            foreach (var location in locations)
+                bundles.Add(Path.GetFileNameWithoutExtension(location.InternalId), location.Dependencies[0].InternalId);
+            return bundles;
+        }
+
+        static void AssertOnlyDependency(Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap, string modifiedPath, string dependentPath)
+        {
+            Assert.AreEqual(1, dependencyMap.Count);
+            foreach (var pair in dependencyMap)
+            {
+                Assert.AreEqual(modifiedPath, pair.Key.AssetPath);
+                Assert.AreEqual(1, pair.Value.Count);
+                Assert.AreEqual(dependentPath, pair.Value[0].AssetPath);
+            }
+        }
+
+        string PreviousContentStatePath => Path.Combine(Path.GetDirectoryName(Application.dataPath), "Library", "com.unity.addressables",
+            PlatformMappingService.GetPlatformPathSubFolder(), "addressables_content_state.bin");
+
+        AddressableAssetGroup CreatePreventUpdatesGroup(string groupName)
+        {
+            var group = Settings.CreateGroup(groupName, false, false, false, null);
+            var schema = group.AddSchema<BundledAssetGroupSchema>();
+            schema.BuildPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalBuildPath);
+            schema.LoadPath.SetVariableByName(Settings, AddressableAssetSettings.kLocalLoadPath);
+            schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
+            group.AddSchema<ContentUpdateGroupSchema>().StaticContent = true;
+            return group;
+        }
+
+        AddressableAssetGroup CreateContentUpdateGroup(string groupName)
+        {
+            ContentUpdateScript.CreateContentUpdateGroup(Settings, ContentUpdateScript.GatherModifiedEntries(Settings, PreviousContentStatePath), groupName);
+            return Settings.FindGroup(groupName);
+        }
+
+        AddressablesPlayerBuildResult BuildContent()
+        {
+            var result = Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(new AddressablesDataBuilderInput(Settings));
+            Assert.IsTrue(string.IsNullOrEmpty(result.Error), result.Error);
+            return result;
+        }
+
+        string CreatePrefabsInFolder(string folderName, params string[] prefabNames)
+        {
+            AssetDatabase.CreateFolder(TestFolder, folderName);
+            string folderPath = GetAssetPath(folderName);
+            foreach (string prefabName in prefabNames)
+            {
+                var go = new GameObject(prefabName);
+                PrefabUtility.SaveAsPrefabAsset(go, $"{folderPath}/{prefabName}.prefab");
+                GameObject.DestroyImmediate(go);
+            }
+
+            AssetDatabase.SaveAssets();
+            return folderPath;
+        }
+
+        static void ModifyPrefab(string prefabPath)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            prefab.transform.position += new Vector3(10, 10, 10);
+            PrefabUtility.SavePrefabAsset(prefab);
+            AssetDatabase.SaveAssets();
+        }
+
+        static void AddReference(string fromPrefabPath, string toPrefabPath)
+        {
+            var contents = PrefabUtility.LoadPrefabContents(fromPrefabPath);
+            contents.AddComponent<ObjectReferenceMonoBehaviour>().m_ObjectReference = AssetDatabase.LoadAssetAtPath<GameObject>(toPrefabPath);
+            PrefabUtility.SaveAsPrefabAsset(contents, fromPrefabPath);
+            PrefabUtility.UnloadPrefabContents(contents);
+            AssetDatabase.SaveAssets();
+        }
+
+        [Test]
         public void IsCacheDataValid_WhenNoPreviousRemoteCatalogPath_ReturnsFalseWithError()
         {
             AddressablesContentState cacheData = new AddressablesContentState();
@@ -1778,13 +1901,9 @@ namespace UnityEditor.AddressableAssets.Tests
                 var modifiedEntries = ContentUpdateScript.GatherModifiedEntries(Settings, tempPath);
 
                 Assert.AreEqual(2, modifiedEntries.Count);
-                foreach (var entry in modifiedEntries)
-                {
-                    if (entry.IsFolder)
-                        Assert.IsTrue(entry.AssetPath == folderPath, "Modified Entries does not include folder");
-                    else
-                        Assert.IsTrue(entry.AssetPath == mainAssetPath, "Modified Entries does not include the prefab with modified material");
-                }
+                Assert.IsTrue(modifiedEntries.Exists(e => e.AssetPath == mainAssetPath), "Modified Entries does not include the prefab with modified material");
+                Assert.IsTrue(modifiedEntries.Exists(e => e.AssetPath == refAssetPath), "Modified Entries does not include the folder asset that references the modified prefab");
+                Assert.IsFalse(modifiedEntries.Exists(e => e.IsFolder), "Only the dependent folder asset should be flagged, not the folder");
             }
             finally
             {
@@ -1799,6 +1918,256 @@ namespace UnityEditor.AddressableAssets.Tests
                 AssetDatabase.DeleteAsset(mainAssetPath);
                 AssetDatabase.DeleteAsset(refAssetPath);
                 AssetDatabase.DeleteAsset(materialAssetPath);
+            }
+        }
+
+        [Test]
+        public void CreateContentUpdateGroup_WhenFolderAssetIsModified_MovesOnlyItAndKeepsItInTheFolder()
+        {
+            string folderPath = CreatePrefabsInFolder("ModifiedFolderAsset", "Hero", "Villain");
+            string heroPath = $"{folderPath}/Hero.prefab";
+            AddressableAssetGroup staticGroup = null;
+            AddressableAssetGroup contentGroup = null;
+            try
+            {
+                staticGroup = CreatePreventUpdatesGroup("ModifiedFolderAssetGroup");
+                var folderEntry = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(folderPath), staticGroup);
+                folderEntry.SetLabel("folderLabel", true, true);
+                BuildContent();
+                ModifyPrefab(heroPath);
+
+                contentGroup = CreateContentUpdateGroup("ModifiedFolderAssetContentUpdate");
+
+                var hero = Settings.FindAssetEntry(AssetDatabase.AssetPathToGUID(heroPath), true);
+                var villain = Settings.FindAssetEntry(AssetDatabase.AssetPathToGUID($"{folderPath}/Villain.prefab"), true);
+                Assert.AreSame(staticGroup, folderEntry.parentGroup);
+                Assert.AreSame(staticGroup, villain.parentGroup);
+                Assert.AreSame(contentGroup, hero.parentGroup);
+                Assert.IsTrue(hero.IsFolderMember);
+                Assert.AreEqual(heroPath, hero.address);
+                CollectionAssert.Contains(hero.labels, "folderLabel");
+            }
+            finally
+            {
+                if (contentGroup != null)
+                    Settings.RemoveGroup(contentGroup);
+                if (staticGroup != null)
+                    Settings.RemoveGroup(staticGroup);
+                AssetDatabase.DeleteAsset(folderPath);
+            }
+        }
+
+        [Test]
+        public void CreateContentUpdateGroup_WhenEveryFolderAssetIsModified_MovesTheWholeFolder()
+        {
+            string folderPath = CreatePrefabsInFolder("ModifiedWholeFolder", "Hero", "Villain");
+            AddressableAssetGroup staticGroup = null;
+            AddressableAssetGroup contentGroup = null;
+            try
+            {
+                staticGroup = CreatePreventUpdatesGroup("ModifiedWholeFolderGroup");
+                var folderEntry = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(folderPath), staticGroup);
+                BuildContent();
+                ModifyPrefab($"{folderPath}/Hero.prefab");
+                ModifyPrefab($"{folderPath}/Villain.prefab");
+
+                bool folderMovePosted = false;
+                Action<AddressableAssetSettings, AddressableAssetSettings.ModificationEvent, object> onModification = (s, e, o) => folderMovePosted |= o == folderEntry;
+                Settings.OnModification += onModification;
+                try
+                {
+                    contentGroup = CreateContentUpdateGroup("ModifiedWholeFolderContentUpdate");
+                }
+                finally
+                {
+                    Settings.OnModification -= onModification;
+                }
+
+                Assert.IsTrue(folderMovePosted, "The Groups window reloads only when the folder move is posted.");
+                Assert.AreSame(contentGroup, folderEntry.parentGroup);
+                Assert.AreEqual(1, contentGroup.entries.Count);
+                Assert.AreEqual(0, staticGroup.entries.Count);
+                Assert.AreEqual(0, Settings.GetFolderMembers(folderEntry.guid).Count);
+            }
+            finally
+            {
+                if (contentGroup != null)
+                    Settings.RemoveGroup(contentGroup);
+                if (staticGroup != null)
+                    Settings.RemoveGroup(staticGroup);
+                AssetDatabase.DeleteAsset(folderPath);
+            }
+        }
+
+        [Test]
+        public void CreateContentUpdateGroup_WhenTheRestOfAFolderIsModifiedLater_EarlierMembersFollowTheMovedFolder()
+        {
+            string folderPath = CreatePrefabsInFolder("FolderMovedInSecondUpdate", "Hero", "Villain");
+            string heroPath = $"{folderPath}/Hero.prefab";
+            AddressableAssetGroup staticGroup = null;
+            AddressableAssetGroup firstUpdateGroup = null;
+            AddressableAssetGroup secondUpdateGroup = null;
+            try
+            {
+                staticGroup = CreatePreventUpdatesGroup("FolderMovedInSecondUpdateGroup");
+                var folderEntry = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(folderPath), staticGroup);
+                folderEntry.SetLabel("folderLabel", true, true);
+                BuildContent();
+
+                ModifyPrefab(heroPath);
+                firstUpdateGroup = CreateContentUpdateGroup("FolderMovedInSecondUpdate_First");
+                ModifyPrefab($"{folderPath}/Villain.prefab");
+                secondUpdateGroup = CreateContentUpdateGroup("FolderMovedInSecondUpdate_Second");
+
+                var hero = Settings.FindAssetEntry(AssetDatabase.AssetPathToGUID(heroPath));
+                Assert.AreSame(secondUpdateGroup, folderEntry.parentGroup);
+                Assert.AreEqual(0, staticGroup.entries.Count);
+                Assert.AreSame(firstUpdateGroup, hero.parentGroup);
+                Assert.AreSame(folderEntry, hero.HomeFolderEntry);
+
+                folderEntry.SetAddress("RenamedFolder");
+                folderEntry.SetLabel("folderLabel", false, true);
+                Assert.AreEqual("RenamedFolder/Hero.prefab", hero.address);
+                CollectionAssert.DoesNotContain(hero.labels, "folderLabel");
+            }
+            finally
+            {
+                if (secondUpdateGroup != null)
+                    Settings.RemoveGroup(secondUpdateGroup);
+                if (firstUpdateGroup != null)
+                    Settings.RemoveGroup(firstUpdateGroup);
+                if (staticGroup != null)
+                    Settings.RemoveGroup(staticGroup);
+                AssetDatabase.DeleteAsset(folderPath);
+            }
+        }
+
+        [Test]
+        public void GatherModifiedEntriesWithDependencies_WhenFolderAssetIsModified_ListsOnlyItsReferrersAsDependents()
+        {
+            string folderPath = CreatePrefabsInFolder("FolderReferrer", "Sword", "Villain", "Bystander");
+            string swordPath = $"{folderPath}/Sword.prefab";
+            string villainPath = $"{folderPath}/Villain.prefab";
+            AddReference(villainPath, swordPath);
+            AddressableAssetGroup staticGroup = null;
+            try
+            {
+                staticGroup = CreatePreventUpdatesGroup("FolderReferrerGroup");
+                Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(folderPath), staticGroup);
+                BuildContent();
+                ModifyPrefab(swordPath);
+
+                var dependencyMap = ContentUpdateScript.GatherModifiedEntriesWithDependencies(Settings, PreviousContentStatePath);
+
+                AssertOnlyDependency(dependencyMap, swordPath, villainPath);
+            }
+            finally
+            {
+                if (staticGroup != null)
+                    Settings.RemoveGroup(staticGroup);
+                AssetDatabase.DeleteAsset(folderPath);
+            }
+        }
+
+        [Test]
+        public void GatherModifiedEntriesWithDependencies_WhenChangeIsInAnotherStaticBundle_ListsReferrerOnlyAsDependent([Values] bool nonRecursiveBuilding)
+        {
+            string folderPath = CreatePrefabsInFolder("ChangeInAnotherBundle", "Sword", "Villain");
+            string materialPath = $"{folderPath}/Blade.mat";
+            string swordPath = $"{folderPath}/Sword.prefab";
+            string villainPath = $"{folderPath}/Villain.prefab";
+            AssetDatabase.CreateAsset(new Material(Shader.Find("Transparent/Diffuse")), materialPath);
+            var sword = PrefabUtility.LoadPrefabContents(swordPath);
+            sword.AddComponent<MeshRenderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            PrefabUtility.SaveAsPrefabAsset(sword, swordPath);
+            PrefabUtility.UnloadPrefabContents(sword);
+            AddReference(villainPath, swordPath);
+
+            bool previousNonRecursiveBuilding = Settings.NonRecursiveBuilding;
+            AddressableAssetGroup staticGroup = null;
+            try
+            {
+                Settings.NonRecursiveBuilding = nonRecursiveBuilding;
+                staticGroup = CreatePreventUpdatesGroup("ChangeInAnotherBundleGroup");
+                Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(swordPath), staticGroup);
+                Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(villainPath), staticGroup);
+                BuildContent();
+
+                var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+                material.color = new Color(0.1f, 0.2f, 0.3f);
+                EditorUtility.SetDirty(material);
+                AssetDatabase.SaveAssets();
+
+                var dependencyMap = ContentUpdateScript.GatherModifiedEntriesWithDependencies(Settings, PreviousContentStatePath);
+
+                AssertOnlyDependency(dependencyMap, swordPath, villainPath);
+            }
+            finally
+            {
+                Settings.NonRecursiveBuilding = previousNonRecursiveBuilding;
+                if (staticGroup != null)
+                    Settings.RemoveGroup(staticGroup);
+                AssetDatabase.DeleteAsset(folderPath);
+            }
+        }
+
+        [Test]
+        public void BundledDependencyLookup_WhenAssetsShareDependencies_QueriesEachAssetOnce()
+        {
+            var graph = new Dictionary<string, string[]>
+            {
+                { "Assets/Hero.prefab", new[] { "Assets/Shared.mat" } },
+                { "Assets/Villain.prefab", new[] { "Assets/Shared.mat", "Assets/Villain.png" } },
+                { "Assets/Shared.mat", new[] { "Assets/Shared.shader" } },
+                { "Assets/Shared.shader", new string[0] },
+                { "Assets/Villain.png", new string[0] },
+            };
+            var queries = new List<string>();
+            var lookup = new ContentUpdateScript.BundledDependencyLookup(Settings, new HashSet<AddressableAssetGroup>(), path =>
+            {
+                queries.Add(path);
+                return graph[path];
+            });
+
+            var heroPaths = lookup.GetPathsBundledWithAsset("Assets/Hero.prefab");
+            var villainPaths = lookup.GetPathsBundledWithAsset("Assets/Villain.prefab");
+            lookup.GetPathsBundledWithAsset("Assets/Hero.prefab");
+
+            CollectionAssert.AreEquivalent(new[] { "Assets/Hero.prefab", "Assets/Shared.mat", "Assets/Shared.shader" }, heroPaths);
+            CollectionAssert.AreEquivalent(new[] { "Assets/Villain.prefab", "Assets/Shared.mat", "Assets/Shared.shader", "Assets/Villain.png" }, villainPaths);
+            CollectionAssert.AreEquivalent(graph.Keys, queries, "Each asset's dependencies should be looked up once per restrictions check.");
+        }
+
+        [TestCase(BundledAssetGroupSchema.BundlePackingMode.PackTogether)]
+        [TestCase(BundledAssetGroupSchema.BundlePackingMode.PackSeparately)]
+        [TestCase(BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel)]
+        public void ContentUpdateScenes_InAddressableFolder_MarksCoBundledFolderScenesModified(BundledAssetGroupSchema.BundlePackingMode packingMode)
+        {
+            string folderName = "FolderScenes" + packingMode;
+            string folderPath = GetAssetPath(folderName);
+            AssetDatabase.CreateFolder(TestFolder, folderName);
+            string scene1Path = $"{folderPath}/scene1.unity";
+            string scene2Path = $"{folderPath}/scene2.unity";
+            AssetDatabase.CopyAsset(AssetDatabase.GUIDToAssetPath(m_SceneGuids[0]), scene1Path);
+            AssetDatabase.CopyAsset(AssetDatabase.GUIDToAssetPath(m_SceneGuids[1]), scene2Path);
+
+            AddressableAssetGroup group = Settings.CreateGroup(folderName + "Group", false, false, false, null, typeof(BundledAssetGroupSchema));
+            try
+            {
+                group.GetSchema<BundledAssetGroupSchema>().BundleMode = packingMode;
+                var folderEntry = Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(folderPath), group);
+                var folderScenes = new List<AddressableAssetEntry>();
+                folderEntry.GatherAllAssets(folderScenes, false, true, false);
+
+                var modifiedEntries = new List<AddressableAssetEntry> { folderScenes.Find(e => e.AssetPath == scene1Path) };
+                ContentUpdateScript.AddAllDependentScenesFromModifiedEntries(modifiedEntries);
+
+                CollectionAssert.AreEquivalent(new[] { scene1Path, scene2Path }, modifiedEntries.ConvertAll(e => e.AssetPath));
+            }
+            finally
+            {
+                Settings.RemoveGroup(group);
+                AssetDatabase.DeleteAsset(folderPath);
             }
         }
 

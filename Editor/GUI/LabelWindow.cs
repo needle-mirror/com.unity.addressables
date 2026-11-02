@@ -119,14 +119,7 @@ namespace UnityEditor.AddressableAssets.GUI
             if (m_ActiveIndex < 0 || m_Settings.labelTable.Count == 0)
                 return;
 
-            if (current.type == EventType.ContextClick)
-            {
-                GenericMenu contextMenu = new GenericMenu();
-                contextMenu.AddItem(new GUIContent("Edit"), false, BeginEditMenu);
-                contextMenu.ShowAsContext();
-                Repaint();
-            }
-            else if (m_IsEditing)
+            if (m_IsEditing)
             {
                 if (current.type == EventType.KeyUp && (current.keyCode == KeyCode.Return || current.keyCode == KeyCode.KeypadEnter))
                 {

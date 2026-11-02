@@ -276,6 +276,55 @@ namespace BuildLayoutGenerationTaskPerPlatformTests
             }
         }
 
+        // BuildData clears the record on the way out, so a test calling WriteBuildLog directly has to
+        // stand in for the layout task and supply it.
+        BuildLayoutGenerationTask.LayoutIdentityScope LayoutIdentityOf(BuildLayout layout)
+        {
+            return new BuildLayoutGenerationTask.LayoutIdentityScope(
+                new BuildLayoutGenerationTask.LayoutIdentity
+                {
+                    IsValid = true,
+                    SessionGUID = layout.AddressablesBuildSessionGUID,
+                    BuildStart = layout.BuildStart
+                });
+        }
+
+        [Test]
+        public void BuildLayout_WritesProfilerFile_AndLayoutHasNoObjects()
+        {
+            AddressableAssetGroup group = CreateGroup("Group1");
+            CreateAddressablePrefab("ProfilerFilePrefab", group);
+            string layoutPath = null;
+            string profilerPath = null;
+            try
+            {
+                BuildLayout layout = BuildAndExtractLayout();
+                Assert.IsNotNull(layout);
+                layoutPath = BuildLayoutGenerationTask.TimeStampedReportPath(layout.BuildStart);
+                profilerPath = BuildLayoutGenerationTask.TimeStampedProfilerReportPath(layout.BuildStart);
+                FileAssert.Exists(profilerPath);
+                Assert.IsTrue(ProfilerData.IsProfilerFile(profilerPath));
+
+                BuildLayout written = BuildLayout.Open(layoutPath, readFullFile: true);
+                Assert.AreEqual(Path.GetFileName(profilerPath), written.ProfilerFileName);
+                Assert.AreEqual(Path.GetFullPath(layoutPath), Path.GetFullPath(ProfilerData.GetLayoutPath(profilerPath)));
+                foreach (BuildLayout.ExplicitAsset asset in BuildLayoutHelpers.EnumerateAssets(written))
+                    Assert.AreEqual(0, asset.Objects.Count, $"{asset.AssetPath} should have no objects in the written layout");
+
+                Assert.IsTrue(ProfilerData.TryAttachObjects(written));
+                int objectCount = 0;
+                foreach (BuildLayout.ExplicitAsset asset in BuildLayoutHelpers.EnumerateAssets(written))
+                    objectCount += asset.Objects.Count;
+                Assert.Greater(objectCount, 0, "Objects should attach from the profiler file");
+            }
+            finally
+            {
+                Settings.RemoveGroup(group);
+                if (profilerPath != null && File.Exists(profilerPath))
+                    File.Delete(profilerPath);
+            }
+        }
+
         // regression test for UUM-147985
         [Test]
         public void WriteBuildLog_WhenTimestampedTEPAlreadyExists_SkipsCopyWithoutThrowing()
@@ -289,17 +338,104 @@ namespace BuildLayoutGenerationTaskPerPlatformTests
             string timestampedTEPPath = BuildScriptBase.GetLayoutTEPFilePath(layout.BuildStart);
             try
             {
-                // Simulates the first Play Mode entry: creates the timestamped TEP copy.
-                BuildScriptBase.WriteBuildLog(new BuildLog(), tepSourceDir);
-                FileAssert.Exists(timestampedTEPPath);
+                using (LayoutIdentityOf(layout))
+                {
+                    // Simulates the first Play Mode entry: creates the timestamped TEP copy.
+                    BuildScriptBase.WriteBuildLog(new BuildLog(), tepSourceDir);
+                    FileAssert.Exists(timestampedTEPPath);
 
-                // Simulates re-entering Play Mode against the same build layout report
-                // (same BuildStart, so the same timestamped filename). This used to throw
-                // IOException from File.Copy because the destination already existed.
-                Assert.DoesNotThrow(() => BuildScriptBase.WriteBuildLog(new BuildLog(), tepSourceDir));
+                    // Simulates re-entering Play Mode against the same build layout report
+                    // (same BuildStart, so the same timestamped filename). This used to throw
+                    // IOException from File.Copy because the destination already existed.
+                    Assert.DoesNotThrow(() => BuildScriptBase.WriteBuildLog(new BuildLog(), tepSourceDir));
+                }
             }
             finally
             {
+                if (File.Exists(timestampedTEPPath))
+                    File.Delete(timestampedTEPPath);
+            }
+        }
+
+        // UUM-157861: the report format used to decide whether anything was copied at all.
+        [Test]
+        public void WriteBuildLog_InTxtReportFormat_StillCopiesForTheBuildThatRan()
+        {
+            // TXT generates a .txt build layout alongside the .json one.
+            ProjectConfigData.BuildLayoutReportFileFormat = ProjectConfigData.ReportFileFormat.TXT;
+
+            // A real build, not BuildAndExtractLayout, which deletes the TEP before it can be checked.
+            BuildLayout layout = null;
+            Action<string, BuildLayout> onLayoutCompleted = (x, y) => layout = y;
+            BuildLayoutGenerationTask.LayoutCompleted += onLayoutCompleted;
+            string timestampedTEPPath = null;
+            try
+            {
+                Settings.BuildPlayerContentImpl();
+                Assert.IsNotNull(layout);
+
+                timestampedTEPPath = BuildScriptBase.GetLayoutTEPFilePath(layout.BuildStart);
+                FileAssert.Exists(timestampedTEPPath);
+            }
+            finally
+            {
+                BuildLayoutGenerationTask.LayoutCompleted -= onLayoutCompleted;
+                if (timestampedTEPPath != null && File.Exists(timestampedTEPPath))
+                    File.Delete(timestampedTEPPath);
+            }
+        }
+
+        [Test]
+        public void WriteBuildLog_WhenNoLayoutWasWrittenForThisBuild_CopiesNothing()
+        {
+            ProjectConfigData.BuildLayoutReportFileFormat = ProjectConfigData.ReportFileFormat.JSON;
+
+            BuildLayout layout = BuildAndExtractLayout();
+            Assert.IsNotNull(layout);
+
+            string tepSourceDir = Path.Combine(m_TestAssetsRoot, "BuildLog");
+            string timestampedTEPPath = BuildScriptBase.GetLayoutTEPFilePath(layout.BuildStart);
+
+            try
+            {
+                // BuildData clears the record on the way out, so nothing is recorded here.
+                BuildScriptBase.WriteBuildLog(new BuildLog(), tepSourceDir);
+
+                FileAssert.DoesNotExist(timestampedTEPPath);
+            }
+            finally
+            {
+                if (File.Exists(timestampedTEPPath))
+                    File.Delete(timestampedTEPPath);
+            }
+        }
+
+        // UUM-157861: Use Existing Build runs no layout task, but BuildData still calls WriteBuildLog,
+        // which used to write Play Mode's profile over the previous build's.
+        [Test]
+        public void PackedPlayModeBuild_WritesNoTEPForThePreviousBuild()
+        {
+            ProjectConfigData.BuildLayoutReportFileFormat = ProjectConfigData.ReportFileFormat.JSON;
+
+            BuildLayout layout = BuildAndExtractLayout();
+            Assert.IsNotNull(layout);
+
+            string timestampedTEPPath = BuildScriptBase.GetLayoutTEPFilePath(layout.BuildStart);
+
+            // Without the stale layout the old code read, this test would pass vacuously.
+            FileAssert.Exists(BuildLayoutGenerationTask.GetLayoutFilePathForFormat(ProjectConfigData.ReportFileFormat.JSON));
+
+            BuildScriptPackedPlayMode playModeScript = ScriptableObject.CreateInstance<BuildScriptPackedPlayMode>();
+            try
+            {
+                var result = playModeScript.BuildData<AddressablesPlayModeBuildResult>(new AddressablesDataBuilderInput(Settings));
+                Assert.IsTrue(string.IsNullOrEmpty(result.Error), result.Error);
+
+                FileAssert.DoesNotExist(timestampedTEPPath);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(playModeScript);
                 if (File.Exists(timestampedTEPPath))
                     File.Delete(timestampedTEPPath);
             }

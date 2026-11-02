@@ -26,6 +26,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
     public partial class ContentDirectorySchemaBuilder : ISchemaBuilder
     {
         internal const string kContentDirectoryBuildName = "Content Directory";
+        internal const string kContentDirectoryStepName = "BuildPipeline.BuildContentDirectory";
 
         string m_CatalogBuildPath;
         string m_BuildReportDirectory;
@@ -176,7 +177,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                         buildParams.options |= UnityEditor.BuildContentOptions.SerializeUnityVersion;
 
                     BuildReport report;
-                    using (m_Logger.ScopedStep(LogLevel.Info, "BuildPipeline.BuildContentDirectory"))
+                    using (m_Logger.ScopedStep(LogLevel.Info, kContentDirectoryStepName))
                     {
                         report = BuildPipeline.BuildContentDirectory(buildParams);
                     }
@@ -555,7 +556,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                     if (entry.IsSubAsset)
                         subAssetCount++;
 
-                    List<string> labels = CollectLabels(contentDirectoryGroupSchema, entry, out bool isFolderChild);
+                    List<string> labels = CollectLabels(contentDirectoryGroupSchema, entry, out bool includeAddressKey);
                     if (isSubObject && entry.MainAssetType != typeof(SpriteAtlas))
                         (labels ??= new List<string>()).Add($"{entryGuid}[{targetAsset.name}]");
 
@@ -568,7 +569,7 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                         type = convertedType,
                         isScene = isScene,
                         id = id,
-                        includeAddressKey = contentDirectoryGroupSchema.IncludeAddressesForFolderChildren || !isFolderChild
+                        includeAddressKey = includeAddressKey
                     };
                     buildEntries.Add(buildEntry);
 
@@ -625,10 +626,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
         /// Builds the extra catalog keys, labels and folder entries. Returns null when there
         /// are none.
         /// </summary>
-        List<string> CollectLabels(ContentDirectoryGroupSchema schema, AddressableAssetEntry entry, out bool isFolderChild)
+        List<string> CollectLabels(ContentDirectoryGroupSchema schema, AddressableAssetEntry entry, out bool includeAddressKey)
         {
             List<string> labels = null;
-            isFolderChild = false;
+            includeAddressKey = true;
 
             if (!schema.IncludeLabelsInCatalog)
             {
@@ -639,12 +640,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
             if (entry.labels.Count > 0)
                 labels = new List<string>(entry.labels);
 
-            if (!schema.IncludeFolderKeysInCatalog)
-                return labels;
-
-            string folderKey = entry.ParentFolderAddress;
-            isFolderChild = !string.IsNullOrEmpty(folderKey) && folderKey != entry.address;
-            if (isFolderChild)
+            string folderKey = entry.GetCatalogFolderKey(schema.IncludeFolderKeysInCatalog, schema.IncludeAddressesForFolderChildren, out includeAddressKey);
+            if (folderKey != null)
                 (labels ??= new List<string>()).Add(folderKey);
 
             return labels;
@@ -659,8 +656,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
             var spriteChildData = new SpriteChildEntryData
             {
                 address = entry.address,
-                labels = CollectLabels(schema, entry, out bool isSpriteFolderChild),
-                includeAddressKey = schema.IncludeAddressesForFolderChildren || !isSpriteFolderChild
+                labels = CollectLabels(schema, entry, out bool includeSpriteAddressKey),
+                includeAddressKey = includeSpriteAddressKey
             };
 
             var parentKey = entry.ParentEntry.address;

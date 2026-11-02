@@ -386,12 +386,95 @@ namespace UnityEditor.AddressableAssets.Build
             return true;
         }
 
-        static bool HasAssetOrDependencyChanged(CachedAssetState cachedInfo)
+        static bool HasAssetOrBundledDependencyChanged(CachedAssetState cachedInfo, BundledDependencyLookup dependencyLookup)
         {
             CachedAssetState newCachedInfo;
             if (!GetCachedAssetStateForData(cachedInfo.asset.guid, cachedInfo.bundleFileId, cachedInfo.groupGuid, cachedInfo.data, cachedInfo.dependencies.Select(x => x.guid), out newCachedInfo))
                 return true;
-            return !cachedInfo.Equals(newCachedInfo);
+            if (!cachedInfo.asset.Equals(newCachedInfo.asset) || cachedInfo.dependencies.Length != newCachedInfo.dependencies.Length)
+                return true;
+
+            HashSet<string> pathsBundledWithAsset = null;
+            for (int i = 0; i < cachedInfo.dependencies.Length; i++)
+            {
+                AssetState previous = cachedInfo.dependencies[i];
+                AssetState current = newCachedInfo.dependencies[i];
+                if (previous.Equals(current))
+                    continue;
+                if (previous.guid != current.guid)
+                    return true;
+
+                // A static dependency is flagged on its own, with this entry listed as its dependent.
+                string dependencyGuid = current.guid.ToString();
+                if (dependencyLookup.IsInStaticGroup(dependencyGuid))
+                    continue;
+
+                // The cached dependencies can be recursive, so only count a change built into this asset's own bundle.
+                if (pathsBundledWithAsset == null)
+                    pathsBundledWithAsset = dependencyLookup.GetPathsBundledWithAsset(AssetDatabase.GUIDToAssetPath(cachedInfo.asset.guid.ToString()));
+                if (pathsBundledWithAsset.Contains(AssetDatabase.GUIDToAssetPath(dependencyGuid)))
+                    return true;
+            }
+
+            return false;
+        }
+
+        internal class BundledDependencyLookup
+        {
+            readonly AddressableAssetSettings m_Settings;
+            readonly HashSet<AddressableAssetGroup> m_StaticGroups;
+            readonly Func<string, string[]> m_GetDirectDependencies;
+            readonly Dictionary<string, string[]> m_DirectDependencies = new Dictionary<string, string[]>();
+            readonly Dictionary<string, bool> m_IsInStaticGroup = new Dictionary<string, bool>();
+
+            internal BundledDependencyLookup(AddressableAssetSettings settings, HashSet<AddressableAssetGroup> staticGroups, Func<string, string[]> getDirectDependencies = null)
+            {
+                m_Settings = settings;
+                m_StaticGroups = staticGroups;
+                m_GetDirectDependencies = getDirectDependencies ?? (path => AssetDatabase.GetDependencies(path, false));
+            }
+
+            internal bool IsInStaticGroup(string guid)
+            {
+                if (!m_IsInStaticGroup.TryGetValue(guid, out bool isInStaticGroup))
+                {
+                    var entry = m_Settings.FindAssetEntry(guid, true);
+                    isInStaticGroup = entry != null && m_StaticGroups.Contains(entry.parentGroup);
+                    m_IsInStaticGroup.Add(guid, isInStaticGroup);
+                }
+
+                return isInStaticGroup;
+            }
+
+            internal HashSet<string> GetPathsBundledWithAsset(string assetPath)
+            {
+                var bundledPaths = new HashSet<string> { assetPath };
+                var pending = new Stack<string>();
+                pending.Push(assetPath);
+                while (pending.Count > 0)
+                {
+                    foreach (string dependency in GetDirectDependencies(pending.Pop()))
+                    {
+                        if (bundledPaths.Contains(dependency) || IsInStaticGroup(AssetDatabase.AssetPathToGUID(dependency)))
+                            continue;
+                        bundledPaths.Add(dependency);
+                        pending.Push(dependency);
+                    }
+                }
+
+                return bundledPaths;
+            }
+
+            string[] GetDirectDependencies(string assetPath)
+            {
+                if (!m_DirectDependencies.TryGetValue(assetPath, out string[] dependencies))
+                {
+                    dependencies = m_GetDirectDependencies(assetPath);
+                    m_DirectDependencies.Add(assetPath, dependencies);
+                }
+
+                return dependencies;
+            }
         }
 
         /// <summary>
@@ -882,10 +965,11 @@ namespace UnityEditor.AddressableAssets.Build
             foreach (var cacheInfo in cacheData.cachedInfos)
                 if (cacheInfo != null)
                     entryToCacheInfo[cacheInfo.asset.guid.ToString()] = cacheInfo;
+            var dependencyLookup = new BundledDependencyLookup(settings, new HashSet<AddressableAssetGroup>(GetStaticGroups(settings)));
             var modifiedEntries = new List<AddressableAssetEntry>();
             foreach (var entry in allEntries)
             {
-                if (!entryToCacheInfo.TryGetValue(entry.guid, out CachedAssetState cachedInfo) || HasAssetOrDependencyChanged(cachedInfo))
+                if (!entryToCacheInfo.TryGetValue(entry.guid, out CachedAssetState cachedInfo) || HasAssetOrBundledDependencyChanged(cachedInfo, dependencyLookup))
                 {
                     Type mainType = AddressableAssetUtility.MapEditorTypeToRuntimeType(entry.MainAssetType, false);
                     if ((mainType == null || mainType == typeof(DefaultAsset)))
@@ -960,23 +1044,18 @@ namespace UnityEditor.AddressableAssets.Build
         internal static void GetEntriesDependentOnModifiedEntries(AddressableAssetSettings settings, ref Dictionary<AddressableAssetEntry, List<AddressableAssetEntry>> dependencyMap)
         {
             var groups = GetStaticGroups(settings);
-            Dictionary<AddressableAssetEntry, string[]> entryToDependencies = new Dictionary<AddressableAssetEntry, string[]>();
+            var entryToDependencies = new Dictionary<AddressableAssetEntry, HashSet<string>>();
             foreach (AddressableAssetGroup group in groups)
             {
                 foreach (AddressableAssetEntry entry in group.entries)
                 {
                     if (entry.IsFolder)
                     {
-                        var folderDependencies = new HashSet<string>();
                         foreach (AddressableAssetEntry subAsset in entry.SubAssets)
-                        {
-                            folderDependencies.UnionWith(AssetDatabase.GetDependencies(subAsset.AssetPath));
-                        }
-                        entryToDependencies.Add(entry, folderDependencies.ToArray());
+                            entryToDependencies[subAsset] = new HashSet<string>(AssetDatabase.GetDependencies(subAsset.AssetPath));
                         continue;
                     }
-                    string[] dependencies = AssetDatabase.GetDependencies(entry.AssetPath);
-                    entryToDependencies.Add(entry, dependencies);
+                    entryToDependencies.Add(entry, new HashSet<string>(AssetDatabase.GetDependencies(entry.AssetPath)));
                 }
             }
 
@@ -991,9 +1070,10 @@ namespace UnityEditor.AddressableAssets.Build
             // if an entry is dependant on a modified entry, then it too should be modified to reference the moved asset
             foreach (AddressableAssetEntry modifiedEntry in modifiedEntries)
             {
-                foreach (KeyValuePair<AddressableAssetEntry, string[]> dependency in entryToDependencies)
+                foreach (KeyValuePair<AddressableAssetEntry, HashSet<string>> dependency in entryToDependencies)
                 {
-                    if (dependency.Key != modifiedEntry &&
+                    // Folder children are rebuilt on each gather, so compare by guid to keep an asset from being its own dependent.
+                    if (dependency.Key.guid != modifiedEntry.guid &&
                         dependency.Value.Contains(modifiedEntry.AssetPath) &&
                         dependencyMap.TryGetValue(modifiedEntry, out var value))
                     {
@@ -1128,26 +1208,29 @@ namespace UnityEditor.AddressableAssets.Build
         internal static void AddAllDependentScenesFromModifiedEntries(List<AddressableAssetEntry> modifiedEntries)
         {
             List<AddressableAssetEntry> entriesToAdd = new List<AddressableAssetEntry>();
+            var includedGuids = new HashSet<string>();
+            foreach (AddressableAssetEntry entry in modifiedEntries)
+                includedGuids.Add(entry.guid);
             //If a scene has changed, all scenes that end up in the same bundle need to be marked as modified due to bundle dependencies
             foreach (AddressableAssetEntry entry in modifiedEntries)
             {
-                if (entry.IsScene && !entriesToAdd.Contains(entry))
+                if (entry.IsScene)
                 {
                     var entryBundleSchema = entry.parentGroup.GetSchema<BundledAssetGroupSchema>();
                     if (entryBundleSchema == null || !entryBundleSchema.IsEnabled)
                         continue;
+
+                    // A folder's scenes are always packed into one scene bundle, whatever the packing mode.
+                    var rootEntry = entry.RootEntry;
+                    if (rootEntry != entry && rootEntry.IsFolder)
+                        AddScenesFromGroupEntry(rootEntry, includedGuids, entriesToAdd);
+
                     switch (entryBundleSchema.BundleMode)
                     {
                         case BundledAssetGroupSchema.BundlePackingMode.PackTogether:
                             //Add every scene in the group to modified entries
                             foreach (AddressableAssetEntry sharedGroupEntry in entry.parentGroup.entries)
-                            {
-                                if (sharedGroupEntry.IsScene && !modifiedEntries.Contains(sharedGroupEntry))
-                                {
-                                    sharedGroupEntry.FlaggedDuringContentUpdateRestriction = true;
-                                    entriesToAdd.Add(sharedGroupEntry);
-                                }
-                            }
+                                AddScenesFromGroupEntry(sharedGroupEntry, includedGuids, entriesToAdd);
 
                             break;
 
@@ -1160,11 +1243,8 @@ namespace UnityEditor.AddressableAssets.Build
                                     continue;
 
                                 //Only add if labels are shared
-                                if (sharedGroupEntry.IsScene && !modifiedEntries.Contains(sharedGroupEntry) && sharedGroupEntry.labels.Union(entry.labels).Any())
-                                {
-                                    sharedGroupEntry.FlaggedDuringContentUpdateRestriction = true;
-                                    entriesToAdd.Add(sharedGroupEntry);
-                                }
+                                if (sharedGroupEntry.labels.Count > 0 || entry.labels.Count > 0)
+                                    AddScenesFromGroupEntry(sharedGroupEntry, includedGuids, entriesToAdd);
                             }
 
                             break;
@@ -1180,6 +1260,20 @@ namespace UnityEditor.AddressableAssets.Build
             }
 
             modifiedEntries.AddRange(entriesToAdd);
+        }
+
+        static void AddScenesFromGroupEntry(AddressableAssetEntry groupEntry, HashSet<string> includedGuids, List<AddressableAssetEntry> entriesToAdd)
+        {
+            var candidates = new List<AddressableAssetEntry>();
+            groupEntry.GatherAllAssets(candidates, true, true, false);
+            foreach (AddressableAssetEntry candidate in candidates)
+            {
+                if (candidate.IsScene && includedGuids.Add(candidate.guid))
+                {
+                    candidate.FlaggedDuringContentUpdateRestriction = true;
+                    entriesToAdd.Add(candidate);
+                }
+            }
         }
 
         private static void AddInvalidGroupsToLogMessage(StringBuilder builder, List<string> invalidGroupList,
@@ -1218,7 +1312,43 @@ namespace UnityEditor.AddressableAssets.Build
             schema.LoadPath.SetVariableByName(settings, AddressableAssetSettings.kRemoteLoadPath);
             schema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
             contentGroup.AddSchema<ContentUpdateGroupSchema>().StaticContent = false;
+
+            var touchedFolders = new HashSet<AddressableAssetEntry>();
+            foreach (var item in items)
+            {
+                var folderEntry = GetAddressableFolder(item);
+                if (folderEntry == null)
+                    continue;
+
+                item.ParentEntry = null;
+                item.SetHomeFolder(folderEntry, false);
+                touchedFolders.Add(folderEntry);
+            }
             settings.MoveEntries(items, contentGroup);
+
+            foreach (var folderEntry in touchedFolders)
+            {
+                var remainingAssets = new List<AddressableAssetEntry>();
+                folderEntry.GatherAllAssets(remainingAssets, false, true, false);
+                // If all of a folder's assets have been moved into a new group, move the folder entry with them.
+                if (remainingAssets.Count == 0)
+                    settings.MoveEntry(folderEntry, contentGroup, folderEntry.ReadOnly);
+            }
+        }
+
+        static AddressableAssetEntry GetAddressableFolder(AddressableAssetEntry item)
+        {
+            if (!item.IsSubAsset)
+                return null;
+
+            var folderEntry = item.RootEntry;
+            if (folderEntry == item)
+                return null;
+
+            if (!folderEntry.IsFolder)
+                return null;
+
+            return folderEntry;
         }
 
         /// <summary>

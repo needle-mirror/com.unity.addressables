@@ -776,6 +776,72 @@ namespace UnityEngine.ResourceManagement.Tests
         }
 
         [Test]
+        public void ToAwaitable_CancelAfterFailure_ExceptionHandleStaysValidUntilReleased()
+        {
+            var op = new MockOperation<int>();
+            var handle = m_RM.StartOperation(op, default(AsyncOperationHandle));
+            using var cts = new CancellationTokenSource();
+
+            AsyncOperationHandleException<int> caught = null;
+
+            async Task AwaitIt()
+            {
+                try
+                {
+                    await handle.ToAwaitable(cts.Token);
+                }
+                catch (AsyncOperationHandleException<int> e)
+                {
+                    caught = e;
+                }
+            }
+
+            var task = AwaitIt();
+            op.Complete(default, false, new Exception("boom"));
+            m_RM.Update(0.0f);
+            Assert.IsTrue(task.IsCompleted);
+            Assert.IsNotNull(caught);
+
+            cts.Cancel();
+            Assert.IsTrue(caught.Handle.IsValid());
+            caught.Handle.Release();
+            Assert.AreEqual(1, op.DestroyCount);
+        }
+
+        [Test]
+        public void ToAwaitable_AlreadyFailed_CancelAfterFailure_ExceptionHandleStaysValidUntilReleased()
+        {
+            var op = new MockOperation<int>();
+            var handle = m_RM.StartOperation(op, default(AsyncOperationHandle));
+            op.Complete(default, false, new Exception("boom"));
+            m_RM.Update(0.0f);
+            using var cts = new CancellationTokenSource();
+
+            AsyncOperationHandleException<int> caught = null;
+
+            async Task AwaitIt()
+            {
+                try
+                {
+                    await handle.ToAwaitable(cts.Token);
+                }
+                catch (AsyncOperationHandleException<int> e)
+                {
+                    caught = e;
+                }
+            }
+
+            var task = AwaitIt();
+            Assert.IsTrue(task.IsCompleted);
+            Assert.IsNotNull(caught);
+
+            cts.Cancel();
+            Assert.IsTrue(caught.Handle.IsValid());
+            caught.Handle.Release();
+            Assert.AreEqual(1, op.DestroyCount);
+        }
+
+        [Test]
         public void ToAwaitable_Typeless_TokenAlreadyCanceled_ReleasesHandle()
         {
             var op = m_RM.CreateCompletedOperationInternal<int>(42, true, null);

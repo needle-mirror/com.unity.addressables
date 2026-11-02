@@ -12,6 +12,8 @@ namespace UnityEditor.AddressableAssets.GUI
     [CustomEditor(typeof(AddressableAssetGroupTemplate))]
     class AddressableAssetGroupTemplateInspector : Editor
     {
+        private const string k_RemoveSchemaOptSessionKey = "groupTemplateRemoveSchema";
+
         List<Type> m_SchemaTypes;
 
         AddressableAssetGroupTemplate m_AddressableAssetGroupTarget;
@@ -157,7 +159,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     menu.AddItem(AddressableAssetGroup.RemoveSchemaContent, false, () =>
                     {
                         var schemaName = AddressableAssetUtility.GetCachedTypeDisplayName(schemaType);
-                        if (EditorUtility.DisplayDialog("Remove selected schema?", "Are you sure you want to remove " + schemaName + " schema?\n\nYou cannot undo this action.", "Yes", "No"))
+                        if (EditorUtility.DisplayDialog("Remove Selected Schema", "This removes the " + schemaName + " schema from the group template. You can't undo this action.", "Remove Schema", "Cancel", DialogOptOutDecisionType.ForThisSession, k_RemoveSchemaOptSessionKey))
                         {
                             int actualIndex = m_AddressableAssetGroupTarget.GetActualIndexFromDisplayIndex(currentDisplayIndex);
                             if (actualIndex != -1)

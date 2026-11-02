@@ -2081,7 +2081,57 @@ namespace UnityEditor.AddressableAssets.Settings
                 return false;
             if (entry.parentGroup != null)
                 entry.parentGroup.RemoveAssetEntry(entry, postEvent);
+            if (!entry.IsSubAsset && entry.IsFolder)
+                RemoveEntries(GetFolderMembers(entry.guid), postEvent);
             return true;
+        }
+
+        internal List<AddressableAssetEntry> GetFolderMembers(string folderGuid)
+        {
+            return FindEntries(e => e.FolderGuid == folderGuid);
+        }
+
+        List<AddressableAssetEntry> FindEntries(Predicate<AddressableAssetEntry> match)
+        {
+            var found = new List<AddressableAssetEntry>();
+            foreach (var group in groups)
+            {
+                if (group == null)
+                    continue;
+                foreach (var entry in group.entries)
+                {
+                    if (match(entry))
+                        found.Add(entry);
+                }
+            }
+
+            return found;
+        }
+
+        static void RemoveEntries(IEnumerable<AddressableAssetEntry> entries, bool postEvent)
+        {
+            foreach (var entry in entries)
+                entry.parentGroup?.RemoveAssetEntry(entry, postEvent);
+        }
+
+        internal void UpdateFolderMembers(string folderGuid, bool postEvent)
+        {
+            foreach (var member in GetFolderMembers(folderGuid))
+                member.UpdateFromHomeFolder(postEvent);
+        }
+
+        void RefreshFolderMembers(HashSet<string> changedGuids)
+        {
+            foreach (var member in FindEntries(e => !string.IsNullOrEmpty(e.FolderGuid)))
+            {
+                if (!changedGuids.Contains(member.guid) && !changedGuids.Contains(member.FolderGuid))
+                    continue;
+
+                if (!member.IsFolderMember)
+                    member.LeaveHomeFolder(false);
+                else
+                    member.UpdateFromHomeFolder(false);
+            }
         }
 
         void Awake()
@@ -2754,11 +2804,20 @@ namespace UnityEditor.AddressableAssets.Settings
             if (targetParent == null || entry == null)
                 return;
 
+            if (entry.HomeFolderEntry?.parentGroup == targetParent)
+            {
+                entry.parentGroup?.RemoveAssetEntry(entry, postEvent);
+                return;
+            }
+
             if (entry.parentGroup != null && entry.parentGroup != targetParent)
                 entry.parentGroup.RemoveAssetEntry(entry, postEvent);
 
             targetParent.AddAssetEntry(entry, postEvent);
             entry.ReadOnly = readOnly;
+
+            if (!entry.IsSubAsset && entry.IsFolder)
+                RemoveEntries(FindEntries(e => e.FolderGuid == entry.guid && e.IsFolderMember && e.parentGroup == targetParent), postEvent);
         }
 
         /// <summary>
@@ -2777,6 +2836,9 @@ namespace UnityEditor.AddressableAssets.Settings
             AddressableAssetEntry entry = FindAssetEntry(guid);
             if (entry != null) //move entry to where it should go...
             {
+                if (entry.parentGroup != targetParent || entry.ReadOnly != readOnly)
+                    entry.LeaveHomeFolder(false);
+
                 //no need to do anything if already done...
                 if (entry.parentGroup == targetParent && entry.ReadOnly == readOnly && !postEvent)
                     return entry;
@@ -2816,6 +2878,8 @@ namespace UnityEditor.AddressableAssets.Settings
                 AddressableAssetEntry entry = FindAssetEntry(guid);
                 if (entry != null)
                 {
+                    if (entry.parentGroup != targetParent || entry.ReadOnly != readOnly)
+                        entry.LeaveHomeFolder(false);
                     MoveEntry(entry, targetParent, readOnly, false);
                     if (movedEntries != null)
                         movedEntries.Add(entry);
@@ -2992,10 +3056,27 @@ namespace UnityEditor.AddressableAssets.Settings
             }
         }
 
+        List<AddressableAssetEntry> GetFolderMembersInOtherGroups(AddressableAssetGroup group)
+        {
+            var folderGuids = new HashSet<string>();
+            foreach (var entry in group.entries)
+            {
+                if (entry.IsFolder)
+                    folderGuids.Add(entry.guid);
+            }
+
+            if (folderGuids.Count == 0)
+                return new List<AddressableAssetEntry>();
+            return FindEntries(e => e.parentGroup != group && folderGuids.Contains(e.FolderGuid));
+        }
+
         internal void RemoveGroupInternal(AddressableAssetGroup g, bool deleteAsset, bool postEvent)
         {
+            var members = g == null ? new List<AddressableAssetEntry>() : GetFolderMembersInOtherGroups(g);
+
             g?.ClearSchemas(true, false);
             groups.Remove(g);
+            RemoveEntries(members, false);
             SetDirty(ModificationEvent.GroupRemoved, g, postEvent, true);
             if (g != null && deleteAsset)
             {
@@ -3143,6 +3224,16 @@ namespace UnityEditor.AddressableAssets.Settings
                     //any addressables move or resources move (even resources to within resources) needs to refresh the UI.
                     relatedAssetChanged = isAlreadyAddressable || startedInResources || endedInResources || inEditorSceneList;
                 }
+            }
+
+            if (deletedAssets.Length > 0 || movedAssets.Length > 0)
+            {
+                var changedGuids = new HashSet<string>();
+                foreach (string str in deletedAssets)
+                    changedGuids.Add(AssetDatabase.AssetPathToGUID(str));
+                foreach (string str in movedAssets)
+                    changedGuids.Add(AssetDatabase.AssetPathToGUID(str));
+                aa.RefreshFolderMembers(changedGuids);
             }
 
             if (relatedAssetChanged || settingsChanged)

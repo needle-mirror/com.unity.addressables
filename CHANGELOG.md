@@ -4,6 +4,44 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2026-11-02
+- Fixed the Related Builds row of an Addressables build report in the Build Analysis window keeping links to builds that had been deleted from the build history.
+- Rewrote popup dialog copy across the Addressables package for editor consistency.
+- Added a session-level opt-out to the Remove Schema and Delete Groups/Entries confirmation dialogs.
+- Renamed the "Remove Addressables" context menu item to "Delete Entries".
+- Read-Only groups can now be deleted via the right click menu's "Delete Group(s)" option, and via the delete key on your keyboard.
+- Fixed `AsyncOperationHandleException.Handle` becoming invalid when the `ToAwaitable` cancellation token is cancelled after the operation failed.
+- Fixed Addressables build performance data (TEP) not being saved when the Debug Build Layout File Format is set to "TXT and JSON".
+- Fixed a build's performance data being overwritten by a session that generated no build layout report, such as entering Play Mode with Use Existing Build.
+- Fixed a NullReferenceException that left the Addressables Groups window blank when Group Hierarchy with Dashes was enabled and a group name contained a dash.
+- Fixed an issue where handle released in OnApplicationQuit callback or from OnDisable or OnDestroy would fail when exiting play mode.
+- Fixed the ProcessGroup, ProcessGroupSchema and PostProcessGroup steps in Addressables build performance data (TEP) not naming the group or schema they process.
+- Fixed an issue where modifying an asset inside an Addressable folder in a group with Prevent Updates enabled moved the whole folder into the content update group. Only the modified assets, and the folder assets that reference them, now move.
+- Assets moved out of an Addressable folder by a content update now keep the folder's address, labels and folder key, so loading the folder's address still returns them.
+- Fixed an issue where an asset whose only change was a dependency in a Prevent Updates group was listed as its own entry in the content update restrictions window, causing it to still move even if the dependency was not included in the content update.
+- Dragging an asset out from under an Addressable folder in the Groups window now makes it an ordinary, editable entry.
+### UI/UX Changes
+- Groups window: Moved asset type icons into the Name column. Added "Show in Project" to the right-click menu for a single group or entry, which pings the asset in the Project window.
+- Groups window: Added row padding and alternating row backgrounds for editor consistency.
+- Groups window: Renamed the "Group Name \ Addressable Name" column header to "Name".
+- Groups window: Subasset rows no longer show the Labels dropdown.
+- Groups window: Folder entries now display the standard folder icon.
+- Groups window: Replaced the toolbar "New" text button with a "+" icon for editor consistency.
+- Inspectors: Buttons that open a new window now end with an ellipsis; the button to open Addressable settings is now labeled "Open Settings".
+- Asset Settings inspector: Reorderable lists now use the standard editor icon, no longer open a file explorer, and show proper empty-state labels.
+- Group Schemas inspector: Header component spacing and indentation now match other editor inspectors.
+- Group Schemas inspector: Advanced Options is now a foldout, closed by default.
+- Group Templates inspector: Description textbox is sized correctly, resizes with text overflow, and uses consistent padding.
+- Group Templates inspector: Headers use proper header styling instead of foldout styling.
+- Reorganized Groups window right-click menus with consistent naming and grouping.
+- Flattened single-item submenus under Create > Addressables.
+- Removed Settings entry from Window > Asset Management > Addressables as it does not open a window.
+- Moved Binary Catalog tools from Window > Asset Management > Addressables to the Groups window Tools > Binary Catalogs submenu.
+- Renamed "Addressables Report" to "Report" under Window > Asset Management > Addressables for consistency with other menu items.
+- Reworded Tools dropdown items: "Inspect System Settings" → "Show Settings in Inspector", "Groups View" → "Display Options", "Group Hierarchy with Dashes" → "Use Dashes to Nest Groups".
+- Removed redundant "Edit" item from the Labels window right-click menu.
+- Reworded Profiles window right-click menus.
+
 ## [4.1.2] - 2026-10-13
 - Update dependency on Scriptable Build Pipeline to 4.0.2
 - Content directory builds run by an Addressables build now appear nested under it in the Build Analysis window.

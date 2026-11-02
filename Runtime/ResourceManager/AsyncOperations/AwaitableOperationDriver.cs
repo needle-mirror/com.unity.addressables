@@ -36,13 +36,24 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                 return;
             }
 
+            // Guards so the caller's reference is released at most once across {failure, cancellation}.
+            // Without it, cancelling after a failure would release the reference the failure exception holds.
+            int callerReleased = 0;
+
+            void ReleaseCallerRefOnce()
+            {
+                if (Interlocked.Exchange(ref callerReleased, 1) == 0)
+                    ReleaseCallerRef(handle);
+            }
+
             // Fast path: already done and nothing else is listening. Still register for a later cancellation.
             if (handle.IsDone && (!handle.IsValid() || !handle.CompletedEventHasListeners))
             {
                 completeSource(handle);
-                ReleaseCallerRefOnFailure(handle);
+                if (handle.Status == AsyncOperationStatus.Failed)
+                    ReleaseCallerRefOnce();
                 if (cancellationToken.CanBeCanceled)
-                    cancellationToken.Register(() => ReleaseCallerRef(handle));
+                    cancellationToken.Register(ReleaseCallerRefOnce);
                 return;
             }
 
@@ -68,7 +79,8 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                         acquired.Release();
                     }
 
-                    ReleaseCallerRefOnFailure(handle);
+                    if (handle.Status == AsyncOperationStatus.Failed)
+                        ReleaseCallerRefOnce();
                 }
             };
 
@@ -82,7 +94,7 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
                         acquired.Release();
                     }
 
-                    ReleaseCallerRef(handle);
+                    ReleaseCallerRefOnce();
                 });
             }
         }
@@ -94,15 +106,6 @@ namespace UnityEngine.ResourceManagement.AsyncOperations
         {
             if (handle.IsValid() && !handle.HasReleaseOnCompletionRegistered)
                 handle.Release();
-        }
-
-        /// <summary>
-        /// Releases the caller's reference to <paramref name="handle"/>, but only if it failed.
-        /// </summary>
-        static void ReleaseCallerRefOnFailure(AsyncOperationHandle handle)
-        {
-            if (handle.Status == AsyncOperationStatus.Failed)
-                ReleaseCallerRef(handle);
         }
     }
 }

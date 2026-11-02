@@ -19,7 +19,7 @@ To create a content-only build:
 
 To set up a remote content build:
 
-1. Open the [Addressable Asset Settings asset](AddressableAssetSettings.md) (menu: __Window > Asset Management > Addressables > Settings__).
+1. Open the [Addressable Asset Settings asset](AddressableAssetSettings.md) by selecting it in the Project window, or by choosing __Tools > Show Settings in Inspector__ from the Addressables Groups window.
 2. In the __Catalog__ section, enable the __Build Remote Catalog__ setting. The __BuildPath__ and __LoadPath__ settings for the catalog must be the same as those you use for remote groups. You can usually use the RemoteBuildPath and RemoteLoadPath profile variables.
 3. For each group that you want to build as remote content, set the __BuildPath__ and __LoadPath__ to the RemoteBuildPath and RemoteLoadPath profile variables (or a custom value if desired).
 4. Open the [Profiles window](addressables-profiles-window.md)  (menu: __Window > Asset Management > Addressables > Profiles__).

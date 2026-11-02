@@ -36,6 +36,8 @@
                 </ba:BuildDetailsGrid>
             </ba:BuildSection>
 
+            <ba:BuildStepsElement name="SummaryTabBuildSteps"/>
+
             <ui:VisualElement name="SummaryTabPotentialIssues" class="SummaryTabSection SummaryTabIssuesCard">
                 <ui:VisualElement class="SummaryTabIssuesBody">
                     <ui:Image name="SummaryTabIssuesIcon" class="SummaryTabIssuesIcon"/>

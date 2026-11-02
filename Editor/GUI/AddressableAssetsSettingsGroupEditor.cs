@@ -326,7 +326,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     if (EditorGUI.DropdownButton(rMode, guiMode, FocusType.Passive, EditorStyles.toolbarDropDown))
                     {
                         var menu = new GenericMenu();
-                        menu.AddItem(new GUIContent("Inspect System Settings"), false, () =>
+                        menu.AddItem(new GUIContent("Show Settings in Inspector"), false, () =>
                         {
                             EditorApplication.ExecuteMenuItem("Window/General/Inspector");
                             EditorGUIUtility.PingObject(AddressableAssetSettingsDefaultObject.Settings);
@@ -339,20 +339,26 @@ namespace UnityEditor.AddressableAssets.GUI
 
                         menu.AddItem(new GUIContent("Window/Analyze"), false, AnalyzeWindow.ShowWindow);
 
-                        menu.AddItem(new GUIContent("Window/Addressables Report"), false, BuildReportVisualizer.BuildReportWindow.ShowWindow);
-                        menu.AddItem(new GUIContent("Groups View/Show Sprite and Subobject Addresses"), ProjectConfigData.ShowSubObjectsInGroupView, () =>
+                        menu.AddItem(new GUIContent("Window/Report"), false, BuildReportVisualizer.BuildReportWindow.ShowWindow);
+                        menu.AddItem(new GUIContent("Display Options/Show Sprite and Subobject Addresses"), ProjectConfigData.ShowSubObjectsInGroupView, () =>
                         {
                             ProjectConfigData.ShowSubObjectsInGroupView = !ProjectConfigData.ShowSubObjectsInGroupView;
                             m_EntryTree.Reload();
                         });
                         menu.AddItem(
-                            new GUIContent("Groups View/Group Hierarchy with Dashes",
-                                "If enabled, group names are parsed as if a '-' represented a child in hierarchy.  So a group called 'a-b-c' would be displayed as if it were in a folder called 'b' that lived in a folder called 'a'.  In this mode, only groups without '-' can be rearranged within the groups window."),
+                            new GUIContent("Display Options/Use Dashes to Nest Groups",
+                                "Show dashes in group names as folders. For example, \"a-b-c\" displays as \"c\" inside folders \"a > b\". This only changes the display. In this mode, you can only reorder groups that don't contain a dash."),
                             ProjectConfigData.ShowGroupsAsHierarchy, () =>
                             {
                                 ProjectConfigData.ShowGroupsAsHierarchy = !ProjectConfigData.ShowGroupsAsHierarchy;
                                 m_EntryTree.Reload();
                             });
+
+                        menu.AddItem(new GUIContent("Binary Catalogs/Optimize Binary Catalog…"), false, UnityEngine.AddressableAssets.ResourceLocators.BinaryContentCatalogData.OptimizeBinaryCatalogMenuCommand);
+                        menu.AddItem(new GUIContent("Binary Catalogs/Extract Binary Catalog…"), false, UnityEngine.AddressableAssets.ResourceLocators.BinaryContentCatalogData.ExtractBinaryCatalogMenuCommand);
+#if UNITY_6000_0_OR_NEWER
+                        menu.AddItem(new GUIContent("Binary Catalogs/Extract Binary Content State…"), false, Build.ContentStateSerializer.ExtractBinaryContentStateMenuCommand);
+#endif
 
                         var bundleList = AssetDatabase.GetAllAssetBundleNames();
                         if (bundleList != null && bundleList.Length > 0)
@@ -734,9 +740,9 @@ namespace UnityEditor.AddressableAssets.GUI
         void OnCleanAll()
         {
             string buildPath = Path.Combine(Addressables.LibraryPath, "aa");
-            string message = $"Do you really want to clear your entire build cache and runtime data cache?\r\nThis will also delete all build cache, runtime cache and the AssetBundles in {buildPath} to ensure invalid AssetBundles don't end up in your Player build.";
+            string message = $"This deletes all build cache, runtime data cache, and AssetBundles in {buildPath}. Your next build may take longer.";
 
-            if (!EditorUtility.DisplayDialog("Delete Cache", message, "Delete", "Cancel"))
+            if (!EditorUtility.DisplayDialog("Clear All Build Data", message, "Clear All", "Cancel"))
                 return;
 
             // Delete the default build path directory to remove all built bundles
@@ -776,7 +782,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             if ((bool) prompt)
             {
-                if (!EditorUtility.DisplayDialog("Purge Content Directory Cache", "Do you really want to purge your entire content directory build cache?", "Yes", "No"))
+                if (!EditorUtility.DisplayDialog("Clear Content Directory Cache", "This deletes the entire content directory build cache. Your next build may take longer.", "Clear Cache", "Cancel"))
                     return;
             }
             BuildPipeline.CleanBuildCache();
@@ -792,7 +798,7 @@ namespace UnityEditor.AddressableAssets.GUI
         {
             if ((bool) prompt)
             {
-                if (!EditorUtility.DisplayDialog("Purge Shader Cache", "Do you really want to purge your entire shader cache?", "Yes", "No"))
+                if (!EditorUtility.DisplayDialog("Clear Shader Cache", "This deletes the entire shader cache. Shaders will recompile on the next build.", "Clear Cache", "Cancel"))
                     return;
             }
 
@@ -823,8 +829,9 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
                 else
                 {
-                    bool selectFileManually = EditorUtility.DisplayDialog("Unable to Check for Update Restrictions", $"The addressable_content_state.bin file could " +
-                                                                                                                     $"not be found at {path}", "Select .bin file", "Cancel content update");
+                    bool selectFileManually = EditorUtility.DisplayDialog("Unable to Check for Update Restrictions",
+                        $"Update Restrictions can't be checked as addressables_content_state.bin wasn't found at {path}. Select the file to continue.",
+                        "Select .bin File", "Cancel Update");
                     if (selectFileManually)
                         path = ContentUpdateScript.GetContentStateDataPath(true);
                     else

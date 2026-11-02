@@ -7,7 +7,7 @@ To enable remote distribution of your application's content, you must enable the
 
 ## Enable the remote catalog
 
-Enable the following settings in the [__Addressable Asset Settings__](AddressableAssetSettings.md) Inspector (menu: __Window > Asset Management > Addressables > Settings__):
+Enable the following settings in the [__Addressable Asset Settings__](AddressableAssetSettings.md) Inspector (select the `AddressableAssetSettings` asset in the Project window, or choose __Tools > Show Settings in Inspector__ from the Addressables Groups window):
 
 * __Build Remote Catalog__: Enabled
 * __Build & Load Paths__: Set to remote

@@ -32,6 +32,9 @@ namespace UnityEditor.AddressableAssets.GUI
 
     internal class AddressableAssetEntryTreeView : TreeViewAdapter
     {
+        private const string k_DeleteGroupsOptSessionKey = "groupsWindowDeleteGroups";
+        private const string k_DeleteEntriesOptSessionKey = "groupsWindowDeleteEntries";
+
         AddressableAssetsSettingsGroupEditor m_Editor;
         internal string customSearchString = string.Empty;
         string m_FirstSelectedGroup;
@@ -320,6 +323,8 @@ namespace UnityEditor.AddressableAssets.GUI
                         selectedObjects[i] = item.group;
                     else if (item.entry != null)
                         selectedObjects[i] = item.entry.TargetAsset;
+                    else if (item.IsFolderMemberNode)
+                        selectedObjects[i] = item.homeFolder.TargetAsset;
                 }
             }
 
@@ -792,9 +797,26 @@ namespace UnityEditor.AddressableAssets.GUI
 
             if (group != null && group.entries.Count > 0)
             {
+                bool groupExpanded = IsExpanded(groupItem.id);
+                Dictionary<AddressableAssetEntry, AssetEntryTreeViewItem> folderMemberItems = null;
                 foreach (var entry in group.entries)
                 {
-                    AddAndRecurseEntriesBuild(entry, groupItem, depth + 1, IsExpanded(groupItem.id), enumerator);
+                    var homeFolder = entry.HomeFolderEntry;
+                    if (homeFolder == null)
+                    {
+                        AddAndRecurseEntriesBuild(entry, groupItem, depth + 1, groupExpanded, enumerator);
+                        continue;
+                    }
+
+                    folderMemberItems ??= new Dictionary<AddressableAssetEntry, AssetEntryTreeViewItem>();
+                    if (!folderMemberItems.TryGetValue(homeFolder, out var folderItem))
+                    {
+                        folderItem = new AssetEntryTreeViewItem(homeFolder, group, depth + 1);
+                        groupItem.AddChild(folderItem);
+                        folderMemberItems.Add(homeFolder, folderItem);
+                    }
+
+                    AddAndRecurseEntriesBuild(entry, folderItem, depth + 2, IsExpanded(folderItem.id), enumerator);
                 }
             }
         }
@@ -887,19 +909,42 @@ namespace UnityEditor.AddressableAssets.GUI
         protected override void RowGUI(RowGUIArgs args)
         {
             var item = args.item as AssetEntryTreeViewItem;
-            if (item == null || item.group == null && item.entry == null)
+            if (item != null && item.IsFolderMemberNode)
+            {
+                for (int i = 0; i < args.GetNumVisibleColumns(); ++i)
+                {
+                    if (args.GetColumn(i) == (int)ColumnId.Id)
+                    {
+                        CellGUI(args.GetCellRect(i), item, (int)ColumnId.Id, ref args);
+                        break;
+                    }
+                }
+
+                UnityEngine.GUI.Label(args.rowRect, new GUIContent(string.Empty,
+                    $"Assets from the addressable folder '{item.homeFolder.address}' in group '{item.homeFolder.parentGroup.Name}' that have been placed in this group."));
+            }
+            else if (item == null || item.group == null && item.entry == null)
             {
                 using (new EditorGUI.DisabledScope(true))
                 {
-                    if (!string.IsNullOrEmpty(item.folderPath))
-                        CellGUI(args.GetCellRect(1), null, (int)ColumnId.Id, ref args);
+                    if (item != null && !string.IsNullOrEmpty(item.folderPath))
+                    {
+                        for (int i = 0; i < args.GetNumVisibleColumns(); ++i)
+                        {
+                            if (args.GetColumn(i) == (int)ColumnId.Id)
+                            {
+                                CellGUI(args.GetCellRect(i), item, (int)ColumnId.Id, ref args);
+                                break;
+                            }
+                        }
+                    }
                     else
                         base.RowGUI(args);
                 }
             }
             else
             {
-                bool isReadOnly = item.group == null ? item.entry.ReadOnly : item.group.ReadOnly;
+                bool isReadOnly = item.group == null ? item.entry.ReadOnly || item.entry.IsFolderMember : item.group.ReadOnly;
                 if (item.group != null)
                 {
                     if (item.isRenaming && !args.isRenaming)
@@ -983,7 +1028,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     }
                     break;
                 case ColumnId.Labels:
-                    if (item.entry != null && !item.entry.IsSubAsset && EditorGUI.DropdownButton(cellRect, new GUIContent(m_Editor.settings.labelTable.GetString(item.entry.labels, cellRect.width)), FocusType.Passive))
+                    if (item.entry != null && !item.entry.IsSubAsset && !item.entry.IsFolderMember && EditorGUI.DropdownButton(cellRect, new GUIContent(m_Editor.settings.labelTable.GetString(item.entry.labels, cellRect.width)), FocusType.Passive))
                     {
                         var selection = GetItemsForContext(args.item.id);
                         Dictionary<string, int> labelCounts = new Dictionary<string, int>();
@@ -1037,9 +1082,9 @@ namespace UnityEditor.AddressableAssets.GUI
             if (assetItem != null)
             {
                 if (assetItem.group != null && !assetItem.group.ReadOnly)
-                    result = "Rename";
-                else if (assetItem.entry != null && !assetItem.entry.ReadOnly)
-                    result = "Change Address";
+                    result = "Rename Group";
+                else if (assetItem.entry != null && !assetItem.entry.ReadOnly && !assetItem.entry.IsFolderMember)
+                    result = "Rename Address";
                 if (isActualRename)
                     assetItem.isRenaming = !string.IsNullOrEmpty(result);
             }
@@ -1258,12 +1303,14 @@ namespace UnityEditor.AddressableAssets.GUI
             bool isGroup = false;
             bool isEntry = false;
             bool hasReadOnly = false;
+            bool hasDefaultGroup = false;
             bool isMissingPath = false;
             foreach (var item in selectedNodes)
             {
                 if (item.group != null)
                 {
                     hasReadOnly |= item.group.ReadOnly;
+                    hasDefaultGroup |= item.group.IsDefaultGroup();
                     isGroup = true;
                 }
                 else if (item.entry != null)
@@ -1282,6 +1329,8 @@ namespace UnityEditor.AddressableAssets.GUI
             if (isEntry && isGroup)
                 return;
 
+            var addressNodes = selectedNodes.FindAll(n => n.entry != null);
+
             GenericMenu menu = new GenericMenu();
             if (selectedNodes.Count == 1)
             {
@@ -1289,6 +1338,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 if (!string.IsNullOrEmpty(label))
                     menu.AddItem(new GUIContent(label), false, RenameItem, selectedNodes);
             }
+            bool clearHandled = false;
             if (!hasReadOnly)
             {
                 if (isGroup)
@@ -1296,12 +1346,8 @@ namespace UnityEditor.AddressableAssets.GUI
                     var group = selectedNodes.First().group;
                     if (selectedNodes.Count == 1)
                         menu.AddItem(new GUIContent("Show in Project"), false, ShowGroupInProject, selectedNodes);
-                    menu.AddItem(new GUIContent("Simplify Addressable Names"), false, SimplifyAddresses, selectedNodes);
-                    if (selectedNodes.Count == 1)
-                    {
-                        if (!group.IsDefaultGroup() && group.CanBeSetAsDefault())
-                            menu.AddItem(new GUIContent("Set as Default"), false, SetGroupAsDefault, selectedNodes);
-                    }
+                    menu.AddItem(new GUIContent(selectedNodes.Count == 1 ? "Simplify Addresses in Group" : "Simplify Addresses in Groups"), false, SimplifyAddresses, selectedNodes);
+
                     // Show "Convert to Content Directory" for groups that are currently AssetBundle groups,
                     // and "Convert to AssetBundles" for groups that are currently Content Directory groups.
                     // A multi-selection containing both types shows both options.
@@ -1321,13 +1367,30 @@ namespace UnityEditor.AddressableAssets.GUI
                             break;
                     }
 
-                    if (anyAssetBundleGroups)
-                        menu.AddItem(new GUIContent("Convert schema(s) to Content Directory"), false, ConvertToContentDirectory, selectedNodes);
-                    if (anyContentDirectoryGroups)
-                        menu.AddItem(new GUIContent("Convert schema(s) to AssetBundles"), false, ConvertToAssetBundles, selectedNodes);
+                    bool showSetAsDefault = selectedNodes.Count == 1 && !hasDefaultGroup && group.CanBeSetAsDefault();
+                    if (showSetAsDefault || anyAssetBundleGroups || anyContentDirectoryGroups)
+                    {
+                        menu.AddSeparator("");
+                        if (showSetAsDefault)
+                            menu.AddItem(new GUIContent("Set as Default Group"), false, SetGroupAsDefault, selectedNodes);
+                        if (anyAssetBundleGroups)
+                            menu.AddItem(new GUIContent("Convert schema(s) to Content Directory"), false, ConvertToContentDirectory, selectedNodes);
+                        if (anyContentDirectoryGroups)
+                            menu.AddItem(new GUIContent("Convert schema(s) to AssetBundles"), false, ConvertToAssetBundles, selectedNodes);
+                    }
 
-                    if (!group.IsDefaultGroup())
-                        menu.AddItem(new GUIContent("Delete Group(s)"), false, RemoveGroup, selectedNodes);
+                    menu.AddSeparator("");
+                    if (HasContentUpdateWarningsInSelection(selectedNodes))
+                        menu.AddItem(new GUIContent("Clear Content Update Warnings"), false, ClearContentUpdateWarnings);
+                    else
+                        menu.AddDisabledItem(new GUIContent("Clear Content Update Warnings"));
+                    clearHandled = true;
+
+                    if (!hasDefaultGroup)
+                    {
+                        menu.AddSeparator("");
+                        menu.AddItem(new GUIContent("Delete"), false, RemoveGroup, selectedNodes);
+                    }
 
                     foreach (var i in AddressableAssetSettings.CustomAssetGroupCommands)
                         menu.AddItem(new GUIContent(i), false, HandleCustomContextMenuItemGroups, new Tuple<string, List<AssetEntryTreeViewItem>>(i, selectedNodes));
@@ -1336,18 +1399,25 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     if (selectedNodes.Count == 1 && !isMissingPath)
                         menu.AddItem(new GUIContent("Show in Project"), false, ShowEntryInProject, selectedNodes);
+                    if (addressNodes.Count == 1)
+                        menu.AddItem(new GUIContent("Copy Address"), false, CopyAddressesToClipboard, addressNodes);
+                    else if (addressNodes.Count > 1)
+                        menu.AddItem(new GUIContent("Copy " + addressNodes.Count + " Addresses"), false, CopyAddressesToClipboard, addressNodes);
+                    menu.AddItem(new GUIContent("Simplify Address"), false, SimplifyAddresses, selectedNodes);
 
-                    menu.AddItem(new GUIContent("Move Addressables to Group..."), false, MoveEntriesToGroup, new Tuple<Event, List<AssetEntryTreeViewItem>>(Event.current, selectedNodes));
-                    menu.AddItem(new GUIContent("Move Addressables to New Group with settings from..."), false, MoveEntriesToNewGroupWithSettings, new Tuple<Event, List<AssetEntryTreeViewItem>>(Event.current, selectedNodes));
+                    menu.AddSeparator("");
+                    menu.AddItem(new GUIContent("Move to Group..."), false, MoveEntriesToGroup, new Tuple<Event, List<AssetEntryTreeViewItem>>(Event.current, selectedNodes));
+                    menu.AddItem(new GUIContent("Create Group with Setting from..."), false, MoveEntriesToNewGroupWithSettings, new Tuple<Event, List<AssetEntryTreeViewItem>>(Event.current, selectedNodes));
 
-                    menu.AddItem(new GUIContent("Remove Addressables"), false, RemoveEntry, selectedNodes);
-                    menu.AddItem(new GUIContent("Simplify Addressable Names"), false, SimplifyAddresses, selectedNodes);
+                    menu.AddSeparator("");
+                    if (HasContentUpdateWarningsInSelection(selectedNodes))
+                        menu.AddItem(new GUIContent("Clear Content Update Warnings"), false, ClearContentUpdateWarnings);
+                    else
+                        menu.AddDisabledItem(new GUIContent("Clear Content Update Warnings"));
+                    clearHandled = true;
 
-                    if (selectedNodes.Count == 1)
-                        menu.AddItem(new GUIContent("Copy Address to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
-
-                    else if (selectedNodes.Count > 1)
-                        menu.AddItem(new GUIContent("Copy " + selectedNodes.Count + " Addresses to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
+                    menu.AddSeparator("");
+                    menu.AddItem(new GUIContent("Delete"), false, RemoveEntry, selectedNodes);
 
                     foreach (var i in AddressableAssetSettings.CustomAssetEntryCommands)
                         menu.AddItem(new GUIContent(i), false, HandleCustomContextMenuItemEntries, new Tuple<string, List<AssetEntryTreeViewItem>>(i, selectedNodes));
@@ -1359,25 +1429,63 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 if (isGroup)
                 {
+                    bool addedIdentity = false;
                     if (selectedNodes.Count == 1)
+                    {
                         menu.AddItem(new GUIContent("Show in Project"), false, ShowGroupInProject, selectedNodes);
+                        addedIdentity = true;
+                    }
+
+                    if (addedIdentity)
+                        menu.AddSeparator("");
+                    if (HasContentUpdateWarningsInSelection(selectedNodes))
+                        menu.AddItem(new GUIContent("Clear Content Update Warnings"), false, ClearContentUpdateWarnings);
+                    else
+                        menu.AddDisabledItem(new GUIContent("Clear Content Update Warnings"));
+                    clearHandled = true;
+
+                    if (!hasDefaultGroup)
+                    {
+                        menu.AddSeparator("");
+                        menu.AddItem(new GUIContent("Delete"), false, RemoveGroup, selectedNodes);
+                    }
                 }
                 else if (isEntry)
                 {
+                    bool addedIdentity = false;
                     if (selectedNodes.Count == 1 && !isMissingPath)
+                    {
                         menu.AddItem(new GUIContent("Show in Project"), false, ShowEntryInProject, selectedNodes);
+                        addedIdentity = true;
+                    }
+                    if (addressNodes.Count == 1)
+                    {
+                        menu.AddItem(new GUIContent("Copy Address"), false, CopyAddressesToClipboard, addressNodes);
+                        addedIdentity = true;
+                    }
+                    else if (addressNodes.Count > 1)
+                    {
+                        menu.AddItem(new GUIContent("Copy " + addressNodes.Count + " Addresses"), false, CopyAddressesToClipboard, addressNodes);
+                        addedIdentity = true;
+                    }
 
-                    if (selectedNodes.Count == 1)
-                        menu.AddItem(new GUIContent("Copy Address to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
-                    else if (selectedNodes.Count > 1)
-                        menu.AddItem(new GUIContent("Copy " + selectedNodes.Count + " Addresses to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
+                    if (addedIdentity)
+                        menu.AddSeparator("");
+                    if (HasContentUpdateWarningsInSelection(selectedNodes))
+                        menu.AddItem(new GUIContent("Clear Content Update Warnings"), false, ClearContentUpdateWarnings);
+                    else
+                        menu.AddDisabledItem(new GUIContent("Clear Content Update Warnings"));
+                    clearHandled = true;
                 }
             }
 
-            if (HasContentUpdateWarningsInSelection(selectedNodes))
-                menu.AddItem(new GUIContent("Clear Content Update Warnings"), false, ClearContentUpdateWarnings);
-            else
-                menu.AddDisabledItem(new GUIContent("Clear Content Update Warnings"));
+            if (!clearHandled)
+            {
+                if (HasContentUpdateWarningsInSelection(selectedNodes))
+                    menu.AddItem(new GUIContent("Clear Content Update Warnings"), false, ClearContentUpdateWarnings);
+                else
+                    menu.AddDisabledItem(new GUIContent("Clear Content Update Warnings"));
+            }
 
             menu.ShowAsContext();
         }
@@ -1423,7 +1531,10 @@ namespace UnityEditor.AddressableAssets.GUI
             string buffer = "";
 
             foreach (AssetEntryTreeViewItem item in selectedNodes)
-                buffer += item.entry.address + ",";
+            {
+                if (item.entry != null)
+                    buffer += item.entry.address + ",";
+            }
 
             buffer = buffer.TrimEnd(',');
             GUIUtility.systemCopyBuffer = buffer;
@@ -1447,10 +1558,7 @@ namespace UnityEditor.AddressableAssets.GUI
         void MoveEntriesToNewGroupWithSettings(AddressableAssetSettings settings, List<AddressableAssetEntry> entries, AddressableAssetGroup group)
         {
             var newGroup = settings.CreateGroup(AddressableAssetSettings.kNewGroupName, false, false, true, group.Schemas);
-            foreach (AddressableAssetEntry entry in entries)
-            {
-                settings.MoveEntry(entry, newGroup, entry.ReadOnly, true);
-            }
+            AddressableAssetUtility.MoveEntriesToGroup(settings, entries, newGroup);
         }
 
         void MoveEntriesToGroup(object context)
@@ -1524,7 +1632,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         internal void RemoveGroupImpl(object context, bool forceRemoval = false)
         {
-            if (forceRemoval || EditorUtility.DisplayDialog("Delete selected groups?", "Are you sure you want to delete the selected groups?\n\nYou cannot undo this action.", "Yes", "No"))
+            if (forceRemoval || EditorUtility.DisplayDialog("Delete Selected Groups", "The selected groups will be deleted. You can't undo this action.", "Delete Groups", "Cancel", DialogOptOutDecisionType.ForThisSession, k_DeleteGroupsOptSessionKey))
             {
                 List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
                 if (selectedNodes == null || selectedNodes.Count < 1)
@@ -1535,6 +1643,11 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     foreach (var item in selectedNodes)
                     {
+                        if (item?.group != null && item.group.IsDefaultGroup())
+                        {
+                            Addressables.LogWarning("Cannot delete the default group: " + item.group.Name);
+                            continue;
+                        }
                         m_Editor.settings.RemoveGroupInternal(item == null ? null : item.group, true, false);
                         GetTreeViewState().sortOrderList.Remove(item.group?.Guid);
                         groups.Add(item.group);
@@ -1568,13 +1681,15 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     foreach (var e in item.group.entries)
                     {
+                        if (e.IsFolderMember)
+                            continue;
                         e.SetAddress(Path.GetFileNameWithoutExtension(e.address), false);
                         entries.Add(e);
                     }
 
                     modifiedGroups.Add(item.group);
                 }
-                else
+                else if (item.entry != null && !item.entry.IsFolderMember)
                 {
                     item.entry.SetAddress(Path.GetFileNameWithoutExtension(item.entry.address), false);
                     entries.Add(item.entry);
@@ -1643,9 +1758,9 @@ namespace UnityEditor.AddressableAssets.GUI
 
                 if (!hasShownWarning)
                 {
-                    string message = $"Converting to Content Directories will invalidate the AssetBundles in the default build path.\r\nThis action will also delete all AssetBundles in {buildPath} to ensure invalid AssetBundles don't end up in your Player build.";
+                    string message = $"Converting to Content Directories will invalidate the AssetBundles in the default build path. This action will also delete all AssetBundles in {buildPath}.";
 
-                    if (!EditorUtility.DisplayDialog("Convert to Content Directory", message, "Convert & Delete", "Cancel"))
+                    if (!EditorUtility.DisplayDialog("Convert to Content Directory", message, "Convert and Delete", "Cancel"))
                         return;
 
                     // Mark that we've shown the warning
@@ -1853,7 +1968,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
         internal void RemoveEntryImpl(object context, bool forceRemoval = false)
         {
-            if (forceRemoval || EditorUtility.DisplayDialog("Delete selected entries?", "Are you sure you want to delete the selected entries?\n\nYou cannot undo this action.", "Yes", "No"))
+            if (forceRemoval || EditorUtility.DisplayDialog("Delete Selected Entries", "The selected entries will be deleted. You can't undo this action.", "Delete Entries", "Cancel", DialogOptOutDecisionType.ForThisSession, k_DeleteEntriesOptSessionKey))
             {
                 List<AssetEntryTreeViewItem> selectedNodes = context as List<AssetEntryTreeViewItem>;
                 if (selectedNodes == null || selectedNodes.Count < 1)
@@ -1963,7 +2078,7 @@ namespace UnityEditor.AddressableAssets.GUI
             foreach (var id in args.draggedItemIDs)
             {
                 var item = FindItemInVisibleRows(id);
-                if (item.entry != null || item.@group != null)
+                if (item.entry != null || item.@group != null || item.IsFolderMemberNode)
                     selectedNodes.Add(item);
             }
 
@@ -2055,16 +2170,40 @@ namespace UnityEditor.AddressableAssets.GUI
                             parent = target.group;
                         else if (target.entry != null)
                             parent = target.entry.parentGroup;
+                        else if (target.IsFolderMemberNode)
+                            parent = target.memberGroup;
 
                         if (parent != null)
                         {
-                            var entries = new List<AddressableAssetEntry>();
-                            foreach (AssetEntryTreeViewItem node in draggedNodes)
+                            var entriesToMove = new List<AddressableAssetEntry>();
+                            var added = new HashSet<AddressableAssetEntry>();
+                            foreach (var node in draggedNodes)
                             {
-                                entries.Add(node.entry);
+                                if (!node.IsFolderMemberNode)
+                                    continue;
+                                foreach (var member in node.memberGroup.entries)
+                                {
+                                    if (member.FolderGuid == node.homeFolder.guid && added.Add(member))
+                                        entriesToMove.Add(member);
+                                }
                             }
 
-                            AddressableAssetUtility.MoveEntriesToGroup(m_Editor.settings, entries, parent);
+                            var unlinked = new List<AddressableAssetEntry>();
+                            foreach (var node in draggedNodes)
+                            {
+                                if (node.entry == null || !added.Add(node.entry))
+                                    continue;
+                                entriesToMove.Add(node.entry);
+                                if (!string.IsNullOrEmpty(node.entry.FolderGuid))
+                                    unlinked.Add(node.entry);
+                            }
+
+                            foreach (var entry in unlinked)
+                                entry.LeaveHomeFolder(false);
+
+                            AddressableAssetUtility.MoveEntriesToGroup(m_Editor.settings, entriesToMove, parent);
+                            if (unlinked.Count > 0)
+                                m_Editor.settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, unlinked, true);
                         }
                     }
                 }
@@ -2106,6 +2245,8 @@ namespace UnityEditor.AddressableAssets.GUI
                 }
                 else if (target.entry != null)
                     parent = target.entry.parentGroup;
+                else if (target.IsFolderMemberNode)
+                    parent = target.memberGroup;
 
                 if (parent != null)
                 {
@@ -2129,6 +2270,8 @@ namespace UnityEditor.AddressableAssets.GUI
                         {
                             var entriesMoved = new List<AddressableAssetEntry>();
                             var entriesCreated = new List<AddressableAssetEntry>();
+                            foreach (string guid in nonResourceGuids)
+                                m_Editor.settings.FindAssetEntry(guid)?.LeaveHomeFolder(false);
                             m_Editor.settings.CreateOrMoveEntries(nonResourceGuids, parent, entriesCreated, entriesMoved, false, false);
 
                             if (entriesMoved.Count > 0)
@@ -2260,6 +2403,19 @@ namespace UnityEditor.AddressableAssets.GUI
             assetIcon = null;
             isRenaming = false;
         }
+
+        public AssetEntryTreeViewItem(AddressableAssetEntry folderEntry, AddressableAssetGroup g, int d)
+            : this(folderEntry.address, d, (g.Guid + folderEntry.guid).GetHashCode())
+        {
+            homeFolder = folderEntry;
+            memberGroup = g;
+            icon = EditorGUIUtility.FindTexture("Folder Icon");
+        }
+
+        public AddressableAssetEntry homeFolder;
+        public AddressableAssetGroup memberGroup;
+
+        public bool IsFolderMemberNode => homeFolder != null && memberGroup != null;
 
         public bool IsGroup => group != null && entry == null;
 

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
@@ -217,6 +218,35 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [UnityTest]
+        public IEnumerator EnteringPlayMode_AfterOnlyUsingResourceManagerInEditMode_DoesNotWarn()
+        {
+            // Mimics packages such as Localization that only use the ResourceManager to create operations in edit mode.
+            var operation = Addressables.ResourceManager.CreateCompletedOperation(new object(), null);
+            operation.Release();
+
+            var warnings = new List<string>();
+            Application.LogCallback onLog = (message, stackTrace, type) =>
+            {
+                if (type == LogType.Warning)
+                    warnings.Add(message);
+            };
+            Application.logMessageReceived += onLog;
+            try
+            {
+                yield return new EnterPlayMode();
+            }
+            finally
+            {
+                Application.logMessageReceived -= onLog;
+            }
+
+            Assert.That(warnings, Has.None.Contains("The Addressables class was used outside playmode"),
+                "Addressables was never initialized in edit mode, so no warning about invalidated references should be logged.");
+
+            yield return new ExitPlayMode();
+        }
+
+        [UnityTest]
         public IEnumerator ExitingPlayMode_AfterLoadingAnAddressableSceneInPlayMode_DoesNotThrow()
         {
             yield return new EnterPlayMode();
@@ -231,6 +261,41 @@ namespace UnityEditor.AddressableAssets.Tests
 
             Assert.IsFalse(handle.IsValid(),
                 "Handle should have been released by Dispose() when exiting play mode.");
+        }
+
+        [UnityTest]
+        public IEnumerator ExitingPlayMode_HandleLoadedInPlayMode_IsStillValidOnApplicationQuit()
+        {
+            yield return new EnterPlayMode();
+
+            var handle = Addressables.LoadAssetAsync<TestObject>(k_AssetKey);
+            yield return handle;
+
+            Assert.AreEqual(AsyncOperationStatus.Succeeded, handle.Status,
+                "Expected the asset to load successfully while in play mode.");
+
+            bool handleValidOnQuit = false;
+            void ReleaseOnQuit()
+            {
+                handleValidOnQuit = handle.IsValid();
+                if (handleValidOnQuit)
+                    Addressables.Release(handle);
+            }
+            Application.quitting += ReleaseOnQuit;
+
+            try
+            {
+                yield return new ExitPlayMode();
+            }
+            finally
+            {
+                Application.quitting -= ReleaseOnQuit;
+            }
+
+            Assert.IsTrue(handleValidOnQuit,
+                "Handle should still be valid when OnApplicationQuit runs (UUM-158313).");
+            Assert.IsFalse(handle.IsValid(),
+                "Handle should have been released on quit.");
         }
     }
 }

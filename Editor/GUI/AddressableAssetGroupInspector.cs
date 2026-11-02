@@ -13,6 +13,8 @@ namespace UnityEditor.AddressableAssets.GUI
     [CustomEditor(typeof(AddressableAssetGroup)), CanEditMultipleObjects]
     class AddressableAssetGroupInspector : Editor
     {
+        private const string k_RemoveSchemaOptSessionKey = "groupInspectorRemoveSchema";
+
         AddressableAssetGroup m_GroupTarget;
         List<Type> m_SchemaTypes;
 
@@ -238,7 +240,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     var menu = new GenericMenu();
                     menu.AddItem(AddressableAssetGroup.RemoveSchemaContent, false, () =>
                     {
-                        string dialogMessage = "Are you sure you want to remove " + AddressableAssetUtility.GetCachedTypeDisplayName(schemaType) + " schema?";
+                        string dialogMessage = "This removes the " + AddressableAssetUtility.GetCachedTypeDisplayName(schemaType) + " schema.";
                         bool removingBundledAssetGroupSchemaFromSharedBundleGroup = false;
                         if (schema is BundledAssetGroupSchema)
                         {
@@ -263,9 +265,13 @@ namespace UnityEditor.AddressableAssets.GUI
                             dialogMessage += $"\n\nThis will apply to {targets.Length} selected groups.";
                         }
 
-                        dialogMessage += "\n\nYou cannot undo this action.";
+                        dialogMessage += "\n\nYou can't undo this action.";
 
-                        if (EditorUtility.DisplayDialog("Remove selected schema?", dialogMessage, "Yes", "No"))
+                        bool confirmed = removingBundledAssetGroupSchemaFromSharedBundleGroup
+                            ? EditorUtility.DisplayDialog("Remove Selected Schema", dialogMessage, "Remove Schema", "Cancel")
+                            : EditorUtility.DisplayDialog("Remove Selected Schema", dialogMessage, "Remove Schema", "Cancel", DialogOptOutDecisionType.ForThisSession, k_RemoveSchemaOptSessionKey);
+
+                        if (confirmed)
                         {
                             OnRemoveSchema(schemaType);
                             if (removingBundledAssetGroupSchemaFromSharedBundleGroup)

@@ -155,7 +155,9 @@ namespace UnityEditor.AddressableAssets.Settings
 
         static void AddEntriesToTables(Dictionary<object, HashSet<AddressableAssetEntry>> keyToEntries, AddressableAssetEntry e)
         {
-            AddEntry(e, e.address, keyToEntries);
+            string folderKey = e.GetCatalogFolderKey(IsFolderKeysEnabled(e), IsIncludeAddressesForFolderChildrenEnabled(e), out bool includeAddress);
+            if (includeAddress)
+                AddEntry(e, e.address, keyToEntries);
             AddEntry(e, e.guid, keyToEntries);
 
             if (e.labels != null && IsLabelsEnabled(e))
@@ -165,6 +167,9 @@ namespace UnityEditor.AddressableAssets.Settings
                     AddEntry(e, l, keyToEntries);
                 }
             }
+
+            if (folderKey != null)
+                AddEntry(e, folderKey, keyToEntries);
         }
 
         static bool IsFolderKeysEnabled(AddressableAssetEntry e)
@@ -348,7 +353,10 @@ namespace UnityEditor.AddressableAssets.Settings
                             {
                                 if (!IsIncludeAddressesForFolderChildrenEnabled(e))
                                     continue;
-                                AddLocations(locations, type, keyStr, GetInternalIdFromFolderEntry(keyStr, e));
+                                string internalId = GetInternalIdFromFolderEntry(keyStr, e);
+                                if (HasOwnEntryForFolderPath(internalId))
+                                    continue;
+                                AddLocations(locations, type, keyStr, internalId);
                             }
                             break;
                         }
@@ -385,6 +393,14 @@ namespace UnityEditor.AddressableAssets.Settings
                     }
                 }
             }
+        }
+
+        bool HasOwnEntryForFolderPath(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath))
+                return false;
+            var entry = m_Settings.FindAssetEntry(AssetDatabase.AssetPathToGUID(assetPath));
+            return entry != null && entry.IsFolderMember;
         }
 
         string GetInternalIdFromFolderEntry(string keyStr, AddressableAssetEntry entry)

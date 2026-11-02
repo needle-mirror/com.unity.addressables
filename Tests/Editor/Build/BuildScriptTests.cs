@@ -6,9 +6,11 @@ using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.BuildReportVisualizer;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
+using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.TestTools;
 using UnityEngine;
@@ -156,15 +158,20 @@ namespace UnityEditor.AddressableAssets.Tests
             {
                 string path = Addressables.BuildPath;
                 Directory.CreateDirectory(path);
-                AddressablesPlayerBuildProcessor.AddPathToStreamingAssets = (string path) => false;
-                var paths = AddressablesPlayerBuildProcessor.GetStreamingAssetPaths();
-                Assert.AreEqual(0, paths.Count, "StreamingAssets paths are expected to be empty");
-                AddressablesPlayerBuildProcessor.AddPathToStreamingAssets = (string path) => true;
-                paths = AddressablesPlayerBuildProcessor.GetStreamingAssetPaths();
-                Assert.AreEqual(1, paths.Count, "StreamingAssets paths expected to include Addressables.BuildPath");
-
-                // cleanup
-                Directory.Delete(path, true);
+                try
+                {
+                    AddressablesPlayerBuildProcessor.AddPathToStreamingAssets = (string path) => false;
+                    var paths = AddressablesPlayerBuildProcessor.GetStreamingAssetPaths();
+                    Assert.AreEqual(0, paths.Count, "StreamingAssets paths are expected to be empty");
+                    AddressablesPlayerBuildProcessor.AddPathToStreamingAssets = (string path) => true;
+                    paths = AddressablesPlayerBuildProcessor.GetStreamingAssetPaths();
+                    Assert.AreEqual(1, paths.Count, "StreamingAssets paths expected to include Addressables.BuildPath");
+                }
+                finally
+                {
+                    AddressablesPlayerBuildProcessor.AddPathToStreamingAssets = null;
+                    Directory.Delete(path, true);
+                }
             }
         }
 
@@ -280,6 +287,29 @@ namespace UnityEditor.AddressableAssets.Tests
                 BuildLog log = new BuildLog();
                 BuildScriptBase.WriteBuildLog(log, dirName);
                 FileAssert.Exists(logFile);
+            }
+            finally
+            {
+                Directory.Delete(dirName, true);
+            }
+        }
+
+        // The report shows Build Steps from this rather than from the profile beside it.
+        [Test]
+        public void BuildScriptBaseWriteBuildLog_WritesTheBuildStepsBesideTheProfile()
+        {
+            string dirName = "SomeTestStepsDir";
+            try
+            {
+                var log = new BuildLog();
+                using (log.ScopedStep(LogLevel.Info, "A Step")) { }
+                BuildScriptBase.WriteBuildLog(log, dirName);
+
+                string stepsFile = Path.Combine(dirName, BuildReportUtility.StepsFileName);
+                FileAssert.Exists(stepsFile);
+                Assert.IsTrue(BuildStepsReport.TryRead(stepsFile, out BuildStepData[] steps));
+                Assert.AreEqual("A Step", steps[0].Name);
+                Assert.AreEqual(0, steps[0].Depth);
             }
             finally
             {
@@ -521,58 +551,70 @@ namespace UnityEditor.AddressableAssets.Tests
         public void WhenLoadPathUsesHttp_AndInsecureHttpNotAllowed_BuildLogsWarning()
         {
             InsecureHttpOption oldHttpOption = PlayerSettings.insecureHttpOption;
-            PlayerSettings.insecureHttpOption = InsecureHttpOption.NotAllowed;
-
             string remoteLoadPathId = Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kRemoteLoadPath).Id;
             string oldRemoteLoadPath = Settings.profileSettings.GetValueById(Settings.activeProfileId, remoteLoadPathId);
-            Settings.profileSettings.SetValue(Settings.activeProfileId, AddressableAssetSettings.kRemoteLoadPath, "http://insecureconnection/");
-
-            AddressableAssetGroup assetGroup = Settings.CreateGroup("InsecureConnections", false, false, false, null, typeof(BundledAssetGroupSchema));
-            assetGroup.GetSchema<BundledAssetGroupSchema>().BuildPath.SetVariableById(Settings, Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kRemoteBuildPath).Id);
-            assetGroup.GetSchema<BundledAssetGroupSchema>().LoadPath.SetVariableById(Settings, Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kRemoteLoadPath).Id);
-
             string assetPath = Path.Combine(TestFolder, "insecureConnectionsTest.prefab");
-            PrefabUtility.SaveAsPrefabAsset(new GameObject(), assetPath);
-            Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(assetPath), assetGroup, false, false);
+            AddressableAssetGroup assetGroup = null;
+            try
+            {
+                PlayerSettings.insecureHttpOption = InsecureHttpOption.NotAllowed;
+                Settings.profileSettings.SetValue(Settings.activeProfileId, AddressableAssetSettings.kRemoteLoadPath, "http://insecureconnection/");
 
-            var context = new AddressablesDataBuilderInput(Settings);
-            BuildScriptBase db = (BuildScriptBase)Settings.DataBuilders.Find(x => x.GetType() == typeof(BuildScriptPackedMode));
-            db.BuildData<AddressablesPlayerBuildResult>(context);
-            LogAssert.Expect(LogType.Warning, $"Addressable group {assetGroup.Name} uses insecure http for its load path.  To allow http connections for UnityWebRequests, change your settings in Edit > Project Settings > Player > Other Settings > Configuration > Allow downloads over HTTP.");
+                assetGroup = Settings.CreateGroup("InsecureConnections", false, false, false, null, typeof(BundledAssetGroupSchema));
+                assetGroup.GetSchema<BundledAssetGroupSchema>().BuildPath.SetVariableById(Settings, Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kRemoteBuildPath).Id);
+                assetGroup.GetSchema<BundledAssetGroupSchema>().LoadPath.SetVariableById(Settings, Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kRemoteLoadPath).Id);
 
-            Settings.RemoveGroup(assetGroup);
-            Settings.profileSettings.SetValue(Settings.activeProfileId, AddressableAssetSettings.kRemoteLoadPath, oldRemoteLoadPath);
-            AssetDatabase.DeleteAsset(assetPath);
-            PlayerSettings.insecureHttpOption = oldHttpOption;
+                PrefabUtility.SaveAsPrefabAsset(new GameObject(), assetPath);
+                Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(assetPath), assetGroup, false, false);
+
+                var context = new AddressablesDataBuilderInput(Settings);
+                BuildScriptBase db = (BuildScriptBase)Settings.DataBuilders.Find(x => x.GetType() == typeof(BuildScriptPackedMode));
+                db.BuildData<AddressablesPlayerBuildResult>(context);
+                LogAssert.Expect(LogType.Warning, $"Addressable group {assetGroup.Name} uses insecure http for its load path.  To allow http connections for UnityWebRequests, change your settings in Edit > Project Settings > Player > Other Settings > Configuration > Allow downloads over HTTP.");
+            }
+            finally
+            {
+                if (assetGroup != null)
+                    Settings.RemoveGroup(assetGroup);
+                Settings.profileSettings.SetValue(Settings.activeProfileId, AddressableAssetSettings.kRemoteLoadPath, oldRemoteLoadPath);
+                AssetDatabase.DeleteAsset(assetPath);
+                PlayerSettings.insecureHttpOption = oldHttpOption;
+            }
         }
 
         [Test]
         public void WhenLoadPathUsesHttp_AndInsecureHttpAllowed_BuildSucceeds()
         {
             InsecureHttpOption oldHttpOption = PlayerSettings.insecureHttpOption;
-            PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
-
             string remoteLoadPathId = Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kRemoteLoadPath).Id;
             string oldRemoteLoadPath = Settings.profileSettings.GetValueById(Settings.activeProfileId, remoteLoadPathId);
-            Settings.profileSettings.SetValue(Settings.activeProfileId, AddressableAssetSettings.kRemoteLoadPath, "http://insecureconnection/");
-
-            AddressableAssetGroup assetGroup = Settings.CreateGroup("InsecureConnections", false, false, false, null, typeof(BundledAssetGroupSchema));
-            assetGroup.GetSchema<BundledAssetGroupSchema>().BuildPath.SetVariableById(Settings, Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kRemoteBuildPath).Id);
-            assetGroup.GetSchema<BundledAssetGroupSchema>().LoadPath.SetVariableById(Settings, Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kRemoteLoadPath).Id);
-
             string assetPath = Path.Combine(TestFolder, "insecureConnectionsTest.prefab");
-            PrefabUtility.SaveAsPrefabAsset(new GameObject(), assetPath);
-            Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(assetPath), assetGroup, false, false);
+            AddressableAssetGroup assetGroup = null;
+            try
+            {
+                PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
+                Settings.profileSettings.SetValue(Settings.activeProfileId, AddressableAssetSettings.kRemoteLoadPath, "http://insecureconnection/");
 
-            var context = new AddressablesDataBuilderInput(Settings);
-            BuildScriptBase db = (BuildScriptBase)Settings.DataBuilders.Find(x => x.GetType() == typeof(BuildScriptPackedMode));
-            db.BuildData<AddressablesPlayerBuildResult>(context);
-            LogAssert.NoUnexpectedReceived();
+                assetGroup = Settings.CreateGroup("InsecureConnections", false, false, false, null, typeof(BundledAssetGroupSchema));
+                assetGroup.GetSchema<BundledAssetGroupSchema>().BuildPath.SetVariableById(Settings, Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kRemoteBuildPath).Id);
+                assetGroup.GetSchema<BundledAssetGroupSchema>().LoadPath.SetVariableById(Settings, Settings.profileSettings.GetProfileDataByName(AddressableAssetSettings.kRemoteLoadPath).Id);
 
-            Settings.RemoveGroup(assetGroup);
-            Settings.profileSettings.SetValue(Settings.activeProfileId, AddressableAssetSettings.kRemoteLoadPath, oldRemoteLoadPath);
-            AssetDatabase.DeleteAsset(assetPath);
-            PlayerSettings.insecureHttpOption = oldHttpOption;
+                PrefabUtility.SaveAsPrefabAsset(new GameObject(), assetPath);
+                Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(assetPath), assetGroup, false, false);
+
+                var context = new AddressablesDataBuilderInput(Settings);
+                BuildScriptBase db = (BuildScriptBase)Settings.DataBuilders.Find(x => x.GetType() == typeof(BuildScriptPackedMode));
+                db.BuildData<AddressablesPlayerBuildResult>(context);
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                if (assetGroup != null)
+                    Settings.RemoveGroup(assetGroup);
+                Settings.profileSettings.SetValue(Settings.activeProfileId, AddressableAssetSettings.kRemoteLoadPath, oldRemoteLoadPath);
+                AssetDatabase.DeleteAsset(assetPath);
+                PlayerSettings.insecureHttpOption = oldHttpOption;
+            }
         }
     }
 

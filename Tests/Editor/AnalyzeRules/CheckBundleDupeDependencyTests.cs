@@ -12,6 +12,7 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.Initialization;
 
 namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
@@ -303,29 +304,45 @@ namespace UnityEditor.AddressableAssets.Tests.AnalyzeRules
             Assert.DoesNotThrow(() => rule.FixIssues(settings));
         }
 
-#if CI_TESTRUNNER_PROJECT
         [Test]
         public void GatherModifiedEntriesOnDupeGroup_DoesNotThrow()
         {
             //Setup
+            var existingGroups = new HashSet<AddressableAssetGroup>(Settings.groups);
+            var buildPath = Addressables.BuildPath;
+            var buildPathBackup = buildPath + "_TestBackup_" + Guid.NewGuid().ToString("N");
+            if (Directory.Exists(buildPath))
+                Directory.Move(buildPath, buildPathBackup);
             var group1 = Settings.CreateGroup("CheckDupeDepencency1", false, false, false, null, typeof(BundledAssetGroupSchema));
             var group2 = Settings.CreateGroup("CheckDupeDepencency2", false, false, false, null, typeof(BundledAssetGroupSchema));
-
-            Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA), group1, false, false);
-            Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabB), group2, false, false);
-
-            var rule = new CheckBundleDupeDependencies();
-
-            //Test
-            rule.FixIssues(Settings);
-
-            var path = "Assets/addressables_content_state.bin";
-            Assert.DoesNotThrow(() =>
+            try
             {
-                ContentUpdateScript.GatherModifiedEntries(Settings, path);
-            });
-        }
+                Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabA), group1, false, false);
+                Settings.CreateOrMoveEntry(AssetDatabase.AssetPathToGUID(k_CheckDupePrefabB), group2, false, false);
 
-#endif
+                var rule = new CheckBundleDupeDependencies();
+                rule.FixIssues(Settings);
+
+                var result = Settings.ActivePlayerDataBuilder.BuildData<AddressablesPlayerBuildResult>(new AddressablesDataBuilderInput(Settings));
+                Assert.IsTrue(string.IsNullOrEmpty(result.Error), result.Error);
+                var path = ContentUpdateScript.GetContentStateDataPath(false, Settings);
+                Assert.IsTrue(File.Exists(path), path);
+
+                //Test
+                Assert.DoesNotThrow(() =>
+                {
+                    ContentUpdateScript.GatherModifiedEntries(Settings, path);
+                });
+            }
+            finally
+            {
+                foreach (var group in Settings.groups.Where(g => g != null && !existingGroups.Contains(g)).ToList())
+                    Settings.RemoveGroup(group);
+                if (Directory.Exists(buildPath))
+                    Directory.Delete(buildPath, true);
+                if (Directory.Exists(buildPathBackup))
+                    Directory.Move(buildPathBackup, buildPath);
+            }
+        }
     }
 }

@@ -655,6 +655,30 @@ namespace UnityEditor.AddressableAssets.Tests.Diagnostics
         }
 
         [Test]
+        public void ReadFullThreadSafe_RestoresSessionGuidFromString()
+        {
+            BuildLayout layout = CreateTestLayout(DateTime.Now);
+            layout.AddressablesBuildSessionGUID = GUID.Generate();
+            string filePath = $"{Application.dataPath}/testLayout.json";
+
+            try
+            {
+                layout.WriteToFile(filePath, false);
+                string json = File.ReadAllText(filePath);
+                json = json.Replace($"\"AddressablesBuildSessionGUID\":\"{layout.AddressablesBuildSessionGUID}\"", "\"AddressablesBuildSessionGUID\":{}");
+                File.WriteAllText(filePath, json);
+
+                BuildLayout readLayout = BuildLayout.ReadFullThreadSafe(filePath);
+                Assert.AreEqual(layout.AddressablesBuildSessionGUID, readLayout.AddressablesBuildSessionGUID, "Session GUID was not restored from BuildSessionGuidString");
+            }
+            finally
+            {
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+            }
+        }
+
+        [Test]
         public void BuildLayoutBundle_SaveAndLoad_ReadsCorrectDataForBody()
         {
             DateTime time = DateTime.Now;
@@ -672,6 +696,39 @@ namespace UnityEditor.AddressableAssets.Tests.Diagnostics
                 Assert.AreEqual(0, readLayout.Groups.Count, "Expect to have not read any Groups yet with only Header read");
                 readLayout.ReadFull();
                 Assert.AreEqual(1, readLayout.Groups.Count, "Expect to have 1 Groups after doing a full read read");
+            }
+            finally
+            {
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+            }
+        }
+
+        const string k_TestObjectName = "BuildLayoutTests_ObjectName";
+
+        BuildLayout CreateTestLayoutWithObjects()
+        {
+            BuildLayout layout = CreateTestLayout(DateTime.Now);
+            BuildLayout.File file = layout.Groups[0].Bundles[0].Files[0];
+            foreach (BuildLayout.ExplicitAsset asset in file.Assets)
+                asset.Objects.Add(new BuildLayout.ObjectData { ObjectName = k_TestObjectName });
+            BuildLayout.DataFromOtherAsset otherAsset = new BuildLayout.DataFromOtherAsset { File = file };
+            otherAsset.Objects.Add(new BuildLayout.ObjectData { ObjectName = k_TestObjectName });
+            file.OtherAssets.Add(otherAsset);
+            return layout;
+        }
+
+        [Test]
+        public void BuildLayout_WriteToFile_StillWritesObjectsWhenLayoutHasThem()
+        {
+            BuildLayout layout = CreateTestLayoutWithObjects();
+            string filePath = Path.Combine("Library", "BuildLayoutTests_withObjects.json");
+
+            try
+            {
+                layout.WriteToFile(filePath, true);
+
+                StringAssert.Contains(k_TestObjectName, File.ReadAllText(filePath));
             }
             finally
             {

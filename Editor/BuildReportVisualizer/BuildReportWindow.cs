@@ -28,7 +28,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             m_BrowserView.OnLayoutCompleted(path, layout);
         }
 
-        [MenuItem("Window/Asset Management/Addressables/Addressables Report", priority = 2051)]
+        [MenuItem("Window/Asset Management/Addressables/Report", priority = 2051)]
         public static void ShowWindow()
         {
             CreateWindow();

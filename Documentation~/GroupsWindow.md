@@ -52,10 +52,11 @@ Open the various Addressables tools available.
 
 |**Addressables tool**|**Description**|
 |---|---|
-| __Inspect System Settings__| Open the [Addressables Settings](xref:addressables-asset-settings) Inspector.|
+| __Show Settings in Inspector__| Open the [Addressables Settings](xref:addressables-asset-settings) Inspector.|
 | __Check for Content Update Restrictions__| Run a pre-update content check. For more information, refer to [Update Restrictions](xref:addressables-content-update-builds).|
-| __Window__| Open other Addressables system windows:<ul><li>[Profiles](addressables-profiles-window.md): Manage the [profiles](profiles-introduction.md) used to build Addressables content. </li><li>[Labels](Labels.md): Manage the labels used to tag and organize assets.</li><li>[Analyze](analyze-addressables-window.md): Gather information on your project's Addressables layout. </li><li>[Addressables Report](addressables-report-window.md): View the output of a content build in depth.</li></ul>|
-|__Groups View__| Set Group window display options:<ul><li>__Show Sprite and Subobject Addresses__: Displays sprite and sub objects in the **Group** list. Disable to display only the parent object.</li><li>__Group Hierarchy with Dashes__: Enable to display groups that contain dashes `-` in their names as if the dashes represented a group hierarchy. Enabling this option affects the group display only. For more information, refer to [Group optimization for large projects](PackingGroupsAsBundles.md#group-optimization-for-large-projects).|
+| __Window__| Open other Addressables system windows:<ul><li>[Profiles](addressables-profiles-window.md): Manage the [profiles](profiles-introduction.md) used to build Addressables content. </li><li>[Labels](Labels.md): Manage the labels used to tag and organize assets.</li><li>[Analyze](analyze-addressables-window.md): Gather information on your project's Addressables layout. </li><li>[Report](addressables-report-window.md): View the output of a content build in depth.</li></ul>|
+|__Display Options__| Set Group window display options:<ul><li>__Show Sprite and Subobject Addresses__: Displays sprite and sub objects in the **Group** list. Disable to display only the parent object.</li><li>__Use Dashes to Nest Groups__: Enable to display groups that contain dashes `-` in their names as if the dashes represented a group hierarchy. Enabling this option affects the group display only. For more information, refer to [Group optimization for large projects](PackingGroupsAsBundles.md#group-optimization-for-large-projects).|
+|__Binary Catalogs__| Inspect and extract binary content catalog files:<ul><li>__Optimize Binary Catalog__: Select a binary catalog file and write an optimized copy next to it.</li><li>__Extract Binary Catalog__: Select a binary catalog file and extract its contents to a folder for inspection.</li><li>__Extract Binary Content State__: Select a binary content state file and extract its contents to a folder for inspection.</li></ul>|
 
 ### Play Mode Script
 
@@ -107,13 +108,14 @@ To open the group context menu and access group-related commands, right-click on
 
 | **Command**| **Description** |
 |:---|:---|
-| __Rename__| Edit the name of the group. |
-| __Simplify Addressable Names__| Shortens the name of assets in the group by removing path-like components and extensions. |
-| __Set as Default__| Sets the group as the default group. When you mark an asset as Addressable without explicitly assigning a group, Unity adds the asset to the default group. |
+| __Show in Project__| Highlights the group's ScriptableObject asset in the Project window. |
+| __Rename Group__| Edit the name of the group. |
+| __Simplify Addresses in Group__| Shortens the name of assets in the group by removing path-like components and extensions. Label becomes __Simplify Addresses in Groups__ for multi-selection. |
+| __Set as Default Group__| Sets the group as the default group. When you mark an asset as Addressable without explicitly assigning a group, Unity adds the asset to the default group. |
 | __Convert schema(s) to Content Directory__|Converts the group to use the [Content Directory schema](GroupSchemas.md).|
 | __Convert schema(s) to AssetBundles__|Converts the group to use the [Packed Asset schema](GroupSchemas.md).|
-| __Delete Group(s)__| Deletes the group and its associated ScriptableObject asset. Unity reverts any assets in the group into non-Addressable assets. Not available for the default group. |
 |**Clear Content Update Warnings**|Clears any warnings related to content updates.|
+| __Delete__| Deletes the group and its associated ScriptableObject asset. Unity reverts any assets in the group into non-Addressable assets. Not available for the default group. |
 
 ### Asset context menu
 
@@ -121,13 +123,14 @@ To open the Addressable asset context menu and access asset-related commands, ri
 
 | **Command**| **Description** |
 |:---|:---|
-| __Change Address__| Edit the asset's name. |
-| __Move Addressables to Group__| Move the selected assets to a different, existing group. |
-| __Move Addressables to New Group with settings from__| Create a new group based on the settings of an existing group, and move the selected assets to it.|
-| __Remove Addressables__| Remove the selected assets from the group and make the assets non-Addressable.  |
-| __Simplify Addressable Names__| Shortens the names of the selected assets by removing path-like components and extensions. |
-| __Copy Address to Clipboard__| Copies the asset's assigned address string to your system Clipboard. |
+| __Show in Project__| Highlights the asset in the Project window. |
+| __Rename Address__| Edit the asset's name. |
+| __Copy Address__| Copies the asset's assigned address string to your system Clipboard. |
+| __Simplify Address__| Shortens the names of the selected assets by removing path-like components and extensions. |
+| __Move to Group...__| Move the selected assets to a different, existing group. |
+| __Create Group with Setting from...__| Create a new group based on the settings of an existing group, and move the selected assets to it.|
 |**Clear Content Update Warnings**|Clears any warnings related to content updates.|
+| __Delete__| Remove the selected assets from the group and make the assets non-Addressable. |
 
 ## Additional resources
 

@@ -15,7 +15,7 @@ namespace UnityEditor.AddressableAssets.Build
     /// </summary>
     internal static class AddressablesBuildHistorySupport
     {
-        internal const string kLayoutFileName = "AddressablesBuildLayout.json";
+        internal const string kLayoutFileName = BuildReportUtility.EmbeddedLayoutFileName;
         internal const string kBuildTypeName = "Addressables";
         internal const string kPackageName = "com.unity.addressables";
 
@@ -65,6 +65,13 @@ namespace UnityEditor.AddressableAssets.Build
             if (string.IsNullOrEmpty(tepDirectory))
                 return;
             TryCopyIntoEntry(tepSourcePath, tepDirectory, BuildReportUtility.TepFileName);
+        }
+
+        internal static void TryCopyBuildSteps(string stepsSourcePath, string directory)
+        {
+            if (string.IsNullOrEmpty(directory))
+                return;
+            TryCopyIntoEntry(stepsSourcePath, directory, BuildReportUtility.StepsFileName);
         }
 
         static void TryCopyIntoEntry(string sourcePath, string directory, string fileName)

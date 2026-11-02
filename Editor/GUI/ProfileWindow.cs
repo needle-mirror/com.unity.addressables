@@ -440,26 +440,20 @@ namespace UnityEditor.AddressableAssets.GUI
             if (menuRect.Contains(evt.mousePosition))
             {
                 GenericMenu menu = new GenericMenu();
-                menu.AddDisabledItem(new GUIContent(groupType.GroupTypePrefix));
-                menu.AddSeparator("");
-                menu.AddItem(new GUIContent("Rename Path Prefix (All Profiles)"), false, () => { RenamePathPair(groupType, parentWindow, menuRect); });
-                menu.AddItem(new GUIContent("Delete Path Pair (All Profiles)"), false, () => { DeletePathPair(groupType); });
+                menu.AddItem(new GUIContent("Rename on All Profiles"), false, () => { RenamePathPair(groupType, parentWindow, menuRect); });
+                menu.AddItem(new GUIContent("Delete Path Pair from All Profiles"), false, () => { DeletePathPair(groupType); });
                 menu.ShowAsContext();
                 evt.Use();
             }
         }
 
-        //Creates the context menu for the selected variable
         void CreateVariableContextMenu(Rect parentWindow, Rect menuRect, AddressableAssetProfileSettings.ProfileIdData variable, Event evt)
         {
             if (menuRect.Contains(evt.mousePosition))
             {
                 GenericMenu menu = new GenericMenu();
-                //Displays name of selected variable so user can be confident they're deleting/renaming the right one
-                menu.AddDisabledItem(new GUIContent(variable.ProfileName));
-                menu.AddSeparator("");
-                menu.AddItem(new GUIContent("Rename Variable (All Profiles)"), false, () => { RenameVariable(variable, parentWindow, menuRect); });
-                menu.AddItem(new GUIContent("Delete Variable (All Profiles)"), false, () => { DeleteVariable(variable); });
+                menu.AddItem(new GUIContent("Rename on All Profiles"), false, () => { RenameVariable(variable, parentWindow, menuRect); });
+                menu.AddItem(new GUIContent("Delete Variable from All Profiles"), false, () => { DeleteVariable(variable); });
                 menu.ShowAsContext();
                 evt.Use();
             }

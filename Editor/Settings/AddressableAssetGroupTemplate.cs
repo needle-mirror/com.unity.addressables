@@ -9,7 +9,7 @@ namespace UnityEditor.AddressableAssets.Settings
     /// <summary>
     /// Used to create template groups to make it easier for the user to create new groups.
     /// </summary>
-    [CreateAssetMenu(fileName = "AddressableAssetGroupTemplate.asset", menuName = "Addressables/Group Templates/Blank Group Template")]
+    [CreateAssetMenu(fileName = "AddressableAssetGroupTemplate.asset", menuName = "Addressables/Blank Group Template", order = 100)]
     [AddressablesHelpURL("GroupTemplates.html")]
     public class AddressableAssetGroupTemplate : ScriptableObject, IGroupTemplate, ISerializationCallbackReceiver
     {

@@ -63,6 +63,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         Ribbon m_TabsRibbon;
         TabView m_TabView;
         ToolbarToggle m_DetailsToggle;
+        bool m_Loading;
         int m_CurrentTab;
 
         DropdownField m_ContentViewTypeDropdown;
@@ -246,7 +247,14 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 return;
 
             var tab = (RibbonTabType)index;
-            m_DetailsToggle.SetEnabled(tab == RibbonTabType.ContentTab || tab == RibbonTabType.PotentialIssues);
+            m_DetailsToggle.SetEnabled(!m_Loading && (tab == RibbonTabType.ContentTab || tab == RibbonTabType.PotentialIssues));
+        }
+
+        // The details toggle stays disabled while a report is loading.
+        internal void SetLoading(bool loading)
+        {
+            m_Loading = loading;
+            UpdateDetailsToggleEnabled(m_CurrentTab);
         }
 
         /// <summary>
@@ -306,6 +314,13 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 m_MainPanelSummaryTabEmbedded.Consume(report, buildName, relatedBuilds);
             else
                 m_MainPanelSummaryTab.Consume(report);
+        }
+
+        /// <summary>Replaces the Related Builds row. No-op for the standalone layout.</summary>
+        internal void SetRelatedBuilds(IReadOnlyList<UnityEditor.Build.BuildReportSummary> relatedBuilds)
+        {
+            if (UsesBuildAnalysisLayout)
+                m_MainPanelSummaryTabEmbedded.SetRelatedBuilds(relatedBuilds);
         }
 #endif
 

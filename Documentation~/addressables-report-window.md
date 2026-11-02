@@ -8,7 +8,7 @@ uid: addressables-report-overview
 
 The Addressables Report is a tool that you can use to view information about the content built in an Addressables Build in depth.
 
-To open the Addressables Report window, go to **Window** > **Asset Management** > **Addressables** > **Addressables Report**.
+To open the Addressables Report window, go to **Window** > **Asset Management** > **Addressables** > **Report**.
 
 ## Prerequisites
 

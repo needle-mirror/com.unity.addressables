@@ -8,6 +8,7 @@ using UnityEditor.AddressableAssets.Build.Layout;
 using UnityEditor.AddressableAssets.BuildReportVisualizer;
 using UnityEditor.Build;
 using UnityEditor.Build.Analysis;
+using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -404,6 +405,38 @@ namespace Tests.Editor.BuildReportVisualizer
         }
 
         [Test]
+        public void SetRelatedBuilds_WhileAReportIsShown_ReplacesTheLinks()
+        {
+            m_View.Consume(CreateLayout(), "Addressables", CreateRelatedBuilds("Cards"));
+
+            m_View.SetRelatedBuilds(CreateRelatedBuilds("Cards", "Content Directory"));
+
+            Assert.AreEqual(2, RelatedBuildLinkLabels().Count);
+            Assert.AreEqual(DisplayStyle.None, RelatedBuildsNoneLabel().style.display.value);
+        }
+
+        [Test]
+        public void SetRelatedBuilds_WithNoBuildsLeft_ShowsNoneAgain()
+        {
+            m_View.Consume(CreateLayout(), "Addressables", CreateRelatedBuilds("Cards"));
+
+            m_View.SetRelatedBuilds(null);
+
+            AssertRelatedBuildsShowsNone();
+        }
+
+        [Test]
+        public void SetRelatedBuilds_LeavesTheRestOfTheSummaryAlone()
+        {
+            m_View.Consume(CreateLayout(), "AssetBundle_myname", CreateRelatedBuilds("Cards"));
+
+            m_View.SetRelatedBuilds(CreateRelatedBuilds());
+
+            Assert.AreEqual("AssetBundle_myname", HeaderText(k_HeaderTitleClass));
+            Assert.AreEqual("1 (25%)", DetailValueFor("Addressables"));
+        }
+
+        [Test]
         public void ConsumeTwice_DoesNotDuplicateTheBuildDetailRows()
         {
             m_View.Consume(CreateLayout(), null, null);
@@ -429,17 +462,101 @@ namespace Tests.Editor.BuildReportVisualizer
                 m_Root.Q<ScrollView>(BuildReportUtility.SummaryTabScroll).style.visibility.value);
         }
 
+        static string BuildTypeDescriptionOf(BuildLayout layout)
+        {
+            return MainPanelSummaryTabEmbedded.GetBuildTypeDescription(
+                layout, BuildLayoutSummary.GetSummaryWithoutAssetTypes(layout));
+        }
+
         [Test]
         public void GetBuildTypeDescription_DistinguishesUpdateBuilds()
         {
-            Assert.AreEqual("Addressables AssetBundle Build", MainPanelSummaryTabEmbedded.GetBuildTypeDescription(BuildType.NewBuild));
-            Assert.AreEqual("Addressables Content Update Build", MainPanelSummaryTabEmbedded.GetBuildTypeDescription(BuildType.UpdateBuild));
+            BuildLayout layout = CreateLayout();
+            Assert.AreEqual("Addressables AssetBundle Build", BuildTypeDescriptionOf(layout));
+
+            layout.BuildType = BuildType.UpdateBuild;
+            Assert.AreEqual("Addressables Content Update Build", BuildTypeDescriptionOf(layout));
+        }
+
+        [Test]
+        public void GetBuildTypeDescription_SaysWhenTheBuildWroteContentDirectories()
+        {
+            BuildLayout layout = CreateLayout();
+            layout.ContentDirectories.Add(new BuildLayout.ContentDirectory());
+
+            Assert.AreEqual("Addressables AssetBundle and Content Directory Build", BuildTypeDescriptionOf(layout));
+        }
+
+        [Test]
+        public void GetBuildTypeDescription_WithOnlyContentDirectories_DoesNotClaimAssetBundles()
+        {
+            BuildLayout layout = CreateLayout();
+            layout.Groups.Clear();
+            layout.ContentDirectories.Add(new BuildLayout.ContentDirectory());
+
+            Assert.AreEqual("Addressables Content Directory Build", BuildTypeDescriptionOf(layout));
+        }
+
+        [Test]
+        public void Header_SubtitleSaysContentDirectoriesWereBuilt()
+        {
+            BuildLayout layout = CreateLayout();
+            layout.ContentDirectories.Add(new BuildLayout.ContentDirectory());
+            m_View.Consume(layout, "AssetBundle_myname", null);
+
+            Assert.AreEqual("StandaloneWindows64 • Addressables AssetBundle and Content Directory Build",
+                HeaderText(k_HeaderSubtitleClass));
         }
 
         [Test]
         public void FormatAssetCount_WithNoAssets_OmitsThePercentage()
         {
             Assert.AreEqual("0", MainPanelSummaryTabEmbedded.FormatAssetCount(0, 0));
+        }
+
+        static BuildStepData Step(string name, bool isBuildTask = false)
+        {
+            return new BuildStepData { Name = name, Depth = 0, DurationMs = 1d, IsBuildTask = isBuildTask };
+        }
+
+        static string TooltipFor(BuildStepData[] steps, int id)
+        {
+            return MainPanelSummaryTabEmbedded.GetStepTooltip(steps,
+                new BuildAnalysisStep { Id = id, Name = steps[id].Name, Depth = steps[id].Depth });
+        }
+
+        [Test]
+        public void GetStepTooltip_TellsEachCappedRowWhereTheRestOfItIs()
+        {
+            var steps = new[]
+            {
+                Step("Building Bundled Assets"),
+                Step(BuildReportUtility.ContentDirectoryStepName),
+                Step("WriteSerializedFiles", isBuildTask: true),
+            };
+
+            Assert.IsNull(TooltipFor(steps, 0), "A step that simply had no children says nothing.");
+            Assert.AreEqual(MainPanelSummaryTabEmbedded.k_ContentDirectoryStepTooltip, TooltipFor(steps, 1));
+            Assert.AreEqual(MainPanelSummaryTabEmbedded.k_BuildTaskStepTooltip, TooltipFor(steps, 2));
+        }
+
+        [Test]
+        public void GetStepTooltip_WithAnIdOutsideTheSteps_IsNull()
+        {
+            var steps = new[] { Step("WriteSerializedFiles", isBuildTask: true) };
+
+            Assert.IsNull(MainPanelSummaryTabEmbedded.GetStepTooltip(steps,
+                new BuildAnalysisStep { Id = 7, Name = "Gone" }));
+            Assert.IsNull(MainPanelSummaryTabEmbedded.GetStepTooltip(Array.Empty<BuildStepData>(),
+                new BuildAnalysisStep { Id = 0, Name = "Gone" }));
+        }
+
+        // Foundations caps an Editor tooltip at 200 characters.
+        [Test]
+        public void StepTooltips_StayWithinTheLengthATooltipCanShow()
+        {
+            Assert.Less(MainPanelSummaryTabEmbedded.k_ContentDirectoryStepTooltip.Length, 201);
+            Assert.Less(MainPanelSummaryTabEmbedded.k_BuildTaskStepTooltip.Length, 201);
         }
     }
 }

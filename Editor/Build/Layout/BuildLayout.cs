@@ -159,6 +159,10 @@ namespace UnityEditor.AddressableAssets.Build.Layout
         [SerializeField]
         internal string BuildSessionGuidString;
 
+        // Profiler file next to this layout; empty if objects are inline
+        [SerializeField]
+        internal string ProfilerFileName;
+
         /// <summary>
         /// If the build was a new build or an update for a previous build
         /// </summary>
@@ -282,6 +286,7 @@ namespace UnityEditor.AddressableAssets.Build.Layout
 
         private bool m_HeaderRead = false;
         internal bool m_BodyRead = false;
+        internal bool m_ObjectsAttached = false;
 
         private FileStream m_FileStream = null;
         private StreamReader m_StreamReader = null;
@@ -301,6 +306,7 @@ namespace UnityEditor.AddressableAssets.Build.Layout
             public string BuildError;
             public GUID BuildSessionGUID;
             public string BuildSessionGuidString;
+            public string ProfilerFileName;
             public int DuplicatedAssetCount;
         }
 
@@ -358,6 +364,7 @@ namespace UnityEditor.AddressableAssets.Build.Layout
                     BuildError = this.BuildError,
                     BuildSessionGUID = this.AddressablesBuildSessionGUID,
                     BuildSessionGuidString = this.BuildSessionGuidString,
+                    ProfilerFileName = this.ProfilerFileName,
                     DuplicatedAssetCount = this.DuplicatedAssetCount
                 };
                 headerJson = JsonUtility.ToJson(header, false);
@@ -507,6 +514,20 @@ namespace UnityEditor.AddressableAssets.Build.Layout
             }
 
             return true;
+        }
+
+        // JsonUtility is marked as thread safe.
+        internal static BuildLayout ReadFullThreadSafe(string path)
+        {
+            BuildLayout layout = JsonUtility.FromJson<BuildLayout>(System.IO.File.ReadAllText(path));
+            if (layout == null)
+                return null;
+
+            layout.m_FilePath = path;
+            layout.RestoreSessionGuidFromString();
+            layout.m_HeaderRead = true;
+            layout.m_BodyRead = true;
+            return layout;
         }
 
         private void RestoreSessionGuidFromString()

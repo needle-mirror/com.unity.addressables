@@ -337,7 +337,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             Dictionary<string, string> guidToNewPath = new Dictionary<string, string>();
 
-            var message = "Any assets in Resources that you wish to mark as Addressable must be moved within the project. We will move the files to:\n\n";
+            var message = "Assets in Resources can't be Addressable. To mark these assets Addressable, Unity will move them to:\n\n";
             for (int i = 0; i < guids.Count; i++)
             {
                 var newName = paths[i].Replace("\\", "/");
@@ -350,8 +350,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 message += newName + "\n";
             }
 
-            message += "\nAre you sure you want to proceed?";
-            if (!showDialog || EditorUtility.DisplayDialog("Move From Resources", message, "Yes", "No"))
+            if (!showDialog || EditorUtility.DisplayDialog("Move Assets from Resources", message, "Move Assets", "Cancel"))
             {
                 settings.MoveAssetsFromResources(guidToNewPath, targetGroup);
                 return true;
@@ -471,7 +470,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
             AssetList assets = GetVCAssets(path);
             var uneditableAssets = new List<Asset>();
-            string message = "Check out file(s)?\n\n";
+            string message = "Addressables settings can't be saved because the following files are locked by version control:\n\n";
             foreach (Asset asset in assets)
             {
                 if (!Provider.IsOpenForEdit(asset))
@@ -484,8 +483,10 @@ namespace UnityEditor.AddressableAssets.Settings
             if (uneditableAssets.Count == 0)
                 return false;
 
+            message += "\nTo save your changes, check out the files.";
+
             bool openedAsset = true;
-            if (EditorUtility.DisplayDialog("Attempting to modify files that are uneditable", message, "Yes", "No"))
+            if (EditorUtility.DisplayDialog("Files Locked by Version Control", message, "Check Out Files", "Cancel"))
             {
                 foreach (Asset asset in uneditableAssets)
                 {
@@ -505,8 +506,8 @@ namespace UnityEditor.AddressableAssets.Settings
         {
 #if !ENABLE_CCD
             var confirm = EditorUtility.DisplayDialog("Install CCD Management SDK Package",
-                "Are you sure you want to install the CCD Management SDK package and enable CCD features within Addressables?\nTo remove this package and its related features please use the Package manager, or uncheck the Addressable Asset Settings > Cloud Content Delivery > Enable CCD Features toggle.",
-                "Yes", "No");
+                "To enable Cloud Content Delivery (CCD) features, install the CCD Management SDK package.",
+                "Install Package", "Cancel");
             if (confirm)
             {
                 AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.InstallCCDManagementPackage);
@@ -519,7 +520,7 @@ namespace UnityEditor.AddressableAssets.Settings
 
         internal static bool RemoveCCDPackage()
         {
-            var confirm = EditorUtility.DisplayDialog("Remove CCD Management SDK Package", "Are you sure you want to remove the CCD Management SDK package?", "Yes", "No");
+            var confirm = EditorUtility.DisplayDialog("Remove CCD Management SDK Package", "This removes the CCD Management SDK package and disables Cloud Content Delivery (CCD) features.", "Remove Package", "Cancel");
             if (confirm)
             {
                 Client.Remove("com.unity.services.ccd.management");
@@ -776,7 +777,7 @@ namespace UnityEditor.AddressableAssets.Settings
             var entriesToMove = new List<AddressableAssetEntry>();
             foreach (AddressableAssetEntry entry in entries)
             {
-                if (entry == null || entry.parentGroup != null && entry.parentGroup == group)
+                if (entry == null || entry.parentGroup == group && !IsFolderAsset(entry))
                     continue;
                 entriesToMove.Add(entry);
             }
@@ -788,13 +789,24 @@ namespace UnityEditor.AddressableAssets.Settings
             foreach (AddressableAssetEntry entry in entriesToMove)
             {
                 modifiedGroups.Add(entry.parentGroup);
-                settings.MoveEntry(entry, group, entry.ReadOnly, false); // do not postEvent per entry
+                bool readOnly = entry.ReadOnly;
+                if (IsFolderAsset(entry))
+                {
+                    entry.ParentEntry = null;
+                    readOnly = false;
+                }
+                settings.MoveEntry(entry, group, readOnly, false); // do not postEvent per entry
             }
 
             foreach (AddressableAssetGroup modifiedGroup in modifiedGroups)
                 OpenAssetIfUsingVCIntegration(modifiedGroup);
 
             settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesToMove, true, false); // batch postEvent callbacks
+        }
+
+        static bool IsFolderAsset(AddressableAssetEntry entry)
+        {
+            return entry.IsSubAsset && !entry.IsSubObject && entry.ParentEntry != null && entry.ParentEntry.IsFolder;
         }
 
 #if UNITY_6000_3_OR_NEWER

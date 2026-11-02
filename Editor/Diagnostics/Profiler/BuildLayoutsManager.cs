@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Unity.Collections;
+using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
 using UnityEditor.AddressableAssets.Build.Layout;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -11,7 +12,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 {
     internal class BuildLayoutsManager
     {
-        private class ActiveLayout
+        internal class ActiveLayout
         {
             public Hash128 BuildResultHash;
 
@@ -20,7 +21,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
             public ActiveLayout(BuildLayout layout)
             {
+                if (!string.IsNullOrEmpty(layout.BuildResultHash))
+                    BuildResultHash = Hash128.Parse(layout.BuildResultHash);
                 layout.ReadFull();
+                ProfilerData.TryAttachObjects(layout);
                 foreach (BuildLayout.Bundle bundle in BuildLayoutHelpers.EnumerateBundles(layout))
                 {
                     int bundleCode = bundle.InternalName.GetHashCode();
@@ -56,6 +60,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         private Dictionary<Hash128, BuildLayout> m_BuildLayouts = new Dictionary<Hash128, BuildLayout>();
         private readonly List<ActiveLayout> m_ActiveLayouts = new List<ActiveLayout>();
+        internal IReadOnlyList<ActiveLayout> ActiveLayouts => m_ActiveLayouts;
 
         internal void ClearReports()
         {
@@ -69,7 +74,7 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
             if (Directory.Exists(Addressables.BuildReportPath))
             {
-                foreach (string file in Directory.EnumerateFiles(Addressables.BuildReportPath, "*.json", SearchOption.TopDirectoryOnly))
+                foreach (string file in Directory.EnumerateFiles(Addressables.BuildReportPath, $"{BuildLayoutGenerationTask.m_LayoutFileName}_*.json", SearchOption.TopDirectoryOnly))
                 {
                     if (!TryLoadLayoutAtPath(file, out BuildLayout layout))
                         continue;
@@ -93,6 +98,10 @@ namespace UnityEditor.AddressableAssets.Diagnostics
 
         public bool LoadManualReport(string path)
         {
+            // the profiler file is only usable through its layout
+            if (ProfilerData.IsProfilerFile(path))
+                path = ProfilerData.GetLayoutPath(path) ?? path;
+
             if (!TryLoadLayoutAtPath(path, out BuildLayout layout, true))
                 return false;
 

@@ -14,7 +14,7 @@ Before starting the build, set the active [Profile](AddressableAssetsProfiles.md
 
 The settings defined by [`AddressableAssetSettings`](xref:UnityEditor.AddressableAssets.Settings.AddressableAssetSettings) include the list of [groups](groups-intro.md) and the [profile](profiles-introduction.md) to use.
 
-To access the settings displayed in the Unity Editor (menu: __Window > Asset Management > Addressables > Settings__), use the static [`AddressableAssetSettingsDefaultObject.Settings`](xref:UnityEditor.AddressableAssets.AddressableAssetSettingsDefaultObject.Settings) property. However, if desired, you can use a different settings object for a build.
+To access the settings displayed in the Unity Editor (select the `AddressableAssetSettings` asset in the Project window, or use __Tools > Show Settings in Inspector__ from the Addressables Groups window), use the static [`AddressableAssetSettingsDefaultObject.Settings`](xref:UnityEditor.AddressableAssets.AddressableAssetSettingsDefaultObject.Settings) property. However, if desired, you can use a different settings object for a build.
 
 To load a custom settings object in a build:
 

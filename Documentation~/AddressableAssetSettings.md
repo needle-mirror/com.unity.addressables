@@ -6,7 +6,7 @@ uid: addressables-asset-settings
 
 Reference for project-level Addressables settings, including profiles, catalogs, downloads, build options, and system configuration.
 
-To manage how Addressable assets work in your project, use the **Addressable Asset Settings** Inspector. To open this Inspector, go to **Window** &gt; **Asset Management** &gt; **Addressables** &gt; **Settings**.
+To manage how Addressable assets work in your project, use the **Addressable Asset Settings** Inspector. To open it, select the `AddressableAssetSettings` asset in the Project window, or go to the **Addressables Groups** window and choose **Tools &gt; Show Settings in Inspector**.
 
 The Addressables system stores the settings asset in the `AddressableSettingsData` folder in the project's `Assets` folder. If this folder doesn't exist yet, you must initialize the Addressables system from the [Groups window](xref:addressables-groups-window) (menu: **Window** &gt; **Asset Management** &gt; **Addressables** &gt; **Groups**).
 

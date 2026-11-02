@@ -40,7 +40,7 @@ namespace UnityEditor.AddressableAssets.GUI
             Editor.finishedDefaultHeaderGUI += OnPostHeaderGUI;
         }
 
-        static void SetAaEntry(AddressableAssetSettings aaSettings, List<TargetInfo> targetInfos, bool create)
+        internal static void SetAaEntry(AddressableAssetSettings aaSettings, List<TargetInfo> targetInfos, bool create)
         {
             if (create && aaSettings.DefaultGroup.ReadOnly)
             {
@@ -78,7 +78,10 @@ namespace UnityEditor.AddressableAssets.GUI
                 var otherTargetInfos = targetInfos.Except(resourceTargets);
                 List<string> otherTargetGuids = new List<string>(targetInfos.Count);
                 foreach (var info in otherTargetInfos)
+                {
                     otherTargetGuids.Add(info.Guid);
+                    aaSettings.FindAssetEntry(info.Guid)?.LeaveHomeFolder(false);
+                }
 
                 var entriesCreated = new List<AddressableAssetEntry>();
                 var entriesMoved = new List<AddressableAssetEntry>();
@@ -145,7 +148,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 {
                     if (info.MainAssetEntry == null)
                         continue;
-                    if (info.MainAssetEntry.IsSubAsset)
+                    if (info.MainAssetEntry.IsSubAsset || info.MainAssetEntry.IsFolderMember)
                         subAssetsAddressable++;
                     else
                         mainAssetsAddressable++;
@@ -205,7 +208,7 @@ namespace UnityEditor.AddressableAssets.GUI
 
                     if (editor.targets.Length == 1)
                     {
-                        if (!entryInfo.IsMainAsset || entryInfo.MainAssetEntry.IsSubAsset)
+                        if (!entryInfo.IsMainAsset || entryInfo.MainAssetEntry.IsSubAsset || entryInfo.MainAssetEntry.IsFolderMember)
                         {
                             bool preAddressPrevEnabledState = UnityEngine.GUI.enabled;
                             UnityEngine.GUI.enabled = false;
@@ -343,7 +346,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     labelCount++;
                     labelNameToFreqCount[label] = labelCount;
 
-                    if (entry.ReadOnly || entry.IsSubAsset)
+                    if (entry.ReadOnly || entry.IsSubAsset || entry.IsFolderMember)
                         nonEditableLabels.Add(label);
                 }
             }

@@ -96,9 +96,9 @@ namespace UnityEditor.AddressableAssets.Build
             bool hasUpdatedContentSinceUpdate = Convert.ToBoolean(EditorPrefs.GetInt(ContentUpdateScript.FirstTimeUpdatePreviousBuild, 0));
             if (!hasUpdatedContentSinceUpdate)
             {
-                int firstTimeSelection = EditorUtility.DisplayDialogComplex("New Content Update",
-                    "Starting in 1.20.0+ \"Update Previous Build\" now automatically checks the previous addressables_content_state.bin for update restrictions. " +
-                    "This automatic behavior, and the file location, can be adjusted in the Addressable Asset Settings.", "Continue", "Cancel build", "Open Settings");
+                int firstTimeSelection = EditorUtility.DisplayDialogComplex("\"Update a Previous Build\" Changed",
+                    "Starting in 1.20.0+, \"Update Previous Build\" automatically checks the previous addressables_content_state.bin for update restrictions. " +
+                    "To change this behavior or the file location, go to Addressable Asset Settings.", "Continue", "Cancel Build", "Open Settings");
                 EditorPrefs.SetInt(ContentUpdateScript.FirstTimeUpdatePreviousBuild, 1);
                 switch (firstTimeSelection)
                 {
@@ -115,7 +115,7 @@ namespace UnityEditor.AddressableAssets.Build
 
                     //Open settings
                     case 2:
-                        //Same code that gets executed when clicking Inspect System Settings from the tools dropdown
+                        //Same code that gets executed when clicking Show Settings in Inspector from the tools dropdown
                         EditorApplication.ExecuteMenuItem("Window/General/Inspector");
                         EditorGUIUtility.PingObject(AddressableAssetSettingsDefaultObject.Settings);
                         Selection.activeObject = AddressableAssetSettingsDefaultObject.Settings;
@@ -140,8 +140,9 @@ namespace UnityEditor.AddressableAssets.Build
                     AddressableAnalytics.ReportUsageEvent(AddressableAnalytics.UsageEventType.CannotLocateBinFile, false, (int)settings.CheckForContentUpdateRestrictionsOption);
 
                     //Unable to find Content Update .bin
-                    bool selectBin = EditorUtility.DisplayDialog("Unable to Check for Update Restrictions", $"The addressable_content_state.bin file could " +
-                                                                                                            $"not be found at {path}", "Select .bin file", "Cancel content update");
+                    bool selectBin = EditorUtility.DisplayDialog("Unable to Check for Update Restrictions",
+                        $"Update Restrictions can't be checked as addressables_content_state.bin wasn't found at {path}. Select the file to continue.",
+                        "Select .bin File", "Cancel Update");
 
                     if (selectBin)
                         path = ContentUpdateScript.GetContentStateDataPath(true);

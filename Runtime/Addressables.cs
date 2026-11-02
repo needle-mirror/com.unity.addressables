@@ -655,7 +655,8 @@ namespace UnityEngine.AddressableAssets
 
             // Cleaning up the Addressables registration when playmode changes
             // to ensure no editor handles are being kept pointing to unloaded assetbundle.
-            if (change == PlayModeStateChange.ExitingPlayMode)
+            // Disposed on EnteredEditMode so OnApplicationQuit and OnDestroy can still release their handles.
+            if (change == PlayModeStateChange.EnteredEditMode)
             {
                 InternalIdTransformFunc = null;
                 WebRequestOverride = null;
@@ -664,7 +665,8 @@ namespace UnityEngine.AddressableAssets
             }
             else if (change == PlayModeStateChange.ExitingEditMode)
             {
-                if (WarnOnAddressablesUsageOutsidePlaymode)
+                // Only warn if addressables content was actually loaded. Callers that only use the ResourceManager directly do not need to be warned.
+                if (WarnOnAddressablesUsageOutsidePlaymode && s_AddressablesImpl.hasStartedInitialization)
                 {
                     Debug.LogWarning(
                         "The Addressables class was used outside playmode and loaded references might be invalidated when entering playmode. " +
@@ -836,7 +838,7 @@ namespace UnityEngine.AddressableAssets
         ///<para>
         /// In this example we add a build pre-process hook. When building a player this throws an exception if the content has not been built.
         /// This could be useful when 'Build Addressables on Player Build' is not set in Addressables Settings.</para>
-        /// <code source="../Tests/Editor/DocExampleCode/ScriptReference/ContentBuiltcheck.cs" region="CONTENT_BUILT_CHECK"/>
+        /// <code source="../Tests/Editor/DocExampleCode/ScriptReference/ContentBuiltCheck.cs" region="CONTENT_BUILT_CHECK"/>
         /// </example>
         public static string BuildPath
         {

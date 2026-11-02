@@ -208,7 +208,6 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
                 }
             }
 
-            DisplayBuildReport();
             return result;
         }
 
@@ -625,8 +624,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             foreach (var schema in assetGroup.Schemas)
             {
-                using (Log.ScopedStep(LogLevel.Verbose, "ProcessGroupSchema",
-                           ("Name", schema.GetType().FullName),
+                string schemaName = schema.GetType().FullName;
+                using (Log.ScopedStep(LogLevel.Verbose, $"ProcessGroupSchema {schemaName}",
+                           ("Name", schemaName),
                            ("Enabled", schema.IsEnabled.ToString())))
                 {
                     string errorString = "";

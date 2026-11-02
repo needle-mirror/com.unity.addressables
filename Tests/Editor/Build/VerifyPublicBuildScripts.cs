@@ -1,13 +1,9 @@
 using System;
 using System.Collections;
 using System.IO;
-using System.Numerics;
+using System.Linq;
 using NUnit.Framework;
-using UnityEditor;
-using UnityEditor.Experimental.GraphView;
-using UnityEngine;
-using UnityEngine.AddressableAssets.ResourceLocators;
-using UnityEngine.ResourceManagement.ResourceProviders;
+using UnityEditor.Compilation;
 using UnityEngine.TestTools;
 using File = System.IO.File;
 using Path = System.IO.Path;
@@ -18,11 +14,25 @@ using Path = System.IO.Path;
 /// had crept in and made it impossible to do this without copying the entire package. This test verifies
 /// that you can copy the script into your own namespace and it will compile.
 /// </summary>
+/// <remarks>
+/// The scripts are compiled out of the project with AssemblyBuilder rather than copied into Assets.
+/// That avoids an asset refresh, a full script compile and a domain reload for every test case.
+/// </remarks>
 public class VerifyPublicBuildScripts
 {
+    // Temp is not imported by the AssetDatabase, so nothing written here triggers a refresh.
+    private const string k_TempRoot = "Temp/VerifyPublicBuildScripts";
+    private const string k_SourceFolder = k_TempRoot + "/Source";
+
+    // This name must not appear in any InternalsVisibleTo attribute in the package,
+    // otherwise the compiled scripts would get access to the internal APIs this test guards against.
+    private const string k_AssemblyPath = k_TempRoot + "/Output/VerifyPublicBuildScripts.Compiled.dll";
+
+    private static readonly TimeSpan k_CompileTimeout = TimeSpan.FromMinutes(2);
+
     private string m_PackagePath;
     private string m_SamplePath;
-    private string m_FolderPath = $"Assets{Path.DirectorySeparatorChar}ScriptFolder/Editor";
+    private string m_LoadScenePath;
 
     /// <summary>
     /// Test setup for validating build scripts
@@ -30,16 +40,12 @@ public class VerifyPublicBuildScripts
     [SetUp]
     public void SetUp()
     {
-        if(AssetDatabase.IsValidFolder(m_FolderPath))
-        {
-            AssetDatabase.DeleteAsset(m_FolderPath);
-        }
-        AssetDatabase.CreateFolder("Assets", "ScriptFolder");
-        AssetDatabase.CreateFolder("Assets/ScriptFolder", "Editor");
+        DeleteTempRoot();
+        Directory.CreateDirectory(k_SourceFolder);
 
         m_PackagePath = "Packages/com.unity.addressables";
         m_SamplePath = "Samples";
-        if (Directory.Exists(String.Join($"{Path.DirectorySeparatorChar}", new [] {m_PackagePath, "Samples~"})))
+        if (Directory.Exists(Path.Combine(m_PackagePath, "Samples~")))
         {
             // when packaging the samples are moved into a hidden directory
             m_SamplePath = "Samples~";
@@ -47,10 +53,8 @@ public class VerifyPublicBuildScripts
 
         // this is a dependant class and copying is easier than an asmdef
         var loadScenePath = "Samples/CustomBuildAndPlaymodeScripts/LoadSceneForCustomBuild.cs";
-        var fullPath = String.Join($"{Path.DirectorySeparatorChar}", new[] { m_PackagePath, loadScenePath });
-        fullPath = fullPath.Replace("Samples", m_SamplePath);
-        var testFilePath = String.Join($"{Path.DirectorySeparatorChar}", new[] { m_FolderPath, Path.GetFileName(loadScenePath) });
-        File.Copy(fullPath, testFilePath);
+        m_LoadScenePath = $"{k_SourceFolder}/{Path.GetFileName(loadScenePath)}";
+        File.Copy(GetPackageFilePath(loadScenePath), m_LoadScenePath);
     }
 
     /// <summary>
@@ -59,10 +63,7 @@ public class VerifyPublicBuildScripts
     [TearDown]
     public void TearDown()
     {
-        if(AssetDatabase.IsValidFolder(m_FolderPath))
-        {
-            AssetDatabase.DeleteAsset(m_FolderPath);
-        }
+        DeleteTempRoot();
     }
 
     private static string[] BuildScripts =
@@ -136,12 +137,9 @@ public class VerifyPublicBuildScripts
     /// <param name="buildScriptPath">The filepath of the build script</param>
     /// <returns>IEnumerator for async test</returns>
     [UnityTest]
-    [Ignore("Compilation and domain reload per case is too slow for CI. Tracked in CBD-2425.")]
     public IEnumerator Verify_BuildScript_HasNoInternalApis([ValueSource(nameof(BuildScripts))] string buildScriptPath)
     {
-        var fullPath = String.Join($"{Path.DirectorySeparatorChar}", new[] { m_PackagePath, buildScriptPath });
-        fullPath = fullPath.Replace("Samples", m_SamplePath);
-        var content = File.ReadAllText(fullPath);
+        var content = File.ReadAllText(GetPackageFilePath(buildScriptPath));
         content = StripContentDirectoriesGuard(content);
         content = content.Replace("namespace UnityEditor.AddressableAssets.Build.DataBuilders", "namespace TestBuildScriptNamespace");
         // this is the using statement for the package the scripts are being copied from
@@ -149,34 +147,26 @@ public class VerifyPublicBuildScripts
         content = "using UnityEditor.AddressableAssets.Build; // added by unit test\n" + content;
         content = "using UnityEditor.AddressableAssets.Build.DataBuilders; // added by unit test\n" + content;
         content = "using UnityEditor.AddressableAssets; // added by unit test\n" + content;
-        // content = "compile error;" + content;
 
-        var testFilePath = String.Join($"{Path.DirectorySeparatorChar}", new[] { m_FolderPath, Path.GetFileName(buildScriptPath) });
-        Debug.Log(testFilePath);
+        var testFilePath = WriteSourceFile(buildScriptPath, content);
 
-        File.WriteAllText(testFilePath, content);
-        AssetDatabase.Refresh();
-        yield return new WaitForDomainReload();
-
-        // assert we didn't get any log messages when compiling the test file
-        LogAssert.NoUnexpectedReceived();
+        yield return CompileAndAssertNoErrors(m_LoadScenePath, testFilePath);
     }
 
 #if ENABLE_CONTENT_DIRECTORIES
     /// <summary>
     /// Verify that a group of related build scripts compile together without using internal APIs
     /// </summary>
-    /// <param name="buildScriptPaths">File paths of the build scripts to compile as a group</param>
+    /// <param name="group">The group of build scripts to compile together</param>
     /// <returns>IEnumerator for async test</returns>
     [UnityTest]
-    [Ignore("Compilation and domain reload per case is too slow for CI. Tracked in CBD-2425.")]
     public IEnumerator Verify_BuildScriptGroup_HasNoInternalApis([ValueSource(nameof(BuildScriptGroups))] BuildScriptGroupData group)
     {
-        foreach (var buildScriptPath in group.Files)
+        var scriptPaths = new string[group.Files.Length];
+        for (int i = 0; i < group.Files.Length; i++)
         {
-            var fullPath = String.Join($"{Path.DirectorySeparatorChar}", new[] { m_PackagePath, buildScriptPath });
-            fullPath = fullPath.Replace("Samples", m_SamplePath);
-            var content = File.ReadAllText(fullPath);
+            var buildScriptPath = group.Files[i];
+            var content = File.ReadAllText(GetPackageFilePath(buildScriptPath));
             content = StripContentDirectoriesGuard(content);
             content = content.Replace("namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders", "namespace TestBuildScriptNamespace");
             content = content.Replace("namespace UnityEditor.AddressableAssets.Build.DataBuilders", "namespace TestBuildScriptNamespace");
@@ -186,22 +176,79 @@ public class VerifyPublicBuildScripts
             content = "using UnityEditor.AddressableAssets.Build; // added by unit test\n" + content;
             content = "using UnityEditor.AddressableAssets; // added by unit test\n" + content;
 
-            var testFilePath = String.Join($"{Path.DirectorySeparatorChar}", new[] { m_FolderPath, Path.GetFileName(buildScriptPath) });
-            Debug.Log(testFilePath);
-
-            File.WriteAllText(testFilePath, content);
+            scriptPaths[i] = WriteSourceFile(buildScriptPath, content);
         }
 
-        AssetDatabase.Refresh();
-        yield return new WaitForDomainReload();
-
-        LogAssert.NoUnexpectedReceived();
+        yield return CompileAndAssertNoErrors(scriptPaths);
     }
 #endif
 
+    private string GetPackageFilePath(string packageRelativePath)
+    {
+        return Path.Combine(m_PackagePath, packageRelativePath).Replace("Samples", m_SamplePath);
+    }
+
+    private static string WriteSourceFile(string packageRelativePath, string content)
+    {
+        var path = $"{k_SourceFolder}/{Path.GetFileName(packageRelativePath)}";
+        File.WriteAllText(path, content);
+        return path;
+    }
+
+    private static void DeleteTempRoot()
+    {
+        if (Directory.Exists(k_TempRoot))
+            Directory.Delete(k_TempRoot, true);
+    }
+
+    // Compiles the scripts into a standalone editor assembly. Like the predefined Assembly-CSharp-Editor
+    // assembly a user's copy would land in, it references the compiled package assemblies but has no
+    // access to their internals. The output is written outside Assets, so there is no domain reload.
+    private static IEnumerator CompileAndAssertNoErrors(params string[] scriptPaths)
+    {
+        CompilerMessage[] messages = null;
+
+        // AssemblyBuilder is obsolete, but it is the only public API that compiles against the
+        // project's assemblies without importing the scripts into the project.
+#pragma warning disable CS0618
+        var builder = new AssemblyBuilder(k_AssemblyPath, scriptPaths)
+        {
+            flags = AssemblyBuilderFlags.EditorAssembly,
+            referencesOptions = ReferencesOptions.UseEngineModules,
+        };
+        builder.buildFinished += (_, compilerMessages) => messages = compilerMessages;
+
+        var deadline = DateTime.UtcNow + k_CompileTimeout;
+
+        // Build returns false while the editor or another AssemblyBuilder is compiling.
+        while (!builder.Build())
+        {
+            if (DateTime.UtcNow > deadline)
+                Assert.Fail($"AssemblyBuilder could not start within {k_CompileTimeout.TotalSeconds}s because another compilation was in progress.");
+            yield return null;
+        }
+
+        // Reading status is what completes the build and raises buildFinished.
+        while (builder.status != AssemblyBuilderStatus.Finished)
+        {
+            if (DateTime.UtcNow > deadline)
+                Assert.Fail($"AssemblyBuilder did not finish within {k_CompileTimeout.TotalSeconds}s.");
+            yield return null;
+        }
+#pragma warning restore CS0618
+
+        Assert.IsNotNull(messages, "AssemblyBuilder finished without reporting compiler messages.");
+
+        var errors = messages
+            .Where(m => m.type == CompilerMessageType.Error)
+            .Select(m => m.message)
+            .ToArray();
+        Assert.IsEmpty(errors, "Copied build scripts failed to compile:\n" + string.Join("\n", errors));
+    }
+
     // Content Directory source files are wrapped in #if ENABLE_CONTENT_DIRECTORIES.
     // That symbol is not defined for the predefined Assembly-CSharp-Editor assembly
-    // the copied test files land in, so without stripping the guard the body would
+    // a user's copy would land in, so without stripping the guard the body would
     // be preprocessed out and the compile check would pass vacuously.
     private static string StripContentDirectoriesGuard(string content)
     {

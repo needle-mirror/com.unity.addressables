@@ -305,8 +305,9 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
                             if (!aaContext.assetGroupToBundles.ContainsKey(assetGroup))
                                 continue;
 
-                            using (m_Logger.ScopedStep(LogLevel.Info, "PostProcessGroup",
-                                ("Name", assetGroup.Name),
+                            string groupName = assetGroup.Name;
+                            using (m_Logger.ScopedStep(LogLevel.Info, $"PostProcessGroup {groupName}",
+                                ("Name", groupName),
                                 ("Bundles", aaContext.assetGroupToBundles[assetGroup].Count.ToString())))
                             {
                                 PostProcessBundles(assetGroup, results, addrResult,

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor.AddressableAssets.GUI;
 using UnityEditor.AddressableAssets.GUI.Adapters;
@@ -51,6 +52,32 @@ namespace UnityEditor.AddressableAssets.Tests
 
             // Last child is the complete name of the group
             Assert.NotNull(item.children.FirstOrDefault(c => c.displayName == nameWithDashes));
+        }
+
+        [Test]
+        public void OnGUI_WhenGroupHierarchyIsEnabled_DrawsFolderRowsWithoutException()
+        {
+            CreateGroup("Animal-Cat");
+
+            ProjectConfigData.ShowGroupsAsHierarchy = true;
+            var tree = CreateExpandedTree();
+            Assert.NotNull(tree.Root.children.FirstOrDefault(c => c.displayName == "Animal"));
+
+            var window = EditorWindow.GetWindow<TreeViewTestWindow>();
+            try
+            {
+                window.Tree = tree;
+                var repaintImmediately = typeof(EditorWindow).GetMethod("RepaintImmediately", BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.NotNull(repaintImmediately, "EditorWindow.RepaintImmediately not found");
+                repaintImmediately.Invoke(window, null);
+
+                Assert.IsTrue(window.Drawn);
+                Assert.IsNull(window.Exception, window.Exception?.ToString());
+            }
+            finally
+            {
+                window.Close();
+            }
         }
 
         [Test]
@@ -352,6 +379,28 @@ namespace UnityEditor.AddressableAssets.Tests
         string GetName(string assetGuid)
         {
             return Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(assetGuid));
+        }
+    }
+
+    class TreeViewTestWindow : EditorWindow
+    {
+        public AddressableAssetEntryTreeView Tree;
+        public bool Drawn;
+        public System.Exception Exception;
+
+        void OnGUI()
+        {
+            if (Tree == null)
+                return;
+            try
+            {
+                Tree.OnGUI(new Rect(0, 0, position.width, position.height));
+                Drawn = true;
+            }
+            catch (System.Exception e)
+            {
+                Exception = e;
+            }
         }
     }
 }

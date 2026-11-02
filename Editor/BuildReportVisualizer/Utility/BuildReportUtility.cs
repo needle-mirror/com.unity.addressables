@@ -39,6 +39,8 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
 
         public static readonly string ReportContentRoot = nameof(ReportContentRoot);
+        public static readonly string ReportBody = nameof(ReportBody);
+        public static readonly string ReportLoadingOverlay = nameof(ReportLoadingOverlay);
         public static readonly string MainPanel = nameof(MainPanel);
         public static readonly string DetailsPanel = nameof(DetailsPanel);
 
@@ -147,6 +149,14 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
         public const string TepFileName = "AddressablesBuildTEP.json";
 
+        public const string StepsFileName = "AddressablesBuildSteps.json";
+
+        // Here, not in ContentDirectorySchemaBuilder, so the two sides cannot drift behind their own defines.
+        public const string ContentDirectoryStepName = "BuildPipeline.BuildContentDirectory";
+
+        // Here rather than beside the build history code, so files outside that define can use it too.
+        public const string EmbeddedLayoutFileName = "AddressablesBuildLayout.json";
+
         // Summary tab
         public static readonly string SummaryTabScroll = nameof(SummaryTabScroll);
 
@@ -201,6 +211,7 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
         public static readonly string SummaryTabRelatedBuilds = nameof(SummaryTabRelatedBuilds);
 
         public static readonly string SummaryTabContentDirectories = nameof(SummaryTabContentDirectories);
+        public static readonly string SummaryTabBuildSteps = nameof(SummaryTabBuildSteps);
         public static readonly string SummaryTabPotentialIssues = nameof(SummaryTabPotentialIssues);
         public static readonly string SummaryTabIssuesIcon = nameof(SummaryTabIssuesIcon);
         public static readonly string SummaryTabIssuesMessage = nameof(SummaryTabIssuesMessage);

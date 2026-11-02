@@ -10,7 +10,7 @@ namespace AddressableAssets.DocExampleCode
     using UnityEngine.AddressableAssets;
 
 
-    [CreateAssetMenu(fileName = "CustomLocationBuildScript.asset", menuName = "Addressables/Custom Build/Custom Location Build Script")]
+    [CreateAssetMenu(fileName = "CustomLocationBuildScript.asset", menuName = "Addressables/Custom Location Build Script", order = 101)]
     public class CustomLocationBuildScript : BuildScriptPackedMode
     {
 

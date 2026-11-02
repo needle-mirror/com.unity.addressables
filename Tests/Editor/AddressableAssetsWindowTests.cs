@@ -59,6 +59,29 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void AddressableAssetWindow_RemoveGroup_ReadOnlyGroupGetsRemoved()
+        {
+            var group = Settings.CreateGroup("ReadOnlyGroup", false, true, true, new List<AddressableAssetGroupSchema>());
+            AddressableAssetEntryTreeView treeView = new AddressableAssetEntryTreeView(Settings);
+            treeView.RemoveGroupImpl(new List<AssetEntryTreeViewItem>() {new AssetEntryTreeViewItem(group, 1)}, true);
+            Assert.IsNull(Settings.FindGroup("ReadOnlyGroup"));
+        }
+
+        [Test]
+        public void AddressableAssetWindow_RemoveGroup_DefaultGroupIsNotRemoved()
+        {
+            var defaultGroup = Settings.DefaultGroup;
+            var group = Settings.CreateGroup("RemoveMeGroup", false, false, true, new List<AddressableAssetGroupSchema>());
+            AddressableAssetEntryTreeView treeView = new AddressableAssetEntryTreeView(Settings);
+
+            LogAssert.Expect(LogType.Warning, new Regex("Cannot delete the default group"));
+            treeView.RemoveGroupImpl(new List<AssetEntryTreeViewItem>() {new AssetEntryTreeViewItem(defaultGroup, 1), new AssetEntryTreeViewItem(group, 2)}, true);
+
+            Assert.IsNotNull(Settings.FindGroup(defaultGroup.Name));
+            Assert.IsNull(Settings.FindGroup("RemoveMeGroup"));
+        }
+
+        [Test]
         public void AddressableAssetWindow_RemoveMissingReferences_RemovesAllNullReferences()
         {
             Settings.groups.Add(null);

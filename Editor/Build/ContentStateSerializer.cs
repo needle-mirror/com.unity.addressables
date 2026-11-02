@@ -164,8 +164,7 @@ namespace UnityEditor.AddressableAssets.Build
             }
         }
 
-        [MenuItem("Window/Asset Management/Addressables/Extract Binary Content State", priority = 2053)]
-        private static void ExtractBinaryContentStateMenuCommand()
+        internal static void ExtractBinaryContentStateMenuCommand()
         {
             var contentStatePath = EditorUtility.OpenFilePanelWithFilters(
                 "Select Binary Content State",
@@ -179,7 +178,7 @@ namespace UnityEditor.AddressableAssets.Build
             {
                 EditorUtility.DisplayDialog(
                     "Legacy Format Detected",
-                    "The selected file is in the legacy BinaryFormatter format. Please convert it first using the migration tool.",
+                    "Unity can't extract the content state, because this file uses the legacy BinaryFormatter format. Convert it with the migration tool, then try again.",
                     "OK");
                 return;
             }

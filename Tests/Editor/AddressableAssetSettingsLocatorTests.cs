@@ -442,7 +442,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var fastModeHandle = fmImpl.ResourceManager.StartOperation(new FastModeInitializationOperation(fmImpl, m_Settings), default(AsyncOperationHandle));
             var packedHandle = packedImpl.InitializeAsync(packedModeSettingsPath);
             var packedPlayHandle = packedPlayImpl.InitializeAsync(packedPlayModeSettingsPath);
-            while (!fastModeHandle.IsDone && !packedHandle.IsDone &&
+            while (!fastModeHandle.IsDone || !packedHandle.IsDone ||
                    !packedPlayHandle.IsDone)
                 yield return null;
 

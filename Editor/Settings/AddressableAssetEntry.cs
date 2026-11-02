@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
 using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -56,6 +57,9 @@ namespace UnityEditor.AddressableAssets.Settings
         /// </summary>
         [SerializeField]
         public bool FlaggedDuringContentUpdateRestriction = false;
+
+        [SerializeField]
+        string m_FolderGuid;
 
         internal virtual bool HasSettings()
         {
@@ -128,6 +132,9 @@ namespace UnityEditor.AddressableAssets.Settings
         /// <param name="postEvent">Post modification event.</param>
         public void SetAddress(string addr, bool postEvent = true)
         {
+            if (!string.IsNullOrEmpty(m_FolderGuid) && addr != address)
+                m_FolderGuid = null;
+
             if (m_Address != addr)
             {
                 m_Address = addr;
@@ -136,6 +143,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (m_GUID.Length > 0 && m_Address.Contains('[') && m_Address.Contains(']'))
                     Debug.LogErrorFormat("Address '{0}' cannot contain '[ ]'.", m_Address);
                 SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
+                UpdateFolderMembers(postEvent);
             }
         }
 
@@ -180,14 +188,21 @@ namespace UnityEditor.AddressableAssets.Settings
         {
             get
             {
-                var e = ParentEntry;
-                if (e == null)
-                    return null;
+                var root = RootEntry;
+                if (root != this && root.IsFolder)
+                    return root.address;
+                return root.HomeFolderEntry?.address;
+            }
+        }
+
+        internal AddressableAssetEntry RootEntry
+        {
+            get
+            {
+                var e = this;
                 while (e.ParentEntry != null)
                     e = e.ParentEntry;
-                if (!e.IsFolder)
-                    return null;
-                return e.address;
+                return e;
             }
         }
 
@@ -217,6 +232,131 @@ namespace UnityEditor.AddressableAssets.Settings
         public ISet<string> labels
         {
             get { return m_Labels; }
+        }
+
+        internal bool IsFolderMember => HomeFolderEntry != null;
+
+        internal string FolderGuid => m_FolderGuid;
+
+        internal AddressableAssetEntry HomeFolderEntry
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(m_FolderGuid))
+                    return null;
+
+                var folderEntry = parentGroup?.Settings?.FindAssetEntry(m_FolderGuid);
+                if (folderEntry == null)
+                    return null;
+
+                if (!folderEntry.IsFolder || folderEntry.IsSubAsset)
+                    return null;
+
+                if (!string.IsNullOrEmpty(folderEntry.FolderGuid) || string.IsNullOrEmpty(folderEntry.AssetPath))
+                    return null;
+
+                if (!AssetPath.StartsWith(folderEntry.AssetPath + "/", StringComparison.Ordinal))
+                    return null;
+
+                return folderEntry;
+            }
+        }
+
+        internal void SetHomeFolder(AddressableAssetEntry folderEntry, bool postEvent = true)
+        {
+            if (m_FolderGuid == folderEntry.guid)
+                return;
+
+            m_FolderGuid = folderEntry.guid;
+            CopyAddressAndLabelsFromHomeFolder();
+            SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
+        }
+
+        /// <summary>
+        /// Takes a folder member out of its folder, keeping its current address and labels. Does nothing for other entries.
+        /// </summary>
+        internal void LeaveHomeFolder(bool postEvent = true)
+        {
+            if (string.IsNullOrEmpty(m_FolderGuid))
+                return;
+
+            m_FolderGuid = null;
+            SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
+        }
+
+        internal void UpdateFromHomeFolder(bool postEvent)
+        {
+            if (CopyAddressAndLabelsFromHomeFolder())
+                SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
+        }
+
+        bool CopyAddressAndLabelsFromHomeFolder()
+        {
+            var homeFolder = HomeFolderEntry;
+            if (homeFolder == null)
+                return false;
+
+            bool changed = false;
+            string folderAddress = homeFolder.address + GetRelativePath(AssetPath, homeFolder.AssetPath);
+            if (m_Address != folderAddress)
+            {
+                m_Address = folderAddress;
+                changed = true;
+            }
+
+            if (!m_Labels.SetEquals(homeFolder.labels))
+            {
+                m_Labels = new SortedSet<string>(homeFolder.labels);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        void UpdateFolderMembers(bool postEvent)
+        {
+            if (!IsFolder)
+                return;
+
+            if (IsSubAsset || IsFolderMember)
+                return;
+            parentGroup?.Settings?.UpdateFolderMembers(guid, postEvent);
+        }
+
+        /// <summary>
+        /// Gets the folder key this entry is loaded by, or null if it has none. The settings are those of the group being
+        /// built, except for a folder member, which uses its folder's group so it keeps the keys it shipped with.
+        /// </summary>
+        /// <param name="includeFolderKeys">Whether the group being built adds folder keys to the catalog.</param>
+        /// <param name="includeAddressesForFolderChildren">Whether the group being built keeps the address key of assets loaded by a folder key.</param>
+        /// <param name="includeAddress">True if the entry's own address should also be added to the catalog as a key.</param>
+        /// <returns>The folder key to add to the catalog for this entry, or null if it has none.</returns>
+        public string GetCatalogFolderKey(bool includeFolderKeys, bool includeAddressesForFolderChildren, out bool includeAddress)
+        {
+            var homeGroup = RootEntry.HomeFolderEntry?.parentGroup;
+            if (homeGroup != null && homeGroup.Schemas != null)
+            {
+                includeFolderKeys = false;
+                foreach (var schema in homeGroup.Schemas)
+                {
+                    if (schema != null && schema.IsEnabled && schema is ICanIncludeFolderKeys folderKeySchema && folderKeySchema.IncludeFolderKeysInCatalog)
+                    {
+                        includeFolderKeys = true;
+                        includeAddressesForFolderChildren = folderKeySchema.IncludeAddressesForFolderChildren;
+                        break;
+                    }
+                }
+            }
+
+            string folderKey = includeFolderKeys ? ParentFolderAddress : null;
+            if (string.IsNullOrEmpty(folderKey) || folderKey == address)
+            {
+                includeAddress = true;
+                return null;
+            }
+
+            includeAddress = includeAddressesForFolderChildren;
+            return folderKey;
         }
 
         internal Type m_cachedMainAssetType = null;
@@ -256,6 +396,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (m_Labels.Add(label))
                 {
                     SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
+                    UpdateFolderMembers(postEvent);
                     return true;
                 }
             }
@@ -264,6 +405,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 if (RemoveLabel(label))
                 {
                     SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, this, postEvent);
+                    UpdateFolderMembers(postEvent);
                     return true;
                 }
             }
@@ -293,11 +435,10 @@ namespace UnityEditor.AddressableAssets.Settings
         internal List<object> CreateKeyList(bool includeAddress, bool includeGUID, bool includeLabels, bool includeFolderKey = true, bool includeAddressesForFolderChildren = true)
         {
             var keys = new List<object>();
-            string folderKey = includeFolderKey ? ParentFolderAddress : null;
-            bool isFolderChild = !string.IsNullOrEmpty(folderKey) && folderKey != address;
+            string folderKey = GetCatalogFolderKey(includeFolderKey, includeAddressesForFolderChildren, out bool includeAddressKey);
 
             //the address is normally the first key, unless disabled for folder children
-            if (includeAddress && (includeAddressesForFolderChildren || !isFolderChild))
+            if (includeAddress && includeAddressKey)
                 keys.Add(address);
             if (includeGUID && !string.IsNullOrEmpty(guid))
                 keys.Add(guid);
@@ -318,7 +459,7 @@ namespace UnityEditor.AddressableAssets.Settings
                     RemoveLabel(l);
             }
 
-            if (isFolderChild)
+            if (folderKey != null)
                 keys.Add(folderKey);
 
             return keys;

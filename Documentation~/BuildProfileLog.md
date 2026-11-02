@@ -18,7 +18,7 @@ View the log file with the chrome://tracing tool in Google Chrome or another [Ch
 4. In the file browser, navigate to your Unity project's `Library/com.unity.addressables` folder.
 5. Open the `AddressablesBuildTEP.json` file.
 
-Refer to [Unity Scriptable Build Pipeline](https://docs.unity3d.com/Packages/com.unity.scriptablebuildpipeline@latest) for more information about build performance logging.
+For more information on build performance logging, refer to [Unity Scriptable Build Pipeline](https://docs.unity3d.com/Packages/com.unity.scriptablebuildpipeline@latest/manual/BuildLogger.html).
 
 ## Additional resources
 
