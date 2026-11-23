@@ -1067,7 +1067,7 @@ namespace AddressableAssetsIntegrationTests
             op.Release();
         }
 
-#if !UNITY_SWITCH && !UNITY_SWITCH2
+#if !(UNITY_SWITCH || UNITY_SWITCH2) || ENABLE_CACHING
         [UnityTest]
         public IEnumerator LoadContentCatalogAsync_SetsUpLocalAndRemoteAndCacheLocations()
         {
@@ -1160,7 +1160,7 @@ namespace AddressableAssetsIntegrationTests
             File.Delete(cacheHashFilePath);
         }
 #endif
-#if !UNITY_SWITCH && !UNITY_SWITCH2
+#if !(UNITY_SWITCH || UNITY_SWITCH2) || ENABLE_CACHING
         [UnityTest]
         public IEnumerator LoadContentCatalogAsync_LocationsHaveTimeout()
         {
@@ -3459,7 +3459,7 @@ namespace AddressableAssetsIntegrationTests
             GetRLM(m_Addressables).Add(key, new List<IResourceLocation>() {location});
         }
         [UnityTest]
-        [Platform(Exclude = "PS5")]
+        [UnityPlatform(exclude = new[] { RuntimePlatform.PS5 })]
         public IEnumerator ClearDependencyCache_ClearsAllCachedFilesForKey()
         {
             if (!UseJsonCatalog)

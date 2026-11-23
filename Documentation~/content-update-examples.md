@@ -81,6 +81,22 @@ If only Dependency3 is changed:
 | AssetB|  |
 | | AssetC |
 
+## Addressable folders
+
+If an Addressable folder is in a group with **Prevent Updates** enabled, __Check for Content Update Restrictions__ moves only the changed assets out of the folder, along with any folder assets that [depend on them](#content-update-dependencies). If one scene in the folder changes, all of the folder's scenes move, because they share an AssetBundle. If every asset left in the folder moves, the folder's entry moves to the content update group instead, so no empty folder remains in the static group.
+
+For example, if `Local_Static` contains the Addressable folder `Assets/Characters` and you modify `Hero.prefab`:
+
+| **Local_Static** | **content_update_group** |
+|:---|:---|
+| Assets/Characters<ul><li>Villain.prefab</li><li>Sidekick.prefab</li></ul> | Assets/Characters<ul><li>Hero.prefab</li></ul> |
+
+A moved asset stays linked to its folder and keeps the folder's address and labels. Its **Folder Key** and **Individual Asset Addresses** settings come from the folder's group. All other settings come from the group it moved to. If **Folder Key** is enabled on the folder's group, the moved asset also keeps the folder key, which means that any loads that use the folder key are able to load both the unchanged assets on the user's device and any new assets that have been updated as part of the content update.
+
+In the **Addressables Groups** window, a moved asset appears greyed out under its folder's entry. To change its address or labels, change the folder entry. You can move assets within a folder by dragging the folder entry.
+
+A moved asset becomes an ordinary Addressable asset, and loses the folder key, when it's moved out of its folder entry. This happens if you drag it on its own in the **Addressables Groups** window, mark it Addressable yourself, change its address, or move the asset out of the folder in the Project window. If you remove the folder's entry or its group, the moved asset stops being Addressable.
+
 ## Additional resources
 
 * [Content update build settings](content-update-build-settings.md)

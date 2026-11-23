@@ -129,9 +129,7 @@ namespace UnityEditor.AddressableAssets.Build
 
             //Attempt content update build
             var path = ContentUpdateScript.GetContentStateDataPath(false);
-
-            if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
-                path = ContentUpdateScript.DownloadBinFileToTempLocation(path);
+            path = ContentUpdateScript.DownloadBinFileToTempLocation(path);
 
             if (!string.IsNullOrEmpty(path) && doContentUpdate)
             {

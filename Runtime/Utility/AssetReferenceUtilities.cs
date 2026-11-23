@@ -158,7 +158,10 @@ namespace UnityEngine.AddressableAssets.Utility
             if (atlas.isVariant)
                 atlas = atlas.GetMasterAtlas();
 
+            // SpriteAtlas V1 APIs are obsolete in 7000.0; keep using them until the V2 migration.
+#pragma warning disable CS0618 // Type or member is obsolete
             Object[] atlasPackables = atlas.GetPackables();
+#pragma warning restore CS0618 // Type or member is obsolete
             foreach (var packable in atlasPackables)
             {
                 GetSpritesFromPackable(packable, guids);

@@ -623,6 +623,22 @@ namespace UnityEngine.ResourceManagement.Util
         }
 
         /// <summary>
+        /// Normalizes a local file url so that it can be parsed as a Uri on the current platform.
+        /// </summary>
+        /// <param name="url">The url to normalize.</param>
+        /// <returns>Returns the normalized url.</returns>
+        internal static string NormalizeFileUrl(string url)
+        {
+#if UNITY_SWITCH || UNITY_SWITCH2
+            const string prefix = "file:///";
+            const string prefixWithExtraSlash = prefix + "/";
+            if (url != null && url.StartsWith(prefixWithExtraSlash, StringComparison.Ordinal))
+                return prefix + url.Substring(prefixWithExtraSlash.Length);
+#endif
+            return url;
+        }
+
+        /// <summary>
         /// Check if path should use WebRequest.  A path should use WebRequest for remote paths and platforms that require WebRequest to load locally.
         /// </summary>
         /// <param name="path">The path to check.</param>

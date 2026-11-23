@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -490,6 +491,15 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
             ulong gbytes = mbytes / 1024;
             dec = Mathf.FloorToInt(((mbytes % 1024) / 1024f) * 100);
             return $"{gbytes}.{dec:D2} GB";
+        }
+
+        internal static string FormatAssetCount(int count, int totalCount)
+        {
+            if (totalCount <= 0)
+                return $"{count} (0%)";
+
+            float percentage = ((float)count / totalCount) * 100f;
+            return $"{count} ({percentage.ToString("0.##", CultureInfo.InvariantCulture)}%)";
         }
 
         // Matches the duration format of the Build Analysis window's Overview tab, so the embedded

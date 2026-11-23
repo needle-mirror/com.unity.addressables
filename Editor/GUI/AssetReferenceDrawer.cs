@@ -98,7 +98,8 @@ namespace UnityEditor.AddressableAssets.GUI
 
             string labelText = label.text;
             m_ReferencesSame = true;
-            m_AssetRefObject = property.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
+            m_AssetRefObject = AssetReferenceDrawerUtilities.GetAssetReference(property);
+            SerializedPropertyExtensions.UseElementLabelForArrayItem(property, ref labelText);
 
             labelText = ObjectNames.NicifyVariableName(labelText);
             if (labelText != label.text || string.IsNullOrEmpty(label.text))
@@ -328,8 +329,7 @@ namespace UnityEditor.AddressableAssets.GUI
                     arrayProperty.serializedObject.Update();
                     SerializedProperty elementProperty = arrayProperty.GetArrayElementAtIndex(arrayProperty.arraySize - 1);
 
-                    string labelText = "";
-                    AssetReference assetRef = elementProperty.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
+                    AssetReference assetRef = AssetReferenceDrawerUtilities.GetAssetReference(elementProperty);
 
                     bool referencesSame = false;
                     Object obj = entry.TargetAsset;
@@ -401,8 +401,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         arrayProperty.serializedObject.Update();
                         SerializedProperty elementProperty = arrayProperty.GetArrayElementAtIndex(arrayProperty.arraySize - 1);
 
-                        string labelText = "";
-                        AssetReference assetRef = elementProperty.GetActualObjectForSerializedProperty<AssetReference>(fieldInfo, ref labelText);
+                        AssetReference assetRef = AssetReferenceDrawerUtilities.GetAssetReference(elementProperty);
 
                         bool referencesSame = false;
                         Object obj = (DragAndDrop.objectReferences != null && i < DragAndDrop.objectReferences.Length) ? DragAndDrop.objectReferences[i] : AssetDatabase.LoadAssetAtPath<Object>(path);
@@ -429,18 +428,31 @@ namespace UnityEditor.AddressableAssets.GUI
 
         internal bool RefreshSubAsset()
         {
-            if (!m_SubassetRefreshed)
+            if (m_SubassetRefreshed)
+                return false;
+            m_SubassetRefreshed = true;
+
+            var saveRequired = AssetReferenceDrawerUtilities.RefreshSubObjects(ref m_AssetRefObject);
+
+            // Refresh each target separately: writing through a multi-object property would copy one reference to all targets
+            bool targetChanged = false;
+            foreach (var target in assetProperty.serializedObject.targetObjects)
             {
-                var saveRequired = AssetReferenceDrawerUtilities.RefreshSubObjects(ref m_AssetRefObject);
-                if (saveRequired)
-                {
-                    assetProperty.serializedObject.ApplyModifiedPropertiesWithoutUndo();
-                    assetProperty.serializedObject.Update();
-                }
-                m_SubassetRefreshed = true;
-                return saveRequired;
+                if (target == null)
+                    continue;
+                var targetObject = new SerializedObject(target);
+                var targetProperty = targetObject.FindProperty(assetProperty.propertyPath);
+                var targetRef = AssetReferenceDrawerUtilities.GetAssetReference(targetProperty);
+                if (!AssetReferenceDrawerUtilities.RefreshSubObjects(ref targetRef))
+                    continue;
+                targetProperty.boxedValue = targetRef;
+                targetObject.ApplyModifiedPropertiesWithoutUndo();
+                targetChanged = true;
             }
-            return false;
+
+            if (targetChanged)
+                assetProperty.serializedObject.Update();
+            return saveRequired || targetChanged;
         }
 
         private void DrawSubAssetsControl(SerializedProperty property, List<Object> subAssets, bool isEnterKeyPressed)
@@ -994,16 +1006,7 @@ namespace UnityEditor.AddressableAssets.GUI
                         arrayCounts.RemoveAt(i);
                     }
 
-#if NET_UNITY_4_8
-                    if (property.propertyPath.EndsWith(']'))
-#else
-                    if (property.propertyPath.EndsWith("]"))
-#endif
-                    {
-                        var slice = property.propertyPath.Split('[', ']');
-                        if (slice.Length >= 2 && label == property.displayName)
-                            label = "Element " + slice[slice.Length - 2];
-                    }
+                    UseElementLabelForArrayItem(property, ref label);
 
                     return DescendHierarchy<T>(targetObject, slicedName, arrayCounts, 0);
                 }
@@ -1015,6 +1018,19 @@ namespace UnityEditor.AddressableAssets.GUI
             {
                 return default(T);
             }
+        }
+
+        internal static void UseElementLabelForArrayItem(SerializedProperty property, ref string label)
+        {
+#if NET_UNITY_4_8
+            if (!property.propertyPath.EndsWith(']'))
+#else
+            if (!property.propertyPath.EndsWith("]"))
+#endif
+                return;
+            var slice = property.propertyPath.Split('[', ']');
+            if (slice.Length >= 2 && label == property.displayName)
+                label = "Element " + slice[slice.Length - 2];
         }
 
         static T DescendHierarchy<T>(object targetObject, List<string> splitName, List<int> splitCounts, int depth)

@@ -1,7 +1,7 @@
 {
   "name": "com.unity.addressables",
   "displayName": "Addressables",
-  "version": "4.2.0",
+  "version": "5.0.0",
   "unity": "6000.0",
   "description": "The Addressables package provides a user interface in the Unity Editor to organize and manage the assets in your project, to create content builds that you can ship along with a Player build. It also has an API that you can use to load and release assets at runtime.\n\nThe Addressables package was originally designed on top of Unity's AssetBundle system, but is also compatible with the newer content directories system. Addressables automatically manages dependencies, asset locations, and provides simpler workflows for memory management which you otherwise have to handle manually in the AssetBundle and content directories systems.\n\nWhen you make an asset Addressable, you can use that asset's address to load it locally or from a content delivery network, rather than using its file name, AssetBundle location, or content directory location. This means you can change the location of assets in a project without needing to rewrite code.",
   "keywords": [
@@ -12,7 +12,7 @@
     "assetbundles"
   ],
   "dependencies": {
-    "com.unity.scriptablebuildpipeline": "4.0.3",
+    "com.unity.scriptablebuildpipeline": "4.0.4",
     "com.unity.modules.assetbundle": "1.0.0",
     "com.unity.modules.imageconversion": "1.0.0",
     "com.unity.modules.jsonserialize": "1.0.0",
@@ -59,15 +59,15 @@
     }
   ],
   "_upm": {
-    "changelog": "- Fixed the Related Builds row of an Addressables build report in the Build Analysis window keeping links to builds that had been deleted from the build history.\n- Rewrote popup dialog copy across the Addressables package for editor consistency.\n- Added a session-level opt-out to the Remove Schema and Delete Groups/Entries confirmation dialogs.\n- Renamed the \"Remove Addressables\" context menu item to \"Delete Entries\".\n- Read-Only groups can now be deleted via the right click menu's \"Delete Group(s)\" option, and via the delete key on your keyboard.\n- Fixed `AsyncOperationHandleException.Handle` becoming invalid when the `ToAwaitable` cancellation token is cancelled after the operation failed.\n- Fixed Addressables build performance data (TEP) not being saved when the Debug Build Layout File Format is set to \"TXT and JSON\".\n- Fixed a build's performance data being overwritten by a session that generated no build layout report, such as entering Play Mode with Use Existing Build.\n- Fixed a NullReferenceException that left the Addressables Groups window blank when Group Hierarchy with Dashes was enabled and a group name contained a dash.\n- Fixed an issue where handle released in OnApplicationQuit callback or from OnDisable or OnDestroy would fail when exiting play mode.\n- Fixed the ProcessGroup, ProcessGroupSchema and PostProcessGroup steps in Addressables build performance data (TEP) not naming the group or schema they process.\n- Fixed an issue where modifying an asset inside an Addressable folder in a group with Prevent Updates enabled moved the whole folder into the content update group. Only the modified assets, and the folder assets that reference them, now move.\n- Assets moved out of an Addressable folder by a content update now keep the folder's address, labels and folder key, so loading the folder's address still returns them.\n- Fixed an issue where an asset whose only change was a dependency in a Prevent Updates group was listed as its own entry in the content update restrictions window, causing it to still move even if the dependency was not included in the content update.\n- Dragging an asset out from under an Addressable folder in the Groups window now makes it an ordinary, editable entry.\n### UI/UX Changes\n- Groups window: Moved asset type icons into the Name column. Added \"Show in Project\" to the right-click menu for a single group or entry, which pings the asset in the Project window.\n- Groups window: Added row padding and alternating row backgrounds for editor consistency.\n- Groups window: Renamed the \"Group Name \\ Addressable Name\" column header to \"Name\".\n- Groups window: Subasset rows no longer show the Labels dropdown.\n- Groups window: Folder entries now display the standard folder icon.\n- Groups window: Replaced the toolbar \"New\" text button with a \"+\" icon for editor consistency.\n- Inspectors: Buttons that open a new window now end with an ellipsis; the button to open Addressable settings is now labeled \"Open Settings\".\n- Asset Settings inspector: Reorderable lists now use the standard editor icon, no longer open a file explorer, and show proper empty-state labels.\n- Group Schemas inspector: Header component spacing and indentation now match other editor inspectors.\n- Group Schemas inspector: Advanced Options is now a foldout, closed by default.\n- Group Templates inspector: Description textbox is sized correctly, resizes with text overflow, and uses consistent padding.\n- Group Templates inspector: Headers use proper header styling instead of foldout styling.\n- Reorganized Groups window right-click menus with consistent naming and grouping.\n- Flattened single-item submenus under Create > Addressables.\n- Removed Settings entry from Window > Asset Management > Addressables as it does not open a window.\n- Moved Binary Catalog tools from Window > Asset Management > Addressables to the Groups window Tools > Binary Catalogs submenu.\n- Renamed \"Addressables Report\" to \"Report\" under Window > Asset Management > Addressables for consistency with other menu items.\n- Reworded Tools dropdown items: \"Inspect System Sett"
+    "changelog": "- Fixed the build profile recording empty building and generating steps for schema builders with no work to do.\n- Fixed the Addressables Report summary showing \"NaN%\" when a build has no assets.\n- Fixed the \"View by\" dropdown in the Addressables Report window overlapping the search field when the window is narrow.\n- Fixed AssetReference values in a serialized Dictionary appearing empty and uneditable in the Inspector."
   },
   "upmCi": {
-    "footprint": "1b79935f6eaa5ecd340415476477aef1ab4c4489"
+    "footprint": "f93a13af518f294d9b52369f433f8f3ec86ec87e"
   },
-  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.addressables@4.2/manual/index.html",
+  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.addressables@5.0/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/Addressables.git",
     "type": "git",
-    "revision": "9973ced6402fd1613e85f832857cc2fdbc05ccb8"
+    "revision": "8b4de1cb69008b0d9e89bd43c9c241522e422a7d"
   }
 }

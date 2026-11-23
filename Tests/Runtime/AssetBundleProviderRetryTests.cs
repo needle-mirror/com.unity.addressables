@@ -43,7 +43,7 @@ namespace AddressableAssetsIntegrationTests
 #endif
 
         [UnityTest]
-        [Platform(Exclude = "PS5")]
+        [UnityPlatform(exclude = new[] { RuntimePlatform.PS5, RuntimePlatform.OSXPlayer })]
         public IEnumerator AssetBundleProviderRetry_WhenRetryCountIsZero_LogsUWRError()
         {
             var nonExistingPath = "http://127.0.0.1/non-existing-bundle";
@@ -61,7 +61,7 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
-        [Platform(Exclude = "PS5")]
+        [UnityPlatform(exclude = new[] { RuntimePlatform.PS5, RuntimePlatform.OSXPlayer })]
         public IEnumerator AssetBundleProviderRetry_WhenRetryCountIsSet_LogsRetryError()
         {
             var nonExistingPath = "http://127.0.0.1/non-existing-bundle";

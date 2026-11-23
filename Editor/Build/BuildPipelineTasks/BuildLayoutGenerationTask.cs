@@ -1049,9 +1049,9 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
                 }
             }
 
-            using (m_Log.ScopedStep(LogLevel.Info, "Correlate Content Directories to Groups"))
+            if (m_BuildLayoutParameters.BuildResult != null && lookup.GroupToContentDirectory.Count > 0)
             {
-                if (m_BuildLayoutParameters.BuildResult != null)
+                using (m_Log.ScopedStep(LogLevel.Info, "Correlate Content Directories to Groups"))
                 {
                     HashSet<string> processedContentDirectories = new HashSet<string>();
                     foreach (var contentDirectory in lookup.GroupToContentDirectory.Values)
@@ -1112,7 +1112,9 @@ namespace UnityEditor.AddressableAssets.Build.BuildPipelineTasks
 
             foreach (PropertyInfo property in properties)
             {
+#pragma warning disable SYSLIB0050
                 if (!property.PropertyType.IsSerializable || !property.CanRead)
+#pragma warning restore SYSLIB0050
                     continue;
                 string propertyName = property.Name;
                 if (propertyName == "name" || propertyName == "hideFlags")

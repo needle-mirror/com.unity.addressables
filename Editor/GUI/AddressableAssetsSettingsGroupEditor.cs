@@ -816,9 +816,7 @@ namespace UnityEditor.AddressableAssets.GUI
                 Debug.LogWarning("No path specified for Content State Data file.");
                 return;
             }
-
-            if (ResourceManagerConfig.ShouldPathUseWebRequest(path))
-                path = ContentUpdateScript.DownloadBinFileToTempLocation(path);
+            path = ContentUpdateScript.DownloadBinFileToTempLocation(path);
 
             if (!File.Exists(path))
             {

@@ -267,8 +267,8 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
 
         void BindBuildDetails(BuildLayout report, BuildLayoutSummary summary)
         {
-            SetDetail("Addressables", FormatAssetCount(summary.ExplicitAssetCount, summary.TotalAssetCount));
-            SetDetail("Assets pulled", FormatAssetCount(summary.ImplicitAssetCount, summary.TotalAssetCount));
+            SetDetail("Addressables", BuildReportUtility.FormatAssetCount(summary.ExplicitAssetCount, summary.TotalAssetCount));
+            SetDetail("Assets pulled", BuildReportUtility.FormatAssetCount(summary.ImplicitAssetCount, summary.TotalAssetCount));
             SetDetail("Package Version", FormatPackageVersion(report.PackageVersion));
             SetDetail("Editor Version", report.UnityVersion);
             SetOptionalDetail("Player Build Version", report.PlayerBuildVersion);
@@ -366,15 +366,6 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 return packageVersion;
 
             return packageVersion.Substring(separator + 1).Trim();
-        }
-
-        internal static string FormatAssetCount(int count, int totalCount)
-        {
-            if (totalCount <= 0)
-                return count.ToString();
-
-            float percentage = ((float)count / totalCount) * 100f;
-            return $"{count} ({percentage.ToString("0.##", CultureInfo.InvariantCulture)}%)";
         }
 
         // What the build produced, which is not the same question as how it was built.

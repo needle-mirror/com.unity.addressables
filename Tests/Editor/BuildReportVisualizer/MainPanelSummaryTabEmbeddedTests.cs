@@ -508,12 +508,6 @@ namespace Tests.Editor.BuildReportVisualizer
                 HeaderText(k_HeaderSubtitleClass));
         }
 
-        [Test]
-        public void FormatAssetCount_WithNoAssets_OmitsThePercentage()
-        {
-            Assert.AreEqual("0", MainPanelSummaryTabEmbedded.FormatAssetCount(0, 0));
-        }
-
         static BuildStepData Step(string name, bool isBuildTask = false)
         {
             return new BuildStepData { Name = name, Depth = 0, DurationMs = 1d, IsBuildTask = isBuildTask };

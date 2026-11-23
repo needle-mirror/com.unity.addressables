@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders;
 using UnityEditor.AddressableAssets.Settings;
@@ -146,6 +147,7 @@ namespace UnityEditor.AddressableAssets.Build
         /// </summary>
 #if UNITY_6000_0_OR_NEWER
         [DataMember]
+        [NonSerialized]
 #endif
         public object data;
 
@@ -193,6 +195,7 @@ namespace UnityEditor.AddressableAssets.Build
         /// </summary>
 #if UNITY_6000_0_OR_NEWER
         [DataMember]
+        [NonSerialized]
 #endif
         public object data;
     }
@@ -732,22 +735,57 @@ namespace UnityEditor.AddressableAssets.Build
         /// <returns>The temp path the bin file was downloaded to.</returns>
         internal static string DownloadBinFileToTempLocation(string url)
         {
-            if (!Directory.Exists(ContentUpdateScript.PreviousContentStateFileCachePath))
-                Directory.CreateDirectory(Path.GetDirectoryName(ContentUpdateScript.PreviousContentStateFileCachePath));
-            else if (File.Exists(ContentUpdateScript.PreviousContentStateFileCachePath))
-                File.Delete(ContentUpdateScript.PreviousContentStateFileCachePath);
+            if (!ResourceManagerConfig.ShouldPathUseWebRequest(url))
+                return url;
+
+            RemoveExistingBinFile();
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
+                return PreviousContentStateFileCachePath;
 
             try
             {
-                var bytes = new WebClient().DownloadData(url);
-                File.WriteAllBytes(ContentUpdateScript.PreviousContentStateFileCachePath, bytes);
+                if (uri.IsFile)
+                {
+                    File.Copy(uri.LocalPath, PreviousContentStateFileCachePath, true);
+                    return PreviousContentStateFileCachePath;
+                }
+
+                if (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+                {
+                    using (var client = new HttpClient())
+                    using (var httpStream = client.GetStreamAsync(uri).GetAwaiter().GetResult())
+                    using (var outputStream = new FileStream(PreviousContentStateFileCachePath, FileMode.Create))
+                    {
+                        httpStream.CopyTo(outputStream);
+                    }
+                    return PreviousContentStateFileCachePath;
+                }
+
+                Debug.LogWarning($"Cannot download the previous content state from '{url}': only file, http and https URLs are supported.");
             }
-            catch
+            catch (Exception e)
             {
-                //Do nothing, nothing will get downloaded and the users can select a file manually if they want.
+                Addressables.LogException(e);
+                // remove a partially downloaded file
+                RemoveExistingBinFile();
             }
 
-            return ContentUpdateScript.PreviousContentStateFileCachePath;
+            return PreviousContentStateFileCachePath;
+        }
+
+        internal static void RemoveExistingBinFile()
+        {
+            if (!Directory.Exists(Path.GetDirectoryName(PreviousContentStateFileCachePath)))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(PreviousContentStateFileCachePath));
+                return;
+            }
+
+            if (File.Exists(PreviousContentStateFileCachePath))
+            {
+                File.Delete(PreviousContentStateFileCachePath);
+            }
         }
 
         /// <summary>

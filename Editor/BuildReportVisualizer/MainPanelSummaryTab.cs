@@ -123,8 +123,8 @@ namespace UnityEditor.AddressableAssets.BuildReportVisualizer
                 .With("Number of bundles", summary.BundleSummary.Count.ToString())
                 .With("Total size of all bundles", BuildReportUtility.GetDenominatedBytesString(summary.BundleSummary.TotalCompressedSize))
                 .With("Total number of assets in AssetBundles", summary.TotalAssetCount.ToString())
-                .With("Addressables", $"{summary.ExplicitAssetCount} ({String.Format("{0:0.##}", ((float)summary.ExplicitAssetCount/(float)summary.TotalAssetCount) * 100f)}%)")
-                .With("Assets pulled into a build by an Addressable", $"{summary.ImplicitAssetCount} ({String.Format("{0:0.##}", ((float)summary.ImplicitAssetCount/(float)summary.TotalAssetCount) * 100f)}%)", FontStyle.Italic);
+                .With("Addressables", BuildReportUtility.FormatAssetCount(summary.ExplicitAssetCount, summary.TotalAssetCount))
+                .With("Assets pulled into a build by an Addressable", BuildReportUtility.FormatAssetCount(summary.ImplicitAssetCount, summary.TotalAssetCount), FontStyle.Italic);
 
             scrollbarElement.Add(aggregateInfo.Build());
 

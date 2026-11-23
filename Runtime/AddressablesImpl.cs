@@ -555,7 +555,7 @@ namespace UnityEngine.AddressableAssets
                 };
                 catalogLoc.Dependencies.Add(hashResourceLocation);
 
-#if UNITY_SWITCH || UNITY_SWITCH2
+#if (UNITY_SWITCH || UNITY_SWITCH2) && !ENABLE_CACHING
                 string cacheHashFilePath = hashFilePath;
 #else
                 string cacheHashFilePath = ResolveInternalId(kCacheDataFolder + tmpPath.GetHashCode() + ".hash");
@@ -602,7 +602,7 @@ namespace UnityEngine.AddressableAssets
                 };
                 catalogLoc.Dependencies.Add(hashResourceLocation);
 
-#if UNITY_SWITCH || UNITY_SWITCH2
+#if (UNITY_SWITCH || UNITY_SWITCH2) && !ENABLE_CACHING
                 string cacheHashFilePath = hashFilePath; // ResourceLocationBase does not allow empty string id
 #else
                 // The file name of the local cached catalog + hash file is the hash code of the

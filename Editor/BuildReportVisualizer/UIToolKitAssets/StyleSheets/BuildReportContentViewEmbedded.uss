@@ -10,7 +10,7 @@
 }
 
 /* Tab strip, matching the Build Analysis window's own tabs. Source of truth for these values:
-   Modules/BuildAnalysis/EditorResourcesPackage/Editor Default Resources/BuildAnalysis/
+   Editor/Modules/BuildAnalysis/EditorResourcesPackage/Editor Default Resources/BuildAnalysis/
    StyleSheets/BuildAnalysisWindow.uss.
 
    The TabView is hoisted above the splitter and keeps only its header row, so the strip spans the
@@ -36,7 +36,7 @@
 }
 
 /* The [?][details] pair at the end of the strip. Source of truth for these values: the
-   .help-button / .inspector-toggle rules in Modules/BuildAnalysis/EditorResourcesPackage/
+   .help-button / .inspector-toggle rules in Editor/Modules/BuildAnalysis/EditorResourcesPackage/
    Editor Default Resources/BuildAnalysis/StyleSheets/BuildAnalysisWindow.uss. */
 
 .ReportToolbarButton {

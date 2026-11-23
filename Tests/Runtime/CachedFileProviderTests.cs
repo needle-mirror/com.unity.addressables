@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.IO;
 using NUnit.Framework;
@@ -19,6 +20,14 @@ public abstract class CachedFileProviderTests : AddressablesTestFixture
         return Path.Combine(Application.temporaryCachePath, Path.GetFileName(Path.GetTempFileName()));
     }
 
+    string ToFileUrl(string path)
+    {
+        int mountSeparator = path.IndexOf(":/", StringComparison.Ordinal);
+        if (mountSeparator > 1)
+            path = "/" + path.Substring(0, mountSeparator) + path.Substring(mountSeparator + 1);
+        return $"file://{path}";
+    }
+
     [UnityTest]
     public IEnumerator CanProvideRemoteFileToCache_WhenCacheIsEmpty()
     {
@@ -30,7 +39,7 @@ public abstract class CachedFileProviderTests : AddressablesTestFixture
         var fullCachePath = $"{Application.temporaryCachePath}/{cachePath}";
         if (File.Exists(fullCachePath))
             File.Delete(fullCachePath);
-        var loc = new ResourceLocationBase("key", $"file://{tempFile}", typeof(CachedFileProvider).FullName, typeof(string));
+        var loc = new ResourceLocationBase("key", ToFileUrl(tempFile), typeof(CachedFileProvider).FullName, typeof(string));
         loc.Data = new ProviderLoadRequestOptions { LocalCachePath = cachePath };
         var h = m_Addressables.ResourceManager.ProvideResource<string>(loc);
         yield return h;
@@ -69,7 +78,7 @@ public abstract class CachedFileProviderTests : AddressablesTestFixture
         var cachePath = ComputeCachePath(tempFile);
         var fullCachePath = $"{Application.temporaryCachePath}/{cachePath}";
         File.Copy(tempFile, fullCachePath, true);
-        var loc = new ResourceLocationBase("key", $"file://{tempFile}", typeof(CachedFileProvider).FullName, typeof(string));
+        var loc = new ResourceLocationBase("key", ToFileUrl(tempFile), typeof(CachedFileProvider).FullName, typeof(string));
         loc.Data = new ProviderLoadRequestOptions { LocalCachePath = cachePath };
         var h = m_Addressables.ResourceManager.ProvideResource<string>(loc);
         yield return h;
@@ -85,7 +94,7 @@ public abstract class CachedFileProviderTests : AddressablesTestFixture
         var testText = "test text";
         var tempFile = GetTempFileName();
         File.WriteAllText(tempFile, testText);
-        var loc = new ResourceLocationBase("key", $"file://{tempFile}", typeof(CachedFileProvider).FullName, typeof(string));
+        var loc = new ResourceLocationBase("key", ToFileUrl(tempFile), typeof(CachedFileProvider).FullName, typeof(string));
         var h = m_Addressables.ResourceManager.ProvideResource<string>(loc);
         yield return h;
         Assert.IsTrue(File.Exists(h.Result));
@@ -105,8 +114,11 @@ class CachedFileProviderTests_PackedPlaymodeMode : CachedFileProviderTests
 }
 #endif
 
-[UnityPlatform(exclude = new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor, RuntimePlatform.PS5, RuntimePlatform.Android, RuntimePlatform.Switch
-#if UNITY_6000_5_OR_NEWER
+[UnityPlatform(exclude = new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor, RuntimePlatform.PS5, RuntimePlatform.Android
+#if UNITY_SWITCH && !ENABLE_CACHING
+    , RuntimePlatform.Switch
+#endif
+#if UNITY_SWITCH2 && !ENABLE_CACHING
     , RuntimePlatform.Switch2
 #endif
 })]

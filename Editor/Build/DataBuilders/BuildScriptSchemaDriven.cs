@@ -371,32 +371,28 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
 
             foreach (ISchemaBuilder schemaBuilder in SchemaBuilders)
             {
-                using (Log.ScopedStep(LogLevel.Info, $"Building {schemaBuilder.Name}"))
-                {
-                    schemaBuilder.Build(aaContext, addrResult);
-                }
+                schemaBuilder.Build(aaContext, addrResult);
 
-                using (Log.ScopedStep(LogLevel.Info, $"Generating {schemaBuilder.Name} Catalog Locations"))
-                {
-                    var locationsByCatalogId = schemaBuilder.GenerateCatalogLocations(aaContext, addrResult);
-                    if (locationsByCatalogId == null)
-                        continue;
+                var locationsByCatalogId = schemaBuilder.GenerateCatalogLocations(aaContext, addrResult);
+                if (locationsByCatalogId == null || locationsByCatalogId.Count == 0)
+                    continue;
 
-                    var contributedIds = new List<string>();
-                    foreach (var kvp in locationsByCatalogId)
+                using var collectStep = Log.ScopedStep(LogLevel.Info, "Collecting Catalog Locations");
+
+                var contributedIds = new List<string>();
+                foreach (var kvp in locationsByCatalogId)
+                {
+                    if (!mergedLocations.TryGetValue(kvp.Key, out var existing))
                     {
-                        if (!mergedLocations.TryGetValue(kvp.Key, out var existing))
-                        {
-                            existing = new List<ContentCatalogDataEntry>();
-                            mergedLocations[kvp.Key] = existing;
-                        }
-
-                        existing.AddRange(kvp.Value);
-                        contributedIds.Add(kvp.Key);
+                        existing = new List<ContentCatalogDataEntry>();
+                        mergedLocations[kvp.Key] = existing;
                     }
 
-                    builderToCatalogIds[schemaBuilder] = contributedIds;
+                    existing.AddRange(kvp.Value);
+                    contributedIds.Add(kvp.Key);
                 }
+
+                builderToCatalogIds[schemaBuilder] = contributedIds;
             }
 
             return mergedLocations;

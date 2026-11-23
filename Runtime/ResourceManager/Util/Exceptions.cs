@@ -40,6 +40,9 @@ namespace UnityEngine.ResourceManagement.Exceptions
         /// </summary>
         /// <param name="message">Message to describe the exception.</param>
         /// <param name="context">Context related to the exception.</param>
+#if NET8_0_OR_GREATER
+        [Obsolete(DiagnosticId = "SYSLIB0051")]
+#endif
         protected ResourceManagerException(SerializationInfo message, StreamingContext context) : base(message, context)
         {
         }
@@ -97,6 +100,9 @@ namespace UnityEngine.ResourceManagement.Exceptions
         /// </summary>
         /// <param name="message">Message to describe the exception.</param>
         /// <param name="context">Context related to the exception.</param>
+#if NET8_0_OR_GREATER
+        [Obsolete(DiagnosticId = "SYSLIB0051")]
+#endif
         protected UnknownResourceProviderException(SerializationInfo message, StreamingContext context) : base(message, context)
         {
         }

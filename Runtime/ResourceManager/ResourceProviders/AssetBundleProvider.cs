@@ -613,10 +613,14 @@ namespace UnityEngine.ResourceManagement.ResourceProviders
                 sanitizedUrl,
                 @"^file:////",
                 "file:///");
+#pragma warning disable SYSLIB0013 // Uri.EscapeUriString is obsolete in .NET 5+
             Uri uri = new Uri(Uri.EscapeUriString(sanitizedUrl));
+#pragma warning restore SYSLIB0013
 
 #else
-            Uri uri = new Uri(Uri.EscapeUriString(sanitizedUrl));
+#pragma warning disable SYSLIB0013 // Uri.EscapeUriString is obsolete in .NET 5+
+            Uri uri = new Uri(Uri.EscapeUriString(ResourceManagerConfig.NormalizeFileUrl(sanitizedUrl)));
+#pragma warning restore SYSLIB0013
 #endif
 
             if (m_Options == null)

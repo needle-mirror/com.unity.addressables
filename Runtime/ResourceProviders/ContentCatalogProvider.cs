@@ -283,7 +283,7 @@ namespace UnityEngine.AddressableAssets.ResourceProviders
 
                     if (ResourceManagerConfig.ShouldPathUseWebRequest(m_BundlePath))
                     {
-                        var req = UnityWebRequestAssetBundle.GetAssetBundle(m_BundlePath);
+                        var req = UnityWebRequestAssetBundle.GetAssetBundle(ResourceManagerConfig.NormalizeFileUrl(m_BundlePath));
                         if (m_WebRequestTimeout > 0)
                             req.timeout = m_WebRequestTimeout;
 

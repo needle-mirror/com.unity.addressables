@@ -182,6 +182,9 @@ namespace UnityEngine.AddressableAssets
         /// </summary>
         /// <param name="message">The message for the exception.</param>
         /// <param name="context">Describes the source and destination of a given serialized stream.</param>
+#if NET8_0_OR_GREATER
+        [Obsolete(DiagnosticId = "SYSLIB0051")]
+#endif
         protected InvalidKeyException(SerializationInfo message, StreamingContext context) : base(message, context)
         {
         }

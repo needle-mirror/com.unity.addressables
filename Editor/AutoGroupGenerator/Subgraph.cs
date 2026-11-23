@@ -11,6 +11,7 @@ namespace AutoGroupGenerator
     {
 
         #region Fields
+#pragma warning disable UAC1009
         /// <summary>
         /// Nodes contained in this subgraph.
         /// </summary>
@@ -20,6 +21,7 @@ namespace AutoGroupGenerator
         /// Source nodes that lead into this subgraph.
         /// </summary>
         public HashSet<AssetNode> Sources = new HashSet<AssetNode>();
+#pragma warning restore UAC1009
 
         /// <summary>
         /// Hash representing the sources set.

@@ -184,7 +184,7 @@ namespace AddressableAssetsIntegrationTests
 #endif
 
         [UnityTest]
-        [Platform(Exclude = "PS5")]
+        [UnityPlatform(exclude = new[] { RuntimePlatform.PS5 })]
         public IEnumerator WhenValidCatalogId_RemovesNonReferencedBundlesFromCache([Values(true, false)] bool forceSingleThreading)
         {
 #if ENABLE_CACHING
@@ -216,7 +216,7 @@ namespace AddressableAssetsIntegrationTests
         }
 
         [UnityTest]
-        [Platform(Exclude = "PS5")]
+        [UnityPlatform(exclude = new[] { RuntimePlatform.PS5 })]
         public IEnumerator WhenCatalogIdListNull_UsesLoadedCatalogs_AndRemovesNonReferencedBundlesFromCache()
         {
 #if ENABLE_CACHING

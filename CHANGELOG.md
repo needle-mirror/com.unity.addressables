@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-11-23
+- Fixed the build profile recording empty building and generating steps for schema builders with no work to do.
+- Fixed the Addressables Report summary showing "NaN%" when a build has no assets.
+- Fixed the "View by" dropdown in the Addressables Report window overlapping the search field when the window is narrow.
+- Fixed AssetReference values in a serialized Dictionary appearing empty and uneditable in the Inspector.
+
 ## [4.2.0] - 2026-11-02
 - Fixed the Related Builds row of an Addressables build report in the Build Analysis window keeping links to builds that had been deleted from the build history.
 - Rewrote popup dialog copy across the Addressables package for editor consistency.
@@ -20,6 +26,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Assets moved out of an Addressable folder by a content update now keep the folder's address, labels and folder key, so loading the folder's address still returns them.
 - Fixed an issue where an asset whose only change was a dependency in a Prevent Updates group was listed as its own entry in the content update restrictions window, causing it to still move even if the dependency was not included in the content update.
 - Dragging an asset out from under an Addressable folder in the Groups window now makes it an ordinary, editable entry.
+- Added a Build Steps section to the Addressables report in the Build Analysis window.
+- Selecting an Addressables build in the Build Analysis window now loads its report in the background and shows a loading indicator, instead of freezing the Editor.
+- Improved build layout loading performance by moving Addressables profiler data into a new `buildlayout_<timestamp>.profiler` file next to the layout in `Library/com.unity.addressables/BuildReports/`. Keep both files together, unrenamed, to use them with the Addressables Profiler.
+- Fixed the "The Addressables class was used outside playmode" warning being logged when entering Play Mode after packages such as Localization only accessed `Addressables.ResourceManager` in edit mode.
 ### UI/UX Changes
 - Groups window: Moved asset type icons into the Name column. Added "Show in Project" to the right-click menu for a single group or entry, which pings the asset in the Project window.
 - Groups window: Added row padding and alternating row backgrounds for editor consistency.

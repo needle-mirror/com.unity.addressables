@@ -777,6 +777,7 @@ namespace UnityEditor.AddressableAssets.Build.Layout
             /// <summary>
             /// These key-value-pairs include data about the AddressableAssetGroupSchema, such as PackingMode and Compression.
             /// </summary>
+            [NonSerialized]
             public List<System.Tuple<string, string>> KvpDetails = new List<System.Tuple<string, string>>();
 
             [SerializeField]

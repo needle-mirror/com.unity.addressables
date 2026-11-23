@@ -54,5 +54,17 @@ namespace Tests.Editor.BuildReportVisualizer
         {
             Assert.AreEqual(expected, BuildReportUtility.GetDurationString(seconds));
         }
+
+        [Test]
+        public void FormatAssetCount_WithNoAssets_ShowsZeroPercent()
+        {
+            Assert.AreEqual("0 (0%)", BuildReportUtility.FormatAssetCount(0, 0));
+        }
+
+        [Test]
+        public void FormatAssetCount_WithAssets_IncludesThePercentage()
+        {
+            Assert.AreEqual("1 (33.33%)", BuildReportUtility.FormatAssetCount(1, 3));
+        }
     }
 }

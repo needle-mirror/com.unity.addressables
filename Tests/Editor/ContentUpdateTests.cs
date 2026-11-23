@@ -203,6 +203,53 @@ namespace UnityEditor.AddressableAssets.Tests
         }
 
         [Test]
+        public void DownloadBinFileToTempLocation_CopiesFile_WhenUrlIsFileUrl()
+        {
+            var sourcePath = Path.Combine(Path.GetTempPath(), "addressables_content_state_source.bin");
+            var content = new byte[] { 1, 2, 3, 4, 5 };
+            File.WriteAllBytes(sourcePath, content);
+            if (File.Exists(ContentUpdateScript.PreviousContentStateFileCachePath))
+                File.Delete(ContentUpdateScript.PreviousContentStateFileCachePath);
+
+            try
+            {
+                var returnValue = ContentUpdateScript.DownloadBinFileToTempLocation(new Uri(sourcePath).AbsoluteUri);
+                Assert.AreEqual(ContentUpdateScript.PreviousContentStateFileCachePath, returnValue);
+                CollectionAssert.AreEqual(content, File.ReadAllBytes(returnValue));
+            }
+            finally
+            {
+                File.Delete(sourcePath);
+                if (File.Exists(ContentUpdateScript.PreviousContentStateFileCachePath))
+                    File.Delete(ContentUpdateScript.PreviousContentStateFileCachePath);
+            }
+        }
+
+        [Test]
+        public void DownloadBinFileToTempLocation_DoesNotThrowError_WhenFileUrlDoesNotExist()
+        {
+            if (File.Exists(ContentUpdateScript.PreviousContentStateFileCachePath))
+                File.Delete(ContentUpdateScript.PreviousContentStateFileCachePath);
+
+            var missingPath = Path.Combine(Path.GetTempPath(), "addressables_content_state_missing.bin");
+            var returnValue = ContentUpdateScript.DownloadBinFileToTempLocation(new Uri(missingPath).AbsoluteUri);
+            Assert.AreEqual(ContentUpdateScript.PreviousContentStateFileCachePath, returnValue);
+            Assert.IsFalse(File.Exists(returnValue));
+        }
+
+        [Test]
+        public void DownloadBinFileToTempLocation_LogsWarning_WhenUrlSchemeIsNotSupported()
+        {
+            if (File.Exists(ContentUpdateScript.PreviousContentStateFileCachePath))
+                File.Delete(ContentUpdateScript.PreviousContentStateFileCachePath);
+
+            LogAssert.Expect(LogType.Warning, new Regex("only file, http and https URLs are supported"));
+            var returnValue = ContentUpdateScript.DownloadBinFileToTempLocation("ftp://notarealurl.com/addressable_state.bin");
+            Assert.AreEqual(ContentUpdateScript.PreviousContentStateFileCachePath, returnValue);
+            Assert.IsFalse(File.Exists(returnValue));
+        }
+
+        [Test]
         public void PrepareContentUpdate()
         {
             var group = Settings.CreateGroup("LocalStuff2", false, false, false, null);

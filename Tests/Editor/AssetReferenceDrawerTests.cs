@@ -58,6 +58,21 @@ namespace UnityEditor.AddressableAssets.Tests
             public AssetReference Reference = new AssetReference();
         }
 
+        // Dictionary fields only serialize from 6000.6.0a6
+#if UNITY_6000_6_OR_NEWER
+        internal class TestEditorObjectWithDictionaryOfRefs : TestEditorObject
+        {
+            [SerializeField]
+            public Dictionary<string, AssetReferenceGameObject> References = new Dictionary<string, AssetReferenceGameObject>();
+        }
+#endif
+
+        internal class TestEditorObjectWithMeshRef : TestEditorObject
+        {
+            [SerializeField]
+            public AssetReferenceT<Mesh> Reference = new AssetReferenceT<Mesh>("");
+        }
+
         internal class TestEditorObjectWithRestrictedRef : TestEditorObject
         {
             [SerializeField]
@@ -539,6 +554,148 @@ namespace UnityEditor.AddressableAssets.Tests
             property.GetActualObjectForSerializedProperty<AssetReference>(propertyFieldInfo, ref expectedLabel);
 
             Assert.AreEqual(label.text, expectedLabel, "Default label name is present instead of Custom label name");
+        }
+
+        // Dictionary fields only serialize from 6000.6.0a6
+#if UNITY_6000_6_OR_NEWER
+        TestEditorObjectWithDictionaryOfRefs CreateDictionaryOfRefs(out SerializedObject so)
+        {
+            var obj = ScriptableObject.CreateInstance<TestEditorObjectWithDictionaryOfRefs>();
+            obj.References.Add("first", new AssetReferenceGameObject(""));
+            obj.References.Add("second", new AssetReferenceGameObject(m_AssetGUID));
+            so = new SerializedObject(obj);
+            return obj;
+        }
+
+        static SerializedProperty FindDictionaryValue(SerializedObject so, string key)
+        {
+            var rows = so.FindProperty("References");
+            for (int i = 0; i < rows.arraySize; i++)
+            {
+                var row = rows.GetArrayElementAtIndex(i);
+                if (row.FindPropertyRelative("key").stringValue == key)
+                    return row.FindPropertyRelative("value");
+            }
+            return null;
+        }
+
+        [Test]
+        public void GetAssetReference_DictionaryValue_ReadsSerializedReference()
+        {
+            var obj = CreateDictionaryOfRefs(out var so);
+
+            var assetRef = AssetReferenceDrawerUtilities.GetAssetReference(FindDictionaryValue(so, "second"));
+
+            Assert.IsNotNull(assetRef);
+            Assert.AreEqual(m_AssetGUID, assetRef.AssetGUID);
+            Object.DestroyImmediate(obj);
+        }
+
+        [Test]
+        public void SetObject_DictionaryValue_WritesToDictionary()
+        {
+            var obj = CreateDictionaryOfRefs(out var so);
+            var property = FindDictionaryValue(so, "first");
+            var assetRef = AssetReferenceDrawerUtilities.GetAssetReference(property);
+            bool referencesSame = true;
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(m_AssetGUID));
+
+            Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref assetRef, ref referencesSame, property, prefab, null, "", out string guid));
+
+            Assert.AreEqual(m_AssetGUID, guid);
+            Assert.AreEqual(m_AssetGUID, obj.References["first"].AssetGUID);
+            Object.DestroyImmediate(obj);
+        }
+
+        [Test]
+        public void SetObject_DictionaryValue_ClearsReference()
+        {
+            var obj = CreateDictionaryOfRefs(out var so);
+            var property = FindDictionaryValue(so, "second");
+            var assetRef = AssetReferenceDrawerUtilities.GetAssetReference(property);
+            bool referencesSame = true;
+
+            Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref assetRef, ref referencesSame, property, null, null, "", out string _));
+
+            Assert.IsTrue(string.IsNullOrEmpty(obj.References["second"].AssetGUID));
+            Object.DestroyImmediate(obj);
+        }
+
+        [Test]
+        public void SetObject_DictionaryValueWithDuplicateKey_WritesSerializedRow()
+        {
+            var obj = CreateDictionaryOfRefs(out var so);
+            var rows = so.FindProperty("References");
+            rows.InsertArrayElementAtIndex(rows.arraySize);
+            so.ApplyModifiedProperties();
+            var duplicateRow = rows.GetArrayElementAtIndex(rows.arraySize - 1);
+            var property = duplicateRow.FindPropertyRelative("value");
+            var assetRef = AssetReferenceDrawerUtilities.GetAssetReference(property);
+            Assert.IsNotNull(assetRef, "A duplicate-key row has no live dictionary entry but should still be readable");
+            bool referencesSame = true;
+
+            Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref assetRef, ref referencesSame, property, null, null, "", out string _));
+
+            so.Update();
+            Assert.IsTrue(string.IsNullOrEmpty(rows.GetArrayElementAtIndex(rows.arraySize - 1).FindPropertyRelative("value.m_AssetGUID").stringValue));
+            Assert.AreEqual(m_AssetGUID, obj.References["second"].AssetGUID, "The live entry for the original key should be unchanged");
+            Object.DestroyImmediate(obj);
+        }
+
+        [Test]
+        public void GetNameForAsset_EmptyDictionaryValue_UsesValueType()
+        {
+            var obj = CreateDictionaryOfRefs(out var so);
+            var property = FindDictionaryValue(so, "first");
+            FieldInfo fieldInfo = typeof(TestEditorObjectWithDictionaryOfRefs).GetField("References");
+            bool referencesSame = true;
+
+            var name = AssetReferenceDrawerUtilities.GetNameForAsset(ref referencesSame, property, false, fieldInfo, "");
+
+            Assert.AreEqual(AssetReferenceDrawerUtilities.ConstructNoAssetLabel(typeof(AssetReferenceGameObject)), name);
+            Object.DestroyImmediate(obj);
+        }
+
+        [Test]
+        public void SetObject_DictionaryValue_CanUndo()
+        {
+            var obj = CreateDictionaryOfRefs(out var so);
+            var property = FindDictionaryValue(so, "first");
+            var assetRef = AssetReferenceDrawerUtilities.GetAssetReference(property);
+            bool referencesSame = true;
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(m_AssetGUID));
+            Undo.IncrementCurrentGroup();
+
+            Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref assetRef, ref referencesSame, property, prefab, null, "", out string _));
+            Assert.AreEqual(m_AssetGUID, obj.References["first"].AssetGUID);
+            Assert.AreEqual("Assign Asset Reference", Undo.GetCurrentGroupName());
+
+            Undo.PerformUndo();
+
+            Assert.IsTrue(string.IsNullOrEmpty(obj.References["first"].AssetGUID));
+            Object.DestroyImmediate(obj);
+        }
+#endif
+
+        [Test]
+        public void SetObject_CanUndo()
+        {
+            var obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
+            var so = new SerializedObject(obj);
+            var property = so.FindProperty("Reference");
+            var assetRef = AssetReferenceDrawerUtilities.GetAssetReference(property);
+            bool referencesSame = true;
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(m_AssetGUID));
+            Undo.IncrementCurrentGroup();
+
+            Assert.IsTrue(AssetReferenceDrawerUtilities.SetObject(ref assetRef, ref referencesSame, property, prefab, null, "", out string _));
+            Assert.AreEqual(m_AssetGUID, obj.Reference.AssetGUID);
+            Assert.AreEqual("Assign Asset Reference", Undo.GetCurrentGroupName());
+
+            Undo.PerformUndo();
+
+            Assert.IsTrue(string.IsNullOrEmpty(obj.Reference.AssetGUID));
+            Object.DestroyImmediate(obj);
         }
 
         [Test]
@@ -1119,7 +1276,7 @@ namespace UnityEditor.AddressableAssets.Tests
 
             // Setup property
             var ar = new AssetReferenceT<Mesh>("");
-            var obj = ScriptableObject.CreateInstance<TestEditorObjectWithRef>();
+            var obj = ScriptableObject.CreateInstance<TestEditorObjectWithMeshRef>();
             obj.Reference = ar;
             var so = new SerializedObject(obj);
             var property = so.FindProperty("Reference");
@@ -1150,7 +1307,7 @@ namespace UnityEditor.AddressableAssets.Tests
             string guid;
             FieldInfo propertyFieldInfo = typeof(TestEditorSubObjectsSpriteAtlas).GetField("testSpriteReference", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             AssetReferenceDrawerUtilities.SetObject(ref m_AssetReferenceDrawer.m_AssetRefObject, ref m_AssetReferenceDrawer.m_ReferencesSame, property, null, propertyFieldInfo, "", out guid);
-            Assert.AreEqual(null, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName);
+            Assert.IsTrue(string.IsNullOrEmpty(m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName));
             Assert.AreEqual(string.Empty, m_AssetReferenceDrawer.m_AssetRefObject.AssetGUID);
 
             // Cleanup
@@ -1274,7 +1431,7 @@ namespace UnityEditor.AddressableAssets.Tests
             AssetReferenceDrawerUtilities.SetSubAssets(property, null, propertyFieldInfo, m_AssetReferenceDrawer.m_label.text);
             foreach (var obj in property.serializedObject.targetObjects)
             {
-                Assert.AreEqual(null, ((TestEditorSubObjectsSpriteAtlas)obj).testSpriteReference.SubObjectName);
+                Assert.IsTrue(string.IsNullOrEmpty(((TestEditorSubObjectsSpriteAtlas)obj).testSpriteReference.SubObjectName));
             }
 
             // Cleanup
@@ -1305,7 +1462,7 @@ namespace UnityEditor.AddressableAssets.Tests
                 for (int currElement = 0; currElement < checkList.Length; currElement++)
                 {
                     if (currElement == selectedElement)
-                        Assert.AreEqual(null, checkList[selectedElement].SubObjectName);
+                        Assert.IsTrue(string.IsNullOrEmpty(checkList[selectedElement].SubObjectName));
                     else
                         Assert.AreEqual("test", checkList[currElement].SubObjectName);
                 }
@@ -1595,7 +1752,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.True(m_AssetReferenceDrawer.m_SubassetRefreshed);
             // save required as the non-matching result was cleared out
             Assert.True(result);
-            Assert.IsNull(m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName);
+            Assert.IsTrue(string.IsNullOrEmpty(m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName));
             Assert.AreEqual(string.Empty, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectGUID);
 
             // Cleanup
@@ -1726,7 +1883,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var result = m_AssetReferenceDrawer.RefreshSubAsset();
             Assert.True(m_AssetReferenceDrawer.m_SubassetRefreshed);
             Assert.True(result);
-            Assert.AreEqual(null, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName);
+            Assert.IsTrue(string.IsNullOrEmpty(m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName));
             Assert.AreEqual(string.Empty, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectGUID);
 
 
@@ -1734,6 +1891,47 @@ namespace UnityEditor.AddressableAssets.Tests
             LogAssert.ignoreFailingMessages = false;
             TearDownTestDir();
             Settings.RemoveAssetEntry(atlasGUID);
+        }
+
+        [Test]
+        public void AssetReferenceDrawer_RefreshSubAsset_MultipleTargetsWithDifferentReferences_OnlyRefreshesStaleTarget()
+        {
+            // Setup
+            var subAssets = new List<Object>();
+            var atlas = SetUpSpriteAtlas(5, out subAssets);
+            var atlasGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetOrScenePath(atlas));
+            var prefabPath = ConfigFolder + "/test/testPrefab.prefab";
+            CreateTestPrefabAddressable(prefabPath, false);
+            var prefabGuid = AssetDatabase.AssetPathToGUID(prefabPath);
+
+            var property = SetupForSetSubAssets(atlas, 2, false);
+            var targets = property.serializedObject.targetObjects;
+            var staleTarget = (TestEditorSubObjectsSpriteAtlas)targets[0];
+            var otherTarget = (TestEditorSubObjectsSpriteAtlas)targets[1];
+            var packableGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(atlas.GetPackables()[3]));
+            staleTarget.testSpriteReference = new AssetReferenceSprite(atlasGuid) {SubObjectName = "testSprite3", SubObjectGUID = packableGUID};
+            otherTarget.testSpriteReference = new AssetReferenceSprite(prefabGuid);
+            property.serializedObject.Update();
+
+            // delete the first target's sprite
+            AssetDatabase.DeleteAsset(AssetDatabase.GetAssetPath(subAssets[3]));
+            AssetDatabase.Refresh();
+
+            LogAssert.ignoreFailingMessages = true;
+            m_AssetReferenceDrawer.m_AssetRefObject = AssetReferenceDrawerUtilities.GetAssetReference(property);
+            m_AssetReferenceDrawer.assetProperty = property;
+            var result = m_AssetReferenceDrawer.RefreshSubAsset();
+
+            Assert.True(result);
+            Assert.AreEqual(atlasGuid, staleTarget.testSpriteReference.AssetGUID);
+            Assert.IsTrue(string.IsNullOrEmpty(staleTarget.testSpriteReference.SubObjectName));
+            Assert.AreEqual(prefabGuid, otherTarget.testSpriteReference.AssetGUID);
+            Assert.IsTrue(string.IsNullOrEmpty(otherTarget.testSpriteReference.SubObjectName));
+
+            // Cleanup
+            LogAssert.ignoreFailingMessages = false;
+            TearDownTestDir();
+            Settings.RemoveAssetEntry(atlasGuid);
         }
 
         [TestCase(5, 1)]
@@ -1763,7 +1961,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var result = m_AssetReferenceDrawer.RefreshSubAsset();
             Assert.True(m_AssetReferenceDrawer.m_SubassetRefreshed);
             Assert.True(result);
-            Assert.AreEqual(null, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName);
+            Assert.IsTrue(string.IsNullOrEmpty(m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName));
             Assert.AreEqual(string.Empty, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectGUID);
 
             // Cleanup
@@ -1798,7 +1996,7 @@ namespace UnityEditor.AddressableAssets.Tests
             var result = m_AssetReferenceDrawer.RefreshSubAsset();
             Assert.True(m_AssetReferenceDrawer.m_SubassetRefreshed);
             Assert.True(result);
-            Assert.IsNull(m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName);
+            Assert.IsTrue(string.IsNullOrEmpty(m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName));
             Assert.AreEqual(string.Empty, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectGUID);
 
             // Cleanup
@@ -1835,7 +2033,7 @@ namespace UnityEditor.AddressableAssets.Tests
             Assert.True(result);
             Assert.True(m_AssetReferenceDrawer.m_SubassetRefreshed);
             Assert.False(property.serializedObject.hasModifiedProperties);
-            Assert.IsNull(m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName);
+            Assert.IsTrue(string.IsNullOrEmpty(m_AssetReferenceDrawer.m_AssetRefObject.SubObjectName));
             Assert.AreEqual(string.Empty, m_AssetReferenceDrawer.m_AssetRefObject.SubObjectGUID);
 
             // verify a second call does nothing

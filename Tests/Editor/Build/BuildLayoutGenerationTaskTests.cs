@@ -809,7 +809,60 @@ namespace BuildLayoutGenerationTaskPerPlatformTests
             }
         }
 
+        [Test]
+        public void AssetBundleOnlyBuild_RecordsOnlyBundledAssetsSteps()
+        {
+            AddressableAssetGroup group = null;
+            try
+            {
+                group = CreateGroup("Group1");
+                CreateAddressablePrefab("p1", group);
+
+                BuildAndExtractLayout();
+
+                string text = File.ReadAllText(Addressables.LibraryPath + "AddressablesBuildTEP.json");
+                StringAssert.Contains("Building Bundled Assets", text);
+                StringAssert.Contains("Collecting Catalog Locations", text);
+                StringAssert.DoesNotContain("Building Content Directories", text);
+                StringAssert.DoesNotContain("Generating Content Directories Catalog Locations", text);
+                StringAssert.DoesNotContain("Correlate Content Directories to Groups", text);
+            }
+            finally
+            {
+                if (group != null)
+                    Settings.RemoveGroup(group);
+                DeletePrefab("p1");
+            }
+        }
+
 #if ENABLE_CONTENT_DIRECTORIES
+        [Test]
+        public void ContentDirectoryOnlyBuild_RecordsOnlyContentDirectoriesSteps()
+        {
+            AddressableAssetGroup group = null;
+            try
+            {
+                group = CreateContentDirectoryGroup("ContentDirectoryGroup");
+                CreateAddressablePrefab("p1", group);
+                AssetDatabase.SaveAssets();
+
+                BuildAndExtractLayout();
+
+                string text = File.ReadAllText(Addressables.LibraryPath + "AddressablesBuildTEP.json");
+                StringAssert.Contains("Building Content Directories", text);
+                StringAssert.Contains("Generating Content Directories Catalog Locations", text);
+                StringAssert.Contains("Collecting Catalog Locations", text);
+                StringAssert.Contains("Correlate Content Directories to Groups", text);
+                StringAssert.DoesNotContain("Building Bundled Assets", text);
+            }
+            finally
+            {
+                if (group != null)
+                    Settings.RemoveGroup(group);
+                DeletePrefab("p1");
+            }
+        }
+
         [Test]
         public void Verify_ContentDirectoryData_IncludedInBuildLayout()
         {

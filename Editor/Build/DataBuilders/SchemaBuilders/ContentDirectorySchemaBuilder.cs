@@ -115,6 +115,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
             if (m_CatalogIdToEntriesMap.Count == 0)
                 return;
 
+            using var buildStep = m_Logger.ScopedStep(LogLevel.Info, $"Building {Name}");
+
             if (aaContext.Settings.DisableWriteTypeTree && aaContext.Settings.StripUnityVersion)
                 throw new InvalidOperationException(
                     "Cannot build Content Directory groups when both DisableWriteTypeTree and " +
@@ -315,6 +317,10 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
             aaContext.providerTypes.Add(typeof(NativeContentAssetListProvider));
 
             var result = new Dictionary<string, List<ContentCatalogDataEntry>>();
+            if (m_CatalogIdToEntriesMap.Count == 0)
+                return result;
+
+            using var generateStep = m_Logger.ScopedStep(LogLevel.Info, $"Generating {Name} Catalog Locations");
             foreach (var catalogId in m_CatalogIdToEntriesMap.Keys)
                 result[catalogId] = GenerateCatalogEntries(catalogId, aaContext);
 

@@ -235,6 +235,8 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders
         {
             if (m_AllBundleInputDefs.Count > 0)
             {
+                using var buildStep = m_Logger.ScopedStep(LogLevel.Info, $"Building {Name}");
+
                 aaContext.ContainsAssetBundleData = true;
 
                 var buildParams = new AddressableAssetsBundleBuildParameters(
@@ -994,6 +996,8 @@ FileRegistry registry)
             m_BuiltTypeTreeDataPath = Path.Combine(Addressables.BuildPath, BuildScriptPackedMode.kTypeTreeDataFileName);
             if (aaContext.Settings.ExtractTypeTreeData)
             {
+                using var generateStep = m_Logger.ScopedStep(LogLevel.Info, $"Generating {Name} Catalog Locations");
+
                 aaContext.providerTypes.Add(typeof(CachedFileProvider));
                 if (m_PreviousContentState != null)
                 {

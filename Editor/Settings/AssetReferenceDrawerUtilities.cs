@@ -54,6 +54,28 @@ namespace UnityEditor.AddressableAssets.Settings
             return false;
         }
 
+        // Reads a copy from the serialized data, so it works in any container, including dictionary values
+        static internal AssetReference GetAssetReference(SerializedProperty property)
+        {
+            if (property == null)
+                return null;
+            try
+            {
+                return property.boxedValue as AssetReference;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        static internal void WriteAssetReference(SerializedProperty property, AssetReference assetReference, string undoName)
+        {
+            property.boxedValue = assetReference;
+            property.serializedObject.ApplyModifiedProperties();
+            Undo.SetCurrentGroupName(undoName);
+        }
+
         static internal bool SetObject(ref AssetReference assetRefObject, ref bool referencesSame, SerializedProperty property, Object target, FieldInfo fieldInfo, string label, out string guid)
         {
             guid = null;
@@ -61,7 +83,6 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 if (assetRefObject == null)
                     return false;
-                Undo.RecordObject(property.serializedObject.targetObject, "Assign Asset Reference");
                 if (target == null)
                 {
                     guid = SetSingleAsset(ref assetRefObject, property, null, null);
@@ -125,6 +146,7 @@ namespace UnityEditor.AddressableAssets.Settings
             if (asset == null)
             {
                 assetReferenceObject.SetEditorAsset(null);
+                WriteAssetReference(property, assetReferenceObject, "Assign Asset Reference");
                 SetDirty(property.serializedObject.targetObject);
                 return guid;
             }
@@ -137,6 +159,7 @@ namespace UnityEditor.AddressableAssets.Settings
                 else
                     assetReferenceObject.SubObjectName = null;
                 guid = assetReferenceObject.AssetGUID;
+                WriteAssetReference(property, assetReferenceObject, "Assign Asset Reference");
                 SetDirty(property.serializedObject.targetObject);
             }
 
@@ -150,11 +173,9 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 var serializeObjectMulti = new SerializedObject(targetObj);
                 SerializedProperty sp = serializeObjectMulti.FindProperty(property.propertyPath);
-                var assetRefObject =
-                    sp.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
+                var assetRefObject = GetAssetReference(sp);
                 if (assetRefObject != null)
                 {
-                    Undo.RecordObject(targetObj, "Assign Asset Reference");
                     var success = assetRefObject.SetEditorAsset(asset);
                     if (success)
                     {
@@ -162,6 +183,7 @@ namespace UnityEditor.AddressableAssets.Settings
                             assetRefObject.SetEditorSubObject(subObject);
                         else
                             assetRefObject.SubObjectName = null;
+                        WriteAssetReference(sp, assetRefObject, "Assign Asset Reference");
                         SetDirty(targetObj);
                     }
                     else
@@ -188,14 +210,13 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 var serializeObjectMulti = new SerializedObject(t);
                 var sp = serializeObjectMulti.FindProperty(property.propertyPath);
-                var assetRefObject =
-                    sp.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
+                var assetRefObject = GetAssetReference(sp);
                 if (assetRefObject != null && (assetRefObject.SubObjectName == null || assetRefObject.SubObjectName != spriteName))
                 {
-                    Undo.RecordObject(t, "Assign Asset Reference Sub Object");
                     var success = assetRefObject.SetEditorSubObject(subAsset);
                     if (success)
                     {
+                        WriteAssetReference(sp, assetRefObject, "Assign Asset Reference Sub Object");
                         valueChanged = true;
                         SetDirty(t);
                     }
@@ -215,7 +236,7 @@ namespace UnityEditor.AddressableAssets.Settings
             {
                 var serializeObjectMulti = new SerializedObject(targetObject);
                 var sp = serializeObjectMulti.FindProperty(property.propertyPath);
-                var assetRefObject = sp.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
+                var assetRefObject = GetAssetReference(sp);
                 if (assetRefObject != null && assetRefObject.SubObjectName != null)
                 {
                     if (assetRefObject.SubObjectName != objName)
@@ -339,10 +360,10 @@ namespace UnityEditor.AddressableAssets.Settings
 
         static internal string GetNameForAsset(ref bool referencesSame, SerializedProperty property, bool isNotAddressable, FieldInfo propertyField, string labelText)
         {
-            var currentRef =
-                property.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
+            var currentRef = GetAssetReference(property);
 
-            string nameToUse = currentRef.editorAsset != null ? currentRef.editorAsset.name : ConstructNoAssetLabel(propertyField.FieldType);
+            // Use the reference's own type: for a dictionary the field type's first generic argument is the key
+            string nameToUse = currentRef.editorAsset != null ? currentRef.editorAsset.name : ConstructNoAssetLabel(currentRef.GetType());
 
             if (property.serializedObject.targetObjects.Length > 1)
             {
@@ -350,9 +371,8 @@ namespace UnityEditor.AddressableAssets.Settings
                 {
                     var serializeObjectMulti = new SerializedObject(t);
                     var sp = serializeObjectMulti.FindProperty(property.propertyPath);
-                    var assetRefObject =
-                        sp.GetActualObjectForSerializedProperty<AssetReference>(propertyField, ref labelText);
-                    if (assetRefObject.AssetGUID != currentRef.AssetGUID)
+                    var assetRefObject = GetAssetReference(sp);
+                    if (assetRefObject == null || assetRefObject.AssetGUID != currentRef.AssetGUID)
                     {
                         referencesSame = false;
                         return "--";
